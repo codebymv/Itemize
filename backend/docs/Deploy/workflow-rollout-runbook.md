@@ -1,4 +1,4 @@
-# Workflow execution staging rollout
+# Workflow execution rollout
 
 The workflow rollout harness provides three staging-only commands:
 
@@ -145,3 +145,28 @@ After the rehearsal:
 3. resolve or assign all terminal rows;
 4. restore only the intended rollout flags;
 5. record the operator, deployment version, timestamps, evidence path, and rollback result.
+
+## Production ownership
+
+Production uses the existing public backend origin as the browser GraphQL endpoint. The backend forwards `/graphql` to the private `itemize.cloud GraphQL Production` service, preserving the host-bound authentication cookie and CSRF boundary.
+
+The mutually exclusive production settings are:
+
+```text
+# NestJS owner
+WORKFLOW_NEST_SCHEDULER_ENABLED=true
+WORKFLOW_NEST_SCHEDULER_INTERVAL_MS=60000
+
+# Retained owner disabled
+WORKFLOW_TRIGGER_JOBS_ENABLED=false
+WORKFLOW_ENROLLMENT_JOBS_ENABLED=false
+WORKFLOW_SIDE_EFFECT_JOBS_ENABLED=false
+
+# Frontend build
+VITE_WORKFLOW_READS_GRAPHQL=true
+VITE_WORKFLOW_MUTATIONS_GRAPHQL=true
+VITE_WORKFLOW_ENROLLMENTS_GRAPHQL=true
+VITE_WORKFLOW_PERFORMANCE_GRAPHQL=true
+```
+
+Never enable a retained workflow flag while `WORKFLOW_NEST_SCHEDULER_ENABLED=true`. To roll scheduler ownership back, first set the NestJS flag false and deploy GraphQL, verify its ownership log is absent, then enable the intended retained flags and redeploy the backend. To roll consumers back independently, rebuild the frontend with the four `VITE_WORKFLOW_*` flags false; persisted rows require no conversion or repair.

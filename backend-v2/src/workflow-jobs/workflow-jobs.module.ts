@@ -13,6 +13,7 @@ import {
 } from './workflow-side-effect.providers';
 import { WorkflowSideEffectJobsRepository } from './workflow-side-effect-jobs.repository';
 import { WorkflowSideEffectJobsService } from './workflow-side-effect-jobs.service';
+import { WorkflowJobsSchedulerService } from './workflow-jobs-scheduler.service';
 
 @Module({
   providers: [
@@ -22,6 +23,7 @@ import { WorkflowSideEffectJobsService } from './workflow-side-effect-jobs.servi
     WorkflowTriggerJobsService,
     WorkflowSideEffectJobsRepository,
     WorkflowSideEffectJobsService,
+    WorkflowJobsSchedulerService,
     ResendWorkflowEmailProvider,
     TwilioWorkflowSmsProvider,
     ControlledWorkflowWebhookProvider,

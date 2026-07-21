@@ -1,4 +1,4 @@
-import registry from '../../../workflow-registry.json';
+import registry from '../../workflow-registry.json';
 
 export const WORKFLOW_TRIGGER_TYPES = [
   'contact_added',
