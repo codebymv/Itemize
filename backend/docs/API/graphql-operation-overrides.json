@@ -735,9 +735,9 @@
       "owner": "growth",
       "targetModule": "CampaignDeliveryModule",
       "targetOperation": "campaignRecipients",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Use the shared page contract and return only recipient snapshots belonging to an organization-owned campaign."
+      "notes": "CampaignDeliveryModule verifies the organization-owned parent, qualifies every child and current-contact join by organization, supports strict status filtering and bounded shared paging, and orders by sent_at then id with nulls last. It preserves recipient snapshots, safe current-contact names, engagement/provider fields, and excludes inconsistent cross-tenant child rows. Fresh PostgreSQL proves retained-REST parity, paging, filters, private misses, invalid-input failure, and corrupt-row exclusion behind an independent default-off frontend flag."
     },
     "POST /api/campaigns/:id/resume": {
       "disposition": "graphql-mutation",

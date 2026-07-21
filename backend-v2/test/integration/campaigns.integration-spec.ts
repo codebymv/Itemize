@@ -356,6 +356,103 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
     expect(deleted.body.data.deleteCampaign).toEqual({ deletedId: id, success: true });
   });
 
+  it('pages tenant-qualified recipient snapshots with stable status filtering and REST parity', async () => {
+    const suffix = `${Date.now()}-${process.pid}`;
+    const contacts = await pool.query<{ id: number }>(
+      `INSERT INTO contacts (organization_id, first_name, last_name, email, status, created_by)
+       VALUES ($1, 'Current A', 'Contact', $5, 'active', $3),
+              ($1, 'Current B', 'Contact', $6, 'active', $3),
+              ($2, 'Foreign', 'Contact', $7, 'active', $4)
+       RETURNING id`,
+      [organizationId, outsiderOrganizationId, memberId, outsiderId,
+        `recipient-a-${suffix}@test.itemize`, `recipient-b-${suffix}@test.itemize`,
+        `recipient-foreign-${suffix}@test.itemize`],
+    );
+    const [contactA, contactB, foreignContact] = contacts.rows.map((row) => Number(row.id));
+    const campaigns = await pool.query<{ id: number }>(
+      `INSERT INTO email_campaigns (organization_id, name, subject, created_by)
+       VALUES ($1, $3, 'Recipients', $5), ($2, $4, 'Foreign recipients', $6)
+       RETURNING id`,
+      [organizationId, outsiderOrganizationId, `Recipients ${suffix}`,
+        `Foreign recipients ${suffix}`, memberId, outsiderId],
+    );
+    const id = Number(campaigns.rows[0].id);
+    const foreignCampaignId = Number(campaigns.rows[1].id);
+    await pool.query(
+      `INSERT INTO campaign_recipients (
+         campaign_id, contact_id, organization_id, email, first_name, last_name,
+         status, sent_at, opened_at, open_count
+       ) VALUES
+         ($1, $2, $6, $8, 'Snapshot A', 'Original', 'opened', '2026-07-21T10:00:00Z', '2026-07-21T10:05:00Z', 2),
+         ($1, $3, $6, $9, 'Snapshot B', NULL, 'sent', '2026-07-21T09:00:00Z', NULL, 0),
+         ($4, $5, $7, $10, 'Foreign', 'Snapshot', 'opened', '2026-07-21T11:00:00Z', '2026-07-21T11:05:00Z', 1)`,
+      [id, contactA, contactB, foreignCampaignId, foreignContact, organizationId, outsiderOrganizationId,
+        `snapshot-a-${suffix}@test.itemize`, `snapshot-b-${suffix}@test.itemize`,
+        `snapshot-foreign-${suffix}@test.itemize`],
+    );
+    const document = `query Recipients(
+      $campaignId: Int!, $filter: CampaignRecipientFilterInput, $page: PageInput
+    ) {
+      campaignRecipients(campaignId: $campaignId, filter: $filter, page: $page) {
+        nodes {
+          id campaignId contactId organizationId email firstName lastName status sentAt openedAt
+          openCount clickCount clickedLinks contactFirstName contactLastName
+        }
+        pageInfo { page pageSize total totalPages hasNextPage hasPreviousPage }
+      }
+    }`;
+    const listed = await graphql(memberToken, organizationId, document, {
+      campaignId: id, filter: { status: 'all' }, page: { page: 1, pageSize: 1 },
+    }, false).expect(200);
+    expect(listed.body.errors).toBeUndefined();
+    expect(listed.body.data.campaignRecipients).toMatchObject({
+      nodes: [{
+        campaignId: id, contactId: contactA, organizationId, status: 'opened',
+        firstName: 'Snapshot A', contactFirstName: 'Current A', openCount: 2,
+      }],
+      pageInfo: { page: 1, pageSize: 1, total: 2, totalPages: 2, hasNextPage: true },
+    });
+
+    const opened = await graphql(memberToken, organizationId, document, {
+      campaignId: id, filter: { status: 'opened' }, page: { page: 1, pageSize: 50 },
+    }, false).expect(200);
+    expect(opened.body.data.campaignRecipients.pageInfo.total).toBe(1);
+    const retained = await legacy(`/${id}/recipients?status=opened&page=1&limit=50`).expect(200);
+    expect(retained.body.data.recipients).toHaveLength(1);
+    expect(retained.body.data.recipients[0]).toMatchObject({
+      id: opened.body.data.campaignRecipients.nodes[0].id,
+      campaign_id: id, contact_id: contactA, status: 'opened',
+      first_name: 'Snapshot A', contact_first_name: 'Current A', open_count: 2,
+    });
+    expect(retained.body.data.pagination).toEqual({
+      page: 1, limit: 50, total: 1, totalPages: 1,
+    });
+
+    await pool.query(
+      `INSERT INTO campaign_recipients (
+         campaign_id, contact_id, organization_id, email, status, sent_at
+       ) VALUES ($1, $2, $3, $4, 'opened', '2026-07-21T12:00:00Z')`,
+      [id, foreignContact, outsiderOrganizationId, `corrupt-${suffix}@test.itemize`],
+    );
+    const isolated = await graphql(memberToken, organizationId, document, {
+      campaignId: id, filter: { status: 'opened' }, page: { page: 1, pageSize: 50 },
+    }, false).expect(200);
+    expect(isolated.body.data.campaignRecipients.pageInfo.total).toBe(1);
+
+    const hidden = await graphql(memberToken, organizationId, document, {
+      campaignId: foreignCampaignId,
+    }, false).expect(200);
+    expect(hidden.body.errors[0].extensions.code).toBe('NOT_FOUND');
+    const invalid = await graphql(memberToken, organizationId, document, {
+      campaignId: id, filter: { status: 'unknown' },
+    }, false).expect(200);
+    expect(invalid.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT', reason: 'INVALID_CAMPAIGN_RECIPIENT_STATUS',
+    });
+    await pool.query('DELETE FROM email_campaigns WHERE id=ANY($1::int[])', [[id, foreignCampaignId]]);
+    await pool.query('DELETE FROM contacts WHERE id=ANY($1::int[])', [[contactA, contactB, foreignContact]]);
+  });
+
   it('previews deliverable audiences with REST parity and fail-closed saved segments', async () => {
     const suffix = `${Date.now()}-${process.pid}`;
     const tags = await pool.query<{ id: number }>(

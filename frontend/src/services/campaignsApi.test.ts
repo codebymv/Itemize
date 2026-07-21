@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '@/lib/api';
-import { createCampaign, getCampaigns, previewCampaign } from './campaignsApi';
+import { createCampaign, getCampaignRecipients, getCampaigns, previewCampaign } from './campaignsApi';
 
 vi.mock('@/lib/api', () => ({
     default: {
@@ -13,6 +13,7 @@ describe('campaigns API', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.stubEnv('VITE_CAMPAIGN_AUDIENCE_PREVIEW_GRAPHQL', 'false');
+        vi.stubEnv('VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL', 'false');
     });
 
     it('maps the shared REST pagination envelope to the campaign consumer contract', async () => {
@@ -60,6 +61,22 @@ describe('campaigns API', () => {
             recipientCount: 3,
             segmentType: 'segment',
             segmentId: 91,
+        });
+    });
+
+    it('keeps campaign recipient inspection on REST by default', async () => {
+        vi.mocked(api.get).mockResolvedValue({
+            data: { success: true, data: {
+                recipients: [{ id: 17, status: 'opened' }],
+                pagination: { page: 2, limit: 25, total: 26, totalPages: 2 },
+            } },
+        });
+
+        await expect(getCampaignRecipients(43, { status: 'opened', page: 2, limit: 25 }, 7))
+            .resolves.toMatchObject({ recipients: [{ id: 17, status: 'opened' }] });
+        expect(api.get).toHaveBeenCalledWith('/api/campaigns/43/recipients', {
+            params: { status: 'opened', page: 2, limit: 25 },
+            headers: { 'x-organization-id': '7' },
         });
     });
 });

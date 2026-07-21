@@ -10,6 +10,7 @@ import { GraphqlCsrfGuard } from './auth/graphql-csrf.guard';
 import { BookingsModule } from './bookings/bookings.module';
 import { CalendarIntegrationsModule } from './calendar-integrations/calendar-integrations.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
+import { CampaignDeliveryModule } from './campaign-delivery/campaign-delivery.module';
 import { CategoriesModule } from './categories/categories.module';
 import { CalendarsModule } from './calendars/calendars.module';
 import { formatItemizeGraphqlError } from './common/graphql-error';
@@ -58,6 +59,7 @@ const observabilityPlugins = [
     CalendarsModule,
     CalendarIntegrationsModule,
     CampaignsModule,
+    CampaignDeliveryModule,
     BookingsModule,
     CategoriesModule,
     WorkspaceContentModule,

@@ -6,6 +6,7 @@ import {
   duplicateCampaignViaGraphql,
   getCampaignViaGraphql,
   getCampaignsViaGraphql,
+  getCampaignRecipientsViaGraphql,
   previewCampaignViaGraphql,
   scheduleCampaignViaGraphql,
   unscheduleCampaignViaGraphql,
@@ -13,6 +14,7 @@ import {
 } from './campaignsGraphql';
 import {
   isCampaignAudiencePreviewGraphqlEnabled,
+  isCampaignRecipientReadsGraphqlEnabled,
   isCampaignGraphqlMutationsEnabled,
   isCampaignGraphqlReadsEnabled,
 } from './graphqlClient';
@@ -59,13 +61,44 @@ describe('campaign GraphQL consumer', () => {
     vi.stubEnv('VITE_CAMPAIGN_READS_GRAPHQL', 'false');
     vi.stubEnv('VITE_CAMPAIGN_MUTATIONS_GRAPHQL', 'false');
     vi.stubEnv('VITE_CAMPAIGN_AUDIENCE_PREVIEW_GRAPHQL', 'false');
+    vi.stubEnv('VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL', 'false');
     expect(isCampaignGraphqlReadsEnabled()).toBe(false);
     expect(isCampaignGraphqlMutationsEnabled()).toBe(false);
     expect(isCampaignAudiencePreviewGraphqlEnabled()).toBe(false);
+    expect(isCampaignRecipientReadsGraphqlEnabled()).toBe(false);
     vi.stubEnv('VITE_CAMPAIGN_READS_GRAPHQL', 'true');
     expect(isCampaignGraphqlReadsEnabled()).toBe(true);
     expect(isCampaignGraphqlMutationsEnabled()).toBe(false);
     expect(isCampaignAudiencePreviewGraphqlEnabled()).toBe(false);
+    expect(isCampaignRecipientReadsGraphqlEnabled()).toBe(false);
+  });
+
+  it('maps recipient snapshots, status, and shared paging without CSRF', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({ data: { campaignRecipients: {
+      nodes: [{
+        id: 17, campaignId: 9, contactId: 8, organizationId: 4,
+        email: 'recipient@test.itemize', firstName: 'Snapshot', lastName: null, status: 'opened',
+        sentAt: '2026-07-21T10:00:00.000Z', deliveredAt: null, openedAt: null,
+        clickedAt: null, bouncedAt: null, unsubscribedAt: null, openCount: 2, clickCount: 0,
+        clickedLinks: [], errorMessage: null, bounceType: null, abVariant: null,
+        emailLogId: 31, externalMessageId: 'provider-17',
+        createdAt: '2026-07-21T09:00:00.000Z', updatedAt: '2026-07-21T10:00:00.000Z',
+        contactFirstName: 'Current', contactLastName: 'Name',
+      }],
+      pageInfo: { page: 2, pageSize: 25, total: 26, totalPages: 2 },
+    } } }));
+    await expect(getCampaignRecipientsViaGraphql(9, { status: 'opened', page: 2, limit: 25 }, 4))
+      .resolves.toMatchObject({
+        recipients: [{ campaign_id: 9, first_name: 'Snapshot', last_name: undefined,
+          contact_first_name: 'Current', open_count: 2, email_log_id: 31,
+          external_message_id: 'provider-17' }],
+        pagination: { page: 2, limit: 25, total: 26, totalPages: 2 },
+      });
+    const body = JSON.parse(String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body));
+    expect(body.variables).toEqual({
+      campaignId: 9, filter: { status: 'opened' }, page: { page: 2, pageSize: 25 },
+    });
+    expect(fetchCsrfToken).not.toHaveBeenCalled();
   });
 
   it('maps paginated reads, filters, joined fields, and legacy casing', async () => {

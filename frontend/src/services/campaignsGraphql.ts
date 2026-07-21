@@ -1,4 +1,4 @@
-import type { CampaignPreview, EmailCampaign } from './campaignsApi';
+import type { CampaignPreview, CampaignRecipient, EmailCampaign } from './campaignsApi';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 
 type GraphqlCampaignLink = {
@@ -23,6 +23,18 @@ type GraphqlCampaign = {
   completedAt: string | null; createdAt: string; updatedAt: string;
   templateName: string | null; templateHtml: string | null; createdByName: string | null;
   sentByName: string | null; links: GraphqlCampaignLink[];
+};
+
+type GraphqlCampaignRecipient = {
+  id: number; campaignId: number; contactId: number; organizationId: number; email: string;
+  firstName: string | null; lastName: string | null; status: CampaignRecipient['status'];
+  sentAt: string | null; deliveredAt: string | null; openedAt: string | null;
+  clickedAt: string | null; bouncedAt: string | null; unsubscribedAt: string | null;
+  openCount: number; clickCount: number; clickedLinks: unknown[];
+  emailLogId: number | null; externalMessageId: string | null;
+  errorMessage: string | null; bounceType: string | null; abVariant: string | null;
+  createdAt: string; updatedAt: string; contactFirstName: string | null;
+  contactLastName: string | null;
 };
 
 const fields = `
@@ -95,6 +107,35 @@ const mapCampaign = (campaign: GraphqlCampaign): EmailCampaign => ({
   links: campaign.links.map(mapLink),
 });
 
+const mapRecipient = (recipient: GraphqlCampaignRecipient): CampaignRecipient => ({
+  id: recipient.id,
+  campaign_id: recipient.campaignId,
+  contact_id: recipient.contactId,
+  organization_id: recipient.organizationId,
+  email: recipient.email,
+  first_name: recipient.firstName ?? undefined,
+  last_name: recipient.lastName ?? undefined,
+  status: recipient.status,
+  sent_at: recipient.sentAt ?? undefined,
+  delivered_at: recipient.deliveredAt ?? undefined,
+  opened_at: recipient.openedAt ?? undefined,
+  clicked_at: recipient.clickedAt ?? undefined,
+  bounced_at: recipient.bouncedAt ?? undefined,
+  unsubscribed_at: recipient.unsubscribedAt ?? undefined,
+  open_count: recipient.openCount,
+  click_count: recipient.clickCount,
+  clicked_links: recipient.clickedLinks,
+  email_log_id: recipient.emailLogId,
+  external_message_id: recipient.externalMessageId,
+  error_message: recipient.errorMessage ?? undefined,
+  bounce_type: recipient.bounceType ?? undefined,
+  ab_variant: recipient.abVariant ?? undefined,
+  created_at: recipient.createdAt,
+  updated_at: recipient.updatedAt,
+  contact_first_name: recipient.contactFirstName ?? undefined,
+  contact_last_name: recipient.contactLastName ?? undefined,
+});
+
 const mapInput = (input: Partial<EmailCampaign>) => ({
   ...(input.name === undefined ? {} : { name: input.name }),
   ...(input.subject === undefined ? {} : { subject: input.subject }),
@@ -165,6 +206,42 @@ export const previewCampaignViaGraphql = async (
     organizationId,
   );
   return data.campaignAudiencePreview;
+};
+
+export const getCampaignRecipientsViaGraphql = async (
+  campaignId: number,
+  params: { status?: CampaignRecipient['status'] | 'all'; page?: number; limit?: number } = {},
+  organizationId?: number,
+): Promise<{ recipients: CampaignRecipient[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
+  const data = await graphqlRequest<
+    { campaignRecipients: { nodes: GraphqlCampaignRecipient[]; pageInfo: {
+      page: number; pageSize: number; total: number; totalPages: number;
+    } } },
+    { campaignId: number; filter: { status?: string }; page: { page: number; pageSize: number } }
+  >(
+    `query CampaignRecipients($campaignId: Int!, $filter: CampaignRecipientFilterInput, $page: PageInput) {
+      campaignRecipients(campaignId: $campaignId, filter: $filter, page: $page) {
+        nodes {
+          id campaignId contactId organizationId email firstName lastName status sentAt deliveredAt
+          openedAt clickedAt bouncedAt unsubscribedAt openCount clickCount clickedLinks errorMessage
+          emailLogId externalMessageId bounceType abVariant createdAt updatedAt contactFirstName
+          contactLastName
+        }
+        pageInfo { page pageSize total totalPages }
+      }
+    }`,
+    {
+      campaignId,
+      filter: params.status === undefined ? {} : { status: params.status },
+      page: { page: params.page ?? 1, pageSize: params.limit ?? 50 },
+    },
+    organizationId,
+  );
+  const page = data.campaignRecipients.pageInfo;
+  return {
+    recipients: data.campaignRecipients.nodes.map(mapRecipient),
+    pagination: { page: page.page, limit: page.pageSize, total: page.total, totalPages: page.totalPages },
+  };
 };
 
 export const createCampaignViaGraphql = async (

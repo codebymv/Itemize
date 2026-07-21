@@ -9,6 +9,7 @@ import {
     duplicateCampaignViaGraphql,
     getCampaignViaGraphql,
     getCampaignsViaGraphql,
+    getCampaignRecipientsViaGraphql,
     previewCampaignViaGraphql,
     scheduleCampaignViaGraphql,
     unscheduleCampaignViaGraphql,
@@ -18,6 +19,7 @@ import {
     isCampaignGraphqlMutationsEnabled,
     isCampaignGraphqlReadsEnabled,
     isCampaignAudiencePreviewGraphqlEnabled,
+    isCampaignRecipientReadsGraphqlEnabled,
 } from './graphqlClient';
 
 type CampaignJson = Record<string, unknown>;
@@ -137,6 +139,8 @@ export interface CampaignRecipient {
     open_count: number;
     click_count: number;
     clicked_links?: unknown[];
+    email_log_id?: number | null;
+    external_message_id?: string | null;
     
     error_message?: string;
     bounce_type?: string;
@@ -361,6 +365,9 @@ export const getCampaignRecipients = async (
     } = {},
     organizationId?: number
 ): Promise<{ recipients: CampaignRecipient[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
+    if (isCampaignRecipientReadsGraphqlEnabled()) {
+        return getCampaignRecipientsViaGraphql(campaignId, params, organizationId);
+    }
     const response = await api.get(`/api/campaigns/${campaignId}/recipients`, {
         params,
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
