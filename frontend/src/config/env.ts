@@ -9,6 +9,7 @@ const envSchema = z.object({
   // API
   VITE_API_URL: z.string().url().optional().default('http://localhost:3001'),
   VITE_GRAPHQL_URL: z.string().url().optional(),
+  VITE_AUTH_SESSION_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_CONTACT_READS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_CONTACT_MUTATIONS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_CONTACT_BULK_MUTATIONS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
@@ -110,6 +111,7 @@ if (import.meta.env.DEV) {
     mode: env.MODE,
     apiUrl: env.VITE_API_URL,
     graphqlUrl: env.VITE_GRAPHQL_URL || undefined,
+    authSessionGraphql: env.VITE_AUTH_SESSION_GRAPHQL === 'true',
     contactReadsGraphql: env.VITE_CONTACT_READS_GRAPHQL === 'true',
     contactMutationsGraphql: env.VITE_CONTACT_MUTATIONS_GRAPHQL === 'true',
     contactBulkMutationsGraphql: env.VITE_CONTACT_BULK_MUTATIONS_GRAPHQL === 'true',

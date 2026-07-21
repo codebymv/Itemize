@@ -66,6 +66,7 @@ describe('legacy-origin GraphQL proxy', () => {
         expect(options.headers.get('x-organization-id')).toBe('42');
         expect(options.headers.get('x-request-id')).toBe('browser-request');
         expect(options.headers.get('x-csrf-token')).toBe('csrf-value');
+        expect(options.headers.get('x-forwarded-for')).toBeTruthy();
         expect(options.headers.get('authorization')).toBeNull();
         expect(JSON.parse(options.body.toString())).toEqual({
             operationName: 'Readiness',
@@ -90,6 +91,55 @@ describe('legacy-origin GraphQL proxy', () => {
             }),
         );
         expect(JSON.stringify(logger.info.mock.calls)).not.toContain('private-value');
+    });
+
+    it('forwards only the authentication response headers required by the browser', async () => {
+        const upstreamHeaders = new Headers({
+            'content-type': 'application/json',
+            'cache-control': 'no-store',
+            pragma: 'no-cache',
+            expires: '0',
+            'x-csrf-token': 'csrf-token-value',
+            'x-private-upstream': 'must-not-forward',
+        });
+        upstreamHeaders.append(
+            'set-cookie',
+            'itemize_auth=access; Path=/; HttpOnly; SameSite=None; Secure',
+        );
+        upstreamHeaders.append(
+            'set-cookie',
+            'itemize_refresh=refresh; Path=/; HttpOnly; SameSite=None; Secure',
+        );
+        upstreamHeaders.append(
+            'set-cookie',
+            'unrelated_upstream_cookie=blocked; Path=/; HttpOnly',
+        );
+        const fetchImpl = jest.fn().mockResolvedValue(new Response(
+            JSON.stringify({ data: { login: { success: true } } }),
+            { status: 200, headers: upstreamHeaders },
+        ));
+        const { app } = testApp({
+            environment: { GRAPHQL_UPSTREAM_URL: 'http://graphql.internal/graphql' },
+            fetchImpl,
+        });
+
+        const response = await request(app)
+            .post('/graphql')
+            .send({ query: 'mutation Login { login { success } }' })
+            .expect(200);
+
+        expect(response.headers['set-cookie']).toEqual(expect.arrayContaining([
+            expect.stringContaining('itemize_auth=access'),
+            expect.stringContaining('itemize_refresh=refresh'),
+        ]));
+        expect(response.headers['set-cookie'].join(';')).not.toContain(
+            'unrelated_upstream_cookie',
+        );
+        expect(response.headers['cache-control']).toBe('no-store');
+        expect(response.headers.pragma).toBe('no-cache');
+        expect(response.headers.expires).toBe('0');
+        expect(response.headers['x-csrf-token']).toBe('csrf-token-value');
+        expect(response.headers['x-private-upstream']).toBeUndefined();
     });
 
     it('preserves upstream GraphQL errors and HTTP status', async () => {

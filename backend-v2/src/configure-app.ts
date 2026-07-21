@@ -4,6 +4,7 @@ import { Request, Response } from 'express';
 import { graphqlCorsOptions } from './common/cors';
 
 export const configureApp = (app: NestExpressApplication): void => {
+  app.set('trust proxy', 1);
   app.useBodyParser('json', {
     limit: '1mb',
     verify: (request: Request, _response: Response, buffer: Buffer) => {

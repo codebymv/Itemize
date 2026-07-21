@@ -20,13 +20,15 @@ type GraphqlResult<TData> = {
 
 export class GraphqlRequestError extends Error {
   readonly code?: string;
+  readonly reason?: string;
   readonly status: number;
 
-  constructor(message: string, status: number, code?: string) {
+  constructor(message: string, status: number, code?: string, reason?: string) {
     super(message);
     this.name = 'GraphqlRequestError';
     this.status = status;
     this.code = code;
+    this.reason = reason;
   }
 }
 
@@ -292,6 +294,7 @@ const runGraphqlRequest = async <TData, TVariables extends object>(
   variables: TVariables,
   organizationId?: number,
   csrfToken?: string,
+  refreshOnUnauthenticated = true,
 ): Promise<TData> => {
   let result = await executeGraphqlRequest<TData, TVariables>(
     query,
@@ -299,7 +302,10 @@ const runGraphqlRequest = async <TData, TVariables extends object>(
     organizationId,
     csrfToken,
   );
-  if (result.payload.errors?.[0]?.extensions?.code === 'UNAUTHENTICATED') {
+  if (
+    refreshOnUnauthenticated &&
+    result.payload.errors?.[0]?.extensions?.code === 'UNAUTHENTICATED'
+  ) {
     try {
       await refreshAuthenticatedSession();
     } catch (error) {
@@ -322,6 +328,9 @@ const runGraphqlRequest = async <TData, TVariables extends object>(
       firstError?.message || `GraphQL request failed with status ${result.response.status}`,
       result.response.status,
       firstError?.extensions?.code,
+      typeof firstError?.extensions?.reason === 'string'
+        ? firstError.extensions.reason
+        : undefined,
     );
   }
 
@@ -342,3 +351,14 @@ export const graphqlMutationRequest = async <TData, TVariables extends object>(
   const csrfToken = await fetchCsrfToken();
   return runGraphqlRequest(query, variables, organizationId, csrfToken);
 };
+
+export const graphqlPublicRequest = async <TData, TVariables extends object>(
+  query: string,
+  variables: TVariables,
+): Promise<TData> => runGraphqlRequest(
+  query,
+  variables,
+  undefined,
+  undefined,
+  false,
+);

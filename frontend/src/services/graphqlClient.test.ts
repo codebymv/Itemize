@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCsrfToken, refreshAuthenticatedSession } from '@/lib/api';
-import { GraphqlRequestError, graphqlMutationRequest, graphqlRequest } from './graphqlClient';
+import {
+  GraphqlRequestError,
+  graphqlMutationRequest,
+  graphqlPublicRequest,
+  graphqlRequest,
+} from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   getApiUrl: vi.fn(() => 'https://api.test.itemize'),
@@ -71,5 +76,23 @@ describe('GraphQL session recovery', () => {
       'x-csrf-token': 'csrf-test-token',
       'x-organization-id': '42',
     });
+  });
+
+  it('does not attempt session refresh for public authentication failures', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({
+      data: null,
+      errors: [{
+        message: 'Email not verified',
+        extensions: { code: 'UNAUTHENTICATED', reason: 'EMAIL_NOT_VERIFIED' },
+      }],
+    }));
+
+    await expect(graphqlPublicRequest('mutation { login }', {})).rejects.toMatchObject({
+      name: 'GraphqlRequestError',
+      code: 'UNAUTHENTICATED',
+      reason: 'EMAIL_NOT_VERIFIED',
+    });
+    expect(refreshAuthenticatedSession).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 });

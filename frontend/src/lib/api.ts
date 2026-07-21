@@ -180,15 +180,42 @@ export const fetchCsrfToken = async (): Promise<string> => {
   if (csrfToken) return csrfToken;
   if (csrfRequest) return csrfRequest;
 
-  csrfRequest = axios.create({
-    baseURL: getApiUrl(),
-    withCredentials: true,
-    timeout: 10000,
-  }).get('/api/auth/csrf').then((response) => {
+  csrfRequest = (async () => {
+    if (import.meta.env.VITE_AUTH_SESSION_GRAPHQL === 'true') {
+      const baseURL = getApiUrl();
+      const graphqlUrl = import.meta.env.VITE_GRAPHQL_URL?.trim()
+        || `${baseURL.replace(/\/$/, '')}/graphql`;
+      const response = await fetch(graphqlUrl, {
+        method: 'POST',
+        credentials: 'include',
+        signal: AbortSignal.timeout(10_000),
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          query: 'query CsrfToken { csrfToken { token } }',
+          variables: {},
+        }),
+      });
+      const payload = await response.json() as {
+        data?: { csrfToken?: { token?: string } };
+        errors?: Array<{ message?: string }>;
+      };
+      const token = payload.data?.csrfToken?.token;
+      if (!response.ok || !token) {
+        throw new Error(payload.errors?.[0]?.message || 'CSRF token not returned by GraphQL service');
+      }
+      return token;
+    }
+    const response = await axios.create({
+      baseURL: getApiUrl(),
+      withCredentials: true,
+      timeout: 10000,
+    }).get('/api/auth/csrf');
     const token = response.data?.csrfToken || response.headers?.['x-csrf-token'];
     if (!token) {
       throw new Error('CSRF token not returned by server');
     }
+    return token;
+  })().then((token) => {
     csrfToken = token;
     return token;
   }).finally(() => {
@@ -268,21 +295,52 @@ export const refreshAuthenticatedSession = (
   refreshAttempts++;
   sessionRefreshPromise = (async () => {
     console.log('[Auth] Attempting token refresh...');
-    const refreshResponse = await axios.create({
-      baseURL,
-      withCredentials: true,
-      timeout: 10000,
-      headers: { [CSRF_HEADER]: await fetchCsrfToken() },
-    }).post('/api/auth/refresh');
+    const csrf = await fetchCsrfToken();
+    let success = false;
+    let refreshedUser: unknown;
+    if (import.meta.env.VITE_AUTH_SESSION_GRAPHQL === 'true') {
+      const configuredGraphqlUrl = import.meta.env.VITE_GRAPHQL_URL?.trim();
+      const graphqlUrl = configuredGraphqlUrl || `${baseURL.replace(/\/$/, '')}/graphql`;
+      const response = await fetch(graphqlUrl, {
+        method: 'POST',
+        credentials: 'include',
+        signal: AbortSignal.timeout(10_000),
+        headers: {
+          'content-type': 'application/json',
+          [CSRF_HEADER]: csrf,
+        },
+        body: JSON.stringify({
+          query: 'mutation RefreshSession { refreshSession { success } }',
+          variables: {},
+        }),
+      });
+      const payload = await response.json() as {
+        data?: { refreshSession?: { success?: boolean } };
+        errors?: Array<{ message?: string }>;
+      };
+      success = response.ok && payload.data?.refreshSession?.success === true;
+      if (!success && payload.errors?.[0]?.message) {
+        throw new Error(payload.errors[0].message);
+      }
+    } else {
+      const refreshResponse = await axios.create({
+        baseURL,
+        withCredentials: true,
+        timeout: 10000,
+        headers: { [CSRF_HEADER]: csrf },
+      }).post('/api/auth/refresh');
+      success = refreshResponse.data?.success === true;
+      refreshedUser = refreshResponse.data?.user;
+    }
 
-    if (!refreshResponse.data?.success) {
+    if (!success) {
       throw new Error('Refresh endpoint did not confirm success');
     }
 
     console.log('[Auth] Token refreshed successfully');
     markAuthenticatedSession();
-    if (refreshResponse.data?.user && typeof window !== 'undefined' && window.sessionStorage) {
-      window.sessionStorage.setItem('itemize_user', JSON.stringify(refreshResponse.data.user));
+    if (refreshedUser && typeof window !== 'undefined' && window.sessionStorage) {
+      window.sessionStorage.setItem('itemize_user', JSON.stringify(refreshedUser));
     }
     refreshAttempts = 0;
     if (typeof window !== 'undefined') {

@@ -1,14 +1,14 @@
 # GraphQL production consumer cutover
 
-**Status:** All implemented browser GraphQL consumers enabled in production
+**Status:** 73 domain consumers enabled; authentication session consumer staged default-off
 
 **Cutover date:** 2026-07-21
 
 ## Production topology
 
-The browser continues to use the public `itemize.cloud Backend` origin for authentication, REST, and `/graphql`. The backend forwards GraphQL to `itemize.cloud GraphQL Production` over Railway's private network. This preserves the host-bound authentication cookie and existing CSRF contract while NestJS owns the GraphQL schema.
+The browser continues to use the public `itemize.cloud Backend` origin for REST and `/graphql`. The backend forwards GraphQL to `itemize.cloud GraphQL Production` over Railway's private network. The proxy now has an explicit response allowlist for the three authentication cookies and cache/CSRF headers, allowing NestJS to own browser sessions without changing the public origin.
 
-The authoritative browser switch inventory is every `VITE_*_GRAPHQL` key referenced by `frontend/src/services/graphqlClient.ts`. The centralized schema in `frontend/src/config/env.ts` contains the same 73 keys. Production sets all 73 to `true`; a frontend rebuild is required because Vite embeds them at build time.
+The 73 domain switches referenced by `frontend/src/services/graphqlClient.ts` are enabled in production. `VITE_AUTH_SESSION_GRAPHQL` is a 74th coordinated switch referenced by the authentication adapter and shared refresh/CSRF transport. It remains false until the session deployment and login/reload/logout smoke gate pass. A frontend rebuild is required because Vite embeds these values at build time.
 
 The enabled families are:
 
@@ -21,7 +21,7 @@ The enabled families are:
 
 ## Intentionally retained transports
 
-Enabling every implemented GraphQL consumer does not turn non-GraphQL protocols into GraphQL. Authentication and OAuth callbacks, public booking/form/signing capabilities, provider webhooks, CSV/file/PDF HTTP responses, and Socket.IO realtime delivery remain on their documented HTTP or socket boundaries. Where an HTTP route is already owned by NestJS, the legacy backend may continue to act as the same-origin private proxy.
+Enabling every implemented GraphQL consumer does not turn non-GraphQL protocols into GraphQL. Registration/verification/recovery/profile operations and unused OAuth callbacks, public booking/form/signing capabilities, provider webhooks, CSV/file/PDF HTTP responses, and Socket.IO realtime delivery remain on their documented HTTP or socket boundaries. Where an HTTP route is already owned by NestJS, the legacy backend may continue to act as the same-origin private proxy.
 
 ## Verification
 
@@ -32,10 +32,10 @@ After deployment, verify:
 1. `https://itemize.cloud` returns HTTP `200`;
 2. production `/api/health` returns HTTP `200`;
 3. a proxied GraphQL `__typename` query returns HTTP `200`;
-4. all 73 production `VITE_*_GRAPHQL` variables are `true`;
+4. all 73 domain `VITE_*_GRAPHQL` variables are `true`, and the auth switch matches the current session rollout stage;
 5. the frontend and backend deployments resolve to the Git commit containing this document;
 6. GraphQL logs contain no internal-error spike after the frontend replacement.
 
 ## Rollback
 
-Consumer rollback is data-neutral. Set only the affected `VITE_*_GRAPHQL` variables to `false` and rebuild the frontend; the retained REST adapters read the same PostgreSQL rows. Scheduler rollback is separate and must follow the mutually exclusive ownership procedure in [workflow-rollout-runbook.md](workflow-rollout-runbook.md).
+Consumer rollback is data-neutral. Set only the affected domain variables to `false` and rebuild the frontend; the retained REST adapters read the same PostgreSQL rows. Authentication rolls back as one unit by setting `VITE_AUTH_SESSION_GRAPHQL=false` and rebuilding; do not mix GraphQL login with retained refresh/CSRF/logout during rollback. Scheduler rollback is separate and must follow the mutually exclusive ownership procedure in [workflow-rollout-runbook.md](workflow-rollout-runbook.md).

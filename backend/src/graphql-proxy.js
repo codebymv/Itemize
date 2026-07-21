@@ -134,6 +134,9 @@ const createGraphqlProxy = ({
         forwardHeader(req, headers, 'cookie');
         forwardHeader(req, headers, 'x-organization-id');
         forwardHeader(req, headers, 'x-csrf-token');
+        if (typeof req.ip === 'string' && req.ip.length > 0) {
+            headers.set('x-forwarded-for', req.ip);
+        }
         if (requestId) headers.set('x-request-id', requestId);
 
         const controller = new AbortController();
@@ -154,6 +157,19 @@ const createGraphqlProxy = ({
             const contentType = upstream.headers.get('content-type');
             const upstreamRequestId = upstream.headers.get('x-request-id');
             if (contentType) res.set('content-type', contentType);
+            for (const name of ['cache-control', 'pragma', 'expires', 'x-csrf-token']) {
+                const value = upstream.headers.get(name);
+                if (value) res.set(name, value);
+            }
+            const setCookies = typeof upstream.headers.getSetCookie === 'function'
+                ? upstream.headers.getSetCookie()
+                : [];
+            const authenticationCookies = setCookies.filter((cookie) => (
+                /^(itemize_auth|itemize_refresh|csrf-token)=/.test(cookie)
+            ));
+            if (authenticationCookies.length > 0) {
+                res.setHeader('set-cookie', authenticationCookies);
+            }
             if (upstreamRequestId || requestId) {
                 res.set('x-request-id', upstreamRequestId || requestId);
             }

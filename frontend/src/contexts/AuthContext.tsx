@@ -5,6 +5,13 @@ import { storage } from '@/lib/storage';
 import axios from 'axios';
 import { toast } from '@/components/ui/use-toast';
 import logger from '@/lib/logger';
+import {
+  getCurrentUserViaGraphql,
+  isAuthSessionGraphqlEnabled,
+  loginViaGraphql,
+  logoutViaGraphql,
+} from '@/services/authGraphql';
+import { GraphqlRequestError } from '@/services/graphqlClient';
 
 export interface User {
   uid: string;
@@ -198,10 +205,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        const response = await api.get('/api/auth/me');
+        const responseData = isAuthSessionGraphqlEnabled()
+          ? await getCurrentUserViaGraphql()
+          : (await api.get('/api/auth/me')).data;
 
-        if (response.data && (response.data.id || response.data.uid)) {
-          const user = normalizeUser(response.data as Record<string, unknown>);
+        if (responseData && (responseData.id || responseData.uid)) {
+          const user = normalizeUser(responseData as unknown as Record<string, unknown>);
           if (user) {
             setCurrentUser(user);
             markAuthenticatedSession();
@@ -243,6 +252,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithEmail = useCallback(async (email: string, password: string): Promise<void> => {
     try {
+      if (isAuthSessionGraphqlEnabled()) {
+        const response = await loginViaGraphql(email, password);
+        establishSession(response.user);
+        return;
+      }
       const response = await api.post('/api/auth/login', { email, password });
 
       if (response.data.success || response.data.user) {
@@ -253,6 +267,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new AuthError(message, code);
       }
     } catch (error) {
+      if (
+        error instanceof GraphqlRequestError ||
+        (error instanceof Error && error.name === 'GraphqlRequestError')
+      ) {
+        const graphqlError = error as GraphqlRequestError;
+        throw new AuthError(
+          graphqlError.message,
+          graphqlError.reason || graphqlError.code || 'UNKNOWN',
+        );
+      }
       if (axios.isAxiosError(error) && error.response?.data) {
         const { message, code } = getAuthErrorDetails(error.response.data, 'Login failed');
         throw new AuthError(message, code);
@@ -299,7 +323,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
     try {
-      api.post('/api/auth/logout').catch((error) => {
+      const request = isAuthSessionGraphqlEnabled()
+        ? logoutViaGraphql()
+        : api.post('/api/auth/logout');
+      request.catch((error) => {
         logger.error('Backend logout failed:', error);
       });
     } catch (error) {

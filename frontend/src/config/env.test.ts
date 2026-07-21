@@ -6,6 +6,7 @@ describe('Environment Validation', () => {
     expect(env).toBeDefined();
     expect(env.MODE).toBe('test');
     expect(env.VITE_CONTACT_READS_GRAPHQL).toBe('false');
+    expect(env.VITE_AUTH_SESSION_GRAPHQL).toBe('false');
     expect(env.VITE_CONTACT_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_CONTACT_BULK_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_CONTACT_ACTIVITIES_GRAPHQL).toBe('false');

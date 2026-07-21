@@ -6,6 +6,10 @@ import { getApiUrl } from '@/lib/api';
 import { toast } from '@/components/ui/use-toast';
 import { useAuthActions, type User } from '@/contexts/AuthContext';
 import logger from '@/lib/logger';
+import {
+  isAuthSessionGraphqlEnabled,
+  loginWithGoogleAccessTokenViaGraphql,
+} from '@/services/authGraphql';
 
 /**
  * Google OAuth popup sign-in. Only use inside GoogleOAuthProvider
@@ -20,17 +24,20 @@ export function useGoogleSignIn() {
     onSuccess: async (tokenResponse) => {
       try {
         logger.debug('auth', 'Google login successful, establishing server session');
-        const apiUrl = getApiUrl();
-
-        const response = await axios.post(
-          `${apiUrl}/api/auth/google-login`,
-          {
-            accessToken: tokenResponse.access_token,
-          },
-          { withCredentials: true }
-        );
-
-        const { user: userData } = response.data as { user: User };
+        let userData: User;
+        if (isAuthSessionGraphqlEnabled()) {
+          userData = (await loginWithGoogleAccessTokenViaGraphql(
+            tokenResponse.access_token,
+          )).user as unknown as User;
+        } else {
+          const apiUrl = getApiUrl();
+          const response = await axios.post(
+            `${apiUrl}/api/auth/google-login`,
+            { accessToken: tokenResponse.access_token },
+            { withCredentials: true },
+          );
+          userData = (response.data as { user: User }).user;
+        }
         establishSession(userData);
 
         toast({

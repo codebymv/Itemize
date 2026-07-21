@@ -7,6 +7,7 @@ export type ItemizeGraphqlErrorCode =
   | 'INTERNAL_SERVER_ERROR'
   | 'NOT_FOUND'
   | 'ORGANIZATION_REQUIRED'
+  | 'RATE_LIMITED'
   | 'SERVICE_UNAVAILABLE'
   | 'UNAUTHENTICATED';
 
