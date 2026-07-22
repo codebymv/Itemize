@@ -74,6 +74,7 @@ describe('Environment Validation', () => {
     expect(env.VITE_CAMPAIGN_TEST_SEND_GRAPHQL).toBe('false');
     expect(env.VITE_CAMPAIGN_SEND_GRAPHQL).toBe('false');
     expect(env.VITE_CAMPAIGN_PAUSE_RESUME_GRAPHQL).toBe('false');
+    expect(env.VITE_SEGMENTS_GRAPHQL).toBe('false');
     expect(env.VITE_DEV_AUTH_PROBE_WITHOUT_HINT).toBe('false');
   });
 });

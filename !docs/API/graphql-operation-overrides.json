@@ -1789,39 +1789,39 @@
       "notes": "Implemented behind default-off VITE_WORKFLOW_PERFORMANCE_GRAPHQL. Organization-owned workflows count only enrollments whose contact belongs to the same organization; enrollment rows, not advisory stats JSON, drive deterministic totals and zero-safe completion rates."
     },
     "GET /api/segments": {
-      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segments", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Organization-scoped active/search filters with deterministic name and ID ordering."
+      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segments", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Implemented as a bounded organization-scoped connection with active/search filters and deterministic name/ID ordering; retained REST remains the default-off rollback path."
     },
     "POST /api/segments": {
-      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "createSegment", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "createSegment", "parityStatus": "dual-parity", "risk": "high",
       "notes": "Atomically validates the exact dynamic/static definition and tenant references, creates it, calculates membership, and records initial history."
     },
     "GET /api/segments/:id": {
-      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segment", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segment", "parityStatus": "dual-parity", "risk": "high",
       "notes": "Organization-owned definition with a bounded, newest-first calculation history projection."
     },
     "PUT /api/segments/:id": {
-      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "updateSegment", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "updateSegment", "parityStatus": "dual-parity", "risk": "high",
       "notes": "Locked atomic partial update; omitted metadata is preserved and targeting changes recalculate membership in the same transaction."
     },
     "DELETE /api/segments/:id": {
-      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "deleteSegment", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "deleteSegment", "parityStatus": "dual-parity", "risk": "high",
       "notes": "Organization-owned delete; conflicts while any campaign references the saved audience so historical targeting is not orphaned."
     },
     "POST /api/segments/:id/calculate": {
-      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "recalculateSegment", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "recalculateSegment", "parityStatus": "dual-parity", "risk": "high",
       "notes": "Serializes concurrent recalculation, fails closed on invalid definitions, updates the cached count, and appends one accurate history delta."
     },
     "GET /api/segments/:id/contacts": {
-      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segmentContacts", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segmentContacts", "parityStatus": "dual-parity", "risk": "high",
       "notes": "Evaluates the saved definition inside its organization with strict bounded pagination and deterministic ordering."
     },
     "POST /api/segments/preview": {
-      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "previewSegment", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "previewSegment", "parityStatus": "dual-parity", "risk": "high",
       "notes": "Pure query despite the legacy POST; count and sample share one validated parameterized evaluator and never persist a definition."
     },
     "GET /api/segments/filter-options": {
-      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segmentFilterOptions", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segmentFilterOptions", "parityStatus": "dual-parity", "risk": "high",
       "notes": "Tenant-scoped tags, members, and pipeline stages plus the authoritative filter/operator/status vocabulary."
     },
     "GET /api/categories": {

@@ -4,6 +4,18 @@
  */
 import api from '@/lib/api';
 import type { Contact } from '@/types';
+import { isSegmentsGraphqlEnabled } from './graphqlClient';
+import {
+    createSegmentViaGraphql,
+    deleteSegmentViaGraphql,
+    getSegmentContactsViaGraphql,
+    getSegmentFilterOptionsViaGraphql,
+    getSegmentViaGraphql,
+    getSegmentsViaGraphql,
+    previewSegmentViaGraphql,
+    recalculateSegmentViaGraphql,
+    updateSegmentViaGraphql,
+} from './segmentsGraphql';
 
 const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -98,6 +110,7 @@ export const getSegments = async (
     params: { is_active?: boolean; search?: string } = {},
     organizationId?: number
 ): Promise<Segment[]> => {
+    if (isSegmentsGraphqlEnabled()) return getSegmentsViaGraphql(params, organizationId);
     const response = await api.get('/api/segments', {
         params,
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
@@ -112,6 +125,7 @@ export const getSegment = async (
     segmentId: number,
     organizationId?: number
 ): Promise<Segment> => {
+    if (isSegmentsGraphqlEnabled()) return getSegmentViaGraphql(segmentId, organizationId);
     const response = await api.get(`/api/segments/${segmentId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -125,6 +139,7 @@ export const createSegment = async (
     segment: Partial<Segment>,
     organizationId?: number
 ): Promise<Segment> => {
+    if (isSegmentsGraphqlEnabled()) return createSegmentViaGraphql(segment, organizationId);
     const response = await api.post('/api/segments', segment, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -139,6 +154,7 @@ export const updateSegment = async (
     segment: Partial<Segment>,
     organizationId?: number
 ): Promise<Segment> => {
+    if (isSegmentsGraphqlEnabled()) return updateSegmentViaGraphql(segmentId, segment, organizationId);
     const response = await api.put(`/api/segments/${segmentId}`, segment, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -152,6 +168,7 @@ export const deleteSegment = async (
     segmentId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
+    if (isSegmentsGraphqlEnabled()) return deleteSegmentViaGraphql(segmentId, organizationId);
     const response = await api.delete(`/api/segments/${segmentId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -165,6 +182,7 @@ export const calculateSegment = async (
     segmentId: number,
     organizationId?: number
 ): Promise<Segment> => {
+    if (isSegmentsGraphqlEnabled()) return recalculateSegmentViaGraphql(segmentId, organizationId);
     const response = await api.post(`/api/segments/${segmentId}/calculate`, {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -179,6 +197,7 @@ export const getSegmentContacts = async (
     params: { page?: number; limit?: number } = {},
     organizationId?: number
 ): Promise<{ contacts: Contact[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
+    if (isSegmentsGraphqlEnabled()) return getSegmentContactsViaGraphql(segmentId, params, organizationId);
     const response = await api.get(`/api/segments/${segmentId}/contacts`, {
         params,
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
@@ -194,6 +213,7 @@ export const previewSegment = async (
     filterType: 'and' | 'or' = 'and',
     organizationId?: number
 ): Promise<SegmentPreview> => {
+    if (isSegmentsGraphqlEnabled()) return previewSegmentViaGraphql(filters, filterType, organizationId);
     const response = await api.post('/api/segments/preview', {
         filters,
         filter_type: filterType
@@ -207,6 +227,7 @@ export const previewSegment = async (
  * Get available filter options
  */
 export const getFilterOptions = async (organizationId?: number): Promise<FilterOptions> => {
+    if (isSegmentsGraphqlEnabled()) return getSegmentFilterOptionsViaGraphql(organizationId);
     const response = await api.get('/api/segments/filter-options', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });

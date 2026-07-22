@@ -39,6 +39,7 @@ import { ProductsModule } from './products/products.module';
 import { RecurringInvoicesModule } from './recurring-invoices/recurring-invoices.module';
 import { RequestContextMiddleware } from './request-context/request-context.middleware';
 import { RequestContextModule } from './request-context/request-context.module';
+import { SegmentsModule } from './segments/segments.module';
 import { TagsModule } from './tags/tags.module';
 import { WorkspaceContentModule } from './workspace-content/workspace-content.module';
 import { RealtimeOutboxModule } from './realtime-outbox/realtime-outbox.module';
@@ -62,6 +63,7 @@ const observabilityPlugins = [
     CalendarsModule,
     CalendarIntegrationsModule,
     CampaignsModule,
+    SegmentsModule,
     CampaignDeliveryModule,
     BookingsModule,
     CategoriesModule,

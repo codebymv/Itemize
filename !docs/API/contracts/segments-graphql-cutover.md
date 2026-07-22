@@ -1,6 +1,6 @@
 # Audience segments GraphQL cutover contract
 
-**Status:** Phase 0 characterization
+**Status:** Implemented at dual parity behind `VITE_SEGMENTS_GRAPHQL`
 
 **Evidence date:** 2026-07-15
 
@@ -94,4 +94,6 @@ The segment page historically read `type` while the API returns `segment_type`; 
 
 Fresh PostgreSQL coverage proves route reachability, exact status metadata, bound preview parameters, tenant isolation, hostile custom-field keys, fail-closed rule validation, dynamic and static membership, bounded pagination, partial-update rollback, serialized history deltas, saved campaign persistence, preview/send recipient agreement, duplicate preservation, delete conflict, and cross-tenant campaign rejection. Nest campaign preview additionally proves all/tag/status/dynamic/static evaluation, deliverability exclusions, retained-REST parity, foreign-campaign concealment, and corrupt saved-definition denial against a clean 102-table/77-marker schema.
 
-This slice is not ready for full traffic until segment CRUD/preview/membership has typed GraphQL inputs, the consumer gaps above are resolved, campaign send reuses the shared compiler, scheduled-campaign segment deactivation semantics are fixed, and production migration/rollback plus observability are rehearsed. The persisted-campaign audience-preview query itself is implementation- and PostgreSQL-parity-proven behind a default-off rollback flag.
+All nine authenticated segment operations are implemented in `SegmentsModule` and the existing `segmentsApi` service selects the complete GraphQL adapter behind one default-off rollback flag. Segment and campaign audience evaluation reuse the same fail-closed compiler. The frontend's currently reachable dynamic-builder journey is covered; static definitions, update/detail, and membership remain available through the complete adapter even though the current UI does not expose them.
+
+Fresh PostgreSQL now additionally proves GraphQL filter vocabulary, forged-context denial, custom-field preview, create/count/initial history, bounded list and membership reads, retained REST interoperability, partial-update preservation, metadata-only history stability, concurrent recalculation serialization, foreign-reference denial, CSRF, campaign-reference delete conflict, and final deletion. Focused frontend tests prove flag selection, organization headers, CSRF, casing, custom-field input mapping, preview, vocabulary, and delete identity. Production traffic still requires the explicit service deployment, frontend flag enablement, and a safe authenticated smoke; scheduled-campaign deactivation remains a product rule for a future UI that permits segment deactivation.

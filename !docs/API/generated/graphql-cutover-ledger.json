@@ -11,7 +11,7 @@
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 390,
     "operationsWithFrontendConsumers": 368,
-    "operationsWithBackendTests": 204,
+    "operationsWithBackendTests": 205,
     "unmatchedFrontendCallCount": 1,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
@@ -13501,20 +13501,27 @@
           "path": "/api/segments",
           "rawPath": "/api/segments",
           "source": "frontend/src/services/segmentsApi.ts",
-          "line": 101,
+          "line": 114,
           "client": "api",
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/segments",
+          "source": "backend-v2/test/integration/segments.integration-spec.ts",
+          "line": 181
+        }
+      ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
       "owner": "audiences",
       "targetOperation": "segments",
       "targetModule": "SegmentsModule",
-      "parityStatus": "characterizing",
-      "notes": "Organization-scoped active/search filters with deterministic name and ID ordering.",
+      "parityStatus": "dual-parity",
+      "notes": "Implemented as a bounded organization-scoped connection with active/search filters and deterministic name/ID ordering; retained REST remains the default-off rollback path.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -13535,7 +13542,7 @@
           "path": "/api/segments",
           "rawPath": "/api/segments",
           "source": "frontend/src/services/segmentsApi.ts",
-          "line": 128,
+          "line": 143,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13547,7 +13554,7 @@
       "owner": "audiences",
       "targetOperation": "createSegment",
       "targetModule": "SegmentsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "dual-parity",
       "notes": "Atomically validates the exact dynamic/static definition and tenant references, creates it, calculates membership, and records initial history.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13569,7 +13576,7 @@
           "path": "/api/segments/:segmentId",
           "rawPath": "/api/segments/${segmentId}",
           "source": "frontend/src/services/segmentsApi.ts",
-          "line": 155,
+          "line": 172,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13581,7 +13588,7 @@
       "owner": "audiences",
       "targetOperation": "deleteSegment",
       "targetModule": "SegmentsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "dual-parity",
       "notes": "Organization-owned delete; conflicts while any campaign references the saved audience so historical targeting is not orphaned.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13603,7 +13610,7 @@
           "path": "/api/segments/:segmentId",
           "rawPath": "/api/segments/${segmentId}",
           "source": "frontend/src/services/segmentsApi.ts",
-          "line": 115,
+          "line": 129,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13615,7 +13622,7 @@
       "owner": "audiences",
       "targetOperation": "segment",
       "targetModule": "SegmentsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "dual-parity",
       "notes": "Organization-owned definition with a bounded, newest-first calculation history projection.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13637,7 +13644,7 @@
           "path": "/api/segments/:segmentId",
           "rawPath": "/api/segments/${segmentId}",
           "source": "frontend/src/services/segmentsApi.ts",
-          "line": 142,
+          "line": 158,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13649,7 +13656,7 @@
       "owner": "audiences",
       "targetOperation": "updateSegment",
       "targetModule": "SegmentsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "dual-parity",
       "notes": "Locked atomic partial update; omitted metadata is preserved and targeting changes recalculate membership in the same transaction.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13671,7 +13678,7 @@
           "path": "/api/segments/:segmentId/calculate",
           "rawPath": "/api/segments/${segmentId}/calculate",
           "source": "frontend/src/services/segmentsApi.ts",
-          "line": 168,
+          "line": 186,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13683,7 +13690,7 @@
       "owner": "audiences",
       "targetOperation": "recalculateSegment",
       "targetModule": "SegmentsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "dual-parity",
       "notes": "Serializes concurrent recalculation, fails closed on invalid definitions, updates the cached count, and appends one accurate history delta.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13705,7 +13712,7 @@
           "path": "/api/segments/:segmentId/contacts",
           "rawPath": "/api/segments/${segmentId}/contacts",
           "source": "frontend/src/services/segmentsApi.ts",
-          "line": 182,
+          "line": 201,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13717,7 +13724,7 @@
       "owner": "audiences",
       "targetOperation": "segmentContacts",
       "targetModule": "SegmentsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "dual-parity",
       "notes": "Evaluates the saved definition inside its organization with strict bounded pagination and deterministic ordering.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13739,7 +13746,7 @@
           "path": "/api/segments/filter-options",
           "rawPath": "/api/segments/filter-options",
           "source": "frontend/src/services/segmentsApi.ts",
-          "line": 210,
+          "line": 231,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13751,7 +13758,7 @@
       "owner": "audiences",
       "targetOperation": "segmentFilterOptions",
       "targetModule": "SegmentsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "dual-parity",
       "notes": "Tenant-scoped tags, members, and pipeline stages plus the authoritative filter/operator/status vocabulary.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13773,7 +13780,7 @@
           "path": "/api/segments/preview",
           "rawPath": "/api/segments/preview",
           "source": "frontend/src/services/segmentsApi.ts",
-          "line": 197,
+          "line": 217,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13785,7 +13792,7 @@
       "owner": "audiences",
       "targetOperation": "previewSegment",
       "targetModule": "SegmentsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "dual-parity",
       "notes": "Pure query despite the legacy POST; count and sample share one validated parameterized evaluator and never persist a definition.",
       "literalInterpolationRisk": false,
       "risk": "high"

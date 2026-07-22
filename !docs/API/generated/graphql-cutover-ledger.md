@@ -9,7 +9,7 @@
 - Non-API registered operations: 7
 - Static frontend callsites: 390
 - Operations with frontend consumers: 368
-- Operations referenced by backend tests: 204
+- Operations referenced by backend tests: 205
 - Recommended GraphQL queries: 127
 - Recommended GraphQL mutations: 244
 - Recommended retained HTTP endpoints: 40
@@ -329,7 +329,7 @@
 | PUT | `/api/reputation/widgets/:id` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/reputation/widgets/:id/embed-code` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/search` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/segments` | 1 | 0 | graphql-query | high | audiences / SegmentsModule / segments |
+| GET | `/api/segments` | 1 | 1 | graphql-query | high | audiences / SegmentsModule / segments |
 | POST | `/api/segments` | 1 | 0 | graphql-mutation | high | audiences / SegmentsModule / createSegment |
 | DELETE | `/api/segments/:id` | 1 | 0 | graphql-mutation | high | audiences / SegmentsModule / deleteSegment |
 | GET | `/api/segments/:id` | 1 | 0 | graphql-query | high | audiences / SegmentsModule / segment |
