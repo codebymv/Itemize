@@ -5,9 +5,14 @@
 import api from '@/lib/api';
 import {
     isReputationAnalyticsGraphqlEnabled,
+    isReputationRequestManagementGraphqlEnabled,
     isReputationReviewsGraphqlEnabled,
 } from './graphqlClient';
 import { getReputationAnalyticsViaGraphql } from './reputationAnalyticsGraphql';
+import {
+    deleteReviewRequestViaGraphql,
+    getReviewRequestsViaGraphql,
+} from './reputationRequestsGraphql';
 import {
     createReviewViaGraphql,
     deleteReviewViaGraphql,
@@ -305,6 +310,9 @@ export const getReviewRequests = async (
     params: { status?: ReviewRequest['status'] | 'all'; page?: number; limit?: number } = {},
     organizationId?: number
 ): Promise<{ requests: ReviewRequest[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
+    if (isReputationRequestManagementGraphqlEnabled()) {
+        return getReviewRequestsViaGraphql(params, organizationId);
+    }
     const response = await api.get('/api/reputation/requests', {
         params,
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
@@ -351,6 +359,9 @@ export const deleteReviewRequest = async (
     requestId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
+    if (isReputationRequestManagementGraphqlEnabled()) {
+        return deleteReviewRequestViaGraphql(requestId, organizationId);
+    }
     const response = await api.delete(`/api/reputation/requests/${requestId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });

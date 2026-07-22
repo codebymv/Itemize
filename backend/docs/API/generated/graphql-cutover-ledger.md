@@ -9,11 +9,11 @@
 - Non-API registered operations: 7
 - Static frontend callsites: 390
 - Operations with frontend consumers: 368
-- Operations referenced by backend tests: 207
+- Operations referenced by backend tests: 208
 - Recommended GraphQL queries: 127
 - Recommended GraphQL mutations: 244
 - Recommended retained HTTP endpoints: 40
-- High-risk operations: 335
+- High-risk operations: 336
 - Unmatched frontend calls: 1
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -311,9 +311,9 @@
 | GET | `/api/reputation/public/review/:token` | 0 | 0 | graphql-query | unknown | _unassigned_ |
 | POST | `/api/reputation/public/review/:token` | 0 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/reputation/public/widget/:widgetKey` | 0 | 0 | graphql-query | unknown | _unassigned_ |
-| GET | `/api/reputation/requests` | 1 | 0 | graphql-query | high | _unassigned_ |
+| GET | `/api/reputation/requests` | 1 | 1 | graphql-query | high | reputation / ReputationRequestsModule / reputationRequests |
 | POST | `/api/reputation/requests` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| DELETE | `/api/reputation/requests/:id` | 1 | 2 | graphql-mutation | medium | _unassigned_ |
+| DELETE | `/api/reputation/requests/:id` | 1 | 2 | graphql-mutation | high | reputation / ReputationRequestsModule / deleteReputationRequest |
 | POST | `/api/reputation/requests/:id/resend` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | POST | `/api/reputation/requests/bulk` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/reputation/reviews` | 1 | 0 | graphql-query | high | reputation / ReputationReviewsModule / reputationReviews |

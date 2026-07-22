@@ -11,7 +11,7 @@
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 390,
     "operationsWithFrontendConsumers": 368,
-    "operationsWithBackendTests": 207,
+    "operationsWithBackendTests": 208,
     "unmatchedFrontendCallCount": 1,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
@@ -19,7 +19,7 @@
     "retainHttpCount": 40,
     "graphqlQueryCount": 127,
     "graphqlMutationCount": 244,
-    "highRiskCount": 335,
+    "highRiskCount": 336,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -12668,7 +12668,7 @@
           "path": "/api/reputation/analytics",
           "rawPath": "/api/reputation/analytics",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 444,
+          "line": 455,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12678,7 +12678,7 @@
           "method": "GET",
           "path": "/api/reputation/analytics",
           "source": "backend-v2/test/integration/reputation-reviews.integration-spec.ts",
-          "line": 243
+          "line": 244
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -12709,7 +12709,7 @@
           "path": "/api/reputation/platforms",
           "rawPath": "/api/reputation/platforms",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 195,
+          "line": 200,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12743,7 +12743,7 @@
           "path": "/api/reputation/platforms",
           "rawPath": "/api/reputation/platforms",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 215,
+          "line": 220,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12777,7 +12777,7 @@
           "path": "/api/reputation/platforms/:platformId",
           "rawPath": "/api/reputation/platforms/${platformId}",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 225,
+          "line": 230,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12883,20 +12883,27 @@
           "path": "/api/reputation/requests",
           "rawPath": "/api/reputation/requests",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 308,
+          "line": 316,
           "client": "api",
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/reputation/requests",
+          "source": "backend-v2/test/integration/reputation-reviews.integration-spec.ts",
+          "line": 337
+        }
+      ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "reputation",
+      "targetOperation": "reputationRequests",
+      "targetModule": "ReputationRequestsModule",
+      "parityStatus": "dual-parity",
+      "notes": "Bounded organization-scoped management list with stable created-at/ID ordering, one repeatable-read count/page snapshot, tenant-qualified contact projection, and no public capability token.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -12917,7 +12924,7 @@
           "path": "/api/reputation/requests",
           "rawPath": "/api/reputation/requests",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 329,
+          "line": 337,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12951,7 +12958,7 @@
           "path": "/api/reputation/requests/:requestId",
           "rawPath": "/api/reputation/requests/${requestId}",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 354,
+          "line": 365,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12973,13 +12980,13 @@
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "reputation",
+      "targetOperation": "deleteReputationRequest",
+      "targetModule": "ReputationRequestsModule",
+      "parityStatus": "dual-parity",
+      "notes": "CSRF-protected organization-qualified delete returning exact stable identity with private foreign and repeated misses; provider delivery operations remain retained.",
       "literalInterpolationRisk": false,
-      "risk": "medium"
+      "risk": "high"
     },
     {
       "id": "POST /api/reputation/requests/:id/resend",
@@ -12998,7 +13005,7 @@
           "path": "/api/reputation/requests/:requestId/resend",
           "rawPath": "/api/reputation/requests/${requestId}/resend",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 205,
+          "line": 210,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13032,7 +13039,7 @@
           "path": "/api/reputation/requests/bulk",
           "rawPath": "/api/reputation/requests/bulk",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 344,
+          "line": 352,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13066,7 +13073,7 @@
           "path": "/api/reputation/reviews",
           "rawPath": "/api/reputation/reviews",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 248,
+          "line": 253,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13100,7 +13107,7 @@
           "path": "/api/reputation/reviews",
           "rawPath": "/api/reputation/reviews",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 271,
+          "line": 276,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13134,7 +13141,7 @@
           "path": "/api/reputation/reviews/:reviewId",
           "rawPath": "/api/reputation/reviews/${reviewId}",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 294,
+          "line": 299,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13168,7 +13175,7 @@
           "path": "/api/reputation/reviews/:reviewId",
           "rawPath": "/api/reputation/reviews/${reviewId}",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 260,
+          "line": 265,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13178,7 +13185,7 @@
           "method": "GET",
           "path": "/api/reputation/reviews/:reviewId",
           "source": "backend-v2/test/integration/reputation-reviews.integration-spec.ts",
-          "line": 151
+          "line": 152
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -13209,7 +13216,7 @@
           "path": "/api/reputation/reviews/:reviewId",
           "rawPath": "/api/reputation/reviews/${reviewId}",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 283,
+          "line": 288,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13243,7 +13250,7 @@
           "path": "/api/reputation/settings",
           "rawPath": "/api/reputation/settings",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 417,
+          "line": 428,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13277,7 +13284,7 @@
           "path": "/api/reputation/settings",
           "rawPath": "/api/reputation/settings",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 427,
+          "line": 438,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13311,7 +13318,7 @@
           "path": "/api/reputation/widgets",
           "rawPath": "/api/reputation/widgets",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 365,
+          "line": 376,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13345,7 +13352,7 @@
           "path": "/api/reputation/widgets",
           "rawPath": "/api/reputation/widgets",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 375,
+          "line": 386,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13379,7 +13386,7 @@
           "path": "/api/reputation/widgets/:widgetId",
           "rawPath": "/api/reputation/widgets/${widgetId}",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 396,
+          "line": 407,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13413,7 +13420,7 @@
           "path": "/api/reputation/widgets/:widgetId",
           "rawPath": "/api/reputation/widgets/${widgetId}",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 386,
+          "line": 397,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13447,7 +13454,7 @@
           "path": "/api/reputation/widgets/:widgetId/embed-code",
           "rawPath": "/api/reputation/widgets/${widgetId}/embed-code",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 406,
+          "line": 417,
           "client": "api",
           "literalInterpolation": false
         }

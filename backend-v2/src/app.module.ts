@@ -38,6 +38,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { ProductsModule } from './products/products.module';
 import { RecurringInvoicesModule } from './recurring-invoices/recurring-invoices.module';
 import { ReputationReviewsModule } from './reputation-reviews/reputation-reviews.module';
+import { ReputationRequestsModule } from './reputation-requests/reputation-requests.module';
 import { RequestContextMiddleware } from './request-context/request-context.middleware';
 import { RequestContextModule } from './request-context/request-context.module';
 import { SegmentsModule } from './segments/segments.module';
@@ -81,6 +82,7 @@ const observabilityPlugins = [
     ProductsModule,
     RecurringInvoicesModule,
     ReputationReviewsModule,
+    ReputationRequestsModule,
     TagsModule,
     FormsModule,
     InvoiceBusinessesModule,

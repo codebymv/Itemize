@@ -24,6 +24,7 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
   let memberToken: string;
   let outsiderToken: string;
   let reviewId: number;
+  let requestManagementId: number;
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -260,6 +261,84 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
     expect(invalid.body.errors[0].extensions).toMatchObject({
       code: 'BAD_USER_INPUT', reason: 'INVALID_REPUTATION_ANALYTICS_PERIOD',
     });
+  });
+
+  it('lists review requests with stable tenant-scoped paging and fail-closed contact joins', async () => {
+    const inserted = await pool.query<{ id: number }>(
+      `INSERT INTO review_requests
+       (organization_id,contact_id,contact_email,contact_name,channel,status,unique_token,created_at)
+       VALUES ($1,$2,$3,'Primary pending','email','pending',$6,NOW()),
+              ($1,$4,$5,'Foreign pointer','sms','sent',$7,NOW())
+       RETURNING id`,
+      [organizationId, contactId, `primary-request-${Date.now()}@test.itemize`,
+        outsiderContactId, `foreign-pointer-${Date.now()}@test.itemize`,
+        `primary-token-${Date.now()}`, `pointer-token-${Date.now()}`],
+    );
+    const [pendingId, corruptContactId] = inserted.rows.map((value) => Number(value.id));
+    requestManagementId = pendingId;
+    const fields = `id organizationId contactId contactEmail contactName channel emailSent emailOpened
+      smsSent clicked reviewSubmitted status createdAt updatedAt contactFirstName contactLastName currentContactEmail`;
+    const page = await graphql(
+      `query Requests($page:PageInput){ reputationRequests(page:$page){
+        nodes { ${fields} } pageInfo { page pageSize total totalPages }
+      } }`,
+      { page: { page: 1, pageSize: 2 } }, { csrf: false },
+    ).expect(200);
+    expect(page.body.errors).toBeUndefined();
+    expect(page.body.data.reputationRequests.pageInfo).toEqual({
+      page: 1, pageSize: 2, total: 3, totalPages: 2,
+    });
+    expect(page.body.data.reputationRequests.nodes.map((value: { id: number }) => value.id))
+      .toEqual([corruptContactId, pendingId]);
+    expect(page.body.data.reputationRequests.nodes[0]).toMatchObject({
+      id: corruptContactId, organizationId, contactId: outsiderContactId,
+      contactFirstName: null, contactLastName: null, currentContactEmail: null,
+    });
+    expect(JSON.stringify(page.body)).not.toContain('pointer-token');
+
+    const filtered = await graphql(
+      `query { reputationRequests(filter:{status:"pending"}){
+        nodes { id status } pageInfo { total }
+      } }`, {}, { csrf: false },
+    ).expect(200);
+    expect(filtered.body.data.reputationRequests).toEqual({
+      nodes: [{ id: pendingId, status: 'pending' }], pageInfo: { total: 1 },
+    });
+
+    const invalid = await graphql(
+      'query { reputationRequests(filter:{status:"unknown"}){ pageInfo { total } } }',
+      {}, { csrf: false },
+    ).expect(200);
+    expect(invalid.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
+  });
+
+  it('requires CSRF and deletes request identity without crossing tenants', async () => {
+    const noCsrf = await graphql(
+      'mutation Delete($id:Int!){ deleteReputationRequest(id:$id){ deletedId } }',
+      { id: requestManagementId }, { csrf: false },
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+
+    const foreignRequest = await pool.query<{ id: number }>(
+      'SELECT id FROM review_requests WHERE organization_id=$1 ORDER BY id ASC LIMIT 1',
+      [outsiderOrganizationId],
+    );
+    const denied = await graphql(
+      'mutation Delete($id:Int!){ deleteReputationRequest(id:$id){ deletedId } }',
+      { id: Number(foreignRequest.rows[0].id) },
+    ).expect(200);
+    expect(denied.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const deleted = await graphql(
+      'mutation Delete($id:Int!){ deleteReputationRequest(id:$id){ deletedId } }',
+      { id: requestManagementId },
+    ).expect(200);
+    expect(deleted.body.data.deleteReputationRequest).toEqual({ deletedId: requestManagementId });
+    const legacy = await request(legacyApp).get('/api/reputation/requests?status=pending')
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId)).expect(200);
+    expect(legacy.body.requests.some((value: { id: number }) => Number(value.id) === requestManagementId))
+      .toBe(false);
   });
 
   it('composes concurrent partial updates and keeps response metadata coherent', async () => {

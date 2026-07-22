@@ -260,6 +260,9 @@ export const isReputationReviewsGraphqlEnabled = (): boolean =>
 export const isReputationAnalyticsGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_REPUTATION_ANALYTICS_GRAPHQL === 'true';
 
+export const isReputationRequestManagementGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_REPUTATION_REQUEST_MANAGEMENT_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

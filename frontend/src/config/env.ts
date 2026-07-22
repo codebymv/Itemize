@@ -88,6 +88,7 @@ const envSchema = z.object({
   VITE_SEGMENTS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_REPUTATION_REVIEWS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_REPUTATION_ANALYTICS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
+  VITE_REPUTATION_REQUEST_MANAGEMENT_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_DEV_AUTH_PROBE_WITHOUT_HINT: z.enum(['true', 'false']).optional().default('false'),
   
   // OAuth
@@ -195,6 +196,7 @@ if (import.meta.env.DEV) {
     segmentsGraphql: env.VITE_SEGMENTS_GRAPHQL === 'true',
     reputationReviewsGraphql: env.VITE_REPUTATION_REVIEWS_GRAPHQL === 'true',
     reputationAnalyticsGraphql: env.VITE_REPUTATION_ANALYTICS_GRAPHQL === 'true',
+    reputationRequestManagementGraphql: env.VITE_REPUTATION_REQUEST_MANAGEMENT_GRAPHQL === 'true',
     devAuthProbeWithoutHint: env.VITE_DEV_AUTH_PROBE_WITHOUT_HINT === 'true',
     hasClientId: !!env.VITE_GOOGLE_CLIENT_ID,
     productionDomain: env.VITE_PRODUCTION_DOMAIN || undefined,
