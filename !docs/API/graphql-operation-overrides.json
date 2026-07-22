@@ -1828,6 +1828,26 @@
       "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "categories", "parityStatus": "dual-parity", "risk": "high",
       "notes": "Authenticated user-scoped categories with deterministic ordering and no synthetic fallback data."
     },
+    "GET /api/reputation/reviews": {
+      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationReviewsModule", "targetOperation": "reputationReviews", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Bounded organization-scoped connection with platform/rating/status/sentiment/search filters, stable review-date/ID ordering, and one repeatable-read count/page snapshot."
+    },
+    "GET /api/reputation/reviews/:id": {
+      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationReviewsModule", "targetOperation": "reputationReview", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Private organization-owned detail with platform and contact joins independently qualified by organization."
+    },
+    "POST /api/reputation/reviews": {
+      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationReviewsModule", "targetOperation": "createReputationReview", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "CSRF-protected manual create with bounded content, deterministic sentiment, and locked tenant-platform/contact validation in one transaction."
+    },
+    "PUT /api/reputation/reviews/:id": {
+      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationReviewsModule", "targetOperation": "updateReputationReview", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "CSRF-protected row-locked partial update; concurrent patches compose and response text, status, responder, and timestamp remain coherent."
+    },
+    "DELETE /api/reputation/reviews/:id": {
+      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationReviewsModule", "targetOperation": "deleteReputationReview", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "CSRF-protected organization-qualified delete returning exact stable identity with private foreign and repeated misses."
+    },
     "POST /api/categories": {
       "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "createCategory", "parityStatus": "dual-parity", "risk": "high",
       "notes": "CSRF-protected normalized create; the General invariant is seeded for every existing and newly inserted user."

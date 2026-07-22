@@ -6,9 +6,9 @@
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "changePassword",
-      "parityStatus": "not-started",
+      "parityStatus": "dual-parity",
       "risk": "high",
-      "notes": "Authenticated credential rotation; preserve current-password verification, password policy, CSRF, and notification side effects."
+      "notes": "NestJS verifies the current bcrypt hash, enforces password policy and a changed value, conditionally updates the still-current hash, clears reset state, requires CSRF, and attempts notification after commit."
     },
     "GET /api/auth/csrf": {
       "disposition": "retain-http",
@@ -24,9 +24,9 @@
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "requestPasswordReset",
-      "parityStatus": "not-started",
+      "parityStatus": "dual-parity",
       "risk": "high",
-      "notes": "Must retain non-enumerating responses, strict rate limits, hashed one-hour tokens, and email side effects."
+      "notes": "NestJS preserves the generic response and strict throttle, rotates a random token stored only as a hash with one-hour expiry for eligible local accounts, and starts delivery after persistence without awaiting provider latency in the public response."
     },
     "POST /api/auth/google-credential": {
       "disposition": "merge-into-graphql-operation",
@@ -78,9 +78,9 @@
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "updateViewerProfile",
-      "parityStatus": "characterizing",
+      "parityStatus": "dual-parity",
       "risk": "medium",
-      "notes": "Requires authentication and CSRF; trim the name and enforce a 1-100 character contract."
+      "notes": "NestJS requires authentication and CSRF, trims the name, enforces a 1-100 character contract, and returns the normalized viewer."
     },
     "POST /api/auth/refresh": {
       "disposition": "retain-http",
@@ -96,36 +96,36 @@
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "register",
-      "parityStatus": "not-started",
+      "parityStatus": "dual-parity",
       "risk": "high",
-      "notes": "Target contract makes user, personal organization, owner membership, and default-organization assignment atomic."
+      "notes": "NestJS creates the user, personal organization, owner membership, and default-organization assignment in one transaction; the default-off identity flag preserves REST rollback."
     },
     "POST /api/auth/resend-verification": {
       "disposition": "graphql-mutation",
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "resendVerificationEmail",
-      "parityStatus": "not-started",
+      "parityStatus": "dual-parity",
       "risk": "high",
-      "notes": "Preserve non-enumerating responses, strict rate limits, hashed tokens, 24-hour expiry, and email behavior."
+      "notes": "NestJS preserves a non-enumerating response, an independent strict rate-limit bucket, hashed tokens, 24-hour expiry, and post-commit email delivery."
     },
     "POST /api/auth/reset-password": {
       "disposition": "graphql-mutation",
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "resetPassword",
-      "parityStatus": "not-started",
+      "parityStatus": "dual-parity",
       "risk": "high",
-      "notes": "Consume a valid hashed reset token once, enforce password policy, clear reset state, and notify the user."
+      "notes": "NestJS enforces password policy and atomically consumes a valid hashed reset token while replacing the bcrypt hash and clearing reset state; concurrent reuse has one winner."
     },
     "POST /api/auth/verify-email": {
       "disposition": "graphql-mutation",
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "verifyEmail",
-      "parityStatus": "not-started",
+      "parityStatus": "dual-parity",
       "risk": "high",
-      "notes": "Consume a valid hashed verification token, mark the email verified, issue cookie-only session credentials, and send welcome notification."
+      "notes": "NestJS conditionally consumes a valid hashed token once, marks the email verified, issues cookie-only session credentials, and attempts the welcome notification after commit."
     },
     "GET /api/organizations": {
       "disposition": "graphql-query",
@@ -1789,44 +1789,64 @@
       "notes": "Implemented behind default-off VITE_WORKFLOW_PERFORMANCE_GRAPHQL. Organization-owned workflows count only enrollments whose contact belongs to the same organization; enrollment rows, not advisory stats JSON, drive deterministic totals and zero-safe completion rates."
     },
     "GET /api/segments": {
-      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segments", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Organization-scoped active/search filters with deterministic name and ID ordering."
+      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segments", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Implemented as a bounded organization-scoped connection with active/search filters and deterministic name/ID ordering; retained REST remains the default-off rollback path."
     },
     "POST /api/segments": {
-      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "createSegment", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "createSegment", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Atomically validates the exact dynamic/static definition and tenant references, creates it, calculates membership, and records initial history."
     },
     "GET /api/segments/:id": {
-      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segment", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segment", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Organization-owned definition with a bounded, newest-first calculation history projection."
     },
     "PUT /api/segments/:id": {
-      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "updateSegment", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "updateSegment", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Locked atomic partial update; omitted metadata is preserved and targeting changes recalculate membership in the same transaction."
     },
     "DELETE /api/segments/:id": {
-      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "deleteSegment", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "deleteSegment", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Organization-owned delete; conflicts while any campaign references the saved audience so historical targeting is not orphaned."
     },
     "POST /api/segments/:id/calculate": {
-      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "recalculateSegment", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "recalculateSegment", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Serializes concurrent recalculation, fails closed on invalid definitions, updates the cached count, and appends one accurate history delta."
     },
     "GET /api/segments/:id/contacts": {
-      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segmentContacts", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segmentContacts", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Evaluates the saved definition inside its organization with strict bounded pagination and deterministic ordering."
     },
     "POST /api/segments/preview": {
-      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "previewSegment", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "previewSegment", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Pure query despite the legacy POST; count and sample share one validated parameterized evaluator and never persist a definition."
     },
     "GET /api/segments/filter-options": {
-      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segmentFilterOptions", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segmentFilterOptions", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Tenant-scoped tags, members, and pipeline stages plus the authoritative filter/operator/status vocabulary."
     },
     "GET /api/categories": {
       "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "categories", "parityStatus": "dual-parity", "risk": "high",
       "notes": "Authenticated user-scoped categories with deterministic ordering and no synthetic fallback data."
+    },
+    "GET /api/reputation/reviews": {
+      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationReviewsModule", "targetOperation": "reputationReviews", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Bounded organization-scoped connection with platform/rating/status/sentiment/search filters, stable review-date/ID ordering, and one repeatable-read count/page snapshot."
+    },
+    "GET /api/reputation/reviews/:id": {
+      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationReviewsModule", "targetOperation": "reputationReview", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Private organization-owned detail with platform and contact joins independently qualified by organization."
+    },
+    "POST /api/reputation/reviews": {
+      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationReviewsModule", "targetOperation": "createReputationReview", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "CSRF-protected manual create with bounded content, deterministic sentiment, and locked tenant-platform/contact validation in one transaction."
+    },
+    "PUT /api/reputation/reviews/:id": {
+      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationReviewsModule", "targetOperation": "updateReputationReview", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "CSRF-protected row-locked partial update; concurrent patches compose and response text, status, responder, and timestamp remain coherent."
+    },
+    "DELETE /api/reputation/reviews/:id": {
+      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationReviewsModule", "targetOperation": "deleteReputationReview", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "CSRF-protected organization-qualified delete returning exact stable identity with private foreign and repeated misses."
     },
     "POST /api/categories": {
       "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "createCategory", "parityStatus": "dual-parity", "risk": "high",

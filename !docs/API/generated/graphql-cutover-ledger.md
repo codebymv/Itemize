@@ -9,7 +9,7 @@
 - Non-API registered operations: 7
 - Static frontend callsites: 390
 - Operations with frontend consumers: 368
-- Operations referenced by backend tests: 205
+- Operations referenced by backend tests: 206
 - Recommended GraphQL queries: 127
 - Recommended GraphQL mutations: 244
 - Recommended retained HTTP endpoints: 40
@@ -316,11 +316,11 @@
 | DELETE | `/api/reputation/requests/:id` | 1 | 2 | graphql-mutation | medium | _unassigned_ |
 | POST | `/api/reputation/requests/:id/resend` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | POST | `/api/reputation/requests/bulk` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/reputation/reviews` | 1 | 0 | graphql-query | high | _unassigned_ |
-| POST | `/api/reputation/reviews` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| DELETE | `/api/reputation/reviews/:id` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/reputation/reviews/:id` | 1 | 0 | graphql-query | high | _unassigned_ |
-| PUT | `/api/reputation/reviews/:id` | 1 | 0 | graphql-mutation | high | _unassigned_ |
+| GET | `/api/reputation/reviews` | 1 | 0 | graphql-query | high | reputation / ReputationReviewsModule / reputationReviews |
+| POST | `/api/reputation/reviews` | 1 | 0 | graphql-mutation | high | reputation / ReputationReviewsModule / createReputationReview |
+| DELETE | `/api/reputation/reviews/:id` | 1 | 0 | graphql-mutation | high | reputation / ReputationReviewsModule / deleteReputationReview |
+| GET | `/api/reputation/reviews/:id` | 1 | 1 | graphql-query | high | reputation / ReputationReviewsModule / reputationReview |
+| PUT | `/api/reputation/reviews/:id` | 1 | 0 | graphql-mutation | high | reputation / ReputationReviewsModule / updateReputationReview |
 | GET | `/api/reputation/settings` | 1 | 0 | graphql-query | high | _unassigned_ |
 | PUT | `/api/reputation/settings` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/reputation/widgets` | 1 | 0 | graphql-query | high | _unassigned_ |

@@ -1,6 +1,6 @@
 # Authentication GraphQL cutover contract
 
-**Status:** Core browser session enabled in production behind a one-switch REST rollback
+**Status:** Session, registration/verification, and password recovery enabled; password change and viewer profile implemented with no retained frontend consumer
 **Owner:** Identity, with Platform Security owning cookie and CSRF transport  
 **NestJS boundary:** `AuthModule`
 
@@ -8,9 +8,13 @@
 
 Authentication remains cookie based. GraphQL must not return bearer or refresh tokens to browser JavaScript. The access token stays in `itemize_auth`; the refresh token stays in `itemize_refresh`; both remain `httpOnly` and scoped to `/`.
 
-The browser session protocol now moves as one unit behind `VITE_AUTH_SESSION_GRAPHQL`: login, active Google access-token login, current-user hydration, CSRF issuance, access refresh, and logout. The retained HTTP endpoints remain executable rollback paths. Registration, verification, recovery, password change, and profile update remain on REST until their transactional email/profile contracts are implemented.
+The browser session protocol moves as one unit behind `VITE_AUTH_SESSION_GRAPHQL`: login, active Google access-token login, current-user hydration, CSRF issuance, access refresh, and logout. Registration, email verification, and verification resend move together behind `VITE_AUTH_IDENTITY_GRAPHQL`. Forgot/reset password use the independent `VITE_AUTH_RECOVERY_GRAPHQL` switch. Authenticated `changePassword` and `updateViewerProfile` are implemented and tested in the schema; there is no current frontend REST consumer to switch. Every active consumer retains an executable HTTP rollback path.
 
 The coordinated switch was enabled in production on 2026-07-21. Backend deployment `5d155af6-e84b-4a8a-a385-2867a01f8fc2`, GraphQL deployment `62755717-ecb6-4249-8ee7-748f229d620b`, and frontend deployment `75a3b29a-3870-492a-b99e-d6f0c5cd9475` serve commit `9f3a4c86`. Same-origin probes verified the CSRF/cookie allowlist and stable anonymous errors, and a real browser login attempt was observed as GraphQL `Login` with no retained REST auth request.
+
+Registration, verification, and resend were enabled on 2026-07-21 from commit `44281ad3`: backend deployment `1fc4a8c1-7a73-4459-8868-d6826bd4ac99`, GraphQL deployment `7c9b6fc2-2af6-474b-be47-9ec1052a40f3`, and flag-enabled frontend deployment `0186d765-2661-49a6-9d77-f4c7e01e889e`. Safe production probes returned `BAD_USER_INPUT` for malformed registration, `INVALID_TOKEN` for an unknown verification token, and the generic success envelope for a missing resend identity without creating a row. The deployed browser rendered the verification error while GraphQL observability recorded `operationName="VerifyEmail"`; no retained REST request handled that page load.
+
+Forgot/reset password were enabled on 2026-07-21 from commit `28d0b0af`: backend deployment `eccd0bb5-02f7-4799-80e9-a9a47a776033`, GraphQL deployment `2037928f-a948-48ca-9828-a3735d28eca1`, and flag-enabled frontend deployment `83913ee7-6566-4820-b181-033ebaa9dd12`. Safe production probes verified malformed email rejection, the generic missing-account envelope, invalid reset-token rejection, and anonymous profile denial without creating a row or sending email. A deployed forgot-password submission rendered the generic success state while NestJS recorded `operationName="RequestPasswordReset"` in 9 ms.
 
 The active Google flow now sends an access token to the backend. The backend validates that token's audience against `GOOGLE_CLIENT_ID`, fetches the Google profile itself, requires a verified email, and derives the account identity from that provider response. Client-supplied Google IDs, email addresses, and names are not trusted.
 
@@ -49,7 +53,7 @@ The active Google flow now sends an access token to the backend. The backend val
 - Authentication establishes user identity only. It does not authorize an organization supplied by the client.
 - GraphQL context resolves the requested organization from the organization header or the user's default organization, then verifies current membership in PostgreSQL.
 - Role and membership are database facts, not trusted JWT claims. Cross-organization access returns `FORBIDDEN` without revealing whether the target record exists.
-- Registration's intended contract is atomic creation of the user, personal organization, owner membership, and default organization. The legacy route currently catches organization-creation failure and can leave a user without a workspace; that behavior is not accepted as the target contract and requires a PostgreSQL characterization/fix before dual parity.
+- Registration atomically creates the user, personal organization, owner membership, and default organization. A workspace failure rolls back the complete identity transaction instead of preserving the legacy route's partial account.
 
 ## GraphQL error contract
 
@@ -89,7 +93,7 @@ Password recovery and verification resend must not expose account existence thro
 7. Google token failure, wrong audience, unverified email, normalized verified identity, existing account, new account, and workspace-creation rollback.
 8. Organization header/default selection, non-member denial, role changes after token issuance, and cross-tenant record denial.
 
-Current executable evidence covers cookie-only local GraphQL login, generic bad credentials, `currentUser`, public CSRF issuance, CSRF-protected access refresh, logout cookie expiration, and the legacy attempt limit. HTTP-level Nest tests prove that response bodies contain no token, both session cookies are `httpOnly`, refreshed access cookies authenticate subsequent operations, and failed login emits no cookie. The same-origin proxy proves the cookie/cache header allowlist and frontend tests prove one-flag routing, no refresh loop on public login failure, CSRF transport, refresh retry, REST-default behavior, and logout mapping. Existing evidence continues to cover profile update, Google legacy-payload rejection, provider audience and verified-email validation, server-derived identity, global CSRF guards, and tenant-scoped mutation denial. Remaining registration, verification, recovery, Google live-provider, identity-concurrency, and transaction scenarios still require expansion in the disposable integration environment and production-like browser coverage.
+Current executable evidence covers cookie-only local GraphQL login, generic bad credentials, `currentUser`, public CSRF issuance, CSRF-protected access refresh, logout cookie expiration, and the legacy attempt limit. HTTP-level Nest tests prove that response bodies contain no token, both session cookies are `httpOnly`, refreshed access cookies authenticate subsequent operations, and failed login emits no cookie. Fresh PostgreSQL additionally proves atomic account/workspace creation and rollback, concurrent single-winner verification and password reset, hashed verification/reset token storage, cookie-only verification sessions, non-enumerating resend/recovery, bcrypt replacement, authenticated current-hash password change, CSRF denial, and trimmed profile persistence. The same-origin proxy proves the cookie/cache header allowlist, while frontend tests prove independent default-off session, identity, and recovery routing plus stable adapter mapping and REST rollback. Production probes and deployed browser flows verify registration/verification/resend and password recovery are active through GraphQL. Google live-provider behavior remains outstanding.
 
 ## Known consumer issue
 

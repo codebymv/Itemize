@@ -3,6 +3,14 @@
  * Handles reviews, requests, widgets, and analytics
  */
 import api from '@/lib/api';
+import { isReputationReviewsGraphqlEnabled } from './graphqlClient';
+import {
+    createReviewViaGraphql,
+    deleteReviewViaGraphql,
+    getReviewViaGraphql,
+    getReviewsViaGraphql,
+    updateReviewViaGraphql
+} from './reputationReviewsGraphql';
 
 const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -64,6 +72,7 @@ export interface Review {
     contact_first_name?: string;
     contact_last_name?: string;
     contact_email?: string;
+    review_url?: string;
 }
 
 export interface ReviewRequest {
@@ -231,6 +240,7 @@ export const getReviews = async (
     } = {},
     organizationId?: number
 ): Promise<{ reviews: Review[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
+    if (isReputationReviewsGraphqlEnabled()) return getReviewsViaGraphql(params, organizationId);
     const response = await api.get('/api/reputation/reviews', {
         params,
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
@@ -242,6 +252,7 @@ export const getReview = async (
     reviewId: number,
     organizationId?: number
 ): Promise<Review> => {
+    if (isReputationReviewsGraphqlEnabled()) return getReviewViaGraphql(reviewId, organizationId);
     const response = await api.get(`/api/reputation/reviews/${reviewId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -252,6 +263,7 @@ export const createReview = async (
     review: Partial<Review>,
     organizationId?: number
 ): Promise<Review> => {
+    if (isReputationReviewsGraphqlEnabled()) return createReviewViaGraphql(review, organizationId);
     const response = await api.post('/api/reputation/reviews', review, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -263,6 +275,7 @@ export const updateReview = async (
     update: Partial<Pick<Review, 'status' | 'response_text' | 'internal_notes' | 'contact_id'>>,
     organizationId?: number
 ): Promise<Review> => {
+    if (isReputationReviewsGraphqlEnabled()) return updateReviewViaGraphql(reviewId, update, organizationId);
     const response = await api.put(`/api/reputation/reviews/${reviewId}`, update, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -273,6 +286,7 @@ export const deleteReview = async (
     reviewId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
+    if (isReputationReviewsGraphqlEnabled()) return deleteReviewViaGraphql(reviewId, organizationId);
     const response = await api.delete(`/api/reputation/reviews/${reviewId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });

@@ -254,6 +254,9 @@ export const isCampaignPauseResumeGraphqlEnabled = (): boolean =>
 export const isSegmentsGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_SEGMENTS_GRAPHQL === 'true';
 
+export const isReputationReviewsGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_REPUTATION_REVIEWS_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;
