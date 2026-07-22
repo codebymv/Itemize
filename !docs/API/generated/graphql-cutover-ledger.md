@@ -9,7 +9,7 @@
 - Non-API registered operations: 7
 - Static frontend callsites: 390
 - Operations with frontend consumers: 368
-- Operations referenced by backend tests: 206
+- Operations referenced by backend tests: 207
 - Recommended GraphQL queries: 127
 - Recommended GraphQL mutations: 244
 - Recommended retained HTTP endpoints: 40
@@ -304,7 +304,7 @@
 | GET | `/api/public/sign/:token/download` | 0 | 0 | retain-http | high | esignatures / SignatureFilesModule / downloadSigningPdf |
 | GET | `/api/public/sign/:token/file` | 0 | 0 | retain-http | high | esignatures / SignatureFilesModule / streamSigningPdf |
 | POST | `/api/public/sign/:token/verify` | 0 | 0 | retain-http | high | esignatures / PublicSigningModule / verifySigner |
-| GET | `/api/reputation/analytics` | 1 | 0 | graphql-query | high | _unassigned_ |
+| GET | `/api/reputation/analytics` | 1 | 1 | graphql-query | high | reputation / AnalyticsModule / reputationAnalytics |
 | GET | `/api/reputation/platforms` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/reputation/platforms` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | DELETE | `/api/reputation/platforms/:id` | 1 | 0 | graphql-mutation | high | _unassigned_ |

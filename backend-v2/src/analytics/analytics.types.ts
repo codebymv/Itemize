@@ -539,3 +539,108 @@ export class WorkflowPerformanceAnalytics {
   @Field(() => WorkflowAnalyticsSummary)
   summary: WorkflowAnalyticsSummary;
 }
+
+@ObjectType()
+export class ReputationOverallAnalytics {
+  @Field(() => Float)
+  totalReviews: number;
+
+  @Field(() => Float)
+  averageRating: number;
+
+  @Field(() => Float)
+  positiveReviews: number;
+
+  @Field(() => Float)
+  negativeReviews: number;
+
+  @Field(() => Float)
+  newReviews: number;
+
+  @Field(() => Float)
+  respondedReviews: number;
+}
+
+@ObjectType()
+export class ReputationPeriodAnalytics {
+  @Field(() => Int)
+  days: number;
+
+  @Field(() => Float)
+  reviewsCount: number;
+
+  @Field(() => Float)
+  averageRating: number;
+}
+
+@ObjectType()
+export class ReputationRatingDistribution {
+  @Field(() => Int)
+  rating: number;
+
+  @Field(() => Float)
+  count: number;
+}
+
+@ObjectType()
+export class ReputationPlatformDistribution {
+  @Field(() => String)
+  platform: string;
+
+  @Field(() => Float)
+  count: number;
+
+  @Field(() => Float)
+  averageRating: number;
+}
+
+@ObjectType()
+export class ReputationReviewTimeBucket {
+  @Field(() => GraphQLISODateTime)
+  date: Date;
+
+  @Field(() => Float)
+  count: number;
+
+  @Field(() => Float)
+  averageRating: number;
+}
+
+@ObjectType()
+export class ReputationRequestAnalytics {
+  @Field(() => Float)
+  totalSent: number;
+
+  @Field(() => Float)
+  clicked: number;
+
+  @Field(() => Float)
+  converted: number;
+}
+
+@ObjectType()
+export class ReputationAnalytics {
+  @Field(() => GraphQLISODateTime)
+  asOf: Date;
+
+  @Field(() => String)
+  reportingTimezone: string;
+
+  @Field(() => ReputationOverallAnalytics)
+  overall: ReputationOverallAnalytics;
+
+  @Field(() => ReputationPeriodAnalytics)
+  period: ReputationPeriodAnalytics;
+
+  @Field(() => [ReputationRatingDistribution])
+  ratingDistribution: ReputationRatingDistribution[];
+
+  @Field(() => [ReputationPlatformDistribution])
+  platformDistribution: ReputationPlatformDistribution[];
+
+  @Field(() => [ReputationReviewTimeBucket])
+  reviewsOverTime: ReputationReviewTimeBucket[];
+
+  @Field(() => ReputationRequestAnalytics)
+  requestStats: ReputationRequestAnalytics;
+}

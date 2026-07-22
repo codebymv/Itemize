@@ -61,6 +61,7 @@ describe('AnalyticsService', () => {
       bookingAnalytics: jest.fn(),
       communicationStats: jest.fn(),
       workflowPerformance: jest.fn(),
+      reputationAnalytics: jest.fn(),
     } as unknown as jest.Mocked<AnalyticsRepository>;
     service = new AnalyticsService(repository);
   });
@@ -186,6 +187,38 @@ describe('AnalyticsService', () => {
         completedEnrollments: 2, activeEnrollments: 1, failedEnrollments: 1,
         overallCompletionRate: 50,
       },
+    });
+  });
+
+  it('normalizes reputation metrics and validates the bounded day window', async () => {
+    repository.reputationAnalytics.mockResolvedValue({
+      asOf: new Date('2026-07-20T18:00:00.000Z'),
+      data: {
+        overall: {
+          total_reviews: '3', average_rating: '4.333333', positive_reviews: '2',
+          negative_reviews: '1', new_reviews: '1', responded_reviews: '2',
+        },
+        period: { reviews_count: '2', average_rating: '4.5' },
+        ratingDistribution: [{ rating: 5, count: '2' }, { rating: 2, count: '1' }],
+        platformDistribution: [{ platform: 'google', count: '3', average_rating: '4.333333' }],
+        reviewsOverTime: [{ date: new Date('2026-07-20T00:00:00.000Z'), count: '2', average_rating: '4.5' }],
+        requestStats: { total_sent: '4', clicked: '3', converted: '2' },
+      },
+    });
+
+    await expect(service.reputationAnalytics(4, 90)).resolves.toMatchObject({
+      asOf: new Date('2026-07-20T18:00:00.000Z'),
+      reportingTimezone: 'UTC',
+      overall: { totalReviews: 3, averageRating: 4.333333 },
+      period: { days: 90, reviewsCount: 2, averageRating: 4.5 },
+      ratingDistribution: [{ rating: 5, count: 2 }, { rating: 2, count: 1 }],
+      platformDistribution: [{ platform: 'google', count: 3, averageRating: 4.333333 }],
+      reviewsOverTime: [{ date: new Date('2026-07-20T00:00:00.000Z'), count: 2, averageRating: 4.5 }],
+      requestStats: { totalSent: 4, clicked: 3, converted: 2 },
+    });
+    expect(repository.reputationAnalytics).toHaveBeenCalledWith(4, 90);
+    await expect(service.reputationAnalytics(4, 0)).rejects.toMatchObject({
+      extensions: { code: 'BAD_USER_INPUT', reason: 'INVALID_REPUTATION_ANALYTICS_PERIOD' },
     });
   });
 });

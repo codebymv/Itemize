@@ -73,4 +73,19 @@ describe('AnalyticsRepository', () => {
     expect(statements[smsIndex]).toContain("SUM(segments) FILTER (WHERE direction = 'outbound')");
     expect(client.query).toHaveBeenLastCalledWith('COMMIT');
   });
+
+  it('reads every reputation metric from one snapshot with parameterized periods', async () => {
+    const repository = new AnalyticsRepository(pool);
+    await expect(repository.reputationAnalytics(7, 90)).resolves.toMatchObject({ asOf });
+
+    const calls = client.query.mock.calls;
+    const statements = calls.map((call) => String(call[0]));
+    expect(statements.filter((text) => text.includes('FROM reviews')).length).toBe(5);
+    expect(statements.filter((text) => text.includes('FROM review_requests')).length).toBe(1);
+    const periodCalls = calls.filter((call) => String(call[0]).includes("$3::int * INTERVAL '1 day'"));
+    expect(periodCalls).toHaveLength(2);
+    for (const call of periodCalls) expect(call[1]).toEqual([7, asOf, 90]);
+    expect(statements.join('\n')).not.toContain("INTERVAL '90 days'");
+    expect(client.query).toHaveBeenLastCalledWith('COMMIT');
+  });
 });

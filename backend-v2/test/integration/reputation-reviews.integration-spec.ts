@@ -185,6 +185,83 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
     expect(foreign.body.errors[0].extensions.code).toBe('NOT_FOUND');
   });
 
+  it('returns one tenant-isolated reputation snapshot with retained REST semantics', async () => {
+    await pool.query(
+      `UPDATE reviews
+       SET review_date = NOW() - INTERVAL '1 day'
+       WHERE organization_id = $1`,
+      [organizationId],
+    );
+    await pool.query(
+      `INSERT INTO reviews (organization_id,platform,rating,sentiment,source,review_date)
+       VALUES ($1,'yelp',1,'negative','manual',NOW())`,
+      [outsiderOrganizationId],
+    );
+    await pool.query(
+      `INSERT INTO review_requests
+       (organization_id,contact_id,contact_email,channel,clicked,review_submitted,status,created_at)
+       VALUES ($1,$2,$3,'email',true,true,'completed',NOW()),
+              ($4,$5,$6,'email',true,true,'completed',NOW())`,
+      [organizationId, contactId, `ada-analytics-${Date.now()}@test.itemize`,
+        outsiderOrganizationId, outsiderContactId, `grace-analytics-${Date.now()}@test.itemize`],
+    );
+
+    const response = await graphql(
+      `query ReputationAnalytics($days:Int) {
+        reputationAnalytics(days:$days) {
+          asOf reportingTimezone
+          overall { totalReviews averageRating positiveReviews negativeReviews newReviews respondedReviews }
+          period { days reviewsCount averageRating }
+          ratingDistribution { rating count }
+          platformDistribution { platform count averageRating }
+          reviewsOverTime { date count averageRating }
+          requestStats { totalSent clicked converted }
+        }
+      }`,
+      { days: 30 }, { csrf: false },
+    ).expect(200);
+    expect(response.body.errors).toBeUndefined();
+    const result = response.body.data.reputationAnalytics;
+    expect(result).toMatchObject({
+      reportingTimezone: 'UTC',
+      overall: {
+        totalReviews: 2, averageRating: 4, positiveReviews: 1,
+        negativeReviews: 0, newReviews: 2, respondedReviews: 0,
+      },
+      period: { days: 30, reviewsCount: 2, averageRating: 4 },
+      ratingDistribution: [{ rating: 5, count: 1 }, { rating: 3, count: 1 }],
+      requestStats: { totalSent: 1, clicked: 1, converted: 1 },
+    });
+    expect(new Date(result.asOf).toISOString()).toBe(result.asOf);
+    expect(result.platformDistribution).toEqual([
+      { platform: 'custom', count: 1, averageRating: 3 },
+      { platform: 'google', count: 1, averageRating: 5 },
+    ]);
+    expect(result.reviewsOverTime).toHaveLength(1);
+    expect(result.reviewsOverTime[0]).toMatchObject({ count: 2, averageRating: 4 });
+
+    const legacy = await request(legacyApp).get('/api/reputation/analytics?period=30')
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId)).expect(200);
+    expect(result.overall).toEqual({
+      totalReviews: Number(legacy.body.overall.total_reviews),
+      averageRating: Number(legacy.body.overall.average_rating),
+      positiveReviews: Number(legacy.body.overall.positive_reviews),
+      negativeReviews: Number(legacy.body.overall.negative_reviews),
+      newReviews: Number(legacy.body.overall.new_reviews),
+      respondedReviews: Number(legacy.body.overall.responded_reviews),
+    });
+  });
+
+  it('rejects unbounded reputation periods before querying metrics', async () => {
+    const invalid = await graphql(
+      'query { reputationAnalytics(days:366) { period { days } } }', {}, { csrf: false },
+    ).expect(200);
+    expect(invalid.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT', reason: 'INVALID_REPUTATION_ANALYTICS_PERIOD',
+    });
+  });
+
   it('composes concurrent partial updates and keeps response metadata coherent', async () => {
     const mutation = `mutation Update($id:Int!,$input:UpdateReputationReviewInput!){
       updateReputationReview(id:$id,input:$input){ id status responseText respondedBy internalNotes }

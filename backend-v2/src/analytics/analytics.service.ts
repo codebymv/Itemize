@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { AnalyticsRepository, DashboardSnapshotRows } from './analytics.repository';
+import { itemizeGraphqlError } from '../common/graphql-error';
 import {
   CommunicationAnalyticsPeriod,
   ContactAnalyticsPeriod,
@@ -12,6 +13,7 @@ import {
   DashboardAnalytics,
   DashboardFunnelStage,
   DealPerformanceAnalytics,
+  ReputationAnalytics,
   WorkflowPerformanceAnalytics,
 } from './analytics.types';
 
@@ -344,6 +346,55 @@ export class AnalyticsService {
         activeEnrollments,
         failedEnrollments,
         overallCompletionRate: this.percentage(completedEnrollments, totalEnrollments),
+      },
+    };
+  }
+
+  async reputationAnalytics(
+    organizationId: number,
+    days = 30,
+  ): Promise<ReputationAnalytics> {
+    if (!Number.isSafeInteger(days) || days < 1 || days > 365) {
+      throw itemizeGraphqlError('days must be an integer from 1 to 365', 'BAD_USER_INPUT', {
+        field: 'days',
+        reason: 'INVALID_REPUTATION_ANALYTICS_PERIOD',
+      });
+    }
+    const snapshot = await this.analytics.reputationAnalytics(organizationId, days);
+    return {
+      asOf: snapshot.asOf,
+      reportingTimezone: 'UTC',
+      overall: {
+        totalReviews: this.count(snapshot.data.overall.total_reviews, 'reputation.overall.totalReviews'),
+        averageRating: this.number(snapshot.data.overall.average_rating, 'reputation.overall.averageRating'),
+        positiveReviews: this.count(snapshot.data.overall.positive_reviews, 'reputation.overall.positiveReviews'),
+        negativeReviews: this.count(snapshot.data.overall.negative_reviews, 'reputation.overall.negativeReviews'),
+        newReviews: this.count(snapshot.data.overall.new_reviews, 'reputation.overall.newReviews'),
+        respondedReviews: this.count(snapshot.data.overall.responded_reviews, 'reputation.overall.respondedReviews'),
+      },
+      period: {
+        days,
+        reviewsCount: this.count(snapshot.data.period.reviews_count, 'reputation.period.reviewsCount'),
+        averageRating: this.number(snapshot.data.period.average_rating, 'reputation.period.averageRating'),
+      },
+      ratingDistribution: snapshot.data.ratingDistribution.map((row) => ({
+        rating: this.count(row.rating, 'reputation.ratingDistribution.rating'),
+        count: this.count(row.count, 'reputation.ratingDistribution.count'),
+      })),
+      platformDistribution: snapshot.data.platformDistribution.map((row) => ({
+        platform: this.string(row.platform, 'reputation.platformDistribution.platform'),
+        count: this.count(row.count, 'reputation.platformDistribution.count'),
+        averageRating: this.number(row.average_rating, 'reputation.platformDistribution.averageRating'),
+      })),
+      reviewsOverTime: snapshot.data.reviewsOverTime.map((row) => ({
+        date: this.date(row.date, 'reputation.reviewsOverTime.date'),
+        count: this.count(row.count, 'reputation.reviewsOverTime.count'),
+        averageRating: this.number(row.average_rating, 'reputation.reviewsOverTime.averageRating'),
+      })),
+      requestStats: {
+        totalSent: this.count(snapshot.data.requestStats.total_sent, 'reputation.requestStats.totalSent'),
+        clicked: this.count(snapshot.data.requestStats.clicked, 'reputation.requestStats.clicked'),
+        converted: this.count(snapshot.data.requestStats.converted, 'reputation.requestStats.converted'),
       },
     };
   }

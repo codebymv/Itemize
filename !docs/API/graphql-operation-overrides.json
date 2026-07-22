@@ -1848,6 +1848,10 @@
       "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationReviewsModule", "targetOperation": "deleteReputationReview", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "CSRF-protected organization-qualified delete returning exact stable identity with private foreign and repeated misses."
     },
+    "GET /api/reputation/analytics": {
+      "disposition": "graphql-query", "owner": "reputation", "targetModule": "AnalyticsModule", "targetOperation": "reputationAnalytics", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "One tenant-scoped repeatable-read snapshot for overall, period, distribution, UTC timeline, and request metrics with a bounded parameterized day window."
+    },
     "POST /api/categories": {
       "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "createCategory", "parityStatus": "dual-parity", "risk": "high",
       "notes": "CSRF-protected normalized create; the General invariant is seeded for every existing and newly inserted user."

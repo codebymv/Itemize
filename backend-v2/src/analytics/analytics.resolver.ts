@@ -1,4 +1,4 @@
-import { Args, Query, Resolver } from '@nestjs/graphql';
+import { Args, Int, Query, Resolver } from '@nestjs/graphql';
 import { OrganizationScoped } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import { AnalyticsService } from './analytics.service';
@@ -13,6 +13,7 @@ import {
   ContactTrendsAnalytics,
   DashboardAnalytics,
   DealPerformanceAnalytics,
+  ReputationAnalytics,
   WorkflowPerformanceAnalytics,
 } from './analytics.types';
 
@@ -66,6 +67,14 @@ export class AnalyticsResolver {
   @Query(() => WorkflowPerformanceAnalytics)
   workflowPerformance(): Promise<WorkflowPerformanceAnalytics> {
     return this.analytics.workflowPerformance(this.organizationId());
+  }
+
+  @OrganizationScoped()
+  @Query(() => ReputationAnalytics)
+  reputationAnalytics(
+    @Args('days', { type: () => Int, nullable: true }) days?: number,
+  ): Promise<ReputationAnalytics> {
+    return this.analytics.reputationAnalytics(this.organizationId(), days);
   }
 
   private organizationId(): number {

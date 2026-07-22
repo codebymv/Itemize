@@ -3,7 +3,11 @@
  * Handles reviews, requests, widgets, and analytics
  */
 import api from '@/lib/api';
-import { isReputationReviewsGraphqlEnabled } from './graphqlClient';
+import {
+    isReputationAnalyticsGraphqlEnabled,
+    isReputationReviewsGraphqlEnabled,
+} from './graphqlClient';
+import { getReputationAnalyticsViaGraphql } from './reputationAnalyticsGraphql';
 import {
     createReviewViaGraphql,
     deleteReviewViaGraphql,
@@ -434,6 +438,9 @@ export const getReputationAnalytics = async (
     period: number = 30,
     organizationId?: number
 ): Promise<ReputationAnalytics> => {
+    if (isReputationAnalyticsGraphqlEnabled()) {
+        return getReputationAnalyticsViaGraphql(period, organizationId);
+    }
     const response = await api.get('/api/reputation/analytics', {
         params: { period },
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}

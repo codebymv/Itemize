@@ -28,6 +28,15 @@ export interface AnalyticsQuerySnapshot<T> {
   data: T;
 }
 
+export interface ReputationAnalyticsRows {
+  overall: Row;
+  period: Row;
+  ratingDistribution: Row[];
+  platformDistribution: Row[];
+  reviewsOverTime: Row[];
+  requestStats: Row;
+}
+
 @Injectable()
 export class AnalyticsRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
@@ -268,6 +277,62 @@ export class AnalyticsRepository {
       WHERE w.organization_id = $1
       GROUP BY w.id, w.name, w.trigger_type, w.is_active, w.stats
       ORDER BY total_enrollments DESC, w.id ASC`, [organizationId]));
+  }
+
+  reputationAnalytics(
+    organizationId: number,
+    days: number,
+  ): Promise<AnalyticsQuerySnapshot<ReputationAnalyticsRows>> {
+    return this.withSnapshot(async (client, asOf) => {
+      const overall = await this.one(client, `
+        SELECT COUNT(*) AS total_reviews,
+          COALESCE(AVG(rating), 0) AS average_rating,
+          COUNT(*) FILTER (WHERE rating >= 4) AS positive_reviews,
+          COUNT(*) FILTER (WHERE rating <= 2) AS negative_reviews,
+          COUNT(*) FILTER (WHERE status = 'new') AS new_reviews,
+          COUNT(*) FILTER (WHERE status = 'responded') AS responded_reviews
+        FROM reviews
+        WHERE organization_id = $1`, [organizationId]);
+      const period = await this.one(client, `
+        SELECT COUNT(*) AS reviews_count,
+          COALESCE(AVG(rating), 0) AS average_rating
+        FROM reviews
+        WHERE organization_id = $1
+          AND review_date >= $2::timestamptz - ($3::int * INTERVAL '1 day')`,
+      [organizationId, asOf, days]);
+      const ratingDistribution = await this.many(client, `
+        SELECT rating, COUNT(*) AS count
+        FROM reviews
+        WHERE organization_id = $1
+        GROUP BY rating
+        ORDER BY rating DESC`, [organizationId]);
+      const platformDistribution = await this.many(client, `
+        SELECT platform, COUNT(*) AS count, COALESCE(AVG(rating), 0) AS average_rating
+        FROM reviews
+        WHERE organization_id = $1
+        GROUP BY platform
+        ORDER BY count DESC, platform ASC`, [organizationId]);
+      const reviewsOverTime = await this.many(client, `
+        SELECT DATE_TRUNC('day', review_date AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' AS date,
+          COUNT(*) AS count, COALESCE(AVG(rating), 0) AS average_rating
+        FROM reviews
+        WHERE organization_id = $1
+          AND review_date >= $2::timestamptz - INTERVAL '30 days'
+        GROUP BY DATE_TRUNC('day', review_date AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'
+        ORDER BY date ASC`, [organizationId, asOf]);
+      const requestStats = await this.one(client, `
+        SELECT COUNT(*) AS total_sent,
+          COUNT(*) FILTER (WHERE clicked = TRUE) AS clicked,
+          COUNT(*) FILTER (WHERE review_submitted = TRUE) AS converted
+        FROM review_requests
+        WHERE organization_id = $1
+          AND created_at >= $2::timestamptz - ($3::int * INTERVAL '1 day')`,
+      [organizationId, asOf, days]);
+      return {
+        overall, period, ratingDistribution, platformDistribution,
+        reviewsOverTime, requestStats,
+      };
+    });
   }
 
   private async withSnapshot<T>(
