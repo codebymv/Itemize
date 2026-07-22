@@ -4,6 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
+    "preDeployCommand": "node scripts/run-migrations.js",
     "startCommand": "npm start",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 100,

@@ -30,4 +30,4 @@ Fresh PostgreSQL coverage proves migration-from-zero, anonymous/non-admin denial
 
 The release-candidate checkpoint passes 365 legacy unit tests, 352 Nest unit tests, 489 legacy PostgreSQL integration tests, 210 Nest PostgreSQL integration tests, and 338 frontend tests. Both production builds compile.
 
-Rollout order is tracked migration `041_admin_email_deliveries` first, default-off GraphQL second, scheduler enablement third, read/preview consumer enablement fourth, and delivery consumer enablement last. Rollback is ordered in reverse: disable delivery consumer, disable scheduler, then disable read/preview consumer. Queued jobs and audit rows remain durable and require no data repair.
+Rollout order is tracked migration `041_admin_email_deliveries` first through the backend pre-deploy migration gate, default-off GraphQL second, scheduler enablement third, read/preview consumer enablement fourth, and delivery consumer enablement last. Rollback is ordered in reverse: disable delivery consumer, disable scheduler, then disable read/preview consumer. Queued jobs and audit rows remain durable and require no data repair.
