@@ -45,12 +45,14 @@ The review-request delivery cutover completed from commits `2a6ffa4a` and `abc6a
 
 The reputation-configuration cutover completed from commit `272f138f` with legacy backend deployment `6659ec78-e5ce-4c9a-8831-51b75be02e90`, GraphQL deployment `5c54bd41-87cd-4d50-861b-80f919b7b7a2`, and flag-enabled frontend deployment `ca211f99-8de5-4b63-8bf7-8b5c9489f72f`. Railway confirmed `VITE_REPUTATION_PLATFORMS_GRAPHQL=true`, `VITE_REPUTATION_SETTINGS_GRAPHQL=true`, `VITE_REPUTATION_WIDGETS_GRAPHQL=true`, and the non-secret GraphQL `PUBLIC_API_URL` needed by generated embeds. Anonymous read/write probes resolved every new operation and returned the intended `UNAUTHENTICATED` guard without mutation. The widget runtime returned deployed JavaScript, malformed and unknown capabilities returned `404` plus `no-store`, and the exact capability-shaped endpoint allowed wildcard CORS without credentials. An authenticated `/review-widgets` load rendered the empty state without console errors while Nest recorded successful zero-error `ReputationWidgets` request `53445209-8622-406e-82c4-94f2fe62d439`. Platform and settings have enabled adapters but no active page callsite, so their gate is schema/auth plus the full local interoperability suite rather than a claimed browser request.
 
+The administrator-operations cutover completed from commit `cc0060e5` with legacy backend deployment `4e106cb9-c7c0-4001-a294-a949607958cf`, GraphQL deployment `874fc457-af17-4e21-8f87-0bcd52858a98`, default-off frontend deployment `e3021b3b-57f2-4295-9f0f-913752651a7f`, and flag-enabled frontend deployment `452a30ec-cc32-4d7c-bf78-1a122fa7d55b`. Railway confirmed `VITE_ADMIN_DIRECTORY_GRAPHQL=true` and `VITE_ADMIN_PLAN_GRAPHQL=true`. Safe production query and mutation probes resolved all six operations and returned `UNAUTHENTICATED` without mutation; site and API health were `200`. The available signed-in browser identity was correctly denied the admin surface and redirected to `/dashboard` without console errors, so authenticated administrator success remains evidenced by fresh PostgreSQL rather than a production browser claim.
+
 After deployment, verify:
 
 1. `https://itemize.cloud` returns HTTP `200`;
 2. production `/api/health` returns HTTP `200`;
 3. a proxied GraphQL `__typename` query returns HTTP `200`;
-4. all 81 domain `VITE_*_GRAPHQL` variables plus `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` are `true`;
+4. all 83 domain `VITE_*_GRAPHQL` variables plus `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` are `true`;
 5. the frontend and backend deployments resolve to the Git commit containing this document;
 6. GraphQL logs contain no internal-error spike after the frontend replacement.
 

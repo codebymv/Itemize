@@ -252,7 +252,7 @@
       "owner": "platform-operations",
       "targetOperation": "updateAdminOwnPlan",
       "targetModule": "AdminOperationsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Database-authorized administrator-only, CSRF-protected plan change atomically updates the subscription and organization plan authorities.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -286,7 +286,7 @@
       "owner": "platform-operations",
       "targetOperation": "adminSystemStats",
       "targetModule": "AdminOperationsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Database-authorized administrator-only global user, contact, and invoice counts from one statement snapshot.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -320,7 +320,7 @@
       "owner": "platform-operations",
       "targetOperation": "adminUsersByIds",
       "targetModule": "AdminOperationsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Database-authorized administrator-only bounded batch lookup; positive IDs are deduplicated and output preserves requested order.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -354,7 +354,7 @@
       "owner": "platform-operations",
       "targetOperation": "adminUserCount",
       "targetModule": "AdminOperationsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Database-authorized administrator-only global user count independent of selected organization.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -388,7 +388,7 @@
       "owner": "platform-operations",
       "targetOperation": "adminUserIds",
       "targetModule": "AdminOperationsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Database-authorized administrator-only matching ID query shares search and plan filters with the paged directory; REST rollback received the same plan-filter repair.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -422,7 +422,7 @@
       "owner": "platform-operations",
       "targetOperation": "adminUsers",
       "targetModule": "AdminOperationsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Database-authorized administrator-only global directory with bounded search, validated plan filter, stable ordering, pagination, and repeatable-read total parity.",
       "literalInterpolationRisk": false,
       "risk": "high"

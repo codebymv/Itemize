@@ -1,6 +1,6 @@
 # Admin operations GraphQL cutover contract
 
-**Status:** Implementation and dual-transport parity verified; production consumer cutover pending
+**Status:** Production consumer cutover complete
 
 **Evidence date:** 2026-07-22
 
@@ -25,3 +25,9 @@ These operations are intentionally not organization-scoped. `AdminAccessGuard` r
 Fresh PostgreSQL coverage proves anonymous and non-admin denial without organization context, authoritative global counts, stable filtered search, plan-filtered ID parity, ordered/deduplicated batch lookup, validation bounds, CSRF, successful two-authority plan storage, and failed-mutation rollback. Focused unit and frontend tests freeze normalization, pagination, filtered selection, REST fallback, independent flags, and CSRF mutation transport.
 
 The complete checkpoint passes 365 legacy unit tests, 345 Nest unit tests, 489 legacy PostgreSQL integration tests, 206 Nest PostgreSQL integration tests, and 333 frontend tests. Both frontend flags default off. Rollback is data-neutral: disable only the affected flag and rebuild; both transports share the same PostgreSQL rows.
+
+## Production gate
+
+Commit `cc0060e5` deployed as legacy backend `4e106cb9-c7c0-4001-a294-a949607958cf`, GraphQL `874fc457-af17-4e21-8f87-0bcd52858a98`, default-off frontend `e3021b3b-57f2-4295-9f0f-913752651a7f`, and flag-enabled frontend `452a30ec-cc32-4d7c-bf78-1a122fa7d55b`. Railway confirmed `VITE_ADMIN_DIRECTORY_GRAPHQL=true` and `VITE_ADMIN_PLAN_GRAPHQL=true`.
+
+A production query containing all five new read operations and a separate plan mutation both resolved through the public proxy and returned the intended anonymous `UNAUTHENTICATED` guard without mutation. The site and API health endpoint returned HTTP `200`. The available signed-in browser account was not an administrator and was correctly redirected from `/admin/stats` to `/dashboard` without console errors, so no authenticated production admin result is claimed; administrator success behavior is instead gated by the fresh PostgreSQL contract suite.
