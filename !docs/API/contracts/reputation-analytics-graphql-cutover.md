@@ -1,6 +1,6 @@
 # Reputation analytics GraphQL cutover contract
 
-**Status:** Implemented at dual parity behind `VITE_REPUTATION_ANALYTICS_GRAPHQL`
+**Status:** Production consumer cutover complete behind `VITE_REPUTATION_ANALYTICS_GRAPHQL`
 
 **Evidence date:** 2026-07-21
 
@@ -21,3 +21,5 @@ The projection preserves the retained frontend response shape through a casing a
 Fresh PostgreSQL proves exact retained overall parity, selected-period behavior, deterministic distributions, UTC bucketing, request outcomes, rejection of an out-of-range window, and exclusion of a foreign tenant's review and request. Repository tests prove all six metric groups share one snapshot and that both variable windows remain SQL parameters. Service tests prove numeric normalization; the frontend test proves period, selected-organization, casing, and complete retained-shape mapping.
 
 The flag is default-off in source. Setting only `VITE_REPUTATION_ANALYTICS_GRAPHQL=false` and rebuilding restores the retained REST read against the same rows without affecting GraphQL review CRUD.
+
+Production cutover completed from commit `4e9d63b4` with backend deployment `9723ae05-204f-493a-89f0-203c666f4e57`, GraphQL deployment `df732fda-7157-4a73-9c86-e3bcfa56dcb3`, and flag-enabled frontend deployment `c7fb43f1-2d5b-4f68-b473-fbe462ed87e9`. The public proxy accepted the complete selection and returned the intended anonymous auth guard. Railway confirmed `VITE_REPUTATION_ANALYTICS_GRAPHQL=true`; an authenticated `/reviews` reload rendered all five metric cards and the authoritative empty state while Nest recorded successful zero-error `ReputationReviews` and `ReputationAnalytics` operations.

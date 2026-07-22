@@ -12687,7 +12687,7 @@
       "owner": "reputation",
       "targetOperation": "reputationAnalytics",
       "targetModule": "AnalyticsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "One tenant-scoped repeatable-read snapshot for overall, period, distribution, UTC timeline, and request metrics with a bounded parameterized day window.",
       "literalInterpolationRisk": false,
       "risk": "high"

@@ -1,6 +1,6 @@
 # GraphQL production consumer cutover
 
-**Status:** 75 domain consumers plus authentication session, identity lifecycle, and password recovery enabled
+**Status:** 76 domain consumers plus authentication session, identity lifecycle, and password recovery enabled
 
 **Cutover date:** 2026-07-21
 
@@ -8,7 +8,7 @@
 
 The browser uses the production `VITE_API_URL` (`https://itemize-backend-production-92ad.up.railway.app`) for REST and `/graphql`. That backend forwards GraphQL to `itemize.cloud GraphQL Production` over Railway's private network. The proxy has an explicit response allowlist for the three authentication cookies and cache/CSRF headers, allowing NestJS to own browser sessions through the existing API origin. The frontend custom domain itself serves the SPA shell and is not the direct `/graphql` endpoint.
 
-The 75 domain switches referenced by `frontend/src/services/graphqlClient.ts` are enabled in production. `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` independently control the enabled session, registration/verification, and forgot/reset-password protocols. A frontend rebuild is required because Vite embeds these values at build time.
+The 76 domain switches referenced by `frontend/src/services/graphqlClient.ts` are enabled in production. `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` independently control the enabled session, registration/verification, and forgot/reset-password protocols. A frontend rebuild is required because Vite embeds these values at build time.
 
 The enabled families are:
 
@@ -17,7 +17,7 @@ The enabled families are:
 - products, invoice businesses/settings/invoices, estimates, recurring invoices, and payments;
 - workspace lists, notes, and whiteboards;
 - dashboard and aggregate analytics;
-- audience segments, email/SMS templates, campaigns, workflows, enrollments, workflow execution visibility, and reputation reviews.
+- audience segments, email/SMS templates, campaigns, workflows, enrollments, workflow execution visibility, reputation reviews, and reputation analytics.
 
 ## Intentionally retained transports
 
@@ -37,12 +37,14 @@ The audience-segment cutover completed from commit `b0c618da` with backend deplo
 
 The reputation-review cutover completed from commit `6749ff27` with backend deployment `2f404c99-9a5e-4b46-9603-632a3f045a2a`, GraphQL deployment `4b297d81-7a5e-4af0-be02-505da701786d`, and flag-enabled frontend deployment `8b2b8b94-8d85-4c93-a55e-98f2b693ea2e`. Safe query and mutation probes proved the production schema and auth guard through the public proxy, `VITE_REPUTATION_REVIEWS_GRAPHQL=true` was confirmed from Railway, and an authenticated `/reviews` navigation rendered the authoritative empty state without a client or server error.
 
+The reputation-analytics cutover completed from commit `4e9d63b4` with backend deployment `9723ae05-204f-493a-89f0-203c666f4e57`, GraphQL deployment `df732fda-7157-4a73-9c86-e3bcfa56dcb3`, and flag-enabled frontend deployment `c7fb43f1-2d5b-4f68-b473-fbe462ed87e9`. The public proxy recognized the complete query and auth guard, Railway confirmed `VITE_REPUTATION_ANALYTICS_GRAPHQL=true`, and an authenticated `/reviews` reload rendered all five metric cards plus the empty state. Nest logs paired that browser navigation with successful, zero-error `ReputationReviews` and `ReputationAnalytics` operations, so the active Reviews page has no retained REST application-data request.
+
 After deployment, verify:
 
 1. `https://itemize.cloud` returns HTTP `200`;
 2. production `/api/health` returns HTTP `200`;
 3. a proxied GraphQL `__typename` query returns HTTP `200`;
-4. all 75 domain `VITE_*_GRAPHQL` variables plus `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` are `true`;
+4. all 76 domain `VITE_*_GRAPHQL` variables plus `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` are `true`;
 5. the frontend and backend deployments resolve to the Git commit containing this document;
 6. GraphQL logs contain no internal-error spike after the frontend replacement.
 
