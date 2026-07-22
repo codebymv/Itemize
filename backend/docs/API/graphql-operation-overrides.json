@@ -1853,11 +1853,11 @@
       "notes": "One tenant-scoped repeatable-read snapshot for overall, period, distribution, UTC timeline, and request metrics with a bounded parameterized day window."
     },
     "GET /api/reputation/requests": {
-      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationRequestsModule", "targetOperation": "reputationRequests", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationRequestsModule", "targetOperation": "reputationRequests", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Bounded organization-scoped management list with stable created-at/ID ordering, one repeatable-read count/page snapshot, tenant-qualified contact projection, and no public capability token."
     },
     "DELETE /api/reputation/requests/:id": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationRequestsModule", "targetOperation": "deleteReputationRequest", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationRequestsModule", "targetOperation": "deleteReputationRequest", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "CSRF-protected organization-qualified delete returning exact stable identity with private foreign and repeated misses; provider delivery operations remain retained."
     },
     "POST /api/categories": {

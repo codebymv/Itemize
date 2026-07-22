@@ -1,6 +1,6 @@
 # Reputation request management GraphQL cutover contract
 
-**Status:** Dual parity behind default-off `VITE_REPUTATION_REQUEST_MANAGEMENT_GRAPHQL`
+**Status:** Production consumer cutover complete behind `VITE_REPUTATION_REQUEST_MANAGEMENT_GRAPHQL`
 
 **Evidence date:** 2026-07-21
 
@@ -25,3 +25,5 @@ Deletion requires CSRF and verified organization context, qualifies the row by r
 Repository and service tests prove snapshot reuse, parameterized filtering, deterministic ordering, tenant-qualified joins, token omission, page/status validation, rollback, exact deletion, and private misses. Fresh PostgreSQL proves stable same-timestamp paging, foreign-contact concealment, status filtering, CSRF denial, tenant isolation, exact deletion, and REST interoperability. Frontend tests prove the flag is independently default-off, retained-shape paging, organization forwarding, CSRF, and delete-identity verification.
 
 The complete gates pass 331/331 NestJS unit cases, 192/192 NestJS/PostgreSQL cases, 489/489 retained Express/PostgreSQL cases, and 300/300 frontend cases. Both production builds pass. Setting only `VITE_REPUTATION_REQUEST_MANAGEMENT_GRAPHQL=false` and rebuilding restores list/delete to REST against the same rows; delivery routes never move with this flag.
+
+Production cutover completed from commit `19c1fa1a` with GraphQL deployment `18d3dc88-643a-4403-b6dc-06cf8b2427ad` and flag-enabled frontend deployment `a7c274eb-f66b-4b57-9127-7be49aa3485c`. Safe anonymous query and delete probes reached the registered operations through the public proxy and returned `UNAUTHENTICATED` without touching data. Railway confirmed `VITE_REPUTATION_REQUEST_MANAGEMENT_GRAPHQL=true`; an authenticated `/review-requests` navigation rendered the authoritative empty state while Nest recorded successful zero-error `ReputationRequests` request `705fa2f4-bd2d-4c44-99fa-17e537f1c47e`.

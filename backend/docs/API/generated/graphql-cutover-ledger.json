@@ -12902,7 +12902,7 @@
       "owner": "reputation",
       "targetOperation": "reputationRequests",
       "targetModule": "ReputationRequestsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Bounded organization-scoped management list with stable created-at/ID ordering, one repeatable-read count/page snapshot, tenant-qualified contact projection, and no public capability token.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -12983,7 +12983,7 @@
       "owner": "reputation",
       "targetOperation": "deleteReputationRequest",
       "targetModule": "ReputationRequestsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected organization-qualified delete returning exact stable identity with private foreign and repeated misses; provider delivery operations remain retained.",
       "literalInterpolationRisk": false,
       "risk": "high"
