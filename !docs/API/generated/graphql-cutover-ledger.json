@@ -82,7 +82,7 @@
       "owner": "platform-operations",
       "targetOperation": "adminEmailLogs",
       "targetModule": "AdminMessagingModule",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Administrator-only global audit page with validated status filters and bounded cursor pagination.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -116,7 +116,7 @@
       "owner": "platform-operations",
       "targetOperation": "adminEmailLog",
       "targetModule": "AdminMessagingModule",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Administrator-only global log detail; preserve stored rendered content while applying audit-data retention rules.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -150,7 +150,7 @@
       "owner": "platform-operations",
       "targetOperation": "previewAdminEmail",
       "targetModule": "AdminMessagingModule",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Pure rendering operation with bounded input; never fetch arbitrary URLs or perform provider delivery.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -184,7 +184,7 @@
       "owner": "platform-operations",
       "targetOperation": "enqueueAdminEmailBatch",
       "targetModule": "MessagingDeliveryModule",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Validate and cap recipients, persist one durable batch plus recipient jobs, and never perform a synchronous provider loop in the resolver.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -218,7 +218,7 @@
       "owner": "platform-operations",
       "targetOperation": "adminEmailTemplates",
       "targetModule": "AdminMessagingModule",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Administrator-only cross-organization template search with cursor pagination and explicit system-template handling.",
       "literalInterpolationRisk": false,
       "risk": "high"

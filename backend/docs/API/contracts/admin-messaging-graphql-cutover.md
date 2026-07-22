@@ -1,6 +1,6 @@
 # Admin messaging GraphQL cutover contract
 
-**Status:** Release candidate; production flags default off
+**Status:** Production consumer and worker cutover complete
 
 **Evidence date:** 2026-07-22
 
@@ -28,6 +28,8 @@ The scheduler leases due recipient jobs for 30 seconds and uses a stable provide
 
 Fresh PostgreSQL coverage proves migration-from-zero, anonymous/non-admin denial, global template filters, pure preview, CSRF, atomic intent/log creation, idempotent replay and conflict, provider-free mutation handling, leased provider completion, and list/detail audit projections. Unit coverage freezes validation, personalization, safe idempotency, retry versus reconciliation, and scheduler defaults. Frontend tests freeze the two default-off rollout boundaries and CSRF/query transport selection.
 
-The release-candidate checkpoint passes 365 legacy unit tests, 352 Nest unit tests, 489 legacy PostgreSQL integration tests, 210 Nest PostgreSQL integration tests, and 338 frontend tests. Both production builds compile.
+The cutover checkpoint passes 365 legacy unit tests, 352 Nest unit tests, 489 legacy PostgreSQL integration tests, 210 Nest PostgreSQL integration tests, and 338 frontend tests. Both production builds compile.
 
 Rollout order is tracked migration `041_admin_email_deliveries` first through the backend pre-deploy migration gate, default-off GraphQL second, scheduler enablement third, read/preview consumer enablement fourth, and delivery consumer enablement last. Rollback is ordered in reverse: disable delivery consumer, disable scheduler, then disable read/preview consumer. Queued jobs and audit rows remain durable and require no data repair.
+
+Production cutover completed on 2026-07-22 from implementation commit `61c10030`, migration-registration commit `552aa42a`, and migration-gate commit `991621ef`. Migration `041_admin_email_deliveries` was applied at `2026-07-22T14:54:50.598Z`; the gated legacy deployment `1caf4e74-6b5e-4c47-b44b-17bcd05b44b7` then reported zero pending migrations and registered every API route. GraphQL default-off deployment `5c069a0c-d191-4d79-b797-41d28cc20f4b` passed schema/auth probes, worker-enabled deployment `352bc5f6-bdf9-4a1b-b18c-51768342c9a3` started the 30-second scheduler, and flag-enabled frontend deployment `ae829069-8c25-4846-81ee-977994e6f0a7` enabled both consumer boundaries. Railway confirms all three switches are `true`; public site, GraphQL proxy, and canonical legacy API health probes pass. Anonymous reads and mutations reached their registered operations and failed with `UNAUTHENTICATED` before data or provider work. An anonymous browser navigation to `/admin` redirected to `/home` without console errors; authenticated administrator rendering remains an observational smoke rather than a deployment blocker.
