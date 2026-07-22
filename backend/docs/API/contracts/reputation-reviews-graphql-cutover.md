@@ -1,6 +1,6 @@
 # Reputation reviews GraphQL cutover contract
 
-**Status:** Implemented at dual parity behind `VITE_REPUTATION_REVIEWS_GRAPHQL`
+**Status:** Production consumer cutover complete behind `VITE_REPUTATION_REVIEWS_GRAPHQL`
 
 **Evidence date:** 2026-07-21
 
@@ -30,4 +30,6 @@ Delete is organization-qualified and returns the exact deleted ID; foreign and r
 
 ## Evidence and exit gate
 
-Fresh PostgreSQL proves verified tenant context, CSRF, tenant-qualified platform/contact joins, manual create and sentiment, REST readback, bounded compound filtering, private foreign detail, concurrent partial-update composition, coherent response clearing, foreign platform/contact rejection, stable delete identity, and final private miss. Focused frontend tests prove the default-off switch, filter/page/organization variables, casing and nullable mapping, mutation CSRF/input mapping, and delete identity. Production requires explicit GraphQL deployment, flag enablement, and an authenticated Reputation page smoke before these ledger rows become `consumer-cutover-complete`.
+Fresh PostgreSQL proves verified tenant context, CSRF, tenant-qualified platform/contact joins, manual create and sentiment, REST readback, bounded compound filtering, private foreign detail, concurrent partial-update composition, coherent response clearing, foreign platform/contact rejection, stable delete identity, and final private miss. Focused frontend tests prove the default-off switch, filter/page/organization variables, casing and nullable mapping, mutation CSRF/input mapping, and delete identity.
+
+Production cutover completed from commit `6749ff27` with backend deployment `2f404c99-9a5e-4b46-9603-632a3f045a2a`, GraphQL deployment `4b297d81-7a5e-4af0-be02-505da701786d`, and flag-enabled frontend deployment `8b2b8b94-8d85-4c93-a55e-98f2b693ea2e`. Safe query and mutation probes reached the registered schema through the public proxy and returned the intended `UNAUTHENTICATED` guard result. The selected production variable is `VITE_REPUTATION_REVIEWS_GRAPHQL=true`; an existing authenticated browser session loaded `/reviews` and rendered the authoritative zero-review state without an error boundary, failed-load state, or abandoned spinner.

@@ -13071,7 +13071,7 @@
       "owner": "reputation",
       "targetOperation": "reputationReviews",
       "targetModule": "ReputationReviewsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Bounded organization-scoped connection with platform/rating/status/sentiment/search filters, stable review-date/ID ordering, and one repeatable-read count/page snapshot.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13105,7 +13105,7 @@
       "owner": "reputation",
       "targetOperation": "createReputationReview",
       "targetModule": "ReputationReviewsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected manual create with bounded content, deterministic sentiment, and locked tenant-platform/contact validation in one transaction.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13139,7 +13139,7 @@
       "owner": "reputation",
       "targetOperation": "deleteReputationReview",
       "targetModule": "ReputationReviewsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected organization-qualified delete returning exact stable identity with private foreign and repeated misses.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13180,7 +13180,7 @@
       "owner": "reputation",
       "targetOperation": "reputationReview",
       "targetModule": "ReputationReviewsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Private organization-owned detail with platform and contact joins independently qualified by organization.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13214,7 +13214,7 @@
       "owner": "reputation",
       "targetOperation": "updateReputationReview",
       "targetModule": "ReputationReviewsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected row-locked partial update; concurrent patches compose and response text, status, responder, and timestamp remain coherent.",
       "literalInterpolationRisk": false,
       "risk": "high"
