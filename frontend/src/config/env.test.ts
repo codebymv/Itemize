@@ -79,6 +79,9 @@ describe('Environment Validation', () => {
     expect(env.VITE_REPUTATION_ANALYTICS_GRAPHQL).toBe('false');
     expect(env.VITE_REPUTATION_REQUEST_MANAGEMENT_GRAPHQL).toBe('false');
     expect(env.VITE_REPUTATION_REQUEST_DELIVERY_GRAPHQL).toBe('false');
+    expect(env.VITE_REPUTATION_PLATFORMS_GRAPHQL).toBe('false');
+    expect(env.VITE_REPUTATION_SETTINGS_GRAPHQL).toBe('false');
+    expect(env.VITE_REPUTATION_WIDGETS_GRAPHQL).toBe('false');
     expect(env.VITE_DEV_AUTH_PROBE_WITHOUT_HINT).toBe('false');
   });
 });

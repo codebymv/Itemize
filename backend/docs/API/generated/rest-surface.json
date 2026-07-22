@@ -23,7 +23,7 @@
       ],
       "declaredPath": "*",
       "source": "backend/src/index.js",
-      "line": 585,
+      "line": 568,
       "dynamic": false
     },
     {
@@ -243,7 +243,7 @@
       ],
       "declaredPath": "/api/auth/csrf",
       "source": "backend/src/index.js",
-      "line": 183,
+      "line": 166,
       "dynamic": false
     },
     {
@@ -1473,7 +1473,7 @@
       ],
       "declaredPath": "/api/health",
       "source": "backend/src/index.js",
-      "line": 263,
+      "line": 246,
       "dynamic": false
     },
     {
@@ -2883,7 +2883,7 @@
       ],
       "declaredPath": "/public/review/:token",
       "source": "backend/src/routes/reputation/public.routes.js",
-      "line": 87,
+      "line": 102,
       "dynamic": false
     },
     {
@@ -2893,7 +2893,7 @@
       ],
       "declaredPath": "/public/review/:token",
       "source": "backend/src/routes/reputation/public.routes.js",
-      "line": 136,
+      "line": 156,
       "dynamic": false
     },
     {
@@ -2903,7 +2903,7 @@
       ],
       "declaredPath": "/public/widget/:widgetKey",
       "source": "backend/src/routes/reputation/public.routes.js",
-      "line": 18,
+      "line": 20,
       "dynamic": false
     },
     {
@@ -2923,7 +2923,7 @@
       ],
       "declaredPath": "/requests",
       "source": "backend/src/routes/reputation/requests.routes.js",
-      "line": 89,
+      "line": 93,
       "dynamic": false
     },
     {
@@ -2933,7 +2933,7 @@
       ],
       "declaredPath": "/requests/:id",
       "source": "backend/src/routes/reputation/requests.routes.js",
-      "line": 70,
+      "line": 71,
       "dynamic": false
     },
     {
@@ -2943,7 +2943,7 @@
       ],
       "declaredPath": "/requests/:id/resend",
       "source": "backend/src/routes/reputation/requests.routes.js",
-      "line": 242,
+      "line": 246,
       "dynamic": false
     },
     {
@@ -2953,7 +2953,7 @@
       ],
       "declaredPath": "/requests/bulk",
       "source": "backend/src/routes/reputation/requests.routes.js",
-      "line": 321,
+      "line": 325,
       "dynamic": false
     },
     {
@@ -4293,7 +4293,7 @@
       ],
       "declaredPath": "/graphql",
       "source": "backend/src/index.js",
-      "line": 251,
+      "line": 234,
       "dynamic": false
     },
     {
@@ -4303,7 +4303,7 @@
       ],
       "declaredPath": "/graphql",
       "source": "backend/src/index.js",
-      "line": 250,
+      "line": 233,
       "dynamic": false
     },
     {
@@ -4313,7 +4313,7 @@
       ],
       "declaredPath": "/health",
       "source": "backend/src/index.js",
-      "line": 383,
+      "line": 366,
       "dynamic": false
     }
   ]

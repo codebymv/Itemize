@@ -39,6 +39,7 @@ const { Server } = require('socket.io');
 // Background job scheduler
 const { initScheduler } = require('./scheduler');
 const registerApiRoutes = require('./bootstrap/register-api-routes');
+const { createCorsOptionsDelegate } = require('./config/cors-options');
 
 // Create Express app
 const app = express();
@@ -155,28 +156,10 @@ const allowedOrigins = [...new Set([
     ...extraCorsOrigins,
 ])];
 
-app.use(cors({
-    origin: (origin, callback) => {
-        // Allow requests with no origin (mobile apps, curl, etc.)
-        if (!origin) return callback(null, true);
-
-        // Check if origin matches allowed origins or is a GitHub Codespaces URL
-        const isAllowed =
-            allowedOrigins.some((allowed) => origin === allowed) ||
-            origin.includes('.app.github.dev') ||
-            (process.env.NODE_ENV !== 'production' && origin.includes('localhost'));
-
-        if (isAllowed) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'X-Organization-Id', 'X-Request-Id', 'X-CSRF-Token'],
-    exposedHeaders: ['Content-Range', 'X-Content-Range', 'X-Request-Id', 'X-CSRF-Token']
-}));
+// Review widgets are intentionally embedded on third-party sites. Their
+// capability-keyed, read-only endpoint permits credential-free cross-origin
+// GETs; every other route retains the authenticated origin allowlist.
+app.use(cors(createCorsOptionsDelegate(allowedOrigins, process.env.NODE_ENV)));
 
 // CSRF token endpoint and protection for cookie-authenticated writes
 const { csrfProtection, issueCsrfToken } = require('./middleware/csrf');

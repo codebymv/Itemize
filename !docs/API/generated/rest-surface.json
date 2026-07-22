@@ -23,7 +23,7 @@
       ],
       "declaredPath": "*",
       "source": "backend/src/index.js",
-      "line": 585,
+      "line": 568,
       "dynamic": false
     },
     {
@@ -243,7 +243,7 @@
       ],
       "declaredPath": "/api/auth/csrf",
       "source": "backend/src/index.js",
-      "line": 183,
+      "line": 166,
       "dynamic": false
     },
     {
@@ -1473,7 +1473,7 @@
       ],
       "declaredPath": "/api/health",
       "source": "backend/src/index.js",
-      "line": 263,
+      "line": 246,
       "dynamic": false
     },
     {
@@ -2883,7 +2883,7 @@
       ],
       "declaredPath": "/public/review/:token",
       "source": "backend/src/routes/reputation/public.routes.js",
-      "line": 89,
+      "line": 102,
       "dynamic": false
     },
     {
@@ -2893,7 +2893,7 @@
       ],
       "declaredPath": "/public/review/:token",
       "source": "backend/src/routes/reputation/public.routes.js",
-      "line": 143,
+      "line": 156,
       "dynamic": false
     },
     {
@@ -4293,7 +4293,7 @@
       ],
       "declaredPath": "/graphql",
       "source": "backend/src/index.js",
-      "line": 251,
+      "line": 234,
       "dynamic": false
     },
     {
@@ -4303,7 +4303,7 @@
       ],
       "declaredPath": "/graphql",
       "source": "backend/src/index.js",
-      "line": 250,
+      "line": 233,
       "dynamic": false
     },
     {
@@ -4313,7 +4313,7 @@
       ],
       "declaredPath": "/health",
       "source": "backend/src/index.js",
-      "line": 383,
+      "line": 366,
       "dynamic": false
     }
   ]

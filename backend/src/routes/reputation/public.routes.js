@@ -20,6 +20,10 @@ module.exports = ({ pool, publicRateLimit, getSentiment }) => {
     router.get('/public/widget/:widgetKey', publicRateLimit, async (req, res) => {
         try {
             const { widgetKey } = req.params;
+            res.setHeader('Cache-Control', 'no-store');
+            if (!/^[a-f0-9]{32}$/i.test(widgetKey)) {
+                return res.status(404).json({ error: 'Widget not found' });
+            }
             const data = await withDbClient(pool, async (client) => {
                 // Get widget config
                 const widgetResult = await client.query(`
@@ -32,10 +36,17 @@ module.exports = ({ pool, publicRateLimit, getSentiment }) => {
                 }
 
                 const widget = widgetResult.rows[0];
+                const minimumRating = Number.isInteger(widget.min_rating) && widget.min_rating >= 1 && widget.min_rating <= 5
+                    ? widget.min_rating : 4;
+                const maximumReviews = Number.isInteger(widget.max_reviews) && widget.max_reviews >= 1 && widget.max_reviews <= 100
+                    ? widget.max_reviews : 10;
+                const selectedPlatforms = Array.isArray(widget.platforms)
+                    ? widget.platforms.filter((platform) => reviewPlatforms.has(platform)).slice(0, reviewPlatforms.size)
+                    : [];
 
                 // Get reviews based on widget config
                 let platformFilter = '';
-                if (widget.platforms && widget.platforms.length > 0) {
+                if (selectedPlatforms.length > 0) {
                     platformFilter = `AND platform = ANY($4)`;
                 }
 
@@ -46,13 +57,15 @@ module.exports = ({ pool, publicRateLimit, getSentiment }) => {
                     FROM reviews
                     WHERE organization_id = $1 
                         AND rating >= $2
+                        AND status IS DISTINCT FROM 'hidden'
+                        AND status IS DISTINCT FROM 'flagged'
                         ${widget.hide_no_text_reviews ? "AND review_text IS NOT NULL AND review_text != ''" : ''}
                         ${platformFilter}
                     ORDER BY review_date DESC
                     LIMIT $3
-                `, widget.platforms && widget.platforms.length > 0 
-                    ? [widget.organization_id, widget.min_rating, widget.max_reviews, widget.platforms]
-                    : [widget.organization_id, widget.min_rating, widget.max_reviews]
+                `, selectedPlatforms.length > 0
+                    ? [widget.organization_id, minimumRating, maximumReviews, selectedPlatforms]
+                    : [widget.organization_id, minimumRating, maximumReviews]
                 );
 
                 return { status: 200, widget, reviewsResult };

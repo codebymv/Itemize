@@ -90,6 +90,9 @@ const envSchema = z.object({
   VITE_REPUTATION_ANALYTICS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_REPUTATION_REQUEST_MANAGEMENT_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_REPUTATION_REQUEST_DELIVERY_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
+  VITE_REPUTATION_PLATFORMS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
+  VITE_REPUTATION_SETTINGS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
+  VITE_REPUTATION_WIDGETS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_DEV_AUTH_PROBE_WITHOUT_HINT: z.enum(['true', 'false']).optional().default('false'),
   
   // OAuth
@@ -199,6 +202,9 @@ if (import.meta.env.DEV) {
     reputationAnalyticsGraphql: env.VITE_REPUTATION_ANALYTICS_GRAPHQL === 'true',
     reputationRequestManagementGraphql: env.VITE_REPUTATION_REQUEST_MANAGEMENT_GRAPHQL === 'true',
     reputationRequestDeliveryGraphql: env.VITE_REPUTATION_REQUEST_DELIVERY_GRAPHQL === 'true',
+    reputationPlatformsGraphql: env.VITE_REPUTATION_PLATFORMS_GRAPHQL === 'true',
+    reputationSettingsGraphql: env.VITE_REPUTATION_SETTINGS_GRAPHQL === 'true',
+    reputationWidgetsGraphql: env.VITE_REPUTATION_WIDGETS_GRAPHQL === 'true',
     devAuthProbeWithoutHint: env.VITE_DEV_AUTH_PROBE_WITHOUT_HINT === 'true',
     hasClientId: !!env.VITE_GOOGLE_CLIENT_ID,
     productionDomain: env.VITE_PRODUCTION_DOMAIN || undefined,

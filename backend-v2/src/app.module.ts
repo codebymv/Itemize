@@ -37,6 +37,7 @@ import { PipelinesModule } from './pipelines/pipelines.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ProductsModule } from './products/products.module';
 import { RecurringInvoicesModule } from './recurring-invoices/recurring-invoices.module';
+import { ReputationConfigurationModule } from './reputation-configuration/reputation-configuration.module';
 import { ReputationReviewsModule } from './reputation-reviews/reputation-reviews.module';
 import { ReputationRequestsModule } from './reputation-requests/reputation-requests.module';
 import { RequestContextMiddleware } from './request-context/request-context.middleware';
@@ -81,6 +82,7 @@ const observabilityPlugins = [
     PaymentsModule,
     ProductsModule,
     RecurringInvoicesModule,
+    ReputationConfigurationModule,
     ReputationReviewsModule,
     ReputationRequestsModule,
     TagsModule,

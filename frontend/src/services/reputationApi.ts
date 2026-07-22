@@ -8,7 +8,22 @@ import {
     isReputationRequestDeliveryGraphqlEnabled,
     isReputationRequestManagementGraphqlEnabled,
     isReputationReviewsGraphqlEnabled,
+    isReputationPlatformsGraphqlEnabled,
+    isReputationSettingsGraphqlEnabled,
+    isReputationWidgetsGraphqlEnabled,
 } from './graphqlClient';
+import {
+    createWidgetViaGraphql,
+    deletePlatformViaGraphql,
+    deleteWidgetViaGraphql,
+    getPlatformsViaGraphql,
+    getReputationSettingsViaGraphql,
+    getWidgetEmbedCodeViaGraphql,
+    getWidgetsViaGraphql,
+    updateReputationSettingsViaGraphql,
+    updateWidgetViaGraphql,
+    upsertPlatformViaGraphql,
+} from './reputationConfigurationGraphql';
 import { getReputationAnalyticsViaGraphql } from './reputationAnalyticsGraphql';
 import {
     deleteReviewRequestViaGraphql,
@@ -40,11 +55,11 @@ export interface ReviewPlatform {
     id: number;
     organization_id: number;
     platform: 'google' | 'facebook' | 'yelp' | 'trustpilot' | 'g2' | 'capterra' | 'custom';
-    platform_name?: string;
-    place_id?: string;
-    page_id?: string;
-    business_url?: string;
-    review_url?: string;
+    platform_name?: string | null;
+    place_id?: string | null;
+    page_id?: string | null;
+    business_url?: string | null;
+    review_url?: string | null;
     total_reviews: number;
     average_rating: number;
     last_synced_at?: string;
@@ -192,17 +207,17 @@ export interface ReputationSettings {
     auto_request_delay_days: number;
     auto_request_channel: string;
     auto_request_trigger: string;
-    email_template_id?: number;
-    sms_template_text?: string;
+    email_template_id?: number | null;
+    sms_template_text?: string | null;
     negative_threshold: number;
-    negative_alert_email?: string;
+    negative_alert_email?: string | null;
     negative_route_internal: boolean;
-    positive_route_url?: string;
-    default_review_url?: string;
-    google_place_id?: string;
+    positive_route_url?: string | null;
+    default_review_url?: string | null;
+    google_place_id?: string | null;
     new_review_notify_email: boolean;
     new_review_notify_slack: boolean;
-    slack_webhook_url?: string;
+    slack_webhook_url?: string | null;
     created_at?: string;
     updated_at?: string;
 }
@@ -236,6 +251,7 @@ export interface ReputationAnalytics {
 // ======================
 
 export const getPlatforms = async (organizationId?: number): Promise<ReviewPlatform[]> => {
+    if (isReputationPlatformsGraphqlEnabled()) return getPlatformsViaGraphql(organizationId);
     const response = await api.get('/api/reputation/platforms', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -267,6 +283,7 @@ export const addPlatform = async (
     platform: Partial<ReviewPlatform>,
     organizationId?: number
 ): Promise<ReviewPlatform> => {
+    if (isReputationPlatformsGraphqlEnabled()) return upsertPlatformViaGraphql(platform, organizationId);
     const response = await api.post('/api/reputation/platforms', platform, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -277,6 +294,7 @@ export const removePlatform = async (
     platformId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
+    if (isReputationPlatformsGraphqlEnabled()) return deletePlatformViaGraphql(platformId, organizationId);
     const response = await api.delete(`/api/reputation/platforms/${platformId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -443,6 +461,7 @@ export const submitPublicReview = async (
 // ======================
 
 export const getWidgets = async (organizationId?: number): Promise<ReviewWidget[]> => {
+    if (isReputationWidgetsGraphqlEnabled()) return getWidgetsViaGraphql(organizationId);
     const response = await api.get('/api/reputation/widgets', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -453,6 +472,7 @@ export const createWidget = async (
     widget: Partial<ReviewWidget>,
     organizationId?: number
 ): Promise<ReviewWidget> => {
+    if (isReputationWidgetsGraphqlEnabled()) return createWidgetViaGraphql(widget, organizationId);
     const response = await api.post('/api/reputation/widgets', widget, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -464,6 +484,7 @@ export const updateWidget = async (
     widget: Partial<ReviewWidget>,
     organizationId?: number
 ): Promise<ReviewWidget> => {
+    if (isReputationWidgetsGraphqlEnabled()) return updateWidgetViaGraphql(widgetId, widget, organizationId);
     const response = await api.put(`/api/reputation/widgets/${widgetId}`, widget, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -474,6 +495,7 @@ export const deleteWidget = async (
     widgetId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
+    if (isReputationWidgetsGraphqlEnabled()) return deleteWidgetViaGraphql(widgetId, organizationId);
     const response = await api.delete(`/api/reputation/widgets/${widgetId}`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -484,6 +506,7 @@ export const getWidgetEmbedCode = async (
     widgetId: number,
     organizationId?: number
 ): Promise<{ embed_code: string; widget_key: string }> => {
+    if (isReputationWidgetsGraphqlEnabled()) return getWidgetEmbedCodeViaGraphql(widgetId, organizationId);
     const response = await api.get(`/api/reputation/widgets/${widgetId}/embed-code`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -495,6 +518,7 @@ export const getWidgetEmbedCode = async (
 // ======================
 
 export const getReputationSettings = async (organizationId?: number): Promise<ReputationSettings> => {
+    if (isReputationSettingsGraphqlEnabled()) return getReputationSettingsViaGraphql(organizationId);
     const response = await api.get('/api/reputation/settings', {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
@@ -505,6 +529,7 @@ export const updateReputationSettings = async (
     settings: Partial<ReputationSettings>,
     organizationId?: number
 ): Promise<ReputationSettings> => {
+    if (isReputationSettingsGraphqlEnabled()) return updateReputationSettingsViaGraphql(settings, organizationId);
     const response = await api.put('/api/reputation/settings', settings, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });

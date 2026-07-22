@@ -23,7 +23,7 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 | Method | Public path candidate | Declared path | Source |
 | --- | --- | --- | --- |
-| GET | `/*` | `*` | `backend/src/index.js:585` |
+| GET | `/*` | `*` | `backend/src/index.js:568` |
 | GET | `/api/admin/email/logs` | `/logs` | `backend/src/routes/admin-email.routes.js:233` |
 | GET | `/api/admin/email/logs/:id` | `/logs/:id` | `backend/src/routes/admin-email.routes.js:312` |
 | POST | `/api/admin/email/preview` | `/preview` | `backend/src/routes/admin-email.routes.js:168` |
@@ -45,7 +45,7 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/analytics/revenue-trends` | `/revenue-trends` | `backend/src/routes/analytics/advanced.routes.js:156` |
 | GET | `/api/analytics/workflow-performance` | `/workflow-performance` | `backend/src/routes/analytics/operations.routes.js:117` |
 | POST | `/api/auth/change-password` | `/change-password` | `backend/src/auth/credentials.routes.js:462` |
-| GET | `/api/auth/csrf` | `/api/auth/csrf` | `backend/src/index.js:183` |
+| GET | `/api/auth/csrf` | `/api/auth/csrf` | `backend/src/index.js:166` |
 | POST | `/api/auth/forgot-password` | `/forgot-password` | `backend/src/auth/credentials.routes.js:338` |
 | POST | `/api/auth/google-credential` | `/google-credential` | `backend/src/auth/google.routes.js:133` |
 | POST | `/api/auth/google-login` | `/google-login` | `backend/src/auth/google.routes.js:18` |
@@ -168,7 +168,7 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | DELETE | `/api/forms/:id/submissions/:subId` | `/:id/submissions/:subId` | `backend/src/routes/forms.routes.js:887` |
 | GET | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:916` |
 | POST | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:961` |
-| GET | `/api/health` | `/api/health` | `backend/src/index.js:263` |
+| GET | `/api/health` | `/api/health` | `backend/src/index.js:246` |
 | GET | `/api/invoices` | `/` | `backend/src/routes/invoices/crud.routes.js:18` |
 | POST | `/api/invoices` | `/` | `backend/src/routes/invoices/crud.routes.js:145` |
 | DELETE | `/api/invoices/:id` | `/:id` | `backend/src/routes/invoices/crud.routes.js:537` |
@@ -309,8 +309,8 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/reputation/platforms` | `/platforms` | `backend/src/routes/reputation/platforms.routes.js:15` |
 | POST | `/api/reputation/platforms` | `/platforms` | `backend/src/routes/reputation/platforms.routes.js:33` |
 | DELETE | `/api/reputation/platforms/:id` | `/platforms/:id` | `backend/src/routes/reputation/platforms.routes.js:73` |
-| GET | `/api/reputation/public/review/:token` | `/public/review/:token` | `backend/src/routes/reputation/public.routes.js:89` |
-| POST | `/api/reputation/public/review/:token` | `/public/review/:token` | `backend/src/routes/reputation/public.routes.js:143` |
+| GET | `/api/reputation/public/review/:token` | `/public/review/:token` | `backend/src/routes/reputation/public.routes.js:102` |
+| POST | `/api/reputation/public/review/:token` | `/public/review/:token` | `backend/src/routes/reputation/public.routes.js:156` |
 | GET | `/api/reputation/public/widget/:widgetKey` | `/public/widget/:widgetKey` | `backend/src/routes/reputation/public.routes.js:20` |
 | GET | `/api/reputation/requests` | `/requests` | `backend/src/routes/reputation/requests.routes.js:18` |
 | POST | `/api/reputation/requests` | `/requests` | `backend/src/routes/reputation/requests.routes.js:93` |
@@ -450,6 +450,6 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/docs/content` | `/content` | `backend/src/routes/docs.js:48` |
 | GET | `/docs/search` | `/search` | `backend/src/routes/docs.js:138` |
 | GET | `/docs/structure` | `/structure` | `backend/src/routes/docs.js:121` |
-| ALL | `/graphql` | `/graphql` | `backend/src/index.js:251` |
-| POST | `/graphql` | `/graphql` | `backend/src/index.js:250` |
-| GET | `/health` | `/health` | `backend/src/index.js:383` |
+| ALL | `/graphql` | `/graphql` | `backend/src/index.js:234` |
+| POST | `/graphql` | `/graphql` | `backend/src/index.js:233` |
+| GET | `/health` | `/health` | `backend/src/index.js:366` |
