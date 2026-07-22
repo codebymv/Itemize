@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Mail, RefreshCw, Loader2 } from 'lucide-react';
-import { getEmailLogs, EmailLog } from '@/services/adminEmailApi';
+import { getEmailLog, getEmailLogs, EmailLog } from '@/services/adminEmailApi';
 
 export function EmailLogsView() {
     const [logs, setLogs] = useState<EmailLog[]>([]);
@@ -32,6 +32,16 @@ export function EmailLogsView() {
     useEffect(() => {
         fetchLogs();
     }, []);
+
+    const selectLog = async (log: EmailLog) => {
+        setSelectedLog(log);
+        try {
+            const detail = await getEmailLog(log.id);
+            setSelectedLog(current => current?.id === log.id ? detail : current);
+        } catch {
+            toast({ title: 'Error', description: 'Failed to load email content', variant: 'destructive' });
+        }
+    };
 
     const getStatusBadgeVariant = (status: string) => {
         switch (status) {
@@ -80,7 +90,7 @@ export function EmailLogsView() {
                             <div
                                 key={log.id}
                                 className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 cursor-pointer transition-colors"
-                                onClick={() => setSelectedLog(log)}
+                                onClick={() => void selectLog(log)}
                             >
                                 <div className="flex-1 min-w-0">
                                     <p className="font-medium truncate">{log.subject}</p>
@@ -141,6 +151,7 @@ export function EmailLogsView() {
                                 <div className="border rounded overflow-hidden">
                                     <iframe
                                         srcDoc={selectedLog.bodyHtml}
+                                        sandbox="allow-same-origin"
                                         className="w-full h-[300px] bg-white"
                                         title="Email Content"
                                     />

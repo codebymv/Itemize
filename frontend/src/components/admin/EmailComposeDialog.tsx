@@ -41,6 +41,7 @@ export function EmailComposeDialog({
     const [sending, setSending] = useState(false);
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState(false);
+    const [queued, setQueued] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
 
     // Preview visibility - default to true for better UX
@@ -144,7 +145,7 @@ export function EmailComposeDialog({
 
         setSending(true);
         try {
-            await sendEmail({
+            const result = await sendEmail({
                 recipients: allRecipients.map(r => ({
                     id: typeof r.id === 'number' ? r.id : undefined,
                     email: r.email,
@@ -154,6 +155,7 @@ export function EmailComposeDialog({
                 bodyHtml: body,
             });
 
+            setQueued((result.queued ?? 0) > 0);
             setSuccess(true);
 
             setTimeout(() => {
@@ -172,6 +174,7 @@ export function EmailComposeDialog({
         setSubject('');
         setBody('');
         setSuccess(false);
+        setQueued(false);
         setSaveSuccess(false);
         setOriginalTemplate(null);
         setShowPreview(false);
@@ -231,9 +234,11 @@ export function EmailComposeDialog({
                     {success ? (
                         <div className="py-12 text-center">
                             <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-green-500" />
-                            <p className="text-lg font-medium text-slate-700 dark:text-slate-200">Email sent successfully!</p>
+                            <p className="text-lg font-medium text-slate-700 dark:text-slate-200">
+                                {queued ? 'Email queued successfully!' : 'Email sent successfully!'}
+                            </p>
                             <p className="text-sm text-muted-foreground">
-                                Sent to {allRecipients.length} recipient{allRecipients.length !== 1 ? 's' : ''}
+                                {queued ? 'Queued for' : 'Sent to'} {allRecipients.length} recipient{allRecipients.length !== 1 ? 's' : ''}
                             </p>
                         </div>
                     ) : (

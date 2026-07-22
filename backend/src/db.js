@@ -77,6 +77,9 @@ const {
 const {
   runCampaignDeliveryMigration,
 } = require('./db_campaign_delivery_migrations');
+const {
+  runAdminEmailDeliveryMigration,
+} = require('./db_admin_email_delivery_migrations');
 
 // Import Forms migrations
 const { runAllFormsMigrations } = require('./db_forms_migrations');
@@ -647,6 +650,7 @@ const initializeDatabase = async (pool) => {
       console.log('✅ Admin email logs columns migration complete');
       return true;
     });
+    await runMigrationOnce(pool, 'admin_email_deliveries', runAdminEmailDeliveryMigration);
 
     const elapsed = Date.now() - startTime;
     console.log(`✅ Database initialized successfully in ${elapsed}ms`);

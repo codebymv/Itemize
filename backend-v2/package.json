@@ -14,6 +14,7 @@
     "jobs:campaign-test-email-deliveries": "node dist/run-campaign-test-email-delivery.js",
     "jobs:campaign-deliveries": "node dist/run-campaign-delivery.js",
     "jobs:reputation-request-deliveries": "node dist/run-reputation-request-delivery.js",
+    "jobs:admin-email-deliveries": "node dist/run-admin-email-delivery.js",
     "jobs:workflow-schedules": "node dist/run-workflow-schedules.js",
     "jobs:workflow-triggers": "node dist/run-workflow-triggers.js",
     "jobs:workflow-enrollments": "node dist/run-workflow-enrollments.js",

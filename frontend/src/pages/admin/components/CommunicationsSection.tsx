@@ -231,7 +231,7 @@ export default function CommunicationsSection() {
         setComposeOpen(false);
         setSelectedUsers(new Set());
         setAllFilteredSelected(false);
-        toast({ title: 'Success', description: 'Emails sent successfully!' });
+        toast({ title: 'Success', description: 'Email request completed successfully.' });
     };
 
     const getPlanBadgeClass = (plan: string) => {

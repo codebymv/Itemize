@@ -20,6 +20,8 @@ Generated artifacts:
 
 The global administrator directory, statistics, and current-administrator plan change are assigned to `AdminOperationsModule`. Database-backed administrator authorization, shared plan filters for paged and all-ID selection, bounded ordered batch lookup, snapshot-consistent pagination, and atomic plan storage are frozen in the [admin operations GraphQL cutover contract](contracts/admin-operations-graphql-cutover.md).
 
+Administrator templates, email audit, and pure preview rendering are assigned to `AdminMessagingModule`; durable provider delivery is separately assigned to `MessagingDeliveryModule`. Atomic intent/log storage, per-recipient leases, idempotency, ambiguous-outcome reconciliation, sandboxed HTML rendering, and independent consumer/worker rollback boundaries are frozen in the [admin messaging GraphQL cutover contract](contracts/admin-messaging-graphql-cutover.md).
+
 ## Current static baseline
 
 | Evidence | Count |

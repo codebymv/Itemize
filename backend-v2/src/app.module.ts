@@ -5,6 +5,8 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { Request, Response } from 'express';
 import { AuthModule } from './auth/auth.module';
 import { AdminOperationsModule } from './admin-operations/admin-operations.module';
+import { AdminMessagingModule } from './admin-messaging/admin-messaging.module';
+import { MessagingDeliveryModule } from './admin-messaging/messaging-delivery.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { GraphqlAuthGuard } from './auth/graphql-auth.guard';
 import { GraphqlCsrfGuard } from './auth/graphql-csrf.guard';
@@ -63,6 +65,8 @@ const observabilityPlugins = [
     DatabaseModule,
     AuthModule,
     AdminOperationsModule,
+    AdminMessagingModule,
+    MessagingDeliveryModule,
     AnalyticsModule,
     OrganizationsModule,
     CalendarsModule,

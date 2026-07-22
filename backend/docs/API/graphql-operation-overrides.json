@@ -960,25 +960,25 @@
       "owner": "platform-operations",
       "targetModule": "AdminMessagingModule",
       "targetOperation": "adminEmailLogs",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Administrator-only global audit page with validated status filters and bounded cursor pagination."
+      "notes": "Administrator-only global audit page with validated status filters, snapshot-consistent counts, deterministic ordering, and bounded pagination."
     },
     "GET /api/admin/email/logs/:id": {
       "disposition": "graphql-query",
       "owner": "platform-operations",
       "targetModule": "AdminMessagingModule",
       "targetOperation": "adminEmailLog",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Administrator-only global log detail; preserve stored rendered content while applying audit-data retention rules."
+      "notes": "Administrator-only global log detail preserves stored rendered content; list projections omit bodies and every browser rendering is sandboxed."
     },
     "POST /api/admin/email/preview": {
       "disposition": "graphql-mutation",
       "owner": "platform-operations",
       "targetModule": "AdminMessagingModule",
       "targetOperation": "previewAdminEmail",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "medium",
       "notes": "Pure rendering operation with bounded input; never fetch arbitrary URLs or perform provider delivery."
     },
@@ -987,7 +987,7 @@
       "owner": "platform-operations",
       "targetModule": "MessagingDeliveryModule",
       "targetOperation": "enqueueAdminEmailBatch",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "high",
       "notes": "Validate and cap recipients, persist one durable batch plus recipient jobs, and never perform a synchronous provider loop in the resolver."
     },
@@ -996,9 +996,9 @@
       "owner": "platform-operations",
       "targetModule": "AdminMessagingModule",
       "targetOperation": "adminEmailTemplates",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Administrator-only cross-organization template search with cursor pagination and explicit system-template handling."
+      "notes": "Administrator-only cross-organization template search with deterministic ordering, a 100-row bound, a true filtered total, and nullable system-template ownership in the GraphQL contract."
     },
     "GET /api/email-templates": {
       "disposition": "graphql-query",

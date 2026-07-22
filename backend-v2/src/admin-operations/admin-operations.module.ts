@@ -4,5 +4,8 @@ import { AdminOperationsRepository } from './admin-operations.repository';
 import { AdminOperationsResolver } from './admin-operations.resolver';
 import { AdminOperationsService } from './admin-operations.service';
 
-@Module({ providers: [AdminAccessGuard, AdminOperationsRepository, AdminOperationsService, AdminOperationsResolver] })
+@Module({
+  providers: [AdminAccessGuard, AdminOperationsRepository, AdminOperationsService, AdminOperationsResolver],
+  exports: [AdminAccessGuard],
+})
 export class AdminOperationsModule {}

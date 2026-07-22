@@ -281,6 +281,12 @@ export const isAdminDirectoryGraphqlEnabled = (): boolean =>
 export const isAdminPlanGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_ADMIN_PLAN_GRAPHQL === 'true';
 
+export const isAdminMessagingGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_ADMIN_MESSAGING_GRAPHQL === 'true';
+
+export const isAdminEmailDeliveryGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_ADMIN_EMAIL_DELIVERY_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

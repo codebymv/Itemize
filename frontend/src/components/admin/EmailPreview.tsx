@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Monitor, Smartphone, ExternalLink, AlertCircle } from 'lucide-react';
 import { getPreview } from '@/services/adminEmailApi';
 import { cn } from '@/lib/utils';
+import { sandboxedEmailPreviewDocument } from '@/lib/emailPreviewWindow';
 
 interface EmailPreviewProps {
     subject: string;
@@ -66,7 +67,7 @@ export function EmailPreview({
 
         const newWindow = window.open('', '_blank');
         if (newWindow) {
-            newWindow.document.write(previewHtml);
+            newWindow.document.write(sandboxedEmailPreviewDocument(previewHtml));
             newWindow.document.close();
         }
     };
