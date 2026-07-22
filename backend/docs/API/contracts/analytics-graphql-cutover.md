@@ -1,8 +1,8 @@
 # Analytics and dashboard GraphQL cutover contract
 
-**Status:** Dashboard plus five dedicated metric queries implemented default-off; three business-definition queries remain blocked
+**Status:** Dashboard plus five dedicated metric queries complete in production; three business-definition queries remain blocked
 
-**Evidence date:** 2026-07-21
+**Evidence date:** 2026-07-22
 
 ## Decision
 

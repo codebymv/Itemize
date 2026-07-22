@@ -24,7 +24,7 @@
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "requestPasswordReset",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "high",
       "notes": "NestJS preserves the generic response and strict throttle, rotates a random token stored only as a hash with one-hour expiry for eligible local accounts, and starts delivery after persistence without awaiting provider latency in the public response."
     },
@@ -42,7 +42,7 @@
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "loginWithGoogle",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "high",
       "notes": "Backend now verifies access-token audience and derives the verified identity from Google before issuing httpOnly cookies."
     },
@@ -51,7 +51,7 @@
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "login",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
       "notes": "Cookie-only session establishment; GraphQL payload must never expose access or refresh tokens."
     },
@@ -60,7 +60,7 @@
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "logout",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
       "notes": "Requires CSRF and must expire both authentication cookies even when the server-side session is otherwise invalid."
     },
@@ -69,7 +69,7 @@
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "viewer",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
       "notes": "Resolve identity from the signed httpOnly access cookie; preserve no-store behavior and normalized user fields."
     },
@@ -96,7 +96,7 @@
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "register",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "high",
       "notes": "NestJS creates the user, personal organization, owner membership, and default-organization assignment in one transaction; the default-off identity flag preserves REST rollback."
     },
@@ -105,7 +105,7 @@
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "resendVerificationEmail",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "high",
       "notes": "NestJS preserves a non-enumerating response, an independent strict rate-limit bucket, hashed tokens, 24-hour expiry, and post-commit email delivery."
     },
@@ -114,7 +114,7 @@
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "resetPassword",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "high",
       "notes": "NestJS enforces password policy and atomically consumes a valid hashed reset token while replacing the bcrypt hash and clearing reset state; concurrent reuse has one winner."
     },
@@ -123,7 +123,7 @@
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "verifyEmail",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "high",
       "notes": "NestJS conditionally consumes a valid hashed token once, marks the email verified, issues cookie-only session credentials, and attempts the welcome notification after commit."
     },
@@ -132,7 +132,7 @@
       "owner": "workspace",
       "targetModule": "OrganizationsModule",
       "targetOperation": "organizations",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
       "notes": "The active workspace selector lists only current database memberships, includes the caller's current role and selected default, preserves the retained frontend shape, and has an independent default-off REST rollback flag. The real staging provider passed both GraphQL selection and flag-off REST reads with the same persisted default."
     },
@@ -186,7 +186,7 @@
       "owner": "workspace",
       "targetModule": "OrganizationsModule",
       "targetOperation": "selectOrganization",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
       "notes": "The active workspace selector re-reads current membership without existence disclosure, persists the selected default under a user lock, requires CSRF, clears tenant-scoped client caches, and preserves an independent default-off REST rollback flag. The staging browser passed GraphQL selection and reload persistence, then REST selection and reload persistence without data repair."
     },
@@ -231,7 +231,7 @@
       "owner": "workspace",
       "targetModule": "OrganizationsModule",
       "targetOperation": "ensureDefaultOrganization",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
       "notes": "The active workspace selector idempotently selects an existing membership or atomically creates one personal organization, owner membership, and default assignment; concurrent first-workspace requests serialize on the user row and share the mutation rollback flag. Repeated authenticated staging GraphQL probes returned the existing selected membership; first-workspace creation remains proven by fresh PostgreSQL rather than the disposable staging browser."
     },
@@ -1199,23 +1199,23 @@
       "notes": "Retain Twilio-signed form HTTP with durable MessageSid/status claims and an explicit provider-to-domain status map."
     },
     "GET /api/contacts": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "contacts", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "contacts", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Preserve organization scope, search/filter semantics, deterministic ordering, strict pagination, and safe assignee projection."
     },
     "POST /api/contacts": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "createContact", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "createContact", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Plan limit is serialized per organization; assignee must be an active-organization member and automation intent must use the durable event boundary."
     },
     "GET /api/contacts/:id": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "contact", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "contact", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Outside-organization IDs are not found and related user projections must not expose invalid legacy references."
     },
     "PUT /api/contacts/:id": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "updateContact", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "updateContact", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Preserve omitted-versus-null behavior explicitly, validate assignee membership, and emit status changes transactionally through the event boundary."
     },
     "DELETE /api/contacts/:id": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "deleteContact", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "deleteContact", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Organization-scoped deletion with an explicit policy for dependent deals, submissions, activities, and content."
     },
     "GET /api/contacts/:id/profile": {
@@ -1223,23 +1223,23 @@
       "notes": "Aggregate PII query requires verified authentication and organization context. GraphQL bounds and tenant-scopes all nine child collections, exposes total/truncation plus AVAILABLE/UNAVAILABLE section health, repairs the legacy payment-date and nonexistent list-junction queries, passed the authenticated staging operation/foreign-tenant gate, and has exhaustive nine-section failure isolation. The generated ledger and source regression prove there is no current frontend consumer; introducing one requires a browser/rollback gate."
     },
     "GET /api/contacts/:id/activities": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "contactActivities", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "contactActivities", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "GraphQL returns a bounded page ordered by created time and ID descending, supports the full database activity enum as a filter, and scopes every row through an organization-owned parent contact."
     },
     "POST /api/contacts/:id/activities": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "addContactActivity", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "addContactActivity", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "GraphQL validates the full database activity enum, bounded title, and object-shaped content/metadata; CSRF is required and the organization-owned contact lock plus insert share one transaction."
     },
     "GET /api/contacts/:id/content": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactProfilesModule", "targetOperation": "contactContent", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactProfilesModule", "targetOperation": "contactContent", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Related lists, notes, and whiteboards use a tenant-private parent lookup, stable newest-first ordering, a 100-row collection bound, and explicit total/truncation metadata; GraphQL and REST rollback passed staging."
     },
     "POST /api/contacts/bulk-update": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "bulkUpdateContacts", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "bulkUpdateContacts", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "GraphQL caps requests at 100 IDs, deduplicates in request order, validates status/tag mode/assignee membership, applies set-like tags, commits workflow triggers and status activities atomically, and returns requested/matched/changed/rejected IDs without distinguishing foreign from absent rows."
     },
     "POST /api/contacts/bulk-delete": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "bulkDeleteContacts", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "bulkDeleteContacts", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "GraphQL caps requests at 100 IDs, deduplicates in request order, deletes only active-organization rows, returns requested/matched/changed/rejected IDs, and relies on the verified database cascade policy for dependent activities."
     },
     "GET /api/contacts/export/csv": {
@@ -1295,59 +1295,59 @@
       "notes": "Retain anonymous rate-limited HTTP; contact reuse and submission now commit transactionally with same-email race serialization. Add durable notification/event delivery and complete field validation."
     },
     "GET /api/pipelines": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "PipelinesModule", "targetOperation": "pipelines", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "PipelinesModule", "targetOperation": "pipelines", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Organization-scoped pipelines with deal aggregates and deterministic default/name ordering."
     },
     "POST /api/pipelines": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "PipelinesModule", "targetOperation": "createPipeline", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "PipelinesModule", "targetOperation": "createPipeline", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Validate non-empty unique stage IDs/names; concurrent default requests leave exactly one default."
     },
     "GET /api/pipelines/:id": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "PipelinesModule", "targetOperation": "pipeline", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "PipelinesModule", "targetOperation": "pipeline", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Organization-owned pipeline with paginated deals and safe related-contact/assignee projection."
     },
     "PUT /api/pipelines/:id": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "PipelinesModule", "targetOperation": "updatePipeline", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "PipelinesModule", "targetOperation": "updatePipeline", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Default changes serialize and stage replacement cannot remove a stage referenced by a deal."
     },
     "DELETE /api/pipelines/:id": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "PipelinesModule", "targetOperation": "deletePipeline", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "PipelinesModule", "targetOperation": "deletePipeline", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Lock and verify organization ownership before checking dependent deals so outsiders receive not found without an existence leak."
     },
     "GET /api/pipelines/deals/all": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "deals", "parityStatus": "implemented", "risk": "high",
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "deals", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Organization-scoped filters, strict pagination, Decimal value transport, and stable tie-breaker ordering."
     },
     "POST /api/pipelines/deals": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "createDeal", "parityStatus": "implemented", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "createDeal", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Pipeline, stage, contact, and assignee references must all belong to the active organization."
     },
     "GET /api/pipelines/deals/:id": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "deal", "parityStatus": "implemented", "risk": "high",
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "deal", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Outside-organization IDs are not found and relation projections must preserve tenant scope."
     },
     "PUT /api/pipelines/deals/:id": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "updateDeal", "parityStatus": "implemented", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "updateDeal", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Lock the deal and validate the effective pipeline/stage/contact/assignee tuple before update."
     },
     "DELETE /api/pipelines/deals/:id": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "deleteDeal", "parityStatus": "implemented", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "deleteDeal", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Organization-scoped deletion with explicit activity/event semantics."
     },
     "PATCH /api/pipelines/deals/:id/stage": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "moveDeal", "parityStatus": "implemented", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "moveDeal", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Lock the deal, validate the destination against its pipeline, and publish the durable deal-stage-changed event only after commit."
     },
     "POST /api/pipelines/deals/:id/won": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "markDealWon", "parityStatus": "implemented", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "markDealWon", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Atomically set won state, clear lost state, and emit lifecycle activity/event."
     },
     "POST /api/pipelines/deals/:id/lost": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "markDealLost", "parityStatus": "implemented", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "markDealLost", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Atomically set lost state/reason, clear won state, and emit lifecycle activity/event."
     },
     "POST /api/pipelines/deals/:id/reopen": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "reopenDeal", "parityStatus": "implemented", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "reopenDeal", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Clear terminal timestamps/reason atomically and emit lifecycle activity/event."
     },
     "GET /api/tags": {
@@ -1587,7 +1587,7 @@
       "notes": "Active signing capabilities receive the source PDF as a private attachment; completed-artifact delivery remains a separate product/lifecycle decision."
     },
     "GET /api/canvas/lists": {
-      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceLists", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceLists", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "User-scoped canvas list read implemented as repeated strict bounded pages with deterministic ordering; Canvas and Contents passed independent GraphQL read selection plus GraphQL-list-write and REST-write rollback in staging. The personalized rollback response is private/no-store and returns a complete HTTP 200 even when a retained ETag is replayed."
     },
     "PUT /api/canvas/positions": {
@@ -1595,19 +1595,19 @@
       "notes": "Active debounced Canvas drag path batches mixed list, note, whiteboard, and wireframe positions. It remains HTTP for this checkpoint; a later cutover needs bounded mixed-aggregate input, per-kind ownership checks, concurrency semantics, and publication policy."
     },
     "GET /api/lists": {
-      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceLists", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceLists", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "User-scoped paginated list read with typed items, canonical category resolution, search, and deterministic ordering. Its personalized rollback response is private/no-store and ignores conditional validators. The static callsite belongs to the retained UserHome adapter, but the active App router does not mount the legacy /lists page; shipped Canvas and Contents use GET /api/canvas/lists instead."
     },
     "POST /api/lists": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceList", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceList", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Implemented with bounded typed items, canonical category ID/name dual-write, CSRF, user scope, and REST-readable persistence behind an independent default-off mutation flag. Canvas/Contents creation and REST rollback passed the staging browser gate."
     },
     "PUT /api/lists/:id": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceList", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceList", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Implemented for the reachable whole-list UI adapter with row locking, required updatedAt optimistic concurrency, stable CONFLICT details, canonical category dual-write, and atomic owner/public realtime outbox rows. Staging proved stale-write rejection, sent owner/shared projections, an open anonymous viewer update, and REST rollback without later GraphQL traffic."
     },
     "DELETE /api/lists/:id": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "deleteWorkspaceList", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "deleteWorkspaceList", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Implemented with user concealment, CSRF, stable mutation IDs, and atomic owner-canvas plus active public-viewer deletion projections through the cross-service outbox. The staging browser gate proved GraphQL deletion and flag-off REST deletion reach the shipped owner and anonymous-viewer surfaces."
     },
     "POST /api/lists/:id/items": {
@@ -1643,31 +1643,31 @@
       "notes": "Rate-limited non-enumerating capability read with recursive sanitization and no-store/noindex headers."
     },
     "GET /api/notes": {
-      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceNotes", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceNotes", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "User-scoped paginated note read with title/content search, canonical category resolution, and deterministic ordering; the shipped Canvas and Contents surfaces passed independent GraphQL selection and REST rollback in staging. The personalized rollback response is private/no-store and returns a complete HTTP 200 when a retained ETag is replayed."
     },
     "POST /api/notes": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceNote", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceNote", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "User-scoped create validates bounded fields, resolves a canonical category, and writes its ID/name projection atomically."
     },
     "PUT /api/notes/:noteId": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNote", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNote", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Row-locked user-scoped update preserves omitted fields and atomically enqueues shared-viewer realtime projection."
     },
     "DELETE /api/notes/:noteId": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "deleteWorkspaceNote", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "deleteWorkspaceNote", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "User-scoped delete atomically enqueues the shared-viewer deletion event with a stable mutation key."
     },
     "PUT /api/notes/:noteId/category": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNote", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNote", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "The shared partial-update mutation verifies the user-owned category and atomically writes ID/name plus realtime projection."
     },
     "PUT /api/notes/:noteId/content": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNote", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNote", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "The shared row-locked partial-update mutation validates bounded content and preserves granular realtime event semantics."
     },
     "PUT /api/notes/:noteId/title": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNote", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNote", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "The shared row-locked partial-update mutation validates title and preserves granular realtime event semantics."
     },
     "POST /api/notes/:noteId/share": {
@@ -1683,19 +1683,19 @@
       "notes": "Rate-limited non-enumerating capability read; executable markup is sanitized and the response cannot be cached or indexed."
     },
     "GET /api/whiteboards": {
-      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceWhiteboards", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceWhiteboards", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "User-scoped paginated whiteboard read with title search, canonical category resolution, deterministic ordering, and JSON/casing adaptation for Canvas, Contents, and Global Search. The personalized REST rollback response is private/no-store and returns a complete HTTP 200 when a retained ETag is replayed. Staging browser rehearsal remains required."
     },
     "POST /api/whiteboards": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceWhiteboard", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceWhiteboard", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "User-scoped CSRF-protected create validates bounded canvas JSON, geometry, colors, and canonical category identity; REST can read the committed row. The independent mutation flag remains default-off pending staging."
     },
     "PUT /api/whiteboards/:whiteboardId": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceWhiteboard", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceWhiteboard", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Row-locked update requires the preceding updatedAt revision, rejects stale snapshots with stable conflict details, serializes rapid frontend saves, and atomically enqueues a bounded shared-viewer refetch projection rather than oversized canvas JSON."
     },
     "DELETE /api/whiteboards/:whiteboardId": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "deleteWorkspaceWhiteboard", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "deleteWorkspaceWhiteboard", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "User-scoped CSRF-protected delete uses a stable mutation ID and atomically enqueues the active public-viewer terminal projection. PostgreSQL proves REST miss and worker delivery; staging remains required."
     },
     "PUT /api/whiteboards/:id/position": {
@@ -1753,19 +1753,19 @@
       "notes": "Retain exact-body X-Hub-Signature-256 verification and fail closed without the app secret. One normalized durable batch claim precedes bounded inline processing; leased workers drain overflow and reconcile unmatched or ambiguous page/account mappings only when exactly one active organization remains. Durable message IDs prevent replay, Facebook and Instagram identities route separately, and socket delivery occurs only after commit."
     },
     "GET /api/analytics/dashboard": {
-      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "dashboardAnalytics", "parityStatus": "implemented", "risk": "high",
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "dashboardAnalytics", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Implemented behind default-off VITE_DASHBOARD_ANALYTICS_GRAPHQL. One read-only repeatable-read snapshot captures asOf, serializes aggregate reads, uses explicit UTC calendar boundaries, normalizes safe numeric scalars, isolates every source by organization, selects only the default/earliest pipeline, excludes terminal future bookings, and exposes booked/collected revenue separately while retaining deprecated mixed fields for frontend parity."
     },
     "GET /api/analytics/contacts/trends": {
-      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "contactTrends", "parityStatus": "implemented", "risk": "high",
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "contactTrends", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Implemented behind default-off VITE_CONTACT_TRENDS_GRAPHQL. Typed periods map to one captured read-only repeatable-read snapshot with inclusive-start/exclusive-end UTC buckets, tenant isolation, safe counts, REST parity, and invalid-enum rejection before SQL."
     },
     "GET /api/analytics/deals/performance": {
-      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "dealPerformance", "parityStatus": "implemented", "risk": "high",
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "dealPerformance", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Implemented behind default-off VITE_DEAL_PERFORMANCE_GRAPHQL. Closed-deal metrics use one captured inclusive-start/exclusive-end rolling window, safe numeric normalization, zero-safe rates, tenant isolation, and retained REST parity."
     },
     "GET /api/analytics/bookings/summary": {
-      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "bookingAnalytics", "parityStatus": "implemented", "risk": "high",
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "bookingAnalytics", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Implemented behind default-off VITE_BOOKING_ANALYTICS_GRAPHQL. One captured tenant snapshot returns safe status totals; upcoming includes only actionable pending/confirmed future bookings and completion excludes cancellation from its denominator."
     },
     "GET /api/analytics/conversion-rates": {
@@ -1781,11 +1781,11 @@
       "notes": "Tenant-scoped pipeline lookup and current deal ages are characterized; true time-in-stage is blocked until stage-transition history exists."
     },
     "GET /api/analytics/communication-stats": {
-      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "communicationStats", "parityStatus": "implemented", "risk": "high",
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "communicationStats", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Implemented behind default-off VITE_COMMUNICATION_STATS_GRAPHQL. Typed rolling periods share one captured boundary; email states are cumulative, while SMS sent/delivered/failed/segments and its delivery denominator are outbound-only. Queries are serialized and tenant-scoped."
     },
     "GET /api/analytics/workflow-performance": {
-      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "workflowPerformance", "parityStatus": "implemented", "risk": "high",
+      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "workflowPerformance", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Implemented behind default-off VITE_WORKFLOW_PERFORMANCE_GRAPHQL. Organization-owned workflows count only enrollments whose contact belongs to the same organization; enrollment rows, not advisory stats JSON, drive deterministic totals and zero-safe completion rates."
     },
     "GET /api/segments": {
@@ -1825,7 +1825,7 @@
       "notes": "Tenant-scoped tags, members, and pipeline stages plus the authoritative filter/operator/status vocabulary."
     },
     "GET /api/categories": {
-      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "categories", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "categories", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Authenticated user-scoped categories with deterministic ordering and no synthetic fallback data."
     },
     "GET /api/reputation/reviews": {
@@ -1949,39 +1949,39 @@
       "notes": "Database-authorized administrator-only global directory with bounded search, validated plan filter, stable ordering, pagination, and repeatable-read total parity."
     },
     "POST /api/categories": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "createCategory", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "createCategory", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "CSRF-protected normalized create; the General invariant is seeded for every existing and newly inserted user."
     },
     "PUT /api/categories/:id": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "updateCategory", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "updateCategory", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "User-owned partial update; General cannot be renamed and name changes propagate transactionally across all personal content stores."
     },
     "DELETE /api/categories/:id": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "deleteCategory", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "deleteCategory", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "User-owned transactional delete; all personal content is reassigned to General and the invariant category cannot be removed."
     },
     "GET /api/onboarding/progress": {
-      "disposition": "graphql-query", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "onboardingProgress", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-query", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "onboardingProgress", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Authenticated user-scoped progress, independent of selected organization, with deterministic typed feature projections."
     },
     "GET /api/onboarding/progress/:featureKey": {
-      "disposition": "graphql-query", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "onboardingFeatureProgress", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-query", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "onboardingFeatureProgress", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Validated feature key with an explicit unseen projection when no entry is stored."
     },
     "POST /api/onboarding/mark-seen": {
-      "disposition": "graphql-mutation", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "markOnboardingSeen", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "markOnboardingSeen", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "CSRF-protected row-locked user update with the viewed event committed in the same transaction."
     },
     "POST /api/onboarding/dismiss": {
-      "disposition": "graphql-mutation", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "dismissOnboarding", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "dismissOnboarding", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "CSRF-protected user-scoped dismissal that preserves existing feature fields and commits its event atomically."
     },
     "POST /api/onboarding/complete-step": {
-      "disposition": "graphql-mutation", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "completeOnboardingStep", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "completeOnboardingStep", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "CSRF-protected non-negative integer step update with an atomic durable analytics event."
     },
     "DELETE /api/onboarding/reset": {
-      "disposition": "graphql-mutation", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "resetOnboarding", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "resetOnboarding", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "CSRF-protected feature or full user reset; historical onboarding events are retained."
     }
   },

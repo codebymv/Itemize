@@ -456,7 +456,7 @@
       "owner": "analytics",
       "targetOperation": "bookingAnalytics",
       "targetModule": "AnalyticsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Implemented behind default-off VITE_BOOKING_ANALYTICS_GRAPHQL. One captured tenant snapshot returns safe status totals; upcoming includes only actionable pending/confirmed future bookings and completion excludes cancellation from its denominator.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -490,7 +490,7 @@
       "owner": "analytics",
       "targetOperation": "communicationStats",
       "targetModule": "AnalyticsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Implemented behind default-off VITE_COMMUNICATION_STATS_GRAPHQL. Typed rolling periods share one captured boundary; email states are cumulative, while SMS sent/delivered/failed/segments and its delivery denominator are outbound-only. Queries are serialized and tenant-scoped.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -524,7 +524,7 @@
       "owner": "analytics",
       "targetOperation": "contactTrends",
       "targetModule": "AnalyticsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Implemented behind default-off VITE_CONTACT_TRENDS_GRAPHQL. Typed periods map to one captured read-only repeatable-read snapshot with inclusive-start/exclusive-end UTC buckets, tenant isolation, safe counts, REST parity, and invalid-enum rejection before SQL.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -599,7 +599,7 @@
       "owner": "analytics",
       "targetOperation": "dashboardAnalytics",
       "targetModule": "AnalyticsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Implemented behind default-off VITE_DASHBOARD_ANALYTICS_GRAPHQL. One read-only repeatable-read snapshot captures asOf, serializes aggregate reads, uses explicit UTC calendar boundaries, normalizes safe numeric scalars, isolates every source by organization, selects only the default/earliest pipeline, excludes terminal future bookings, and exposes booked/collected revenue separately while retaining deprecated mixed fields for frontend parity.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -633,7 +633,7 @@
       "owner": "analytics",
       "targetOperation": "dealPerformance",
       "targetModule": "AnalyticsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Implemented behind default-off VITE_DEAL_PERFORMANCE_GRAPHQL. Closed-deal metrics use one captured inclusive-start/exclusive-end rolling window, safe numeric normalization, zero-safe rates, tenant isolation, and retained REST parity.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -735,7 +735,7 @@
       "owner": "analytics",
       "targetOperation": "workflowPerformance",
       "targetModule": "AnalyticsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Implemented behind default-off VITE_WORKFLOW_PERFORMANCE_GRAPHQL. Organization-owned workflows count only enrollments whose contact belongs to the same organization; enrollment rows, not advisory stats JSON, drive deterministic totals and zero-safe completion rates.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -848,7 +848,7 @@
       "owner": "identity",
       "targetOperation": "requestPasswordReset",
       "targetModule": "AuthModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "NestJS preserves the generic response and strict throttle, rotates a random token stored only as a hash with one-hour expiry for eligible local accounts, and starts delivery after persistence without awaiting provider latency in the public response.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -940,7 +940,7 @@
       "owner": "identity",
       "targetOperation": "loginWithGoogle",
       "targetModule": "AuthModule",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Backend now verifies access-token audience and derives the verified identity from Google before issuing httpOnly cookies.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -1011,7 +1011,7 @@
       "owner": "identity",
       "targetOperation": "login",
       "targetModule": "AuthModule",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Cookie-only session establishment; GraphQL payload must never expose access or refresh tokens.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -1052,7 +1052,7 @@
       "owner": "identity",
       "targetOperation": "logout",
       "targetModule": "AuthModule",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Requires CSRF and must expire both authentication cookies even when the server-side session is otherwise invalid.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -1099,7 +1099,7 @@
       "owner": "identity",
       "targetOperation": "viewer",
       "targetModule": "AuthModule",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Resolve identity from the signed httpOnly access cookie; preserve no-store behavior and normalized user fields.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -1211,7 +1211,7 @@
       "owner": "identity",
       "targetOperation": "register",
       "targetModule": "AuthModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "NestJS creates the user, personal organization, owner membership, and default-organization assignment in one transaction; the default-off identity flag preserves REST rollback.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -1245,7 +1245,7 @@
       "owner": "identity",
       "targetOperation": "resendVerificationEmail",
       "targetModule": "AuthModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "NestJS preserves a non-enumerating response, an independent strict rate-limit bucket, hashed tokens, 24-hour expiry, and post-commit email delivery.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -1279,7 +1279,7 @@
       "owner": "identity",
       "targetOperation": "resetPassword",
       "targetModule": "AuthModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "NestJS enforces password policy and atomically consumes a valid hashed reset token while replacing the bcrypt hash and clearing reset state; concurrent reuse has one winner.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -1313,7 +1313,7 @@
       "owner": "identity",
       "targetOperation": "verifyEmail",
       "targetModule": "AuthModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "NestJS conditionally consumes a valid hashed token once, marks the email verified, issues cookie-only session credentials, and attempts the welcome notification after commit.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -3711,7 +3711,7 @@
       "owner": "workspace-content",
       "targetOperation": "workspaceLists",
       "targetModule": "WorkspaceContentModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "User-scoped canvas list read implemented as repeated strict bounded pages with deterministic ordering; Canvas and Contents passed independent GraphQL read selection plus GraphQL-list-write and REST-write rollback in staging. The personalized rollback response is private/no-store and returns a complete HTTP 200 even when a retained ETag is replayed.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -3790,7 +3790,7 @@
       "owner": "workspace-content",
       "targetOperation": "categories",
       "targetModule": "CategoriesModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Authenticated user-scoped categories with deterministic ordering and no synthetic fallback data.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -3831,7 +3831,7 @@
       "owner": "workspace-content",
       "targetOperation": "createCategory",
       "targetModule": "CategoriesModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected normalized create; the General invariant is seeded for every existing and newly inserted user.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -3872,7 +3872,7 @@
       "owner": "workspace-content",
       "targetOperation": "deleteCategory",
       "targetModule": "CategoriesModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "User-owned transactional delete; all personal content is reassigned to General and the invariant category cannot be removed.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -3913,7 +3913,7 @@
       "owner": "workspace-content",
       "targetOperation": "updateCategory",
       "targetModule": "CategoriesModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "User-owned partial update; General cannot be renamed and name changes propagate transactionally across all personal content stores.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -4460,7 +4460,7 @@
       "owner": "crm",
       "targetOperation": "contacts",
       "targetModule": "ContactsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Preserve organization scope, search/filter semantics, deterministic ordering, strict pagination, and safe assignee projection.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -4531,7 +4531,7 @@
       "owner": "crm",
       "targetOperation": "createContact",
       "targetModule": "ContactsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Plan limit is serialized per organization; assignee must be an active-organization member and automation intent must use the durable event boundary.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -4578,7 +4578,7 @@
       "owner": "crm",
       "targetOperation": "deleteContact",
       "targetModule": "ContactsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Organization-scoped deletion with an explicit policy for dependent deals, submissions, activities, and content.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -4631,7 +4631,7 @@
       "owner": "crm",
       "targetOperation": "contact",
       "targetModule": "ContactsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Outside-organization IDs are not found and related user projections must not expose invalid legacy references.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -4690,7 +4690,7 @@
       "owner": "crm",
       "targetOperation": "updateContact",
       "targetModule": "ContactsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Preserve omitted-versus-null behavior explicitly, validate assignee membership, and emit status changes transactionally through the event boundary.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -4731,7 +4731,7 @@
       "owner": "crm",
       "targetOperation": "contactActivities",
       "targetModule": "ContactsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "GraphQL returns a bounded page ordered by created time and ID descending, supports the full database activity enum as a filter, and scopes every row through an organization-owned parent contact.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -4765,7 +4765,7 @@
       "owner": "crm",
       "targetOperation": "addContactActivity",
       "targetModule": "ContactsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "GraphQL validates the full database activity enum, bounded title, and object-shaped content/metadata; CSRF is required and the organization-owned contact lock plus insert share one transaction.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -4806,7 +4806,7 @@
       "owner": "crm",
       "targetOperation": "contactContent",
       "targetModule": "ContactProfilesModule",
-      "parityStatus": "characterized",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Related lists, notes, and whiteboards use a tenant-private parent lookup, stable newest-first ordering, a 100-row collection bound, and explicit total/truncation metadata; GraphQL and REST rollback passed staging.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -4889,7 +4889,7 @@
       "owner": "crm",
       "targetOperation": "bulkDeleteContacts",
       "targetModule": "ContactsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "GraphQL caps requests at 100 IDs, deduplicates in request order, deletes only active-organization rows, returns requested/matched/changed/rejected IDs, and relies on the verified database cascade policy for dependent activities.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -4936,7 +4936,7 @@
       "owner": "crm",
       "targetOperation": "bulkUpdateContacts",
       "targetModule": "ContactsModule",
-      "parityStatus": "characterized",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "GraphQL caps requests at 100 IDs, deduplicates in request order, validates status/tag mode/assignee membership, applies set-like tags, commits workflow triggers and status activities atomically, and returns requested/matched/changed/rejected IDs without distinguishing foreign from absent rows.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8964,7 +8964,7 @@
       "owner": "workspace-content",
       "targetOperation": "workspaceLists",
       "targetModule": "WorkspaceContentModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "User-scoped paginated list read with typed items, canonical category resolution, search, and deterministic ordering. Its personalized rollback response is private/no-store and ignores conditional validators. The static callsite belongs to the retained UserHome adapter, but the active App router does not mount the legacy /lists page; shipped Canvas and Contents use GET /api/canvas/lists instead.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -9005,7 +9005,7 @@
       "owner": "workspace-content",
       "targetOperation": "createWorkspaceList",
       "targetModule": "WorkspaceContentModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Implemented with bounded typed items, canonical category ID/name dual-write, CSRF, user scope, and REST-readable persistence behind an independent default-off mutation flag. Canvas/Contents creation and REST rollback passed the staging browser gate.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -9052,7 +9052,7 @@
       "owner": "workspace-content",
       "targetOperation": "deleteWorkspaceList",
       "targetModule": "WorkspaceContentModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Implemented with user concealment, CSRF, stable mutation IDs, and atomic owner-canvas plus active public-viewer deletion projections through the cross-service outbox. The staging browser gate proved GraphQL deletion and flag-off REST deletion reach the shipped owner and anonymous-viewer surfaces.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -9086,7 +9086,7 @@
       "owner": "workspace-content",
       "targetOperation": "updateWorkspaceList",
       "targetModule": "WorkspaceContentModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Implemented for the reachable whole-list UI adapter with row locking, required updatedAt optimistic concurrency, stable CONFLICT details, canonical category dual-write, and atomic owner/public realtime outbox rows. Staging proved stale-write rejection, sent owner/shared projections, an open anonymous viewer update, and REST rollback without later GraphQL traffic.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -9598,7 +9598,7 @@
       "owner": "workspace-content",
       "targetOperation": "workspaceNotes",
       "targetModule": "WorkspaceContentModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "User-scoped paginated note read with title/content search, canonical category resolution, and deterministic ordering; the shipped Canvas and Contents surfaces passed independent GraphQL selection and REST rollback in staging. The personalized rollback response is private/no-store and returns a complete HTTP 200 when a retained ETag is replayed.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -9669,7 +9669,7 @@
       "owner": "workspace-content",
       "targetOperation": "createWorkspaceNote",
       "targetModule": "WorkspaceContentModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "User-scoped create validates bounded fields, resolves a canonical category, and writes its ID/name projection atomically.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -9728,7 +9728,7 @@
       "owner": "workspace-content",
       "targetOperation": "deleteWorkspaceNote",
       "targetModule": "WorkspaceContentModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "User-scoped delete atomically enqueues the shared-viewer deletion event with a stable mutation key.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -9775,7 +9775,7 @@
       "owner": "workspace-content",
       "targetOperation": "updateWorkspaceNote",
       "targetModule": "WorkspaceContentModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Row-locked user-scoped update preserves omitted fields and atomically enqueues shared-viewer realtime projection.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -9822,7 +9822,7 @@
       "owner": "workspace-content",
       "targetOperation": "updateWorkspaceNote",
       "targetModule": "WorkspaceContentModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The shared partial-update mutation verifies the user-owned category and atomically writes ID/name plus realtime projection.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -9881,7 +9881,7 @@
       "owner": "workspace-content",
       "targetOperation": "updateWorkspaceNote",
       "targetModule": "WorkspaceContentModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The shared row-locked partial-update mutation validates bounded content and preserves granular realtime event semantics.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -10034,7 +10034,7 @@
       "owner": "workspace-content",
       "targetOperation": "updateWorkspaceNote",
       "targetModule": "WorkspaceContentModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The shared row-locked partial-update mutation validates title and preserves granular realtime event semantics.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -10068,7 +10068,7 @@
       "owner": "onboarding",
       "targetOperation": "completeOnboardingStep",
       "targetModule": "OnboardingModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected non-negative integer step update with an atomic durable analytics event.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -10102,7 +10102,7 @@
       "owner": "onboarding",
       "targetOperation": "dismissOnboarding",
       "targetModule": "OnboardingModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected user-scoped dismissal that preserves existing feature fields and commits its event atomically.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -10136,7 +10136,7 @@
       "owner": "onboarding",
       "targetOperation": "markOnboardingSeen",
       "targetModule": "OnboardingModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected row-locked user update with the viewed event committed in the same transaction.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -10177,7 +10177,7 @@
       "owner": "onboarding",
       "targetOperation": "onboardingProgress",
       "targetModule": "OnboardingModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Authenticated user-scoped progress, independent of selected organization, with deterministic typed feature projections.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -10211,7 +10211,7 @@
       "owner": "onboarding",
       "targetOperation": "onboardingFeatureProgress",
       "targetModule": "OnboardingModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Validated feature key with an explicit unseen projection when no entry is stored.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -10245,7 +10245,7 @@
       "owner": "onboarding",
       "targetOperation": "resetOnboarding",
       "targetModule": "OnboardingModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected feature or full user reset; historical onboarding events are retained.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -10304,7 +10304,7 @@
       "owner": "workspace",
       "targetOperation": "organizations",
       "targetModule": "OrganizationsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The active workspace selector lists only current database memberships, includes the caller's current role and selected default, preserves the retained frontend shape, and has an independent default-off REST rollback flag. The real staging provider passed both GraphQL selection and flag-off REST reads with the same persisted default.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -10839,7 +10839,7 @@
       "owner": "workspace",
       "targetOperation": "selectOrganization",
       "targetModule": "OrganizationsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The active workspace selector re-reads current membership without existence disclosure, persists the selected default under a user lock, requires CSRF, clears tenant-scoped client caches, and preserves an independent default-off REST rollback flag. The staging browser passed GraphQL selection and reload persistence, then REST selection and reload persistence without data repair.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -10892,7 +10892,7 @@
       "owner": "workspace",
       "targetOperation": "ensureDefaultOrganization",
       "targetModule": "OrganizationsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The active workspace selector idempotently selects an existing membership or atomically creates one personal organization, owner membership, and default assignment; concurrent first-workspace requests serialize on the user row and share the mutation rollback flag. Repeated authenticated staging GraphQL probes returned the existing selected membership; first-workspace creation remains proven by fresh PostgreSQL rather than the disposable staging browser.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -11703,7 +11703,7 @@
       "owner": "crm",
       "targetOperation": "pipelines",
       "targetModule": "PipelinesModule",
-      "parityStatus": "characterized",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Organization-scoped pipelines with deal aggregates and deterministic default/name ordering.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -11798,7 +11798,7 @@
       "owner": "crm",
       "targetOperation": "createPipeline",
       "targetModule": "PipelinesModule",
-      "parityStatus": "characterized",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Validate non-empty unique stage IDs/names; concurrent default requests leave exactly one default.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -11851,7 +11851,7 @@
       "owner": "crm",
       "targetOperation": "deletePipeline",
       "targetModule": "PipelinesModule",
-      "parityStatus": "characterized",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Lock and verify organization ownership before checking dependent deals so outsiders receive not found without an existence leak.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -11898,7 +11898,7 @@
       "owner": "crm",
       "targetOperation": "pipeline",
       "targetModule": "PipelinesModule",
-      "parityStatus": "characterized",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Organization-owned pipeline with paginated deals and safe related-contact/assignee projection.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -11957,7 +11957,7 @@
       "owner": "crm",
       "targetOperation": "updatePipeline",
       "targetModule": "PipelinesModule",
-      "parityStatus": "characterized",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Default changes serialize and stage replacement cannot remove a stage referenced by a deal.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -12046,7 +12046,7 @@
       "owner": "crm",
       "targetOperation": "createDeal",
       "targetModule": "DealsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Pipeline, stage, contact, and assignee references must all belong to the active organization.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -12087,7 +12087,7 @@
       "owner": "crm",
       "targetOperation": "deleteDeal",
       "targetModule": "DealsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Organization-scoped deletion with explicit activity/event semantics.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -12134,7 +12134,7 @@
       "owner": "crm",
       "targetOperation": "deal",
       "targetModule": "DealsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Outside-organization IDs are not found and relation projections must preserve tenant scope.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -12193,7 +12193,7 @@
       "owner": "crm",
       "targetOperation": "updateDeal",
       "targetModule": "DealsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Lock the deal and validate the effective pipeline/stage/contact/assignee tuple before update.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -12234,7 +12234,7 @@
       "owner": "crm",
       "targetOperation": "markDealLost",
       "targetModule": "DealsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Atomically set lost state/reason, clear won state, and emit lifecycle activity/event.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -12287,7 +12287,7 @@
       "owner": "crm",
       "targetOperation": "reopenDeal",
       "targetModule": "DealsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Clear terminal timestamps/reason atomically and emit lifecycle activity/event.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -12334,7 +12334,7 @@
       "owner": "crm",
       "targetOperation": "moveDeal",
       "targetModule": "DealsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Lock the deal, validate the destination against its pipeline, and publish the durable deal-stage-changed event only after commit.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -12381,7 +12381,7 @@
       "owner": "crm",
       "targetOperation": "markDealWon",
       "targetModule": "DealsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Atomically set won state, clear lost state, and emit lifecycle activity/event.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -12428,7 +12428,7 @@
       "owner": "crm",
       "targetOperation": "deals",
       "targetModule": "DealsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Organization-scoped filters, strict pagination, Decimal value transport, and stable tie-breaker ordering.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -16913,7 +16913,7 @@
       "owner": "workspace-content",
       "targetOperation": "workspaceWhiteboards",
       "targetModule": "WorkspaceContentModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "User-scoped paginated whiteboard read with title search, canonical category resolution, deterministic ordering, and JSON/casing adaptation for Canvas, Contents, and Global Search. The personalized REST rollback response is private/no-store and returns a complete HTTP 200 when a retained ETag is replayed. Staging browser rehearsal remains required.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -16947,7 +16947,7 @@
       "owner": "workspace-content",
       "targetOperation": "createWorkspaceWhiteboard",
       "targetModule": "WorkspaceContentModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "User-scoped CSRF-protected create validates bounded canvas JSON, geometry, colors, and canonical category identity; REST can read the committed row. The independent mutation flag remains default-off pending staging.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -17019,7 +17019,7 @@
       "owner": "workspace-content",
       "targetOperation": "deleteWorkspaceWhiteboard",
       "targetModule": "WorkspaceContentModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "User-scoped CSRF-protected delete uses a stable mutation ID and atomically enqueues the active public-viewer terminal projection. PostgreSQL proves REST miss and worker delivery; staging remains required.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -17060,7 +17060,7 @@
       "owner": "workspace-content",
       "targetOperation": "updateWorkspaceWhiteboard",
       "targetModule": "WorkspaceContentModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Row-locked update requires the preceding updatedAt revision, rejects stale snapshots with stable conflict details, serializes rapid frontend saves, and atomically enqueues a bounded shared-viewer refetch projection rather than oversized canvas JSON.",
       "literalInterpolationRisk": false,
       "risk": "high"
