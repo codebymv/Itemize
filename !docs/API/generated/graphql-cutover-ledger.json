@@ -1651,7 +1651,7 @@
       "owner": "scheduling",
       "targetOperation": "bookings",
       "targetModule": "BookingsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Staging-gated behind the independent default-off booking-read flag with strict organization-scoped filters, bounded pagination, DateTime-range validation, stable start-time/ID ordering, tenant-qualified relations, retained-shape mapping, fresh-PostgreSQL interoperability, real-browser list/status-filter coverage, and same-session REST rollback.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -1758,7 +1758,7 @@
       "owner": "scheduling",
       "targetOperation": "createBooking",
       "targetModule": "BookingsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Implemented behind an independent default-off scheduling-mutation flag with CSRF, organization-owned calendar/contact/assignee validation, canonical advisory-lock-first serialization, shared authoritative windows/override/buffer/notice/horizon/activity/DST/external-busy policy, retained-shape mapping, one version-1 durable event, REST interoperability, and a fresh-PostgreSQL simultaneous-slot race. The shipped interface has no create control, so browser parity is not claimed.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -1811,7 +1811,7 @@
       "owner": "scheduling",
       "targetOperation": "booking",
       "targetModule": "BookingsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Staging-gated behind the independent default-off booking-read flag with organization-owned detail, tenant-safe contact/calendar/assignee projections, foreign-ID concealment, cancellation-capability exclusion, retained-shape mapping, fresh-PostgreSQL interoperability, and authenticated direct comparison with retained REST. The shipped app has no booking-detail route.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -1864,7 +1864,7 @@
       "owner": "scheduling",
       "targetOperation": "cancelBooking",
       "targetModule": "BookingsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Browser-gated behind an independent default-off frontend flag: CSRF and tenant context required; pending/confirmed only; status, timestamp, normalized reason, public-capability revocation, and one versioned durable booking_cancelled event commit transactionally; replay is rejected without another write. Authenticated staging mutation and independent retained-REST rollback both passed with exactly one event.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -1923,7 +1923,7 @@
       "owner": "scheduling",
       "targetOperation": "rescheduleBooking",
       "targetModule": "BookingsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Implemented behind the independent default-off scheduling-mutation flag with CSRF, tenant concealment, pending/confirmed enforcement, advisory-lock-first authoritative policy checks excluding itself, optional timezone preservation, public-capability expiry realignment to the new end plus one day, one version-1 durable event, retained-shape mapping, and REST interoperability. The shipped interface has no reschedule control, so browser parity is not claimed.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -2211,7 +2211,7 @@
       "owner": "scheduling-integrations",
       "targetOperation": "calendarConnections",
       "targetModule": "CalendarIntegrationsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Implemented behind VITE_CALENDAR_INTEGRATIONS_GRAPHQL. Returns only the current user's connections in the verified organization; provider account IDs, tokens, cursors, and job internals are absent from the schema.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -2245,7 +2245,7 @@
       "owner": "scheduling-integrations",
       "targetOperation": "disconnectCalendar",
       "targetModule": "CalendarIntegrationsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected user-and-organization scoped disconnect behind the default-off integration flag. Remote provider events are retained, matching the shipped UI warning; foreign and peer-user IDs return NOT_FOUND.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -2279,7 +2279,7 @@
       "owner": "scheduling-integrations",
       "targetOperation": "updateCalendarConnection",
       "targetModule": "CalendarIntegrationsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected and implemented behind the default-off integration flag. It rejects null settings, validates push/pull/both direction and at most 100 unique non-empty 255-character provider calendar IDs, then updates only the current user's organization-qualified connection.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -2431,7 +2431,7 @@
       "owner": "scheduling-integrations",
       "targetOperation": "calendarSyncStatus",
       "targetModule": "CalendarIntegrationsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Implemented behind the default-off integration flag with user-and-organization scoped connection status, bounded sync aggregates, and the ten newest safe durable-job projections including retry/dead-letter state and redacted diagnostics.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -2472,7 +2472,7 @@
       "owner": "scheduling-integrations",
       "targetOperation": "requestCalendarSync",
       "targetModule": "CalendarIntegrationsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected and implemented behind the default-off integration flag. It returns immediately after idempotent durable enqueue and never performs provider I/O inline. Migration 033 enforces one active connection job and durable coalesced request aliases; leased workers fence completion, retry with redacted errors, dead-letter, and execute snapshotted push/pull/both policy.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -2531,7 +2531,7 @@
       "owner": "scheduling",
       "targetOperation": "calendars",
       "targetModule": "CalendarsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Default-off GraphQL list with verified organization context, deterministic newest-first ordering, current-member assignee projection, confirmed-booking aggregates, and retained response mapping. Fresh PostgreSQL and the real browser prove a nonempty GraphQL reload, retained REST write interoperability, and flag-off REST rollback without data repair.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -2626,7 +2626,7 @@
       "owner": "scheduling",
       "targetOperation": "createCalendar",
       "targetModule": "CalendarsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Default-off GraphQL create validates timezone, duration, buffers, plan limits, assignment membership, and availability windows in one transaction. Fresh PostgreSQL plus the real browser prove GraphQL creation, GraphQL readback, and independent flag-off REST rollback without data repair.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -2679,7 +2679,7 @@
       "owner": "scheduling",
       "targetOperation": "deleteCalendar",
       "targetModule": "CalendarsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Behind the default-off calendar definition-mutation flag, delete and retained booking writes acquire the shared booking-namespace advisory lock before row locks or inserts, booking creation rechecks the calendar after that lock, and delete rejects pending or confirmed future bookings before cascade. Fresh PostgreSQL proves the concurrent retained-create-versus-GraphQL-delete race plus blocked, foreign, no-CSRF, allowed-cancelled-history, cascade, and REST-readback cases. The real browser passed a successful GraphQL delete, stable upcoming-booking rejection, and independent flag-off REST delete without data repair.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -2756,7 +2756,7 @@
       "owner": "scheduling",
       "targetOperation": "calendar",
       "targetModule": "CalendarsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Default-off GraphQL detail with tenant-private misses, retained response mapping, ordered recurring availability, current/future overrides, and fresh-PostgreSQL foreign-calendar concealment. The registered /calendars/:id settings consumer passed GraphQL and flag-off REST browser reloads around retained REST settings and availability writes without data repair.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -2803,7 +2803,7 @@
       "owner": "scheduling",
       "targetOperation": "updateCalendar",
       "targetModule": "CalendarsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Omitted fields preserve values, explicit nullable assignment clears only when authorized, and settings are fully validated. The same staged calendar passed GraphQL update followed by independent flag-off REST update and GraphQL readback without data repair.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -2862,7 +2862,7 @@
       "owner": "scheduling",
       "targetOperation": "replaceCalendarAvailability",
       "targetModule": "CalendarsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The active settings writer passed a real-browser GraphQL replacement, persisted GraphQL readback, and independent flag-off REST replacement on the same staged calendar without repair. Atomic replacement, bounded weekdays/windows, overlap rejection, tenant concealment, and CSRF remain covered in fresh PostgreSQL.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -2921,7 +2921,7 @@
       "owner": "scheduling",
       "targetOperation": "upsertCalendarDateOverride",
       "targetModule": "CalendarsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Implemented behind the availability-mutation flag as an organization-owned upsert; available overrides require a valid local-time window while unavailable overrides reject one, with REST interoperability coverage. The shipped settings page currently has no active override writer control, so browser parity is not claimed.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -2968,7 +2968,7 @@
       "owner": "scheduling",
       "targetOperation": "deleteCalendarDateOverride",
       "targetModule": "CalendarsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Implemented behind the availability-mutation flag and scopes deletion through the organization-owned parent calendar, closing the legacy child-ID-only tenant boundary. The shipped settings page currently has no active override writer control, so browser parity is not claimed.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -3039,7 +3039,7 @@
       "owner": "growth",
       "targetOperation": "campaigns",
       "targetModule": "CampaignsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CampaignsModule now provides organization-scoped status/search filtering, literal escaped search, stable created-at/id ordering, bounded shared paging, safe numeric mapping, and a default-off frontend read rollback flag.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -3134,7 +3134,7 @@
       "owner": "growth",
       "targetOperation": "createCampaign",
       "targetModule": "CampaignsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected creation requires nonblank content, validates tenant-owned template/tag/saved-segment references, rejects unsupported custom targeting, clears irrelevant audience fields, and retains REST behind the default-off mutation flag.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -3193,7 +3193,7 @@
       "owner": "growth",
       "targetOperation": "deleteCampaign",
       "targetModule": "CampaignsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The mutation locks and conceals the organization-owned campaign, rejects deletion while sending, returns verified stable identity, and permits every other retained state.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -3240,7 +3240,7 @@
       "owner": "growth",
       "targetOperation": "campaign",
       "targetModule": "CampaignsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The query conceals foreign IDs and returns tenant-owned campaign, template/user metadata, and tracked links in stable position/id order behind the read rollback flag.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -3293,7 +3293,7 @@
       "owner": "growth",
       "targetOperation": "updateCampaign",
       "targetModule": "CampaignsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The mutation locks draft/scheduled rows, serializes concurrent partial updates, distinguishes omission from nullable clearing, and revalidates tenant-owned audience/template references.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -3340,7 +3340,7 @@
       "owner": "growth",
       "targetOperation": "duplicateCampaign",
       "targetModule": "CampaignsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The mutation atomically copies tenant-owned configuration into a bounded-name draft, preserves saved-segment targeting, and does not copy schedule, delivery state, statistics, recipients, or tracked links.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -3415,7 +3415,7 @@
       "owner": "growth",
       "targetOperation": "campaignAudiencePreview",
       "targetModule": "CampaignsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CampaignsModule uses the shared fail-closed, parameterized audience compiler to count distinct organization-owned deliverable emails across all/tag/status/dynamic/static saved-segment modes. PostgreSQL proves include/exclude, unsubscribe, bounce, empty-email, hostile custom-key, tenant-concealment, and retained-REST parity behavior behind an independent default-off frontend flag.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -3449,7 +3449,7 @@
       "owner": "growth",
       "targetOperation": "campaignRecipients",
       "targetModule": "CampaignDeliveryModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CampaignDeliveryModule verifies the organization-owned parent, qualifies every child and current-contact join by organization, supports strict status filtering and bounded shared paging, and orders by sent_at then id with nulls last. It preserves recipient snapshots, safe current-contact names, engagement/provider fields, and excludes inconsistent cross-tenant child rows. Fresh PostgreSQL proves retained-REST parity, paging, filters, private misses, invalid-input failure, and corrupt-row exclusion behind an independent default-off frontend flag.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -3536,7 +3536,7 @@
       "owner": "growth",
       "targetOperation": "scheduleCampaign",
       "targetModule": "CampaignsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The mutation requires a future absolute timestamp, treats bounded timezone as metadata, and locks draft/scheduled rows before the scheduled transition.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -3617,7 +3617,7 @@
       "owner": "growth",
       "targetOperation": "sendCampaignTest",
       "targetModule": "CampaignDeliveryModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The CSRF-protected mutation locks and conceals the organization-owned campaign, validates the destination and bounded idempotency key, snapshots rendered test content with a prefixed subject, and commits a tenant-enforced durable intent before provider I/O. Leased attempts use a stable Resend idempotency key; definite failures retry, ambiguous outcomes require reconciliation, conflicting key reuse fails, and exact replay returns stored evidence. Fresh PostgreSQL proves provider-confirmed delivery, replay, tenant isolation, CSRF, snapshot substitution, and zero campaign/recipient state mutation behind an independent default-off frontend flag.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -3658,7 +3658,7 @@
       "owner": "growth",
       "targetOperation": "unscheduleCampaign",
       "targetModule": "CampaignsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The mutation locks and conceals the row, allows only scheduled-to-draft, clears the instant atomically, and returns stable BAD_USER_INPUT state evidence for invalid transitions.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -5410,7 +5410,7 @@
       "owner": "messaging",
       "targetOperation": "emailTemplates",
       "targetModule": "EmailTemplatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Default-off GraphQL reads page organization-scoped templates with deterministic updated-at/id ordering, escaped search, category and active filters, safe numeric counts, and retained response mapping.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -5493,7 +5493,7 @@
       "owner": "messaging",
       "targetOperation": "createEmailTemplate",
       "targetModule": "EmailTemplatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected GraphQL creation validates required content and derives a deterministic unique variable set from the complete email body.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -5555,7 +5555,7 @@
       "owner": "messaging",
       "targetOperation": "deleteEmailTemplate",
       "targetModule": "EmailTemplatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected GraphQL deletion conceals foreign templates and preserves nullable historical log references through the existing database contract.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -5611,7 +5611,7 @@
       "owner": "messaging",
       "targetOperation": "emailTemplate",
       "targetModule": "EmailTemplatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Default-off GraphQL detail reads return an organization-owned template with retained-shape mapping and tenant-private misses.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -5658,7 +5658,7 @@
       "owner": "messaging",
       "targetOperation": "updateEmailTemplate",
       "targetModule": "EmailTemplatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected GraphQL partial updates lock the organization-owned row, preserve omitted fields, and re-extract variables from the complete resulting content without lost concurrent writes.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -5714,7 +5714,7 @@
       "owner": "messaging",
       "targetOperation": "duplicateEmailTemplate",
       "targetModule": "EmailTemplatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected GraphQL duplication copies only an organization-owned template, bounds the suffixed name, and always creates the copy inactive.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -5798,7 +5798,7 @@
       "owner": "messaging",
       "targetOperation": "emailTemplateCategories",
       "targetModule": "EmailTemplatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Default-off GraphQL category aggregates are organization-scoped, deterministically ordered, case-preserving, and expose safe integer counts.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -6632,7 +6632,7 @@
       "owner": "billing",
       "targetOperation": "invoices",
       "targetModule": "InvoicesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Organization-scoped status/contact/search filters use the shared page contract, literal search, deterministic created/id ordering, cross-tenant-safe counts, and decimal strings. A default-off frontend read flag preserves REST rollback.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -6745,7 +6745,7 @@
       "owner": "billing",
       "targetOperation": "createInvoice",
       "targetModule": "InvoicesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected creation validates tenant-owned contact, business, and product references; allocates the invoice number atomically; and commits line items plus PostgreSQL-calculated totals in one transaction. A default-off frontend mutation flag preserves REST rollback.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -6834,7 +6834,7 @@
       "owner": "billing",
       "targetOperation": "deleteInvoice",
       "targetModule": "InvoicesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected organization-scoped deletion returns a stable deleted ID and number, conceals foreign rows, and retains the REST path behind the default-off mutation flag.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -6905,7 +6905,7 @@
       "owner": "billing",
       "targetOperation": "invoice",
       "targetModule": "InvoicesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Organization-qualified detail reads return line items, payments, contact, and business projections with decimal strings and conceal foreign invoice IDs. A default-off frontend read flag preserves REST rollback.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -6958,7 +6958,7 @@
       "owner": "billing",
       "targetOperation": "updateInvoice",
       "targetModule": "InvoicesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected updates lock the tenant-owned invoice, allow only draft/sent edits, validate effective references and dates, and atomically replace line items with PostgreSQL decimal recalculation. A default-off frontend mutation flag preserves REST rollback.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -6992,7 +6992,7 @@
       "owner": "billing",
       "targetOperation": "createInvoicePaymentLink",
       "targetModule": "InvoicesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The CSRF-protected mutation snapshots the exact tenant-owned payable balance in a durable intent before Stripe. Intent-derived provider idempotency, exact replay, conflicting stale-key rejection, unresolved ambiguous-outcome fencing, and a post-provider balance/state recheck prevent duplicate or stale links. Definite rejection permits a fresh request; ambiguous and raced outcomes expose no URL and require reconciliation. The frontend adapter is independently default-off.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -7198,7 +7198,7 @@
       "owner": "billing",
       "targetOperation": "recordInvoicePayment",
       "targetModule": "PaymentsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Default-off GraphQL mutation inserts the payment, locks the tenant-owned invoice, performs decimal balance/status arithmetic in PostgreSQL, and enqueues invoice_paid exactly once in the same transaction. Concurrent final payments, CSRF, validation, and tenant-hidden misses pass fresh PostgreSQL.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -7269,7 +7269,7 @@
       "owner": "billing",
       "targetOperation": "sendInvoice",
       "targetModule": "InvoicesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The CSRF-protected mutation snapshots the tenant-owned invoice, recipient, custom message, CC list, resend intent, PDF inputs, and optional payment-link request into a durable delivery row. Stripe and Resend receive intent-derived idempotency keys; the PDF attachment and requested payment link are required, and only confirmed email delivery marks a draft sent. Definite failures retry through a leased worker, ambiguous provider outcomes require reconciliation, conflicting key reuse fails, one unresolved intent prevents bypass with a new key, exact replay cannot duplicate delivery, and the frontend adapter is independently default-off.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -7303,7 +7303,7 @@
       "owner": "billing",
       "targetOperation": "invoiceBusinesses",
       "targetModule": "InvoiceBusinessesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Default-off GraphQL consumer pages active profiles in last-used/newest order; fresh PostgreSQL proves REST parity and tenant-scoped counts.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -7344,7 +7344,7 @@
       "owner": "billing",
       "targetOperation": "createInvoiceBusiness",
       "targetModule": "InvoiceBusinessesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "GraphQL accepts bounded profile fields but never accepts a client-selected logo URL; multipart logo ownership remains on retained HTTP.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -7378,7 +7378,7 @@
       "owner": "billing",
       "targetOperation": "deleteInvoiceBusiness",
       "targetModule": "InvoiceBusinessesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Organization-scoped soft deletion preserves historical invoice references while removing the profile from active lists.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -7412,7 +7412,7 @@
       "owner": "billing",
       "targetOperation": "invoiceBusiness",
       "targetModule": "InvoiceBusinessesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Detail reads include inactive historical profiles and return the same NOT_FOUND outcome for absent and foreign rows.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -7446,7 +7446,7 @@
       "owner": "billing",
       "targetOperation": "updateInvoiceBusiness",
       "targetModule": "InvoiceBusinessesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Partial writes preserve omitted fields, normalize blank optional values to null, retain server-owned logo URLs, and require CSRF.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -7480,7 +7480,7 @@
       "owner": "billing",
       "targetOperation": "removeInvoiceBusinessLogo",
       "targetModule": "InvoiceBusinessesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected tenant-scoped removal clears the server-owned URL and enqueues its exact prior value in one transaction. A leased worker retries safe local or exact configured-S3 deletion; foreign URLs dead-letter without storage access. The existing business mutation flag is independently default-off while multipart upload remains HTTP.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -7614,7 +7614,7 @@
       "owner": "billing",
       "targetOperation": "previewInvoiceEmail",
       "targetModule": "InvoicesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected selected-organization mutation returns bounded branded HTML, treats message and subject as plain text, uses only the server-configured frontend origin, and is displayed in a script-disabled browser sandbox.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -7685,7 +7685,7 @@
       "owner": "billing",
       "targetOperation": "estimates",
       "targetModule": "EstimatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Default-off GraphQL reads preserve organization-scoped filters, literal search, deterministic paging, decimal precision, and the retained frontend list shape.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -7774,7 +7774,7 @@
       "owner": "billing",
       "targetOperation": "createEstimate",
       "targetModule": "EstimatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected creation validates tenant-owned contacts/products, serializes estimate numbering, and commits line items plus PostgreSQL-calculated tax, discount, and total values atomically.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -7821,7 +7821,7 @@
       "owner": "billing",
       "targetOperation": "deleteEstimate",
       "targetModule": "EstimatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Tenant-scoped deletion conceals foreign rows and returns stable deleted identity through the retained-shape adapter.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -7874,7 +7874,7 @@
       "owner": "billing",
       "targetOperation": "estimate",
       "targetModule": "EstimatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Detail reads qualify contact, product, and item projections by organization and preserve decimal strings until the frontend boundary.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -7927,7 +7927,7 @@
       "owner": "billing",
       "targetOperation": "updateEstimate",
       "targetModule": "EstimatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected updates lock the estimate, permit only draft/sent edits, validate effective references and dates, and replace items plus derived totals atomically.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -7974,7 +7974,7 @@
       "owner": "billing",
       "targetOperation": "convertEstimateToInvoice",
       "targetModule": "EstimatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The CSRF-protected mutation locks and conceals the tenant-owned estimate, replays its existing tenant-qualified invoice, and atomically allocates one number, copies header/items with qualified references, and links the accepted source. Fresh PostgreSQL proves exact values, REST readback, tenant isolation, rollback, fail-closed corrupt links, and repeat/concurrent-repeat convergence on one invoice and one allocation.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8008,7 +8008,7 @@
       "owner": "billing",
       "targetOperation": "sendEstimate",
       "targetModule": "EstimatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The CSRF-protected mutation locks and conceals the tenant-owned estimate, requires a bounded idempotency key and recipient, and persists a delivery snapshot before provider work. Resend receives an intent-derived idempotency key; only confirmed delivery atomically marks the intent and draft estimate sent. Definite failures retry through a leased one-shot worker, ambiguous failures require reconciliation, and exact request replay cannot duplicate delivery. Fresh PostgreSQL proves success evidence, replay, provider failure and worker recovery, ambiguous quarantine, CSRF, tenant isolation, recipient/key validation, and terminal-state denial. The frontend adapter is independently default-off.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8042,7 +8042,7 @@
       "owner": "billing",
       "targetOperation": "payments",
       "targetModule": "PaymentsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Default-off GraphQL payment history preserves bounded paging, typed status/method filters, deterministic newest ordering, decimal strings, organization-qualified invoice/contact joins, and selected-tenant isolation. Manual payment writes remain on the retained transactional REST route.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8095,7 +8095,7 @@
       "owner": "billing",
       "targetOperation": "recordPayment",
       "targetModule": "PaymentsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Default-off GraphQL mutation validates bounded decimal/currency/method/status/date inputs, organization-qualifies optional contact/invoice references, and shares the locked invoice balance/event transaction. Pending/failed payments do not mutate invoice balances.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -8129,7 +8129,7 @@
       "owner": "billing",
       "targetOperation": "products",
       "targetModule": "ProductsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Default-off GraphQL consumer pages deterministic organization-scoped reads; fresh PostgreSQL proves active/search filters, REST interoperability, tenant isolation, and decimal-string output.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8163,7 +8163,7 @@
       "owner": "billing",
       "targetOperation": "createProduct",
       "targetModule": "ProductsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "NestJS validates product type, recurring period, currency, bounded decimal strings, and normalized optional fields; CSRF and REST rollback remain independently tested.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8197,7 +8197,7 @@
       "owner": "billing",
       "targetOperation": "deleteProduct",
       "targetModule": "ProductsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Organization-scoped delete returns a stable deleted identity; foreign and absent rows are indistinguishable and the retained REST path remains available.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8231,7 +8231,7 @@
       "owner": "billing",
       "targetOperation": "updateProduct",
       "targetModule": "ProductsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Partial updates preserve omitted fields, clear nullable text explicitly, enforce recurring-period invariants from stored state, and keep one-time billing periods null.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8265,7 +8265,7 @@
       "owner": "billing",
       "targetOperation": "recurringInvoices",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Tenant-scoped status filtering and deterministic paging map decimal strings and generated counts into the retained frontend shape behind a default-off read flag.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8299,7 +8299,7 @@
       "owner": "billing",
       "targetOperation": "createRecurringInvoice",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected creation validates tenant contacts/products, frequency and date bounds, stores legacy-compatible JSON items, and calculates totals transactionally.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8333,7 +8333,7 @@
       "owner": "billing",
       "targetOperation": "deleteRecurringInvoice",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Tenant-scoped deletion returns stable identity and conceals foreign or absent templates.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8386,7 +8386,7 @@
       "owner": "billing",
       "targetOperation": "recurringInvoice",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Detail reads qualify contact, source-invoice, and generated-invoice projections through the active organization and conceal foreign templates.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8420,7 +8420,7 @@
       "owner": "billing",
       "targetOperation": "updateRecurringInvoice",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Partial updates lock the template, validate effective tenant references and dates, replace items when supplied, and recalculate totals from stored legacy JSON when discounts change.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8467,7 +8467,7 @@
       "owner": "billing",
       "targetOperation": "generateRecurringInvoiceNow",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The CSRF-protected mutation locks the tenant-owned template, validates generation data and qualified references before allocation, atomically creates the invoice/items and advances the schedule, and persists a namespaced request receipt. Concurrent requests with the same explicit idempotency key return one stable invoice and consume one number.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8501,7 +8501,7 @@
       "owner": "billing",
       "targetOperation": "recurringInvoiceHistory",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Tenant-private history uses bounded stable paging, decimal-string totals, and a parent ownership check so missing and foreign templates are indistinguishable.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -8542,7 +8542,7 @@
       "owner": "billing",
       "targetOperation": "pauseRecurringInvoice",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The CSRF-protected mutation row-locks the tenant-owned template, permits only active-to-paused transitions, and reports replay or wrong-state attempts as a stable conflict.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8576,7 +8576,7 @@
       "owner": "billing",
       "targetOperation": "resumeRecurringInvoice",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The CSRF-protected mutation row-locks the tenant-owned template, permits only paused-to-active transitions, and advances a stale date-only schedule beyond the database current date before commit.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8610,7 +8610,7 @@
       "owner": "billing",
       "targetOperation": "createRecurringInvoiceFromInvoice",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The CSRF-protected mutation row-locks the tenant-owned source invoice, rejects terminal sources, clones tenant-qualified item snapshots into legacy-compatible JSON, recalculates exact recurring totals in PostgreSQL, marks the preserved source, and commits all effects atomically.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8644,7 +8644,7 @@
       "owner": "billing",
       "targetOperation": "previewRecurringInvoiceNumber",
       "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "The tenant-scoped query returns the configured prefix and current next number without reserving or incrementing it; invoice creation remains the atomic allocation authority.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8685,7 +8685,7 @@
       "owner": "billing",
       "targetOperation": "invoiceSettings",
       "targetModule": "InvoiceSettingsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Returns selected-organization settings or virtual retained defaults without creating a row; provider-owned Stripe fields and the server-owned logo URL are read-only.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8726,7 +8726,7 @@
       "owner": "billing",
       "targetOperation": "updateInvoiceSettings",
       "targetModule": "InvoiceSettingsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected partial writes validate bounded settings, preserve omitted fields, serialize on the shared invoice-number row, reject counter regression and exact-number collision, and never accept Stripe or logo fields.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -8760,7 +8760,7 @@
       "owner": "billing",
       "targetOperation": "removeInvoiceSettingsLogo",
       "targetModule": "InvoiceSettingsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected selected-organization removal clears the server-owned URL and enqueues its exact prior value in one transaction. A leased worker retries safe local or exact configured-S3 deletion; foreign URLs dead-letter without storage access. The existing settings mutation flag is independently default-off while multipart upload remains HTTP.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -15061,7 +15061,7 @@
       "owner": "messaging",
       "targetOperation": "smsTemplates",
       "targetModule": "SmsTemplatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Default-off GraphQL reads page organization-scoped templates with deterministic updated-at/id ordering, escaped filters, integer counts, and retained response mapping.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -15102,7 +15102,7 @@
       "owner": "messaging",
       "targetOperation": "createSmsTemplate",
       "targetModule": "SmsTemplatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected GraphQL creation validates the 1600-character bound, extracts deterministic variables, and returns standards-aware encoding and segment information.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -15136,7 +15136,7 @@
       "owner": "messaging",
       "targetOperation": "deleteSmsTemplate",
       "targetModule": "SmsTemplatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected GraphQL deletion conceals foreign templates while retaining nullable historical log references.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -15183,7 +15183,7 @@
       "owner": "messaging",
       "targetOperation": "smsTemplate",
       "targetModule": "SmsTemplatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Default-off GraphQL detail returns an organization-owned SMS template without cross-tenant existence leakage.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -15217,7 +15217,7 @@
       "owner": "messaging",
       "targetOperation": "updateSmsTemplate",
       "targetModule": "SmsTemplatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected GraphQL partial updates lock the tenant row, prevent lost concurrent changes, and recompute variables plus message information.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -15251,7 +15251,7 @@
       "owner": "messaging",
       "targetOperation": "duplicateSmsTemplate",
       "targetModule": "SmsTemplatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected GraphQL duplication bounds the copy suffix, conceals foreign rows, and creates the copy inactive.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -15319,7 +15319,7 @@
       "owner": "messaging",
       "targetOperation": "smsTemplateCategories",
       "targetModule": "SmsTemplatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Default-off GraphQL category aggregates preserve category case, deterministic ordering, tenant scope, and safe integer counts.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -15353,7 +15353,7 @@
       "owner": "messaging",
       "targetOperation": "smsMessageInfo",
       "targetModule": "SmsTemplatesModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Default-off authenticated GraphQL calculation counts GSM-7 extension characters as two septets and Unicode as UTF-16 units across single and concatenated segment boundaries.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -17493,7 +17493,7 @@
       "owner": "automation",
       "targetOperation": "workflows",
       "targetModule": "WorkflowsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Preserve organization scope, trigger/active/search filters, updated-at ordering, step counts, and active enrollment counts.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -17630,7 +17630,7 @@
       "owner": "automation",
       "targetOperation": "createWorkflow",
       "targetModule": "WorkflowsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Validate trigger and step enums, enforce plan limits, and create workflow plus ordered steps atomically.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -17695,7 +17695,7 @@
       "owner": "automation",
       "targetOperation": "deleteWorkflow",
       "targetModule": "WorkflowsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Delete only an organization-owned workflow and characterize cascade/audit behavior for enrollments and execution logs.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -17742,7 +17742,7 @@
       "owner": "automation",
       "targetOperation": "workflow",
       "targetModule": "WorkflowsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Return the organization-owned workflow, ordered steps, and enrollment statistics without existence leakage.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -17807,7 +17807,7 @@
       "owner": "automation",
       "targetOperation": "updateWorkflow",
       "targetModule": "WorkflowsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Validate enums and atomically replace steps when supplied; omitted steps leave the current sequence intact.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -17890,7 +17890,7 @@
       "owner": "automation",
       "targetOperation": "activateWorkflow",
       "targetModule": "WorkflowsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Require organization ownership and at least one step. Reactivation resumes only enrollments paused by workflow deactivation; explicit manual pauses remain paused.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -17937,7 +17937,7 @@
       "owner": "automation",
       "targetOperation": "deactivateWorkflow",
       "targetModule": "WorkflowsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Organization-scoped deactivation atomically pauses active enrollments with a distinct reason and clears their live execution claims.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -17984,7 +17984,7 @@
       "owner": "automation",
       "targetOperation": "duplicateWorkflow",
       "targetModule": "WorkflowsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Enforce plan limits and atomically copy an organization-owned definition and ordered steps into an inactive workflow.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -18049,7 +18049,7 @@
       "owner": "automation",
       "targetOperation": "enrollContactInWorkflow",
       "targetModule": "WorkflowEnrollmentsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Lock the organization-owned workflow, require a same-organization contact, and serialize the unique workflow/contact enrollment transition.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -18090,7 +18090,7 @@
       "owner": "automation",
       "targetOperation": "workflowEnrollments",
       "targetModule": "WorkflowEnrollmentsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Use the shared page contract, organization-scope through the workflow, and support explicit status filtering.",
       "literalInterpolationRisk": false,
       "risk": "medium"
@@ -18137,7 +18137,7 @@
       "owner": "automation",
       "targetOperation": "cancelWorkflowEnrollment",
       "targetModule": "WorkflowEnrollmentsModule",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Scope through an organization-owned workflow, clear execution claims and future scheduling, and cancel queued/retrying/dead-letter provider work. An accepted in-flight call may finish sent; failed or expired cancelled work must not retry.",
       "literalInterpolationRisk": false,
       "risk": "high"

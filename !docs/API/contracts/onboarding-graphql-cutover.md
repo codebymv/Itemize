@@ -1,5 +1,9 @@
 # Onboarding GraphQL cutover contract
 
+**Status:** Production consumer cutover complete
+
+**Evidence date:** 2026-07-22
+
 ## Scope and transport decision
 
 Authenticated onboarding progress moves to `OnboardingModule` in the NestJS
@@ -7,8 +11,8 @@ GraphQL service. It is user-scoped, not organization-scoped: switching the
 selected workspace must not create a second onboarding record or expose another
 user's progress.
 
-The legacy Express routes remain available until the shipped frontend has
-passed the GraphQL browser and rollback gates.
+The legacy Express routes remain available for data-neutral rollback until the
+final traffic-observation and retirement phase.
 
 | Legacy operation | GraphQL operation |
 | --- | --- |
