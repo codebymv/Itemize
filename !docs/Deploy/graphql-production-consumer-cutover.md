@@ -1,6 +1,6 @@
 # GraphQL production consumer cutover
 
-**Status:** 73 domain consumers plus authentication session and identity lifecycle enabled; password recovery staged default-off
+**Status:** 73 domain consumers plus authentication session, identity lifecycle, and password recovery enabled
 
 **Cutover date:** 2026-07-21
 
@@ -8,7 +8,7 @@
 
 The browser uses the production `VITE_API_URL` (`https://itemize-backend-production-92ad.up.railway.app`) for REST and `/graphql`. That backend forwards GraphQL to `itemize.cloud GraphQL Production` over Railway's private network. The proxy has an explicit response allowlist for the three authentication cookies and cache/CSRF headers, allowing NestJS to own browser sessions through the existing API origin. The frontend custom domain itself serves the SPA shell and is not the direct `/graphql` endpoint.
 
-The 73 domain switches referenced by `frontend/src/services/graphqlClient.ts` are enabled in production. `VITE_AUTH_SESSION_GRAPHQL` and `VITE_AUTH_IDENTITY_GRAPHQL` independently control the enabled session and registration/verification protocols. `VITE_AUTH_RECOVERY_GRAPHQL` controls forgot/reset password and remains default-off until the staged GraphQL deployment and production probes pass. A frontend rebuild is required because Vite embeds these values at build time.
+The 73 domain switches referenced by `frontend/src/services/graphqlClient.ts` are enabled in production. `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` independently control the enabled session, registration/verification, and forgot/reset-password protocols. A frontend rebuild is required because Vite embeds these values at build time.
 
 The enabled families are:
 
@@ -31,15 +31,17 @@ The authentication cutover completed on 2026-07-21 with backend deployment `5d15
 
 The identity-lifecycle cutover completed from commit `44281ad3` with backend deployment `1fc4a8c1-7a73-4459-8868-d6826bd4ac99`, GraphQL deployment `7c9b6fc2-2af6-474b-be47-9ec1052a40f3`, and flag-enabled frontend deployment `0186d765-2661-49a6-9d77-f4c7e01e889e`. Non-mutating production probes verified malformed registration, unknown verification token, and non-enumerating missing-account resend. A browser load of an invalid verification link rendered the expected error while NestJS recorded `operationName="VerifyEmail"` with `INVALID_TOKEN`.
 
+The password-recovery cutover completed from commit `28d0b0af` with backend deployment `eccd0bb5-02f7-4799-80e9-a9a47a776033`, GraphQL deployment `2037928f-a948-48ca-9828-a3735d28eca1`, and flag-enabled frontend deployment `83913ee7-6566-4820-b181-033ebaa9dd12`. Safe probes verified validation, generic missing-account behavior, invalid reset-token rejection, and authenticated-only profile access. A deployed forgot-password submission used GraphQL and rendered the generic success state without creating data or invoking the email provider.
+
 After deployment, verify:
 
 1. `https://itemize.cloud` returns HTTP `200`;
 2. production `/api/health` returns HTTP `200`;
 3. a proxied GraphQL `__typename` query returns HTTP `200`;
-4. all 73 domain `VITE_*_GRAPHQL` variables plus `VITE_AUTH_SESSION_GRAPHQL` and `VITE_AUTH_IDENTITY_GRAPHQL` are `true`;
+4. all 73 domain `VITE_*_GRAPHQL` variables plus `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` are `true`;
 5. the frontend and backend deployments resolve to the Git commit containing this document;
 6. GraphQL logs contain no internal-error spike after the frontend replacement.
 
 ## Rollback
 
-Consumer rollback is data-neutral. Set only the affected domain variables to `false` and rebuild the frontend; the retained REST adapters read the same PostgreSQL rows. Authentication session rolls back as one unit by setting `VITE_AUTH_SESSION_GRAPHQL=false`; registration/verification/resend roll back independently with `VITE_AUTH_IDENTITY_GRAPHQL=false`. Rebuild after either change, and do not split the coordinated session operations during rollback. Scheduler rollback is separate and must follow the mutually exclusive ownership procedure in [workflow-rollout-runbook.md](workflow-rollout-runbook.md).
+Consumer rollback is data-neutral. Set only the affected domain variables to `false` and rebuild the frontend; the retained REST adapters read the same PostgreSQL rows. Authentication session rolls back as one unit with `VITE_AUTH_SESSION_GRAPHQL=false`; registration/verification/resend use `VITE_AUTH_IDENTITY_GRAPHQL=false`; forgot/reset password use `VITE_AUTH_RECOVERY_GRAPHQL=false`. Rebuild after any change, and do not split the coordinated session operations. Scheduler rollback is separate and must follow the mutually exclusive ownership procedure in [workflow-rollout-runbook.md](workflow-rollout-runbook.md).
