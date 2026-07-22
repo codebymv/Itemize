@@ -24,7 +24,7 @@ import { ListRowSkeleton } from '@/components/ui/loading-skeletons';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
-import { getReviewRequests, deleteReviewRequest, sendReviewRequest, resendReviewRequest } from '@/services/reputationApi';
+import { getReviewRequests, deleteReviewRequest, resendReviewRequest } from '@/services/reputationApi';
 import { SendReviewRequestModal } from './SendReviewRequestModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
@@ -171,8 +171,23 @@ export function ReputationRequestsPage() {
     const handleResend = async (id: number) => {
         if (!organizationId) return;
         try {
-            await resendReviewRequest(id, organizationId);
-            toast({ title: 'Success', description: 'Review request resent successfully' });
+            const result = await resendReviewRequest(id, organizationId);
+            if (result.status === 'failed' || result.status === 'reconciliation_required') {
+                toast({
+                    title: result.status === 'failed' ? 'Delivery failed' : 'Delivery needs review',
+                    description: result.status === 'failed'
+                        ? 'The provider rejected the resend.'
+                        : 'The provider outcome could not be confirmed.',
+                    variant: 'destructive',
+                });
+            } else {
+                toast({
+                    title: result.status === 'sent' ? 'Request resent' : 'Resend accepted',
+                    description: result.status === 'sent'
+                        ? 'Review request delivery was confirmed'
+                        : 'Review request is queued for delivery',
+                });
+            }
             fetchRequests(); // Refresh the list to update statuses/timestamps
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to resend request', variant: 'destructive' });

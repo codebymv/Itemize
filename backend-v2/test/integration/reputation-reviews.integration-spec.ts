@@ -8,6 +8,16 @@ import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
+import {
+  REPUTATION_EMAIL_PROVIDER,
+  REPUTATION_SMS_PROVIDER,
+  ReputationDeliveryProviderResult,
+  ReputationEmailMessage,
+  ReputationEmailProvider,
+  ReputationSmsMessage,
+  ReputationSmsProvider,
+} from '../../src/reputation-requests/reputation-request-delivery.providers';
+import { ReputationRequestDeliveryService } from '../../src/reputation-requests/reputation-request-delivery.service';
 
 describe('Reputation reviews GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
@@ -25,7 +35,20 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
   let outsiderToken: string;
   let reviewId: number;
   let requestManagementId: number;
+  let deliveryRequestId: number;
+  let deliveryRequestToken: string;
+  let deliveryService: ReputationRequestDeliveryService;
   const jwt = new JwtService();
+  const emailProvider: jest.Mocked<ReputationEmailProvider> = {
+    send: jest.fn<Promise<ReputationDeliveryProviderResult>, [ReputationEmailMessage]>(
+      async () => ({ kind: 'sent', providerId: `email-${Date.now()}` }),
+    ),
+  };
+  const smsProvider: jest.Mocked<ReputationSmsProvider> = {
+    send: jest.fn<Promise<ReputationDeliveryProviderResult>, [ReputationSmsMessage]>(
+      async () => ({ kind: 'sent', providerId: `sms-${Date.now()}` }),
+    ),
+  };
 
   beforeAll(async () => {
     const connectionString = process.env.TEST_DATABASE_URL;
@@ -78,7 +101,11 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
     outsiderToken = await jwt.signAsync({ id: outsiderId }, { secret: process.env.JWT_SECRET, expiresIn: '15m' });
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(PG_POOL).useValue(pool).compile();
+      .overrideProvider(PG_POOL).useValue(pool)
+      .overrideProvider(REPUTATION_EMAIL_PROVIDER).useValue(emailProvider)
+      .overrideProvider(REPUTATION_SMS_PROVIDER).useValue(smsProvider)
+      .compile();
+    deliveryService = moduleRef.get(ReputationRequestDeliveryService);
     app = moduleRef.createNestApplication<NestExpressApplication>({ bodyParser: false, logger: false });
     configureApp(app);
     await app.init();
@@ -93,6 +120,10 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
 
   afterAll(async () => {
     if (pool && (organizationId || outsiderOrganizationId)) {
+      await pool.query(
+        'DELETE FROM review_request_delivery_batches WHERE organization_id=ANY($1::int[])',
+        [[organizationId, outsiderOrganizationId].filter(Boolean)],
+      );
       await pool.query('DELETE FROM organizations WHERE id=ANY($1::int[])', [[organizationId, outsiderOrganizationId].filter(Boolean)]);
     }
     if (pool && (memberId || outsiderId)) {
@@ -339,6 +370,175 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
       .set('x-organization-id', String(organizationId)).expect(200);
     expect(legacy.body.requests.some((value: { id: number }) => Number(value.id) === requestManagementId))
       .toBe(false);
+  });
+
+  it('sends once, replays exactly, and rejects conflicting idempotency reuse', async () => {
+    const mutation = `mutation Send($input:SendReputationRequestInput!){
+      sendReputationRequest(input:$input){
+        batchId status replayed accepted sent
+        requests { id organizationId contactId channel status emailSent emailSentAt }
+      }
+    }`;
+    const variables = { input: {
+      idempotencyKey: `review-send-${Date.now()}`, contactId, channel: 'email',
+      customMessage: 'Please tell us how we did', preferredPlatform: 'google',
+    } };
+    const sent = await graphql(mutation, variables).expect(200);
+    expect(sent.body.errors).toBeUndefined();
+    expect(sent.body.data.sendReputationRequest).toMatchObject({
+      status: 'SENT', replayed: false, accepted: 1, sent: 1,
+      requests: [{ organizationId, contactId, channel: 'email', status: 'sent', emailSent: true }],
+    });
+    deliveryRequestId = Number(sent.body.data.sendReputationRequest.requests[0].id);
+    expect(emailProvider.send).toHaveBeenCalledTimes(1);
+    expect(emailProvider.send.mock.calls[0][0]).toMatchObject({
+      to: expect.stringContaining('ada-'),
+      idempotencyKey: expect.stringMatching(new RegExp(`^review-request-email:${organizationId}:\\d+$`)),
+    });
+    expect(emailProvider.send.mock.calls[0][0].text).toContain('https://itemize.cloud/review/');
+    expect(emailProvider.send.mock.calls[0][0].text).not.toContain('/r/');
+
+    const replay = await graphql(mutation, variables).expect(200);
+    expect(replay.body.errors).toBeUndefined();
+    expect(replay.body.data.sendReputationRequest).toMatchObject({
+      batchId: sent.body.data.sendReputationRequest.batchId,
+      status: 'SENT', replayed: true, accepted: 1, sent: 1,
+    });
+    expect(emailProvider.send).toHaveBeenCalledTimes(1);
+
+    const conflict = await graphql(mutation, {
+      input: { ...variables.input, customMessage: 'Different body' },
+    }).expect(200);
+    expect(conflict.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'REVIEW_REQUEST_IDEMPOTENCY_CONFLICT',
+    });
+    const token = await pool.query<{ unique_token: string }>(
+      'SELECT unique_token FROM review_requests WHERE id=$1 AND organization_id=$2',
+      [deliveryRequestId, organizationId],
+    );
+    deliveryRequestToken = token.rows[0].unique_token;
+    expect(deliveryRequestToken).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it('resends the same request/token exactly once', async () => {
+    const mutation = `mutation Resend($id:Int!,$key:String!){
+      resendReputationRequest(id:$id,idempotencyKey:$key){
+        batchId status replayed accepted sent requests { id status emailSent }
+      }
+    }`;
+    const variables = { id: deliveryRequestId, key: `review-resend-${Date.now()}` };
+    const before = emailProvider.send.mock.calls.length;
+    const first = await graphql(mutation, variables).expect(200);
+    expect(first.body.errors).toBeUndefined();
+    expect(first.body.data.resendReputationRequest).toMatchObject({
+      status: 'SENT', replayed: false, accepted: 1, sent: 1,
+      requests: [{ id: deliveryRequestId, status: 'sent', emailSent: true }],
+    });
+    const replay = await graphql(mutation, variables).expect(200);
+    expect(replay.body.data.resendReputationRequest).toMatchObject({
+      batchId: first.body.data.resendReputationRequest.batchId, replayed: true,
+    });
+    expect(emailProvider.send).toHaveBeenCalledTimes(before + 1);
+    const token = await pool.query<{ unique_token: string }>(
+      'SELECT unique_token FROM review_requests WHERE id=$1', [deliveryRequestId],
+    );
+    expect(token.rows[0].unique_token).toBe(deliveryRequestToken);
+  });
+
+  it('creates bulk requests atomically and lets the durable worker confirm delivery', async () => {
+    const mutation = `mutation Bulk($input:SendBulkReputationRequestsInput!){
+      sendBulkReputationRequests(input:$input){
+        batchId status replayed accepted sent requests { id contactId status emailSent }
+      }
+    }`;
+    const missingKey = `review-bulk-missing-${Date.now()}`;
+    const missing = await graphql(mutation, { input: {
+      idempotencyKey: missingKey, contactIds: [contactId, outsiderContactId], channel: 'email',
+    } }).expect(200);
+    expect(missing.body.errors[0].extensions).toMatchObject({
+      code: 'NOT_FOUND', reason: 'REVIEW_REQUEST_CONTACT_NOT_FOUND',
+    });
+    const absent = await pool.query<{ count: string }>(
+      'SELECT COUNT(*)::text count FROM review_request_delivery_batches WHERE organization_id=$1 AND idempotency_key=$2',
+      [organizationId, missingKey],
+    );
+    expect(Number(absent.rows[0].count)).toBe(0);
+
+    const key = `review-bulk-${Date.now()}`;
+    const before = emailProvider.send.mock.calls.length;
+    const queued = await graphql(mutation, { input: {
+      idempotencyKey: key, contactIds: [contactId], channel: 'email',
+    } }).expect(200);
+    expect(queued.body.errors).toBeUndefined();
+    expect(queued.body.data.sendBulkReputationRequests).toMatchObject({
+      status: 'QUEUED', replayed: false, accepted: 1, sent: 0,
+      requests: [{ contactId, status: 'pending', emailSent: false }],
+    });
+    const requestId = Number(queued.body.data.sendBulkReputationRequests.requests[0].id);
+    expect(emailProvider.send).toHaveBeenCalledTimes(before);
+
+    const blockedDelete = await graphql(
+      'mutation Delete($id:Int!){ deleteReputationRequest(id:$id){ deletedId } }', { id: requestId },
+    ).expect(200);
+    expect(blockedDelete.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'REVIEW_REQUEST_DELIVERY_ACTIVE',
+    });
+    const legacyBlocked = await request(legacyApp).delete(`/api/reputation/requests/${requestId}`)
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId)).expect(409);
+    expect(legacyBlocked.body.error).toContain('unresolved delivery');
+
+    await expect(deliveryService.runDue()).resolves.toMatchObject({ attempted: 1, sent: 1 });
+    expect(emailProvider.send).toHaveBeenCalledTimes(before + 1);
+    const persisted = await pool.query(
+      `SELECT status,email_sent,email_sent_at FROM review_requests
+       WHERE id=$1 AND organization_id=$2`, [requestId, organizationId],
+    );
+    expect(persisted.rows[0]).toMatchObject({ status: 'sent', email_sent: true });
+    expect(persisted.rows[0].email_sent_at).not.toBeNull();
+  });
+
+  it('quarantines an ambiguous SMS outcome without claiming it was sent', async () => {
+    smsProvider.send.mockRejectedValueOnce(new Error('SMS provider outcome is unknown'));
+    const result = await graphql(
+      `mutation Send($input:SendReputationRequestInput!){
+        sendReputationRequest(input:$input){ status sent requests { id status smsSent smsSentAt } }
+      }`,
+      { input: {
+        idempotencyKey: `review-sms-${Date.now()}`, contactPhone: '+16025550123', channel: 'sms',
+      } },
+    ).expect(200);
+    expect(result.body.errors).toBeUndefined();
+    expect(result.body.data.sendReputationRequest).toMatchObject({
+      status: 'RECONCILIATION_REQUIRED', sent: 0,
+      requests: [{ status: 'failed', smsSent: false, smsSentAt: null }],
+    });
+  });
+
+  it('serves the canonical public review page contract and commits only one concurrent submission', async () => {
+    const opened = await request(legacyApp)
+      .get(`/api/reputation/public/review/${deliveryRequestToken}`).expect(200);
+    expect(opened.headers['cache-control']).toBe('no-store');
+    expect(opened.body).toMatchObject({
+      organization_name: 'Review Primary', contact_name: 'Ada Primary',
+      preferred_platform: 'google',
+    });
+
+    const [one, two] = await Promise.all([
+      request(legacyApp).post(`/api/reputation/public/review/${deliveryRequestToken}`)
+        .send({ rating: 5, review_text: 'Wonderful', platform: 'google' }),
+      request(legacyApp).post(`/api/reputation/public/review/${deliveryRequestToken}`)
+        .send({ rating: 4, review_text: 'Also good', platform: 'google' }),
+    ]);
+    expect([one.status, two.status].sort()).toEqual([200, 404]);
+    const committed = await pool.query<{ count: string }>(
+      `SELECT COUNT(*)::text count FROM reviews
+       WHERE organization_id=$1 AND review_request_id=$2`,
+      [organizationId, deliveryRequestId],
+    );
+    expect(Number(committed.rows[0].count)).toBe(1);
+
+    await request(legacyApp).get('/api/reputation/public/review/not-a-token').expect(404);
   });
 
   it('composes concurrent partial updates and keeps response metadata coherent', async () => {

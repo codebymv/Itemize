@@ -1,5 +1,10 @@
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
-import type { ReviewRequest } from './reputationApi';
+import type {
+  ReviewRequest,
+  ReviewRequestDeliveryAcceptance,
+  SendBulkReviewRequestsInput,
+  SendReviewRequestInput,
+} from './reputationApi';
 
 type GraphqlReputationRequest = {
   id: number; organizationId: number; contactId: number | null; contactEmail: string | null;
@@ -53,6 +58,30 @@ const mapRequest = (request: GraphqlReputationRequest): ReviewRequest => ({
   ...(request.currentContactEmail === null ? {} : { email: request.currentContactEmail }),
 });
 
+type GraphqlDeliveryResult = {
+  batchId: number;
+  status: ReviewRequestDeliveryAcceptance['status'];
+  replayed: boolean;
+  accepted: number;
+  sent: number;
+  requests: GraphqlReputationRequest[];
+};
+
+const deliveryFields = `batchId status replayed accepted sent requests { ${fields} }`;
+
+const mapDelivery = (result: GraphqlDeliveryResult): ReviewRequestDeliveryAcceptance => ({
+  batchId: result.batchId,
+  status: result.status,
+  replayed: result.replayed,
+  accepted: result.accepted,
+  sent: result.sent,
+  requests: result.requests.map(mapRequest),
+});
+
+const deliveryKey = (prefix: string): string =>
+  globalThis.crypto?.randomUUID?.() ??
+  `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
 export const getReviewRequestsViaGraphql = async (
   params: { status?: ReviewRequest['status'] | 'all'; page?: number; limit?: number } = {},
   organizationId?: number,
@@ -95,4 +124,81 @@ export const deleteReviewRequestViaGraphql = async (
     throw new Error('GraphQL deleted a different review request');
   }
   return { success: true };
+};
+
+export const sendReviewRequestViaGraphql = async (
+  request: SendReviewRequestInput,
+  organizationId?: number,
+  idempotencyKey?: string,
+): Promise<ReviewRequestDeliveryAcceptance> => {
+  const input = {
+    idempotencyKey: idempotencyKey ?? deliveryKey('review-request-send'),
+    ...(request.contact_id === undefined ? {} : { contactId: request.contact_id }),
+    ...(request.contact_email === undefined ? {} : { contactEmail: request.contact_email }),
+    ...(request.contact_phone === undefined ? {} : { contactPhone: request.contact_phone }),
+    ...(request.contact_name === undefined ? {} : { contactName: request.contact_name }),
+    channel: request.channel,
+    ...(request.custom_message === undefined ? {} : { customMessage: request.custom_message }),
+    ...(request.preferred_platform === undefined ? {} : { preferredPlatform: request.preferred_platform }),
+    ...(request.redirect_url === undefined ? {} : { redirectUrl: request.redirect_url }),
+    ...(request.scheduled_at === undefined ? {} : { scheduledAt: request.scheduled_at }),
+  };
+  const data = await graphqlMutationRequest<
+    { sendReputationRequest: GraphqlDeliveryResult },
+    { input: typeof input }
+  >(
+    `mutation SendReputationRequest($input: SendReputationRequestInput!) {
+      sendReputationRequest(input: $input) { ${deliveryFields} }
+    }`,
+    { input },
+    organizationId,
+  );
+  return mapDelivery(data.sendReputationRequest);
+};
+
+export const sendBulkReviewRequestsViaGraphql = async (
+  request: SendBulkReviewRequestsInput,
+  organizationId?: number,
+  idempotencyKey?: string,
+): Promise<ReviewRequestDeliveryAcceptance> => {
+  const input = {
+    idempotencyKey: idempotencyKey ?? deliveryKey('review-request-bulk'),
+    contactIds: request.contact_ids,
+    channel: request.channel,
+    ...(request.custom_message === undefined ? {} : { customMessage: request.custom_message }),
+    ...(request.preferred_platform === undefined ? {} : { preferredPlatform: request.preferred_platform }),
+  };
+  const data = await graphqlMutationRequest<
+    { sendBulkReputationRequests: GraphqlDeliveryResult },
+    { input: typeof input }
+  >(
+    `mutation SendBulkReputationRequests($input: SendBulkReputationRequestsInput!) {
+      sendBulkReputationRequests(input: $input) { ${deliveryFields} }
+    }`,
+    { input },
+    organizationId,
+  );
+  return mapDelivery(data.sendBulkReputationRequests);
+};
+
+export const resendReviewRequestViaGraphql = async (
+  requestId: number,
+  organizationId?: number,
+  idempotencyKey?: string,
+): Promise<ReviewRequestDeliveryAcceptance> => {
+  const variables = {
+    id: requestId,
+    idempotencyKey: idempotencyKey ?? deliveryKey('review-request-resend'),
+  };
+  const data = await graphqlMutationRequest<
+    { resendReputationRequest: GraphqlDeliveryResult },
+    typeof variables
+  >(
+    `mutation ResendReputationRequest($id: Int!, $idempotencyKey: String!) {
+      resendReputationRequest(id: $id, idempotencyKey: $idempotencyKey) { ${deliveryFields} }
+    }`,
+    variables,
+    organizationId,
+  );
+  return mapDelivery(data.resendReputationRequest);
 };

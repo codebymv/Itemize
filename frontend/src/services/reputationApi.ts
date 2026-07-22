@@ -5,6 +5,7 @@
 import api from '@/lib/api';
 import {
     isReputationAnalyticsGraphqlEnabled,
+    isReputationRequestDeliveryGraphqlEnabled,
     isReputationRequestManagementGraphqlEnabled,
     isReputationReviewsGraphqlEnabled,
 } from './graphqlClient';
@@ -12,6 +13,9 @@ import { getReputationAnalyticsViaGraphql } from './reputationAnalyticsGraphql';
 import {
     deleteReviewRequestViaGraphql,
     getReviewRequestsViaGraphql,
+    resendReviewRequestViaGraphql,
+    sendBulkReviewRequestsViaGraphql,
+    sendReviewRequestViaGraphql,
 } from './reputationRequestsGraphql';
 import {
     createReviewViaGraphql,
@@ -120,6 +124,41 @@ export interface ReviewRequest {
     email?: string;
 }
 
+export interface PublicReviewRequest {
+    organization_name: string;
+    contact_name?: string;
+    redirect_url?: string;
+    preferred_platform?: string;
+}
+
+export type SendReviewRequestInput = {
+    contact_id?: number;
+    contact_email?: string;
+    contact_phone?: string;
+    contact_name?: string;
+    channel: 'email' | 'sms' | 'both';
+    custom_message?: string;
+    preferred_platform?: string;
+    redirect_url?: string;
+    scheduled_at?: string;
+};
+
+export type SendBulkReviewRequestsInput = {
+    contact_ids: number[];
+    channel: 'email' | 'sms' | 'both';
+    custom_message?: string;
+    preferred_platform?: string;
+};
+
+export interface ReviewRequestDeliveryAcceptance {
+    batchId?: number;
+    status: 'queued' | 'processing' | 'sent' | 'failed' | 'reconciliation_required';
+    replayed: boolean;
+    accepted: number;
+    sent: number;
+    requests: ReviewRequest[];
+}
+
 export interface ReviewWidget {
     id: number;
     organization_id: number;
@@ -205,12 +244,23 @@ export const getPlatforms = async (organizationId?: number): Promise<ReviewPlatf
 
 export const resendReviewRequest = async (
     requestId: number,
-    organizationId?: number
-): Promise<ReviewRequest> => {
+    organizationId?: number,
+    idempotencyKey?: string
+): Promise<ReviewRequestDeliveryAcceptance> => {
+    if (isReputationRequestDeliveryGraphqlEnabled()) {
+        return resendReviewRequestViaGraphql(requestId, organizationId, idempotencyKey);
+    }
     const response = await api.post(`/api/reputation/requests/${requestId}/resend`, {}, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    const request = unwrapResponse<ReviewRequest>(response.data);
+    return {
+        status: request.status === 'failed' ? 'failed' : 'sent',
+        replayed: false,
+        accepted: 1,
+        sent: request.status === 'failed' ? 0 : 1,
+        requests: [request],
+    };
 };
 
 export const addPlatform = async (
@@ -321,38 +371,42 @@ export const getReviewRequests = async (
 };
 
 export const sendReviewRequest = async (
-    request: {
-        contact_id?: number;
-        contact_email?: string;
-        contact_phone?: string;
-        contact_name?: string;
-        channel: 'email' | 'sms' | 'both';
-        custom_message?: string;
-        preferred_platform?: string;
-        redirect_url?: string;
-        scheduled_at?: string;
-    },
-    organizationId?: number
-): Promise<ReviewRequest> => {
+    request: SendReviewRequestInput,
+    organizationId?: number,
+    idempotencyKey?: string
+): Promise<ReviewRequestDeliveryAcceptance> => {
+    if (isReputationRequestDeliveryGraphqlEnabled()) {
+        return sendReviewRequestViaGraphql(request, organizationId, idempotencyKey);
+    }
     const response = await api.post('/api/reputation/requests', request, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    const created = unwrapResponse<ReviewRequest>(response.data);
+    return {
+        status: created.status === 'failed' ? 'failed' : created.status === 'pending' ? 'queued' : 'sent',
+        replayed: false,
+        accepted: 1,
+        sent: created.status === 'sent' ? 1 : 0,
+        requests: [created],
+    };
 };
 
 export const sendBulkReviewRequests = async (
-    data: {
-        contact_ids: number[];
-        channel: 'email' | 'sms' | 'both';
-        custom_message?: string;
-        preferred_platform?: string;
-    },
-    organizationId?: number
-): Promise<{ sent: number; requests: Array<{ id: number }> }> => {
+    data: SendBulkReviewRequestsInput,
+    organizationId?: number,
+    idempotencyKey?: string
+): Promise<ReviewRequestDeliveryAcceptance> => {
+    if (isReputationRequestDeliveryGraphqlEnabled()) {
+        return sendBulkReviewRequestsViaGraphql(data, organizationId, idempotencyKey);
+    }
     const response = await api.post('/api/reputation/requests/bulk', data, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
-    return response.data;
+    const result = unwrapResponse<{ sent: number; requests: ReviewRequest[] }>(response.data);
+    return {
+        status: 'sent', replayed: false, accepted: result.sent, sent: result.sent,
+        requests: result.requests,
+    };
 };
 
 export const deleteReviewRequest = async (
@@ -366,6 +420,22 @@ export const deleteReviewRequest = async (
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
     });
     return response.data;
+};
+
+export const getPublicReviewRequest = async (token: string): Promise<PublicReviewRequest> => {
+    const response = await api.get(`/api/reputation/public/review/${encodeURIComponent(token)}`);
+    return unwrapResponse<PublicReviewRequest>(response.data);
+};
+
+export const submitPublicReview = async (
+    token: string,
+    input: { rating: number; review_text?: string; platform?: string }
+): Promise<{ success: boolean; redirect_url?: string }> => {
+    const response = await api.post(
+        `/api/reputation/public/review/${encodeURIComponent(token)}`,
+        input
+    );
+    return unwrapResponse<{ success: boolean; redirect_url?: string }>(response.data);
 };
 
 // ======================

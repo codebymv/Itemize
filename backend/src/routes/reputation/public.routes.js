@@ -1,5 +1,5 @@
 const express = require('express');
-const { withDbClient } = require('../../utils/db');
+const { withDbClient, withTransaction } = require('../../utils/db');
 const { sendError } = require('../../utils/response');
 const {
     REVIEW_REQUEST_COLUMNS,
@@ -8,6 +8,8 @@ const {
 
 module.exports = ({ pool, publicRateLimit, getSentiment }) => {
     const router = express.Router();
+    const tokenPattern = /^[a-f0-9]{64}$/i;
+    const reviewPlatforms = new Set(['google', 'facebook', 'yelp', 'trustpilot', 'g2', 'capterra', 'custom']);
 
 // Public Endpoints
     // ======================
@@ -86,14 +88,20 @@ module.exports = ({ pool, publicRateLimit, getSentiment }) => {
      */
     router.get('/public/review/:token', publicRateLimit, async (req, res) => {
         try {
+            res.set('Cache-Control', 'no-store');
             const { token } = req.params;
+            if (!tokenPattern.test(token)) {
+                return res.status(404).json({ error: 'Review request not found or expired' });
+            }
             const data = await withDbClient(pool, async (client) => {
                 const result = await client.query(`
                     SELECT ${REVIEW_REQUEST_COLUMNS.split(', ').map(column => `rr.${column}`).join(', ')},
                            o.name as organization_name
                     FROM review_requests rr
                     JOIN organizations o ON rr.organization_id = o.id
-                    WHERE rr.unique_token = $1 AND rr.status NOT IN ('completed', 'unsubscribed')
+                    WHERE rr.unique_token = $1
+                      AND rr.status NOT IN ('completed', 'unsubscribed')
+                      AND (rr.expires_at IS NULL OR rr.expires_at > CURRENT_TIMESTAMP)
                 `, [token]);
 
                 if (result.rows.length === 0) {
@@ -121,7 +129,6 @@ module.exports = ({ pool, publicRateLimit, getSentiment }) => {
             res.json({
                 organization_name: data.request.organization_name,
                 contact_name: data.request.contact_name,
-                redirect_url: data.request.redirect_url,
                 preferred_platform: data.request.preferred_platform
             });
         } catch (error) {
@@ -135,17 +142,33 @@ module.exports = ({ pool, publicRateLimit, getSentiment }) => {
      */
     router.post('/public/review/:token', publicRateLimit, async (req, res) => {
         try {
+            res.set('Cache-Control', 'no-store');
             const { token } = req.params;
             const { rating, review_text, platform } = req.body;
+            const numericRating = Number(rating);
+            const normalizedText = typeof review_text === 'string' ? review_text.trim() : '';
+            const normalizedPlatform = typeof platform === 'string' ? platform.trim().toLowerCase() : '';
 
-            if (!rating || rating < 1 || rating > 5) {
+            if (!tokenPattern.test(token)) {
+                return res.status(404).json({ error: 'Review request not found' });
+            }
+            if (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 5) {
                 return res.status(400).json({ error: 'Valid rating (1-5) required' });
             }
+            if (normalizedText.length > 5000) {
+                return res.status(400).json({ error: 'Review text must be 5000 characters or fewer' });
+            }
+            if (normalizedPlatform && !reviewPlatforms.has(normalizedPlatform)) {
+                return res.status(400).json({ error: 'Review platform is invalid' });
+            }
 
-            const data = await withDbClient(pool, async (client) => {
+            const data = await withTransaction(pool, async (client) => {
                 const requestResult = await client.query(`
                     SELECT ${REVIEW_REQUEST_COLUMNS} FROM review_requests
-                    WHERE unique_token = $1 AND status NOT IN ('completed', 'unsubscribed')
+                    WHERE unique_token = $1
+                      AND status NOT IN ('completed', 'unsubscribed')
+                      AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
+                    FOR UPDATE
                 `, [token]);
 
                 if (requestResult.rows.length === 0) {
@@ -164,14 +187,14 @@ module.exports = ({ pool, publicRateLimit, getSentiment }) => {
                     RETURNING id
                 `, [
                     request.organization_id,
-                    platform || request.preferred_platform || 'custom',
-                    rating,
-                    review_text || null,
+                    normalizedPlatform || request.preferred_platform || 'custom',
+                    numericRating,
+                    normalizedText || null,
                     request.contact_name,
                     request.contact_email,
                     request.contact_phone,
                     request.contact_id,
-                    getSentiment(rating),
+                    getSentiment(numericRating),
                     request.id
                 ]);
 
@@ -184,7 +207,7 @@ module.exports = ({ pool, publicRateLimit, getSentiment }) => {
                         review_id = $2,
                         status = 'completed'
                     WHERE id = $3
-                `, [rating, reviewResult.rows[0].id, request.id]);
+                `, [numericRating, reviewResult.rows[0].id, request.id]);
 
                 return { status: 200, request };
             });
@@ -195,7 +218,7 @@ module.exports = ({ pool, publicRateLimit, getSentiment }) => {
 
             res.json({ 
                 success: true, 
-                redirect_url: rating >= 4 ? data.request.redirect_url : null
+                redirect_url: numericRating >= 4 ? data.request.redirect_url : null
             });
         } catch (error) {
             console.error('Error submitting review:', error);

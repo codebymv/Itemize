@@ -51,4 +51,20 @@ describe('ReputationRequestsRepository', () => {
     expect(client.query).toHaveBeenCalledWith('ROLLBACK');
     expect(client.release).toHaveBeenCalledTimes(1);
   });
+
+  it('locks identity and refuses deletion while delivery is unresolved', async () => {
+    client.query.mockImplementation(async (text: string) => {
+      if (text.includes('FROM review_requests WHERE id=')) return { rows: [{ id: 8 }] } as never;
+      if (text.includes('FROM review_request_deliveries')) return { rows: [{ one: 1 }] } as never;
+      return { rows: [] } as never;
+    });
+    const repository = new ReputationRequestsRepository(pool);
+    await expect(repository.delete(3, 8)).resolves.toBe('delivery-active');
+    expect(client.query).toHaveBeenCalledWith(
+      expect.stringContaining("status IN ('queued','processing','retry','reconciliation_required')"),
+      [8, 3],
+    );
+    expect(client.query).toHaveBeenLastCalledWith('COMMIT');
+    expect(client.release).toHaveBeenCalledTimes(1);
+  });
 });

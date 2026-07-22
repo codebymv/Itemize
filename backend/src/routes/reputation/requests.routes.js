@@ -40,7 +40,8 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
                     SELECT ${REVIEW_REQUEST_COLUMNS.split(', ').map(column => `rr.${column}`).join(', ')},
                            c.first_name, c.last_name, c.email
                     FROM review_requests rr
-                    LEFT JOIN contacts c ON rr.contact_id = c.id
+                    LEFT JOIN contacts c
+                      ON rr.contact_id = c.id AND c.organization_id = rr.organization_id
                     ${whereClause}
                     ORDER BY rr.created_at DESC
                     LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
@@ -78,6 +79,9 @@ module.exports = ({ pool, authenticateJWT, requireOrganization }) => {
             if (result.rows.length === 0) return sendNotFound(res, 'Review request');
             return sendSuccess(res, { id: result.rows[0].id, deleted: true });
         } catch (error) {
+            if (error && error.constraint === 'review_request_active_delivery') {
+                return res.status(409).json({ error: 'Review request has an unresolved delivery' });
+            }
             console.error('Error deleting review request:', error);
             return sendError(res, 'Failed to delete review request');
         }

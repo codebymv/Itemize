@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Send, User, Users, Mail, MessageSquare, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,6 +66,7 @@ export function SendReviewRequestModal({
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<'single' | 'bulk'>('single');
+  const deliveryAttempt = useRef<{ signature: string; key: string } | null>(null);
   
   // Contact search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -149,6 +150,14 @@ export function SendReviewRequestModal({
     }));
   };
 
+  const idempotencyKeyFor = (signature: string): string => {
+    if (deliveryAttempt.current?.signature === signature) return deliveryAttempt.current.key;
+    const key = globalThis.crypto?.randomUUID?.() ??
+      `review-request-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    deliveryAttempt.current = { signature, key };
+    return key;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -192,7 +201,7 @@ export function SendReviewRequestModal({
 
       setLoading(true);
       try {
-        await sendReviewRequest({
+        const payload = {
           contact_id: singleForm.useExistingContact ? singleForm.contact_id || undefined : undefined,
           contact_email: !singleForm.useExistingContact ? singleForm.contact_email : undefined,
           contact_phone: !singleForm.useExistingContact ? singleForm.contact_phone : undefined,
@@ -200,9 +209,27 @@ export function SendReviewRequestModal({
           channel: singleForm.channel,
           custom_message: singleForm.custom_message || undefined,
           preferred_platform: singleForm.preferred_platform || undefined,
-        }, organizationId);
+        };
+        const result = await sendReviewRequest(
+          payload,
+          organizationId,
+          idempotencyKeyFor(JSON.stringify({ mode: 'single', payload })),
+        );
+        deliveryAttempt.current = null;
         
-        toast({ title: 'Request sent', description: 'Review request has been sent successfully' });
+        if (result.status === 'failed' || result.status === 'reconciliation_required') {
+          toast({
+            title: result.status === 'failed' ? 'Delivery failed' : 'Delivery needs review',
+            description: result.status === 'failed'
+              ? 'The request was saved, but the provider rejected delivery.'
+              : 'The request was saved, but the provider outcome could not be confirmed.',
+            variant: 'destructive',
+          });
+        } else if (result.status === 'sent') {
+          toast({ title: 'Request sent', description: 'Review request delivery was confirmed' });
+        } else {
+          toast({ title: 'Request accepted', description: 'Review request is queued for delivery' });
+        }
         onSent();
       } catch (error) {
         console.error('Error sending request:', error);
@@ -227,16 +254,24 @@ export function SendReviewRequestModal({
 
       setLoading(true);
       try {
-        const result = await sendBulkReviewRequests({
+        const payload = {
           contact_ids: bulkForm.selectedContactIds,
           channel: bulkForm.channel,
           custom_message: bulkForm.custom_message || undefined,
           preferred_platform: bulkForm.preferred_platform || undefined,
-        }, organizationId);
+        };
+        const result = await sendBulkReviewRequests(
+          payload,
+          organizationId,
+          idempotencyKeyFor(JSON.stringify({ mode: 'bulk', payload })),
+        );
+        deliveryAttempt.current = null;
         
-        toast({ 
-          title: 'Requests sent', 
-          description: `Successfully sent ${result.sent} review request${result.sent !== 1 ? 's' : ''}` 
+        toast({
+          title: result.status === 'sent' ? 'Requests sent' : 'Requests accepted',
+          description: result.status === 'sent'
+            ? `Confirmed ${result.sent} review request deliver${result.sent === 1 ? 'y' : 'ies'}`
+            : `Queued ${result.accepted} review request${result.accepted === 1 ? '' : 's'} for delivery`,
         });
         onSent();
       } catch (error) {

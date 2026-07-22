@@ -19,7 +19,9 @@ describe('ReputationRequestsService', () => {
   let service: ReputationRequestsService;
 
   beforeEach(() => {
-    repository = { findPage: jest.fn(), delete: jest.fn() } as unknown as jest.Mocked<ReputationRequestsRepository>;
+    repository = {
+      findPage: jest.fn(), findByIds: jest.fn(), delete: jest.fn(),
+    } as unknown as jest.Mocked<ReputationRequestsRepository>;
     service = new ReputationRequestsService(repository);
   });
 
@@ -49,10 +51,17 @@ describe('ReputationRequestsService', () => {
   });
 
   it('returns exact delete identity and keeps missing rows private', async () => {
-    repository.delete.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    repository.delete.mockResolvedValueOnce('deleted').mockResolvedValueOnce('not-found');
     await expect(service.delete(3, 8)).resolves.toBe(8);
     await expect(service.delete(3, 9)).rejects.toMatchObject({
       extensions: { code: 'NOT_FOUND' },
+    });
+  });
+
+  it('refuses deletion while delivery state is unresolved', async () => {
+    repository.delete.mockResolvedValue('delivery-active');
+    await expect(service.delete(3, 8)).rejects.toMatchObject({
+      extensions: { code: 'CONFLICT', reason: 'REVIEW_REQUEST_DELIVERY_ACTIVE' },
     });
   });
 });

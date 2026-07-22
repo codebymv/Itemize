@@ -69,13 +69,50 @@ export class ReputationRequestsRepository {
     }
   }
 
-  async delete(organizationId: number, requestId: number): Promise<boolean> {
-    const result = await this.pool.query<{ id: number }>(
-      `DELETE FROM review_requests
-       WHERE id = $1 AND organization_id = $2
-       RETURNING id`,
-      [requestId, organizationId],
-    );
-    return result.rows.length === 1 && Number(result.rows[0].id) === requestId;
+  async findByIds(organizationId: number, requestIds: number[]): Promise<ReputationRequestRow[]> {
+    if (requestIds.length === 0) return [];
+    const result = await this.pool.query<ReputationRequestRow>(`
+      SELECT ${projection}
+      FROM review_requests rr
+      LEFT JOIN contacts c
+        ON c.id = rr.contact_id AND c.organization_id = rr.organization_id
+      WHERE rr.organization_id=$1 AND rr.id=ANY($2::int[])
+      ORDER BY array_position($2::int[],rr.id)`, [organizationId, requestIds]);
+    return result.rows;
+  }
+
+  async delete(organizationId: number, requestId: number): Promise<'deleted' | 'not-found' | 'delivery-active'> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const locked = await client.query(
+        'SELECT 1 FROM review_requests WHERE id=$1 AND organization_id=$2 FOR UPDATE',
+        [requestId, organizationId],
+      );
+      if (!locked.rows[0]) {
+        await client.query('COMMIT');
+        return 'not-found';
+      }
+      const active = await client.query(
+        `SELECT 1 FROM review_request_deliveries
+         WHERE review_request_id=$1 AND organization_id=$2
+           AND status IN ('queued','processing','retry','reconciliation_required') LIMIT 1`,
+        [requestId, organizationId],
+      );
+      if (active.rows[0]) {
+        await client.query('COMMIT');
+        return 'delivery-active';
+      }
+      const result = await client.query<{ id: number }>(
+        `DELETE FROM review_requests WHERE id=$1 AND organization_id=$2 RETURNING id`,
+        [requestId, organizationId],
+      );
+      await client.query('COMMIT');
+      return result.rows.length === 1 && Number(result.rows[0].id) === requestId
+        ? 'deleted' : 'not-found';
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally { client.release(); }
   }
 }

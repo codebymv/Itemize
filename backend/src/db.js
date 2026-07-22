@@ -114,6 +114,9 @@ const { runEstimatesRecurringMigrations } = require('./db_estimates_recurring_mi
 
 // Import Reputation migrations
 const { runAllReputationMigrations } = require('./db_reputation_migrations');
+const {
+  runReputationRequestDeliveryMigration,
+} = require('./db_reputation_request_delivery_migrations');
 
 // Import Social migrations
 const { runAllSocialMigrations } = require('./db_social_migrations');
@@ -547,6 +550,11 @@ const initializeDatabase = async (pool) => {
     });
     
     await runMigrationOnce(pool, 'module_reputation', runAllReputationMigrations);
+    await runMigrationOnce(
+      pool,
+      'reputation_request_deliveries',
+      runReputationRequestDeliveryMigration
+    );
     
     // Social migrations + oauth_states table
     await runMigrationOnce(pool, 'module_social', async (p) => {

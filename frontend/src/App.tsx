@@ -71,6 +71,7 @@ const SocialPage = React.lazy(() => import("./pages/social/SocialPage"));
 const ReputationPage = React.lazy(() => import("./pages/reputation/ReputationPage"));
 const ReputationRequestsPage = React.lazy(() => import("./pages/reputation/ReputationRequestsPage"));
 const ReputationWidgetsPage = React.lazy(() => import("./pages/reputation/ReputationWidgetsPage"));
+const PublicReviewPage = React.lazy(() => import("./pages/reputation/PublicReviewPage"));
 const InvoicesPage = React.lazy(() => import("./pages/invoices/InvoicesPage"));
 const InvoiceEditorPage = React.lazy(() => import("./pages/invoices/InvoiceEditorPage"));
 const EstimatesPage = React.lazy(() => import("./pages/invoices/EstimatesPage"));
@@ -221,6 +222,11 @@ const AppContent = () => {
     return <Navigate to={id ? `/templates/${id}` : '/templates'} replace />;
   };
 
+  const LegacyReviewRedirect = () => {
+    const { token } = useParams();
+    return <Navigate to={token ? `/review/${token}` : '/home'} replace />;
+  };
+
   // Handle session expiration notifications
   useSessionExpiration();
 
@@ -245,7 +251,9 @@ const AppContent = () => {
   const publicRoutes = ['/home', '/auth/callback', '/status', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
   const isPublicRoute = publicRoutes.includes(location.pathname) ||
     location.pathname.startsWith('/shared/') ||
-    location.pathname.startsWith('/form/');
+    location.pathname.startsWith('/form/') ||
+    location.pathname.startsWith('/review/') ||
+    location.pathname.startsWith('/r/');
   const marketingChatRoutes = ['/home', '/status', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
   const showMarketingChat =
     marketingChatRoutes.includes(location.pathname) ||
@@ -277,6 +285,8 @@ const AppContent = () => {
       <Route path="/shared/vault/:token" element={<SharedVaultPage />} />
       <Route path="/sign/:token" element={<SignPage />} />
       <Route path="/form/:identifier" element={<PublicFormPage />} />
+      <Route path="/review/:token" element={<PublicReviewPage />} />
+      <Route path="/r/:token" element={<LegacyReviewRedirect />} />
 
       {/* Protected routes with sidebar layout */}
       <Route element={<ProtectedRoute />}>

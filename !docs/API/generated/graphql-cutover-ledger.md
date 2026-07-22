@@ -7,13 +7,13 @@
 - Registered method/path operations: 419
 - API operations under `/api`: 412
 - Non-API registered operations: 7
-- Static frontend callsites: 390
-- Operations with frontend consumers: 368
-- Operations referenced by backend tests: 208
+- Static frontend callsites: 392
+- Operations with frontend consumers: 370
+- Operations referenced by backend tests: 210
 - Recommended GraphQL queries: 127
 - Recommended GraphQL mutations: 244
 - Recommended retained HTTP endpoints: 40
-- High-risk operations: 336
+- High-risk operations: 335
 - Unmatched frontend calls: 1
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -308,12 +308,12 @@
 | GET | `/api/reputation/platforms` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/reputation/platforms` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | DELETE | `/api/reputation/platforms/:id` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/reputation/public/review/:token` | 0 | 0 | graphql-query | unknown | _unassigned_ |
-| POST | `/api/reputation/public/review/:token` | 0 | 0 | graphql-mutation | high | _unassigned_ |
+| GET | `/api/reputation/public/review/:token` | 1 | 2 | graphql-query | medium | _unassigned_ |
+| POST | `/api/reputation/public/review/:token` | 1 | 2 | graphql-mutation | medium | _unassigned_ |
 | GET | `/api/reputation/public/widget/:widgetKey` | 0 | 0 | graphql-query | unknown | _unassigned_ |
 | GET | `/api/reputation/requests` | 1 | 1 | graphql-query | high | reputation / ReputationRequestsModule / reputationRequests |
 | POST | `/api/reputation/requests` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| DELETE | `/api/reputation/requests/:id` | 1 | 2 | graphql-mutation | high | reputation / ReputationRequestsModule / deleteReputationRequest |
+| DELETE | `/api/reputation/requests/:id` | 1 | 3 | graphql-mutation | high | reputation / ReputationRequestsModule / deleteReputationRequest |
 | POST | `/api/reputation/requests/:id/resend` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | POST | `/api/reputation/requests/bulk` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/reputation/reviews` | 1 | 0 | graphql-query | high | reputation / ReputationReviewsModule / reputationReviews |

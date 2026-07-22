@@ -2,11 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   graphqlMutationRequest,
   graphqlRequest,
+  isReputationRequestDeliveryGraphqlEnabled,
   isReputationRequestManagementGraphqlEnabled,
 } from './graphqlClient';
 import {
   deleteReviewRequestViaGraphql,
   getReviewRequestsViaGraphql,
+  resendReviewRequestViaGraphql,
+  sendBulkReviewRequestsViaGraphql,
+  sendReviewRequestViaGraphql,
 } from './reputationRequestsGraphql';
 
 vi.mock('./graphqlClient', async (importOriginal) => ({
@@ -67,6 +71,76 @@ describe('reputation request management GraphQL adapter', () => {
     await expect(deleteReviewRequestViaGraphql(8, 3)).resolves.toEqual({ success: true });
     expect(graphqlMutationRequest).toHaveBeenCalledWith(
       expect.stringContaining('mutation DeleteReputationRequest'), { id: 8 }, 3,
+    );
+  });
+
+  it('keeps delivery on an independent default-off rollback boundary', () => {
+    vi.stubEnv('VITE_REPUTATION_REQUEST_DELIVERY_GRAPHQL', 'false');
+    expect(isReputationRequestDeliveryGraphqlEnabled()).toBe(false);
+    vi.stubEnv('VITE_REPUTATION_REQUEST_DELIVERY_GRAPHQL', 'true');
+    expect(isReputationRequestDeliveryGraphqlEnabled()).toBe(true);
+  });
+
+  it('sends one request with a caller-stable idempotency key and maps the confirmed result', async () => {
+    vi.mocked(graphqlMutationRequest).mockResolvedValue({
+      sendReputationRequest: {
+        batchId: 14, status: 'sent', replayed: false, accepted: 1, sent: 1, requests: [request],
+      },
+    });
+
+    await expect(sendReviewRequestViaGraphql({
+      contact_id: 4, channel: 'email', custom_message: 'Please share feedback',
+      preferred_platform: 'google', scheduled_at: '2026-07-22T12:00:00.000Z',
+    }, 3, 'stable-send-14')).resolves.toMatchObject({
+      batchId: 14, status: 'sent', accepted: 1, sent: 1,
+      requests: [expect.objectContaining({ id: 8, contact_id: 4 })],
+    });
+    expect(graphqlMutationRequest).toHaveBeenCalledWith(
+      expect.stringContaining('mutation SendReputationRequest'),
+      { input: {
+        idempotencyKey: 'stable-send-14', contactId: 4, channel: 'email',
+        customMessage: 'Please share feedback', preferredPlatform: 'google',
+        scheduledAt: '2026-07-22T12:00:00.000Z',
+      } },
+      3,
+    );
+  });
+
+  it('bulk queues atomically and resend carries exact identity', async () => {
+    vi.mocked(graphqlMutationRequest)
+      .mockResolvedValueOnce({
+        sendBulkReputationRequests: {
+          batchId: 15, status: 'queued', replayed: false, accepted: 2, sent: 0,
+          requests: [request, { ...request, id: 9 }],
+        },
+      })
+      .mockResolvedValueOnce({
+        resendReputationRequest: {
+          batchId: 16, status: 'processing', replayed: true, accepted: 1, sent: 0,
+          requests: [request],
+        },
+      });
+
+    await expect(sendBulkReviewRequestsViaGraphql({
+      contact_ids: [4, 5], channel: 'both', preferred_platform: 'yelp',
+    }, 3, 'stable-bulk-15')).resolves.toMatchObject({ status: 'queued', accepted: 2, sent: 0 });
+    expect(graphqlMutationRequest).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('mutation SendBulkReputationRequests'),
+      { input: {
+        idempotencyKey: 'stable-bulk-15', contactIds: [4, 5], channel: 'both',
+        preferredPlatform: 'yelp',
+      } },
+      3,
+    );
+
+    await expect(resendReviewRequestViaGraphql(8, 3, 'stable-resend-16'))
+      .resolves.toMatchObject({ batchId: 16, status: 'processing', replayed: true });
+    expect(graphqlMutationRequest).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('mutation ResendReputationRequest'),
+      { id: 8, idempotencyKey: 'stable-resend-16' },
+      3,
     );
   });
 });

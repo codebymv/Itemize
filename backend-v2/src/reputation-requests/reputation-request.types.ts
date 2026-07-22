@@ -1,4 +1,4 @@
-import { Field, GraphQLISODateTime, Int, ObjectType } from '@nestjs/graphql';
+import { Field, GraphQLISODateTime, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
 import { PageInfo } from '../common/pagination';
 
 @ObjectType()
@@ -110,4 +110,37 @@ export class ReputationRequestPage {
 export class DeleteReputationRequestResult {
   @Field(() => Int)
   deletedId: number;
+}
+
+export enum ReputationRequestDeliveryBatchStatus {
+  QUEUED = 'queued',
+  PROCESSING = 'processing',
+  SENT = 'sent',
+  FAILED = 'failed',
+  RECONCILIATION_REQUIRED = 'reconciliation_required',
+}
+
+registerEnumType(ReputationRequestDeliveryBatchStatus, {
+  name: 'ReputationRequestDeliveryBatchStatus',
+});
+
+@ObjectType()
+export class ReputationRequestDeliveryResult {
+  @Field(() => Int)
+  batchId: number;
+
+  @Field(() => ReputationRequestDeliveryBatchStatus)
+  status: ReputationRequestDeliveryBatchStatus;
+
+  @Field()
+  replayed: boolean;
+
+  @Field(() => Int)
+  accepted: number;
+
+  @Field(() => Int)
+  sent: number;
+
+  @Field(() => [ReputationRequest])
+  requests: ReputationRequest[];
 }

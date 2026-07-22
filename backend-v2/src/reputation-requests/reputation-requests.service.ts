@@ -32,7 +32,13 @@ export class ReputationRequestsService {
 
   async delete(organizationId: number, requestId: number): Promise<number> {
     this.id(requestId);
-    if (!(await this.repository.delete(organizationId, requestId))) {
+    const outcome = await this.repository.delete(organizationId, requestId);
+    if (outcome === 'delivery-active') {
+      throw itemizeGraphqlError('Review request has an unresolved delivery', 'CONFLICT', {
+        reason: 'REVIEW_REQUEST_DELIVERY_ACTIVE',
+      });
+    }
+    if (outcome === 'not-found') {
       throw itemizeGraphqlError('Review request not found', 'NOT_FOUND');
     }
     return requestId;
@@ -64,7 +70,7 @@ export class ReputationRequestsService {
     }
   }
 
-  private map(row: ReputationRequestRow): ReputationRequest {
+  map(row: ReputationRequestRow): ReputationRequest {
     return {
       id: this.numberId(row.id, 'id'),
       organizationId: this.numberId(row.organization_id, 'organizationId'),
