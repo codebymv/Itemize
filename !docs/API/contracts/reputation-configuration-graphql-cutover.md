@@ -1,6 +1,6 @@
 # Reputation configuration GraphQL cutover contract
 
-**Status:** Implementation and dual-parity complete; production flags default off
+**Status:** Production consumer cutover complete
 
 **Evidence date:** 2026-07-22
 
@@ -33,3 +33,9 @@ The retained public endpoint accepts only exact 32-hex keys, returns only active
 Fresh PostgreSQL coverage proves authorization and CSRF, null-place upsert serialization, OAuth-field schema omission, REST interoperability, tenant concealment, virtual settings defaults, tenant-qualified template validation with atomic rollback, complete widget create/update mapping, embed origins, hidden-review exclusion, input rejection without mutation, capability revocation, exact delete identity, and repeated private misses. Frontend adapter and dispatch tests prove all three flags are independently default-off, casing/input mapping, CSRF mutation routing, exact delete verification, embed/settings projections, retained REST rollback, and that platform routing cannot intercept review deletion. A focused CORS unit test freezes the single public wildcard boundary. The complete checkpoint passes 365/365 legacy unit cases, 341/341 focused Nest cases, 489/489 legacy PostgreSQL cases, 202/202 Nest PostgreSQL cases, and 328/328 frontend cases.
 
 Rollback is data-neutral: set only the affected frontend flag to `false` and rebuild. The retained REST adapters use the same rows. Public widget retrieval and public review submission do not change transport during rollback.
+
+## Production gate
+
+Commit `272f138f` deployed as legacy backend `6659ec78-e5ce-4c9a-8831-51b75be02e90`, GraphQL `5c54bd41-87cd-4d50-861b-80f919b7b7a2`, and flag-enabled frontend `ca211f99-8de5-4b63-8bf7-8b5c9489f72f`. GraphQL production now has `PUBLIC_API_URL` set to the public legacy API origin so embed code separates the static asset and data origins correctly.
+
+Production schema probes resolved every configuration operation and stopped anonymous reads and writes at `UNAUTHENTICATED` without mutation. The deployed widget runtime returned JavaScript from `/widget/reviews.js`; malformed capabilities returned `404` with `Cache-Control: no-store`; an unknown exact 32-hex capability returned the same private miss with `Access-Control-Allow-Origin: *` and no credential header. An authenticated `/review-widgets` browser load rendered the authoritative empty state without console errors, and Nest recorded zero-error `ReputationWidgets` request `53445209-8622-406e-82c4-94f2fe62d439`. Platform and settings adapters are enabled and schema-gated, but the current frontend has no active page callsite for those operations, so no browser request is claimed for them.

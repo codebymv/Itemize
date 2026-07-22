@@ -1,6 +1,6 @@
 # GraphQL production consumer cutover
 
-**Status:** 78 domain consumers plus authentication session, identity lifecycle, and password recovery enabled
+**Status:** 81 domain consumers plus authentication session, identity lifecycle, and password recovery enabled
 
 **Cutover date:** 2026-07-21
 
@@ -8,7 +8,7 @@
 
 The browser uses the production `VITE_API_URL` (`https://itemize-backend-production-92ad.up.railway.app`) for REST and `/graphql`. That backend forwards GraphQL to `itemize.cloud GraphQL Production` over Railway's private network. The proxy has an explicit response allowlist for the three authentication cookies and cache/CSRF headers, allowing NestJS to own browser sessions through the existing API origin. The frontend custom domain itself serves the SPA shell and is not the direct `/graphql` endpoint.
 
-The 78 domain switches referenced by `frontend/src/services/graphqlClient.ts` are enabled in production. `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` independently control the enabled session, registration/verification, and forgot/reset-password protocols. A frontend rebuild is required because Vite embeds these values at build time.
+The 81 domain switches represented by the frontend environment contract are enabled in production. `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` independently control the enabled session, registration/verification, and forgot/reset-password protocols. A frontend rebuild is required because Vite embeds these values at build time.
 
 The enabled families are:
 
@@ -17,7 +17,7 @@ The enabled families are:
 - products, invoice businesses/settings/invoices, estimates, recurring invoices, and payments;
 - workspace lists, notes, and whiteboards;
 - dashboard and aggregate analytics;
-- audience segments, email/SMS templates, campaigns, workflows, enrollments, workflow execution visibility, reputation reviews, reputation analytics, review-request management, and review-request delivery.
+- audience segments, email/SMS templates, campaigns, workflows, enrollments, workflow execution visibility, reputation reviews, reputation analytics, review-request management/delivery, and reputation platform/settings/widget configuration.
 
 ## Intentionally retained transports
 
@@ -43,12 +43,14 @@ The review-request management cutover completed from commit `19c1fa1a` with Grap
 
 The review-request delivery cutover completed from commits `2a6ffa4a` and `abc6a1e9`. Migration `040_reputation_request_deliveries` completed at `2026-07-22T05:09:49.628Z` before the stricter startup marker deployed. The legacy proxy deployment `2c51e9ea-ffeb-49b2-b081-dd4c8daf0bf1`, scheduler-enabled GraphQL deployment `48bd544a-3c6f-4ff4-9049-16116542cd10`, and flag-enabled frontend deployment `2369075e-cd85-40f6-b66b-b156e521527d` all reached `SUCCESS`. Railway confirmed both `REPUTATION_REQUEST_DELIVERY_SCHEDULER_ENABLED=true` and `VITE_REPUTATION_REQUEST_DELIVERY_GRAPHQL=true`; Nest logged the review-request delivery scheduler at its 60-second interval. Non-mutating production probes returned `200` for the site, API health, and public review SPA route, returned `404` with `Cache-Control: no-store` for an unknown 64-hex review token, and proved `sendReputationRequest` exists behind the public proxy by receiving the intended anonymous `UNAUTHENTICATED` GraphQL response. No provider delivery was sent during verification.
 
+The reputation-configuration cutover completed from commit `272f138f` with legacy backend deployment `6659ec78-e5ce-4c9a-8831-51b75be02e90`, GraphQL deployment `5c54bd41-87cd-4d50-861b-80f919b7b7a2`, and flag-enabled frontend deployment `ca211f99-8de5-4b63-8bf7-8b5c9489f72f`. Railway confirmed `VITE_REPUTATION_PLATFORMS_GRAPHQL=true`, `VITE_REPUTATION_SETTINGS_GRAPHQL=true`, `VITE_REPUTATION_WIDGETS_GRAPHQL=true`, and the non-secret GraphQL `PUBLIC_API_URL` needed by generated embeds. Anonymous read/write probes resolved every new operation and returned the intended `UNAUTHENTICATED` guard without mutation. The widget runtime returned deployed JavaScript, malformed and unknown capabilities returned `404` plus `no-store`, and the exact capability-shaped endpoint allowed wildcard CORS without credentials. An authenticated `/review-widgets` load rendered the empty state without console errors while Nest recorded successful zero-error `ReputationWidgets` request `53445209-8622-406e-82c4-94f2fe62d439`. Platform and settings have enabled adapters but no active page callsite, so their gate is schema/auth plus the full local interoperability suite rather than a claimed browser request.
+
 After deployment, verify:
 
 1. `https://itemize.cloud` returns HTTP `200`;
 2. production `/api/health` returns HTTP `200`;
 3. a proxied GraphQL `__typename` query returns HTTP `200`;
-4. all 78 domain `VITE_*_GRAPHQL` variables plus `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` are `true`;
+4. all 81 domain `VITE_*_GRAPHQL` variables plus `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` are `true`;
 5. the frontend and backend deployments resolve to the Git commit containing this document;
 6. GraphQL logs contain no internal-error spike after the frontend replacement.
 

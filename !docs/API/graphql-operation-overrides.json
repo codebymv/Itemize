@@ -1873,43 +1873,43 @@
       "notes": "Tenant-private resend creates a new stable delivery intent without mutating the prior provider attempt and rejects unresolved active work."
     },
     "GET /api/reputation/platforms": {
-      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "reputationPlatforms", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "reputationPlatforms", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Deterministic organization-scoped platform list deliberately omits access tokens, refresh tokens, and token expiry from the GraphQL schema."
     },
     "POST /api/reputation/platforms": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "upsertReputationPlatform", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "upsertReputationPlatform", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "CSRF-protected validated upsert serializes the organization/platform/place identity and treats a null place ID as one deterministic identity."
     },
     "DELETE /api/reputation/platforms/:id": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "deleteReputationPlatform", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "deleteReputationPlatform", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Organization-qualified exact-identity delete with foreign and repeated misses concealed as NOT_FOUND."
     },
     "GET /api/reputation/settings": {
-      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "reputationSettings", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "reputationSettings", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Returns complete virtual defaults without writing a row, and normalizes nullable legacy rows into the stable frontend contract."
     },
     "PUT /api/reputation/settings": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "updateReputationSettings", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "updateReputationSettings", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Row-locked partial update merges complete validated state, tenant-validates the optional email template, and commits atomically."
     },
     "GET /api/reputation/widgets": {
-      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "reputationWidgets", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "reputationWidgets", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Deterministic organization-scoped widget configuration list with complete styling, filter, refresh, and activation state."
     },
     "POST /api/reputation/widgets": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "createReputationWidget", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "createReputationWidget", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "CSRF-protected bounded configuration create issues a random 128-bit public capability key and returns no tenant data beyond the owning widget."
     },
     "PUT /api/reputation/widgets/:id": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "updateReputationWidget", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "updateReputationWidget", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Row-locked partial update composes concurrent changes and validates enums, colors, rating/platform filters, counts, refresh intervals, and activation."
     },
     "DELETE /api/reputation/widgets/:id": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "deleteReputationWidget", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "deleteReputationWidget", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Organization-qualified exact-identity delete revokes the associated public capability immediately."
     },
     "GET /api/reputation/widgets/:id/embed-code": {
-      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "reputationWidgetEmbedCode", "parityStatus": "dual-parity", "risk": "high",
+      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "reputationWidgetEmbedCode", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Tenant-private query emits the existing capability key plus a deployable script tag with separately configured public asset and API origins."
     },
     "GET /api/reputation/public/widget/:widgetKey": {

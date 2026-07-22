@@ -12728,7 +12728,7 @@
       "owner": "reputation",
       "targetOperation": "reputationPlatforms",
       "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Deterministic organization-scoped platform list deliberately omits access tokens, refresh tokens, and token expiry from the GraphQL schema.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -12762,7 +12762,7 @@
       "owner": "reputation",
       "targetOperation": "upsertReputationPlatform",
       "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected validated upsert serializes the organization/platform/place identity and treats a null place ID as one deterministic identity.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -12796,7 +12796,7 @@
       "owner": "reputation",
       "targetOperation": "deleteReputationPlatform",
       "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Organization-qualified exact-identity delete with foreign and repeated misses concealed as NOT_FOUND.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13347,7 +13347,7 @@
       "owner": "reputation",
       "targetOperation": "reputationSettings",
       "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Returns complete virtual defaults without writing a row, and normalizes nullable legacy rows into the stable frontend contract.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13381,7 +13381,7 @@
       "owner": "reputation",
       "targetOperation": "updateReputationSettings",
       "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Row-locked partial update merges complete validated state, tenant-validates the optional email template, and commits atomically.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13415,7 +13415,7 @@
       "owner": "reputation",
       "targetOperation": "reputationWidgets",
       "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Deterministic organization-scoped widget configuration list with complete styling, filter, refresh, and activation state.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13449,7 +13449,7 @@
       "owner": "reputation",
       "targetOperation": "createReputationWidget",
       "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected bounded configuration create issues a random 128-bit public capability key and returns no tenant data beyond the owning widget.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13483,7 +13483,7 @@
       "owner": "reputation",
       "targetOperation": "deleteReputationWidget",
       "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Organization-qualified exact-identity delete revokes the associated public capability immediately.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13517,7 +13517,7 @@
       "owner": "reputation",
       "targetOperation": "updateReputationWidget",
       "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Row-locked partial update composes concurrent changes and validates enums, colors, rating/platform filters, counts, refresh intervals, and activation.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13551,7 +13551,7 @@
       "owner": "reputation",
       "targetOperation": "reputationWidgetEmbedCode",
       "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Tenant-private query emits the existing capability key plus a deployable script tag with separately configured public asset and API origins.",
       "literalInterpolationRisk": false,
       "risk": "high"
