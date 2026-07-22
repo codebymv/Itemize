@@ -1,6 +1,6 @@
 # GraphQL production consumer cutover
 
-**Status:** 73 domain consumers plus authentication session, identity lifecycle, and password recovery enabled
+**Status:** 74 domain consumers plus authentication session, identity lifecycle, and password recovery enabled
 
 **Cutover date:** 2026-07-21
 
@@ -8,7 +8,7 @@
 
 The browser uses the production `VITE_API_URL` (`https://itemize-backend-production-92ad.up.railway.app`) for REST and `/graphql`. That backend forwards GraphQL to `itemize.cloud GraphQL Production` over Railway's private network. The proxy has an explicit response allowlist for the three authentication cookies and cache/CSRF headers, allowing NestJS to own browser sessions through the existing API origin. The frontend custom domain itself serves the SPA shell and is not the direct `/graphql` endpoint.
 
-The 73 domain switches referenced by `frontend/src/services/graphqlClient.ts` are enabled in production. `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` independently control the enabled session, registration/verification, and forgot/reset-password protocols. A frontend rebuild is required because Vite embeds these values at build time.
+The 74 domain switches referenced by `frontend/src/services/graphqlClient.ts` are enabled in production. `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` independently control the enabled session, registration/verification, and forgot/reset-password protocols. A frontend rebuild is required because Vite embeds these values at build time.
 
 The enabled families are:
 
@@ -17,7 +17,7 @@ The enabled families are:
 - products, invoice businesses/settings/invoices, estimates, recurring invoices, and payments;
 - workspace lists, notes, and whiteboards;
 - dashboard and aggregate analytics;
-- email/SMS templates, campaigns, workflows, enrollments, and workflow execution visibility.
+- audience segments, email/SMS templates, campaigns, workflows, enrollments, and workflow execution visibility.
 
 ## Intentionally retained transports
 
@@ -33,12 +33,14 @@ The identity-lifecycle cutover completed from commit `44281ad3` with backend dep
 
 The password-recovery cutover completed from commit `28d0b0af` with backend deployment `eccd0bb5-02f7-4799-80e9-a9a47a776033`, GraphQL deployment `2037928f-a948-48ca-9828-a3735d28eca1`, and flag-enabled frontend deployment `83913ee7-6566-4820-b181-033ebaa9dd12`. Safe probes verified validation, generic missing-account behavior, invalid reset-token rejection, and authenticated-only profile access. A deployed forgot-password submission used GraphQL and rendered the generic success state without creating data or invoking the email provider.
 
+The audience-segment cutover completed from commit `b0c618da` with backend deployment `f59a065e-51c7-43ee-8e17-943104d5f850`, GraphQL deployment `acb51cd1-f3e2-45c1-a011-18e6eeec611e`, and flag-enabled frontend deployment `81b86fd7-270d-414d-8162-9133df0e737a`. Read-only production probes validated all nine schema fields without mutation, confirmed `VITE_SEGMENTS_GRAPHQL=true`, and returned healthy site, API, and GraphQL responses. The existing authenticated browser session then loaded `/segments` and rendered the authoritative empty state and zero counts without an error or abandoned loader.
+
 After deployment, verify:
 
 1. `https://itemize.cloud` returns HTTP `200`;
 2. production `/api/health` returns HTTP `200`;
 3. a proxied GraphQL `__typename` query returns HTTP `200`;
-4. all 73 domain `VITE_*_GRAPHQL` variables plus `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` are `true`;
+4. all 74 domain `VITE_*_GRAPHQL` variables plus `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` are `true`;
 5. the frontend and backend deployments resolve to the Git commit containing this document;
 6. GraphQL logs contain no internal-error spike after the frontend replacement.
 

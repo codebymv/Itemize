@@ -13520,7 +13520,7 @@
       "owner": "audiences",
       "targetOperation": "segments",
       "targetModule": "SegmentsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Implemented as a bounded organization-scoped connection with active/search filters and deterministic name/ID ordering; retained REST remains the default-off rollback path.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13554,7 +13554,7 @@
       "owner": "audiences",
       "targetOperation": "createSegment",
       "targetModule": "SegmentsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Atomically validates the exact dynamic/static definition and tenant references, creates it, calculates membership, and records initial history.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13588,7 +13588,7 @@
       "owner": "audiences",
       "targetOperation": "deleteSegment",
       "targetModule": "SegmentsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Organization-owned delete; conflicts while any campaign references the saved audience so historical targeting is not orphaned.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13622,7 +13622,7 @@
       "owner": "audiences",
       "targetOperation": "segment",
       "targetModule": "SegmentsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Organization-owned definition with a bounded, newest-first calculation history projection.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13656,7 +13656,7 @@
       "owner": "audiences",
       "targetOperation": "updateSegment",
       "targetModule": "SegmentsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Locked atomic partial update; omitted metadata is preserved and targeting changes recalculate membership in the same transaction.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13690,7 +13690,7 @@
       "owner": "audiences",
       "targetOperation": "recalculateSegment",
       "targetModule": "SegmentsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Serializes concurrent recalculation, fails closed on invalid definitions, updates the cached count, and appends one accurate history delta.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13724,7 +13724,7 @@
       "owner": "audiences",
       "targetOperation": "segmentContacts",
       "targetModule": "SegmentsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Evaluates the saved definition inside its organization with strict bounded pagination and deterministic ordering.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13758,7 +13758,7 @@
       "owner": "audiences",
       "targetOperation": "segmentFilterOptions",
       "targetModule": "SegmentsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Tenant-scoped tags, members, and pipeline stages plus the authoritative filter/operator/status vocabulary.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -13792,7 +13792,7 @@
       "owner": "audiences",
       "targetOperation": "previewSegment",
       "targetModule": "SegmentsModule",
-      "parityStatus": "dual-parity",
+      "parityStatus": "consumer-cutover-complete",
       "notes": "Pure query despite the legacy POST; count and sample share one validated parameterized evaluator and never persist a definition.",
       "literalInterpolationRisk": false,
       "risk": "high"
