@@ -482,7 +482,7 @@ app.use(dbMonitor(pool));
             const requiredMigrationCheck = await pool.query(`
                 SELECT EXISTS (
                     SELECT 1 FROM schema_migrations
-                    WHERE version = '040_reputation_request_deliveries'
+                    WHERE version = '041_admin_email_deliveries'
                 ) AS has_required_migration
             `);
             if (!requiredMigrationCheck.rows[0]?.has_required_migration) {
