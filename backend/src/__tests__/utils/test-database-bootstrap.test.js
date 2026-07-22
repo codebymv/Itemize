@@ -329,8 +329,20 @@ describe('test database schema contract', () => {
         );
 
         expect(startupSource).toContain(
-            "WHERE version = '039_campaign_deliveries'"
+            "WHERE version = '040_reputation_request_deliveries'"
         );
+    });
+
+    test('production migration stream creates durable review-request delivery intents', async () => {
+        const migration = require('../../../scripts/migrations/040_reputation_request_deliveries');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS review_request_delivery_batches');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS review_request_deliveries');
+        expect(sql).toContain('review_request_delivery_tenant');
+        expect(sql).toContain('review_request_active_delivery');
     });
 
     test('production migration stream creates durable bulk campaign delivery intents', async () => {

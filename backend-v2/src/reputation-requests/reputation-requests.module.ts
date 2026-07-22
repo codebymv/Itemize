@@ -4,6 +4,7 @@ import { ReputationRequestsResolver } from './reputation-requests.resolver';
 import { ReputationRequestsService } from './reputation-requests.service';
 import { ReputationRequestDeliveryRepository } from './reputation-request-delivery.repository';
 import { ReputationRequestDeliveryService } from './reputation-request-delivery.service';
+import { ReputationRequestDeliverySchedulerService } from './reputation-request-delivery-scheduler.service';
 import {
   REPUTATION_EMAIL_PROVIDER,
   REPUTATION_SMS_PROVIDER,
@@ -18,6 +19,7 @@ import {
     ReputationRequestsResolver,
     ReputationRequestDeliveryRepository,
     ReputationRequestDeliveryService,
+    ReputationRequestDeliverySchedulerService,
     ResendReputationEmailProvider,
     TwilioReputationSmsProvider,
     { provide: REPUTATION_EMAIL_PROVIDER, useExisting: ResendReputationEmailProvider },
