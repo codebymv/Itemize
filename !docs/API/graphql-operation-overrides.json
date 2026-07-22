@@ -8,7 +8,7 @@
       "targetOperation": "changePassword",
       "parityStatus": "dual-parity",
       "risk": "high",
-      "notes": "Authenticated credential rotation; preserve current-password verification, password policy, CSRF, and notification side effects."
+      "notes": "NestJS verifies the current bcrypt hash, enforces password policy and a changed value, conditionally updates the still-current hash, clears reset state, requires CSRF, and attempts notification after commit."
     },
     "GET /api/auth/csrf": {
       "disposition": "retain-http",
@@ -24,9 +24,9 @@
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "requestPasswordReset",
-      "parityStatus": "not-started",
+      "parityStatus": "dual-parity",
       "risk": "high",
-      "notes": "Must retain non-enumerating responses, strict rate limits, hashed one-hour tokens, and email side effects."
+      "notes": "NestJS preserves the generic response and strict throttle, rotates a random token stored only as a hash with one-hour expiry for eligible local accounts, and starts delivery after persistence without awaiting provider latency in the public response."
     },
     "POST /api/auth/google-credential": {
       "disposition": "merge-into-graphql-operation",
@@ -78,9 +78,9 @@
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "updateViewerProfile",
-      "parityStatus": "characterizing",
+      "parityStatus": "dual-parity",
       "risk": "medium",
-      "notes": "Requires authentication and CSRF; trim the name and enforce a 1-100 character contract."
+      "notes": "NestJS requires authentication and CSRF, trims the name, enforces a 1-100 character contract, and returns the normalized viewer."
     },
     "POST /api/auth/refresh": {
       "disposition": "retain-http",
@@ -96,7 +96,7 @@
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "register",
-      "parityStatus": "not-started",
+      "parityStatus": "dual-parity",
       "risk": "high",
       "notes": "NestJS creates the user, personal organization, owner membership, and default-organization assignment in one transaction; the default-off identity flag preserves REST rollback."
     },
@@ -116,14 +116,14 @@
       "targetOperation": "resetPassword",
       "parityStatus": "dual-parity",
       "risk": "high",
-      "notes": "Consume a valid hashed reset token once, enforce password policy, clear reset state, and notify the user."
+      "notes": "NestJS enforces password policy and atomically consumes a valid hashed reset token while replacing the bcrypt hash and clearing reset state; concurrent reuse has one winner."
     },
     "POST /api/auth/verify-email": {
       "disposition": "graphql-mutation",
       "owner": "identity",
       "targetModule": "AuthModule",
       "targetOperation": "verifyEmail",
-      "parityStatus": "not-started",
+      "parityStatus": "dual-parity",
       "risk": "high",
       "notes": "NestJS conditionally consumes a valid hashed token once, marks the email verified, issues cookie-only session credentials, and attempts the welcome notification after commit."
     },

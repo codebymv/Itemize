@@ -28,6 +28,9 @@ export const isAuthSessionGraphqlEnabled = (): boolean =>
 export const isAuthIdentityGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_AUTH_IDENTITY_GRAPHQL === 'true';
 
+export const isAuthRecoveryGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_AUTH_RECOVERY_GRAPHQL === 'true';
+
 const SESSION_FIELDS = `
   success
   user { uid email name role photoURL }
@@ -87,6 +90,63 @@ export const resendVerificationViaGraphql = async (email: string) => {
     { input: { email } },
   );
   return data.resendVerificationEmail;
+};
+
+export const requestPasswordResetViaGraphql = async (email: string) => {
+  const data = await graphqlPublicRequest<
+    { requestPasswordReset: { success: boolean; message: string } },
+    { input: { email: string } }
+  >(
+    `mutation RequestPasswordReset($input: RequestPasswordResetInput!) {
+      requestPasswordReset(input: $input) { success message }
+    }`,
+    { input: { email } },
+  );
+  return data.requestPasswordReset;
+};
+
+export const resetPasswordViaGraphql = async (token: string, password: string) => {
+  const data = await graphqlPublicRequest<
+    { resetPassword: { success: boolean; message: string } },
+    { input: { token: string; password: string } }
+  >(
+    `mutation ResetPassword($input: ResetPasswordInput!) {
+      resetPassword(input: $input) { success message }
+    }`,
+    { input: { token, password } },
+  );
+  return data.resetPassword;
+};
+
+export const changePasswordViaGraphql = async (
+  currentPassword: string,
+  newPassword: string,
+) => {
+  const data = await graphqlMutationRequest<
+    { changePassword: { success: boolean; message: string } },
+    { input: { currentPassword: string; newPassword: string } }
+  >(
+    `mutation ChangePassword($input: ChangePasswordInput!) {
+      changePassword(input: $input) { success message }
+    }`,
+    { input: { currentPassword, newPassword } },
+  );
+  return data.changePassword;
+};
+
+export const updateViewerProfileViaGraphql = async (name: string) => {
+  const data = await graphqlMutationRequest<
+    { updateViewerProfile: CurrentGraphqlUser },
+    { input: { name: string } }
+  >(
+    `mutation UpdateViewerProfile($input: UpdateViewerProfileInput!) {
+      updateViewerProfile(input: $input) {
+        id email name provider emailVerified role createdAt
+      }
+    }`,
+    { input: { name } },
+  );
+  return data.updateViewerProfile;
 };
 
 export const loginWithGoogleAccessTokenViaGraphql = async (accessToken: string) => {

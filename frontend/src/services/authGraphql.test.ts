@@ -7,11 +7,16 @@ import {
 import {
   getCurrentUserViaGraphql,
   isAuthIdentityGraphqlEnabled,
+  isAuthRecoveryGraphqlEnabled,
   isAuthSessionGraphqlEnabled,
+  changePasswordViaGraphql,
   loginViaGraphql,
   logoutViaGraphql,
   registerViaGraphql,
+  requestPasswordResetViaGraphql,
+  resetPasswordViaGraphql,
   resendVerificationViaGraphql,
+  updateViewerProfileViaGraphql,
   verifyEmailViaGraphql,
 } from './authGraphql';
 
@@ -37,6 +42,13 @@ describe('authentication GraphQL adapter', () => {
     expect(isAuthIdentityGraphqlEnabled()).toBe(false);
     vi.stubEnv('VITE_AUTH_IDENTITY_GRAPHQL', 'true');
     expect(isAuthIdentityGraphqlEnabled()).toBe(true);
+  });
+
+  it('keeps password recovery behind an independent rollback flag', () => {
+    vi.stubEnv('VITE_AUTH_RECOVERY_GRAPHQL', 'false');
+    expect(isAuthRecoveryGraphqlEnabled()).toBe(false);
+    vi.stubEnv('VITE_AUTH_RECOVERY_GRAPHQL', 'true');
+    expect(isAuthRecoveryGraphqlEnabled()).toBe(true);
   });
 
   it('maps login, current-user, and logout operations', async () => {
@@ -86,6 +98,40 @@ describe('authentication GraphQL adapter', () => {
       3,
       expect.stringContaining('mutation ResendVerificationEmail'),
       { input: { email: 'new@example.com' } },
+    );
+  });
+
+  it('maps recovery plus protected password and profile mutations', async () => {
+    vi.mocked(graphqlPublicRequest)
+      .mockResolvedValueOnce({ requestPasswordReset: { success: true } })
+      .mockResolvedValueOnce({ resetPassword: { success: true } });
+    vi.mocked(graphqlMutationRequest)
+      .mockResolvedValueOnce({ changePassword: { success: true } })
+      .mockResolvedValueOnce({ updateViewerProfile: { id: 7, name: 'Updated' } });
+
+    await requestPasswordResetViaGraphql('member@example.com');
+    expect(graphqlPublicRequest).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('mutation RequestPasswordReset'),
+      { input: { email: 'member@example.com' } },
+    );
+    await resetPasswordViaGraphql('reset-token', 'StrongPass2');
+    expect(graphqlPublicRequest).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('mutation ResetPassword'),
+      { input: { token: 'reset-token', password: 'StrongPass2' } },
+    );
+    await changePasswordViaGraphql('StrongPass1', 'StrongPass2');
+    expect(graphqlMutationRequest).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('mutation ChangePassword'),
+      { input: { currentPassword: 'StrongPass1', newPassword: 'StrongPass2' } },
+    );
+    await updateViewerProfileViaGraphql('Updated');
+    expect(graphqlMutationRequest).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('mutation UpdateViewerProfile'),
+      { input: { name: 'Updated' } },
     );
   });
 });

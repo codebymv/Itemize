@@ -142,6 +142,80 @@ export class AuthRepository {
       : null;
   }
 
+  async replacePasswordResetToken(input: {
+    email: string;
+    tokenHash: string;
+    expiresAt: Date;
+  }): Promise<Pick<AuthenticationUser, 'email' | 'name'> | null> {
+    const result = await this.pool.query<AuthenticationUserRow>(
+      `UPDATE users
+       SET password_reset_token = $1,
+           password_reset_expires = $2,
+           updated_at = NOW()
+       WHERE email = $3
+         AND provider = 'email'
+         AND password_hash IS NOT NULL
+       RETURNING ${USER_COLUMNS}`,
+      [input.tokenHash, input.expiresAt, input.email],
+    );
+    return result.rows[0]
+      ? { email: result.rows[0].email, name: result.rows[0].name }
+      : null;
+  }
+
+  async consumePasswordResetToken(input: {
+    tokenHash: string;
+    passwordHash: string;
+  }): Promise<Pick<AuthenticationUser, 'email' | 'name'> | null> {
+    const result = await this.pool.query<AuthenticationUserRow>(
+      `UPDATE users
+       SET password_hash = $1,
+           password_reset_token = NULL,
+           password_reset_expires = NULL,
+           updated_at = NOW()
+       WHERE password_reset_token = $2
+         AND password_reset_expires > NOW()
+         AND provider = 'email'
+       RETURNING ${USER_COLUMNS}`,
+      [input.passwordHash, input.tokenHash],
+    );
+    return result.rows[0]
+      ? { email: result.rows[0].email, name: result.rows[0].name }
+      : null;
+  }
+
+  async changePasswordIfCurrent(input: {
+    userId: number;
+    currentHash: string;
+    passwordHash: string;
+  }): Promise<Pick<AuthenticationUser, 'email' | 'name'> | null> {
+    const result = await this.pool.query<AuthenticationUserRow>(
+      `UPDATE users
+       SET password_hash = $1,
+           password_reset_token = NULL,
+           password_reset_expires = NULL,
+           updated_at = NOW()
+       WHERE id = $2
+         AND password_hash = $3
+         AND provider = 'email'
+       RETURNING ${USER_COLUMNS}`,
+      [input.passwordHash, input.userId, input.currentHash],
+    );
+    return result.rows[0]
+      ? { email: result.rows[0].email, name: result.rows[0].name }
+      : null;
+  }
+
+  async updateName(userId: number, name: string): Promise<AuthenticationUser | null> {
+    const result = await this.pool.query<AuthenticationUserRow>(
+      `UPDATE users SET name = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING ${USER_COLUMNS}`,
+      [name, userId],
+    );
+    return result.rows[0] ? mapUser(result.rows[0]) : null;
+  }
+
   async findOrCreateGoogleUser(identity: {
     googleId: string;
     email: string;

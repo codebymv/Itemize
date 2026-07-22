@@ -760,7 +760,7 @@
       "targetOperation": "changePassword",
       "targetModule": "AuthModule",
       "parityStatus": "dual-parity",
-      "notes": "Authenticated credential rotation; preserve current-password verification, password policy, CSRF, and notification side effects.",
+      "notes": "NestJS verifies the current bcrypt hash, enforces password policy and a changed value, conditionally updates the still-current hash, clears reset state, requires CSRF, and attempts notification after commit.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -836,7 +836,7 @@
           "path": "/api/auth/forgot-password",
           "rawPath": "/api/auth/forgot-password",
           "source": "frontend/src/pages/ForgotPassword.tsx",
-          "line": 31,
+          "line": 38,
           "client": "api",
           "literalInterpolation": false
         }
@@ -848,8 +848,8 @@
       "owner": "identity",
       "targetOperation": "requestPasswordReset",
       "targetModule": "AuthModule",
-      "parityStatus": "not-started",
-      "notes": "Must retain non-enumerating responses, strict rate limits, hashed one-hour tokens, and email side effects.",
+      "parityStatus": "dual-parity",
+      "notes": "NestJS preserves the generic response and strict throttle, rotates a random token stored only as a hash with one-hour expiry for eligible local accounts, and starts delivery after persistence without awaiting provider latency in the public response.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -1130,8 +1130,8 @@
       "owner": "identity",
       "targetOperation": "updateViewerProfile",
       "targetModule": "AuthModule",
-      "parityStatus": "characterizing",
-      "notes": "Requires authentication and CSRF; trim the name and enforce a 1-100 character contract.",
+      "parityStatus": "dual-parity",
+      "notes": "NestJS requires authentication and CSRF, trims the name, enforces a 1-100 character contract, and returns the normalized viewer.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -1211,7 +1211,7 @@
       "owner": "identity",
       "targetOperation": "register",
       "targetModule": "AuthModule",
-      "parityStatus": "not-started",
+      "parityStatus": "dual-parity",
       "notes": "NestJS creates the user, personal organization, owner membership, and default-organization assignment in one transaction; the default-off identity flag preserves REST rollback.",
       "literalInterpolationRisk": false,
       "risk": "high"
@@ -1267,7 +1267,7 @@
           "path": "/api/auth/reset-password",
           "rawPath": "/api/auth/reset-password",
           "source": "frontend/src/pages/ResetPassword.tsx",
-          "line": 73,
+          "line": 81,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1280,7 +1280,7 @@
       "targetOperation": "resetPassword",
       "targetModule": "AuthModule",
       "parityStatus": "dual-parity",
-      "notes": "Consume a valid hashed reset token once, enforce password policy, clear reset state, and notify the user.",
+      "notes": "NestJS enforces password policy and atomically consumes a valid hashed reset token while replacing the bcrypt hash and clearing reset state; concurrent reuse has one winner.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -1313,7 +1313,7 @@
       "owner": "identity",
       "targetOperation": "verifyEmail",
       "targetModule": "AuthModule",
-      "parityStatus": "not-started",
+      "parityStatus": "dual-parity",
       "notes": "NestJS conditionally consumes a valid hashed token once, marks the email verified, issues cookie-only session credentials, and attempts the welcome notification after commit.",
       "literalInterpolationRisk": false,
       "risk": "high"

@@ -9,6 +9,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Mail, Loader2, CheckCircle, ArrowLeft } from 'lucide-react';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import api from '@/lib/api';
+import {
+  isAuthRecoveryGraphqlEnabled,
+  requestPasswordResetViaGraphql,
+} from '@/services/authGraphql';
 
 export default function ForgotPassword() {
   const { toast } = useToast();
@@ -28,7 +32,11 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      await api.post('/api/auth/forgot-password', { email });
+      if (isAuthRecoveryGraphqlEnabled()) {
+        await requestPasswordResetViaGraphql(email);
+      } else {
+        await api.post('/api/auth/forgot-password', { email });
+      }
       setSent(true);
       toast({
         title: 'Reset link sent',

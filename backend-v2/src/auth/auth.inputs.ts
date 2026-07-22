@@ -38,3 +38,33 @@ export class ResendVerificationInput {
   @Field()
   email: string;
 }
+
+@InputType()
+export class RequestPasswordResetInput {
+  @Field()
+  email: string;
+}
+
+@InputType()
+export class ResetPasswordInput {
+  @Field()
+  token: string;
+
+  @Field()
+  password: string;
+}
+
+@InputType()
+export class ChangePasswordInput {
+  @Field()
+  currentPassword: string;
+
+  @Field()
+  newPassword: string;
+}
+
+@InputType()
+export class UpdateViewerProfileInput {
+  @Field()
+  name: string;
+}

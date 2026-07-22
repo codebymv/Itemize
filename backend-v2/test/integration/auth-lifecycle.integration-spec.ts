@@ -14,6 +14,8 @@ describe('Authentication lifecycle GraphQL PostgreSQL contract', () => {
   const emails = {
     sendVerification: jest.fn().mockResolvedValue(true),
     sendWelcome: jest.fn().mockResolvedValue(true),
+    sendPasswordReset: jest.fn().mockResolvedValue(true),
+    sendPasswordChanged: jest.fn().mockResolvedValue(true),
   };
   const createdUserIds: number[] = [];
   const suffix = `${Date.now()}-${process.pid}`;
@@ -171,5 +173,115 @@ describe('Authentication lifecycle GraphQL PostgreSQL contract', () => {
       [resendEmail],
     );
     expect(rotated.rows[0].verification_token).not.toBe(originalHash);
+  });
+
+  it('keeps recovery non-enumerating and permits one concurrent reset winner', async () => {
+    emails.sendPasswordReset.mockClear();
+    emails.sendPasswordChanged.mockClear();
+    const requestDocument = `mutation RequestReset($input: RequestPasswordResetInput!) {
+      requestPasswordReset(input: $input) { success message email }
+    }`;
+    const missing = await mutation(requestDocument, {
+      input: { email: `missing-reset-${suffix}@test.itemize` },
+    }).expect(200);
+    const eligible = await mutation(requestDocument, {
+      input: { email: resendEmail },
+    }).expect(200);
+
+    expect(eligible.body).toEqual(missing.body);
+    expect(emails.sendPasswordReset).toHaveBeenCalledTimes(1);
+    const rawToken = emails.sendPasswordReset.mock.calls[0][1];
+    expect(rawToken).toMatch(/^[a-f0-9]{64}$/);
+    const before = await pool.query<{ password_reset_token: string }>(
+      'SELECT password_reset_token FROM users WHERE email = $1',
+      [resendEmail],
+    );
+    expect(before.rows[0].password_reset_token).not.toBe(rawToken);
+
+    const resetDocument = `mutation Reset($input: ResetPasswordInput!) {
+      resetPassword(input: $input) { success message }
+    }`;
+    const responses = await Promise.all([
+      mutation(resetDocument, {
+        input: { token: rawToken, password: 'RecoveredPass3' },
+      }).expect(200),
+      mutation(resetDocument, {
+        input: { token: rawToken, password: 'RecoveredPass3' },
+      }).expect(200),
+    ]);
+    expect(responses.filter((response) => response.body.data?.resetPassword?.success)).toHaveLength(1);
+    expect(responses.filter((response) => response.body.errors?.[0]?.extensions?.code === 'INVALID_TOKEN')).toHaveLength(1);
+    expect(emails.sendPasswordChanged).toHaveBeenCalledTimes(1);
+    const after = await pool.query<{
+      password_hash: string;
+      password_reset_token: string | null;
+    }>('SELECT password_hash, password_reset_token FROM users WHERE email = $1', [resendEmail]);
+    expect(after.rows[0].password_reset_token).toBeNull();
+    await expect(bcrypt.compare('RecoveredPass3', after.rows[0].password_hash)).resolves.toBe(true);
+  });
+
+  it('requires authentication and CSRF for password and profile changes', async () => {
+    emails.sendPasswordChanged.mockClear();
+    const agent = request.agent(app.getHttpServer());
+    await agent
+      .post('/graphql')
+      .send({
+        query: `mutation Login($input: LoginInput!) {
+          login(input: $input) { success user { uid } }
+        }`,
+        variables: { input: { email: primaryEmail, password: 'StrongPass1' } },
+      })
+      .expect(200);
+
+    const changeDocument = `mutation Change($input: ChangePasswordInput!) {
+      changePassword(input: $input) { success message }
+    }`;
+    const withoutCsrf = await agent
+      .post('/graphql')
+      .send({
+        query: changeDocument,
+        variables: { input: { currentPassword: 'StrongPass1', newPassword: 'ChangedPass4' } },
+      })
+      .expect(200);
+    expect(withoutCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+
+    const csrf = await agent
+      .post('/graphql')
+      .send({ query: '{ csrfToken { token } }' })
+      .expect(200);
+    const csrfToken = csrf.body.data.csrfToken.token as string;
+    const changed = await agent
+      .post('/graphql')
+      .set('x-csrf-token', csrfToken)
+      .send({
+        query: changeDocument,
+        variables: { input: { currentPassword: 'StrongPass1', newPassword: 'ChangedPass4' } },
+      })
+      .expect(200);
+    expect(changed.body.errors).toBeUndefined();
+    expect(changed.body.data.changePassword.success).toBe(true);
+
+    const profile = await agent
+      .post('/graphql')
+      .set('x-csrf-token', csrfToken)
+      .send({
+        query: `mutation Profile($input: UpdateViewerProfileInput!) {
+          updateViewerProfile(input: $input) { id email name }
+        }`,
+        variables: { input: { name: '  Updated Lifecycle Member  ' } },
+      })
+      .expect(200);
+    expect(profile.body.errors).toBeUndefined();
+    expect(profile.body.data.updateViewerProfile).toMatchObject({
+      email: primaryEmail,
+      name: 'Updated Lifecycle Member',
+    });
+    expect(emails.sendPasswordChanged).toHaveBeenCalledTimes(1);
+    const persisted = await pool.query<{ name: string; password_hash: string }>(
+      'SELECT name, password_hash FROM users WHERE email = $1',
+      [primaryEmail],
+    );
+    expect(persisted.rows[0].name).toBe('Updated Lifecycle Member');
+    await expect(bcrypt.compare('ChangedPass4', persisted.rows[0].password_hash)).resolves.toBe(true);
   });
 });

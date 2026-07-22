@@ -9,10 +9,15 @@ import { useToast } from '@/hooks/use-toast';
 import { Lock, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import api from '@/lib/api';
+import {
+  isAuthRecoveryGraphqlEnabled,
+  resetPasswordViaGraphql,
+} from '@/services/authGraphql';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
   const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
-  return responseData?.error || responseData?.message || fallback;
+  return responseData?.error || responseData?.message ||
+    (error instanceof Error ? error.message : fallback);
 };
 
 export default function ResetPassword() {
@@ -70,7 +75,11 @@ export default function ResetPassword() {
     setError(null);
 
     try {
-      await api.post('/api/auth/reset-password', { token, password });
+      if (isAuthRecoveryGraphqlEnabled()) {
+        await resetPasswordViaGraphql(token, password);
+      } else {
+        await api.post('/api/auth/reset-password', { token, password });
+      }
       setSuccess(true);
       toast({
         title: 'Password reset!',

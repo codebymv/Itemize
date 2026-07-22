@@ -10,6 +10,8 @@ import { SessionService } from './session.service';
 
 const VERIFICATION_MESSAGE =
   'If an account exists with this email, you will receive a verification link.';
+const RESET_MESSAGE =
+  'If an account exists with this email, you will receive a password reset link.';
 
 @Injectable()
 export class IdentityLifecycleService {
@@ -91,6 +93,105 @@ export class IdentityLifecycleService {
     return { success: true, message: VERIFICATION_MESSAGE };
   }
 
+  async requestPasswordReset(rawEmail: string): Promise<AuthMessagePayload> {
+    const email = this.email(rawEmail);
+    const token = randomBytes(32).toString('hex');
+    const user = await this.users.replacePasswordResetToken({
+      email,
+      tokenHash: this.hashToken(token),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    });
+    if (user) void this.emails.sendPasswordReset(user, token);
+    return { success: true, message: RESET_MESSAGE };
+  }
+
+  async resetPassword(rawToken: string, rawPassword: string): Promise<AuthMessagePayload> {
+    const token = this.token(rawToken, 'Reset token is required');
+    const password = this.password(rawPassword);
+    const user = await this.users.consumePasswordResetToken({
+      tokenHash: this.hashToken(token),
+      passwordHash: await bcrypt.hash(password, 12),
+    });
+    if (!user) {
+      throw itemizeGraphqlError('Invalid or expired reset link.', 'INVALID_TOKEN', {
+        reason: 'INVALID_PASSWORD_RESET_TOKEN',
+      });
+    }
+    await this.emails.sendPasswordChanged(user);
+    return {
+      success: true,
+      message: 'Password has been reset successfully. You can now log in.',
+    };
+  }
+
+  async changePassword(
+    userId: number,
+    currentPassword: string,
+    rawNewPassword: string,
+  ): Promise<AuthMessagePayload> {
+    if (typeof currentPassword !== 'string' || currentPassword.length === 0) {
+      throw itemizeGraphqlError('Current password is required', 'BAD_USER_INPUT', {
+        field: 'currentPassword',
+      });
+    }
+    const newPassword = this.password(rawNewPassword);
+    const current = await this.users.findById(userId);
+    if (!current) throw itemizeGraphqlError('User not found', 'NOT_FOUND');
+    if (current.provider !== 'email' || !current.passwordHash) {
+      throw itemizeGraphqlError(
+        'This account uses Google sign-in and does not have a password.',
+        'BAD_USER_INPUT',
+        { reason: 'NO_PASSWORD' },
+      );
+    }
+    if (!(await bcrypt.compare(currentPassword, current.passwordHash))) {
+      throw itemizeGraphqlError('Current password is incorrect.', 'UNAUTHENTICATED', {
+        reason: 'INVALID_PASSWORD',
+      });
+    }
+    if (await bcrypt.compare(newPassword, current.passwordHash)) {
+      throw itemizeGraphqlError(
+        'New password must be different from the current password.',
+        'BAD_USER_INPUT',
+        { reason: 'PASSWORD_UNCHANGED' },
+      );
+    }
+    const user = await this.users.changePasswordIfCurrent({
+      userId,
+      currentHash: current.passwordHash,
+      passwordHash: await bcrypt.hash(newPassword, 12),
+    });
+    if (!user) {
+      throw itemizeGraphqlError('Current password changed during this request.', 'CONFLICT', {
+        reason: 'PASSWORD_CHANGED_CONCURRENTLY',
+      });
+    }
+    await this.emails.sendPasswordChanged(user);
+    return { success: true, message: 'Password changed successfully.' };
+  }
+
+  async updateViewerProfile(userId: number, rawName: string) {
+    const name = rawName?.trim();
+    if (!name || name.length > 100) {
+      throw itemizeGraphqlError(
+        name ? 'Name must be 100 characters or less' : 'Name is required',
+        'BAD_USER_INPUT',
+        { field: 'name' },
+      );
+    }
+    const user = await this.users.updateName(userId, name);
+    if (!user) throw itemizeGraphqlError('User not found', 'NOT_FOUND');
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      provider: user.provider || 'email',
+      emailVerified: user.emailVerified,
+      role: user.role,
+      createdAt: user.createdAt,
+    };
+  }
+
   private email(value: string): string {
     const email = value?.trim().toLowerCase();
     if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -129,9 +230,9 @@ export class IdentityLifecycleService {
     return name;
   }
 
-  private token(value: string): string {
+  private token(value: string, message = 'Verification token is required'): string {
     if (typeof value !== 'string' || value.length < 1 || value.length > 256) {
-      throw itemizeGraphqlError('Verification token is required', 'BAD_USER_INPUT', {
+      throw itemizeGraphqlError(message, 'BAD_USER_INPUT', {
         field: 'token',
       });
     }

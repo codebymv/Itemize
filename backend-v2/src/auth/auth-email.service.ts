@@ -35,6 +35,25 @@ export class AuthEmailService {
     );
   }
 
+  sendPasswordReset(user: AuthEmailUser, token: string): Promise<boolean> {
+    const url = `${this.appUrl()}/reset-password?token=${encodeURIComponent(token)}`;
+    return this.send(
+      user,
+      'Reset your Itemize password',
+      `Reset your password by opening this link within 1 hour: ${url}`,
+      `<p>Hi ${escapeHtml(user.name)},</p><p>We received a request to reset your Itemize password.</p><p><a href="${escapeHtml(url)}">Reset password</a></p><p>This link expires in 1 hour. If you did not request it, you can ignore this email.</p>`,
+    );
+  }
+
+  sendPasswordChanged(user: AuthEmailUser): Promise<boolean> {
+    return this.send(
+      user,
+      'Your Itemize password was changed',
+      'Your Itemize password was changed. If this was not you, contact support immediately.',
+      `<p>Hi ${escapeHtml(user.name)},</p><p>Your Itemize password was changed.</p><p>If this was not you, contact support immediately.</p>`,
+    );
+  }
+
   private async send(
     user: AuthEmailUser,
     subject: string,

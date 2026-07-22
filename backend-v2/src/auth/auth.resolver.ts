@@ -3,10 +3,14 @@ import { Request, Response } from 'express';
 import { CsrfProtected, Public } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
+  ChangePasswordInput,
   GoogleAccessTokenInput,
   LoginInput,
   RegisterInput,
+  RequestPasswordResetInput,
+  ResetPasswordInput,
   ResendVerificationInput,
+  UpdateViewerProfileInput,
   VerifyEmailInput,
 } from './auth.inputs';
 import { AuthRateLimitService } from './auth-rate-limit.service';
@@ -59,6 +63,46 @@ export class AuthResolver {
   ) {
     this.rateLimit.consumeStrict(context.req, input.email);
     return this.identityLifecycle.resendVerification(input.email);
+  }
+
+  @Public()
+  @Mutation(() => AuthMessagePayload)
+  requestPasswordReset(
+    @Args('input') input: RequestPasswordResetInput,
+    @Context() context: GraphqlHttpContext,
+  ) {
+    this.rateLimit.consumeStrict(context.req, input.email);
+    return this.identityLifecycle.requestPasswordReset(input.email);
+  }
+
+  @Public()
+  @Mutation(() => AuthMessagePayload)
+  resetPassword(
+    @Args('input') input: ResetPasswordInput,
+    @Context() context: GraphqlHttpContext,
+  ) {
+    this.rateLimit.consume(context.req);
+    return this.identityLifecycle.resetPassword(input.token, input.password);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => AuthMessagePayload)
+  changePassword(@Args('input') input: ChangePasswordInput) {
+    const identity = this.requestContext.current().identity;
+    if (!identity) throw new Error('Verified user identity is unavailable');
+    return this.identityLifecycle.changePassword(
+      identity.userId,
+      input.currentPassword,
+      input.newPassword,
+    );
+  }
+
+  @CsrfProtected()
+  @Mutation(() => CurrentUser)
+  updateViewerProfile(@Args('input') input: UpdateViewerProfileInput) {
+    const identity = this.requestContext.current().identity;
+    if (!identity) throw new Error('Verified user identity is unavailable');
+    return this.identityLifecycle.updateViewerProfile(identity.userId, input.name);
   }
 
   @Public()
