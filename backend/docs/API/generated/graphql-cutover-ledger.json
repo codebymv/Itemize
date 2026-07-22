@@ -240,7 +240,7 @@
           "path": "/api/admin/me/plan",
           "rawPath": "/api/admin/me/plan",
           "source": "frontend/src/services/adminApi.ts",
-          "line": 97,
+          "line": 112,
           "client": "api",
           "literalInterpolation": false
         }
@@ -249,11 +249,11 @@
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "platform-operations",
+      "targetOperation": "updateAdminOwnPlan",
+      "targetModule": "AdminOperationsModule",
+      "parityStatus": "dual-parity",
+      "notes": "Database-authorized administrator-only, CSRF-protected plan change atomically updates the subscription and organization plan authorities.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -265,7 +265,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/admin.routes.js",
-          "line": 245
+          "line": 255
         }
       ],
       "consumerCallsites": [
@@ -274,7 +274,7 @@
           "path": "/api/admin/stats",
           "rawPath": "/api/admin/stats",
           "source": "frontend/src/services/adminApi.ts",
-          "line": 89,
+          "line": 103,
           "client": "api",
           "literalInterpolation": false
         }
@@ -283,11 +283,11 @@
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "platform-operations",
+      "targetOperation": "adminSystemStats",
+      "targetModule": "AdminOperationsModule",
+      "parityStatus": "dual-parity",
+      "notes": "Database-authorized administrator-only global user, contact, and invoice counts from one statement snapshot.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -299,7 +299,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/admin.routes.js",
-          "line": 213
+          "line": 223
         }
       ],
       "consumerCallsites": [
@@ -308,7 +308,7 @@
           "path": "/api/admin/users/by-ids",
           "rawPath": "/api/admin/users/by-ids",
           "source": "frontend/src/services/adminApi.ts",
-          "line": 79,
+          "line": 92,
           "client": "api",
           "literalInterpolation": false
         }
@@ -317,11 +317,11 @@
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "platform-operations",
+      "targetOperation": "adminUsersByIds",
+      "targetModule": "AdminOperationsModule",
+      "parityStatus": "dual-parity",
+      "notes": "Database-authorized administrator-only bounded batch lookup; positive IDs are deduplicated and output preserves requested order.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -342,7 +342,7 @@
           "path": "/api/admin/users/count",
           "rawPath": "/api/admin/users/count",
           "source": "frontend/src/services/adminApi.ts",
-          "line": 45,
+          "line": 55,
           "client": "api",
           "literalInterpolation": false
         }
@@ -351,11 +351,11 @@
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "platform-operations",
+      "targetOperation": "adminUserCount",
+      "targetModule": "AdminOperationsModule",
+      "parityStatus": "dual-parity",
+      "notes": "Database-authorized administrator-only global user count independent of selected organization.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -376,7 +376,7 @@
           "path": "/api/admin/users/ids",
           "rawPath": "/api/admin/users/ids",
           "source": "frontend/src/services/adminApi.ts",
-          "line": 69,
+          "line": 81,
           "client": "api",
           "literalInterpolation": false
         }
@@ -385,11 +385,11 @@
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "platform-operations",
+      "targetOperation": "adminUserIds",
+      "targetModule": "AdminOperationsModule",
+      "parityStatus": "dual-parity",
+      "notes": "Database-authorized administrator-only matching ID query shares search and plan filters with the paged directory; REST rollback received the same plan-filter repair.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -410,7 +410,7 @@
           "path": "/api/admin/users/search",
           "rawPath": "/api/admin/users/search",
           "source": "frontend/src/services/adminApi.ts",
-          "line": 59,
+          "line": 70,
           "client": "api",
           "literalInterpolation": false
         }
@@ -419,11 +419,11 @@
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "platform-operations",
+      "targetOperation": "adminUsers",
+      "targetModule": "AdminOperationsModule",
+      "parityStatus": "dual-parity",
+      "notes": "Database-authorized administrator-only global directory with bounded search, validated plan filter, stable ordering, pagination, and repeatable-read total parity.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },

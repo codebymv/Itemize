@@ -4,6 +4,7 @@ import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { GraphQLModule } from '@nestjs/graphql';
 import { Request, Response } from 'express';
 import { AuthModule } from './auth/auth.module';
+import { AdminOperationsModule } from './admin-operations/admin-operations.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { GraphqlAuthGuard } from './auth/graphql-auth.guard';
 import { GraphqlCsrfGuard } from './auth/graphql-csrf.guard';
@@ -61,6 +62,7 @@ const observabilityPlugins = [
     RequestContextModule,
     DatabaseModule,
     AuthModule,
+    AdminOperationsModule,
     AnalyticsModule,
     OrganizationsModule,
     CalendarsModule,

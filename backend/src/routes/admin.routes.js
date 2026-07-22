@@ -186,18 +186,28 @@ module.exports = (pool, authenticateJWT, requireAdmin) => {
      * Get all user IDs matching query
      */
     router.get('/users/ids', asyncHandler(async (req, res) => {
-        const { query } = req.query;
+        const { query, plan } = req.query;
 
-        let whereClause = '';
+        const conditions = [];
         const params = [];
 
         if (query && query.trim()) {
-            whereClause = `WHERE email ILIKE $1 OR name ILIKE $1`;
             params.push(`%${query.trim()}%`);
+            conditions.push(`(u.email ILIKE $${params.length} OR u.name ILIKE $${params.length})`);
         }
+        if (plan && plan !== 'all') {
+            params.push(plan);
+            conditions.push(`COALESCE(sp.name, 'free') = $${params.length}`);
+        }
+        const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
         const result = await pool.query(
-            `SELECT id FROM users ${whereClause}`,
+            `SELECT u.id FROM users u
+             LEFT JOIN organizations o ON o.id = u.default_organization_id
+             LEFT JOIN subscriptions s ON s.organization_id = o.id AND s.status IN ('active', 'trialing')
+             LEFT JOIN subscription_plans sp ON sp.id = s.plan_id
+             ${whereClause}
+             ORDER BY u.created_at DESC, u.id DESC`,
             params
         );
 

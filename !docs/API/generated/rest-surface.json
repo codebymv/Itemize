@@ -93,7 +93,7 @@
       ],
       "declaredPath": "/stats",
       "source": "backend/src/routes/admin.routes.js",
-      "line": 245,
+      "line": 255,
       "dynamic": false
     },
     {
@@ -103,7 +103,7 @@
       ],
       "declaredPath": "/users/by-ids",
       "source": "backend/src/routes/admin.routes.js",
-      "line": 213,
+      "line": 223,
       "dynamic": false
     },
     {

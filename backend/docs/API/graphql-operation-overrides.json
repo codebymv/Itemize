@@ -1924,6 +1924,30 @@
       "disposition": "retain-http", "owner": "reputation", "targetModule": "PublicReputationReviewModule", "targetOperation": "submitPublicReview", "parityStatus": "characterized", "risk": "high",
       "notes": "Retain anonymous rate-limited capability HTTP; row locking makes submission one-time and rating, text, platform, and redirect behavior are validated server-side."
     },
+    "PATCH /api/admin/me/plan": {
+      "disposition": "graphql-mutation", "owner": "platform-operations", "targetModule": "AdminOperationsModule", "targetOperation": "updateAdminOwnPlan", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Database-authorized administrator-only, CSRF-protected plan change atomically updates the subscription and organization plan authorities."
+    },
+    "GET /api/admin/stats": {
+      "disposition": "graphql-query", "owner": "platform-operations", "targetModule": "AdminOperationsModule", "targetOperation": "adminSystemStats", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Database-authorized administrator-only global user, contact, and invoice counts from one statement snapshot."
+    },
+    "GET /api/admin/users/by-ids": {
+      "disposition": "graphql-query", "owner": "platform-operations", "targetModule": "AdminOperationsModule", "targetOperation": "adminUsersByIds", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Database-authorized administrator-only bounded batch lookup; positive IDs are deduplicated and output preserves requested order."
+    },
+    "GET /api/admin/users/count": {
+      "disposition": "graphql-query", "owner": "platform-operations", "targetModule": "AdminOperationsModule", "targetOperation": "adminUserCount", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Database-authorized administrator-only global user count independent of selected organization."
+    },
+    "GET /api/admin/users/ids": {
+      "disposition": "graphql-query", "owner": "platform-operations", "targetModule": "AdminOperationsModule", "targetOperation": "adminUserIds", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Database-authorized administrator-only matching ID query shares search and plan filters with the paged directory; REST rollback received the same plan-filter repair."
+    },
+    "GET /api/admin/users/search": {
+      "disposition": "graphql-query", "owner": "platform-operations", "targetModule": "AdminOperationsModule", "targetOperation": "adminUsers", "parityStatus": "dual-parity", "risk": "high",
+      "notes": "Database-authorized administrator-only global directory with bounded search, validated plan filter, stable ordering, pagination, and repeatable-read total parity."
+    },
     "POST /api/categories": {
       "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "createCategory", "parityStatus": "dual-parity", "risk": "high",
       "notes": "CSRF-protected normalized create; the General invariant is seeded for every existing and newly inserted user."

@@ -18,6 +18,8 @@ Generated artifacts:
 - `!docs/API/generated/graphql-cutover-ledger.json` — machine-readable ledger with route, consumer, test, risk, and disposition evidence
 - `!docs/API/generated/graphql-cutover-ledger.md` — reviewable summary, operation table, and unmatched-call queues
 
+The global administrator directory, statistics, and current-administrator plan change are assigned to `AdminOperationsModule`. Database-backed administrator authorization, shared plan filters for paged and all-ID selection, bounded ordered batch lookup, snapshot-consistent pagination, and atomic plan storage are frozen in the [admin operations GraphQL cutover contract](contracts/admin-operations-graphql-cutover.md).
+
 ## Current static baseline
 
 | Evidence | Count |

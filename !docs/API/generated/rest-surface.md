@@ -30,8 +30,8 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/admin/email/send` | `/send` | `backend/src/routes/admin-email.routes.js:28` |
 | GET | `/api/admin/email/templates` | `/templates` | `backend/src/routes/admin-email.routes.js:378` |
 | PATCH | `/api/admin/me/plan` | `/me/plan` | `backend/src/routes/admin.routes.js:26` |
-| GET | `/api/admin/stats` | `/stats` | `backend/src/routes/admin.routes.js:245` |
-| GET | `/api/admin/users/by-ids` | `/users/by-ids` | `backend/src/routes/admin.routes.js:213` |
+| GET | `/api/admin/stats` | `/stats` | `backend/src/routes/admin.routes.js:255` |
+| GET | `/api/admin/users/by-ids` | `/users/by-ids` | `backend/src/routes/admin.routes.js:223` |
 | GET | `/api/admin/users/count` | `/users/count` | `backend/src/routes/admin.routes.js:98` |
 | GET | `/api/admin/users/ids` | `/users/ids` | `backend/src/routes/admin.routes.js:188` |
 | GET | `/api/admin/users/search` | `/users/search` | `backend/src/routes/admin.routes.js:109` |

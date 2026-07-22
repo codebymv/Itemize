@@ -171,7 +171,7 @@ export default function CommunicationsSection() {
 
         setLoadingAllIds(true);
         try {
-            const response = await adminApi.getUserIds(searchQuery || undefined);
+            const response = await adminApi.getUserIds(searchQuery || undefined, planFilter || undefined);
             setSelectedUsers(new Set(response.ids || []));
             setAllFilteredSelected(true);
         } catch (error) {

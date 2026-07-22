@@ -275,6 +275,12 @@ export const isReputationSettingsGraphqlEnabled = (): boolean =>
 export const isReputationWidgetsGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_REPUTATION_WIDGETS_GRAPHQL === 'true';
 
+export const isAdminDirectoryGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_ADMIN_DIRECTORY_GRAPHQL === 'true';
+
+export const isAdminPlanGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_ADMIN_PLAN_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

@@ -36,12 +36,12 @@
 | POST | `/api/admin/email/preview` | 1 | 0 | graphql-mutation | medium | platform-operations / AdminMessagingModule / previewAdminEmail |
 | POST | `/api/admin/email/send` | 1 | 0 | graphql-mutation | high | platform-operations / MessagingDeliveryModule / enqueueAdminEmailBatch |
 | GET | `/api/admin/email/templates` | 1 | 0 | graphql-query | high | platform-operations / AdminMessagingModule / adminEmailTemplates |
-| PATCH | `/api/admin/me/plan` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/admin/stats` | 1 | 0 | graphql-query | high | _unassigned_ |
-| GET | `/api/admin/users/by-ids` | 1 | 0 | graphql-query | high | _unassigned_ |
-| GET | `/api/admin/users/count` | 1 | 0 | graphql-query | high | _unassigned_ |
-| GET | `/api/admin/users/ids` | 1 | 0 | graphql-query | high | _unassigned_ |
-| GET | `/api/admin/users/search` | 1 | 0 | graphql-query | high | _unassigned_ |
+| PATCH | `/api/admin/me/plan` | 1 | 0 | graphql-mutation | high | platform-operations / AdminOperationsModule / updateAdminOwnPlan |
+| GET | `/api/admin/stats` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminSystemStats |
+| GET | `/api/admin/users/by-ids` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminUsersByIds |
+| GET | `/api/admin/users/count` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminUserCount |
+| GET | `/api/admin/users/ids` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminUserIds |
+| GET | `/api/admin/users/search` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminUsers |
 | GET | `/api/analytics/bookings/summary` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / bookingAnalytics |
 | GET | `/api/analytics/communication-stats` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / communicationStats |
 | GET | `/api/analytics/contacts/trends` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / contactTrends |
