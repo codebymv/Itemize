@@ -269,6 +269,21 @@ describe('test database schema contract', () => {
         expect(sql).toContain("'whiteboardUpdated'");
     });
 
+    test('production migration stream extends realtime delivery to wireframes', async () => {
+        const migration = require('../../../scripts/migrations/046_wireframe_realtime_outbox');
+        const {
+            runWireframeRealtimeOutboxMigration,
+        } = require('../../db_realtime_outbox_migrations');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        expect(migration.up).toBe(runWireframeRealtimeOutboxMigration);
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain("'wireframe'");
+        expect(sql).toContain("'shared_wireframe'");
+        expect(sql).toContain("'userWireframeUpdated'");
+    });
+
     test('production migration stream installs authoritative booking availability', async () => {
         const migration = require('../../../scripts/migrations/030_booking_availability_policy');
         const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };

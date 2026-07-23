@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { GraphQLError } from 'graphql';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { NormalizedPage, PageInput, pageInfo } from '../common/pagination';
-import { WorkspaceContentFilterInput } from './workspace-content.inputs';
+import {
+  BatchCanvasPositionsInput,
+  WorkspaceContentFilterInput,
+} from './workspace-content.inputs';
 import {
   WorkspaceList,
   WorkspaceListItem,
@@ -11,8 +14,11 @@ import {
   WorkspaceNotePage,
   WorkspaceWhiteboard,
   WorkspaceWhiteboardPage,
+  BatchCanvasPositionsResult,
 } from './workspace-content.types';
 import {
+  CanvasPositionKind,
+  CanvasPositionUpdateValues,
   CreateWorkspaceListValues,
   CreateWorkspaceNoteValues,
   CreateWorkspaceWhiteboardValues,
@@ -46,6 +52,14 @@ const MAX_LIST_ITEM_TEXT_LENGTH = 500;
 const MAX_LIST_ITEMS_JSON_BYTES = 40_000;
 const MAX_WHITEBOARD_JSON_BYTES = 1_048_576;
 const MAX_WHITEBOARD_DIMENSION = 10_000;
+const MAX_CANVAS_POSITION_UPDATES = 250;
+const CANVAS_POSITION_TYPES = new Set<CanvasPositionKind>([
+  'list',
+  'note',
+  'whiteboard',
+  'wireframe',
+  'vault',
+]);
 const COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 const MUTATION_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -585,6 +599,100 @@ export class WorkspaceContentService {
     }
   }
 
+  async batchCanvasPositions(
+    userId: number,
+    input: BatchCanvasPositionsInput,
+  ): Promise<BatchCanvasPositionsResult> {
+    const mutationId = this.mutationId(input.mutationId);
+    if (
+      !Array.isArray(input.updates) ||
+      input.updates.length < 1 ||
+      input.updates.length > MAX_CANVAS_POSITION_UPDATES
+    ) {
+      throw itemizeGraphqlError(
+        `updates must contain between 1 and ${MAX_CANVAS_POSITION_UPDATES} items`,
+        'BAD_USER_INPUT',
+        { field: 'updates', reason: 'INVALID_CANVAS_POSITION_BATCH' },
+      );
+    }
+
+    const seen = new Set<string>();
+    const valid: CanvasPositionUpdateValues[] = [];
+    const failed: BatchCanvasPositionsResult['failed'] = [];
+    for (const update of input.updates) {
+      const type = update.type?.trim().toLowerCase() as CanvasPositionKind;
+      const id = update.id;
+      if (!CANVAS_POSITION_TYPES.has(type)) {
+        failed.push({
+          type: update.type ?? null,
+          id: Number.isSafeInteger(id) ? id : null,
+          error: 'Unknown update type',
+        });
+        continue;
+      }
+      if (
+        !Number.isSafeInteger(id) ||
+        id < 1 ||
+        !Number.isFinite(update.positionX) ||
+        !Number.isFinite(update.positionY) ||
+        (
+          update.width !== undefined &&
+          (!Number.isSafeInteger(update.width) || update.width <= 0)
+        ) ||
+        (
+          update.height !== undefined &&
+          (!Number.isSafeInteger(update.height) || update.height <= 0)
+        )
+      ) {
+        failed.push({ type, id: Number.isSafeInteger(id) ? id : null, error: 'Invalid update payload' });
+        continue;
+      }
+      const key = `${type}:${id}`;
+      if (seen.has(key)) {
+        failed.push({ type, id, error: 'Duplicate update target' });
+        continue;
+      }
+      seen.add(key);
+      valid.push({
+        type,
+        id,
+        positionX: update.positionX,
+        positionY: update.positionY,
+        width: update.width ?? null,
+        height: update.height ?? null,
+      });
+    }
+
+    if (valid.length === 0) return { updated: [], failed };
+    try {
+      const outcome = await this.content.batchCanvasPositions(
+        userId,
+        mutationId,
+        valid,
+      );
+      return {
+        updated: outcome.updated.map((update) => ({
+          type: update.type,
+          id: update.id,
+          positionX: update.positionX,
+          positionY: update.positionY,
+          width: update.width,
+          height: update.height,
+        })),
+        failed: [
+          ...failed,
+          ...outcome.missing.map((update) => ({
+            type: update.type,
+            id: update.id,
+            error: `${this.canvasTypeLabel(update.type)} not found`,
+          })),
+        ],
+      };
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
   private normalizePage(page: PageInput): NormalizedPage {
     const pageNumber = page.page ?? 1;
     const pageSize = page.pageSize ?? 50;
@@ -735,6 +843,10 @@ export class WorkspaceContentService {
       );
     }
     return mutationId.toLowerCase();
+  }
+
+  private canvasTypeLabel(type: CanvasPositionKind): string {
+    return type[0].toUpperCase() + type.slice(1);
   }
 
   private title(value: string | null): string {

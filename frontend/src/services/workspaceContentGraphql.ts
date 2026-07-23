@@ -1,4 +1,5 @@
-import { graphqlRequest } from './graphqlClient';
+import type { CanvasPositionUpdate } from './api';
+import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 import { rememberWorkspaceWhiteboardRevision } from './workspaceWhiteboardRevision';
 
 type GraphqlPageInfo = {
@@ -347,5 +348,73 @@ export const getWorkspaceWhiteboardsViaGraphql = async (
   return {
     whiteboards: data.workspaceWhiteboards.nodes.map(mapWhiteboard),
     pagination: mapPage(data.workspaceWhiteboards.pageInfo),
+  };
+};
+
+type GraphqlCanvasPositionResult = {
+  type: CanvasPositionUpdate['type'];
+  id: number;
+  positionX: number;
+  positionY: number;
+  width: number | null;
+  height: number | null;
+};
+
+type GraphqlCanvasPositionFailure = {
+  type: string | null;
+  id: number | null;
+  error: string;
+};
+
+export const updateCanvasPositionsViaGraphql = async (
+  updates: CanvasPositionUpdate[],
+): Promise<{
+  updated: Array<{
+    type: string;
+    id: number;
+    position_x: number;
+    position_y: number;
+    width?: number;
+    height?: number;
+  }>;
+  failed: GraphqlCanvasPositionFailure[];
+}> => {
+  const variables = {
+    input: {
+      mutationId: crypto.randomUUID(),
+      updates: updates.map((update) => ({
+        type: update.type,
+        id: Number(update.id),
+        positionX: update.position_x,
+        positionY: update.position_y,
+        ...(update.width === undefined ? {} : { width: update.width }),
+        ...(update.height === undefined ? {} : { height: update.height }),
+      })),
+    },
+  };
+  const data = await graphqlMutationRequest<{
+    batchCanvasPositions: {
+      updated: GraphqlCanvasPositionResult[];
+      failed: GraphqlCanvasPositionFailure[];
+    };
+  }, typeof variables>(
+    `mutation BatchCanvasPositions($input: BatchCanvasPositionsInput!) {
+      batchCanvasPositions(input: $input) {
+        updated { type id positionX positionY width height }
+        failed { type id error }
+      }
+    }`,
+    variables,
+  );
+  return {
+    updated: data.batchCanvasPositions.updated.map((update) => ({
+      type: update.type,
+      id: update.id,
+      position_x: update.positionX,
+      position_y: update.positionY,
+      ...(update.width === null ? {} : { width: update.width }),
+      ...(update.height === null ? {} : { height: update.height }),
+    })),
+    failed: data.batchCanvasPositions.failed,
   };
 };

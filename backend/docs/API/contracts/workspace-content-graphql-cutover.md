@@ -38,6 +38,10 @@ outbox atomically. The legacy socket host delivers those rows after commit.
 | `PUT /api/lists/:id` | `updateWorkspaceList(id, input)` |
 | `DELETE /api/lists/:id` | `deleteWorkspaceList(id, mutationId)` |
 
+| Legacy canvas write | GraphQL mutation |
+| --- | --- |
+| `PUT /api/canvas/positions` | `batchCanvasPositions(input)` |
+
 ## Authentication and transport
 
 - All three queries require the verified `itemize_auth` cookie.
@@ -53,6 +57,8 @@ outbox atomically. The legacy socket host delivers those rows after commit.
 - `VITE_WORKSPACE_WHITEBOARD_READS_GRAPHQL` controls whiteboard reads.
 - `VITE_WORKSPACE_WHITEBOARD_MUTATIONS_GRAPHQL` independently controls
   whiteboard create/update/delete.
+- Mixed Canvas position persistence always uses GraphQL and has no REST
+  fallback.
 - All six flags default to false. Selected GraphQL requests never retry through
   REST after a GraphQL failure.
 
@@ -63,9 +69,9 @@ consumer. The current Canvas and Contents pages both use the canvas-list
 adapter: `GET /api/canvas/lists` on REST or repeated bounded
 `workspaceLists` pages on GraphQL. Canvas, Contents, and Global Search load
 whiteboards through the shared adapter. Canvas and Contents own the reachable
-whiteboard CRUD calls. The active debounced drag path remains the retained
-mixed-aggregate `PUT /api/canvas/positions`; the dedicated whiteboard-position
-adapter is not a shipped call path.
+whiteboard CRUD calls. The active debounced drag path uses
+`batchCanvasPositions` for lists, notes, whiteboards, wireframes, and vaults;
+the dedicated per-kind position adapters are not shipped call paths.
 
 ## Query contract
 
@@ -110,6 +116,15 @@ Fractional coordinates are preserved through validation, PostgreSQL, GraphQL
 responses, and retained REST reads. Lists preserve valid negative canvas
 coordinates; note coordinates retain their existing non-negative contract.
 Width, height, and z-index retain their integer contracts.
+
+`batchCanvasPositions` accepts 1-250 unique type/ID targets. It applies
+finite last-write-wins coordinates, rounds wireframe coordinates exactly as
+the legacy batch did, and applies width/height only to object types that
+support those fields. Unknown, malformed, duplicate, foreign, and missing
+targets are reported in the `failed` list without exposing whether a row
+belongs to another user. Valid targets commit atomically with any required
+shared-list, shared-whiteboard, shared-wireframe, and owner-wireframe
+realtime outbox rows.
 
 Whiteboard canvas data must be valid JSON with an object or array root and a
 serialized size no larger than 1 MiB. Dimensions are 1-10,000, positions are

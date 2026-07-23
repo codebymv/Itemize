@@ -9,16 +9,16 @@
     "operationCount": 419,
     "apiOperationCount": 412,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 392,
-    "operationsWithFrontendConsumers": 370,
-    "operationsWithBackendTests": 215,
+    "frontendCallsiteCount": 391,
+    "operationsWithFrontendConsumers": 369,
+    "operationsWithBackendTests": 216,
     "unmatchedFrontendCallCount": 1,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 6,
-    "retainHttpCount": 43,
+    "retainHttpCount": 42,
     "graphqlQueryCount": 125,
-    "graphqlMutationCount": 243,
+    "graphqlMutationCount": 244,
     "highRiskCount": 338,
     "literalInterpolationRiskCount": 0
   },
@@ -3680,7 +3680,7 @@
           "path": "/api/canvas/lists",
           "rawPath": "/api/canvas/lists",
           "source": "frontend/src/services/api.ts",
-          "line": 174,
+          "line": 175,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3696,13 +3696,13 @@
           "method": "GET",
           "path": "/api/canvas/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 955
+          "line": 1196
         },
         {
           "method": "GET",
           "path": "/api/canvas/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 982
+          "line": 1223
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -3731,26 +3731,16 @@
           "line": 14
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/canvas/positions",
-          "rawPath": "/api/canvas/positions",
-          "source": "frontend/src/services/api.ts",
-          "line": 357,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "retain-http",
+      "disposition": "graphql-mutation",
       "owner": "workspace-content",
-      "targetOperation": "batchWorkspacePositions",
-      "targetModule": "CanvasPositionsModule",
-      "parityStatus": "characterized",
-      "notes": "Active debounced Canvas drag path batches mixed list, note, whiteboard, and wireframe positions. It remains HTTP for this checkpoint; a later cutover needs bounded mixed-aggregate input, per-kind ownership checks, concurrency semantics, and publication policy.",
+      "targetOperation": "batchCanvasPositions",
+      "targetModule": "WorkspaceContentModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "The active debounced Canvas drag path now uses one bounded mixed-aggregate GraphQL mutation for list, note, whiteboard, wireframe, and vault positions. It enforces per-kind user ownership, deterministic duplicate handling, last-write-wins coordinates, wireframe rounding, optional supported dimensions, partial not-found results, CSRF, and transaction-bound shared/owner realtime publication. The frontend has no REST fallback for this path.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -3771,7 +3761,7 @@
           "path": "/api/categories",
           "rawPath": "/api/categories",
           "source": "frontend/src/services/api.ts",
-          "line": 595,
+          "line": 588,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3812,7 +3802,7 @@
           "path": "/api/categories",
           "rawPath": "/api/categories",
           "source": "frontend/src/services/api.ts",
-          "line": 605,
+          "line": 598,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3853,7 +3843,7 @@
           "path": "/api/categories/:categoryId",
           "rawPath": "/api/categories/${categoryId}",
           "source": "frontend/src/services/api.ts",
-          "line": 625,
+          "line": 618,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3894,7 +3884,7 @@
           "path": "/api/categories/:categoryId",
           "rawPath": "/api/categories/${categoryId}",
           "source": "frontend/src/services/api.ts",
-          "line": 615,
+          "line": 608,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8927,7 +8917,7 @@
           "path": "/api/lists",
           "rawPath": "/api/lists",
           "source": "frontend/src/services/api.ts",
-          "line": 204,
+          "line": 205,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8937,13 +8927,13 @@
           "method": "GET",
           "path": "/api/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 951
+          "line": 1192
         },
         {
           "method": "GET",
           "path": "/api/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 977
+          "line": 1218
         },
         {
           "method": "GET",
@@ -8986,7 +8976,7 @@
           "path": "/api/lists",
           "rawPath": "/api/lists",
           "source": "frontend/src/services/api.ts",
-          "line": 248,
+          "line": 249,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9027,7 +9017,7 @@
           "path": "/api/lists/:listId",
           "rawPath": "/api/lists/${listId}",
           "source": "frontend/src/services/api.ts",
-          "line": 343,
+          "line": 344,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9074,7 +9064,7 @@
           "path": "/api/lists/:id",
           "rawPath": "/api/lists/${listData.id}",
           "source": "frontend/src/services/api.ts",
-          "line": 314,
+          "line": 315,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9197,7 +9187,7 @@
           "path": "/api/lists/:listId/position",
           "rawPath": "/api/lists/${listId}/position",
           "source": "frontend/src/services/api.ts",
-          "line": 350,
+          "line": 351,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9293,7 +9283,7 @@
           "path": "/api/lists/:listId/share",
           "rawPath": "/api/lists/${listId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 817,
+          "line": 810,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9358,7 +9348,7 @@
           "path": "/api/lists/:listId/share",
           "rawPath": "/api/lists/${listId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 809,
+          "line": 802,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9525,7 +9515,7 @@
           "path": "/api/notes",
           "rawPath": "/api/notes",
           "source": "frontend/src/services/api.ts",
-          "line": 373,
+          "line": 366,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9541,13 +9531,13 @@
           "method": "GET",
           "path": "/api/notes",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 959
+          "line": 1200
         },
         {
           "method": "GET",
           "path": "/api/notes",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 987
+          "line": 1228
         },
         {
           "method": "GET",
@@ -9620,7 +9610,7 @@
           "path": "/api/notes",
           "rawPath": "/api/notes",
           "source": "frontend/src/services/api.ts",
-          "line": 383,
+          "line": 376,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9691,7 +9681,7 @@
           "path": "/api/notes/:noteId",
           "rawPath": "/api/notes/${noteId}",
           "source": "frontend/src/services/api.ts",
-          "line": 437,
+          "line": 430,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9750,7 +9740,7 @@
           "path": "/api/notes/:noteId",
           "rawPath": "/api/notes/${noteId}",
           "source": "frontend/src/services/api.ts",
-          "line": 393,
+          "line": 386,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9797,7 +9787,7 @@
           "path": "/api/notes/:noteId/category",
           "rawPath": "/api/notes/${noteId}/category",
           "source": "frontend/src/services/api.ts",
-          "line": 424,
+          "line": 417,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9844,7 +9834,7 @@
           "path": "/api/notes/:noteId/content",
           "rawPath": "/api/notes/${noteId}/content",
           "source": "frontend/src/services/api.ts",
-          "line": 404,
+          "line": 397,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9912,7 +9902,7 @@
           "path": "/api/notes/:noteId/share",
           "rawPath": "/api/notes/${noteId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 833,
+          "line": 826,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9962,7 +9952,7 @@
           "path": "/api/notes/:noteId/share",
           "rawPath": "/api/notes/${noteId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 825,
+          "line": 818,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10009,7 +9999,7 @@
           "path": "/api/notes/:noteId/title",
           "rawPath": "/api/notes/${noteId}/title",
           "source": "frontend/src/services/api.ts",
-          "line": 414,
+          "line": 407,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10355,6 +10345,12 @@
           "path": "/api/organizations",
           "source": "backend/src/__tests__/integration/organizations.integration.test.js",
           "line": 391
+        },
+        {
+          "method": "POST",
+          "path": "/api/organizations",
+          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
+          "line": 459
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -10390,7 +10386,20 @@
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "DELETE",
+          "path": "/api/organizations/:retainedOrgId",
+          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
+          "line": 482
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/organizations/:disposableOrgId",
+          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
+          "line": 525
+        }
+      ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
@@ -10510,7 +10519,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/organizations.routes.js",
-          "line": 328
+          "line": 393
         }
       ],
       "consumerCallsites": [
@@ -10557,7 +10566,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/organizations.routes.js",
-          "line": 183
+          "line": 248
         }
       ],
       "consumerCallsites": [
@@ -10610,7 +10619,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/organizations.routes.js",
-          "line": 198
+          "line": 263
         }
       ],
       "consumerCallsites": [
@@ -10687,7 +10696,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/organizations.routes.js",
-          "line": 290
+          "line": 355
         }
       ],
       "consumerCallsites": [
@@ -10734,7 +10743,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/organizations.routes.js",
-          "line": 244
+          "line": 309
         }
       ],
       "consumerCallsites": [
@@ -10799,7 +10808,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/organizations.routes.js",
-          "line": 356
+          "line": 421
         }
       ],
       "consumerCallsites": [
@@ -10852,7 +10861,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/organizations.routes.js",
-          "line": 379
+          "line": 444
         }
       ],
       "consumerCallsites": [
@@ -12469,7 +12478,7 @@
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 566
+          "line": 582
         }
       ],
       "consumerCallsites": [
@@ -12488,25 +12497,25 @@
           "method": "GET",
           "path": "/api/public/sign/:invalidToken",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1318
+          "line": 1335
         },
         {
           "method": "GET",
           "path": "/api/public/sign/:secondToken",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1454
+          "line": 1471
         },
         {
           "method": "GET",
           "path": "/api/public/sign/:secondToken",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1478
+          "line": 1495
         },
         {
           "method": "GET",
           "path": "/api/public/sign/:signingToken",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 300
+          "line": 362
         },
         {
           "method": "GET",
@@ -12556,7 +12565,7 @@
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 593
+          "line": 609
         }
       ],
       "consumerCallsites": [
@@ -12575,19 +12584,19 @@
           "method": "POST",
           "path": "/api/public/sign/:token",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1430
+          "line": 1447
         },
         {
           "method": "POST",
           "path": "/api/public/sign/:signingToken",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 388
+          "line": 450
         },
         {
           "method": "POST",
           "path": "/api/public/sign/:signingToken",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 433
+          "line": 495
         },
         {
           "method": "POST",
@@ -12625,7 +12634,7 @@
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 624
+          "line": 640
         }
       ],
       "consumerCallsites": [
@@ -12644,7 +12653,7 @@
           "method": "POST",
           "path": "/api/public/sign/:secondToken/decline",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1457
+          "line": 1474
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -12670,7 +12679,7 @@
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 638
+          "line": 654
         }
       ],
       "consumerCallsites": [],
@@ -12698,7 +12707,7 @@
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 660
+          "line": 676
         }
       ],
       "consumerCallsites": [],
@@ -12733,7 +12742,7 @@
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 589
+          "line": 605
         }
       ],
       "consumerCallsites": [],
@@ -14142,7 +14151,7 @@
           "path": "/api/shared/vault/:shareToken",
           "rawPath": "/api/shared/vault/${shareToken}",
           "source": "frontend/src/services/api.ts",
-          "line": 782,
+          "line": 775,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14251,7 +14260,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 434
+          "line": 450
         }
       ],
       "consumerCallsites": [
@@ -14294,7 +14303,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 285
+          "line": 293
         }
       ],
       "consumerCallsites": [
@@ -14335,7 +14344,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 420
+          "line": 436
         }
       ],
       "consumerCallsites": [
@@ -14369,7 +14378,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 440
+          "line": 456
         }
       ],
       "consumerCallsites": [
@@ -14403,7 +14412,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 304
+          "line": 312
         }
       ],
       "consumerCallsites": [
@@ -14428,31 +14437,31 @@
           "method": "PUT",
           "path": "/api/signatures/documents/:id",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 337
+          "line": 399
         },
         {
           "method": "PUT",
           "path": "/api/signatures/documents/:id",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 412
+          "line": 474
         },
         {
           "method": "PUT",
           "path": "/api/signatures/documents/:id",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 458
+          "line": 520
         },
         {
           "method": "PUT",
           "path": "/api/signatures/documents/:id",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 479
+          "line": 541
         },
         {
           "method": "PUT",
           "path": "/api/signatures/documents/:id",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 491
+          "line": 553
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -14474,7 +14483,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 555
+          "line": 571
         }
       ],
       "consumerCallsites": [
@@ -14508,7 +14517,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 469
+          "line": 485
         }
       ],
       "consumerCallsites": [
@@ -14527,7 +14536,7 @@
           "method": "POST",
           "path": "/api/signatures/documents/:id/cancel",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 277
+          "line": 339
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -14553,7 +14562,7 @@
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 517
+          "line": 533
         }
       ],
       "consumerCallsites": [],
@@ -14562,7 +14571,7 @@
           "method": "GET",
           "path": "/api/signatures/documents/12/download",
           "source": "backend/src/__tests__/routes/signature-files.routes.test.js",
-          "line": 81
+          "line": 82
         },
         {
           "method": "GET",
@@ -14596,7 +14605,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 407
+          "line": 423
         }
       ],
       "consumerCallsites": [
@@ -14634,7 +14643,7 @@
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 538
+          "line": 554
         }
       ],
       "consumerCallsites": [],
@@ -14643,37 +14652,37 @@
           "method": "GET",
           "path": "/api/signatures/documents/:id/file",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 195
+          "line": 257
         },
         {
           "method": "GET",
           "path": "/api/signatures/documents/:id/file",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 208
+          "line": 270
         },
         {
           "method": "GET",
           "path": "/api/signatures/documents/:id/file",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 213
+          "line": 275
         },
         {
           "method": "GET",
           "path": "/api/signatures/documents/:id/file",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 222
+          "line": 284
         },
         {
           "method": "GET",
           "path": "/api/signatures/documents/12/file",
           "source": "backend/src/__tests__/routes/signature-files.routes.test.js",
-          "line": 65
+          "line": 66
         },
         {
           "method": "GET",
           "path": "/api/signatures/documents/12/file",
           "source": "backend/src/__tests__/routes/signature-files.routes.test.js",
-          "line": 104
+          "line": 105
         },
         {
           "method": "GET",
@@ -14707,7 +14716,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 481
+          "line": 497
         }
       ],
       "consumerCallsites": [
@@ -14726,7 +14735,7 @@
           "method": "POST",
           "path": "/api/signatures/documents/:id/remind",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 361
+          "line": 423
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -14748,7 +14757,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 501
+          "line": 517
         }
       ],
       "consumerCallsites": [],
@@ -14757,13 +14766,13 @@
           "method": "POST",
           "path": "/api/signatures/documents/:id/reminders",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 313
+          "line": 375
         },
         {
           "method": "POST",
           "path": "/api/signatures/documents/:id/reminders",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 331
+          "line": 393
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -14785,7 +14794,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 447
+          "line": 463
         }
       ],
       "consumerCallsites": [
@@ -14804,25 +14813,25 @@
           "method": "POST",
           "path": "/api/signatures/documents/:id/send",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 238
+          "line": 300
         },
         {
           "method": "POST",
           "path": "/api/signatures/documents/:id/send",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 262
+          "line": 324
         },
         {
           "method": "POST",
           "path": "/api/signatures/documents/:id/send",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 381
+          "line": 443
         },
         {
           "method": "POST",
           "path": "/api/signatures/documents/:id/send",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 425
+          "line": 487
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -14848,7 +14857,7 @@
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 347
+          "line": 355
         }
       ],
       "consumerCallsites": [
@@ -14873,13 +14882,19 @@
           "method": "POST",
           "path": "/api/signatures/documents/upload",
           "source": "backend/src/__tests__/routes/signature-files.routes.test.js",
-          "line": 111
+          "line": 112
         },
         {
           "method": "POST",
           "path": "/api/signatures/documents/upload",
           "source": "backend/src/__tests__/routes/signature-files.routes.test.js",
-          "line": 131
+          "line": 134
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend/src/__tests__/routes/signature-files.routes.test.js",
+          "line": 157
         },
         {
           "method": "POST",
@@ -14955,7 +14970,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 384
+          "line": 400
         }
       ],
       "consumerCallsites": [
@@ -14989,7 +15004,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 237
+          "line": 245
         }
       ],
       "consumerCallsites": [
@@ -15091,7 +15106,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 242
+          "line": 250
         }
       ],
       "consumerCallsites": [
@@ -15163,7 +15178,7 @@
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 249
+          "line": 257
         }
       ],
       "consumerCallsites": [],
@@ -15172,7 +15187,7 @@
           "method": "GET",
           "path": "/api/signatures/templates/5/file",
           "source": "backend/src/__tests__/routes/signature-files.routes.test.js",
-          "line": 93
+          "line": 94
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -15194,7 +15209,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 266
+          "line": 274
         }
       ],
       "consumerCallsites": [
@@ -16477,7 +16492,7 @@
           "path": "/api/vaults",
           "rawPath": "/api/vaults",
           "source": "frontend/src/services/api.ts",
-          "line": 666,
+          "line": 659,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16511,7 +16526,7 @@
           "path": "/api/vaults",
           "rawPath": "/api/vaults",
           "source": "frontend/src/services/api.ts",
-          "line": 694,
+          "line": 687,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16545,7 +16560,7 @@
           "path": "/api/vaults/:vaultId",
           "rawPath": "/api/vaults/${vaultId}",
           "source": "frontend/src/services/api.ts",
-          "line": 718,
+          "line": 711,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16579,7 +16594,7 @@
           "path": "/api/vaults/:vaultId",
           "rawPath": "/api/vaults/${vaultId}",
           "source": "frontend/src/services/api.ts",
-          "line": 685,
+          "line": 678,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16613,7 +16628,7 @@
           "path": "/api/vaults/:vaultId",
           "rawPath": "/api/vaults/${vaultId}",
           "source": "frontend/src/services/api.ts",
-          "line": 702,
+          "line": 695,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16647,7 +16662,7 @@
           "path": "/api/vaults/:vaultId/items",
           "rawPath": "/api/vaults/${vaultId}/items",
           "source": "frontend/src/services/api.ts",
-          "line": 726,
+          "line": 719,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16681,7 +16696,7 @@
           "path": "/api/vaults/:vaultId/items/:itemId",
           "rawPath": "/api/vaults/${vaultId}/items/${itemId}",
           "source": "frontend/src/services/api.ts",
-          "line": 750,
+          "line": 743,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16715,7 +16730,7 @@
           "path": "/api/vaults/:vaultId/items/:itemId",
           "rawPath": "/api/vaults/${vaultId}/items/${itemId}",
           "source": "frontend/src/services/api.ts",
-          "line": 742,
+          "line": 735,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16749,7 +16764,7 @@
           "path": "/api/vaults/:vaultId/items/bulk",
           "rawPath": "/api/vaults/${vaultId}/items/bulk",
           "source": "frontend/src/services/api.ts",
-          "line": 734,
+          "line": 727,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16783,7 +16798,7 @@
           "path": "/api/vaults/:vaultId/items/reorder",
           "rawPath": "/api/vaults/${vaultId}/items/reorder",
           "source": "frontend/src/services/api.ts",
-          "line": 758,
+          "line": 751,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16817,7 +16832,7 @@
           "path": "/api/vaults/:vaultId/lock",
           "rawPath": "/api/vaults/${vaultId}/lock",
           "source": "frontend/src/services/api.ts",
-          "line": 788,
+          "line": 781,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16855,7 +16870,7 @@
           "path": "/api/vaults/:vaultId/position",
           "rawPath": "/api/vaults/${vaultId}/position",
           "source": "frontend/src/services/api.ts",
-          "line": 710,
+          "line": 703,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16898,7 +16913,7 @@
           "path": "/api/vaults/:vaultId/share",
           "rawPath": "/api/vaults/${vaultId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 774,
+          "line": 767,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16954,7 +16969,7 @@
           "path": "/api/vaults/:vaultId/share",
           "rawPath": "/api/vaults/${vaultId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 766,
+          "line": 759,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17013,7 +17028,7 @@
           "path": "/api/vaults/:vaultId/unlock",
           "rawPath": "/api/vaults/${vaultId}/unlock",
           "source": "frontend/src/services/api.ts",
-          "line": 799,
+          "line": 792,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17108,7 +17123,7 @@
           "path": "/api/whiteboards",
           "rawPath": "/api/whiteboards",
           "source": "frontend/src/services/api.ts",
-          "line": 450,
+          "line": 443,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17124,13 +17139,13 @@
           "method": "GET",
           "path": "/api/whiteboards",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 963
+          "line": 1204
         },
         {
           "method": "GET",
           "path": "/api/whiteboards",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 992
+          "line": 1233
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -17161,7 +17176,7 @@
           "path": "/api/whiteboards",
           "rawPath": "/api/whiteboards",
           "source": "frontend/src/services/api.ts",
-          "line": 470,
+          "line": 463,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17199,7 +17214,7 @@
           "path": "/api/whiteboards/:whiteboardId/position",
           "rawPath": "/api/whiteboards/${whiteboardId}/position",
           "source": "frontend/src/services/api.ts",
-          "line": 507,
+          "line": 500,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17212,7 +17227,7 @@
       "targetOperation": "moveWorkspaceWhiteboard",
       "targetModule": "WorkspaceContentModule",
       "parityStatus": "blocked",
-      "notes": "No shipped consumer uses this dedicated adapter; active drag writes use retained PUT /api/canvas/positions. Do not migrate dead source without a consumer decision.",
+      "notes": "No shipped consumer uses this dedicated adapter; active drag writes use batchCanvasPositions through GraphQL. Remove this dead retained adapter when legacy application-data routes are retired.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -17233,7 +17248,7 @@
           "path": "/api/whiteboards/:whiteboardId",
           "rawPath": "/api/whiteboards/${whiteboardId}",
           "source": "frontend/src/services/api.ts",
-          "line": 499,
+          "line": 492,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17267,7 +17282,7 @@
           "path": "/api/whiteboards/:whiteboardId",
           "rawPath": "/api/whiteboards/${whiteboardId}",
           "source": "frontend/src/services/api.ts",
-          "line": 488,
+          "line": 481,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17317,7 +17332,7 @@
           "path": "/api/whiteboards/:whiteboardId/share",
           "rawPath": "/api/whiteboards/${whiteboardId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 849,
+          "line": 842,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17367,7 +17382,7 @@
           "path": "/api/whiteboards/:whiteboardId/share",
           "rawPath": "/api/whiteboards/${whiteboardId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 841,
+          "line": 834,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17414,7 +17429,7 @@
           "path": "/api/wireframes",
           "rawPath": "/api/wireframes",
           "source": "frontend/src/services/api.ts",
-          "line": 555,
+          "line": 548,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17448,7 +17463,7 @@
           "path": "/api/wireframes",
           "rawPath": "/api/wireframes",
           "source": "frontend/src/services/api.ts",
-          "line": 562,
+          "line": 555,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17486,7 +17501,7 @@
           "path": "/api/wireframes/:wireframeId/position",
           "rawPath": "/api/wireframes/${wireframeId}/position",
           "source": "frontend/src/services/api.ts",
-          "line": 584,
+          "line": 577,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17520,7 +17535,7 @@
           "path": "/api/wireframes/:wireframeId",
           "rawPath": "/api/wireframes/${wireframeId}",
           "source": "frontend/src/services/api.ts",
-          "line": 577,
+          "line": 570,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17554,7 +17569,7 @@
           "path": "/api/wireframes/:wireframeId",
           "rawPath": "/api/wireframes/${wireframeId}",
           "source": "frontend/src/services/api.ts",
-          "line": 570,
+          "line": 563,
           "client": "api",
           "literalInterpolation": false
         }

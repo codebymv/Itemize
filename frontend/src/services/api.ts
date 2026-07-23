@@ -1,4 +1,4 @@
-import api, { type RetryConfig } from '../lib/api';
+import api from '../lib/api';
 import { logger } from '../lib/logger';
 import { MIN_LIST_WIDTH } from '../constants/dimensions';
 import type { JsonValue } from '@/types';
@@ -23,6 +23,7 @@ import {
   getWorkspaceListsViaGraphql,
   getWorkspaceNotesViaGraphql,
   getWorkspaceWhiteboardsViaGraphql,
+  updateCanvasPositionsViaGraphql,
 } from './workspaceContentGraphql';
 import {
   createWorkspaceNoteViaGraphql,
@@ -354,15 +355,7 @@ export const updateListPosition = async (listId: string, x: number, y: number, t
 };
 
 export const updateCanvasPositions = async (updates: CanvasPositionUpdate[], token?: string) => {
-  const response = await api.put(
-    '/api/canvas/positions',
-    { updates },
-    {
-      headers: getAuthHeaders(token),
-      retryOn429: true
-    } as RetryConfig
-  );
-  return response.data;
+  return updateCanvasPositionsViaGraphql(updates);
 };
 
 // Note API functions

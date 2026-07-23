@@ -102,6 +102,45 @@ describe('RealtimeOutboxService', () => {
     ).resolves.toMatchObject({ inserted: true });
   });
 
+  it('accepts shared and owner wireframe position events', async () => {
+    const query = jest.fn().mockImplementation(
+      (_sql: string, values: unknown[]) => Promise.resolve({
+        rows: [{
+          ...row,
+          event_key: values[0],
+          aggregate_type: values[1],
+          aggregate_id: values[2],
+          channel: values[3],
+          recipient_key: values[4],
+          event_name: values[5],
+          event_type: values[6],
+          payload: JSON.parse(String(values[7])),
+        }],
+      }),
+    );
+    const client = { query } as unknown as PoolClient;
+    await expect(service.enqueue(client, {
+      eventKey: 'wireframe:8:position:request-1:shared',
+      aggregateType: 'wireframe',
+      aggregateId: 8,
+      channel: 'shared_wireframe',
+      recipientKey: '621ca66e-2b82-46a7-b2ba-e7343b6cbac2',
+      eventName: 'wireframeUpdated',
+      eventType: 'POSITION_UPDATE',
+      payload: { id: 8, position_x: 10, position_y: 20 },
+    })).resolves.toMatchObject({ inserted: true });
+    await expect(service.enqueue(client, {
+      eventKey: 'wireframe:8:position:request-1:owner',
+      aggregateType: 'wireframe',
+      aggregateId: 8,
+      channel: 'user_wireframe',
+      recipientKey: '7',
+      eventName: 'userWireframeUpdated',
+      eventType: 'POSITION_UPDATE',
+      payload: { id: 8, position_x: 10, position_y: 20 },
+    })).resolves.toMatchObject({ inserted: true });
+  });
+
   it('rejects unsupported channel/event combinations before querying', async () => {
     const query = jest.fn();
     await expect(

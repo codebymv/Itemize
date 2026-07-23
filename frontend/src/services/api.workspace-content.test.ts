@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '@/lib/api';
-import { fetchCanvasLists, getLists, getNotes } from './api';
+import {
+  fetchCanvasLists,
+  getLists,
+  getNotes,
+  updateCanvasPositions,
+} from './api';
 import {
   isWorkspaceListGraphqlReadsEnabled,
   isWorkspaceNoteGraphqlReadsEnabled,
@@ -9,6 +14,7 @@ import {
   getCanvasListsViaGraphql,
   getWorkspaceListsViaGraphql,
   getWorkspaceNotesViaGraphql,
+  updateCanvasPositionsViaGraphql,
 } from './workspaceContentGraphql';
 
 vi.mock('@/lib/api', () => ({
@@ -26,6 +32,7 @@ vi.mock('./workspaceContentGraphql', () => ({
   getCanvasListsViaGraphql: vi.fn(),
   getWorkspaceListsViaGraphql: vi.fn(),
   getWorkspaceNotesViaGraphql: vi.fn(),
+  updateCanvasPositionsViaGraphql: vi.fn(),
   whiteboardFields: '',
 }));
 
@@ -119,5 +126,29 @@ describe('workspace content API transport selection', () => {
     expect(getCanvasListsViaGraphql).toHaveBeenCalled();
     expect(getWorkspaceNotesViaGraphql).toHaveBeenCalled();
     expect(api.get).not.toHaveBeenCalled();
+  });
+
+  it('always persists mixed canvas positions through GraphQL', async () => {
+    vi.mocked(updateCanvasPositionsViaGraphql).mockResolvedValue({
+      updated: [{
+        type: 'list',
+        id: 4,
+        position_x: 12.5,
+        position_y: 20,
+      }],
+      failed: [],
+    });
+    const updates = [{
+      type: 'list' as const,
+      id: 4,
+      position_x: 12.5,
+      position_y: 20,
+    }];
+
+    await expect(updateCanvasPositions(updates)).resolves.toMatchObject({
+      updated: [{ id: 4, position_x: 12.5 }],
+      failed: [],
+    });
+    expect(updateCanvasPositionsViaGraphql).toHaveBeenCalledWith(updates);
   });
 });

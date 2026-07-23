@@ -228,3 +228,45 @@ export class DeleteWorkspaceWhiteboardResult {
   @Field(() => Int)
   deletedId: number;
 }
+
+@ObjectType()
+export class CanvasPositionUpdateResult {
+  @Field()
+  type: string;
+
+  @Field(() => Int)
+  id: number;
+
+  @Field(() => Float)
+  positionX: number;
+
+  @Field(() => Float)
+  positionY: number;
+
+  @Field(() => Float, { nullable: true })
+  width: number | null;
+
+  @Field(() => Float, { nullable: true })
+  height: number | null;
+}
+
+@ObjectType()
+export class CanvasPositionFailure {
+  @Field(() => String, { nullable: true })
+  type: string | null;
+
+  @Field(() => Int, { nullable: true })
+  id: number | null;
+
+  @Field()
+  error: string;
+}
+
+@ObjectType()
+export class BatchCanvasPositionsResult {
+  @Field(() => [CanvasPositionUpdateResult])
+  updated: CanvasPositionUpdateResult[];
+
+  @Field(() => [CanvasPositionFailure])
+  failed: CanvasPositionFailure[];
+}

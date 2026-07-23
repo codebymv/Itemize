@@ -136,6 +136,28 @@ async function dispatchRealtimeEvent(claim, broadcast) {
       occurredAt
     );
   }
+  if (claim.channel === 'shared_wireframe' && claim.event_name === 'wireframeUpdated') {
+    if (typeof broadcast.wireframeUpdate !== 'function') {
+      throw new Error('wireframeUpdate broadcast adapter is unavailable');
+    }
+    return broadcast.wireframeUpdate(
+      claim.recipient_key,
+      claim.event_type,
+      claim.payload,
+      occurredAt
+    );
+  }
+  if (claim.channel === 'user_wireframe' && claim.event_name === 'userWireframeUpdated') {
+    if (typeof broadcast.userWireframeUpdate !== 'function') {
+      throw new Error('userWireframeUpdate broadcast adapter is unavailable');
+    }
+    return broadcast.userWireframeUpdate(
+      claim.recipient_key,
+      claim.event_type,
+      claim.payload,
+      occurredAt
+    );
+  }
 
   const error = new Error('Unsupported realtime outbox channel/event combination');
   error.retryable = false;

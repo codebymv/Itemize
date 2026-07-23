@@ -7,12 +7,12 @@
 - Registered method/path operations: 419
 - API operations under `/api`: 412
 - Non-API registered operations: 7
-- Static frontend callsites: 392
-- Operations with frontend consumers: 370
-- Operations referenced by backend tests: 215
+- Static frontend callsites: 391
+- Operations with frontend consumers: 369
+- Operations referenced by backend tests: 216
 - Recommended GraphQL queries: 125
-- Recommended GraphQL mutations: 243
-- Recommended retained HTTP endpoints: 43
+- Recommended GraphQL mutations: 244
+- Recommended retained HTTP endpoints: 42
 - High-risk operations: 338
 - Unmatched frontend calls: 1
 - Runtime URL expressions requiring review: 0
@@ -112,7 +112,7 @@
 | POST | `/api/campaigns/:id/send-test` | 1 | 0 | graphql-mutation | high | growth / CampaignDeliveryModule / sendCampaignTest |
 | POST | `/api/campaigns/:id/unschedule` | 1 | 1 | graphql-mutation | medium | growth / CampaignsModule / unscheduleCampaign |
 | GET | `/api/canvas/lists` | 1 | 3 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceLists |
-| PUT | `/api/canvas/positions` | 1 | 0 | retain-http | high | workspace-content / CanvasPositionsModule / batchWorkspacePositions |
+| PUT | `/api/canvas/positions` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / batchCanvasPositions |
 | GET | `/api/categories` | 1 | 1 | graphql-query | high | workspace-content / CategoriesModule / categories |
 | POST | `/api/categories` | 1 | 1 | graphql-mutation | high | workspace-content / CategoriesModule / createCategory |
 | DELETE | `/api/categories/:id` | 1 | 1 | graphql-mutation | high | workspace-content / CategoriesModule / deleteCategory |
@@ -249,8 +249,8 @@
 | GET | `/api/onboarding/progress/:featureKey` | 1 | 0 | graphql-query | high | onboarding / OnboardingModule / onboardingFeatureProgress |
 | DELETE | `/api/onboarding/reset` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / resetOnboarding |
 | GET | `/api/organizations` | 1 | 4 | graphql-query | medium | workspace / OrganizationsModule / organizations |
-| POST | `/api/organizations` | 1 | 4 | graphql-mutation | medium | workspace / OrganizationsModule / createOrganization |
-| DELETE | `/api/organizations/:organizationId` | 1 | 0 | graphql-mutation | high | workspace / OrganizationsModule / deleteOrganization |
+| POST | `/api/organizations` | 1 | 5 | graphql-mutation | medium | workspace / OrganizationsModule / createOrganization |
+| DELETE | `/api/organizations/:organizationId` | 1 | 2 | graphql-mutation | high | workspace / OrganizationsModule / deleteOrganization |
 | GET | `/api/organizations/:organizationId` | 1 | 3 | graphql-query | medium | workspace / OrganizationsModule / organization |
 | PUT | `/api/organizations/:organizationId` | 1 | 2 | graphql-mutation | medium | workspace / OrganizationsModule / updateOrganization |
 | POST | `/api/organizations/:organizationId/leave` | 1 | 2 | graphql-mutation | medium | workspace / OrganizationsModule / leaveOrganization |
@@ -355,7 +355,7 @@
 | POST | `/api/signatures/documents/:id/remind` | 1 | 1 | graphql-mutation | high | esignatures / SignatureDeliveryModule / sendSignatureReminder |
 | POST | `/api/signatures/documents/:id/reminders` | 0 | 2 | graphql-mutation | high | esignatures / SignatureDeliveryModule / scheduleSignatureReminders |
 | POST | `/api/signatures/documents/:id/send` | 1 | 4 | graphql-mutation | high | esignatures / SignatureDeliveryModule / sendSignatureDocument |
-| POST | `/api/signatures/documents/upload` | 1 | 12 | retain-http | high | esignatures / SignatureFilesModule / uploadSignatureDraftPdf |
+| POST | `/api/signatures/documents/upload` | 1 | 13 | retain-http | high | esignatures / SignatureFilesModule / uploadSignatureDraftPdf |
 | POST | `/api/signatures/email/preview` | 1 | 0 | graphql-query | high | esignatures / SignatureDeliveryModule / previewSignatureEmail |
 | GET | `/api/signatures/templates` | 1 | 0 | graphql-query | high | esignatures / SignatureTemplatesModule / signatureTemplates |
 | POST | `/api/signatures/templates` | 1 | 0 | graphql-mutation | high | esignatures / SignatureTemplatesModule / createSignatureTemplate |

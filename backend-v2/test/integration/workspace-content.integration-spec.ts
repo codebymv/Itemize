@@ -946,6 +946,247 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       .expect(404);
   });
 
+  it('persists mixed canvas positions through GraphQL with tenant isolation and durable realtime', async () => {
+    const sharedWireframeToken =
+      '7340ce8e-846a-4935-9bb6-d53d87dd8ac2';
+    const inserted = await pool.query<{
+      type: string;
+      id: number;
+    }>(
+      `WITH list_insert AS (
+         INSERT INTO lists
+           (user_id, title, category, items, position_x, position_y, is_public, share_token)
+         VALUES ($1, 'Canvas batch list', 'General', '[]'::jsonb, 0, 0, FALSE, NULL)
+         RETURNING id
+       ), note_insert AS (
+         INSERT INTO notes
+           (user_id, title, content, category, position_x, position_y)
+         VALUES ($1, 'Canvas batch note', '', 'General', 0, 0)
+         RETURNING id
+       ), whiteboard_insert AS (
+         INSERT INTO whiteboards
+           (user_id, title, category, canvas_data, position_x, position_y)
+         VALUES ($1, 'Canvas batch whiteboard', 'General', '[]'::jsonb, 0, 0)
+         RETURNING id
+       ), wireframe_insert AS (
+         INSERT INTO wireframes
+           (user_id, title, position_x, position_y, is_public, share_token)
+         VALUES ($1, 'Canvas batch wireframe', 0, 0, TRUE, $2)
+         RETURNING id
+       ), vault_insert AS (
+         INSERT INTO vaults
+           (user_id, title, position_x, position_y, width, height)
+         VALUES ($1, 'Canvas batch vault', 0, 0, 400, 300)
+         RETURNING id
+       )
+       SELECT 'list'::text AS type, id FROM list_insert
+       UNION ALL
+       SELECT 'note', id FROM note_insert
+       UNION ALL
+       SELECT 'whiteboard', id FROM whiteboard_insert
+       UNION ALL
+       SELECT 'wireframe', id FROM wireframe_insert
+       UNION ALL
+       SELECT 'vault', id FROM vault_insert`,
+      [memberId, sharedWireframeToken],
+    );
+    const ids = Object.fromEntries(
+      inserted.rows.map((row) => [row.type, Number(row.id)]),
+    ) as Record<string, number>;
+    const outsider = await pool.query<{ id: number }>(
+      `SELECT id FROM lists WHERE user_id = $1 ORDER BY id LIMIT 1`,
+      [outsiderId],
+    );
+    const mutationId = '19790a37-5406-44f6-b798-8876e67733c9';
+    const document = `mutation Batch($input: BatchCanvasPositionsInput!) {
+      batchCanvasPositions(input: $input) {
+        updated { type id positionX positionY width height }
+        failed { type id error }
+      }
+    }`;
+    try {
+      const result = await mutation(memberToken, document, {
+        input: {
+          mutationId,
+          updates: [
+            {
+              type: 'list',
+              id: ids.list,
+              positionX: 10.25,
+              positionY: 20.5,
+              width: 360,
+            },
+            {
+              type: 'note',
+              id: ids.note,
+              positionX: 30.25,
+              positionY: 40.5,
+              width: 240,
+              height: 180,
+            },
+            {
+              type: 'whiteboard',
+              id: ids.whiteboard,
+              positionX: -50.5,
+              positionY: 60.75,
+            },
+            {
+              type: 'wireframe',
+              id: ids.wireframe,
+              positionX: 70.6,
+              positionY: 80.4,
+            },
+            {
+              type: 'vault',
+              id: ids.vault,
+              positionX: 90.25,
+              positionY: 100.5,
+              width: 420,
+              height: 320,
+            },
+            {
+              type: 'list',
+              id: Number(outsider.rows[0].id),
+              positionX: 999,
+              positionY: 999,
+            },
+          ],
+        },
+      }).expect(200);
+
+      expect(result.body.errors).toBeUndefined();
+      expect(result.body.data.batchCanvasPositions.updated).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: 'list',
+            id: ids.list,
+            positionX: 10.25,
+            positionY: 20.5,
+            width: 360,
+          }),
+          expect.objectContaining({
+            type: 'note',
+            id: ids.note,
+            width: 240,
+            height: 180,
+          }),
+          expect.objectContaining({
+            type: 'whiteboard',
+            id: ids.whiteboard,
+            positionX: -50.5,
+          }),
+          expect.objectContaining({
+            type: 'wireframe',
+            id: ids.wireframe,
+            positionX: 71,
+            positionY: 80,
+          }),
+          expect.objectContaining({
+            type: 'vault',
+            id: ids.vault,
+            width: 420,
+            height: 320,
+          }),
+        ]),
+      );
+      expect(result.body.data.batchCanvasPositions.failed).toEqual([
+        {
+          type: 'list',
+          id: Number(outsider.rows[0].id),
+          error: 'List not found',
+        },
+      ]);
+
+      const unchanged = await pool.query<{
+        position_x: number;
+        position_y: number;
+      }>('SELECT position_x, position_y FROM lists WHERE id = $1', [
+        outsider.rows[0].id,
+      ]);
+      expect(unchanged.rows[0]).toMatchObject({
+        position_x: 0,
+        position_y: 0,
+      });
+
+      const events = await pool.query<{
+        id: string;
+        channel: string;
+        event_name: string;
+        event_type: string;
+      }>(
+        `SELECT id, channel, event_name, event_type
+         FROM realtime_event_outbox
+         WHERE event_key IN ($1, $2)
+         ORDER BY channel`,
+        [
+          `wireframe:${ids.wireframe}:position:${mutationId}:shared`,
+          `wireframe:${ids.wireframe}:position:${mutationId}:owner`,
+        ],
+      );
+      expect(events.rows).toEqual([
+        expect.objectContaining({
+          channel: 'shared_wireframe',
+          event_name: 'wireframeUpdated',
+          event_type: 'POSITION_UPDATE',
+        }),
+        expect.objectContaining({
+          channel: 'user_wireframe',
+          event_name: 'userWireframeUpdated',
+          event_type: 'POSITION_UPDATE',
+        }),
+      ]);
+      const wireframeUpdate = jest.fn();
+      const userWireframeUpdate = jest.fn();
+      const { runRealtimeOutboxJobs } = require(
+        '../../../backend/src/jobs/realtime-outbox-jobs',
+      );
+      for (const event of events.rows) {
+        await expect(runRealtimeOutboxJobs(
+          pool,
+          { wireframeUpdate, userWireframeUpdate },
+          {
+            batchSize: 1,
+            outboxId: event.id,
+            workerId: `canvas-position-${event.channel}`,
+          },
+        )).resolves.toMatchObject({ claimed: 1, sent: 1 });
+      }
+      expect(wireframeUpdate).toHaveBeenCalledWith(
+        sharedWireframeToken,
+        'POSITION_UPDATE',
+        {
+          id: ids.wireframe,
+          position_x: 71,
+          position_y: 80,
+        },
+        expect.any(String),
+      );
+      expect(userWireframeUpdate).toHaveBeenCalledWith(
+        String(memberId),
+        'POSITION_UPDATE',
+        {
+          id: ids.wireframe,
+          position_x: 71,
+          position_y: 80,
+        },
+        expect.any(String),
+      );
+    } finally {
+      await pool.query(
+        `DELETE FROM realtime_event_outbox
+         WHERE event_key LIKE $1`,
+        [`%:position:${mutationId}:%`],
+      );
+      await Promise.all([
+        pool.query('DELETE FROM lists WHERE id = $1', [ids.list]),
+        pool.query('DELETE FROM notes WHERE id = $1', [ids.note]),
+        pool.query('DELETE FROM whiteboards WHERE id = $1', [ids.whiteboard]),
+        pool.query('DELETE FROM wireframes WHERE id = $1', [ids.wireframe]),
+        pool.query('DELETE FROM vaults WHERE id = $1', [ids.vault]),
+      ]);
+    }
+  });
+
   it('keeps all four characterized REST read paths available for rollback', async () => {
     const lists = await request(legacyApp)
       .get('/api/lists')

@@ -166,6 +166,33 @@ export type DeleteWorkspaceWhiteboardOutcome =
   | { kind: 'deleted'; deletedId: number }
   | { kind: 'not_found' };
 
+export type CanvasPositionKind =
+  | 'list'
+  | 'note'
+  | 'whiteboard'
+  | 'wireframe'
+  | 'vault';
+
+export type CanvasPositionUpdateValues = {
+  type: CanvasPositionKind;
+  id: number;
+  positionX: number;
+  positionY: number;
+  width: number | null;
+  height: number | null;
+};
+
+export type CanvasPositionUpdatedRow = CanvasPositionUpdateValues & {
+  shareToken: string | null;
+  isPublic: boolean;
+  occurredAt: Date;
+};
+
+export type BatchCanvasPositionsOutcome = {
+  updated: CanvasPositionUpdatedRow[];
+  missing: CanvasPositionUpdateValues[];
+};
+
 type CategoryIdentity = {
   id: number;
   name: string;
@@ -234,6 +261,98 @@ export class WorkspaceContentRepository {
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly realtimeOutbox: RealtimeOutboxService,
   ) {}
+
+  async batchCanvasPositions(
+    userId: number,
+    mutationId: string,
+    updates: CanvasPositionUpdateValues[],
+  ): Promise<BatchCanvasPositionsOutcome> {
+    return this.transaction(async (client) => {
+      const updated: CanvasPositionUpdatedRow[] = [];
+      const missing: CanvasPositionUpdateValues[] = [];
+
+      for (const update of updates) {
+        const table = this.canvasTable(update.type);
+        const roundsCoordinates = update.type === 'wireframe';
+        const positionX = roundsCoordinates
+          ? Math.round(update.positionX)
+          : update.positionX;
+        const positionY = roundsCoordinates
+          ? Math.round(update.positionY)
+          : update.positionY;
+        const supportsWidth = ['list', 'note', 'vault'].includes(update.type);
+        const supportsHeight = ['note', 'vault'].includes(update.type);
+        const assignments = [
+          'position_x = $1',
+          'position_y = $2',
+        ];
+        const parameters: unknown[] = [positionX, positionY];
+        if (supportsWidth && update.width !== null) {
+          parameters.push(update.width);
+          assignments.push(`width = $${parameters.length}`);
+        }
+        if (supportsHeight && update.height !== null) {
+          parameters.push(update.height);
+          assignments.push(`height = $${parameters.length}`);
+        }
+        if (['wireframe', 'vault'].includes(update.type)) {
+          assignments.push('updated_at = CURRENT_TIMESTAMP');
+        }
+        parameters.push(update.id, userId);
+        const result = await client.query<{
+          id: number;
+          position_x: number;
+          position_y: number;
+          width: number | null;
+          height: number | null;
+          share_token: string | null;
+          is_public: boolean | null;
+          occurred_at: Date;
+        }>(
+          `UPDATE ${table}
+           SET ${assignments.join(', ')}
+           WHERE id = $${parameters.length - 1}
+             AND user_id = $${parameters.length}
+           RETURNING
+             id,
+             position_x,
+             position_y,
+             ${supportsWidth ? 'width' : 'NULL::double precision AS width'},
+             ${supportsHeight ? 'height' : 'NULL::double precision AS height'},
+             ${update.type === 'vault'
+               ? 'NULL::varchar AS share_token, FALSE AS is_public'
+               : 'share_token, is_public'},
+             clock_timestamp() AS occurred_at`,
+          parameters,
+        );
+        const row = result.rows[0];
+        if (!row) {
+          missing.push(update);
+          continue;
+        }
+        const value: CanvasPositionUpdatedRow = {
+          type: update.type,
+          id: row.id,
+          positionX: Number(row.position_x),
+          positionY: Number(row.position_y),
+          width: row.width === null ? null : Number(row.width),
+          height: row.height === null ? null : Number(row.height),
+          shareToken: row.share_token,
+          isPublic: Boolean(row.is_public),
+          occurredAt: new Date(row.occurred_at),
+        };
+        updated.push(value);
+        await this.enqueueCanvasPositionEvents(
+          client,
+          userId,
+          mutationId,
+          value,
+        );
+      }
+
+      return { updated, missing };
+    });
+  }
 
   async findLists(
     criteria: WorkspaceContentCriteria,
@@ -991,6 +1110,74 @@ export class WorkspaceContentRepository {
       color_value: list.color_value,
       updated_at: new Date(list.updated_at).toISOString(),
     };
+  }
+
+  private canvasTable(type: CanvasPositionKind): string {
+    return {
+      list: 'lists',
+      note: 'notes',
+      whiteboard: 'whiteboards',
+      wireframe: 'wireframes',
+      vault: 'vaults',
+    }[type];
+  }
+
+  private async enqueueCanvasPositionEvents(
+    client: PoolClient,
+    userId: number,
+    mutationId: string,
+    update: CanvasPositionUpdatedRow,
+  ): Promise<void> {
+    const payload = {
+      id: update.id,
+      position_x: update.positionX,
+      position_y: update.positionY,
+    };
+    if (
+      update.isPublic &&
+      update.shareToken &&
+      ['list', 'whiteboard', 'wireframe'].includes(update.type)
+    ) {
+      const shared = {
+        list: {
+          channel: 'shared_list' as const,
+          eventName: 'listUpdated' as const,
+        },
+        whiteboard: {
+          channel: 'shared_whiteboard' as const,
+          eventName: 'whiteboardUpdated' as const,
+        },
+        wireframe: {
+          channel: 'shared_wireframe' as const,
+          eventName: 'wireframeUpdated' as const,
+        },
+      }[update.type as 'list' | 'whiteboard' | 'wireframe'];
+      await this.realtimeOutbox.enqueue(client, {
+        eventKey:
+          `${update.type}:${update.id}:position:${mutationId}:shared`,
+        aggregateType: update.type as 'list' | 'whiteboard' | 'wireframe',
+        aggregateId: update.id,
+        channel: shared.channel,
+        recipientKey: update.shareToken,
+        eventName: shared.eventName,
+        eventType: 'POSITION_UPDATE',
+        payload,
+        occurredAt: update.occurredAt,
+      });
+    }
+    if (update.type === 'wireframe') {
+      await this.realtimeOutbox.enqueue(client, {
+        eventKey: `wireframe:${update.id}:position:${mutationId}:owner`,
+        aggregateType: 'wireframe',
+        aggregateId: update.id,
+        channel: 'user_wireframe',
+        recipientKey: String(userId),
+        eventName: 'userWireframeUpdated',
+        eventType: 'POSITION_UPDATE',
+        payload,
+        occurredAt: update.occurredAt,
+      });
+    }
   }
 
   private async transaction<T>(

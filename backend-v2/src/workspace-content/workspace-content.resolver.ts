@@ -2,7 +2,10 @@ import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { PageInput } from '../common/pagination';
 import { CsrfProtected } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
-import { WorkspaceContentFilterInput } from './workspace-content.inputs';
+import {
+  BatchCanvasPositionsInput,
+  WorkspaceContentFilterInput,
+} from './workspace-content.inputs';
 import { WorkspaceContentService } from './workspace-content.service';
 import {
   CreateWorkspaceListInput,
@@ -20,6 +23,7 @@ import {
   DeleteWorkspaceListResult,
   DeleteWorkspaceNoteResult,
   DeleteWorkspaceWhiteboardResult,
+  BatchCanvasPositionsResult,
   WorkspaceList,
   WorkspaceListPage,
   WorkspaceNote,
@@ -153,6 +157,14 @@ export class WorkspaceContentResolver {
         mutationId,
       ),
     };
+  }
+
+  @CsrfProtected()
+  @Mutation(() => BatchCanvasPositionsResult)
+  batchCanvasPositions(
+    @Args('input') input: BatchCanvasPositionsInput,
+  ): Promise<BatchCanvasPositionsResult> {
+    return this.content.batchCanvasPositions(this.userId(), input);
   }
 
   private userId(): number {

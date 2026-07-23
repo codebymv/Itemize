@@ -1591,8 +1591,8 @@
       "notes": "User-scoped canvas list read implemented as repeated strict bounded pages with deterministic ordering; Canvas and Contents passed independent GraphQL read selection plus GraphQL-list-write and REST-write rollback in staging. The personalized rollback response is private/no-store and returns a complete HTTP 200 even when a retained ETag is replayed."
     },
     "PUT /api/canvas/positions": {
-      "disposition": "retain-http", "owner": "workspace-content", "targetModule": "CanvasPositionsModule", "targetOperation": "batchWorkspacePositions", "parityStatus": "characterized", "risk": "high",
-      "notes": "Active debounced Canvas drag path batches mixed list, note, whiteboard, and wireframe positions. It remains HTTP for this checkpoint; a later cutover needs bounded mixed-aggregate input, per-kind ownership checks, concurrency semantics, and publication policy."
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "batchCanvasPositions", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "The active debounced Canvas drag path now uses one bounded mixed-aggregate GraphQL mutation for list, note, whiteboard, wireframe, and vault positions. It enforces per-kind user ownership, deterministic duplicate handling, last-write-wins coordinates, wireframe rounding, optional supported dimensions, partial not-found results, CSRF, and transaction-bound shared/owner realtime publication. The frontend has no REST fallback for this path."
     },
     "GET /api/lists": {
       "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceLists", "parityStatus": "consumer-cutover-complete", "risk": "high",
@@ -1700,7 +1700,7 @@
     },
     "PUT /api/whiteboards/:id/position": {
       "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "moveWorkspaceWhiteboard", "parityStatus": "blocked", "risk": "high",
-      "notes": "No shipped consumer uses this dedicated adapter; active drag writes use retained PUT /api/canvas/positions. Do not migrate dead source without a consumer decision."
+      "notes": "No shipped consumer uses this dedicated adapter; active drag writes use batchCanvasPositions through GraphQL. Remove this dead retained adapter when legacy application-data routes are retired."
     },
     "POST /api/whiteboards/:whiteboardId/share": {
       "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "enableWhiteboardSharing", "parityStatus": "characterized", "risk": "high",

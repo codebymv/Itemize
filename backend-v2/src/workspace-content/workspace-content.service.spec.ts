@@ -85,6 +85,7 @@ describe('WorkspaceContentService', () => {
       createList: jest.fn(),
       createNote: jest.fn(),
       createWhiteboard: jest.fn(),
+      batchCanvasPositions: jest.fn(),
       deleteList: jest.fn(),
       deleteNote: jest.fn(),
       deleteWhiteboard: jest.fn(),
@@ -343,6 +344,110 @@ describe('WorkspaceContentService', () => {
         positionY: 1987.125,
       }),
     );
+  });
+
+  it('normalizes a mixed canvas position batch and reports invalid targets', async () => {
+    repository.batchCanvasPositions.mockResolvedValue({
+      updated: [{
+        type: 'wireframe',
+        id: 8,
+        positionX: 13,
+        positionY: 20,
+        width: null,
+        height: null,
+        shareToken: null,
+        isPublic: false,
+        occurredAt: new Date('2026-07-18T12:02:00.000Z'),
+      }],
+      missing: [{
+        type: 'vault',
+        id: 9,
+        positionX: 1,
+        positionY: 2,
+        width: null,
+        height: null,
+      }],
+    });
+    const mutationId = 'e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c';
+
+    await expect(service.batchCanvasPositions(7, {
+      mutationId,
+      updates: [
+        {
+          type: 'wireframe',
+          id: 8,
+          positionX: 12.6,
+          positionY: 20.4,
+        },
+        { type: 'vault', id: 9, positionX: 1, positionY: 2 },
+        { type: 'mystery', id: 10, positionX: 3, positionY: 4 },
+        { type: 'vault', id: 9, positionX: 5, positionY: 6 },
+      ],
+    })).resolves.toEqual({
+      updated: [{
+        type: 'wireframe',
+        id: 8,
+        positionX: 13,
+        positionY: 20,
+        width: null,
+        height: null,
+      }],
+      failed: [
+        { type: 'mystery', id: 10, error: 'Unknown update type' },
+        { type: 'vault', id: 9, error: 'Duplicate update target' },
+        { type: 'vault', id: 9, error: 'Vault not found' },
+      ],
+    });
+    expect(repository.batchCanvasPositions).toHaveBeenCalledWith(
+      7,
+      mutationId,
+      [
+        {
+          type: 'wireframe',
+          id: 8,
+          positionX: 12.6,
+          positionY: 20.4,
+          width: null,
+          height: null,
+        },
+        {
+          type: 'vault',
+          id: 9,
+          positionX: 1,
+          positionY: 2,
+          width: null,
+          height: null,
+        },
+      ],
+    );
+  });
+
+  it('rejects empty and oversized canvas position batches', async () => {
+    const mutationId = 'e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c';
+    await expect(service.batchCanvasPositions(7, {
+      mutationId,
+      updates: [],
+    })).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'INVALID_CANVAS_POSITION_BATCH',
+      },
+    });
+    await expect(service.batchCanvasPositions(7, {
+      mutationId,
+      updates: Array.from({ length: 251 }, (_, index) => ({
+        type: 'list',
+        id: index + 1,
+        positionX: 1,
+        positionY: 2,
+      })),
+    })).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'INVALID_CANVAS_POSITION_BATCH',
+      },
+    });
+    expect(repository.batchCanvasPositions).not.toHaveBeenCalled();
   });
 
   it('normalizes whiteboard creation and rejects invalid canvas JSON', async () => {

@@ -12,6 +12,8 @@ const CHANNEL_EVENTS: Record<string, ReadonlySet<RealtimeEventName>> = {
   shared_list: new Set(['listUpdated']),
   shared_note: new Set(['noteUpdated']),
   shared_whiteboard: new Set(['whiteboardUpdated']),
+  shared_wireframe: new Set(['wireframeUpdated']),
+  user_wireframe: new Set(['userWireframeUpdated']),
 };
 const SHARE_TOKEN_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -102,7 +104,7 @@ export class RealtimeOutboxService {
         'Realtime event key must be between 1 and 255 characters',
       );
     }
-    if (!['list', 'note', 'whiteboard'].includes(input.aggregateType)) {
+    if (!['list', 'note', 'whiteboard', 'wireframe'].includes(input.aggregateType)) {
       throw new Error('Unsupported realtime aggregate type');
     }
     if (!Number.isSafeInteger(input.aggregateId) || input.aggregateId < 1) {
@@ -121,13 +123,13 @@ export class RealtimeOutboxService {
       );
     }
     if (
-      input.channel === 'user_canvas' &&
+      ['user_canvas', 'user_wireframe'].includes(input.channel) &&
       !USER_ID_PATTERN.test(input.recipientKey)
     ) {
       throw new Error('Realtime user recipient must be a positive integer');
     }
     if (
-      input.channel !== 'user_canvas' &&
+      !['user_canvas', 'user_wireframe'].includes(input.channel) &&
       !SHARE_TOKEN_PATTERN.test(input.recipientKey)
     ) {
       throw new Error('Realtime shared recipient must be a UUID capability');
@@ -139,7 +141,16 @@ export class RealtimeOutboxService {
         input.aggregateType !== 'whiteboard'
       ) ||
       (
-        !['shared_note', 'shared_whiteboard'].includes(input.channel) &&
+        ['shared_wireframe', 'user_wireframe'].includes(input.channel) &&
+        input.aggregateType !== 'wireframe'
+      ) ||
+      (
+        ![
+          'shared_note',
+          'shared_whiteboard',
+          'shared_wireframe',
+          'user_wireframe',
+        ].includes(input.channel) &&
         input.aggregateType !== 'list'
       )
     ) {
