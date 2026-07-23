@@ -76,12 +76,16 @@ The production signature infrastructure rehearsal completed on 2026-07-23. Priva
 
 The worker-ownership release adds default-off scheduling controls. Deploy its code to both runtimes first. Confirm all signature delivery, completion, cleanup, and due-reminder queues are empty. Then set `LEGACY_SIGNATURE_REMINDER_JOBS_ENABLED=false`, `SIGNATURE_FILE_CLEANUP_ENABLED=true`, and a validated `SIGNATURE_FILE_CLEANUP_CRON` on the retained backend and deploy it before setting `SIGNATURE_JOBS_SCHEDULER_ENABLED=true` plus `SIGNATURE_JOBS_SCHEDULER_INTERVAL_MS` on Nest. Startup logs must show the retained reminder owner disabled, cleanup initialized, and Nest owning delivery/completion. Reverse that order during rollback: stop Nest ownership before re-enabling the legacy reminder owner. Cleanup can remain enabled because it has no legacy competing scheduler.
 
+The coordinated signature ownership cutover completed on 2026-07-23 from commit `b8cfab97`. Default-off retained deployment `423d0a03-1bf3-43d9-8135-e39c177ff43a` and GraphQL deployment `76cb0b47-aefc-48f9-a2ac-c7843bee47e7` first proved the artifacts. All four work queues were zero. Retained deployment `476a858c-d822-4297-a5cf-de671f368833` then logged legacy reminders disabled and cleanup initialized at `*/5 * * * *`; GraphQL deployment `4f033ed4-29e5-42e5-8180-91dc1b0e6e13` subsequently logged sole delivery/completion ownership at 60 seconds. There was no double-owner window, and later queue/error scans remained empty.
+
+Public signing moved independently through retained read deployment `cf4f8231-60ae-473f-980e-b49af8bbaba6` and mutation deployment `98c63370-7ee0-48f0-ab1a-9f97103166be`. Unknown capabilities returned 404 across session/file/download, decline, and valid-shape submit; verification returned its specified 410. Corrected frontend deployment `e3930e4e-3c97-44ab-81a3-d1cfc888d5df` compiled GraphQL delivery/reminder and draft-file-removal consumers on. The deployed bundle contains both operation names, an authenticated Documents reload rendered the existing sent document with no console error, and Nest logged successful `SignatureDocumentReads`. Site, API, and GraphQL health remained HTTP 200. No provider delivery, valid signer mutation, user upload/deletion, or production-row change was used for this routing verification.
+
 After deployment, verify:
 
 1. `https://itemize.cloud` returns HTTP `200`;
 2. production `/api/health` returns HTTP `200`;
 3. a proxied GraphQL `__typename` query returns HTTP `200`;
-4. all approved consumer `VITE_*_GRAPHQL` variables are `true`, while every documented staged/default-off switch such as `VITE_SIGNATURE_DELIVERY_GRAPHQL` remains `false`;
+4. all approved consumer `VITE_*_GRAPHQL` variables are `true`, and any still-staged switch is explicitly named in its domain contract;
 5. the frontend and backend deployments resolve to the Git commit containing this document;
 6. GraphQL logs contain no internal-error spike after the frontend replacement.
 
