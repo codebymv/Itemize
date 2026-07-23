@@ -6,6 +6,10 @@ import {
   LegacySignatureFileStorage,
   SIGNATURE_FILE_STORAGE,
 } from './signature-file-storage.provider';
+import {
+  ClamAvSignatureMalwareScanner,
+  SIGNATURE_MALWARE_SCANNER,
+} from './signature-malware-scanner.provider';
 import { SignatureFilesController } from './signature-files.controller';
 import { SignatureFilesRepository } from './signature-files.repository';
 import { SignatureFilesService } from './signature-files.service';
@@ -18,9 +22,14 @@ import { SignatureFilesService } from './signature-files.service';
     SignatureFilesRepository,
     SignatureFilesService,
     LegacySignatureFileStorage,
+    ClamAvSignatureMalwareScanner,
     {
       provide: SIGNATURE_FILE_STORAGE,
       useExisting: LegacySignatureFileStorage,
+    },
+    {
+      provide: SIGNATURE_MALWARE_SCANNER,
+      useExisting: ClamAvSignatureMalwareScanner,
     },
   ],
   exports: [SIGNATURE_FILE_STORAGE, SignatureFilesService],

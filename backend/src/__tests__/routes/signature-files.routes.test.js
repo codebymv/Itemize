@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const request = require('supertest');
+const { PDFDocument } = require('pdf-lib');
 
 jest.mock('../../middleware/organization', () => () => ({
     requireOrganization: (req, _res, next) => {
@@ -127,10 +128,12 @@ describe('signature file transport routes', () => {
             file_name: file.originalname,
         }));
 
+        const document = await PDFDocument.create();
+        document.addPage([612, 792]);
         const response = await request(app)
             .post('/api/signatures/documents/upload')
             .field('document_id', '12')
-            .attach('file', Buffer.from('%PDF-1.7\n%%EOF'), {
+            .attach('file', Buffer.from(await document.save()), {
                 filename: 'contract.html',
                 contentType: 'application/pdf',
             });
@@ -140,5 +143,39 @@ describe('signature file transport routes', () => {
         const storedFile = signatureService.uploadDocument.mock.calls[0][3];
         expect(storedFile.mimetype).toBe('application/pdf');
         expect(storedFile.buffer.subarray(0, 5).toString('ascii')).toBe('%PDF-');
+    });
+
+    it('returns a controlled retryable error when required scanning is unavailable', async () => {
+        const priorRequired = process.env.SIGNATURE_MALWARE_SCAN_REQUIRED;
+        const priorHost = process.env.SIGNATURE_CLAMAV_HOST;
+        process.env.SIGNATURE_MALWARE_SCAN_REQUIRED = 'true';
+        delete process.env.SIGNATURE_CLAMAV_HOST;
+        const document = await PDFDocument.create();
+        document.addPage([612, 792]);
+        try {
+            const response = await request(app)
+                .post('/api/signatures/documents/upload')
+                .field('document_id', '12')
+                .attach('file', Buffer.from(await document.save()), {
+                    filename: 'contract.pdf',
+                    contentType: 'application/pdf',
+                });
+            expect(response.status).toBe(503);
+            expect(response.body).toMatchObject({
+                error: { code: 'FILE_SCAN_UNAVAILABLE' },
+            });
+            expect(signatureService.uploadDocument).not.toHaveBeenCalled();
+        } finally {
+            if (priorRequired === undefined) {
+                delete process.env.SIGNATURE_MALWARE_SCAN_REQUIRED;
+            } else {
+                process.env.SIGNATURE_MALWARE_SCAN_REQUIRED = priorRequired;
+            }
+            if (priorHost === undefined) {
+                delete process.env.SIGNATURE_CLAMAV_HOST;
+            } else {
+                process.env.SIGNATURE_CLAMAV_HOST = priorHost;
+            }
+        }
     });
 });

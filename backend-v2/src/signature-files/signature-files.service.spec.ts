@@ -2,9 +2,15 @@ import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { PDFDocument } from 'pdf-lib';
 import { SignatureFileStorage } from './signature-file-storage.provider';
+import {
+  SignatureMalwareDetectedError,
+  SignatureMalwareScanner,
+  SignatureMalwareScannerUnavailableError,
+} from './signature-malware-scanner.provider';
 import { SignatureFilesRepository } from './signature-files.repository';
 import { SignatureFilesService } from './signature-files.service';
 
@@ -27,7 +33,14 @@ describe('SignatureFilesService', () => {
     head,
     remove: jest.fn(),
   } as jest.Mocked<SignatureFileStorage>;
-  const service = new SignatureFilesService(repository, storage);
+  const malwareScanner = {
+    inspect: jest.fn(),
+  } as jest.Mocked<SignatureMalwareScanner>;
+  const service = new SignatureFilesService(
+    repository,
+    storage,
+    malwareScanner,
+  );
   let pdf: Buffer;
   let file: {
     buffer: Buffer;
@@ -88,6 +101,7 @@ describe('SignatureFilesService', () => {
     storage.store.mockResolvedValue('/uploads/signatures/new.pdf');
     storage.remove.mockResolvedValue(undefined);
     storage.read.mockResolvedValue(pdf);
+    malwareScanner.inspect.mockResolvedValue({ verdict: 'clean' });
     head.mockResolvedValue({ totalLength: pdf.length });
     repository.replaceDocument.mockResolvedValue(document as never);
     repository.replaceTemplate.mockResolvedValue({
@@ -141,6 +155,10 @@ describe('SignatureFilesService', () => {
       7,
       '/uploads/signatures/new.pdf',
     );
+    expect(malwareScanner.inspect).toHaveBeenCalledWith(pdf);
+    expect(malwareScanner.inspect.mock.invocationCallOrder[0]).toBeLessThan(
+      repository.stageUpload.mock.invocationCallOrder[0],
+    );
     expect(repository.stageUpload.mock.invocationCallOrder[0]).toBeLessThan(
       storage.store.mock.invocationCallOrder[0],
     );
@@ -172,6 +190,30 @@ describe('SignatureFilesService', () => {
         buffer: Buffer.from('not a pdf'),
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+    expect(storage.store).not.toHaveBeenCalled();
+  });
+
+  it('rejects infected bytes before creating a cleanup receipt or storage locator', async () => {
+    malwareScanner.inspect.mockRejectedValue(
+      new SignatureMalwareDetectedError(),
+    );
+    await expect(service.uploadDocument(4, '7', file)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(storage.allocate).not.toHaveBeenCalled();
+    expect(repository.stageUpload).not.toHaveBeenCalled();
+    expect(storage.store).not.toHaveBeenCalled();
+  });
+
+  it('fails closed before storage when required malware inspection is unavailable', async () => {
+    malwareScanner.inspect.mockRejectedValue(
+      new SignatureMalwareScannerUnavailableError(),
+    );
+    await expect(service.uploadDocument(4, '7', file)).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+    expect(storage.allocate).not.toHaveBeenCalled();
+    expect(repository.stageUpload).not.toHaveBeenCalled();
     expect(storage.store).not.toHaveBeenCalled();
   });
 

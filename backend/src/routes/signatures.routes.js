@@ -228,6 +228,14 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 if (error.code === 'INVALID_FILE_CONTENT') {
                     return sendError(res, error.message, 400, 'UPLOAD_ERROR');
                 }
+                if (error.code === 'FILE_SCAN_UNAVAILABLE') {
+                    return sendError(
+                        res,
+                        'PDF security inspection is temporarily unavailable',
+                        503,
+                        'FILE_SCAN_UNAVAILABLE'
+                    );
+                }
                 console.error('Signature template upload failed:', error);
                 return sendError(res, 'Failed to upload template file');
             }
@@ -371,6 +379,14 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
                 await cleanupUploadedFile(req.file);
                 if (error.code === 'INVALID_FILE_CONTENT') {
                     return sendError(res, error.message, 400, 'UPLOAD_ERROR');
+                }
+                if (error.code === 'FILE_SCAN_UNAVAILABLE') {
+                    return sendError(
+                        res,
+                        'PDF security inspection is temporarily unavailable',
+                        503,
+                        'FILE_SCAN_UNAVAILABLE'
+                    );
                 }
                 console.error('Signature document upload failed:', error);
                 return sendError(res, 'Failed to upload document file');

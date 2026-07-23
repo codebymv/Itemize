@@ -5,6 +5,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import {
@@ -21,6 +22,12 @@ import {
   inspectSignaturePdf,
   SignaturePdfValidationError,
 } from './signature-pdf.validator';
+import {
+  SIGNATURE_MALWARE_SCANNER,
+  SignatureMalwareDetectedError,
+  SignatureMalwareScanner,
+  SignatureMalwareScannerUnavailableError,
+} from './signature-malware-scanner.provider';
 import {
   DeliveredSignatureFile,
   SignatureFileDeliveryRequest,
@@ -45,6 +52,8 @@ export class SignatureFilesService {
     private readonly repository: SignatureFilesRepository,
     @Inject(SIGNATURE_FILE_STORAGE)
     private readonly storage: SignatureFileStorage,
+    @Inject(SIGNATURE_MALWARE_SCANNER)
+    private readonly malwareScanner: SignatureMalwareScanner,
   ) {}
 
   async uploadDocument(
@@ -208,6 +217,29 @@ export class SignatureFilesService {
           code: 'UPLOAD_ERROR',
         },
       });
+    }
+    try {
+      await this.malwareScanner.inspect(file.buffer);
+    } catch (error) {
+      if (error instanceof SignatureMalwareDetectedError) {
+        throw new BadRequestException({
+          success: false,
+          error: {
+            message: 'Invalid PDF file content',
+            code: 'UPLOAD_ERROR',
+          },
+        });
+      }
+      if (error instanceof SignatureMalwareScannerUnavailableError) {
+        throw new ServiceUnavailableException({
+          success: false,
+          error: {
+            message: 'PDF security inspection is temporarily unavailable',
+            code: 'FILE_SCAN_UNAVAILABLE',
+          },
+        });
+      }
+      throw error;
     }
     const storageInput = {
       organizationId,

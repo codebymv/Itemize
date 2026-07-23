@@ -1,4 +1,6 @@
 const path = require('path');
+const { deflateSync } = require('zlib');
+const { PDFDocument, PDFName, PDFRawStream } = require('pdf-lib');
 const {
     allocateUploadedFile,
     assertPdfUpload,
@@ -32,11 +34,36 @@ describe('signature local storage boundary', () => {
     });
 
     it('accepts actual PDF bytes and rejects MIME-spoofed content', async () => {
-        const pdf = { buffer: Buffer.from('%PDF-1.7\ncontent'), mimetype: 'text/html' };
+        const document = await PDFDocument.create();
+        document.addPage([612, 792]);
+        const pdf = {
+            buffer: Buffer.from(await document.save()),
+            mimetype: 'text/html',
+        };
         await expect(assertPdfUpload(pdf)).resolves.toBe(pdf);
         expect(pdf.mimetype).toBe('application/pdf');
         await expect(assertPdfUpload({ buffer: Buffer.from('<html>not a pdf</html>') }))
             .rejects.toMatchObject({ code: 'INVALID_FILE_CONTENT' });
+    });
+
+    it('rejects active PDF behavior and decompression bombs', async () => {
+        const active = await PDFDocument.create();
+        active.addPage([612, 792]);
+        active.catalog.set(PDFName.of('OpenAction'), PDFName.of('JavaScript'));
+        await expect(assertPdfUpload({
+            buffer: Buffer.from(await active.save()),
+        })).rejects.toMatchObject({ code: 'INVALID_FILE_CONTENT' });
+
+        const compressed = await PDFDocument.create();
+        const page = compressed.addPage([612, 792]);
+        const stream = PDFRawStream.of(
+            compressed.context.obj({ Filter: 'FlateDecode' }),
+            deflateSync(Buffer.alloc(2 * 1024 * 1024, 65))
+        );
+        page.node.set(PDFName.Contents, compressed.context.register(stream));
+        await expect(assertPdfUpload({
+            buffer: Buffer.from(await compressed.save({ useObjectStreams: false })),
+        })).rejects.toMatchObject({ code: 'INVALID_FILE_CONTENT' });
     });
 
     it('forces PDF storage keys and accepts only owned signature S3 keys', () => {

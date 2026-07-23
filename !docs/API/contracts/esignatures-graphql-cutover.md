@@ -131,7 +131,7 @@ Commit `8e756351` deployed through legacy backend `70c49ae0-0624-4778-a658-4dd76
 
 The authenticated read and draft/template mutation slices have completed production consumer validation. Delivery, draft-PDF removal, authenticated files, and public signing are implemented behind independent default-off switches. Final e-signature cutover still requires:
 
-1. production S3 private-storage rehearsal and malware/quarantine policy;
+1. production private-S3 and required malware-scanner rehearsal;
 2. audit evidence enforcement under database permissions plus defined retention/export and integrity verification;
 3. the request/reminder/completion workers receive one production owner/schedule and controlled provider/storage canaries;
 4. OTP remains impossible to configure unless its complete issuance/throttling/hash/expiry/replay protocol is implemented;
@@ -224,3 +224,11 @@ The signed-PDF completion worker uses the same pre-registration boundary before 
 The retained unit suite passes 386/386, the Nest unit suite passes 414/414, and the Nest build passes. A clean disposable database passes the retained signature contract 11/11 plus the complete Nest integration gate 225/225. PostgreSQL observes a delayed queued receipt during upload and completion storage callbacks and proves it is absent only after each authoritative transaction commits.
 
 Commit `2d8a3948` deployed default-off through retained backend `aca109f5-0144-4cca-9216-a125f0a60414` and GraphQL `e2dd4111-a57a-4d28-acaf-f04f84a0a10d`. Both became healthy; itemize.cloud, production API health, and the same-origin GraphQL probe returned HTTP 200. Railway confirmed all four signature file/public-signing proxy flags and both checked cleanup-schedule variables remain absent, while GraphQL still has no AWS variables. No upload, completion, cleanup worker, storage access, provider call, or production data mutation ran.
+
+## Implemented signature PDF safety boundary
+
+NestJS and the retained rollback receiver now apply the same full-PDF safety policy before any storage locator or durable cleanup receipt exists. In addition to the 5 MiB transport, encryption, page-count, and page-dimension limits, the parser bounds indirect objects, graph nodes, dictionaries, arrays, streams, decoded Flate bytes, compression ratio, per-image pixels, and aggregate image pixels. Active actions, scripts, forms, XFA, rich media, imports, launches, and embedded-file markers are rejected. Non-image streams may use only inspectable Flate encoding; embedded images have a narrow filter allowlist plus decoded-workload bounds.
+
+Both paths also implement a bounded ClamAV `INSTREAM` client configured by `SIGNATURE_CLAMAV_HOST`, optional `SIGNATURE_CLAMAV_PORT`, and optional `SIGNATURE_CLAMAV_TIMEOUT_MS`. Inspection occurs while the upload remains in memory and before storage allocation, making the untrusted-memory boundary the quarantine stage. Detected content returns the existing non-disclosing upload error. When `SIGNATURE_MALWARE_SCAN_REQUIRED=true`, missing, invalid, timed-out, or unreachable scanning returns `FILE_SCAN_UNAVAILABLE` with HTTP 503 and performs no storage work. With the gate absent, the result is explicitly `skipped`, not `clean`, preserving deployment compatibility without overstating the production verdict.
+
+The retained unit suite passes 391/391, the Nest unit suite passes 421/421, targeted scanner framing and fail-closed tests pass, and the Nest build passes. A clean disposable database passes the complete retained integration gate 491/491 and Nest integration gate 225/225. Production scanner attachment, required-mode clean/infected/outage canaries, private-S3 credential rehearsal, and upload-route traffic cutover remain deferred to the final configuration phase.

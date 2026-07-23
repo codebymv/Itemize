@@ -2,6 +2,8 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { logger } = require('../../utils/logger');
+const { inspectSignaturePdf } = require('./pdf-safety');
+const { inspectSignatureMalware } = require('./malware-scanner');
 
 let s3Service = null;
 try {
@@ -53,25 +55,15 @@ function getS3KeyFromUrl(fileUrl) {
 }
 
 async function assertPdfUpload(file) {
-    let header;
+    let buffer;
     if (file?.buffer) {
-        header = file.buffer.subarray(0, 5);
+        buffer = file.buffer;
     } else if (file?.path) {
-        const handle = await fs.promises.open(file.path, 'r');
-        try {
-            header = Buffer.alloc(5);
-            const { bytesRead } = await handle.read(header, 0, 5, 0);
-            header = header.subarray(0, bytesRead);
-        } finally {
-            await handle.close();
-        }
+        buffer = await fs.promises.readFile(file.path);
     }
 
-    if (!header || header.toString('ascii') !== '%PDF-') {
-        const error = new Error('Invalid PDF file content');
-        error.code = 'INVALID_FILE_CONTENT';
-        throw error;
-    }
+    await inspectSignaturePdf(buffer);
+    await inspectSignatureMalware(buffer);
     file.mimetype = 'application/pdf';
     return file;
 }
