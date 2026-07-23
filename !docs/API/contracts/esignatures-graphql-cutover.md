@@ -131,10 +131,9 @@ Commit `8e756351` deployed through legacy backend `70c49ae0-0624-4778-a658-4dd76
 
 All e-signature application consumers and retained binary/public transports now have production NestJS ownership. Private-S3, required malware scanning, durable worker ownership, public signing, authenticated files, delivery/reminders, and draft-file removal are enabled. Remaining release assurance is deliberately narrower:
 
-1. approve the retention duration plus portable evidence export and tamper-verification policy;
-2. execute an explicitly authorized disposable browser send/sign/decline/completion/download journey through the live provider and object store;
-3. keep OTP impossible to configure unless its complete issuance/throttling/hash/expiry/replay protocol is implemented;
-4. rotate the reused production credentials at the agreed final cutover step.
+1. execute an explicitly authorized disposable browser send/sign/completion/download journey through the live provider and object store;
+2. keep OTP impossible to configure unless its complete issuance/throttling/hash/expiry/replay protocol is implemented;
+3. rotate the reused production credentials by credential family at the agreed final cutover step.
 
 ## Implemented provider-free lifecycle and preview slice
 
@@ -257,3 +256,13 @@ The production infrastructure prerequisite is complete. A private `clamav/clamav
 Commit `b8cfab97` first deployed default-off through retained backend `423d0a03-1bf3-43d9-8135-e39c177ff43a` and GraphQL `76cb0b47-aefc-48f9-a2ac-c7843bee47e7`. With delivery, completion, cleanup, and due-reminder queues all at zero, retained deployment `476a858c-d822-4297-a5cf-de671f368833` disabled legacy reminders and initialized durable cleanup every five minutes. GraphQL deployment `4f033ed4-29e5-42e5-8180-91dc1b0e6e13` then became the sole completion/delivery owner at 60 seconds. Startup logs proved each owner and subsequent queue and error scans remained empty.
 
 Retained deployments `cf4f8231-60ae-473f-980e-b49af8bbaba6` and `98c63370-7ee0-48f0-ab1a-9f97103166be` enabled public reads and mutations independently. Unknown-capability session/file/download, decline, and structurally valid submit probes returned non-enumerating 404 responses; the intentionally unavailable verification endpoint returned 410. Frontend deployment `e3930e4e-3c97-44ab-81a3-d1cfc888d5df` compiled `VITE_SIGNATURE_DELIVERY_GRAPHQL=true` and `VITE_SIGNATURE_FILE_MUTATIONS_GRAPHQL=true`. Its bundle contains the two GraphQL mutation operations; an authenticated Documents reload rendered the existing sent document with no console error while Nest logged successful zero-error `SignatureDocumentReads`. No resend, cancellation, upload, deletion, valid capability, provider call, or user-data mutation was invoked during this final routing gate.
+
+## Evidence retention, export, and integrity policy
+
+There is no product-wide destructive retention timer for non-draft signature evidence. Applicable retention periods vary with the underlying transaction, while [15 U.S.C. § 7001(d)](https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title15-section7001) and [A.R.S. § 44-7012](https://www.azleg.gov/ars/44/07012.htm) require accurate, accessible reproduction for whatever period applies. Until an organization has an approved document-class schedule, Itemize therefore retains sent, in-progress, completed, declined, and cancelled evidence indefinitely and refuses organization deletion that would erase it. Drafts remain ordinary working data and keep their existing explicit cleanup behavior. This is a deliberate fail-closed policy, not an assertion that every record is legally required forever.
+
+A portable evidence export consists of the authenticated original PDF, the completed PDF with its certificate page when completion exists, the ordered `signatureAuditTrail` JSON, and the corresponding strong SHA-256 ETags. The original and completed files remain available at `/api/signatures/documents/:id/file` and `/api/signatures/documents/:id/download`; the audit is organization-scoped GraphQL data. An export verifier recomputes SHA-256 for each downloaded file, compares it with the route ETag, and compares the original digest with the certificate entry in the completed PDF. The certificate also records signer and ordered audit evidence. Export never includes raw storage locators, signing capabilities, or provider secrets.
+
+Any future purge must be a separately reviewed feature with an organization/document-class retention schedule, legal-hold override, advance export, dry-run inventory, append-only authorization audit, and durable object cleanup. No current scheduler may purge non-draft signature evidence.
+
+Commit `7e932a6d` upgrades the retained backend builder and production image to Node 22 and constrains its package engine to Node 22. The complete retained unit suite passes 396/396 under Node `v22.17.0`; production deployment `2a1324a7-f305-4107-8470-c702577870ca` runs Node `v22.23.1`. Site, API, and GraphQL health returned HTTP 200, signature worker ownership logs remained correct, and the prior AWS SDK Node 20 lifecycle warning disappeared.

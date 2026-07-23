@@ -80,6 +80,10 @@ The coordinated signature ownership cutover completed on 2026-07-23 from commit 
 
 Public signing moved independently through retained read deployment `cf4f8231-60ae-473f-980e-b49af8bbaba6` and mutation deployment `98c63370-7ee0-48f0-ab1a-9f97103166be`. Unknown capabilities returned 404 across session/file/download, decline, and valid-shape submit; verification returned its specified 410. Corrected frontend deployment `e3930e4e-3c97-44ab-81a3-d1cfc888d5df` compiled GraphQL delivery/reminder and draft-file-removal consumers on. The deployed bundle contains both operation names, an authenticated Documents reload rendered the existing sent document with no console error, and Nest logged successful `SignatureDocumentReads`. Site, API, and GraphQL health remained HTTP 200. No provider delivery, valid signer mutation, user upload/deletion, or production-row change was used for this routing verification.
 
+The retained runtime upgrade completed from commit `7e932a6d` through deployment `2a1324a7-f305-4107-8470-c702577870ca`. Local Node `v22.17.0` passed the complete retained unit gate at 396/396; the production image reports Node `v22.23.1`. Site, API, and GraphQL health remained HTTP 200, retained startup again logged legacy reminders disabled plus five-minute cleanup ownership, and the former AWS SDK Node 20 lifecycle warning is absent.
+
+Non-draft signature evidence has no automated purge. Until an approved organization/document-class schedule exists, retain sent, in-progress, completed, declined, and cancelled records indefinitely and keep the organization-deletion guard enabled. Export the authenticated original PDF, completed certificate PDF when present, ordered GraphQL audit trail, and their strong SHA-256 ETags. Recompute both file digests, compare them with the ETags, and compare the source digest with the certificate. A future purge requires a legal-hold-aware schedule, advance export, dry run, authorization audit, and durable cleanup; it must not reuse the draft cleanup scheduler.
+
 After deployment, verify:
 
 1. `https://itemize.cloud` returns HTTP `200`;
