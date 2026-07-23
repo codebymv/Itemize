@@ -1,6 +1,6 @@
 # GraphQL production consumer cutover
 
-**Status:** 83 domain consumers plus authentication session, identity lifecycle, and password recovery enabled
+**Status:** 85 domain consumers plus authentication session, identity lifecycle, and password recovery enabled
 
 **Cutover date:** 2026-07-21
 
@@ -8,7 +8,7 @@
 
 The browser uses the production `VITE_API_URL` (`https://itemize-backend-production-92ad.up.railway.app`) for REST and `/graphql`. That backend forwards GraphQL to `itemize.cloud GraphQL Production` over Railway's private network. The proxy has an explicit response allowlist for the three authentication cookies and cache/CSRF headers, allowing NestJS to own browser sessions through the existing API origin. The frontend custom domain itself serves the SPA shell and is not the direct `/graphql` endpoint.
 
-The 83 domain switches represented by the frontend environment contract are enabled in production. `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` independently control the enabled session, registration/verification, and forgot/reset-password protocols. A frontend rebuild is required because Vite embeds these values at build time.
+The 85 domain switches represented by the frontend environment contract are enabled in production. `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` independently control the enabled session, registration/verification, and forgot/reset-password protocols. A frontend rebuild is required because Vite embeds these values at build time.
 
 The enabled families are:
 
@@ -52,14 +52,16 @@ The core consumer evidence reconciliation completed on 2026-07-22 against legacy
 
 The operational consumer evidence reconciliation completed on 2026-07-22 against legacy backend `8cb086aa-1ade-4faa-8557-c2443437c3c3`, GraphQL `352bc5f6-bdf9-4a1b-b18c-51768342c9a3`, and frontend `a9151cb8-4ec0-4843-8cb5-bde960ff1aa9`. Railway confirmed the associated billing, messaging-template, scheduling, calendar-integration, campaign, and workflow switches were already `true`. An authenticated browser rendered all eleven representative routes, and Nest recorded successful zero-error domain reads. This promotes 97 live consumer rows while leaving provider-facing operations under characterization, three blocked analytics definitions, and retained protocols outside the claim. Production verification was read-only and invoked no provider.
 
-The authenticated e-signature read cutover completed on 2026-07-22 from commit `1f00606b` with legacy backend deployment `e9d25b63-f612-43dc-86fe-80be16129611`, GraphQL deployment `2a0c55c3-299e-4d23-81e7-d00225618834`, and flag-enabled frontend deployment `2265bdd2-6e20-4f05-b65a-e5e7782ba53f`. Railway confirmed `VITE_SIGNATURE_DOCUMENT_READS_GRAPHQL=true` and `VITE_SIGNATURE_TEMPLATE_READS_GRAPHQL=true`. An authenticated browser rendered the existing document list, expanded its detail, and rendered the authoritative empty template state without console errors; Nest recorded successful zero-error `SignatureDocumentReads`, `SignatureDocumentRead`, and `SignatureTemplateReads` operations. Multipart uploads, authenticated file streams/downloads, mutations, and public signing remain on their documented HTTP boundaries.
+The authenticated e-signature read cutover completed on 2026-07-22 from commit `1f00606b` with legacy backend deployment `e9d25b63-f612-43dc-86fe-80be16129611`, GraphQL deployment `2a0c55c3-299e-4d23-81e7-d00225618834`, and flag-enabled frontend deployment `2265bdd2-6e20-4f05-b65a-e5e7782ba53f`. Railway confirmed `VITE_SIGNATURE_DOCUMENT_READS_GRAPHQL=true` and `VITE_SIGNATURE_TEMPLATE_READS_GRAPHQL=true`. An authenticated browser rendered the existing document list, expanded its detail, and rendered the authoritative empty template state without console errors; Nest recorded successful zero-error `SignatureDocumentReads`, `SignatureDocumentRead`, and `SignatureTemplateReads` operations. Multipart uploads and authenticated file streams/downloads remain on their documented HTTP boundaries.
+
+The atomic e-signature draft/template mutation cutover completed on 2026-07-22 from commit `8e756351` with legacy backend deployment `70c49ae0-0624-4778-a658-4dd763cf6456`, GraphQL deployment `7625d3ce-e69c-4504-aaf2-1c948715afcc`, and flag-enabled frontend deployment `a8a0c352-1fa3-4f9d-8bef-ccab8ab588d7`. Railway confirmed `VITE_SIGNATURE_DOCUMENT_MUTATIONS_GRAPHQL=true` and `VITE_SIGNATURE_TEMPLATE_MUTATIONS_GRAPHQL=true`. An authenticated browser created and edited a disposable no-file template, instantiated it, edited the resulting draft, created a direct draft, and removed both drafts and the template. The console remained clean, no provider or file side effect occurred, and Nest recorded successful zero-error `CreateSignatureDocument`, `UpdateSignatureDraft`, `DeleteSignatureDraft`, `CreateSignatureTemplate`, `UpdateSignatureTemplate`, `DeleteSignatureTemplate`, and `InstantiateSignatureTemplate` operations. Delivery/lifecycle, binary protocols, and public signing remain on their documented boundaries.
 
 After deployment, verify:
 
 1. `https://itemize.cloud` returns HTTP `200`;
 2. production `/api/health` returns HTTP `200`;
 3. a proxied GraphQL `__typename` query returns HTTP `200`;
-4. all 83 domain `VITE_*_GRAPHQL` variables plus `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` are `true`;
+4. all 85 domain `VITE_*_GRAPHQL` variables plus `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` are `true`;
 5. the frontend and backend deployments resolve to the Git commit containing this document;
 6. GraphQL logs contain no internal-error spike after the frontend replacement.
 

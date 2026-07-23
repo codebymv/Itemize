@@ -1475,20 +1475,20 @@
       "notes": "Production consumer enabled through the independent document-read flag with organization-scoped strict enum filtering, bounded stable pagination, REST-shape mapping, fresh-PostgreSQL interoperability, and authenticated browser/log evidence."
     },
     "POST /api/signatures/documents": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "createSignatureDocument", "parityStatus": "implemented", "risk": "high",
-      "notes": "Implemented behind the independent default-off document-mutation flag; creates one tenant-owned draft aggregate with serialized monthly plan quota, template/contact validation, bounded recipients/fields, and atomic rollback."
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "createSignatureDocument", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Production consumer enabled through the independent document-mutation flag; creates one tenant-owned draft aggregate with serialized monthly plan quota, template/contact validation, bounded recipients/fields, atomic rollback, and authenticated browser/log evidence."
     },
     "GET /api/signatures/documents/:id": {
       "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "signatureDocument", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Production consumer enabled through the independent document-read flag as one repeatable-read tenant-owned aggregate of document, recipients, fields, and ordered audit projection; token hashes, IP/user-agent, audit metadata, storage locations, and file hashes are excluded from the schema."
     },
     "PUT /api/signatures/documents/:id": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "updateSignatureDraft", "parityStatus": "implemented", "risk": "high",
-      "notes": "Implemented behind the independent default-off document-mutation flag as one row-locked metadata, recipient, and field transaction; invalid tenant references or role mappings roll back the complete aggregate."
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "updateSignatureDraft", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Production consumer enabled through the independent document-mutation flag as one row-locked metadata, recipient, and field transaction; invalid tenant references or role mappings roll back the complete aggregate, and authenticated production create/edit cleanup passed."
     },
     "DELETE /api/signatures/documents/:id": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "deleteSignatureDraft", "parityStatus": "implemented", "risk": "high",
-      "notes": "Implemented behind the independent default-off document-mutation flag; the tenant-owned row is locked and only drafts can be deleted, while every non-draft lifecycle state fails with a conflict."
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "deleteSignatureDraft", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Production consumer enabled through the independent document-mutation flag; the tenant-owned row is locked and only drafts can be deleted, every non-draft lifecycle state fails with a conflict, and both disposable production drafts were removed successfully."
     },
     "POST /api/signatures/documents/:id/send": {
       "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDeliveryModule", "targetOperation": "sendSignatureDocument", "parityStatus": "characterized", "risk": "high",
@@ -1535,8 +1535,8 @@
       "notes": "Production consumer enabled through the independent template-read flag with organization scope, deterministic ordering, safe file-presence metadata, REST-shape mapping, fresh-PostgreSQL interoperability, and authenticated browser/log evidence."
     },
     "POST /api/signatures/templates": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "createSignatureTemplate", "parityStatus": "implemented", "risk": "high",
-      "notes": "Implemented behind the independent default-off template-mutation flag as one organization-owned metadata, unique-role, and bounded-field transaction."
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "createSignatureTemplate", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Production consumer enabled through the independent template-mutation flag as one organization-owned metadata, unique-role, and bounded-field transaction, with authenticated browser/log evidence."
     },
     "GET /api/signatures/templates/:id": {
       "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "signatureTemplate", "parityStatus": "consumer-cutover-complete", "risk": "high",
@@ -1547,16 +1547,16 @@
       "notes": "Tenant-authorized private PDF stream with hardened headers, a safe filename, and exact local/S3 signature storage allowlists."
     },
     "PUT /api/signatures/templates/:id": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "updateSignatureTemplate", "parityStatus": "implemented", "risk": "high",
-      "notes": "Implemented behind the independent default-off template-mutation flag; row-locked metadata, role, and field changes commit together and role changes cannot orphan existing role-bound fields."
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "updateSignatureTemplate", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Production consumer enabled through the independent template-mutation flag; row-locked metadata, role, and field changes commit together, role changes cannot orphan existing role-bound fields, and authenticated production editing passed."
     },
     "DELETE /api/signatures/templates/:id": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "deleteSignatureTemplate", "parityStatus": "implemented", "risk": "high",
-      "notes": "Implemented behind the independent default-off template-mutation flag as a row-locked tenant-owned delete; already-instantiated documents retain their immutable snapshot and advisory template ID."
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "deleteSignatureTemplate", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Production consumer enabled through the independent template-mutation flag as a row-locked tenant-owned delete; already-instantiated documents retain their immutable snapshot and advisory template ID, and the disposable production template was removed successfully."
     },
     "POST /api/signatures/templates/:id/instantiate": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "instantiateSignatureTemplate", "parityStatus": "implemented", "risk": "high",
-      "notes": "Implemented behind the independent default-off template-mutation flag as an atomic tenant-owned file/metadata/role/field snapshot with serialized monthly quota and validated recipient contacts."
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "instantiateSignatureTemplate", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Production consumer enabled through the independent template-mutation flag as an atomic tenant-owned file/metadata/role/field snapshot with serialized monthly quota, validated recipient contacts, and authenticated browser/log evidence."
     },
     "POST /api/signatures/templates/upload": {
       "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "uploadSignatureTemplatePdf", "parityStatus": "characterized", "risk": "high",

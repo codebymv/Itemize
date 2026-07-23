@@ -1,6 +1,6 @@
 # E-signatures GraphQL cutover contract
 
-**Status:** Phase 1 authenticated reads live; Phase 2 draft/template mutations implemented behind rollback flags
+**Status:** Phase 1 authenticated reads and Phase 2 draft/template mutations live behind independent rollback flags
 
 **Evidence date:** 2026-07-22
 
@@ -121,13 +121,15 @@ Fresh PostgreSQL now covers concurrent initial-send exclusion, atomic cancellati
 
 ## Implemented draft and template mutation slice
 
-`SignatureDocumentsModule` now implements `createSignatureDocument`, `updateSignatureDraft`, and `deleteSignatureDraft`. `SignatureTemplatesModule` implements `createSignatureTemplate`, `updateSignatureTemplate`, `deleteSignatureTemplate`, and `instantiateSignatureTemplate`. The frontend selects them through independent default-off rollback flags: `VITE_SIGNATURE_DOCUMENT_MUTATIONS_GRAPHQL` and `VITE_SIGNATURE_TEMPLATE_MUTATIONS_GRAPHQL`; multipart source upload and deletion remain on their existing HTTP boundary.
+`SignatureDocumentsModule` now implements `createSignatureDocument`, `updateSignatureDraft`, and `deleteSignatureDraft`. `SignatureTemplatesModule` implements `createSignatureTemplate`, `updateSignatureTemplate`, `deleteSignatureTemplate`, and `instantiateSignatureTemplate`. The frontend selects them through independent production-enabled rollback flags: `VITE_SIGNATURE_DOCUMENT_MUTATIONS_GRAPHQL` and `VITE_SIGNATURE_TEMPLATE_MUTATIONS_GRAPHQL`; multipart source upload and deletion remain on their existing HTTP boundary.
 
-Document metadata, recipient replacement, field replacement, and role-to-recipient binding now share one row-locked transaction. Template metadata, unique roles, and role-bound fields likewise commit together. Creation and instantiation serialize on the organization row before enforcing the starter/unlimited monthly document quota, preventing concurrent requests from oversubscribing it. Inputs bound recipients to tenant-owned contacts, constrain email/role uniqueness, reject unimplemented OTP identity methods, bound aggregate sizes and geometry, and preserve explicit nullable metadata clearing. Non-draft deletion fails with `CONFLICT`.
+Document metadata, recipient replacement, field replacement, and role-to-recipient binding now share one row-locked transaction. Template metadata, unique roles, and role-bound fields likewise commit together. Creation and instantiation serialize on the organization row before enforcing the starter/unlimited monthly document quota, preventing concurrent requests from oversubscribing it. Inputs bind recipients to tenant-owned contacts, constrain email/role uniqueness, reject unimplemented OTP identity methods, bound aggregate sizes and geometry, and preserve explicit nullable metadata clearing. Non-draft deletion fails with `CONFLICT`.
 
 Fresh PostgreSQL proves complete rollback when a child mapping fails after metadata work, GraphQL-write/retained-REST-read interoperability, template snapshot binding, exact draft deletion, and five winners from six concurrent starter-plan creates. Focused adapters prove all seven existing mutation callsites remain on REST while flags are off and switch by family without moving multipart uploads.
 
-The authenticated read slice has completed production consumer validation. The draft/template mutation slice is implemented but remains default-off pending deployment and browser/log validation. Delivery, file-management, and public-signing are not ready for cutover until:
+Commit `8e756351` deployed through legacy backend `70c49ae0-0624-4778-a658-4dd763cf6456`, GraphQL `7625d3ce-e69c-4504-aaf2-1c948715afcc`, and flag-enabled frontend `a8a0c352-1fa3-4f9d-8bef-ccab8ab588d7`. Railway confirms both mutation flags are `true`. An authenticated production browser created and edited a no-file template, instantiated it, edited the resulting draft, created a separate draft, and deleted both drafts and the template without console errors or provider work. Nest recorded successful zero-error operations for all seven mutation names, and the existing sent document remained untouched.
+
+The authenticated read and draft/template mutation slices have completed production consumer validation. Delivery, file-management, and public-signing are not ready for cutover until:
 
 1. public field values, shared ownership, sequential routing, expiry, decline, and terminal races have complete validation and PostgreSQL coverage;
 2. source/signed artifacts use immutable versioned private storage with safe parsing, scanning, delivery, cleanup, and no arbitrary URL proxy;
