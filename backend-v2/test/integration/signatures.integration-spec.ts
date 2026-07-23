@@ -8,6 +8,11 @@ import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
+import { SignatureDeliveryJobsService } from '../../src/signature-delivery/signature-delivery-jobs.service';
+import {
+  WORKFLOW_EMAIL_PROVIDER,
+  WorkflowEmailProvider,
+} from '../../src/workflow-jobs/workflow-side-effect.providers';
 
 describe('E-signature GraphQL read contract', () => {
   let app: NestExpressApplication;
@@ -24,6 +29,10 @@ describe('E-signature GraphQL read contract', () => {
   let foreignDocumentId: number;
   let templateId: number;
   let foreignTemplateId: number;
+  let deliveryJobs: SignatureDeliveryJobsService;
+  const deliveryEmail = {
+    send: jest.fn(),
+  } as jest.Mocked<WorkflowEmailProvider>;
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -158,7 +167,10 @@ describe('E-signature GraphQL read contract', () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PG_POOL)
       .useValue(pool)
+      .overrideProvider(WORKFLOW_EMAIL_PROVIDER)
+      .useValue(deliveryEmail)
       .compile();
+    deliveryJobs = moduleRef.get(SignatureDeliveryJobsService);
     app = moduleRef.createNestApplication<NestExpressApplication>({
       bodyParser: false,
       logger: false,
@@ -522,6 +534,145 @@ describe('E-signature GraphQL read contract', () => {
     );
     expect(invalidPreview.body.errors[0].extensions).toMatchObject({
       code: 'BAD_USER_INPUT', reason: 'EMPTY_SIGNATURE_EMAIL_MESSAGE',
+    });
+  });
+
+  it('durably sends, reminds, schedules, and cancels without persisting raw signing capabilities', async () => {
+    deliveryEmail.send.mockReset().mockResolvedValue({ providerId: 'signature-provider-1' });
+    const inserted = await pool.query<{ id: number }>(
+      `INSERT INTO signature_documents
+         (organization_id,title,message,file_url,file_name,file_size,file_type,status,
+          expiration_days,sender_name,sender_email,routing_mode,created_by,created_at,updated_at)
+       VALUES ($1,'Durable delivery','Please sign','private/durable.pdf','durable.pdf',800,
+          'application/pdf','draft',30,'Member','member@test.itemize','parallel',$2,
+          '2026-01-01T00:00:00Z','2026-01-01T00:00:00Z')
+       RETURNING id`,
+      [organizationId, memberId],
+    );
+    const documentId = Number(inserted.rows[0].id);
+    const recipient = await pool.query<{ id: number }>(
+      `INSERT INTO signature_recipients
+         (document_id,organization_id,name,email,signing_order,status,routing_status)
+       VALUES ($1,$2,'Durable Signer','durable-signer@test.itemize',1,'pending','active')
+       RETURNING id`,
+      [documentId, organizationId],
+    );
+    const recipientId = Number(recipient.rows[0].id);
+    const send = () => graphql(
+      memberToken,
+      organizationId,
+      'mutation Send($id:Int!){sendSignatureDocument(id:$id){id status}}',
+      { id: documentId },
+    );
+    const concurrent = await Promise.all([send(), send()]);
+    const successes = concurrent.filter((result) => !result.body.errors);
+    const conflicts = concurrent.filter((result) => result.body.errors);
+    expect(successes).toHaveLength(1);
+    expect(successes[0].body.data.sendSignatureDocument).toMatchObject({
+      id: documentId,
+      status: 'SENT',
+    });
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0].body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'SIGNATURE_DOCUMENT_NOT_DRAFT',
+    });
+
+    const queued = await pool.query<{
+      id: number;
+      idempotency_key: string;
+      payload: Record<string, unknown>;
+      signing_token_hash: string;
+    }>(
+      `SELECT outbox.id,outbox.idempotency_key,outbox.payload,recipient.signing_token_hash
+       FROM signature_delivery_outbox outbox
+       JOIN signature_recipients recipient ON recipient.id=outbox.recipient_id
+       WHERE outbox.document_id=$1 AND outbox.delivery_type='signature_request'`,
+      [documentId],
+    );
+    expect(queued.rows).toHaveLength(1);
+    expect(queued.rows[0].signing_token_hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(JSON.stringify(queued.rows[0].payload)).not.toContain(
+      queued.rows[0].signing_token_hash,
+    );
+    expect(Object.keys(queued.rows[0].payload)).not.toContain('token');
+
+    const workerRace = await Promise.all([
+      deliveryJobs.run({ outboxId: queued.rows[0].id }),
+      deliveryJobs.run({ outboxId: queued.rows[0].id }),
+    ]);
+    expect(workerRace.reduce((sum, run) => sum + run.sent, 0)).toBe(1);
+    expect(deliveryEmail.send).toHaveBeenCalledTimes(1);
+    expect(deliveryEmail.send).toHaveBeenCalledWith(expect.objectContaining({
+      idempotencyKey: queued.rows[0].idempotency_key,
+    }));
+    expect(Number((await pool.query(
+      `SELECT COUNT(*) AS total FROM signature_audit_log
+       WHERE document_id=$1 AND event_type='sent'`,
+      [documentId],
+    )).rows[0].total)).toBe(1);
+
+    const invalidSchedule = await graphql(
+      memberToken,
+      organizationId,
+      'mutation Schedule($id:Int!,$days:Int!){scheduleSignatureReminders(id:$id,days:$days){reminderCount}}',
+      { id: documentId, days: 0 },
+    );
+    expect(invalidSchedule.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'INVALID_SIGNATURE_REMINDER_DAYS',
+    });
+    const scheduled = await graphql(
+      memberToken,
+      organizationId,
+      'mutation Schedule($id:Int!,$days:Int!){scheduleSignatureReminders(id:$id,days:$days){reminderCount scheduledAt}}',
+      { id: documentId, days: 2 },
+    );
+    expect(scheduled.body.errors).toBeUndefined();
+    expect(scheduled.body.data.scheduleSignatureReminders.reminderCount).toBe(1);
+    await pool.query(
+      `UPDATE signature_reminders SET scheduled_at=NOW()-INTERVAL '1 second'
+       WHERE document_id=$1 AND status='pending'`,
+      [documentId],
+    );
+    deliveryEmail.send.mockResolvedValue({ providerId: 'signature-provider-2' });
+    await expect(deliveryJobs.run()).resolves.toMatchObject({
+      remindersQueued: 1,
+      sent: 1,
+    });
+
+    const remind = await graphql(
+      memberToken,
+      organizationId,
+      'mutation Remind($id:Int!){sendSignatureReminder(id:$id){id status}}',
+      { id: documentId },
+    );
+    expect(remind.body.errors).toBeUndefined();
+    const pendingReminder = await pool.query<{ id: number }>(
+      `SELECT id FROM signature_delivery_outbox
+       WHERE document_id=$1 AND delivery_type='signature_reminder' AND status='queued'`,
+      [documentId],
+    );
+    expect(pendingReminder.rows).toHaveLength(1);
+
+    const cancel = await graphql(
+      memberToken,
+      organizationId,
+      'mutation Cancel($id:Int!){cancelSignatureDocument(id:$id){id status}}',
+      { id: documentId },
+    );
+    expect(cancel.body.errors).toBeUndefined();
+    expect(cancel.body.data.cancelSignatureDocument.status).toBe('CANCELLED');
+    const terminal = await pool.query(
+      `SELECT recipient.signing_token_hash,outbox.status
+       FROM signature_recipients recipient
+       JOIN signature_delivery_outbox outbox ON outbox.id=$2
+       WHERE recipient.id=$1`,
+      [recipientId, pendingReminder.rows[0].id],
+    );
+    expect(terminal.rows[0]).toMatchObject({
+      signing_token_hash: null,
+      status: 'cancelled',
     });
   });
 

@@ -92,6 +92,7 @@ describe('Environment Validation', () => {
     expect(env.VITE_SIGNATURE_TEMPLATE_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_SIGNATURE_CANCELLATION_GRAPHQL).toBe('false');
     expect(env.VITE_SIGNATURE_EMAIL_PREVIEW_GRAPHQL).toBe('false');
+    expect(env.VITE_SIGNATURE_DELIVERY_GRAPHQL).toBe('false');
     expect(env.VITE_DEV_AUTH_PROBE_WITHOUT_HINT).toBe('false');
   });
 });

@@ -80,6 +80,9 @@ const {
 const {
   runAdminEmailDeliveryMigration,
 } = require('./db_admin_email_delivery_migrations');
+const {
+  runSignatureDeliveryMigration,
+} = require('./db_signature_delivery_migrations');
 
 // Import Forms migrations
 const { runAllFormsMigrations } = require('./db_forms_migrations');
@@ -596,6 +599,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'subscription_webhook_reconciliation', runSubscriptionWebhookReconciliationMigration);
     await runMigrationOnce(pool, 'module_esignatures', runAllESignatureMigrations);
     await runMigrationOnce(pool, 'module_esignatures_mvp_plus', runESignatureMvpPlusMigrations);
+    await runMigrationOnce(pool, 'signature_delivery_outbox', runSignatureDeliveryMigration);
     await runMigrationOnce(pool, 'module_vault', runVaultMigrations);
     
     // Admin email communications - extend email_logs for admin use

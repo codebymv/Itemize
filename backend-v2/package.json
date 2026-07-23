@@ -19,6 +19,7 @@
     "jobs:workflow-triggers": "node dist/run-workflow-triggers.js",
     "jobs:workflow-enrollments": "node dist/run-workflow-enrollments.js",
     "jobs:workflow-side-effects": "node dist/run-workflow-side-effects.js",
+    "jobs:signature-deliveries": "node dist/run-signature-deliveries.js",
     "test": "jest --runInBand",
     "test:integration": "jest --config jest.integration.config.cjs --runInBand",
     "test:watch": "jest --watch",

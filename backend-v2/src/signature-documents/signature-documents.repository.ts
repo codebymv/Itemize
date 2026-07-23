@@ -237,6 +237,13 @@ export class SignatureDocumentsRepository {
         [id],
       );
       await client.query(
+        `UPDATE signature_delivery_outbox
+         SET status='cancelled',cancelled_at=CURRENT_TIMESTAMP,
+           cancellation_reason='document_cancelled',updated_at=CURRENT_TIMESTAMP
+         WHERE document_id=$1 AND status IN ('queued','retry','processing')`,
+        [id],
+      );
+      await client.query(
         `INSERT INTO signature_audit_log
            (document_id,event_type,description,created_at)
          VALUES ($1,'cancelled','Signature document cancelled',CURRENT_TIMESTAMP)`,

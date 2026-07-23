@@ -329,7 +329,7 @@ describe('test database schema contract', () => {
         );
 
         expect(startupSource).toContain(
-            "WHERE version = '040_reputation_request_deliveries'"
+            "WHERE version = '042_signature_delivery_outbox'"
         );
     });
 
@@ -533,6 +533,18 @@ describe('test database schema contract', () => {
         const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
         expect(sql).toContain('notification_attempt_count');
         expect(sql).toContain('notification_lease_expires_at');
+        expect(sql).toContain("'dead_letter'");
+    });
+
+    test('production migration stream creates the signature delivery outbox', async () => {
+        const migration = require('../../../scripts/migrations/042_signature_delivery_outbox');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS signature_delivery_outbox');
+        expect(sql).toContain('idx_signature_delivery_outbox_claim');
+        expect(sql).toContain('idempotency_key VARCHAR(255) NOT NULL UNIQUE');
         expect(sql).toContain("'dead_letter'");
     });
 

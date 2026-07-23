@@ -500,6 +500,21 @@ export const cancelSignatureDocumentViaGraphql=async(id:number,organizationId?:n
   return mapDocument(data.cancelSignatureDocument);
 };
 
+export const sendSignatureDocumentViaGraphql=async(id:number,organizationId?:number):Promise<SignatureDocument>=>{
+  const data=await graphqlMutationRequest<{sendSignatureDocument:GqlDocument},{id:number}>(`mutation SendSignatureDocument($id:Int!){sendSignatureDocument(id:$id){${documentFields}}}`,{id},organizationId);
+  return mapDocument(data.sendSignatureDocument);
+};
+
+export const remindSignatureDocumentViaGraphql=async(id:number,organizationId?:number):Promise<SignatureDocument>=>{
+  const data=await graphqlMutationRequest<{sendSignatureReminder:GqlDocument},{id:number}>(`mutation SendSignatureReminder($id:Int!){sendSignatureReminder(id:$id){${documentFields}}}`,{id},organizationId);
+  return mapDocument(data.sendSignatureReminder);
+};
+
+export const scheduleSignatureRemindersViaGraphql=async(id:number,days=2,organizationId?:number):Promise<{scheduledAt:string;reminderCount:number}>=>{
+  const data=await graphqlMutationRequest<{scheduleSignatureReminders:{scheduledAt:string;reminderCount:number}},{id:number;days:number}>(`mutation ScheduleSignatureReminders($id:Int!,$days:Int!){scheduleSignatureReminders(id:$id,days:$days){scheduledAt reminderCount}}`,{id,days},organizationId);
+  return data.scheduleSignatureReminders;
+};
+
 export const getSignatureEmailPreviewViaGraphql=async(input:SignatureEmailPreviewRequest,organizationId?:number):Promise<SignatureEmailPreviewResponse>=>{
   const variables={input:{message:input.message,...(input.documentTitle===undefined?{}:{documentTitle:input.documentTitle}),...(input.senderName===undefined?{}:{senderName:input.senderName}),...(input.senderEmail===undefined?{}:{senderEmail:input.senderEmail}),...(input.recipientName===undefined?{}:{recipientName:input.recipientName}),...(input.expiresAt===undefined?{}:{expiresAt:input.expiresAt})}};
   const data=await graphqlRequest<{previewSignatureEmail:SignatureEmailPreviewResponse},typeof variables>(`query SignatureEmailPreview($input:SignatureEmailPreviewInput!){previewSignatureEmail(input:$input){html subject}}`,variables,organizationId);

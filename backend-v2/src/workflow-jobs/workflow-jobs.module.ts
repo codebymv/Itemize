@@ -32,6 +32,6 @@ import { WorkflowJobsSchedulerService } from './workflow-jobs-scheduler.service'
     { provide: WORKFLOW_WEBHOOK_PROVIDER, useExisting: ControlledWorkflowWebhookProvider },
   ],
   exports: [WorkflowEnrollmentJobsRepository, WorkflowEnrollmentJobsService, WorkflowTriggerJobsService,
-    WorkflowSideEffectJobsRepository, WorkflowSideEffectJobsService],
+    WorkflowSideEffectJobsRepository, WorkflowSideEffectJobsService, WORKFLOW_EMAIL_PROVIDER],
 })
 export class WorkflowJobsModule {}

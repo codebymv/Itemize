@@ -1,6 +1,6 @@
 import api, { getApiUrl } from '@/lib/api';
-import { isSignatureCancellationGraphqlEnabled, isSignatureDocumentGraphqlMutationsEnabled, isSignatureDocumentGraphqlReadsEnabled, isSignatureEmailPreviewGraphqlEnabled, isSignatureTemplateGraphqlMutationsEnabled, isSignatureTemplateGraphqlReadsEnabled } from './graphqlClient';
-import { cancelSignatureDocumentViaGraphql, createSignatureDocumentViaGraphql, createSignatureTemplateViaGraphql, deleteSignatureDocumentViaGraphql, deleteSignatureTemplateViaGraphql, getSignatureAuditViaGraphql, getSignatureDocumentViaGraphql, getSignatureEmailPreviewViaGraphql, getSignatureTemplateViaGraphql, instantiateSignatureTemplateViaGraphql, listSignatureDocumentsViaGraphql, listSignatureTemplatesViaGraphql, updateSignatureDocumentViaGraphql, updateSignatureTemplateViaGraphql } from './signaturesGraphql';
+import { isSignatureCancellationGraphqlEnabled, isSignatureDeliveryGraphqlEnabled, isSignatureDocumentGraphqlMutationsEnabled, isSignatureDocumentGraphqlReadsEnabled, isSignatureEmailPreviewGraphqlEnabled, isSignatureTemplateGraphqlMutationsEnabled, isSignatureTemplateGraphqlReadsEnabled } from './graphqlClient';
+import { cancelSignatureDocumentViaGraphql, createSignatureDocumentViaGraphql, createSignatureTemplateViaGraphql, deleteSignatureDocumentViaGraphql, deleteSignatureTemplateViaGraphql, getSignatureAuditViaGraphql, getSignatureDocumentViaGraphql, getSignatureEmailPreviewViaGraphql, getSignatureTemplateViaGraphql, instantiateSignatureTemplateViaGraphql, listSignatureDocumentsViaGraphql, listSignatureTemplatesViaGraphql, remindSignatureDocumentViaGraphql, sendSignatureDocumentViaGraphql, updateSignatureDocumentViaGraphql, updateSignatureTemplateViaGraphql } from './signaturesGraphql';
 
 type ApiPayload = Record<string, unknown>;
 
@@ -181,6 +181,7 @@ export const getSignatureDocument = async (id: number) => {
 };
 
 export const sendSignatureDocument = async (id: number) => {
+  if (isSignatureDeliveryGraphqlEnabled()) return sendSignatureDocumentViaGraphql(id);
   const response = await api.post(`/api/signatures/documents/${id}/send`);
   return unwrapResponse<SignatureDocument>(response.data);
 };
@@ -198,6 +199,7 @@ export const deleteSignatureDocument = async (id: number) => {
 };
 
 export const remindSignatureDocument = async (id: number) => {
+  if (isSignatureDeliveryGraphqlEnabled()) return remindSignatureDocumentViaGraphql(id);
   const response = await api.post(`/api/signatures/documents/${id}/remind`);
   return unwrapResponse<SignatureDocument>(response.data);
 };

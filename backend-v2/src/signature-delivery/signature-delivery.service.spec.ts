@@ -1,13 +1,47 @@
 import { SignatureDeliveryRepository } from './signature-delivery.repository';
 import { SignatureDeliveryService } from './signature-delivery.service';
+import { SignatureDocumentsService } from '../signature-documents/signature-documents.service';
 
 describe('SignatureDeliveryService', () => {
-  const repository = { hasFeatureAccess: jest.fn() } as unknown as jest.Mocked<SignatureDeliveryRepository>;
-  const service = new SignatureDeliveryService(repository);
+  const repository = {
+    hasFeatureAccess: jest.fn(),
+    enqueueInitial: jest.fn(),
+    enqueueReminder: jest.fn(),
+    scheduleReminders: jest.fn(),
+  } as unknown as jest.Mocked<SignatureDeliveryRepository>;
+  const documents = {
+    detail: jest.fn(),
+  } as unknown as jest.Mocked<SignatureDocumentsService>;
+  const service = new SignatureDeliveryService(repository, documents);
 
   beforeEach(() => {
     jest.clearAllMocks();
     repository.hasFeatureAccess.mockResolvedValue(true);
+    repository.enqueueInitial.mockResolvedValue(true);
+    repository.enqueueReminder.mockResolvedValue(true);
+    documents.detail.mockResolvedValue({
+      document: { id: 7, title: 'NDA' },
+    } as Awaited<ReturnType<SignatureDocumentsService['detail']>>);
+  });
+
+  it('queues send and reminder intents before returning authoritative document state', async () => {
+    await expect(service.send(3, 7)).resolves.toMatchObject({ id: 7 });
+    await expect(service.remind(3, 7)).resolves.toMatchObject({ id: 7 });
+    expect(repository.enqueueInitial).toHaveBeenCalledWith(3, 7);
+    expect(repository.enqueueReminder).toHaveBeenCalledWith(3, 7);
+    expect(documents.detail).toHaveBeenNthCalledWith(1, 3, 7);
+    expect(documents.detail).toHaveBeenNthCalledWith(2, 3, 7);
+  });
+
+  it('validates reminder schedules and maps repository state conflicts', async () => {
+    repository.scheduleReminders.mockResolvedValue({
+      scheduledAt: new Date('2026-08-01T00:00:00Z'),
+      reminderCount: 2,
+    });
+    await expect(service.schedule(3, 7, 5)).resolves.toMatchObject({ reminderCount: 2 });
+    await expect(service.schedule(3, 7, 0)).rejects.toMatchObject({
+      extensions: { code: 'BAD_USER_INPUT', reason: 'INVALID_SIGNATURE_REMINDER_DAYS' },
+    });
   });
 
   it('renders a bounded server-controlled preview and escapes user content', async () => {

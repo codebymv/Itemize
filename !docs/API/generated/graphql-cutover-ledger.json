@@ -12474,7 +12474,7 @@
           "path": "/api/public/sign/:token",
           "rawPath": "/api/public/sign/${token}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 238,
+          "line": 240,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12515,7 +12515,7 @@
           "path": "/api/public/sign/:token",
           "rawPath": "/api/public/sign/${token}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 243,
+          "line": 245,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12562,7 +12562,7 @@
           "path": "/api/public/sign/:token/decline",
           "rawPath": "/api/public/sign/${token}/decline",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 248,
+          "line": 250,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14246,7 +14246,7 @@
           "path": "/api/signatures/documents/:id",
           "rawPath": "/api/signatures/documents/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 196,
+          "line": 197,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14385,7 +14385,7 @@
           "path": "/api/signatures/documents/:id/audit",
           "rawPath": "/api/signatures/documents/${id}/audit",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 233,
+          "line": 235,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14419,7 +14419,7 @@
           "path": "/api/signatures/documents/:id/cancel",
           "rawPath": "/api/signatures/documents/${id}/cancel",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 190,
+          "line": 191,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14562,7 +14562,7 @@
           "path": "/api/signatures/documents/:id/remind",
           "rawPath": "/api/signatures/documents/${id}/remind",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 201,
+          "line": 203,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14581,8 +14581,8 @@
       "owner": "esignatures",
       "targetOperation": "sendSignatureReminder",
       "targetModule": "SignatureDeliveryModule",
-      "parityStatus": "characterized",
-      "notes": "Rotates links only for active unsigned recipients without reopening signed/declined recipients or changing document lifecycle.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind the default-off delivery flag. Active unsigned recipients receive new hash-only capabilities and durable reminder intents; queued/retry work is superseded, processing work fails closed with a conflict, and signed/declined recipients remain terminal.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14618,8 +14618,8 @@
       "owner": "esignatures",
       "targetOperation": "scheduleSignatureReminders",
       "targetModule": "SignatureDeliveryModule",
-      "parityStatus": "characterized",
-      "notes": "Organization-owned active document, bounded delay, active recipients, durable idempotent reminder work.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind the default-off delivery flag. Organization-owned active documents accept a bounded 1-365 day delay, persist recipient-scoped schedules, and convert due reminders into idempotent leased delivery intents while skipping terminal documents and recipients.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14640,7 +14640,7 @@
           "path": "/api/signatures/documents/:id/send",
           "rawPath": "/api/signatures/documents/${id}/send",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 184,
+          "line": 185,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14677,8 +14677,8 @@
       "owner": "esignatures",
       "targetOperation": "sendSignatureDocument",
       "targetModule": "SignatureDeliveryModule",
-      "parityStatus": "characterized",
-      "notes": "Locks a draft so concurrent initial sends issue one token/email intent and one sent audit event.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind a default-off delivery flag. One document-row-locked transaction moves the draft to sent, derives hash-only recipient capabilities, and appends immutable delivery intents; a leased worker uses stable provider idempotency keys with retry/dead-letter state, and PostgreSQL proves one winner and one provider call under concurrent mutation/worker races.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14746,7 +14746,7 @@
           "path": "/api/signatures/email/preview",
           "rawPath": "/api/signatures/email/preview",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 227,
+          "line": 229,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14780,7 +14780,7 @@
           "path": "/api/signatures/templates",
           "rawPath": "/api/signatures/templates",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 318,
+          "line": 320,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14814,7 +14814,7 @@
           "path": "/api/signatures/templates",
           "rawPath": "/api/signatures/templates",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 292,
+          "line": 294,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14848,7 +14848,7 @@
           "path": "/api/signatures/templates/:id",
           "rawPath": "/api/signatures/templates/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 336,
+          "line": 338,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14882,7 +14882,7 @@
           "path": "/api/signatures/templates/:id",
           "rawPath": "/api/signatures/templates/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 324,
+          "line": 326,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14916,7 +14916,7 @@
           "path": "/api/signatures/templates/:id",
           "rawPath": "/api/signatures/templates/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 301,
+          "line": 303,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14981,7 +14981,7 @@
           "path": "/api/signatures/templates/:id/instantiate",
           "rawPath": "/api/signatures/templates/${id}/instantiate",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 330,
+          "line": 332,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15015,7 +15015,7 @@
           "path": "/api/signatures/templates/upload",
           "rawPath": "/api/signatures/templates/upload",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 310,
+          "line": 312,
           "client": "api",
           "literalInterpolation": false
         }

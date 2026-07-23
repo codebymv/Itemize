@@ -129,12 +129,12 @@ Fresh PostgreSQL proves complete rollback when a child mapping fails after metad
 
 Commit `8e756351` deployed through legacy backend `70c49ae0-0624-4778-a658-4dd763cf6456`, GraphQL `7625d3ce-e69c-4504-aaf2-1c948715afcc`, and flag-enabled frontend `a8a0c352-1fa3-4f9d-8bef-ccab8ab588d7`. Railway confirms both mutation flags are `true`. An authenticated production browser created and edited a no-file template, instantiated it, edited the resulting draft, created a separate draft, and deleted both drafts and the template without console errors or provider work. Nest recorded successful zero-error operations for all seven mutation names, and the existing sent document remained untouched.
 
-The authenticated read and draft/template mutation slices have completed production consumer validation. Delivery, file-management, and public-signing are not ready for cutover until:
+The authenticated read and draft/template mutation slices have completed production consumer validation. Delivery is implemented behind a default-off consumer switch; file-management and public-signing are not ready for cutover until:
 
 1. public field values, shared ownership, sequential routing, expiry, decline, and terminal races have complete validation and PostgreSQL coverage;
 2. source/signed artifacts use immutable versioned private storage with safe parsing, scanning, delivery, cleanup, and no arbitrary URL proxy;
 3. audit evidence is append-only under database permissions with defined retention/export and integrity verification;
-4. PDF generation, initial delivery, completion notices, and reminders use durable idempotent jobs outside transactions;
+4. PDF generation and completion notices use durable idempotent jobs outside transactions, and the implemented request/reminder worker receives production scheduling plus a controlled provider canary;
 5. OTP verification is fully implemented and tested or remains impossible to configure;
 6. the remaining GraphQL mutations, retained HTTP protocols, and critical draft/send/sign/decline/cancel/download browser journeys pass semantic parity and rollback tests.
 
@@ -147,3 +147,13 @@ The authenticated read and draft/template mutation slices have completed product
 Focused service/adapter tests and the disposable PostgreSQL gate pass: 489/489 retained Express tests and 218/218 Nest integration tests. PostgreSQL proves cancellation idempotency, capability/reminder revocation, one audit event, completed-state refusal, foreign-tenant concealment, escaped preview output, and invalid-message rejection without provider work.
 
 Commit `792d4891` deployed through retained backend `0464fd60-9b7e-4a27-b551-1f5f7af4c681`, GraphQL `f69286e1-f70e-4ef6-8a62-40f6a47138bc`, default-off frontend `ba71644c-6752-4d5a-abcc-d48678d6c5f9`, and flag-enabled frontend `d747d956-49a7-4d02-8665-007f9c34a5fa`. An authenticated production editor rendered a server-origin preview for a disposable draft; a separate inert sent fixture cancelled through GraphQL with token and expiry revocation, routing lock, pending-reminder cancellation, and exactly one audit event. Nest logged both operations with status 200 and zero errors, the browser logged no console errors, both fixtures were removed, and the original sent document remained unchanged.
+
+## Implemented durable request and reminder delivery slice
+
+`SignatureDeliveryModule` now implements `sendSignatureDocument`, `sendSignatureReminder`, and `scheduleSignatureReminders`. The frontend routes the existing send and remind consumers together through `VITE_SIGNATURE_DELIVERY_GRAPHQL`, which remains default-off until the production worker and provider canary are deliberately enabled.
+
+Migration 042 adds `signature_delivery_outbox`. Initial send locks the draft, validates its PDF and recipients, snapshots provider payloads, derives deterministic signing capabilities from the existing JWT secret (or an optional dedicated derivation key), stores only SHA-256 capability hashes on recipients, and commits lifecycle, routing, audit, and delivery intents atomically. Sequential routing activates only the first recipient; parallel routing activates all recipients. Manual reminders target only active unsigned recipients, supersede queued/retry attempts, and refuse to rotate a capability while delivery is processing.
+
+The worker converts due schedules into recipient-scoped intents, leases work with `SKIP LOCKED`, recovers expired leases, calls the shared Resend provider with a stable idempotency key, and fences provider acknowledgement by claim generation. Failures are redacted and move through bounded exponential retry or dead-letter states. Cancellation revokes capabilities and cancels queued, retrying, or processing intents; a late provider acknowledgement cannot restore cancelled database state.
+
+Focused service, renderer, adapter, and migration tests pass. The clean-schema gate passes 489/489 retained Express tests and 219/219 Nest PostgreSQL integration tests; the full Nest unit suite passes 373/373 and the frontend suite passes 355/355. PostgreSQL proves one initial-send winner, one provider call under concurrent workers, no raw capability in the outbox, scheduled reminder conversion, manual reminder supersession, bounded delays, audit fencing, and cancellation of queued delivery.

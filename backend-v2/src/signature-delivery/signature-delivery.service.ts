@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { SignatureEmailPreviewInput } from './signature-delivery.inputs';
 import { SignatureDeliveryRepository } from './signature-delivery.repository';
-import { SignatureEmailPreview } from './signature-delivery.types';
+import { SignatureDeliveryStateError } from './signature-delivery.repository';
+import { SignatureDocumentsService } from '../signature-documents/signature-documents.service';
+import { SignatureDocument } from '../signature-documents/signature-document.types';
+import { SignatureEmailPreview, SignatureReminderSchedule } from './signature-delivery.types';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const escapeHtml = (value: string): string => value.replace(/[&<>"']/g, (character) => ({
@@ -25,14 +28,64 @@ const frontendOrigin = (): string => {
 
 @Injectable()
 export class SignatureDeliveryService {
-  constructor(private readonly repository: SignatureDeliveryRepository) {}
+  constructor(
+    private readonly repository: SignatureDeliveryRepository,
+    private readonly documents: SignatureDocumentsService,
+  ) {}
+
+  async send(organizationId: number, id: number): Promise<SignatureDocument> {
+    await this.access(organizationId);
+    this.id(id);
+    try {
+      if (!(await this.repository.enqueueInitial(organizationId, id))) {
+        throw itemizeGraphqlError('Signature document not found', 'NOT_FOUND');
+      }
+    } catch (error) {
+      this.deliveryError(error);
+    }
+    return (await this.documents.detail(organizationId, id)).document;
+  }
+
+  async remind(organizationId: number, id: number): Promise<SignatureDocument> {
+    await this.access(organizationId);
+    this.id(id);
+    try {
+      if (!(await this.repository.enqueueReminder(organizationId, id))) {
+        throw itemizeGraphqlError('Signature document not found', 'NOT_FOUND');
+      }
+    } catch (error) {
+      this.deliveryError(error);
+    }
+    return (await this.documents.detail(organizationId, id)).document;
+  }
+
+  async schedule(
+    organizationId: number,
+    id: number,
+    days: number,
+  ): Promise<SignatureReminderSchedule> {
+    await this.access(organizationId);
+    this.id(id);
+    if (!Number.isSafeInteger(days) || days < 1 || days > 365) {
+      throw this.bad(
+        'Reminder days must be an integer between 1 and 365',
+        'days',
+        'INVALID_SIGNATURE_REMINDER_DAYS',
+      );
+    }
+    try {
+      const result = await this.repository.scheduleReminders(organizationId, id, days);
+      if (!result) {
+        throw itemizeGraphqlError('Active signature document not found', 'NOT_FOUND');
+      }
+      return result;
+    } catch (error) {
+      this.deliveryError(error);
+    }
+  }
 
   async preview(organizationId: number, input: SignatureEmailPreviewInput): Promise<SignatureEmailPreview> {
-    if (!(await this.repository.hasFeatureAccess(organizationId))) {
-      throw itemizeGraphqlError('E-Signatures require an upgrade.', 'FORBIDDEN', {
-        reason: 'FEATURE_NOT_AVAILABLE',
-      });
-    }
+    await this.access(organizationId);
     const message = this.required(input.message, 'message', 50_000);
     const documentTitle = this.optional(input.documentTitle, 'documentTitle', 255);
     const senderName = this.optional(input.senderName, 'senderName', 255);
@@ -91,5 +144,26 @@ export class SignatureDeliveryService {
 
   private bad(message: string, field: string, reason: string) {
     return itemizeGraphqlError(message, 'BAD_USER_INPUT', { field, reason });
+  }
+
+  private async access(organizationId: number): Promise<void> {
+    if (!(await this.repository.hasFeatureAccess(organizationId))) {
+      throw itemizeGraphqlError('E-Signatures require an upgrade.', 'FORBIDDEN', {
+        reason: 'FEATURE_NOT_AVAILABLE',
+      });
+    }
+  }
+
+  private id(value: number): void {
+    if (!Number.isSafeInteger(value) || value < 1) {
+      throw this.bad('id must be a positive integer', 'id', 'INVALID_SIGNATURE_DOCUMENT_ID');
+    }
+  }
+
+  private deliveryError(error: unknown): never {
+    if (error instanceof SignatureDeliveryStateError) {
+      throw itemizeGraphqlError(error.message, 'CONFLICT', { reason: error.reason });
+    }
+    throw error;
   }
 }
