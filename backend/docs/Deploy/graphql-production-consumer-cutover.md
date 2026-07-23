@@ -66,6 +66,8 @@ The public-signing retained-HTTP implementation deployed default-off on 2026-07-
 
 Signature PDF storage hardening deployed default-off on 2026-07-23 from commit `0eb05ead` through GraphQL deployment `bd862f41-169e-4603-95ae-b47d638d972f`. Nest started successfully and a same-origin GraphQL probe returned HTTP 200. Railway confirmed that the GraphQL service still has no AWS storage variables, so no object read/write, credential copy, worker run, or data mutation occurred.
 
+Immutable signature source versioning deployed default-off on 2026-07-23 from commit `d322f844` through retained backend `9409092a-e540-483e-a951-50485db89231` and GraphQL `906891d1-3f36-4f1a-a63a-ff92c84838ef`. Both deployments became healthy; production health reported a connected database and the same-origin GraphQL `__typename` probe returned HTTP 200. Railway confirmed `SIGNATURE_FILE_UPLOADS_NESTJS_ENABLED`, `SIGNATURE_FILE_READS_NESTJS_ENABLED`, `PUBLIC_SIGNING_READS_NESTJS_ENABLED`, and `PUBLIC_SIGNING_MUTATIONS_NESTJS_ENABLED` remain absent. No migration, object read/write, cleanup/completion worker, valid signer capability, or production data mutation ran. The retained image emitted an AWS SDK lifecycle warning because it still uses Node 20; upgrade that service to Node 22 before AWS SDK releases after the first week of January 2027.
+
 After deployment, verify:
 
 1. `https://itemize.cloud` returns HTTP `200`;
