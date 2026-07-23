@@ -12488,19 +12488,19 @@
           "method": "GET",
           "path": "/api/public/sign/:invalidToken",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1194
+          "line": 1201
         },
         {
           "method": "GET",
           "path": "/api/public/sign/:secondToken",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1312
+          "line": 1319
         },
         {
           "method": "GET",
           "path": "/api/public/sign/:secondToken",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1336
+          "line": 1343
         },
         {
           "method": "GET",
@@ -12575,7 +12575,7 @@
           "method": "POST",
           "path": "/api/public/sign/:token",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1288
+          "line": 1295
         },
         {
           "method": "POST",
@@ -12644,7 +12644,7 @@
           "method": "POST",
           "path": "/api/public/sign/:secondToken/decline",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1315
+          "line": 1322
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -14843,7 +14843,7 @@
           "method": "POST",
           "path": "/api/signatures/documents/upload",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 511
+          "line": 518
         },
         {
           "method": "POST",

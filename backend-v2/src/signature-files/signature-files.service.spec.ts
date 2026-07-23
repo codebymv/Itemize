@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import { PDFDocument } from 'pdf-lib';
 import { SignatureFileStorage } from './signature-file-storage.provider';
 import { SignatureFilesRepository } from './signature-files.repository';
 import { SignatureFilesService } from './signature-files.service';
@@ -23,40 +24,53 @@ describe('SignatureFilesService', () => {
     remove: jest.fn(),
   } as jest.Mocked<SignatureFileStorage>;
   const service = new SignatureFilesService(repository, storage);
-  const pdf = Buffer.from('%PDF-1.7\nitemize');
-  const file = {
-    buffer: pdf,
-    mimetype: 'application/pdf',
-    originalname: '../Agreement',
-    size: pdf.length,
+  let pdf: Buffer;
+  let file: {
+    buffer: Buffer;
+    mimetype: string;
+    originalname: string;
+    size: number;
   };
-  const document = {
-    id: 7,
-    organization_id: 4,
-    title: 'Agreement',
-    document_number: null,
-    description: null,
-    message: null,
-    file_url: '/uploads/signatures/new.pdf',
-    file_name: 'Agreement.pdf',
-    file_size: pdf.length,
-    file_type: 'application/pdf',
-    status: 'draft',
-    expiration_days: 30,
-    expires_at: null,
-    sender_name: null,
-    sender_email: null,
-    sent_at: null,
-    completed_at: null,
-    signed_file_url: null,
-    timezone: null,
-    locale: null,
-    created_by: 2,
-    created_at: new Date(),
-    updated_at: new Date(),
-    routing_mode: 'parallel',
-    template_id: null,
-  };
+  let document: Record<string, unknown>;
+
+  beforeAll(async () => {
+    const source = await PDFDocument.create();
+    source.addPage([612, 792]);
+    pdf = Buffer.from(await source.save());
+    file = {
+      buffer: pdf,
+      mimetype: 'application/pdf',
+      originalname: '../Agreement',
+      size: pdf.length,
+    };
+    document = {
+      id: 7,
+      organization_id: 4,
+      title: 'Agreement',
+      document_number: null,
+      description: null,
+      message: null,
+      file_url: '/uploads/signatures/new.pdf',
+      file_name: 'Agreement.pdf',
+      file_size: pdf.length,
+      file_type: 'application/pdf',
+      status: 'draft',
+      expiration_days: 30,
+      expires_at: null,
+      sender_name: null,
+      sender_email: null,
+      sent_at: null,
+      completed_at: null,
+      signed_file_url: null,
+      timezone: null,
+      locale: null,
+      created_by: 2,
+      created_at: new Date(),
+      updated_at: new Date(),
+      routing_mode: 'parallel',
+      template_id: null,
+    };
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -66,7 +80,7 @@ describe('SignatureFilesService', () => {
     storage.store.mockResolvedValue('/uploads/signatures/new.pdf');
     storage.remove.mockResolvedValue(undefined);
     storage.read.mockResolvedValue(pdf);
-    repository.replaceDocument.mockResolvedValue(document);
+    repository.replaceDocument.mockResolvedValue(document as never);
     repository.replaceTemplate.mockResolvedValue({
       id: 8,
       organization_id: 4,
@@ -81,7 +95,7 @@ describe('SignatureFilesService', () => {
       created_at: new Date(),
       updated_at: new Date(),
     });
-    repository.findDocument.mockResolvedValue(document);
+    repository.findDocument.mockResolvedValue(document as never);
     repository.findTemplate.mockResolvedValue({
       id: 8,
       organization_id: 4,
@@ -130,7 +144,7 @@ describe('SignatureFilesService', () => {
     expect(storage.store).not.toHaveBeenCalled();
   });
 
-  it('rejects MIME and magic-byte spoofing before storage', async () => {
+  it('rejects MIME and structurally invalid PDF spoofing before storage', async () => {
     await expect(
       service.uploadTemplate(4, '8', {
         ...file,

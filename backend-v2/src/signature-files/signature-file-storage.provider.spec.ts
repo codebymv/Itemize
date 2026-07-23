@@ -1,3 +1,8 @@
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+} from '@aws-sdk/client-s3';
 import { LegacySignatureFileStorage } from './signature-file-storage.provider';
 
 describe('LegacySignatureFileStorage', () => {
@@ -69,5 +74,76 @@ describe('LegacySignatureFileStorage', () => {
     }
     expect(getFile).not.toHaveBeenCalled();
     expect(deleteFile).not.toHaveBeenCalled();
+  });
+
+  it('uses a self-contained private S3 client when the legacy backend is absent', async () => {
+    const previous = {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      sessionToken: process.env.AWS_SESSION_TOKEN,
+      bucket: process.env.AWS_S3_BUCKET,
+      region: process.env.AWS_REGION,
+    };
+    process.env.AWS_ACCESS_KEY_ID = 'test-access';
+    process.env.AWS_SECRET_ACCESS_KEY = 'test-secret';
+    process.env.AWS_SESSION_TOKEN = 'test-session';
+    process.env.AWS_S3_BUCKET = 'standalone-private';
+    process.env.AWS_REGION = 'us-east-1';
+    const send = jest.fn(async (command: unknown) => {
+      if (command instanceof GetObjectCommand) {
+        return {
+          Body: {
+            transformToByteArray: async () => Buffer.from('%PDF-native'),
+          },
+        };
+      }
+      return {};
+    });
+    class NativeStorage extends LegacySignatureFileStorage {
+      protected override legacyS3Service() {
+        return null;
+      }
+      protected override createS3Client() {
+        return { send } as never;
+      }
+    }
+    try {
+      const native = new NativeStorage();
+      const url = await native.store({
+        buffer: Buffer.from('%PDF-native'),
+        organizationId: 9,
+        resourceId: 12,
+        scope: 'document',
+      });
+      expect(url).toMatch(
+        /^https:\/\/standalone-private\.s3\.us-east-1\.amazonaws\.com\/signatures\/signature-9-document-12-[0-9a-f-]+\.pdf$/,
+      );
+      await expect(native.read(url)).resolves.toEqual(
+        Buffer.from('%PDF-native'),
+      );
+      await expect(native.remove(url)).resolves.toBeUndefined();
+      expect(send.mock.calls[0][0]).toBeInstanceOf(PutObjectCommand);
+      expect((send.mock.calls[0][0] as PutObjectCommand).input).toMatchObject({
+        Bucket: 'standalone-private',
+        ContentType: 'application/pdf',
+        ServerSideEncryption: 'AES256',
+      });
+      expect(send.mock.calls[1][0]).toBeInstanceOf(GetObjectCommand);
+      expect(send.mock.calls[2][0]).toBeInstanceOf(DeleteObjectCommand);
+    } finally {
+      const restore = (
+        key: keyof typeof previous,
+        environmentKey: string,
+      ) => {
+        const value = previous[key];
+        if (value === undefined) delete process.env[environmentKey];
+        else process.env[environmentKey] = value;
+      };
+      restore('accessKeyId', 'AWS_ACCESS_KEY_ID');
+      restore('secretAccessKey', 'AWS_SECRET_ACCESS_KEY');
+      restore('sessionToken', 'AWS_SESSION_TOKEN');
+      restore('bucket', 'AWS_S3_BUCKET');
+      restore('region', 'AWS_REGION');
+    }
   });
 });

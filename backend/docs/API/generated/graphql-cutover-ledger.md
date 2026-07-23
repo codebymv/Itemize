@@ -9,7 +9,7 @@
 - Non-API registered operations: 7
 - Static frontend callsites: 392
 - Operations with frontend consumers: 370
-- Operations referenced by backend tests: 213
+- Operations referenced by backend tests: 215
 - Recommended GraphQL queries: 125
 - Recommended GraphQL mutations: 243
 - Recommended retained HTTP endpoints: 43
@@ -298,11 +298,11 @@
 | POST | `/api/pipelines/deals/:id/won` | 1 | 2 | graphql-mutation | high | crm / DealsModule / markDealWon |
 | GET | `/api/pipelines/deals/all` | 1 | 2 | graphql-query | high | crm / DealsModule / deals |
 | GET | `/api/preview/version/:versionId` | 0 | 0 | graphql-query | unknown | _unassigned_ |
-| GET | `/api/public/sign/:token` | 1 | 1 | retain-http | high | esignatures / PublicSigningModule / getSigningSession |
-| POST | `/api/public/sign/:token` | 1 | 2 | retain-http | high | esignatures / PublicSigningModule / submitSignature |
-| POST | `/api/public/sign/:token/decline` | 1 | 0 | retain-http | high | esignatures / PublicSigningModule / declineSignature |
+| GET | `/api/public/sign/:token` | 1 | 8 | retain-http | high | esignatures / PublicSigningModule / getSigningSession |
+| POST | `/api/public/sign/:token` | 1 | 5 | retain-http | high | esignatures / PublicSigningModule / submitSignature |
+| POST | `/api/public/sign/:token/decline` | 1 | 1 | retain-http | high | esignatures / PublicSigningModule / declineSignature |
 | GET | `/api/public/sign/:token/download` | 0 | 0 | retain-http | high | esignatures / SignatureFilesModule / downloadSigningPdf |
-| GET | `/api/public/sign/:token/file` | 0 | 0 | retain-http | high | esignatures / SignatureFilesModule / streamSigningPdf |
+| GET | `/api/public/sign/:token/file` | 0 | 1 | retain-http | high | esignatures / SignatureFilesModule / streamSigningPdf |
 | POST | `/api/public/sign/:token/verify` | 0 | 0 | retain-http | high | esignatures / PublicSigningModule / verifySigner |
 | GET | `/api/reputation/analytics` | 1 | 1 | graphql-query | high | reputation / AnalyticsModule / reputationAnalytics |
 | GET | `/api/reputation/platforms` | 1 | 1 | graphql-query | high | reputation / ReputationConfigurationModule / reputationPlatforms |

@@ -22,6 +22,13 @@ import {
   WorkflowEmailProvider,
 } from '../../src/workflow-jobs/workflow-side-effect.providers';
 
+async function signaturePdf(title: string): Promise<Buffer> {
+  const document = await PDFDocument.create();
+  document.setTitle(title);
+  document.addPage([612, 792]);
+  return Buffer.from(await document.save());
+}
+
 describe('E-signature GraphQL read contract', () => {
   let app: NestExpressApplication;
   let legacyApp: Express;
@@ -365,7 +372,7 @@ describe('E-signature GraphQL read contract', () => {
   };
 
   it('atomically owns authenticated PDF upload and private delivery boundaries', async () => {
-    const firstPdf = Buffer.from('%PDF-1.7\nfirst draft');
+    const firstPdf = await signaturePdf('first draft');
     const uploaded = await signatureUpload('/api/signatures/documents/upload')
       .field('document_id', String(secondDocumentId))
       .attach('file', firstPdf, {
@@ -410,7 +417,7 @@ describe('E-signature GraphQL read contract', () => {
     });
     expect(source.headers['content-disposition']).toContain('inline');
 
-    const secondPdf = Buffer.from('%PDF-1.7\nreplacement draft');
+    const secondPdf = await signaturePdf('replacement draft');
     await signatureUpload('/api/signatures/documents/upload')
       .field('document_id', String(secondDocumentId))
       .attach('file', secondPdf, {
@@ -440,7 +447,7 @@ describe('E-signature GraphQL read contract', () => {
       total: '1',
     });
 
-    const templatePdf = Buffer.from('%PDF-1.7\ntemplate');
+    const templatePdf = await signaturePdf('template');
     const uploadTemplateId = Number((await pool.query<{ id: number }>(
       `INSERT INTO signature_templates
          (organization_id,title,description,message,created_by)

@@ -17,6 +17,10 @@ import {
   SignatureFilesRepository,
   SignatureTemplateFileRow,
 } from './signature-files.repository';
+import {
+  inspectSignaturePdf,
+  SignaturePdfValidationError,
+} from './signature-pdf.validator';
 
 type UploadFile = {
   buffer: Buffer;
@@ -162,11 +166,19 @@ export class SignatureFilesService {
         },
       });
     }
-    if (
-      file.mimetype !== 'application/pdf' ||
-      file.buffer.length < 5 ||
-      file.buffer.subarray(0, 5).toString('ascii') !== '%PDF-'
-    ) {
+    if (file.mimetype !== 'application/pdf') {
+      throw new BadRequestException({
+        success: false,
+        error: {
+          message: 'Invalid PDF file content',
+          code: 'UPLOAD_ERROR',
+        },
+      });
+    }
+    try {
+      await inspectSignaturePdf(file.buffer);
+    } catch (error) {
+      if (!(error instanceof SignaturePdfValidationError)) throw error;
       throw new BadRequestException({
         success: false,
         error: {
