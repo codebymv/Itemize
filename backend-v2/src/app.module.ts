@@ -29,6 +29,7 @@ import { SignatureDeliveryModule } from './signature-delivery/signature-delivery
 import { SignatureFilesModule } from './signature-files/signature-files.module';
 import { PublicSigningModule } from './public-signing/public-signing.module';
 import { SignatureTemplatesModule } from './signature-templates/signature-templates.module';
+import { SignatureJobsSchedulerService } from './signature-jobs/signature-jobs-scheduler.service';
 import { FoundationModule } from './foundation/foundation.module';
 import { FormsModule } from './forms/forms.module';
 import { InvoiceBusinessesModule } from './invoice-businesses/invoice-businesses.module';
@@ -126,6 +127,7 @@ const observabilityPlugins = [
     }),
   ],
   providers: [
+    SignatureJobsSchedulerService,
     { provide: APP_GUARD, useExisting: GraphqlAuthGuard },
     { provide: APP_GUARD, useExisting: GraphqlCsrfGuard },
     { provide: APP_GUARD, useExisting: OrganizationContextGuard },

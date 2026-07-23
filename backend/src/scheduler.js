@@ -23,6 +23,10 @@ const {
 const { scheduleTrialReminderCron } = require('./jobs/trialReminderCron');
 const { startRealtimeOutboxWorker } = require('./jobs/realtime-outbox-jobs');
 const { runCalendarSyncJobs } = require('./jobs/calendar-sync-jobs');
+const {
+    legacySignatureReminderJobsEnabled,
+    scheduleSignatureFileCleanupJobs,
+} = require('./jobs/signature-worker-scheduler');
 const { logger } = require('./utils/logger');
 
 let schedulerInitialized = false;
@@ -53,18 +57,24 @@ function initScheduler(pool, io, broadcast) {
         timezone: 'America/New_York' // Adjust timezone as needed
     });
 
-    // Run signature reminder jobs hourly
-    cron.schedule('0 * * * *', async () => {
-        logger.info('Running signature reminder jobs (hourly)...');
-        try {
-            await runSignatureReminderJobs(pool);
-            logger.info('Signature reminder jobs completed successfully');
-        } catch (error) {
-            logger.error('Error in signature reminder jobs:', error);
-        }
-    }, {
-        timezone: 'America/New_York'
-    });
+    if (legacySignatureReminderJobsEnabled()) {
+        // Run signature reminder jobs hourly until durable NestJS delivery owns them.
+        cron.schedule('0 * * * *', async () => {
+            logger.info('Running signature reminder jobs (hourly)...');
+            try {
+                await runSignatureReminderJobs(pool);
+                logger.info('Signature reminder jobs completed successfully');
+            } catch (error) {
+                logger.error('Error in signature reminder jobs:', error);
+            }
+        }, {
+            timezone: 'America/New_York'
+        });
+    } else {
+        logger.info('Legacy signature reminder scheduler disabled');
+    }
+
+    scheduleSignatureFileCleanupJobs(pool);
 
     // Schedule trial reminder cron job (daily at 9:00 AM)
     scheduleTrialReminderCron();
