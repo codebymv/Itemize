@@ -12,7 +12,12 @@ export type SignatureDeliveryClaim = {
   document_id: number;
   recipient_id: number | null;
   reminder_id: number | null;
-  delivery_type: 'signature_request' | 'signature_reminder';
+  delivery_type:
+    | 'signature_request'
+    | 'signature_reminder'
+    | 'signer_completed'
+    | 'document_completed'
+    | 'signature_declined';
   payload: SignatureDeliveryPayload;
   attempt_count: number;
 };
@@ -79,6 +84,7 @@ export class SignatureDeliveryJobsRepository {
            AND NOT EXISTS (
              SELECT 1 FROM signature_delivery_outbox active_delivery
              WHERE active_delivery.recipient_id=recipient.id
+               AND active_delivery.delivery_type IN ('signature_request','signature_reminder')
                AND active_delivery.status='processing'
            )
          ORDER BY reminder.scheduled_at,reminder.id
@@ -89,7 +95,9 @@ export class SignatureDeliveryJobsRepository {
       await client.query(
         `UPDATE signature_delivery_outbox SET status='cancelled',cancelled_at=CURRENT_TIMESTAMP,
            cancellation_reason='superseded_by_scheduled_reminder',updated_at=CURRENT_TIMESTAMP
-         WHERE recipient_id=$1 AND status IN ('queued','retry')`,
+         WHERE recipient_id=$1
+           AND delivery_type IN ('signature_request','signature_reminder')
+           AND status IN ('queued','retry')`,
         [row.recipient_id],
       );
       const key = `signature-reminder-scheduled-v1-${row.reminder_id}`;
@@ -138,6 +146,7 @@ export class SignatureDeliveryJobsRepository {
            lease_expires_at=NULL,updated_at=CURRENT_TIMESTAMP
          FROM signature_documents document
          WHERE outbox.document_id=document.id AND outbox.status IN ('queued','retry')
+           AND outbox.delivery_type IN ('signature_request','signature_reminder')
            AND (document.status NOT IN ('sent','in_progress')
              OR outbox.recipient_id IS NULL
              OR NOT EXISTS (
@@ -196,10 +205,20 @@ export class SignatureDeliveryJobsRepository {
         [
           claim.document_id,
           claim.recipient_id,
-          claim.delivery_type === 'signature_request' ? 'sent' : 'reminder_sent',
-          claim.delivery_type === 'signature_request'
-            ? 'Signature request sent'
-            : 'Signature reminder sent',
+          {
+            signature_request: 'sent',
+            signature_reminder: 'reminder_sent',
+            signer_completed: 'signer_notice_sent',
+            document_completed: 'completion_notice_sent',
+            signature_declined: 'decline_notice_sent',
+          }[claim.delivery_type],
+          {
+            signature_request: 'Signature request sent',
+            signature_reminder: 'Signature reminder sent',
+            signer_completed: 'Signer completion notice sent',
+            document_completed: 'Document completion notice sent',
+            signature_declined: 'Signature decline notice sent',
+          }[claim.delivery_type],
         ],
       );
       return true;

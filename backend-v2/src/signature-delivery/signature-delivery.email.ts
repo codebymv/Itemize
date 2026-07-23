@@ -27,10 +27,40 @@ const frontendOrigin = (): string => {
 };
 
 export const renderSignatureDeliveryEmail = (
-  deliveryType: 'signature_request' | 'signature_reminder',
+  deliveryType:
+    | 'signature_request'
+    | 'signature_reminder'
+    | 'signer_completed'
+    | 'document_completed'
+    | 'signature_declined',
   idempotencyKey: string,
   payload: SignatureDeliveryPayload,
 ): { subject: string; html: string } => {
+  if (deliveryType === 'signer_completed') {
+    const subject = `${payload.recipientName || 'A recipient'} signed ${payload.documentTitle}`;
+    return notification(
+      subject,
+      'Signature received',
+      `${payload.recipientName || 'A recipient'} completed their signature for ${payload.documentTitle}.`,
+    );
+  }
+  if (deliveryType === 'document_completed') {
+    const subject = `${payload.documentTitle} is complete`;
+    return notification(
+      subject,
+      'Document completed',
+      `${payload.documentTitle} has been signed by every recipient. Sign in to Itemize to review the completed document.`,
+    );
+  }
+  if (deliveryType === 'signature_declined') {
+    const subject = `Signature declined for ${payload.documentTitle}`;
+    const reason = payload.message ? ` Reason: ${payload.message}` : '';
+    return notification(
+      subject,
+      'Signature declined',
+      `${payload.recipientName || 'A recipient'} declined to sign ${payload.documentTitle}.${reason}`,
+    );
+  }
   const reminder = deliveryType === 'signature_reminder';
   const sender = payload.senderEmail || payload.senderName || 'Itemize';
   const subject = reminder
@@ -58,3 +88,17 @@ ${expires ? `<p style="color:#6b7280;font-size:13px">Expires on ${escapeHtml(exp
 </div></body></html>`,
   };
 };
+
+const notification = (
+  subject: string,
+  heading: string,
+  message: string,
+): { subject: string; html: string } => ({
+  subject,
+  html: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>${escapeHtml(subject)}</title></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1e293b;background:#fff;margin:0;padding:0">
+<div style="max-width:600px;margin:0 auto;padding:32px 30px">
+<h1 style="font-size:22px;margin:0 0 16px;color:#111827">${escapeHtml(heading)}</h1>
+<p style="color:#374151;margin:0;line-height:1.6">${escapeHtml(message)}</p>
+</div></body></html>`,
+});

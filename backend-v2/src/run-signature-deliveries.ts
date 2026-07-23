@@ -1,11 +1,22 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SignatureDeliveryJobsService } from './signature-delivery/signature-delivery-jobs.service';
+import { SignatureCompletionJobsService } from './public-signing/signature-completion-jobs.service';
 import { optionalPositiveInteger } from './workflow-jobs/workflow-job.util';
 
 const run = async (): Promise<void> => {
   const context = await NestFactory.createApplicationContext(AppModule, { logger: false });
   try {
+    const completion = await context.get(SignatureCompletionJobsService).run({
+      batchSize: Number(process.env.SIGNATURE_COMPLETION_BATCH_SIZE || 10),
+      leaseSeconds: Number(process.env.SIGNATURE_COMPLETION_LEASE_SECONDS || 300),
+      maxAttempts: Number(process.env.SIGNATURE_COMPLETION_MAX_ATTEMPTS || 5),
+      baseDelayMs: Number(process.env.SIGNATURE_COMPLETION_RETRY_BASE_MS || 60_000),
+      maximumDelayMs: Number(
+        process.env.SIGNATURE_COMPLETION_RETRY_MAX_MS || 86_400_000,
+      ),
+      jobId: optionalPositiveInteger(process.env.SIGNATURE_COMPLETION_JOB_ID),
+    });
     const result = await context.get(SignatureDeliveryJobsService).run({
       batchSize: Number(process.env.SIGNATURE_DELIVERY_BATCH_SIZE || 25),
       reminderBatchSize: Number(process.env.SIGNATURE_REMINDER_BATCH_SIZE || 25),
@@ -15,7 +26,7 @@ const run = async (): Promise<void> => {
       maximumDelayMs: Number(process.env.SIGNATURE_DELIVERY_RETRY_MAX_MS || 86_400_000),
       outboxId: optionalPositiveInteger(process.env.SIGNATURE_DELIVERY_ID),
     });
-    process.stdout.write(`${JSON.stringify(result)}\n`);
+    process.stdout.write(`${JSON.stringify({ completion, delivery: result })}\n`);
   } finally {
     await context.close();
   }

@@ -11,7 +11,7 @@
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 392,
     "operationsWithFrontendConsumers": 370,
-    "operationsWithBackendTests": 213,
+    "operationsWithBackendTests": 215,
     "unmatchedFrontendCallCount": 1,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
@@ -3724,7 +3724,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 57
+          "line": 62
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -4949,7 +4949,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 219
+          "line": 224
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -5024,7 +5024,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 220
+          "line": 225
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -7005,7 +7005,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 265
+          "line": 270
         },
         {
           "source": "backend/src/routes/invoices/actions.routes.js",
@@ -7493,7 +7493,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 257
+          "line": 262
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -8773,7 +8773,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 261
+          "line": 266
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -8811,7 +8811,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 253
+          "line": 258
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -9184,7 +9184,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 53
+          "line": 58
         },
         {
           "source": "backend/src/routes/lists.routes.js",
@@ -12464,6 +12464,10 @@
       "path": "/api/public/sign/:token",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 326
+        },
+        {
           "source": "backend/src/routes/signatures.routes.js",
           "line": 559
         }
@@ -12482,9 +12486,51 @@
       "testCallsites": [
         {
           "method": "GET",
+          "path": "/api/public/sign/:invalidToken",
+          "source": "backend-v2/test/integration/signatures.integration-spec.ts",
+          "line": 1194
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/sign/:secondToken",
+          "source": "backend-v2/test/integration/signatures.integration-spec.ts",
+          "line": 1312
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/sign/:secondToken",
+          "source": "backend-v2/test/integration/signatures.integration-spec.ts",
+          "line": 1336
+        },
+        {
+          "method": "GET",
           "path": "/api/public/sign/:signingToken",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
           "line": 156
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/sign/:token",
+          "source": "backend/src/__tests__/public-signing-proxy.test.js",
+          "line": 38
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/sign/:token",
+          "source": "backend/src/__tests__/public-signing-proxy.test.js",
+          "line": 69
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/sign/not-a-token",
+          "source": "backend/src/__tests__/public-signing-proxy.test.js",
+          "line": 152
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/sign/:token",
+          "source": "backend/src/__tests__/public-signing-proxy.test.js",
+          "line": 154
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -12505,6 +12551,10 @@
       "path": "/api/public/sign/:token",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 346
+        },
+        {
           "source": "backend/src/routes/signatures.routes.js",
           "line": 586
         }
@@ -12523,6 +12573,12 @@
       "testCallsites": [
         {
           "method": "POST",
+          "path": "/api/public/sign/:token",
+          "source": "backend-v2/test/integration/signatures.integration-spec.ts",
+          "line": 1288
+        },
+        {
+          "method": "POST",
           "path": "/api/public/sign/:signingToken",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
           "line": 244
@@ -12532,6 +12588,18 @@
           "path": "/api/public/sign/:signingToken",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
           "line": 289
+        },
+        {
+          "method": "POST",
+          "path": "/api/public/sign/:token",
+          "source": "backend/src/__tests__/public-signing-proxy.test.js",
+          "line": 43
+        },
+        {
+          "method": "POST",
+          "path": "/api/public/sign/:token",
+          "source": "backend/src/__tests__/public-signing-proxy.test.js",
+          "line": 103
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -12552,6 +12620,10 @@
       "path": "/api/public/sign/:token/decline",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 342
+        },
+        {
           "source": "backend/src/routes/signatures.routes.js",
           "line": 617
         }
@@ -12567,7 +12639,14 @@
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/public/sign/:secondToken/decline",
+          "source": "backend-v2/test/integration/signatures.integration-spec.ts",
+          "line": 1315
+        }
+      ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "retain-http",
@@ -12585,6 +12664,10 @@
       "method": "GET",
       "path": "/api/public/sign/:token/download",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 334
+        },
         {
           "source": "backend/src/routes/signatures.routes.js",
           "line": 631
@@ -12610,12 +12693,23 @@
       "path": "/api/public/sign/:token/file",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 330
+        },
+        {
           "source": "backend/src/routes/signatures.routes.js",
           "line": 648
         }
       ],
       "consumerCallsites": [],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/public/sign/:token/file",
+          "source": "backend/src/__tests__/public-signing-proxy.test.js",
+          "line": 134
+        }
+      ],
       "recommendedDisposition": "retain-http",
       "dispositionReason": "Binary upload/download transport.",
       "disposition": "retain-http",
@@ -12633,6 +12727,10 @@
       "method": "POST",
       "path": "/api/public/sign/:token/verify",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 338
+        },
         {
           "source": "backend/src/routes/signatures.routes.js",
           "line": 582
@@ -14451,7 +14549,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 307
+          "line": 312
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -14532,7 +14630,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 303
+          "line": 308
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -14722,7 +14820,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 289
+          "line": 294
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -14745,7 +14843,7 @@
           "method": "POST",
           "path": "/api/signatures/documents/upload",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 409
+          "line": 511
         },
         {
           "method": "POST",
@@ -15037,7 +15135,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 311
+          "line": 316
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -15106,7 +15204,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 296
+          "line": 301
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -15991,7 +16089,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 121
+          "line": 126
         }
       ],
       "consumerCallsites": [
@@ -16025,7 +16123,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 65
+          "line": 70
         }
       ],
       "consumerCallsites": [
@@ -16720,7 +16818,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 56
+          "line": 61
         },
         {
           "source": "backend/src/routes/vaults/crud.routes.js",
@@ -17064,7 +17162,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 54
+          "line": 59
         },
         {
           "source": "backend/src/routes/whiteboards.routes.js",
@@ -17351,7 +17449,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 55
+          "line": 60
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",

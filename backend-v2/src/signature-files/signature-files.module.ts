@@ -23,5 +23,6 @@ import { SignatureFilesService } from './signature-files.service';
       useExisting: LegacySignatureFileStorage,
     },
   ],
+  exports: [SIGNATURE_FILE_STORAGE, SignatureFilesService],
 })
 export class SignatureFilesModule {}

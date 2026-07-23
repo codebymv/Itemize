@@ -127,6 +127,8 @@ export default function SignPage() {
   const [typedValue, setTypedValue] = useState('');
   const [selectedFont, setSelectedFont] = useState(SIGNATURE_FONTS[0].value);
   const [uploadValue, setUploadValue] = useState<string | null>(null);
+  const [terminalState, setTerminalState] = useState<'signed' | 'declined' | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -226,7 +228,7 @@ export default function SignPage() {
   };
 
   const handleSubmit = async () => {
-    if (!token) return;
+    if (!token || submitting) return;
     try {
       const requiredFields = fields.filter((field) => field.is_required);
       const missing = requiredFields.filter((field) => !fieldValues[field.id]);
@@ -234,25 +236,33 @@ export default function SignPage() {
         toast({ title: 'Please complete all required fields', variant: 'destructive' });
         return;
       }
+      setSubmitting(true);
       await submitPublicSignature(token, {
         fields: fields.map((field) => ({
           id: field.id,
           value: fieldValues[field.id] || ''
         }))
       });
+      setTerminalState('signed');
       toast({ title: 'Signature submitted' });
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to submit signature', variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleDecline = async () => {
-    if (!token) return;
+    if (!token || submitting) return;
     try {
+      setSubmitting(true);
       await declinePublicSignature(token, 'Recipient declined');
+      setTerminalState('declined');
       toast({ title: 'Signature declined' });
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to decline', variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -262,6 +272,27 @@ export default function SignPage() {
 
   if (!data) {
     return <div className="p-6">Signing link invalid or expired.</div>;
+  }
+
+  if (terminalState) {
+    return (
+      <div className="max-w-xl mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {terminalState === 'signed' ? 'Signing complete' : 'Signature declined'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              {terminalState === 'signed'
+                ? 'Your signature was submitted successfully. You can close this page.'
+                : 'Your response was recorded. You can close this page.'}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -419,10 +450,10 @@ export default function SignPage() {
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={handleSubmit} disabled={!consent}>
-              Complete Signing
+            <Button onClick={handleSubmit} disabled={!consent || submitting}>
+              {submitting ? 'Submitting…' : 'Complete Signing'}
             </Button>
-            <Button variant="outline" onClick={handleDecline}>
+            <Button variant="outline" onClick={handleDecline} disabled={submitting}>
               Decline
             </Button>
           </div>
@@ -476,7 +507,7 @@ export default function SignPage() {
             <TabsContent value="upload" className="space-y-4">
               <Input
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;

@@ -38,6 +38,11 @@ const {
     createSignatureFileReadProxy,
     createSignatureFileUploadProxy,
 } = require('../signature-file-proxy');
+const {
+    createPublicSigningProxy,
+    publicSigningMutationsEnabled,
+    publicSigningReadsEnabled,
+} = require('../public-signing-proxy');
 const conversationsRoutes = require('../routes/conversations.routes');
 const analyticsRoutes = require('../routes/analytics.routes');
 const contactProfileRoutes = require('../routes/contact-profile.routes');
@@ -311,6 +316,36 @@ function registerApiRoutes({
     app.get(
         '/api/signatures/templates/:id/file',
         createSignatureFileReadProxy({ kind: 'template-source', logger }),
+    );
+    const publicSigningRoute = (kind, enabled) => {
+        const proxy = createPublicSigningProxy({ kind, logger });
+        return enabled
+            ? [publicRateLimit, proxy]
+            : [proxy];
+    };
+    app.get(
+        '/api/public/sign/:token',
+        ...publicSigningRoute('session', publicSigningReadsEnabled()),
+    );
+    app.get(
+        '/api/public/sign/:token/file',
+        ...publicSigningRoute('file', publicSigningReadsEnabled()),
+    );
+    app.get(
+        '/api/public/sign/:token/download',
+        ...publicSigningRoute('download', publicSigningReadsEnabled()),
+    );
+    app.post(
+        '/api/public/sign/:token/verify',
+        ...publicSigningRoute('verify', publicSigningMutationsEnabled()),
+    );
+    app.post(
+        '/api/public/sign/:token/decline',
+        ...publicSigningRoute('decline', publicSigningMutationsEnabled()),
+    );
+    app.post(
+        '/api/public/sign/:token',
+        ...publicSigningRoute('submit', publicSigningMutationsEnabled()),
     );
     app.use('/api', signaturesRoutes(pool, authenticateJWT, publicRateLimit));
     logger.info('Signatures routes initialized');

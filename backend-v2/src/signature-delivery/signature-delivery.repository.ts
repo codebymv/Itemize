@@ -141,8 +141,10 @@ export class SignatureDeliveryRepository {
         );
       }
       const inFlight = await client.query(
-        `SELECT id FROM signature_delivery_outbox
-         WHERE document_id=$1 AND recipient_id=ANY($2::int[]) AND status='processing'
+         `SELECT id FROM signature_delivery_outbox
+         WHERE document_id=$1 AND recipient_id=ANY($2::int[])
+           AND delivery_type IN ('signature_request','signature_reminder')
+           AND status='processing'
          LIMIT 1`,
         [documentId, recipients.rows.map((recipient) => recipient.id)],
       );
@@ -157,7 +159,9 @@ export class SignatureDeliveryRepository {
         await client.query(
           `UPDATE signature_delivery_outbox SET status='cancelled',cancelled_at=CURRENT_TIMESTAMP,
              cancellation_reason='superseded_by_reminder',updated_at=CURRENT_TIMESTAMP
-           WHERE document_id=$1 AND recipient_id=$2 AND status IN ('queued','retry')`,
+           WHERE document_id=$1 AND recipient_id=$2
+             AND delivery_type IN ('signature_request','signature_reminder')
+             AND status IN ('queued','retry')`,
           [documentId, recipient.id],
         );
         const generation = await client.query<{ total: string }>(

@@ -1,14 +1,18 @@
+import { createHash } from 'node:crypto';
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
 import express, { Express } from 'express';
+import { PDFDocument } from 'pdf-lib';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
+import { SignatureCompletionJobsService } from '../../src/public-signing/signature-completion-jobs.service';
 import { SignatureDeliveryJobsService } from '../../src/signature-delivery/signature-delivery-jobs.service';
+import { signatureDeliveryToken } from '../../src/signature-delivery/signature-delivery.token';
 import {
   SIGNATURE_FILE_STORAGE,
   SignatureFileStorage,
@@ -34,6 +38,7 @@ describe('E-signature GraphQL read contract', () => {
   let templateId: number;
   let foreignTemplateId: number;
   let deliveryJobs: SignatureDeliveryJobsService;
+  let completionJobs: SignatureCompletionJobsService;
   const storedSignatureFiles = new Map<string, Buffer>();
   let storedSignatureSequence = 0;
   const signatureStorage = {
@@ -196,6 +201,7 @@ describe('E-signature GraphQL read contract', () => {
       .useValue(signatureStorage)
       .compile();
     deliveryJobs = moduleRef.get(SignatureDeliveryJobsService);
+    completionJobs = moduleRef.get(SignatureCompletionJobsService);
     app = moduleRef.createNestApplication<NestExpressApplication>({
       bodyParser: false,
       logger: false,
@@ -261,6 +267,102 @@ describe('E-signature GraphQL read contract', () => {
     routingMode templateId expirationDays expiresAt senderName senderEmail createdById
     sentAt completedAt hasFile hasSignedFile fileName fileType fileSize createdAt updatedAt
   `;
+
+  const createPublicSigningFixture = async (options: {
+    recipients?: number;
+    routingMode?: 'parallel' | 'sequential';
+    includeSharedField?: boolean;
+  } = {}) => {
+    const recipientCount = options.recipients ?? 1;
+    const routingMode = options.routingMode ?? 'parallel';
+    const sourcePdf = await PDFDocument.create();
+    sourcePdf.addPage([612, 792]);
+    const locator =
+      `/uploads/signatures/public-${Date.now()}-${storedSignatureSequence + 1}.pdf`;
+    storedSignatureFiles.set(locator, Buffer.from(await sourcePdf.save()));
+    const document = await pool.query<{ id: number }>(
+      `INSERT INTO signature_documents (
+         organization_id,title,description,message,file_url,file_name,file_size,file_type,
+         status,expiration_days,expires_at,sender_name,sender_email,original_sha256,
+         routing_mode,created_by,created_at,updated_at
+       ) VALUES (
+         $1,'Public signing integration','A public signing test','Please review and sign',
+         $2,'public-agreement.pdf',800,'application/pdf','sent',30,
+         CURRENT_TIMESTAMP+INTERVAL '30 days','Signature Member',$3,$4,$5,$6,
+         '2026-01-01T00:00:00Z','2026-01-01T00:00:00Z'
+       ) RETURNING id`,
+      [
+        organizationId,
+        locator,
+        `signature-member@test.itemize`,
+        createHash('sha256').update(storedSignatureFiles.get(locator)!).digest('hex'),
+        routingMode,
+        memberId,
+      ],
+    );
+    const documentId = Number(document.rows[0].id);
+    const recipients: Array<{ id: number; token: string | null; fieldId: number }> = [];
+    for (let index = 0; index < recipientCount; index += 1) {
+      const active = routingMode === 'parallel' || index === 0;
+      const token = active
+        ? createHash('sha256')
+          .update(`public-signing-${documentId}-${index}-${Date.now()}`)
+          .digest('base64url')
+        : null;
+      const inserted = await pool.query<{ id: number }>(
+        `INSERT INTO signature_recipients (
+           document_id,organization_id,name,email,signing_order,signing_token_hash,
+           token_expires_at,status,identity_method,routing_status,sent_at
+         ) VALUES (
+           $1,$2,$3,$4,$5,$6,CURRENT_TIMESTAMP+INTERVAL '30 days',$7::varchar,'none',$8,
+           CASE WHEN $7::varchar='sent' THEN CURRENT_TIMESTAMP ELSE NULL END
+         ) RETURNING id`,
+        [
+          documentId,
+          organizationId,
+          `Public Signer ${index + 1}`,
+          `public-signer-${documentId}-${index + 1}@test.itemize`,
+          index + 1,
+          token ? createHash('sha256').update(token).digest('hex') : null,
+          active ? 'sent' : 'pending',
+          active ? 'active' : 'locked',
+        ],
+      );
+      const recipientId = Number(inserted.rows[0].id);
+      const field = await pool.query<{ id: number }>(
+        `INSERT INTO signature_fields (
+           document_id,recipient_id,role_name,field_type,page_number,x_position,
+           y_position,width,height,label,is_required,value,locked
+         ) VALUES ($1,$2,$3,'text',1,10,$4,40,8,'Full legal name',true,NULL,false)
+         RETURNING id`,
+        [
+          documentId,
+          recipientId,
+          `Signer ${index + 1}`,
+          10 + (index * 12),
+        ],
+      );
+      recipients.push({
+        id: recipientId,
+        token,
+        fieldId: Number(field.rows[0].id),
+      });
+    }
+    let sharedFieldId: number | null = null;
+    if (options.includeSharedField) {
+      const shared = await pool.query<{ id: number }>(
+        `INSERT INTO signature_fields (
+           document_id,recipient_id,role_name,field_type,page_number,x_position,
+           y_position,width,height,label,is_required,value,locked
+         ) VALUES ($1,NULL,NULL,'text',1,10,80,40,8,'Internal prefill',false,
+           'server-owned',false)
+         RETURNING id`,
+        [documentId],
+      );
+      sharedFieldId = Number(shared.rows[0].id);
+    }
+    return { documentId, locator, recipients, sharedFieldId };
+  };
 
   it('atomically owns authenticated PDF upload and private delivery boundaries', async () => {
     const firstPdf = Buffer.from('%PDF-1.7\nfirst draft');
@@ -1019,6 +1121,256 @@ describe('E-signature GraphQL read contract', () => {
       signing_token_hash: null,
       status: 'cancelled',
     });
+  });
+
+  it('serves one non-leaking signing capability and durably completes its PDF', async () => {
+    const fixture = await createPublicSigningFixture({ includeSharedField: true });
+    const signer = fixture.recipients[0];
+    const token = signer.token!;
+    const path = `/api/public/sign/${token}`;
+
+    const opened = await request(app.getHttpServer())
+      .get(path)
+      .set('x-request-id', 'public-signing-open-1')
+      .set('user-agent', 'integration signer');
+    expect(opened.status).toBe(200);
+    expect(opened.headers).toMatchObject({
+      'cache-control': 'private, no-store',
+      'referrer-policy': 'no-referrer',
+      'x-content-type-options': 'nosniff',
+      'x-robots-tag': 'noindex, nofollow',
+    });
+    expect(opened.body).toMatchObject({
+      success: true,
+      data: {
+        document: {
+          id: fixture.documentId,
+          title: 'Public signing integration',
+          file_url: '/api/public/sign/current/file',
+          file_name: 'public-agreement.pdf',
+        },
+        recipient: {
+          id: signer.id,
+          status: 'viewed',
+          identity_method: 'none',
+        },
+        fields: [{ id: signer.fieldId, field_type: 'text' }],
+      },
+    });
+    expect(JSON.stringify(opened.body)).not.toContain(fixture.locator);
+    expect(opened.body.data.fields).toHaveLength(1);
+    expect(opened.body.data.fields.map((field: { id: number }) => field.id))
+      .not.toContain(fixture.sharedFieldId);
+
+    await request(app.getHttpServer()).get(path).expect(200);
+    const inline = await request(app.getHttpServer())
+      .get(`${path}/file`)
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+        response.on('end', () => callback(null, Buffer.concat(chunks)));
+      });
+    expect(inline.status).toBe(200);
+    expect(inline.headers).toMatchObject({
+      'content-type': 'application/pdf',
+      'content-disposition': 'inline; filename="public-agreement.pdf"',
+      'content-security-policy': 'sandbox',
+    });
+    expect(Buffer.isBuffer(inline.body)).toBe(true);
+    const attachment = await request(app.getHttpServer())
+      .get(`${path}/download`)
+      .expect('Content-Disposition', 'attachment; filename="public-agreement.pdf"')
+      .expect(200);
+    expect(attachment.headers['content-type']).toBe('application/pdf');
+    expect(Number((await pool.query(
+      `SELECT COUNT(*) AS total FROM signature_audit_log
+       WHERE document_id=$1 AND recipient_id=$2 AND event_type='viewed'`,
+      [fixture.documentId, signer.id],
+    )).rows[0].total)).toBe(1);
+
+    const invalidToken = 'z'.repeat(43);
+    const invalid = await request(app.getHttpServer())
+      .get(`/api/public/sign/${invalidToken}`);
+    expect(invalid.status).toBe(404);
+    expect(invalid.body).toEqual({
+      success: false,
+      error: {
+        message: 'Signing link is invalid or expired',
+        code: 'NOT_FOUND',
+      },
+    });
+    await request(app.getHttpServer())
+      .post(`${path}/verify`)
+      .send({})
+      .expect(410);
+
+    const rejected = await request(app.getHttpServer())
+      .post(path)
+      .send({ fields: [{ id: fixture.sharedFieldId, value: 'overwrite' }] });
+    expect(rejected.status).toBe(400);
+    expect(rejected.body).toMatchObject({
+      success: false,
+      error: {
+        code: 'BAD_REQUEST',
+        reason: 'UNKNOWN_SIGNATURE_FIELD',
+      },
+    });
+    const rolledBack = await pool.query(
+      `SELECT recipient.signing_token_hash,field.value
+       FROM signature_recipients recipient
+       JOIN signature_fields field ON field.id=$2
+       WHERE recipient.id=$1`,
+      [signer.id, signer.fieldId],
+    );
+    expect(rolledBack.rows[0].signing_token_hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(rolledBack.rows[0].value).toBeNull();
+
+    const signed = await request(app.getHttpServer())
+      .post(path)
+      .set('x-request-id', 'public-signing-submit-1')
+      .send({ fields: [{ id: signer.fieldId, value: 'Public Signer One' }] });
+    expect(signed.status).toBe(200);
+    expect(signed.body).toMatchObject({
+      success: true,
+      data: {
+        documentId: fixture.documentId,
+        recipientId: signer.id,
+        completionQueued: true,
+      },
+    });
+    await request(app.getHttpServer()).post(path).send({
+      fields: [{ id: signer.fieldId, value: 'Replay' }],
+    }).expect(404);
+
+    const queued = await pool.query<{ id: number }>(
+      `SELECT id FROM signature_completion_jobs
+       WHERE document_id=$1 AND status='queued'`,
+      [fixture.documentId],
+    );
+    expect(queued.rows).toHaveLength(1);
+    await expect(completionJobs.run({ jobId: queued.rows[0].id })).resolves.toMatchObject({
+      claimed: 1,
+      completed: 1,
+    });
+    const completed = await pool.query<{
+      status: string;
+      signed_file_url: string;
+      signed_sha256: string;
+    }>(
+      `SELECT status,signed_file_url,signed_sha256
+       FROM signature_documents WHERE id=$1`,
+      [fixture.documentId],
+    );
+    expect(completed.rows[0]).toMatchObject({
+      status: 'completed',
+      signed_file_url: expect.stringMatching(/^\/uploads\/signatures\//),
+      signed_sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+    });
+    const completedBytes = storedSignatureFiles.get(completed.rows[0].signed_file_url);
+    expect(completedBytes?.subarray(0, 5).toString('ascii')).toBe('%PDF-');
+    expect((await PDFDocument.load(completedBytes!)).getPageCount()).toBe(2);
+    expect(Number((await pool.query(
+      `SELECT COUNT(*) AS total FROM signature_delivery_outbox
+       WHERE document_id=$1 AND delivery_type='document_completed'`,
+      [fixture.documentId],
+    )).rows[0].total)).toBe(2);
+  });
+
+  it('activates sequential signers once and decline revokes the document', async () => {
+    const fixture = await createPublicSigningFixture({
+      recipients: 2,
+      routingMode: 'sequential',
+    });
+    const first = fixture.recipients[0];
+    const second = fixture.recipients[1];
+    await request(app.getHttpServer())
+      .post(`/api/public/sign/${first.token}`)
+      .send({ fields: [{ id: first.fieldId, value: 'First Signer' }] })
+      .expect(200);
+
+    const key =
+      `signature-request-sequential-v1-${fixture.documentId}-${second.id}`
+      + `-after-${first.id}`;
+    const secondToken = signatureDeliveryToken(key);
+    const activated = await pool.query(
+      `SELECT status,routing_status,signing_token_hash
+       FROM signature_recipients WHERE id=$1`,
+      [second.id],
+    );
+    expect(activated.rows[0]).toMatchObject({
+      status: 'sent',
+      routing_status: 'active',
+      signing_token_hash: createHash('sha256').update(secondToken).digest('hex'),
+    });
+    expect(Number((await pool.query(
+      `SELECT COUNT(*) AS total FROM signature_delivery_outbox
+       WHERE idempotency_key=$1`,
+      [key],
+    )).rows[0].total)).toBe(1);
+    await request(app.getHttpServer())
+      .get(`/api/public/sign/${secondToken}`)
+      .expect(200);
+    const declined = await request(app.getHttpServer())
+      .post(`/api/public/sign/${secondToken}/decline`)
+      .send({ reason: 'Terms changed' });
+    expect(declined.status).toBe(200);
+    expect(declined.body).toMatchObject({
+      success: true,
+      data: { documentId: fixture.documentId, recipientId: second.id },
+    });
+    expect((await pool.query(
+      `SELECT status FROM signature_documents WHERE id=$1`,
+      [fixture.documentId],
+    )).rows[0].status).toBe('cancelled');
+    expect(Number((await pool.query(
+      `SELECT COUNT(*) AS total FROM signature_recipients
+       WHERE document_id=$1 AND signing_token_hash IS NOT NULL`,
+      [fixture.documentId],
+    )).rows[0].total)).toBe(0);
+    expect((await pool.query(
+      `SELECT status FROM signature_delivery_outbox WHERE idempotency_key=$1`,
+      [key],
+    )).rows[0].status).toBe('cancelled');
+    await request(app.getHttpServer())
+      .get(`/api/public/sign/${secondToken}`)
+      .expect(404);
+  });
+
+  it('serializes competing public sign and decline terminal actions', async () => {
+    const fixture = await createPublicSigningFixture();
+    const signer = fixture.recipients[0];
+    const path = `/api/public/sign/${signer.token}`;
+    const outcomes = await Promise.all([
+      request(app.getHttpServer())
+        .post(path)
+        .send({ fields: [{ id: signer.fieldId, value: 'Race Winner' }] }),
+      request(app.getHttpServer())
+        .post(`${path}/decline`)
+        .send({ reason: 'Race decline' }),
+    ]);
+    expect(outcomes.map((outcome) => outcome.status).sort()).toEqual([200, 404]);
+    const authoritative = await pool.query<{ event_type: string }>(
+      `SELECT event_type FROM signature_audit_log
+       WHERE document_id=$1 AND event_type IN ('signed','declined')
+       ORDER BY id`,
+      [fixture.documentId],
+    );
+    expect(authoritative.rows).toHaveLength(1);
+    const document = await pool.query<{ status: string }>(
+      'SELECT status FROM signature_documents WHERE id=$1',
+      [fixture.documentId],
+    );
+    expect(document.rows[0].status).toBe(
+      authoritative.rows[0].event_type === 'signed' ? 'in_progress' : 'cancelled',
+    );
+    expect(Number((await pool.query(
+      `SELECT COUNT(*) AS total FROM signature_completion_jobs
+       WHERE document_id=$1 AND status IN ('queued','processing','completed')`,
+      [fixture.documentId],
+    )).rows[0].total)).toBe(
+      authoritative.rows[0].event_type === 'signed' ? 1 : 0,
+    );
   });
 
   it('serializes starter-plan monthly quota checks under concurrent draft creation', async () => {

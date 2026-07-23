@@ -27,6 +27,7 @@ import { SmsTemplatesModule } from './sms-templates/sms-templates.module';
 import { SignatureDocumentsModule } from './signature-documents/signature-documents.module';
 import { SignatureDeliveryModule } from './signature-delivery/signature-delivery.module';
 import { SignatureFilesModule } from './signature-files/signature-files.module';
+import { PublicSigningModule } from './public-signing/public-signing.module';
 import { SignatureTemplatesModule } from './signature-templates/signature-templates.module';
 import { FoundationModule } from './foundation/foundation.module';
 import { FormsModule } from './forms/forms.module';
@@ -90,6 +91,7 @@ const observabilityPlugins = [
     SignatureDocumentsModule,
     SignatureDeliveryModule,
     SignatureFilesModule,
+    PublicSigningModule,
     SignatureTemplatesModule,
     EstimatesModule,
     PipelinesModule,
