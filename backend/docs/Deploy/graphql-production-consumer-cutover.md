@@ -64,6 +64,8 @@ The authenticated signature-file HTTP implementation deployed default-off on 202
 
 The public-signing retained-HTTP implementation deployed default-off on 2026-07-23 from commit `10f8e49c` through retained backend `3a0f8c82-3592-4a29-8073-aa7aebf1d866`, GraphQL `0e3944bb-8c65-4245-b4ba-cc0bb9ead653`, and frontend `2b88f5be-88d6-4a84-a420-dbcd964a58fa`. The backend pre-deploy step applied migration `044_signature_completion_jobs.js`; Nest initialized `PublicSigningModule` and mapped all six unchanged capability routes. Railway confirmed `PUBLIC_SIGNING_READS_NESTJS_ENABLED` and `PUBLIC_SIGNING_MUTATIONS_NESTJS_ENABLED` are both absent. Site and API health returned HTTP 200, an unknown capability returned the retained-path HTTP 404, and its verification endpoint returned HTTP 410. No valid capability, signer mutation, PDF generation, object storage, provider delivery, completion worker, or production data change was exercised.
 
+Signature PDF storage hardening deployed default-off on 2026-07-23 from commit `0eb05ead` through GraphQL deployment `bd862f41-169e-4603-95ae-b47d638d972f`. Nest started successfully and a same-origin GraphQL probe returned HTTP 200. Railway confirmed that the GraphQL service still has no AWS storage variables, so no object read/write, credential copy, worker run, or data mutation occurred.
+
 After deployment, verify:
 
 1. `https://itemize.cloud` returns HTTP `200`;
