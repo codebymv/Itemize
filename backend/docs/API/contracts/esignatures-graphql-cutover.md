@@ -1,6 +1,6 @@
 # E-signatures GraphQL cutover contract
 
-**Status:** Authenticated reads, draft/template mutations, provider-free cancellation, and email preview live; durable delivery, file lifecycle, and public signing retained HTTP implemented default-off
+**Status:** Authenticated reads, draft/template mutations, provider-free cancellation, and email preview live; durable delivery, file lifecycle, and public signing retained HTTP deployed default-off
 
 **Evidence date:** 2026-07-23
 
@@ -191,4 +191,6 @@ Submit and decline lock the document, capability recipient, and recipient set. S
 
 Migration 044 expands the delivery outbox for escaped signer/completion/decline notices and adds leased `signature_completion_jobs`. The worker generates the signed PDF and certificate outside the request transaction, hashes and stores it through `SignatureFilesModule`, fences completion, removes a stale generated artifact, queues linked-contact workflow events, and queues sender/recipient notices. The signing page now accepts only PNG/JPEG uploads, prevents duplicate terminal clicks, and replaces the revoked session with a terminal confirmation.
 
-Local gates pass 397/397 Nest unit tests, 383/383 retained-backend unit tests, and 358/358 frontend tests. The targeted fresh PostgreSQL signature suite passes 15/15, including the capability, binary, ownership, sequential, decline, terminal-race, and completion paths; the preceding complete fresh run passed 489/489 retained integration tests and all 222 pre-existing Nest integration tests. Both production builds pass. The implementation and migration remain default-off pending deployment and production-provider rehearsal.
+Local gates pass 397/397 Nest unit tests, 383/383 retained-backend unit tests, and 358/358 frontend tests. The targeted fresh PostgreSQL signature suite passes 15/15, including the capability, binary, ownership, sequential, decline, terminal-race, and completion paths; the complete fresh run passes 489/489 retained integration tests and 225/225 Nest integration tests. Both production builds pass.
+
+Commit `10f8e49c` deployed default-off through retained backend `3a0f8c82-3592-4a29-8073-aa7aebf1d866`, GraphQL `0e3944bb-8c65-4245-b4ba-cc0bb9ead653`, and frontend `2b88f5be-88d6-4a84-a420-dbcd964a58fa`. Railway applied migration 044 before the retained backend started; Nest initialized the module and mapped all six routes; both proxy flags remain absent. Site/API health and unknown-capability/verification probes passed without a valid capability, provider call, worker schedule, storage write, or production data mutation. Provider/S3 rehearsal and valid browser sign, decline, and download journeys remain deferred.

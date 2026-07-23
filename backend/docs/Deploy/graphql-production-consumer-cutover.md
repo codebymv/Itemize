@@ -62,6 +62,8 @@ The durable signature draft-PDF removal implementation deployed default-off on 2
 
 The authenticated signature-file HTTP implementation deployed default-off on 2026-07-23 from commit `0a00b135` through retained backend `d09f4e57-930a-4b98-8471-bf72e22c0ea7`, GraphQL `28e65740-96c2-4dfc-88e9-3e567db24b31`, and frontend `4899cc13-7284-4d9d-8335-daa7a3d94068`. Railway confirmed `SIGNATURE_FILE_UPLOADS_NESTJS_ENABLED` and `SIGNATURE_FILE_READS_NESTJS_ENABLED` are both absent. Nest startup initialized `SignatureFilesModule` and mapped all five upload/read routes; backend health and itemize.cloud returned HTTP 200, while an unauthenticated source-file request returned the retained-path HTTP 401. No upload, download, storage mutation, cleanup job, provider call, or production data change was performed.
 
+The public-signing retained-HTTP implementation deployed default-off on 2026-07-23 from commit `10f8e49c` through retained backend `3a0f8c82-3592-4a29-8073-aa7aebf1d866`, GraphQL `0e3944bb-8c65-4245-b4ba-cc0bb9ead653`, and frontend `2b88f5be-88d6-4a84-a420-dbcd964a58fa`. The backend pre-deploy step applied migration `044_signature_completion_jobs.js`; Nest initialized `PublicSigningModule` and mapped all six unchanged capability routes. Railway confirmed `PUBLIC_SIGNING_READS_NESTJS_ENABLED` and `PUBLIC_SIGNING_MUTATIONS_NESTJS_ENABLED` are both absent. Site and API health returned HTTP 200, an unknown capability returned the retained-path HTTP 404, and its verification endpoint returned HTTP 410. No valid capability, signer mutation, PDF generation, object storage, provider delivery, completion worker, or production data change was exercised.
+
 After deployment, verify:
 
 1. `https://itemize.cloud` returns HTTP `200`;

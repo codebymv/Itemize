@@ -1,6 +1,6 @@
 # E-signatures GraphQL cutover contract
 
-**Status:** Authenticated reads, draft/template mutations, provider-free cancellation, and email preview live; durable delivery and draft-PDF removal implemented default-off; uploads, file delivery, and public signing remain HTTP
+**Status:** Authenticated reads, draft/template mutations, provider-free cancellation, and email preview live; durable delivery, file lifecycle, and public signing retained HTTP deployed default-off
 
 **Evidence date:** 2026-07-23
 
@@ -60,15 +60,15 @@ Immediate reminder applies only to `sent` or `in_progress` documents and only ac
 
 ## Public signing capability
 
-Raw signing tokens are generated with at least 256 bits of randomness, stored only as hashes, never returned in authenticated GraphQL DTOs, and redacted from logs/traces. Token lookup checks recipient state, document state, expiration, and sequential-routing activation under a row lock. Signing, decline, cancellation, and expiry revoke the capability. Repeated or concurrent terminal submission returns the same non-enumerating invalid/expired outcome without duplicate evidence.
+Raw signing tokens are derived with 256 bits of HMAC output, stored only as SHA-256 hashes, never returned in authenticated GraphQL DTOs, and omitted from proxy logs. Token lookup checks recipient state, document state, expiration, supported identity method, and sequential-routing activation under a row lock. Signing, decline, cancellation, and expiry revoke the capability. Repeated or concurrent terminal submission returns the same non-enumerating invalid/expired outcome without duplicate evidence.
 
 The current product exposes `identity_method` values for email and SMS OTP, but verification is not implemented and `/verify` returns HTTP 410. Legacy configuration now rejects any method other than `none`; possession of the link is the only supported assurance. OTP values must not be advertised until issuance, throttling, hashed challenges, expiry, attempt limits, replay handling, and audit scenarios exist.
 
-Submission accepts an exact allowlist of fields assigned to the recipient. Unknown fields are rejected rather than silently ignored. Required-value semantics are type-specific: unchecked checkbox, empty text, date format, signature/initial image format, duplicate IDs, payload count, and aggregate decoded-byte limits all need explicit validation. Signature image input permits only supported raster formats after decoded-content inspection; a `data:image/` prefix alone is insufficient.
+Submission accepts only the exact unlocked fields assigned to the recipient. Unknown, shared, locked, and duplicate fields are rejected rather than silently ignored. Required-value semantics are type-specific for checkboxes, text, strict calendar dates, and signature/initial images. Payload count, encoded bytes, per-image bytes, aggregate decoded image bytes, and text bytes are bounded. Images permit only structurally valid PNG or JPEG data URLs with bounded dimensions; a claimed MIME prefix alone is insufficient.
 
-Shared fields (`recipient_id IS NULL`) are currently writable by every recipient and can be overwritten. The target chooses explicit document-prefill versus signer-specific ownership and prevents later signers from changing earlier evidence.
+Shared fields (`recipient_id IS NULL`) are treated as document-prefill. They are not projected in a signer session and cannot be submitted by a capability, preventing a later signer from rewriting shared or earlier evidence.
 
-Viewing may append a single first-view event, but a generic GET should not hide a state mutation. Source-file and download routes must not call a view-mutating loader. Define a separate idempotent `markViewed` transition or a clearly documented signing-session open operation.
+Opening the signing session is the documented idempotent first-view transition. It records `viewed_at` and one audit event only once. Source-file and download routes authorize independently and never mutate viewed state.
 
 ## Audit and completion evidence
 
@@ -76,7 +76,7 @@ Audit rows are append-only and include document/recipient identity, versioned ev
 
 Original and signed PDFs have SHA-256 hashes tied to immutable document versions. Every replacement creates a monotonically allocated version; the legacy upload always attempts version `1` with `ON CONFLICT DO NOTHING`, so later uploads can change the active hash without recording a new version. Fix this before cutover.
 
-Completion atomically claims the last-recipient transition and records completion intent. PDF generation, object storage, and email delivery run as durable idempotent jobs outside the database transaction. The legacy submit path performs PDF generation and multiple emails inside the signing transaction, creating long locks and ambiguous provider-success/database-rollback outcomes.
+Completion atomically claims the last-recipient transition and records one completion intent. Migration 044's leased worker loads the authoritative completed-recipient snapshot, generates and hashes the signed PDF plus certificate outside the request transaction, stores it through the private signature provider, fences the final document transition, queues linked-contact `contract_signed` triggers, and queues escaped completion notices. Provider email delivery stays in the existing leased outbox. A stale completion removes its newly generated artifact; retry/dead-letter state is bounded and redacted.
 
 ## Files and storage
 
@@ -117,7 +117,7 @@ Focused service and adapter tests pass. A disposable PostgreSQL contract proves 
 
 ## Current evidence and exit gate
 
-Fresh PostgreSQL now covers concurrent initial-send exclusion, atomic cancellation and capability/reminder revocation, cancellation idempotency, cross-tenant reminder denial, invalid reminder delays, sent-definition immutability, selective reminder behavior, and unknown signing-field rejection. Existing generic database bootstrap verifies all signature tables are created from zero.
+Fresh PostgreSQL now covers concurrent initial-send exclusion, atomic cancellation and capability/reminder revocation, cancellation idempotency, cross-tenant reminder denial, invalid reminder delays, sent-definition immutability, selective reminder behavior, public first-view idempotency, non-mutating file reads, field ownership rollback, sequential activation, document-wide decline, concurrent terminal actions, and durable PDF completion. Existing generic database bootstrap verifies all signature tables are created from zero.
 
 ## Implemented draft and template mutation slice
 
@@ -129,14 +129,13 @@ Fresh PostgreSQL proves complete rollback when a child mapping fails after metad
 
 Commit `8e756351` deployed through legacy backend `70c49ae0-0624-4778-a658-4dd763cf6456`, GraphQL `7625d3ce-e69c-4504-aaf2-1c948715afcc`, and flag-enabled frontend `a8a0c352-1fa3-4f9d-8bef-ccab8ab588d7`. Railway confirms both mutation flags are `true`. An authenticated production browser created and edited a no-file template, instantiated it, edited the resulting draft, created a separate draft, and deleted both drafts and the template without console errors or provider work. Nest recorded successful zero-error operations for all seven mutation names, and the existing sent document remained untouched.
 
-The authenticated read and draft/template mutation slices have completed production consumer validation. Delivery and draft-PDF removal are implemented behind independent default-off consumer switches; uploads, binary delivery, and public-signing are not ready for cutover until:
+The authenticated read and draft/template mutation slices have completed production consumer validation. Delivery, draft-PDF removal, authenticated files, and public signing are implemented behind independent default-off switches. Final e-signature cutover still requires:
 
-1. public field values, shared ownership, sequential routing, expiry, decline, and terminal races have complete validation and PostgreSQL coverage;
-2. source/signed artifacts use immutable versioned private storage with safe parsing, scanning, delivery, cleanup, and no arbitrary URL proxy;
-3. audit evidence is append-only under database permissions with defined retention/export and integrity verification;
-4. PDF generation and completion notices use durable idempotent jobs outside transactions, and the implemented request/reminder worker receives production scheduling plus a controlled provider canary;
-5. OTP verification is fully implemented and tested or remains impossible to configure;
-6. the remaining GraphQL mutations, retained HTTP protocols, and critical draft/send/sign/decline/cancel/download browser journeys pass semantic parity and rollback tests.
+1. production S3 private-storage rehearsal, structural PDF limits, malware/quarantine policy, range behavior, and crash-abandoned-stage cleanup;
+2. audit evidence enforcement under database permissions plus defined retention/export and integrity verification;
+3. the request/reminder/completion workers receive one production owner/schedule and controlled provider/storage canaries;
+4. OTP remains impossible to configure unless its complete issuance/throttling/hash/expiry/replay protocol is implemented;
+5. the default-off transports and critical draft/send/sign/decline/cancel/download browser journeys pass production-like parity and rollback rehearsal.
 
 ## Implemented provider-free lifecycle and preview slice
 
@@ -181,3 +180,17 @@ Uploads conceal foreign owners before storage and recheck authorization under a 
 Private delivery accepts only the exact local signature root or the configured S3 host plus `signatures/` prefix. Traversal, lookalike hosts, wrong prefixes, arbitrary URLs, missing objects, and foreign tenants fail closed. Successful source/template responses are inline; completed artifacts are attachments; both use `private, no-store`, `application/pdf`, `nosniff`, a sandbox CSP, exact length, and safe filenames.
 
 The legacy origin has two independent default-off rollback switches: `SIGNATURE_FILE_UPLOADS_NESTJS_ENABLED` for the multipart routes and `SIGNATURE_FILE_READS_NESTJS_ENABLED` for the private streams/download. Focused proxy, storage, service, cleanup, and lifecycle tests pass. The full Nest suite passes 383/383, the frontend suite passes 358/358, both production builds pass, and a clean schema passes 489/489 retained Express plus 222/222 Nest PostgreSQL tests. Production-provider rehearsal, public signing file delivery, S3 range behavior, malware/structural PDF inspection, crash-abandoned stages, and worker scheduling remain deferred.
+
+## Implemented public signing retained-HTTP slice
+
+`PublicSigningModule` now owns all six unchanged capability URLs: session open, verification refusal, submit, decline, inline source PDF, and attachment source PDF. The legacy origin has independent default-off read and mutation proxies, `PUBLIC_SIGNING_READS_NESTJS_ENABLED` and `PUBLIC_SIGNING_MUTATIONS_NESTJS_ENABLED`, so either family can fall through to Express without changing the browser URL or repairing data. Proxies bound request/response bytes and timeouts, forward no cookies or organization context, allowlist headers, and never log a capability.
+
+The capability query requires an active, unexpired recipient and document, `identity_method='none'`, and active sequential routing. Missing, malformed, wrong, expired, revoked, cancelled, unsupported-assurance, and routing-locked links share one non-enumerating 404. Session open records first view once; file/download do not. Signer DTOs contain a file-presence sentinel rather than a storage locator and contain only recipient-owned unlocked fields.
+
+Submit and decline lock the document, capability recipient, and recipient set. Submit validates the complete signer-owned field set, revokes its capability, cancels obsolete reminders/deliveries, appends evidence, and either activates the next sequential recipient exactly once or queues the unique completion job. Decline cancels the document, revokes all remaining capabilities, cancels reminders/request deliveries and pending completion, and queues a sender notice. Competing sign/decline calls serialize to one authoritative event and one non-enumerating miss.
+
+Migration 044 expands the delivery outbox for escaped signer/completion/decline notices and adds leased `signature_completion_jobs`. The worker generates the signed PDF and certificate outside the request transaction, hashes and stores it through `SignatureFilesModule`, fences completion, removes a stale generated artifact, queues linked-contact workflow events, and queues sender/recipient notices. The signing page now accepts only PNG/JPEG uploads, prevents duplicate terminal clicks, and replaces the revoked session with a terminal confirmation.
+
+Local gates pass 397/397 Nest unit tests, 383/383 retained-backend unit tests, and 358/358 frontend tests. The targeted fresh PostgreSQL signature suite passes 15/15, including the capability, binary, ownership, sequential, decline, terminal-race, and completion paths; the complete fresh run passes 489/489 retained integration tests and 225/225 Nest integration tests. Both production builds pass.
+
+Commit `10f8e49c` deployed default-off through retained backend `3a0f8c82-3592-4a29-8073-aa7aebf1d866`, GraphQL `0e3944bb-8c65-4245-b4ba-cc0bb9ead653`, and frontend `2b88f5be-88d6-4a84-a420-dbcd964a58fa`. Railway applied migration 044 before the retained backend started; Nest initialized the module and mapped all six routes; both proxy flags remain absent. Site/API health and unknown-capability/verification probes passed without a valid capability, provider call, worker schedule, storage write, or production data mutation. Provider/S3 rehearsal and valid browser sign, decline, and download journeys remain deferred.
