@@ -14438,8 +14438,8 @@
       "owner": "esignatures",
       "targetOperation": "cancelSignatureDocument",
       "targetModule": "SignatureDocumentsModule",
-      "parityStatus": "implemented",
-      "notes": "Implemented behind an independent default-off cancellation flag; one row-locked transaction idempotently cancels non-completed documents, revokes active capability tokens, cancels pending reminders, and writes exactly one audit event.",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "Production consumer enabled through the independent cancellation flag. One row-locked transaction idempotently cancels non-completed documents, revokes active capability tokens, locks routing, cancels pending reminders, and writes exactly one audit event; an authenticated disposable production fixture proved every postcondition and was removed.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14758,8 +14758,8 @@
       "owner": "esignatures",
       "targetOperation": "previewSignatureEmail",
       "targetModule": "SignatureDeliveryModule",
-      "parityStatus": "implemented",
-      "notes": "Implemented behind an independent default-off preview flag as a pure bounded query; all user content is HTML-escaped, the server controls links/assets, and output is not a delivery receipt.",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "Production consumer enabled through the independent preview flag as a pure bounded query; all user content is HTML-escaped, the server controls links/assets, output is not a delivery receipt, and an authenticated production editor rendered the server preview with zero GraphQL or browser errors.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },

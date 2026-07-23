@@ -1,6 +1,6 @@
 # E-signatures GraphQL cutover contract
 
-**Status:** Phase 1 authenticated reads and Phase 2 draft/template mutations live; provider-free cancellation and preview implemented behind rollback flags
+**Status:** Authenticated reads, draft/template mutations, provider-free cancellation, and email preview live; provider delivery, file management, and public signing remain
 
 **Evidence date:** 2026-07-22
 
@@ -142,6 +142,8 @@ The authenticated read and draft/template mutation slices have completed product
 
 `SignatureDocumentsModule` now implements `cancelSignatureDocument` as a CSRF-protected organization-scoped mutation. The document row is locked before state inspection; completed documents fail with `CONFLICT`, foreign IDs remain concealed, repeated cancellation returns the existing cancelled snapshot without another audit row, and the first transition atomically revokes active recipient capability hashes/expiry, locks routing, cancels pending reminders, changes document status, and appends one audit event.
 
-`SignatureDeliveryModule` now implements `previewSignatureEmail` as a pure organization-scoped query. It validates bounded content, escapes every user-controlled HTML insertion, derives the preview link and asset origin from server configuration, ignores the legacy browser-supplied `baseUrl`, performs no delivery, and returns only subject plus rendered HTML. Independent default-off flags `VITE_SIGNATURE_CANCELLATION_GRAPHQL` and `VITE_SIGNATURE_EMAIL_PREVIEW_GRAPHQL` preserve data-neutral REST rollback.
+`SignatureDeliveryModule` now implements `previewSignatureEmail` as a pure organization-scoped query. It validates bounded content, escapes every user-controlled HTML insertion, derives the preview link and asset origin from server configuration, ignores the legacy browser-supplied `baseUrl`, performs no delivery, and returns only subject plus rendered HTML. Independent production-enabled flags `VITE_SIGNATURE_CANCELLATION_GRAPHQL` and `VITE_SIGNATURE_EMAIL_PREVIEW_GRAPHQL` preserve data-neutral REST rollback.
 
 Focused service/adapter tests and the disposable PostgreSQL gate pass: 489/489 retained Express tests and 218/218 Nest integration tests. PostgreSQL proves cancellation idempotency, capability/reminder revocation, one audit event, completed-state refusal, foreign-tenant concealment, escaped preview output, and invalid-message rejection without provider work.
+
+Commit `792d4891` deployed through retained backend `0464fd60-9b7e-4a27-b551-1f5f7af4c681`, GraphQL `f69286e1-f70e-4ef6-8a62-40f6a47138bc`, default-off frontend `ba71644c-6752-4d5a-abcc-d48678d6c5f9`, and flag-enabled frontend `d747d956-49a7-4d02-8665-007f9c34a5fa`. An authenticated production editor rendered a server-origin preview for a disposable draft; a separate inert sent fixture cancelled through GraphQL with token and expiry revocation, routing lock, pending-reminder cancellation, and exactly one audit event. Nest logged both operations with status 200 and zero errors, the browser logged no console errors, both fixtures were removed, and the original sent document remained unchanged.
