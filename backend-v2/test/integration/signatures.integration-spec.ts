@@ -10,6 +10,10 @@ import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
 import { SignatureDeliveryJobsService } from '../../src/signature-delivery/signature-delivery-jobs.service';
 import {
+  SIGNATURE_FILE_STORAGE,
+  SignatureFileStorage,
+} from '../../src/signature-files/signature-file-storage.provider';
+import {
   WORKFLOW_EMAIL_PROVIDER,
   WorkflowEmailProvider,
 } from '../../src/workflow-jobs/workflow-side-effect.providers';
@@ -30,6 +34,25 @@ describe('E-signature GraphQL read contract', () => {
   let templateId: number;
   let foreignTemplateId: number;
   let deliveryJobs: SignatureDeliveryJobsService;
+  const storedSignatureFiles = new Map<string, Buffer>();
+  let storedSignatureSequence = 0;
+  const signatureStorage = {
+    store: jest.fn(async (input: {
+      buffer: Buffer;
+      organizationId: number;
+      resourceId: number;
+      scope: string;
+    }) => {
+      storedSignatureSequence += 1;
+      const url = `/uploads/signatures/integration-${input.organizationId}-${input.scope}-${input.resourceId}-${storedSignatureSequence}.pdf`;
+      storedSignatureFiles.set(url, Buffer.from(input.buffer));
+      return url;
+    }),
+    read: jest.fn(async (url: string) => storedSignatureFiles.get(url) ?? null),
+    remove: jest.fn(async (url: string) => {
+      storedSignatureFiles.delete(url);
+    }),
+  } as jest.Mocked<SignatureFileStorage>;
   const deliveryEmail = {
     send: jest.fn(),
   } as jest.Mocked<WorkflowEmailProvider>;
@@ -169,6 +192,8 @@ describe('E-signature GraphQL read contract', () => {
       .useValue(pool)
       .overrideProvider(WORKFLOW_EMAIL_PROVIDER)
       .useValue(deliveryEmail)
+      .overrideProvider(SIGNATURE_FILE_STORAGE)
+      .useValue(signatureStorage)
       .compile();
     deliveryJobs = moduleRef.get(SignatureDeliveryJobsService);
     app = moduleRef.createNestApplication<NestExpressApplication>({
@@ -218,11 +243,187 @@ describe('E-signature GraphQL read contract', () => {
     .set('Cookie', `itemize_auth=${memberToken}`)
     .set('x-organization-id', String(organizationId));
 
+  const signatureUpload = (path: string, token = memberToken, orgId = organizationId) =>
+    request(app.getHttpServer())
+      .post(path)
+      .set('Cookie', `itemize_auth=${token}; csrf-token=signature-csrf`)
+      .set('x-csrf-token', 'signature-csrf')
+      .set('x-organization-id', String(orgId));
+
+  const signatureFile = (path: string, token = memberToken, orgId = organizationId) =>
+    request(app.getHttpServer())
+      .get(path)
+      .set('Cookie', `itemize_auth=${token}`)
+      .set('x-organization-id', String(orgId));
+
   const documentFields = `
     id organizationId title documentNumber description message status recipientCount
     routingMode templateId expirationDays expiresAt senderName senderEmail createdById
     sentAt completedAt hasFile hasSignedFile fileName fileType fileSize createdAt updatedAt
   `;
+
+  it('atomically owns authenticated PDF upload and private delivery boundaries', async () => {
+    const firstPdf = Buffer.from('%PDF-1.7\nfirst draft');
+    const uploaded = await signatureUpload('/api/signatures/documents/upload')
+      .field('document_id', String(secondDocumentId))
+      .attach('file', firstPdf, {
+        filename: '../Draft Agreement',
+        contentType: 'application/pdf',
+      });
+    expect({ status: uploaded.status, body: uploaded.body }).toMatchObject({
+      status: 200,
+      body: {
+        success: true,
+        data: {
+          id: secondDocumentId,
+          file_url: `/api/signatures/documents/${secondDocumentId}/file`,
+          file_name: 'Draft Agreement.pdf',
+          file_type: 'application/pdf',
+        },
+      },
+    });
+    expect(uploaded.body.data.original_sha256).toBeUndefined();
+
+    const firstRow = await pool.query<{
+      file_url: string;
+      original_sha256: string;
+    }>(
+      `SELECT file_url,original_sha256 FROM signature_documents
+       WHERE id=$1 AND organization_id=$2`,
+      [secondDocumentId, organizationId],
+    );
+    const firstUrl = firstRow.rows[0].file_url;
+    expect(firstRow.rows[0].original_sha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(storedSignatureFiles.get(firstUrl)).toEqual(firstPdf);
+
+    const source = await signatureFile(
+      `/api/signatures/documents/${secondDocumentId}/file`,
+    ).expect(200);
+    expect(source.body).toEqual(firstPdf);
+    expect(source.headers).toMatchObject({
+      'cache-control': 'private, no-store',
+      'content-security-policy': 'sandbox',
+      'content-type': 'application/pdf',
+      'x-content-type-options': 'nosniff',
+    });
+    expect(source.headers['content-disposition']).toContain('inline');
+
+    const secondPdf = Buffer.from('%PDF-1.7\nreplacement draft');
+    await signatureUpload('/api/signatures/documents/upload')
+      .field('document_id', String(secondDocumentId))
+      .attach('file', secondPdf, {
+        filename: 'Replacement.pdf',
+        contentType: 'application/pdf',
+      })
+      .expect(200);
+    const replacement = await pool.query<{ file_url: string }>(
+      'SELECT file_url FROM signature_documents WHERE id=$1',
+      [secondDocumentId],
+    );
+    expect(replacement.rows[0].file_url).not.toBe(firstUrl);
+    const cleanup = await pool.query<{ status: string }>(
+      `SELECT status FROM signature_file_deletion_jobs
+       WHERE organization_id=$1 AND file_url=$2`,
+      [organizationId, firstUrl],
+    );
+    expect(cleanup.rows[0].status).toBe('queued');
+    const version = await pool.query<{ file_url: string; total: string }>(
+      `SELECT file_url,COUNT(*) OVER () AS total
+       FROM signature_document_versions WHERE document_id=$1`,
+      [secondDocumentId],
+    );
+    expect(version.rows).toHaveLength(1);
+    expect(version.rows[0]).toMatchObject({
+      file_url: replacement.rows[0].file_url,
+      total: '1',
+    });
+
+    const templatePdf = Buffer.from('%PDF-1.7\ntemplate');
+    const uploadTemplateId = Number((await pool.query<{ id: number }>(
+      `INSERT INTO signature_templates
+         (organization_id,title,description,message,created_by)
+       VALUES ($1,'Upload Boundary',NULL,NULL,$2) RETURNING id`,
+      [organizationId, memberId],
+    )).rows[0].id);
+    const templateUpload = await signatureUpload(
+      '/api/signatures/templates/upload',
+    )
+      .field('template_id', String(uploadTemplateId))
+      .attach('file', templatePdf, {
+        filename: 'Reusable.pdf',
+        contentType: 'application/pdf',
+      })
+      .expect(200);
+    expect(templateUpload.body.data.file_url).toBe(
+      `/api/signatures/templates/${uploadTemplateId}/file`,
+    );
+    await signatureFile(`/api/signatures/templates/${uploadTemplateId}/file`)
+      .expect('Content-Type', 'application/pdf')
+      .expect(200);
+    await pool.query(
+      'DELETE FROM signature_templates WHERE id=$1 AND organization_id=$2',
+      [uploadTemplateId, organizationId],
+    );
+
+    const signedUrl = '/uploads/signatures/integration-completed.pdf';
+    const signedPdf = Buffer.from('%PDF-1.7\ncompleted');
+    storedSignatureFiles.set(signedUrl, signedPdf);
+    await pool.query(
+      'UPDATE signature_documents SET signed_file_url=$1 WHERE id=$2',
+      [signedUrl, secondDocumentId],
+    );
+    const completed = await signatureFile(
+      `/api/signatures/documents/${secondDocumentId}/download`,
+    ).expect(200);
+    expect(completed.body).toEqual(signedPdf);
+    expect(completed.headers['content-disposition']).toContain('attachment');
+  });
+
+  it('fails closed before storage for invalid, foreign, and non-CSRF uploads', async () => {
+    const storedBefore = signatureStorage.store.mock.calls.length;
+    const foreignDocument = await signatureUpload('/api/signatures/documents/upload')
+      .field('document_id', String(foreignDocumentId))
+      .attach('file', Buffer.from('%PDF-1.7\nforeign'), {
+        filename: 'foreign.pdf',
+        contentType: 'application/pdf',
+      });
+    expect({
+      status: foreignDocument.status,
+      body: foreignDocument.body,
+    }).toMatchObject({ status: 404 });
+    await signatureUpload('/api/signatures/templates/upload')
+      .field('template_id', String(foreignTemplateId))
+      .attach('file', Buffer.from('%PDF-1.7\nforeign'), {
+        filename: 'foreign.pdf',
+        contentType: 'application/pdf',
+      })
+      .expect(404);
+    await signatureUpload('/api/signatures/documents/upload')
+      .field('document_id', String(firstDocumentId))
+      .attach('file', Buffer.from('not a pdf'), {
+        filename: 'spoof.pdf',
+        contentType: 'application/pdf',
+      })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post('/api/signatures/documents/upload')
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .set('x-organization-id', String(organizationId))
+      .field('document_id', String(firstDocumentId))
+      .attach('file', Buffer.from('%PDF-1.7\nno csrf'), {
+        filename: 'no-csrf.pdf',
+        contentType: 'application/pdf',
+      })
+      .expect(403);
+    expect(signatureStorage.store).toHaveBeenCalledTimes(storedBefore);
+
+    await signatureFile(
+      `/api/signatures/documents/${foreignDocumentId}/file`,
+    ).expect(404);
+    await signatureFile(
+      `/api/signatures/templates/${foreignTemplateId}/file`,
+    ).expect(404);
+  });
 
   it('filters and deterministically pages documents with REST parity', async () => {
     const listed = await graphql(
@@ -433,9 +634,22 @@ describe('E-signature GraphQL read contract', () => {
     expect(snapshot.body.data.fields[0].recipient_id).toBe(snapshot.body.data.recipients[0].id);
 
     await graphql(memberToken, organizationId, 'mutation Delete($id:Int!){deleteSignatureDraft(id:$id){id}}', { id: documentId }).expect(200);
+    const deletedTemplateUrl = '/uploads/signatures/deleted-template.pdf';
+    await pool.query(
+      `UPDATE signature_templates SET
+         file_url=$1,file_name='deleted-template.pdf',file_size=500,
+         file_type='application/pdf'
+       WHERE id=$2 AND organization_id=$3`,
+      [deletedTemplateUrl, id, organizationId],
+    );
     const deleted = await graphql(memberToken, organizationId, 'mutation Delete($id:Int!){deleteSignatureTemplate(id:$id){id title}}', { id }).expect(200);
     expect(deleted.body.errors).toBeUndefined();
     expect(deleted.body.data.deleteSignatureTemplate.id).toBe(id);
+    expect((await pool.query(
+      `SELECT id FROM signature_file_deletion_jobs
+       WHERE organization_id=$1 AND document_id IS NULL AND file_url=$2`,
+      [organizationId, deletedTemplateUrl],
+    )).rows).toHaveLength(1);
   });
 
   it('cancels atomically and idempotently while previewing escaped server-controlled email HTML', async () => {
@@ -558,6 +772,12 @@ describe('E-signature GraphQL read contract', () => {
       [organizationId, memberId, sharedUrl],
     );
     const [removeId, sharedId, deleteId, sentId] = inserted.rows.map((row) => Number(row.id));
+    await pool.query(
+      `INSERT INTO signature_document_versions
+         (document_id,version_number,file_url,file_name,file_size,file_type,original_sha256)
+       VALUES ($1,1,$2,'shared-removal.pdf',600,'application/pdf','hash-one')`,
+      [removeId, sharedUrl],
+    );
     const remove = () => graphql(
       memberToken,
       organizationId,
@@ -582,11 +802,14 @@ describe('E-signature GraphQL read contract', () => {
          (SELECT COUNT(*) FROM signature_file_deletion_jobs
           WHERE organization_id=$1 AND file_url=$3) AS jobs,
          (SELECT COUNT(*) FROM signature_audit_log
-          WHERE document_id=$2 AND event_type='file_removed') AS audits`,
+          WHERE document_id=$2 AND event_type='file_removed') AS audits,
+         (SELECT COUNT(*) FROM signature_document_versions
+          WHERE document_id=$2) AS versions`,
       [organizationId, removeId, sharedUrl],
     );
     expect(Number(state.rows[0].jobs)).toBe(1);
     expect(Number(state.rows[0].audits)).toBe(1);
+    expect(Number(state.rows[0].versions)).toBe(0);
 
     const hidden = await graphql(
       memberToken,

@@ -23,6 +23,8 @@ The Stripe invoice webhook also keeps its existing public URL. `STRIPE_INVOICE_W
 
 Invoice logo uploads keep their two existing public URLs. `INVOICE_LOGO_UPLOADS_NESTJS_ENABLED=true` proxies only `POST /api/invoices/businesses/:id/logo` and `POST /api/invoices/settings/logo`; false or unset falls through to Express. `INVOICE_LOGO_UPLOADS_UPSTREAM_TIMEOUT_MS` defaults to 30 seconds. The proxy caps and preserves the multipart bytes and boundary, forwards only the host cookie, selected organization, CSRF token, and request ID, and returns only content type, cache control, and request ID.
 
+Authenticated signature files keep their five existing public URLs. `SIGNATURE_FILE_UPLOADS_NESTJS_ENABLED=true` proxies only the document and template multipart uploads; false or unset falls through to Express. `SIGNATURE_FILE_READS_NESTJS_ENABLED=true` independently proxies the document source, completed-document download, and template source; false or unset falls through to Express. Upload and read timeouts default to 30 and 60 seconds through `SIGNATURE_FILE_UPLOADS_UPSTREAM_TIMEOUT_MS` and `SIGNATURE_FILE_READS_UPSTREAM_TIMEOUT_MS`. Upload forwarding is bounded to 5 MiB plus multipart overhead and carries only the host cookie, selected organization, CSRF token, request ID, and exact content type. Read forwarding carries only the cookie, selected organization, request ID, and PDF accept header, and returns only the hardened private delivery headers.
+
 ## Allowed Methods
 
 The following methods are allowed to be used with the API:

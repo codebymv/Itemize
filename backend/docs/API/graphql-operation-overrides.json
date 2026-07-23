@@ -1511,20 +1511,20 @@
       "notes": "Production consumer enabled through the independent document-read flag as a repeatable-read tenant-owned ordered safe projection; IP, user-agent, and structured metadata remain deliberately absent."
     },
     "POST /api/signatures/documents/upload": {
-      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "uploadSignatureDraftPdf", "parityStatus": "characterized", "risk": "high",
-      "notes": "Authenticated tenant/draft-owned multipart PDF protocol with a 5 MiB limit, PDF magic validation, forced .pdf storage keys, private delivery, and SHA-256 metadata. Malware scanning and structural/page validation remain cutover blockers."
+      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "uploadSignatureDraftPdf", "parityStatus": "implemented", "risk": "high",
+      "notes": "NestJS owns the unchanged authenticated URL behind a default-off upload proxy. Bounded multipart parsing, CSRF, tenant/draft preflight plus row-lock recheck, PDF magic validation, private unguessable storage, SHA-256 metadata, version-1 convergence, replacement cleanup, and failed-commit compensation are covered by PostgreSQL tests. Malware scanning and structural/page validation remain production cutover blockers."
     },
     "GET /api/signatures/documents/:id/file": {
-      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "streamSignatureDraftPdf", "parityStatus": "characterized", "risk": "high",
-      "notes": "Tenant-authorized binary stream; never proxy an arbitrary stored URL and never expose a permanent public object URL."
+      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "streamSignatureDraftPdf", "parityStatus": "implemented", "risk": "high",
+      "notes": "NestJS owns the unchanged authenticated URL behind a default-off read proxy. Tenant lookup precedes an allowlisted local/S3 read; successful responses use private no-store/nosniff/sandbox headers and a safe inline filename without exposing a permanent storage URL."
     },
     "DELETE /api/signatures/documents/:id/file": {
       "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "removeSignatureDraftPdf", "parityStatus": "implemented", "risk": "high",
       "notes": "Draft-only metadata removal atomically enqueues exact server-owned storage cleanup; sent/completed source and signed artifacts are immutable."
     },
     "GET /api/signatures/documents/:id/download": {
-      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "downloadCompletedSignaturePdf", "parityStatus": "characterized", "risk": "high",
-      "notes": "Tenant-authorized completed-PDF attachment with private no-store/nosniff/sandbox headers, a safe filename, and no permanent storage URL or arbitrary remote proxy."
+      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "downloadCompletedSignaturePdf", "parityStatus": "implemented", "risk": "high",
+      "notes": "NestJS owns the unchanged authenticated URL behind a default-off read proxy. A tenant-owned signed locator is required; delivery accepts only exact private local/S3 storage and returns an attachment with private no-store/nosniff/sandbox headers and a safe filename."
     },
     "POST /api/signatures/email/preview": {
       "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDeliveryModule", "targetOperation": "previewSignatureEmail", "parityStatus": "consumer-cutover-complete", "risk": "high",
@@ -1543,8 +1543,8 @@
       "notes": "Production consumer enabled through the independent template-read flag as one repeatable-read tenant-owned aggregate with ordered roles and fields; storage locations and source hashes are excluded."
     },
     "GET /api/signatures/templates/:id/file": {
-      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "streamSignatureTemplatePdf", "parityStatus": "characterized", "risk": "high",
-      "notes": "Tenant-authorized private PDF stream with hardened headers, a safe filename, and exact local/S3 signature storage allowlists."
+      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "streamSignatureTemplatePdf", "parityStatus": "implemented", "risk": "high",
+      "notes": "NestJS owns the unchanged authenticated URL behind a default-off read proxy. Tenant lookup precedes the exact private local/S3 allowlist; the response uses hardened headers and a safe inline filename."
     },
     "PUT /api/signatures/templates/:id": {
       "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "updateSignatureTemplate", "parityStatus": "consumer-cutover-complete", "risk": "high",
@@ -1552,15 +1552,15 @@
     },
     "DELETE /api/signatures/templates/:id": {
       "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "deleteSignatureTemplate", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Production consumer enabled through the independent template-mutation flag as a row-locked tenant-owned delete; already-instantiated documents retain their immutable snapshot and advisory template ID, and the disposable production template was removed successfully."
+      "notes": "Production consumer enabled through the independent template-mutation flag as a row-locked tenant-owned delete; any private template PDF is atomically enqueued for leased cleanup, while already-instantiated documents retain their immutable snapshot and advisory template ID."
     },
     "POST /api/signatures/templates/:id/instantiate": {
       "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "instantiateSignatureTemplate", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Production consumer enabled through the independent template-mutation flag as an atomic tenant-owned file/metadata/role/field snapshot with serialized monthly quota, validated recipient contacts, and authenticated browser/log evidence."
     },
     "POST /api/signatures/templates/upload": {
-      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "uploadSignatureTemplatePdf", "parityStatus": "characterized", "risk": "high",
-      "notes": "Authenticated tenant-owned multipart PDF protocol with a 5 MiB limit, PDF magic validation, forced .pdf storage keys, private delivery, and SHA-256 metadata. Malware scanning and structural/page validation remain cutover blockers."
+      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "uploadSignatureTemplatePdf", "parityStatus": "implemented", "risk": "high",
+      "notes": "NestJS owns the unchanged authenticated URL behind a default-off upload proxy. Bounded multipart parsing, CSRF, tenant preflight plus row-lock recheck, PDF magic validation, private unguessable storage, SHA-256 metadata, replacement cleanup, and failed-commit compensation are covered by PostgreSQL tests. Malware scanning and structural/page validation remain production cutover blockers."
     },
     "GET /api/public/sign/:token": {
       "disposition": "retain-http", "owner": "esignatures", "targetModule": "PublicSigningModule", "targetOperation": "getSigningSession", "parityStatus": "characterized", "risk": "high",

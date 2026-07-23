@@ -349,13 +349,13 @@
 | PUT | `/api/signatures/documents/:id` | 1 | 6 | graphql-mutation | high | esignatures / SignatureDocumentsModule / updateSignatureDraft |
 | GET | `/api/signatures/documents/:id/audit` | 1 | 0 | graphql-query | high | esignatures / SignatureDocumentsModule / signatureAuditTrail |
 | POST | `/api/signatures/documents/:id/cancel` | 1 | 1 | graphql-mutation | high | esignatures / SignatureDocumentsModule / cancelSignatureDocument |
-| GET | `/api/signatures/documents/:id/download` | 0 | 1 | retain-http | high | esignatures / SignatureFilesModule / downloadCompletedSignaturePdf |
+| GET | `/api/signatures/documents/:id/download` | 0 | 3 | retain-http | high | esignatures / SignatureFilesModule / downloadCompletedSignaturePdf |
 | DELETE | `/api/signatures/documents/:id/file` | 1 | 0 | graphql-mutation | high | esignatures / SignatureDocumentsModule / removeSignatureDraftPdf |
-| GET | `/api/signatures/documents/:id/file` | 0 | 2 | retain-http | high | esignatures / SignatureFilesModule / streamSignatureDraftPdf |
+| GET | `/api/signatures/documents/:id/file` | 0 | 4 | retain-http | high | esignatures / SignatureFilesModule / streamSignatureDraftPdf |
 | POST | `/api/signatures/documents/:id/remind` | 1 | 1 | graphql-mutation | high | esignatures / SignatureDeliveryModule / sendSignatureReminder |
 | POST | `/api/signatures/documents/:id/reminders` | 0 | 2 | graphql-mutation | high | esignatures / SignatureDeliveryModule / scheduleSignatureReminders |
 | POST | `/api/signatures/documents/:id/send` | 1 | 4 | graphql-mutation | high | esignatures / SignatureDeliveryModule / sendSignatureDocument |
-| POST | `/api/signatures/documents/upload` | 1 | 2 | retain-http | high | esignatures / SignatureFilesModule / uploadSignatureDraftPdf |
+| POST | `/api/signatures/documents/upload` | 1 | 12 | retain-http | high | esignatures / SignatureFilesModule / uploadSignatureDraftPdf |
 | POST | `/api/signatures/email/preview` | 1 | 0 | graphql-query | high | esignatures / SignatureDeliveryModule / previewSignatureEmail |
 | GET | `/api/signatures/templates` | 1 | 0 | graphql-query | high | esignatures / SignatureTemplatesModule / signatureTemplates |
 | POST | `/api/signatures/templates` | 1 | 0 | graphql-mutation | high | esignatures / SignatureTemplatesModule / createSignatureTemplate |

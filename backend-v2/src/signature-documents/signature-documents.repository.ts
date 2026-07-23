@@ -233,6 +233,10 @@ export class SignatureDocumentsRepository {
         [id,organizationId],
       );
       await client.query(
+        'DELETE FROM signature_document_versions WHERE document_id=$1',
+        [id],
+      );
+      await client.query(
         `INSERT INTO signature_audit_log
            (document_id,event_type,description,created_at)
          VALUES ($1,'file_removed','Document file removed',CURRENT_TIMESTAMP)`,

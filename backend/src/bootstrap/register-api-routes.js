@@ -34,6 +34,10 @@ const calendarsRoutes = require('../routes/calendars.routes');
 const bookingsRoutes = require('../routes/bookings.routes');
 const formsRoutes = require('../routes/forms.routes');
 const signaturesRoutes = require('../routes/signatures.routes');
+const {
+    createSignatureFileReadProxy,
+    createSignatureFileUploadProxy,
+} = require('../signature-file-proxy');
 const conversationsRoutes = require('../routes/conversations.routes');
 const analyticsRoutes = require('../routes/analytics.routes');
 const contactProfileRoutes = require('../routes/contact-profile.routes');
@@ -282,6 +286,32 @@ function registerApiRoutes({
     logger.info('Bookings routes initialized');
     app.use('/api/forms', formsRoutes(pool, authenticateJWT, publicRateLimit));
     logger.info('Forms routes initialized');
+    app.post(
+        '/api/signatures/documents/upload',
+        createSignatureFileUploadProxy({
+            targetPath: '/api/signatures/documents/upload',
+            logger,
+        }),
+    );
+    app.post(
+        '/api/signatures/templates/upload',
+        createSignatureFileUploadProxy({
+            targetPath: '/api/signatures/templates/upload',
+            logger,
+        }),
+    );
+    app.get(
+        '/api/signatures/documents/:id/file',
+        createSignatureFileReadProxy({ kind: 'document-source', logger }),
+    );
+    app.get(
+        '/api/signatures/documents/:id/download',
+        createSignatureFileReadProxy({ kind: 'document-download', logger }),
+    );
+    app.get(
+        '/api/signatures/templates/:id/file',
+        createSignatureFileReadProxy({ kind: 'template-source', logger }),
+    );
     app.use('/api', signaturesRoutes(pool, authenticateJWT, publicRateLimit));
     logger.info('Signatures routes initialized');
     app.use('/api/conversations', conversationsRoutes(pool, authenticateJWT));

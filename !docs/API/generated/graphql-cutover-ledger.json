@@ -3724,7 +3724,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 53
+          "line": 57
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -4949,7 +4949,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 215
+          "line": 219
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -5024,7 +5024,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 216
+          "line": 220
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -7005,7 +7005,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 261
+          "line": 265
         },
         {
           "source": "backend/src/routes/invoices/actions.routes.js",
@@ -7493,7 +7493,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 253
+          "line": 257
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -8773,7 +8773,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 257
+          "line": 261
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -8811,7 +8811,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 249
+          "line": 253
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -9184,7 +9184,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 49
+          "line": 53
         },
         {
           "source": "backend/src/routes/lists.routes.js",
@@ -14450,6 +14450,10 @@
       "path": "/api/signatures/documents/:id/download",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 307
+        },
+        {
           "source": "backend/src/routes/signatures.routes.js",
           "line": 518
         }
@@ -14461,6 +14465,18 @@
           "path": "/api/signatures/documents/12/download",
           "source": "backend/src/__tests__/routes/signature-files.routes.test.js",
           "line": 81
+        },
+        {
+          "method": "GET",
+          "path": "/api/signatures/documents/:id/download",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 88
+        },
+        {
+          "method": "GET",
+          "path": "/api/signatures/documents/7/download",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 99
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -14469,8 +14485,8 @@
       "owner": "esignatures",
       "targetOperation": "downloadCompletedSignaturePdf",
       "targetModule": "SignatureFilesModule",
-      "parityStatus": "characterized",
-      "notes": "Tenant-authorized completed-PDF attachment with private no-store/nosniff/sandbox headers, a safe filename, and no permanent storage URL or arbitrary remote proxy.",
+      "parityStatus": "implemented",
+      "notes": "NestJS owns the unchanged authenticated URL behind a default-off read proxy. A tenant-owned signed locator is required; delivery accepts only exact private local/S3 storage and returns an attachment with private no-store/nosniff/sandbox headers and a safe filename.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14515,6 +14531,10 @@
       "path": "/api/signatures/documents/:id/file",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 303
+        },
+        {
           "source": "backend/src/routes/signatures.routes.js",
           "line": 535
         }
@@ -14532,6 +14552,18 @@
           "path": "/api/signatures/documents/12/file",
           "source": "backend/src/__tests__/routes/signature-files.routes.test.js",
           "line": 104
+        },
+        {
+          "method": "GET",
+          "path": "/api/signatures/documents/:id/file",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 23
+        },
+        {
+          "method": "GET",
+          "path": "/api/signatures/documents/7/file",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 32
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -14540,8 +14572,8 @@
       "owner": "esignatures",
       "targetOperation": "streamSignatureDraftPdf",
       "targetModule": "SignatureFilesModule",
-      "parityStatus": "characterized",
-      "notes": "Tenant-authorized binary stream; never proxy an arbitrary stored URL and never expose a permanent public object URL.",
+      "parityStatus": "implemented",
+      "notes": "NestJS owns the unchanged authenticated URL behind a default-off read proxy. Tenant lookup precedes an allowlisted local/S3 read; successful responses use private no-store/nosniff/sandbox headers and a safe inline filename without exposing a permanent storage URL.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14689,6 +14721,10 @@
       "path": "/api/signatures/documents/upload",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 289
+        },
+        {
           "source": "backend/src/routes/signatures.routes.js",
           "line": 348
         }
@@ -14708,6 +14744,12 @@
         {
           "method": "POST",
           "path": "/api/signatures/documents/upload",
+          "source": "backend-v2/test/integration/signatures.integration-spec.ts",
+          "line": 409
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
           "source": "backend/src/__tests__/routes/signature-files.routes.test.js",
           "line": 111
         },
@@ -14716,6 +14758,60 @@
           "path": "/api/signatures/documents/upload",
           "source": "backend/src/__tests__/routes/signature-files.routes.test.js",
           "line": 131
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 16
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 30
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 42
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 52
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 115
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 120
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 123
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 131
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 133
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -14724,8 +14820,8 @@
       "owner": "esignatures",
       "targetOperation": "uploadSignatureDraftPdf",
       "targetModule": "SignatureFilesModule",
-      "parityStatus": "characterized",
-      "notes": "Authenticated tenant/draft-owned multipart PDF protocol with a 5 MiB limit, PDF magic validation, forced .pdf storage keys, private delivery, and SHA-256 metadata. Malware scanning and structural/page validation remain cutover blockers.",
+      "parityStatus": "implemented",
+      "notes": "NestJS owns the unchanged authenticated URL behind a default-off upload proxy. Bounded multipart parsing, CSRF, tenant/draft preflight plus row-lock recheck, PDF magic validation, private unguessable storage, SHA-256 metadata, version-1 convergence, replacement cleanup, and failed-commit compensation are covered by PostgreSQL tests. Malware scanning and structural/page validation remain production cutover blockers.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14861,7 +14957,7 @@
       "targetOperation": "deleteSignatureTemplate",
       "targetModule": "SignatureTemplatesModule",
       "parityStatus": "consumer-cutover-complete",
-      "notes": "Production consumer enabled through the independent template-mutation flag as a row-locked tenant-owned delete; already-instantiated documents retain their immutable snapshot and advisory template ID, and the disposable production template was removed successfully.",
+      "notes": "Production consumer enabled through the independent template-mutation flag as a row-locked tenant-owned delete; any private template PDF is atomically enqueued for leased cleanup, while already-instantiated documents retain their immutable snapshot and advisory template ID.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14940,6 +15036,10 @@
       "path": "/api/signatures/templates/:id/file",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 311
+        },
+        {
           "source": "backend/src/routes/signatures.routes.js",
           "line": 254
         }
@@ -14959,8 +15059,8 @@
       "owner": "esignatures",
       "targetOperation": "streamSignatureTemplatePdf",
       "targetModule": "SignatureFilesModule",
-      "parityStatus": "characterized",
-      "notes": "Tenant-authorized private PDF stream with hardened headers, a safe filename, and exact local/S3 signature storage allowlists.",
+      "parityStatus": "implemented",
+      "notes": "NestJS owns the unchanged authenticated URL behind a default-off read proxy. Tenant lookup precedes the exact private local/S3 allowlist; the response uses hardened headers and a safe inline filename.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -15005,6 +15105,10 @@
       "path": "/api/signatures/templates/upload",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 296
+        },
+        {
           "source": "backend/src/routes/signatures.routes.js",
           "line": 210
         }
@@ -15027,8 +15131,8 @@
       "owner": "esignatures",
       "targetOperation": "uploadSignatureTemplatePdf",
       "targetModule": "SignatureFilesModule",
-      "parityStatus": "characterized",
-      "notes": "Authenticated tenant-owned multipart PDF protocol with a 5 MiB limit, PDF magic validation, forced .pdf storage keys, private delivery, and SHA-256 metadata. Malware scanning and structural/page validation remain cutover blockers.",
+      "parityStatus": "implemented",
+      "notes": "NestJS owns the unchanged authenticated URL behind a default-off upload proxy. Bounded multipart parsing, CSRF, tenant preflight plus row-lock recheck, PDF magic validation, private unguessable storage, SHA-256 metadata, replacement cleanup, and failed-commit compensation are covered by PostgreSQL tests. Malware scanning and structural/page validation remain production cutover blockers.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -15887,7 +15991,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 117
+          "line": 121
         }
       ],
       "consumerCallsites": [
@@ -15921,7 +16025,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 61
+          "line": 65
         }
       ],
       "consumerCallsites": [
@@ -16616,7 +16720,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 52
+          "line": 56
         },
         {
           "source": "backend/src/routes/vaults/crud.routes.js",
@@ -16960,7 +17064,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 50
+          "line": 54
         },
         {
           "source": "backend/src/routes/whiteboards.routes.js",
@@ -17247,7 +17351,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 51
+          "line": 55
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",
