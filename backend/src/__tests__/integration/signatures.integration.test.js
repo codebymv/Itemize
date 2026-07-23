@@ -19,6 +19,7 @@ const TestDbHelper = require('./test-db-helper');
 const registerApiRoutes = require('../../bootstrap/register-api-routes');
 const { authenticateJWT, requireAdmin } = require('../../auth');
 const signatureEmailService = require('../../services/signature-email.service');
+const signatureService = require('../../services/signature.service');
 
 function createApp(pool) {
     const app = express();
@@ -85,6 +86,68 @@ describe('Signature lifecycle PostgreSQL contract', () => {
         expect(response.status).toBe(200);
         return response.body.data;
     }
+
+    it('retains monotonic source versions and enqueues all of them only when the draft file is removed', async () => {
+        const document = await createDocument(userA, 'Retained version contract');
+        const first = {
+            buffer: Buffer.from('%PDF-1.7\nretained-first'),
+            filename: `retained-first-${document.id}.pdf`,
+            originalname: 'First.pdf',
+            mimetype: 'application/pdf',
+            size: 25,
+        };
+        const second = {
+            buffer: Buffer.from('%PDF-1.7\nretained-second'),
+            filename: `retained-second-${document.id}.pdf`,
+            originalname: 'Second.pdf',
+            mimetype: 'application/pdf',
+            size: 26,
+        };
+
+        const firstUpload = await signatureService.uploadDocument(
+            dbHelper.pool, userA.org.id, document.id, first
+        );
+        const secondUpload = await signatureService.uploadDocument(
+            dbHelper.pool, userA.org.id, document.id, second
+        );
+        expect(firstUpload.file_url).not.toBe(secondUpload.file_url);
+
+        const beforeRemoval = await dbHelper.pool.query(
+            `SELECT version_number,file_url,original_sha256
+             FROM signature_document_versions
+             WHERE document_id=$1 ORDER BY version_number`,
+            [document.id]
+        );
+        expect(beforeRemoval.rows).toEqual([
+            expect.objectContaining({
+                version_number: 1,
+                file_url: firstUpload.file_url,
+                original_sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+            }),
+            expect.objectContaining({
+                version_number: 2,
+                file_url: secondUpload.file_url,
+                original_sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+            }),
+        ]);
+        expect((await dbHelper.pool.query(
+            'SELECT id FROM signature_file_deletion_jobs WHERE document_id=$1',
+            [document.id]
+        )).rows).toHaveLength(0);
+
+        await signatureService.removeDocumentFile(dbHelper.pool, userA.org.id, document.id);
+        expect((await dbHelper.pool.query(
+            `SELECT file_url FROM signature_file_deletion_jobs
+             WHERE document_id=$1 ORDER BY file_url`,
+            [document.id]
+        )).rows.map(row => row.file_url).sort()).toEqual(
+            [firstUpload.file_url, secondUpload.file_url].sort()
+        );
+        expect((await dbHelper.pool.query(
+            'SELECT id FROM signature_document_versions WHERE document_id=$1',
+            [document.id]
+        )).rows).toHaveLength(0);
+    });
 
     it('allows exactly one concurrent initial send and records one sent event', async () => {
         const document = await createDocument(userA, 'Concurrent signature send');

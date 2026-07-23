@@ -435,17 +435,30 @@ describe('E-signature GraphQL read contract', () => {
        WHERE organization_id=$1 AND file_url=$2`,
       [organizationId, firstUrl],
     );
-    expect(cleanup.rows[0].status).toBe('queued');
-    const version = await pool.query<{ file_url: string; total: string }>(
-      `SELECT file_url,COUNT(*) OVER () AS total
-       FROM signature_document_versions WHERE document_id=$1`,
+    expect(cleanup.rows).toHaveLength(0);
+    const versions = await pool.query<{
+      version_number: number;
+      file_url: string;
+      original_sha256: string;
+    }>(
+      `SELECT version_number,file_url,original_sha256
+       FROM signature_document_versions
+       WHERE document_id=$1
+       ORDER BY version_number`,
       [secondDocumentId],
     );
-    expect(version.rows).toHaveLength(1);
-    expect(version.rows[0]).toMatchObject({
-      file_url: replacement.rows[0].file_url,
-      total: '1',
+    expect(versions.rows).toHaveLength(2);
+    expect(versions.rows[0]).toMatchObject({
+      version_number: 1,
+      file_url: firstUrl,
+      original_sha256: firstRow.rows[0].original_sha256,
     });
+    expect(versions.rows[1]).toMatchObject({
+      version_number: 2,
+      file_url: replacement.rows[0].file_url,
+    });
+    expect(versions.rows[1].original_sha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(storedSignatureFiles.get(firstUrl)).toEqual(firstPdf);
 
     const templatePdf = await signaturePdf('template');
     const uploadTemplateId = Number((await pool.query<{ id: number }>(
@@ -511,6 +524,13 @@ describe('E-signature GraphQL read contract', () => {
       .field('document_id', String(firstDocumentId))
       .attach('file', Buffer.from('not a pdf'), {
         filename: 'spoof.pdf',
+        contentType: 'application/pdf',
+      })
+      .expect(400);
+    await signatureUpload('/api/signatures/documents/upload')
+      .field('document_id', String(firstDocumentId))
+      .attach('file', Buffer.from('%PDF-1.7\nnot structurally valid'), {
+        filename: 'malformed.pdf',
         contentType: 'application/pdf',
       })
       .expect(400);
@@ -881,11 +901,18 @@ describe('E-signature GraphQL read contract', () => {
       [organizationId, memberId, sharedUrl],
     );
     const [removeId, sharedId, deleteId, sentId] = inserted.rows.map((row) => Number(row.id));
+    const historicalUrl = '/uploads/signatures/older-removal.pdf';
+    const deletedHistoricalUrl = '/uploads/signatures/older-delete-draft.pdf';
     await pool.query(
       `INSERT INTO signature_document_versions
          (document_id,version_number,file_url,file_name,file_size,file_type,original_sha256)
-       VALUES ($1,1,$2,'shared-removal.pdf',600,'application/pdf','hash-one')`,
-      [removeId, sharedUrl],
+       VALUES
+         ($1,1,$3,'older-removal.pdf',550,'application/pdf','hash-zero'),
+         ($1,2,$2,'shared-removal.pdf',600,'application/pdf','hash-one'),
+         ($4,1,$5,'older-delete-draft.pdf',450,'application/pdf','hash-before-three'),
+         ($4,2,'/uploads/signatures/delete-draft.pdf','delete-draft.pdf',500,
+          'application/pdf','hash-three')`,
+      [removeId, sharedUrl, historicalUrl, deleteId, deletedHistoricalUrl],
     );
     const remove = () => graphql(
       memberToken,
@@ -909,14 +936,14 @@ describe('E-signature GraphQL read contract', () => {
     const state = await pool.query(
       `SELECT
          (SELECT COUNT(*) FROM signature_file_deletion_jobs
-          WHERE organization_id=$1 AND file_url=$3) AS jobs,
+          WHERE organization_id=$1 AND file_url IN ($3,$4)) AS jobs,
          (SELECT COUNT(*) FROM signature_audit_log
           WHERE document_id=$2 AND event_type='file_removed') AS audits,
          (SELECT COUNT(*) FROM signature_document_versions
           WHERE document_id=$2) AS versions`,
-      [organizationId, removeId, sharedUrl],
+      [organizationId, removeId, sharedUrl, historicalUrl],
     );
-    expect(Number(state.rows[0].jobs)).toBe(1);
+    expect(Number(state.rows[0].jobs)).toBe(2);
     expect(Number(state.rows[0].audits)).toBe(1);
     expect(Number(state.rows[0].versions)).toBe(0);
 
@@ -947,9 +974,10 @@ describe('E-signature GraphQL read contract', () => {
     expect(deleted.body.errors).toBeUndefined();
     expect((await pool.query(
       `SELECT id FROM signature_file_deletion_jobs
-       WHERE organization_id=$1 AND file_url='/uploads/signatures/delete-draft.pdf'`,
-      [organizationId],
-    )).rows).toHaveLength(1);
+       WHERE organization_id=$1 AND file_url IN
+         ('/uploads/signatures/delete-draft.pdf',$2)`,
+      [organizationId, deletedHistoricalUrl],
+    )).rows).toHaveLength(2);
 
     const { SignatureFileCleanupService } = require(
       '../../../backend/src/services/signature-file-cleanup.service',

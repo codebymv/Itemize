@@ -1,12 +1,8 @@
-const fs = require('fs');
-const { logger } = require('../../utils/logger');
 const { withDbClient, withTransaction } = require('../../utils/db');
 const {
     s3Service,
     computeSha256FromFile,
     buildUploadKey,
-    getLocalFilePath,
-    getS3KeyFromUrl,
     getUploadedFileUrl
 } = require('./storage');
 const {
@@ -105,12 +101,14 @@ async function updateDocument(pool, organizationId, documentId, data) {
 async function uploadDocument(pool, organizationId, documentId, file) {
     return withTransaction(pool, async (client) => {
         const authorized = await client.query(
-            `SELECT id FROM signature_documents
+            `SELECT id,file_url,file_name,file_size,file_type,original_sha256,created_by
+             FROM signature_documents
              WHERE id = $1 AND organization_id = $2 AND status = 'draft'
              FOR UPDATE`,
             [documentId, organizationId]
         );
         if (authorized.rows.length === 0) return null;
+        const prior = authorized.rows[0];
 
         const sha256 = await computeSha256FromFile(file);
         let fileUrl = null;
@@ -120,6 +118,26 @@ async function uploadDocument(pool, organizationId, documentId, file) {
             fileUrl = await s3Service.uploadFile(file.buffer, key, file.mimetype);
         } else {
             fileUrl = getUploadedFileUrl(file);
+        }
+
+        if (prior.file_url) {
+            const represented = await client.query(
+                `SELECT 1 FROM signature_document_versions
+                 WHERE document_id=$1 AND file_url=$2
+                   AND original_sha256 IS NOT DISTINCT FROM $3
+                 LIMIT 1`,
+                [documentId, prior.file_url, prior.original_sha256]
+            );
+            if (represented.rows.length === 0) {
+                await appendDocumentVersion(client, documentId, {
+                    fileUrl: prior.file_url,
+                    fileName: prior.file_name || 'document.pdf',
+                    fileSize: prior.file_size || 0,
+                    fileType: prior.file_type || 'application/pdf',
+                    sha256: prior.original_sha256,
+                    createdBy: prior.created_by
+                });
+            }
         }
 
         const updateResult = await client.query(`
@@ -143,57 +161,53 @@ async function uploadDocument(pool, organizationId, documentId, file) {
         ]);
 
         if (updateResult.rows.length > 0) {
-            await client.query(`
-                INSERT INTO signature_document_versions (
-                    document_id,
-                    version_number,
-                    file_url,
-                    file_name,
-                    file_size,
-                    file_type,
-                    original_sha256,
-                    created_at
-                ) VALUES ($1, 1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
-                ON CONFLICT (document_id, version_number) DO NOTHING
-            `, [
-                documentId,
+            await appendDocumentVersion(client, documentId, {
                 fileUrl,
-                file.originalname || file.filename || 'document.pdf',
-                file.size || null,
-                'application/pdf',
-                sha256
-            ]);
+                fileName: file.originalname || file.filename || 'document.pdf',
+                fileSize: file.size || 0,
+                fileType: 'application/pdf',
+                sha256,
+                createdBy: prior.created_by
+            });
         }
 
         return updateResult.rows[0] || null;
     });
 }
 
+async function appendDocumentVersion(client, documentId, file) {
+    await client.query(
+        `INSERT INTO signature_document_versions (
+            document_id,version_number,file_url,file_name,file_size,file_type,
+            original_sha256,created_by,created_at
+         )
+         SELECT $1,COALESCE(MAX(version_number),0)+1,$2,$3,$4,$5,$6,$7,
+           CURRENT_TIMESTAMP
+         FROM signature_document_versions
+         WHERE document_id=$1`,
+        [
+            documentId,
+            file.fileUrl,
+            file.fileName,
+            file.fileSize,
+            file.fileType,
+            file.sha256,
+            file.createdBy
+        ]
+    );
+}
+
 async function removeDocumentFile(pool, organizationId, documentId) {
     return withTransaction(pool, async (client) => {
         const docResult = await client.query(
-            "SELECT file_url FROM signature_documents WHERE id = $1 AND organization_id = $2 AND status = 'draft'",
+            `SELECT file_url FROM signature_documents
+             WHERE id = $1 AND organization_id = $2 AND status = 'draft'
+             FOR UPDATE`,
             [documentId, organizationId]
         );
         if (docResult.rows.length === 0) return null;
 
-        const fileUrl = docResult.rows[0].file_url;
-
-        if (fileUrl) {
-            try {
-                if (fileUrl.startsWith('/uploads/')) {
-                    const fullPath = getLocalFilePath(fileUrl);
-                    if (!fullPath) throw new Error('Invalid local signature file path');
-                    await fs.promises.unlink(fullPath).catch(() => null);
-                } else if (fileUrl.includes('.s3.') && s3Service) {
-                    const parsed = new URL(fileUrl.startsWith('http') ? fileUrl : `https://${fileUrl}`);
-                    const key = parsed.pathname.replace(/^\//, '');
-                    await s3Service.deleteFile(key);
-                }
-            } catch (error) {
-                logger.warn('Failed to delete signature document file', { error: error.message });
-            }
-        }
+        await enqueueDocumentFileDeletions(client, organizationId, documentId);
 
         const updateResult = await client.query(`
             UPDATE signature_documents SET
@@ -209,6 +223,10 @@ async function removeDocumentFile(pool, organizationId, documentId) {
             RETURNING ${signatureDocumentColumns()}
         `, [documentId, organizationId]);
 
+        await client.query(
+            'DELETE FROM signature_document_versions WHERE document_id = $1',
+            [documentId]
+        );
         await client.query(`
             INSERT INTO signature_audit_log (document_id, event_type, description, created_at)
             VALUES ($1, 'file_removed', 'Document file removed', CURRENT_TIMESTAMP)
@@ -221,34 +239,13 @@ async function removeDocumentFile(pool, organizationId, documentId) {
 async function deleteDocumentFile(pool, organizationId, documentId) {
     return withTransaction(pool, async (client) => {
         const current = await client.query(
-            'SELECT file_url FROM signature_documents WHERE id = $1 AND organization_id = $2',
+            `SELECT file_url FROM signature_documents
+             WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
             [documentId, organizationId]
         );
         if (current.rows.length === 0) return null;
 
-        const fileUrl = current.rows[0].file_url;
-        if (fileUrl) {
-            if (s3Service && process.env.AWS_ACCESS_KEY_ID) {
-                const key = getS3KeyFromUrl(fileUrl);
-                if (key) {
-                    try {
-                        await s3Service.deleteFile(key);
-                    } catch (error) {
-                        logger.warn('Failed to delete signature file from S3', { error: error.message, key });
-                    }
-                }
-            } else {
-                const localPath = getLocalFilePath(fileUrl);
-                if (localPath) {
-                    try {
-                        await fs.promises.unlink(localPath);
-                    } catch (error) {
-                        logger.warn('Failed to delete signature file from disk', { error: error.message, localPath });
-                    }
-                }
-            }
-        }
-
+        await enqueueDocumentFileDeletions(client, organizationId, documentId);
         await client.query(
             'DELETE FROM signature_document_versions WHERE document_id = $1',
             [documentId]
@@ -273,7 +270,8 @@ async function deleteDocumentFile(pool, organizationId, documentId) {
 async function deleteDocument(pool, organizationId, documentId) {
     return withTransaction(pool, async (client) => {
         const docResult = await client.query(
-            'SELECT id, status, file_url FROM signature_documents WHERE id = $1 AND organization_id = $2',
+            `SELECT id,status,file_url FROM signature_documents
+             WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
             [documentId, organizationId]
         );
         if (docResult.rows.length === 0) return null;
@@ -283,23 +281,7 @@ async function deleteDocument(pool, organizationId, documentId) {
             throw new Error('Only draft documents can be deleted');
         }
 
-        const fileUrl = doc.file_url;
-        if (fileUrl) {
-            try {
-                if (fileUrl.startsWith('/uploads/')) {
-                    const fullPath = getLocalFilePath(fileUrl);
-                    if (!fullPath) throw new Error('Invalid local signature file path');
-                    await fs.promises.unlink(fullPath).catch(() => null);
-                } else if (fileUrl.includes('.s3.') && s3Service) {
-                    const parsed = new URL(fileUrl.startsWith('http') ? fileUrl : `https://${fileUrl}`);
-                    const key = parsed.pathname.replace(/^\//, '');
-                    await s3Service.deleteFile(key).catch(() => null);
-                }
-            } catch (error) {
-                logger.warn('Failed to delete signature document file', { error: error.message });
-            }
-        }
-
+        await enqueueDocumentFileDeletions(client, organizationId, documentId);
         await client.query('DELETE FROM signature_fields WHERE document_id = $1', [documentId]);
         await client.query('DELETE FROM signature_recipients WHERE document_id = $1 AND organization_id = $2', [documentId, organizationId]);
         await client.query('DELETE FROM signature_document_versions WHERE document_id = $1', [documentId]);
@@ -313,6 +295,41 @@ async function deleteDocument(pool, organizationId, documentId) {
 
         return deleted.rows[0] || null;
     });
+}
+
+async function enqueueDocumentFileDeletions(client, organizationId, documentId) {
+    const files = await client.query(
+        `SELECT DISTINCT file_url FROM (
+            SELECT file_url FROM signature_documents
+            WHERE id=$1 AND organization_id=$2
+            UNION ALL
+            SELECT version.file_url
+            FROM signature_document_versions version
+            JOIN signature_documents document ON document.id=version.document_id
+            WHERE version.document_id=$1 AND document.organization_id=$2
+         ) files
+         WHERE file_url IS NOT NULL`,
+        [documentId, organizationId]
+    );
+    for (const file of files.rows) {
+        await client.query(
+            `INSERT INTO signature_file_deletion_jobs
+                (organization_id,document_id,file_url)
+             VALUES ($1,$2,$3)
+             ON CONFLICT (organization_id,file_url) DO UPDATE SET
+                document_id=EXCLUDED.document_id,
+                status=CASE WHEN signature_file_deletion_jobs.status IN ('deleted','dead_letter')
+                    THEN 'queued' ELSE signature_file_deletion_jobs.status END,
+                next_attempt_at=CASE WHEN signature_file_deletion_jobs.status IN ('deleted','dead_letter')
+                    THEN CURRENT_TIMESTAMP ELSE signature_file_deletion_jobs.next_attempt_at END,
+                deleted_at=CASE WHEN signature_file_deletion_jobs.status IN ('deleted','dead_letter')
+                    THEN NULL ELSE signature_file_deletion_jobs.deleted_at END,
+                last_error=CASE WHEN signature_file_deletion_jobs.status IN ('deleted','dead_letter')
+                    THEN NULL ELSE signature_file_deletion_jobs.last_error END,
+                updated_at=CURRENT_TIMESTAMP`,
+            [organizationId, documentId, file.file_url]
+        );
+    }
 }
 
 async function replaceRecipients(pool, organizationId, documentId, recipients) {

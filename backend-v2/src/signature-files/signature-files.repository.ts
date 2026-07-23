@@ -120,18 +120,40 @@ export class SignatureFilesRepository {
     file: { url: string; name: string; size: number; sha256: string },
   ): Promise<SignatureDocumentFileRow | null> {
     return this.transaction(async (client) => {
-      const current = await client.query<{ file_url: string | null }>(
-        `SELECT file_url FROM signature_documents
+      const current = await client.query<{
+        file_url: string | null;
+        file_name: string | null;
+        file_size: number | null;
+        file_type: string | null;
+        original_sha256: string | null;
+        created_by: number | null;
+      }>(
+        `SELECT file_url,file_name,file_size,file_type,original_sha256,created_by
+         FROM signature_documents
          WHERE id=$1 AND organization_id=$2 AND status='draft' FOR UPDATE`,
         [documentId, organizationId],
       );
-      if (!current.rows[0]) return null;
-      await this.enqueueOld(
-        client,
-        organizationId,
-        documentId,
-        current.rows[0].file_url,
-      );
+      const prior = current.rows[0];
+      if (!prior) return null;
+      if (prior.file_url) {
+        const represented = await client.query(
+          `SELECT 1 FROM signature_document_versions
+           WHERE document_id=$1 AND file_url=$2
+             AND original_sha256 IS NOT DISTINCT FROM $3
+           LIMIT 1`,
+          [documentId, prior.file_url, prior.original_sha256],
+        );
+        if (!represented.rows[0]) {
+          await this.appendDocumentVersion(client, documentId, {
+            url: prior.file_url,
+            name: prior.file_name ?? 'document.pdf',
+            size: prior.file_size ?? 0,
+            type: prior.file_type ?? 'application/pdf',
+            sha256: prior.original_sha256,
+            createdBy: prior.created_by,
+          });
+        }
+      }
       const updated = await client.query<SignatureDocumentFileRow>(
         `UPDATE signature_documents SET
            file_url=$1,file_name=$2,file_size=$3,file_type='application/pdf',
@@ -147,17 +169,11 @@ export class SignatureFilesRepository {
           organizationId,
         ],
       );
-      await client.query(
-        `INSERT INTO signature_document_versions (
-           document_id,version_number,file_url,file_name,file_size,file_type,
-           original_sha256,created_at
-         ) VALUES ($1,1,$2,$3,$4,'application/pdf',$5,CURRENT_TIMESTAMP)
-         ON CONFLICT (document_id,version_number) DO UPDATE SET
-           file_url=EXCLUDED.file_url,file_name=EXCLUDED.file_name,
-           file_size=EXCLUDED.file_size,file_type=EXCLUDED.file_type,
-           original_sha256=EXCLUDED.original_sha256,created_at=CURRENT_TIMESTAMP`,
-        [documentId, file.url, file.name, file.size, file.sha256],
-      );
+      await this.appendDocumentVersion(client, documentId, {
+        ...file,
+        type: 'application/pdf',
+        createdBy: prior.created_by,
+      });
       return updated.rows[0] ?? null;
     });
   }
@@ -222,6 +238,39 @@ export class SignatureFilesRepository {
            THEN NULL ELSE signature_file_deletion_jobs.last_error END,
          updated_at=CURRENT_TIMESTAMP`,
       [organizationId, documentId, fileUrl],
+    );
+  }
+
+  private async appendDocumentVersion(
+    client: PoolClient,
+    documentId: number,
+    file: {
+      url: string;
+      name: string;
+      size: number;
+      type: string;
+      sha256: string | null;
+      createdBy: number | null;
+    },
+  ): Promise<void> {
+    await client.query(
+      `INSERT INTO signature_document_versions (
+         document_id,version_number,file_url,file_name,file_size,file_type,
+         original_sha256,created_by,created_at
+       )
+       SELECT $1,COALESCE(MAX(version_number),0)+1,$2,$3,$4,$5,$6,$7,
+         CURRENT_TIMESTAMP
+       FROM signature_document_versions
+       WHERE document_id=$1`,
+      [
+        documentId,
+        file.url,
+        file.name,
+        file.size,
+        file.type,
+        file.sha256,
+        file.createdBy,
+      ],
     );
   }
 

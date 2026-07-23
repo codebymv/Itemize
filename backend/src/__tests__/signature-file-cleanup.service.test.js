@@ -58,6 +58,16 @@ describe('SignatureFileCleanupService', () => {
         });
     });
 
+    test('treats immutable document versions as live storage references', async () => {
+        const query = jest.fn().mockResolvedValue({ rows: [{ referenced: true }] });
+        const service = new SignatureFileCleanupService({ query });
+        await expect(service.isReferenced(claim.file_url)).resolves.toBe(true);
+        expect(query.mock.calls[0][0]).toContain(
+            'SELECT 1 FROM signature_document_versions WHERE file_url=$1'
+        );
+        expect(query).toHaveBeenCalledWith(expect.any(String), [claim.file_url]);
+    });
+
     test('redacts stored failures and classifies unowned storage as terminal', async () => {
         expect(redactedError(
             new Error('delete https://bucket.test/private.pdf for signer@example.com sk-secret'),

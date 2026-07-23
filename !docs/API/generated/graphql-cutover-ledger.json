@@ -12488,25 +12488,25 @@
           "method": "GET",
           "path": "/api/public/sign/:invalidToken",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1201
+          "line": 1229
         },
         {
           "method": "GET",
           "path": "/api/public/sign/:secondToken",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1319
+          "line": 1347
         },
         {
           "method": "GET",
           "path": "/api/public/sign/:secondToken",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1343
+          "line": 1371
         },
         {
           "method": "GET",
           "path": "/api/public/sign/:signingToken",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 156
+          "line": 219
         },
         {
           "method": "GET",
@@ -12575,19 +12575,19 @@
           "method": "POST",
           "path": "/api/public/sign/:token",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1295
+          "line": 1323
         },
         {
           "method": "POST",
           "path": "/api/public/sign/:signingToken",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 244
+          "line": 307
         },
         {
           "method": "POST",
           "path": "/api/public/sign/:signingToken",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 289
+          "line": 352
         },
         {
           "method": "POST",
@@ -12644,7 +12644,7 @@
           "method": "POST",
           "path": "/api/public/sign/:secondToken/decline",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1322
+          "line": 1350
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -14313,7 +14313,7 @@
           "method": "POST",
           "path": "/api/signatures/documents",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 73
+          "line": 74
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -14422,37 +14422,37 @@
           "method": "PUT",
           "path": "/api/signatures/documents/:documentId",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 82
+          "line": 83
         },
         {
           "method": "PUT",
           "path": "/api/signatures/documents/:id",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 193
+          "line": 256
         },
         {
           "method": "PUT",
           "path": "/api/signatures/documents/:id",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 268
+          "line": 331
         },
         {
           "method": "PUT",
           "path": "/api/signatures/documents/:id",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 314
+          "line": 377
         },
         {
           "method": "PUT",
           "path": "/api/signatures/documents/:id",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 335
+          "line": 398
         },
         {
           "method": "PUT",
           "path": "/api/signatures/documents/:id",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 347
+          "line": 410
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -14527,7 +14527,7 @@
           "method": "POST",
           "path": "/api/signatures/documents/:id/cancel",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 133
+          "line": 196
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -14702,7 +14702,7 @@
           "method": "POST",
           "path": "/api/signatures/documents/:id/remind",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 217
+          "line": 280
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -14733,13 +14733,13 @@
           "method": "POST",
           "path": "/api/signatures/documents/:id/reminders",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 169
+          "line": 232
         },
         {
           "method": "POST",
           "path": "/api/signatures/documents/:id/reminders",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 187
+          "line": 250
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -14780,25 +14780,25 @@
           "method": "POST",
           "path": "/api/signatures/documents/:id/send",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 94
+          "line": 157
         },
         {
           "method": "POST",
           "path": "/api/signatures/documents/:id/send",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 118
+          "line": 181
         },
         {
           "method": "POST",
           "path": "/api/signatures/documents/:id/send",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 237
+          "line": 300
         },
         {
           "method": "POST",
           "path": "/api/signatures/documents/:id/send",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 281
+          "line": 344
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -14843,7 +14843,7 @@
           "method": "POST",
           "path": "/api/signatures/documents/upload",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 518
+          "line": 538
         },
         {
           "method": "POST",

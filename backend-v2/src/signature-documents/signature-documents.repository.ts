@@ -207,7 +207,7 @@ export class SignatureDocumentsRepository {
       if (!current.rows[0]) return { row:null, status:null };
       if (current.rows[0].status !== 'draft') return { row:null, status:current.rows[0].status };
       const row = await this.selectDocument(client, organizationId, id);
-      await this.enqueueFileDeletion(client, organizationId, id, current.rows[0].file_url);
+      await this.enqueueDocumentFiles(client, organizationId, id);
       await client.query('DELETE FROM signature_documents WHERE id=$1 AND organization_id=$2 AND status=\'draft\'', [id, organizationId]);
       return { row, status:'draft' };
     });
@@ -224,7 +224,7 @@ export class SignatureDocumentsRepository {
       if(current.rows[0].file_url===null){
         return{row:await this.selectDocument(client,organizationId,id),status:'draft'};
       }
-      await this.enqueueFileDeletion(client,organizationId,id,current.rows[0].file_url);
+      await this.enqueueDocumentFiles(client,organizationId,id);
       await client.query(
         `UPDATE signature_documents SET file_url=NULL,file_name=NULL,file_size=NULL,
            file_type=NULL,original_sha256=NULL,signed_file_url=NULL,signed_sha256=NULL,
@@ -360,6 +360,34 @@ export class SignatureDocumentsRepository {
          updated_at=CURRENT_TIMESTAMP`,
       [organizationId,documentId,fileUrl],
     );
+  }
+
+  private async enqueueDocumentFiles(
+    client:PoolClient,
+    organizationId:number,
+    documentId:number,
+  ):Promise<void>{
+    const files=await client.query<{file_url:string}>(
+      `SELECT DISTINCT file_url FROM (
+         SELECT file_url FROM signature_documents
+         WHERE id=$1 AND organization_id=$2
+         UNION ALL
+         SELECT version.file_url
+         FROM signature_document_versions version
+         JOIN signature_documents document ON document.id=version.document_id
+         WHERE version.document_id=$1 AND document.organization_id=$2
+       ) files
+       WHERE file_url IS NOT NULL`,
+      [documentId,organizationId],
+    );
+    for(const file of files.rows){
+      await this.enqueueFileDeletion(
+        client,
+        organizationId,
+        documentId,
+        file.file_url,
+      );
+    }
   }
 
   private async selectDocument(client:PoolClient,organizationId:number,id:number):Promise<SignatureDocumentRow>{
