@@ -1,6 +1,6 @@
 # E-signatures GraphQL cutover contract
 
-**Status:** Phase 1 read slice implemented; mutation/public protocol work remains
+**Status:** Phase 1 authenticated read consumer cutover complete; mutation/public protocol work remains
 
 **Evidence date:** 2026-07-22
 
@@ -109,17 +109,17 @@ The legacy initial-send and immediate-reminder services call email inside databa
 
 ## Implemented authenticated read slice
 
-`SignatureDocumentsModule` now implements `signatureDocuments`, `signatureDocument`, and `signatureAuditTrail`. `SignatureTemplatesModule` implements `signatureTemplates` and `signatureTemplate`. The frontend preserves its existing REST-shaped service contract and selects these queries through two independent default-off flags: `VITE_SIGNATURE_DOCUMENT_READS_GRAPHQL` and `VITE_SIGNATURE_TEMPLATE_READS_GRAPHQL`.
+`SignatureDocumentsModule` now implements `signatureDocuments`, `signatureDocument`, and `signatureAuditTrail`. `SignatureTemplatesModule` implements `signatureTemplates` and `signatureTemplate`. The frontend preserves its existing REST-shaped service contract and selects these queries through two independent rollback flags: `VITE_SIGNATURE_DOCUMENT_READS_GRAPHQL` and `VITE_SIGNATURE_TEMPLATE_READS_GRAPHQL`. Both flags are enabled in production.
 
 Document and template details are repeatable-read aggregate snapshots. Root and child queries are tenant-qualified, list ordering is deterministic, plan access fails closed, and foreign IDs return `NOT_FOUND`. GraphQL exposes file-presence booleans that the authenticated frontend maps to retained HTTP streams; it does not expose capability hashes, IP/user-agent evidence, audit metadata, storage locations, or file hashes.
 
-Focused service and adapter tests pass. A disposable PostgreSQL contract proves enum filtering, stable pagination, document/recipient/field/audit aggregation, ordered template roles/fields, foreign-tenant concealment, safe projections, and interoperability with the retained Express read routes. Production consumer flags remain off until deployment and browser/log smoke evidence is recorded.
+Focused service and adapter tests pass. A disposable PostgreSQL contract proves enum filtering, stable pagination, document/recipient/field/audit aggregation, ordered template roles/fields, foreign-tenant concealment, safe projections, and interoperability with the retained Express read routes. Commit `1f00606b` deployed through legacy backend `e9d25b63-f612-43dc-86fe-80be16129611`, GraphQL `2a0c55c3-299e-4d23-81e7-d00225618834`, and flag-enabled frontend `2265bdd2-6e20-4f05-b65a-e5e7782ba53f`. An authenticated production browser rendered the existing document list, expanded its detail, and rendered the empty template state without console errors; Nest recorded successful zero-error `SignatureDocumentReads`, `SignatureDocumentRead`, and `SignatureTemplateReads` operations.
 
 ## Current evidence and exit gate
 
 Fresh PostgreSQL now covers concurrent initial-send exclusion, atomic cancellation and capability/reminder revocation, cancellation idempotency, cross-tenant reminder denial, invalid reminder delays, sent-definition immutability, selective reminder behavior, and unknown signing-field rejection. Existing generic database bootstrap verifies all signature tables are created from zero.
 
-The implemented read slice is ready for staged consumer validation. The mutation, delivery, file-management, and public-signing remainder is not ready for GraphQL cutover until:
+The authenticated read slice has completed production consumer validation. The mutation, delivery, file-management, and public-signing remainder is not ready for GraphQL cutover until:
 
 1. document/template aggregate edits and quota enforcement are atomic and concurrency-safe;
 2. public field values, shared ownership, sequential routing, expiry, decline, and terminal races have complete validation and PostgreSQL coverage;

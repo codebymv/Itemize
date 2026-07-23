@@ -1,6 +1,6 @@
 # GraphQL production consumer cutover
 
-**Status:** 81 domain consumers plus authentication session, identity lifecycle, and password recovery enabled
+**Status:** 83 domain consumers plus authentication session, identity lifecycle, and password recovery enabled
 
 **Cutover date:** 2026-07-21
 
@@ -8,7 +8,7 @@
 
 The browser uses the production `VITE_API_URL` (`https://itemize-backend-production-92ad.up.railway.app`) for REST and `/graphql`. That backend forwards GraphQL to `itemize.cloud GraphQL Production` over Railway's private network. The proxy has an explicit response allowlist for the three authentication cookies and cache/CSRF headers, allowing NestJS to own browser sessions through the existing API origin. The frontend custom domain itself serves the SPA shell and is not the direct `/graphql` endpoint.
 
-The 81 domain switches represented by the frontend environment contract are enabled in production. `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` independently control the enabled session, registration/verification, and forgot/reset-password protocols. A frontend rebuild is required because Vite embeds these values at build time.
+The 83 domain switches represented by the frontend environment contract are enabled in production. `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` independently control the enabled session, registration/verification, and forgot/reset-password protocols. A frontend rebuild is required because Vite embeds these values at build time.
 
 The enabled families are:
 
@@ -17,6 +17,7 @@ The enabled families are:
 - products, invoice businesses/settings/invoices, estimates, recurring invoices, and payments;
 - workspace lists, notes, and whiteboards;
 - dashboard and aggregate analytics;
+- authenticated e-signature document and template reads;
 - audience segments, email/SMS templates, campaigns, workflows, enrollments, workflow execution visibility, reputation reviews, reputation analytics, review-request management/delivery, and reputation platform/settings/widget configuration.
 
 ## Intentionally retained transports
@@ -50,6 +51,8 @@ The administrator-operations cutover completed from commit `cc0060e5` with legac
 The core consumer evidence reconciliation completed on 2026-07-22 against legacy backend `ca7cbc74-3fa3-4201-8653-9759949b612f`, GraphQL `352bc5f6-bdf9-4a1b-b18c-51768342c9a3`, and frontend `b37a87c5-a28e-4981-885f-40401f679fc2`. Railway confirmed the authentication, onboarding, organization selector, contact, pipeline/deal, workspace content, and six approved analytics switches were already `true`. An authenticated browser loaded dashboard, contacts, pipelines, and canvas with no console error; Nest recorded zero-error session refresh/current-user, onboarding, organizations, dashboard/communication analytics, contact, pipeline, and workspace list/note/whiteboard queries. This promotes 68 live consumer rows while leaving the three blocked analytics definitions, broader organization administration, retained protocols, and all unexercised side effects outside the claim.
 
 The operational consumer evidence reconciliation completed on 2026-07-22 against legacy backend `8cb086aa-1ade-4faa-8557-c2443437c3c3`, GraphQL `352bc5f6-bdf9-4a1b-b18c-51768342c9a3`, and frontend `a9151cb8-4ec0-4843-8cb5-bde960ff1aa9`. Railway confirmed the associated billing, messaging-template, scheduling, calendar-integration, campaign, and workflow switches were already `true`. An authenticated browser rendered all eleven representative routes, and Nest recorded successful zero-error domain reads. This promotes 97 live consumer rows while leaving provider-facing operations under characterization, three blocked analytics definitions, and retained protocols outside the claim. Production verification was read-only and invoked no provider.
+
+The authenticated e-signature read cutover completed on 2026-07-22 from commit `1f00606b` with legacy backend deployment `e9d25b63-f612-43dc-86fe-80be16129611`, GraphQL deployment `2a0c55c3-299e-4d23-81e7-d00225618834`, and flag-enabled frontend deployment `2265bdd2-6e20-4f05-b65a-e5e7782ba53f`. Railway confirmed `VITE_SIGNATURE_DOCUMENT_READS_GRAPHQL=true` and `VITE_SIGNATURE_TEMPLATE_READS_GRAPHQL=true`. An authenticated browser rendered the existing document list, expanded its detail, and rendered the authoritative empty template state without console errors; Nest recorded successful zero-error `SignatureDocumentReads`, `SignatureDocumentRead`, and `SignatureTemplateReads` operations. Multipart uploads, authenticated file streams/downloads, mutations, and public signing remain on their documented HTTP boundaries.
 
 After deployment, verify:
 
