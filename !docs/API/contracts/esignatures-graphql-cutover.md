@@ -1,6 +1,6 @@
 # E-signatures GraphQL cutover contract
 
-**Status:** Phase 1 authenticated read consumer cutover complete; mutation/public protocol work remains
+**Status:** Phase 1 authenticated reads live; Phase 2 draft/template mutations implemented behind rollback flags
 
 **Evidence date:** 2026-07-22
 
@@ -119,12 +119,19 @@ Focused service and adapter tests pass. A disposable PostgreSQL contract proves 
 
 Fresh PostgreSQL now covers concurrent initial-send exclusion, atomic cancellation and capability/reminder revocation, cancellation idempotency, cross-tenant reminder denial, invalid reminder delays, sent-definition immutability, selective reminder behavior, and unknown signing-field rejection. Existing generic database bootstrap verifies all signature tables are created from zero.
 
-The authenticated read slice has completed production consumer validation. The mutation, delivery, file-management, and public-signing remainder is not ready for GraphQL cutover until:
+## Implemented draft and template mutation slice
 
-1. document/template aggregate edits and quota enforcement are atomic and concurrency-safe;
-2. public field values, shared ownership, sequential routing, expiry, decline, and terminal races have complete validation and PostgreSQL coverage;
-3. source/signed artifacts use immutable versioned private storage with safe parsing, scanning, delivery, cleanup, and no arbitrary URL proxy;
-4. audit evidence is append-only under database permissions with defined retention/export and integrity verification;
-5. PDF generation, initial delivery, completion notices, and reminders use durable idempotent jobs outside transactions;
-6. OTP verification is fully implemented and tested or remains impossible to configure;
-7. the remaining GraphQL mutations, retained HTTP protocols, and critical draft/send/sign/decline/cancel/download browser journeys pass semantic parity and rollback tests.
+`SignatureDocumentsModule` now implements `createSignatureDocument`, `updateSignatureDraft`, and `deleteSignatureDraft`. `SignatureTemplatesModule` implements `createSignatureTemplate`, `updateSignatureTemplate`, `deleteSignatureTemplate`, and `instantiateSignatureTemplate`. The frontend selects them through independent default-off rollback flags: `VITE_SIGNATURE_DOCUMENT_MUTATIONS_GRAPHQL` and `VITE_SIGNATURE_TEMPLATE_MUTATIONS_GRAPHQL`; multipart source upload and deletion remain on their existing HTTP boundary.
+
+Document metadata, recipient replacement, field replacement, and role-to-recipient binding now share one row-locked transaction. Template metadata, unique roles, and role-bound fields likewise commit together. Creation and instantiation serialize on the organization row before enforcing the starter/unlimited monthly document quota, preventing concurrent requests from oversubscribing it. Inputs bound recipients to tenant-owned contacts, constrain email/role uniqueness, reject unimplemented OTP identity methods, bound aggregate sizes and geometry, and preserve explicit nullable metadata clearing. Non-draft deletion fails with `CONFLICT`.
+
+Fresh PostgreSQL proves complete rollback when a child mapping fails after metadata work, GraphQL-write/retained-REST-read interoperability, template snapshot binding, exact draft deletion, and five winners from six concurrent starter-plan creates. Focused adapters prove all seven existing mutation callsites remain on REST while flags are off and switch by family without moving multipart uploads.
+
+The authenticated read slice has completed production consumer validation. The draft/template mutation slice is implemented but remains default-off pending deployment and browser/log validation. Delivery, file-management, and public-signing are not ready for cutover until:
+
+1. public field values, shared ownership, sequential routing, expiry, decline, and terminal races have complete validation and PostgreSQL coverage;
+2. source/signed artifacts use immutable versioned private storage with safe parsing, scanning, delivery, cleanup, and no arbitrary URL proxy;
+3. audit evidence is append-only under database permissions with defined retention/export and integrity verification;
+4. PDF generation, initial delivery, completion notices, and reminders use durable idempotent jobs outside transactions;
+5. OTP verification is fully implemented and tested or remains impossible to configure;
+6. the remaining GraphQL mutations, retained HTTP protocols, and critical draft/send/sign/decline/cancel/download browser journeys pass semantic parity and rollback tests.

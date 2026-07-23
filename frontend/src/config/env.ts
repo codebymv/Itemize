@@ -99,6 +99,8 @@ const envSchema = z.object({
   VITE_ADMIN_EMAIL_DELIVERY_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_SIGNATURE_DOCUMENT_READS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_SIGNATURE_TEMPLATE_READS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
+  VITE_SIGNATURE_DOCUMENT_MUTATIONS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
+  VITE_SIGNATURE_TEMPLATE_MUTATIONS_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_DEV_AUTH_PROBE_WITHOUT_HINT: z.enum(['true', 'false']).optional().default('false'),
   
   // OAuth
@@ -217,6 +219,8 @@ if (import.meta.env.DEV) {
     adminEmailDeliveryGraphql: env.VITE_ADMIN_EMAIL_DELIVERY_GRAPHQL === 'true',
     signatureDocumentReadsGraphql: env.VITE_SIGNATURE_DOCUMENT_READS_GRAPHQL === 'true',
     signatureTemplateReadsGraphql: env.VITE_SIGNATURE_TEMPLATE_READS_GRAPHQL === 'true',
+    signatureDocumentMutationsGraphql: env.VITE_SIGNATURE_DOCUMENT_MUTATIONS_GRAPHQL === 'true',
+    signatureTemplateMutationsGraphql: env.VITE_SIGNATURE_TEMPLATE_MUTATIONS_GRAPHQL === 'true',
     devAuthProbeWithoutHint: env.VITE_DEV_AUTH_PROBE_WITHOUT_HINT === 'true',
     hasClientId: !!env.VITE_GOOGLE_CLIENT_ID,
     productionDomain: env.VITE_PRODUCTION_DOMAIN || undefined,

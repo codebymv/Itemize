@@ -35,6 +35,32 @@ export type SignatureAuditRow = {
   description: string | null; created_at: Date;
 };
 
+export type SignatureRecipientWrite = {
+  contactId: number | null; name: string | null; email: string; signingOrder: number;
+  roleName: string | null; identityMethod: string;
+};
+
+export type SignatureFieldWrite = {
+  recipientId: number | null; roleName: string | null; fieldType: string; pageNumber: number;
+  xPosition: number; yPosition: number; width: number; height: number; label: string | null;
+  isRequired: boolean; value: string | null; fontSize: number | null;
+  fontFamily: string | null; textAlign: string | null; locked: boolean;
+};
+
+export type SignatureDocumentValues = {
+  title: string; documentNumber: string | null; description: string | null; message: string | null;
+  expirationDays: number; senderName: string | null; senderEmail: string | null;
+  timezone: string | null; locale: string | null; routingMode: string; templateId: number | null;
+  recipients?: SignatureRecipientWrite[]; fields?: SignatureFieldWrite[];
+};
+
+export type SignatureDocumentUpdates = Partial<Omit<SignatureDocumentValues, 'recipients' | 'fields'>> & {
+  recipients?: SignatureRecipientWrite[]; fields?: SignatureFieldWrite[];
+};
+
+export class SignatureQuotaExceededError extends Error {}
+export class SignatureReferenceError extends Error {}
+
 const documentColumns = `d.id, d.organization_id, d.title, d.document_number,
   d.description, d.message, d.status, d.routing_mode, d.template_id,
   d.expiration_days, d.expires_at, d.sender_name, d.sender_email, d.created_by,
@@ -125,6 +151,114 @@ export class SignatureDocumentsRepository {
       );
       return result.rows;
     });
+  }
+
+  async createDraft(organizationId: number, userId: number, values: SignatureDocumentValues): Promise<SignatureDocumentRow> {
+    return this.transaction(async (client) => {
+      await this.lockQuota(client, organizationId);
+      if (values.templateId !== null) {
+        const template = await client.query('SELECT id FROM signature_templates WHERE id=$1 AND organization_id=$2', [values.templateId, organizationId]);
+        if (!template.rows[0]) throw new SignatureReferenceError('Template must belong to the active organization');
+      }
+      const inserted = await client.query<{ id: number }>(
+        `INSERT INTO signature_documents (
+           organization_id,title,document_number,description,message,expiration_days,
+           sender_name,sender_email,timezone,locale,routing_mode,template_id,created_by
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+        [organizationId,values.title,values.documentNumber,values.description,values.message,
+          values.expirationDays,values.senderName,values.senderEmail,values.timezone,values.locale,
+          values.routingMode,values.templateId,userId],
+      );
+      const id = Number(inserted.rows[0].id);
+      const recipients = values.recipients === undefined ? undefined : await this.replaceRecipients(client, organizationId, id, values.recipients);
+      if (values.fields !== undefined) await this.replaceFields(client, organizationId, id, values.fields, recipients);
+      return this.selectDocument(client, organizationId, id);
+    });
+  }
+
+  async updateDraft(organizationId: number, id: number, values: SignatureDocumentUpdates): Promise<SignatureDocumentRow | null> {
+    return this.transaction(async (client) => {
+      const locked = await client.query('SELECT id FROM signature_documents WHERE id=$1 AND organization_id=$2 AND status=\'draft\' FOR UPDATE', [id, organizationId]);
+      if (!locked.rows[0]) return null;
+      const assignments: string[] = [];
+      const parameters: unknown[] = [id, organizationId];
+      const set = (column:string,value:unknown) => { parameters.push(value); assignments.push(`${column}=$${parameters.length}`); };
+      if (values.title !== undefined) set('title', values.title);
+      if (values.documentNumber !== undefined) set('document_number', values.documentNumber);
+      if (values.description !== undefined) set('description', values.description);
+      if (values.message !== undefined) set('message', values.message);
+      if (values.expirationDays !== undefined) set('expiration_days', values.expirationDays);
+      if (values.senderName !== undefined) set('sender_name', values.senderName);
+      if (values.senderEmail !== undefined) set('sender_email', values.senderEmail);
+      if (values.timezone !== undefined) set('timezone', values.timezone);
+      if (values.locale !== undefined) set('locale', values.locale);
+      if (values.routingMode !== undefined) set('routing_mode', values.routingMode);
+      if (assignments.length > 0) await client.query(`UPDATE signature_documents SET ${assignments.join(',')},updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND organization_id=$2`, parameters);
+      const recipients = values.recipients === undefined ? undefined : await this.replaceRecipients(client, organizationId, id, values.recipients);
+      if (values.fields !== undefined) await this.replaceFields(client, organizationId, id, values.fields, recipients);
+      else if (recipients !== undefined) await this.remapFieldsByRole(client, id, recipients);
+      return this.selectDocument(client, organizationId, id);
+    });
+  }
+
+  async deleteDraft(organizationId: number, id: number): Promise<{ row: SignatureDocumentRow | null; status: string | null }> {
+    return this.transaction(async (client) => {
+      const current = await client.query<{ status:string }>('SELECT status FROM signature_documents WHERE id=$1 AND organization_id=$2 FOR UPDATE', [id, organizationId]);
+      if (!current.rows[0]) return { row:null, status:null };
+      if (current.rows[0].status !== 'draft') return { row:null, status:current.rows[0].status };
+      const row = await this.selectDocument(client, organizationId, id);
+      await client.query('DELETE FROM signature_documents WHERE id=$1 AND organization_id=$2 AND status=\'draft\'', [id, organizationId]);
+      return { row, status:'draft' };
+    });
+  }
+
+  private async lockQuota(client: PoolClient, organizationId:number):Promise<void>{
+    const organization = await client.query<{plan:string|null}>('SELECT plan FROM organizations WHERE id=$1 FOR UPDATE',[organizationId]);
+    if (!organization.rows[0]) throw new SignatureReferenceError('Organization not found');
+    const plan=organization.rows[0].plan??'starter'; const limit=plan==='starter'?5:plan==='unlimited'?50:Number.POSITIVE_INFINITY;
+    if(Number.isFinite(limit)){
+      const count=await client.query<{total:string}>("SELECT COUNT(*) AS total FROM signature_documents WHERE organization_id=$1 AND created_at>=(date_trunc('month',CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')",[organizationId]);
+      if(Number(count.rows[0]?.total??0)>=limit)throw new SignatureQuotaExceededError('Monthly signature document limit reached');
+    }
+  }
+
+  private async replaceRecipients(client:PoolClient,organizationId:number,documentId:number,recipients:SignatureRecipientWrite[]):Promise<Map<string,number>>{
+    const contactIds=[...new Set(recipients.map(r=>r.contactId).filter((id):id is number=>id!==null))];
+    if(contactIds.length){const found=await client.query('SELECT id FROM contacts WHERE organization_id=$1 AND id=ANY($2::int[])',[organizationId,contactIds]);if(found.rows.length!==contactIds.length)throw new SignatureReferenceError('Recipient contact must belong to the active organization');}
+    await client.query('DELETE FROM signature_recipients WHERE document_id=$1 AND organization_id=$2',[documentId,organizationId]);
+    const roleMap=new Map<string,number>();
+    for(const recipient of recipients){
+      const result=await client.query<{id:number}>(`INSERT INTO signature_recipients (document_id,organization_id,contact_id,name,email,signing_order,identity_method,role_name,routing_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'locked') RETURNING id`,[documentId,organizationId,recipient.contactId,recipient.name,recipient.email,recipient.signingOrder,recipient.identityMethod,recipient.roleName]);
+      if(recipient.roleName!==null)roleMap.set(recipient.roleName,Number(result.rows[0].id));
+    }
+    return roleMap;
+  }
+
+  private async replaceFields(client:PoolClient,organizationId:number,documentId:number,fields:SignatureFieldWrite[],newRecipients?:Map<string,number>):Promise<void>{
+    const existing=await client.query<{id:number;role_name:string|null}>('SELECT id,role_name FROM signature_recipients WHERE document_id=$1 AND organization_id=$2',[documentId,organizationId]);
+    const ids=new Set(existing.rows.map(r=>Number(r.id))); const roles=new Map(existing.rows.filter(r=>r.role_name!==null).map(r=>[r.role_name as string,Number(r.id)]));
+    if(newRecipients)for(const [role,id]of newRecipients)roles.set(role,id);
+    await client.query('DELETE FROM signature_fields WHERE document_id=$1',[documentId]);
+    for(const field of fields){
+      const mapped=field.roleName===null?field.recipientId:(roles.get(field.roleName)??field.recipientId);
+      if(mapped!==null&&!ids.has(mapped)&&![...roles.values()].includes(mapped))throw new SignatureReferenceError('Signature field recipient must belong to the document');
+      if(field.roleName!==null&&!roles.has(field.roleName))throw new SignatureReferenceError('Signature field role must belong to a document recipient');
+      await client.query(`INSERT INTO signature_fields (document_id,recipient_id,role_name,field_type,page_number,x_position,y_position,width,height,label,is_required,value,font_size,font_family,text_align,locked) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,[documentId,mapped,field.roleName,field.fieldType,field.pageNumber,field.xPosition,field.yPosition,field.width,field.height,field.label,field.isRequired,field.value,field.fontSize,field.fontFamily,field.textAlign,field.locked]);
+    }
+  }
+
+  private async remapFieldsByRole(client:PoolClient,documentId:number,recipients:Map<string,number>):Promise<void>{
+    await client.query('UPDATE signature_fields SET recipient_id=NULL WHERE document_id=$1',[documentId]);
+    for(const [role,id]of recipients)await client.query('UPDATE signature_fields SET recipient_id=$1 WHERE document_id=$2 AND role_name=$3',[id,documentId,role]);
+  }
+
+  private async selectDocument(client:PoolClient,organizationId:number,id:number):Promise<SignatureDocumentRow>{
+    const result=await client.query<SignatureDocumentRow>(`SELECT ${documentColumns},(SELECT COUNT(*)::int FROM signature_recipients r WHERE r.document_id=d.id AND r.organization_id=d.organization_id) AS recipient_count FROM signature_documents d WHERE d.id=$1 AND d.organization_id=$2`,[id,organizationId]);
+    return result.rows[0];
+  }
+
+  private async transaction<T>(work:(client:PoolClient)=>Promise<T>):Promise<T>{
+    const client=await this.pool.connect();try{await client.query('BEGIN');const result=await work(client);await client.query('COMMIT');return result;}catch(error){await client.query('ROLLBACK').catch(()=>undefined);throw error;}finally{client.release();}
   }
 
   private async snapshot<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {

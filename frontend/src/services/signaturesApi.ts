@@ -1,6 +1,6 @@
 import api, { getApiUrl } from '@/lib/api';
-import { isSignatureDocumentGraphqlReadsEnabled, isSignatureTemplateGraphqlReadsEnabled } from './graphqlClient';
-import { getSignatureAuditViaGraphql, getSignatureDocumentViaGraphql, getSignatureTemplateViaGraphql, listSignatureDocumentsViaGraphql, listSignatureTemplatesViaGraphql } from './signaturesGraphql';
+import { isSignatureDocumentGraphqlMutationsEnabled, isSignatureDocumentGraphqlReadsEnabled, isSignatureTemplateGraphqlMutationsEnabled, isSignatureTemplateGraphqlReadsEnabled } from './graphqlClient';
+import { createSignatureDocumentViaGraphql, createSignatureTemplateViaGraphql, deleteSignatureDocumentViaGraphql, deleteSignatureTemplateViaGraphql, getSignatureAuditViaGraphql, getSignatureDocumentViaGraphql, getSignatureTemplateViaGraphql, instantiateSignatureTemplateViaGraphql, listSignatureDocumentsViaGraphql, listSignatureTemplatesViaGraphql, updateSignatureDocumentViaGraphql, updateSignatureTemplateViaGraphql } from './signaturesGraphql';
 
 type ApiPayload = Record<string, unknown>;
 
@@ -131,11 +131,13 @@ export interface SignatureDocumentDetails {
 }
 
 export const createSignatureDocument = async (payload: Partial<SignatureDocument>) => {
+  if (isSignatureDocumentGraphqlMutationsEnabled()) return createSignatureDocumentViaGraphql(payload);
   const response = await api.post('/api/signatures/documents', payload);
   return unwrapResponse<SignatureDocument>(response.data);
 };
 
 export const updateSignatureDocument = async (id: number, payload: Partial<SignatureDocument> & { recipients?: SignatureRecipient[]; fields?: SignatureField[] }) => {
+  if (isSignatureDocumentGraphqlMutationsEnabled()) return updateSignatureDocumentViaGraphql(id, payload);
   const response = await api.put(`/api/signatures/documents/${id}`, payload);
   return unwrapResponse<SignatureDocument>(response.data);
 };
@@ -189,6 +191,7 @@ export const cancelSignatureDocument = async (id: number) => {
 };
 
 export const deleteSignatureDocument = async (id: number) => {
+  if (isSignatureDocumentGraphqlMutationsEnabled()) return deleteSignatureDocumentViaGraphql(id);
   const response = await api.delete(`/api/signatures/documents/${id}`);
   return unwrapResponse<SignatureDocument>(response.data);
 };
@@ -283,6 +286,7 @@ export interface SignatureTemplateField {
 }
 
 export const createSignatureTemplate = async (payload: Partial<SignatureTemplate>) => {
+  if (isSignatureTemplateGraphqlMutationsEnabled()) return createSignatureTemplateViaGraphql(payload);
   const response = await api.post('/api/signatures/templates', payload);
   return unwrapResponse<SignatureTemplate>(response.data);
 };
@@ -291,6 +295,7 @@ export const updateSignatureTemplate = async (
   id: number,
   payload: Partial<SignatureTemplate> & { roles?: SignatureTemplateRole[]; fields?: SignatureTemplateField[] }
 ) => {
+  if (isSignatureTemplateGraphqlMutationsEnabled()) return updateSignatureTemplateViaGraphql(id, payload);
   const response = await api.put(`/api/signatures/templates/${id}`, payload);
   return unwrapResponse<SignatureTemplate>(response.data);
 };
@@ -319,11 +324,13 @@ export const getSignatureTemplate = async (id: number) => {
 };
 
 export const instantiateSignatureTemplate = async (id: number, payload: ApiPayload) => {
+  if (isSignatureTemplateGraphqlMutationsEnabled()) return instantiateSignatureTemplateViaGraphql(id, payload);
   const response = await api.post(`/api/signatures/templates/${id}/instantiate`, payload);
   return unwrapResponse<SignatureDocument>(response.data);
 };
 
 export const deleteSignatureTemplate = async (id: number) => {
+  if (isSignatureTemplateGraphqlMutationsEnabled()) return deleteSignatureTemplateViaGraphql(id);
   const response = await api.delete(`/api/signatures/templates/${id}`);
   return unwrapResponse<SignatureTemplate>(response.data);
 };

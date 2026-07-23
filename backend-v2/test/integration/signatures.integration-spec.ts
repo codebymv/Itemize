@@ -196,7 +196,8 @@ describe('E-signature GraphQL read contract', () => {
     variables: Record<string, unknown> = {},
   ) => request(app.getHttpServer())
     .post('/graphql')
-    .set('Cookie', `itemize_auth=${token}`)
+    .set('Cookie', `itemize_auth=${token}; csrf-token=signature-csrf`)
+    .set('x-csrf-token', 'signature-csrf')
     .set('x-organization-id', String(orgId))
     .send({ query: document, variables });
 
@@ -349,5 +350,94 @@ describe('E-signature GraphQL read contract', () => {
     ).expect(200);
     expect(ownForeign.body.errors).toBeUndefined();
     expect(ownForeign.body.data.signatureDocument.document.id).toBe(foreignDocumentId);
+  });
+
+  it('atomically creates and replaces a draft aggregate with retained REST interoperability', async () => {
+    const create = await graphql(memberToken, organizationId, `mutation Create($input:CreateSignatureDocumentInput!){createSignatureDocument(input:$input){${documentFields}}}`, {
+      input: {
+        title: 'Atomic draft', routingMode: 'sequential', expirationDays: 45,
+        recipients: [{ name: 'Signer', email: 'atomic-signer@test.itemize', roleName: 'Signer', signingOrder: 1 }],
+        fields: [{ roleName: 'Signer', fieldType: 'signature', pageNumber: 1, xPosition: 10, yPosition: 10, width: 20, height: 10 }],
+      },
+    }).expect(200);
+    expect(create.body.errors).toBeUndefined();
+    const id = Number(create.body.data.createSignatureDocument.id);
+    expect(create.body.data.createSignatureDocument).toMatchObject({ title: 'Atomic draft', recipientCount: 1, routingMode: 'sequential' });
+
+    const failed = await graphql(memberToken, organizationId, `mutation Update($id:Int!,$input:UpdateSignatureDraftInput!){updateSignatureDraft(id:$id,input:$input){id title}}`, {
+      id,
+      input: { title: 'Must roll back', fields: [{ roleName: 'Missing role', fieldType: 'text', pageNumber: 1, xPosition: 10, yPosition: 20, width: 20, height: 10 }] },
+    }).expect(200);
+    expect(failed.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
+    const afterFailure = await pool.query('SELECT title FROM signature_documents WHERE id=$1', [id]);
+    const fieldsAfterFailure = await pool.query('SELECT id FROM signature_fields WHERE document_id=$1', [id]);
+    expect(afterFailure.rows[0].title).toBe('Atomic draft');
+    expect(fieldsAfterFailure.rows).toHaveLength(1);
+
+    const updated = await graphql(memberToken, organizationId, `mutation Update($id:Int!,$input:UpdateSignatureDraftInput!){updateSignatureDraft(id:$id,input:$input){${documentFields}}}`, {
+      id,
+      input: {
+        title: 'Atomic draft updated',
+        recipients: [{ name: 'New signer', email: 'new-signer@test.itemize', roleName: 'Signer', signingOrder: 1 }],
+        fields: [{ roleName: 'Signer', fieldType: 'date', pageNumber: 2, xPosition: 5, yPosition: 5, width: 15, height: 8 }],
+      },
+    }).expect(200);
+    expect(updated.body.errors).toBeUndefined();
+    const retained = await legacy(`/api/signatures/documents/${id}`).expect(200);
+    expect(retained.body.data.document.title).toBe('Atomic draft updated');
+    expect(retained.body.data.recipients).toMatchObject([{ email: 'new-signer@test.itemize', role_name: 'Signer' }]);
+    expect(retained.body.data.fields).toMatchObject([{ field_type: 'date', role_name: 'Signer' }]);
+
+    const deleted = await graphql(memberToken, organizationId, `mutation Delete($id:Int!){deleteSignatureDraft(id:$id){id title}}`, { id }).expect(200);
+    expect(deleted.body.errors).toBeUndefined();
+    expect(deleted.body.data.deleteSignatureDraft.id).toBe(id);
+    expect((await pool.query('SELECT id FROM signature_documents WHERE id=$1', [id])).rows).toHaveLength(0);
+  });
+
+  it('atomically manages templates and snapshots them into editable drafts', async () => {
+    const created = await graphql(memberToken, organizationId, `mutation Create($input:CreateSignatureTemplateInput!){createSignatureTemplate(input:$input){id title}}`, {
+      input: {
+        title: 'Atomic template', description: 'Original',
+        roles: [{ roleName: 'Signer', signingOrder: 1 }],
+        fields: [{ roleName: 'Signer', fieldType: 'signature', pageNumber: 1, xPosition: 10, yPosition: 10, width: 20, height: 10 }],
+      },
+    }).expect(200);
+    expect(created.body.errors).toBeUndefined();
+    const id = Number(created.body.data.createSignatureTemplate.id);
+
+    const failed = await graphql(memberToken, organizationId, `mutation Update($id:Int!,$input:UpdateSignatureTemplateInput!){updateSignatureTemplate(id:$id,input:$input){id title}}`, {
+      id, input: { title: 'Must roll back', roles: [{ roleName: 'Other', signingOrder: 1 }] },
+    }).expect(200);
+    expect(failed.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
+    expect((await pool.query('SELECT title FROM signature_templates WHERE id=$1', [id])).rows[0].title).toBe('Atomic template');
+
+    const instantiated = await graphql(memberToken, organizationId, `mutation Instantiate($id:Int!,$input:InstantiateSignatureTemplateInput!){instantiateSignatureTemplate(id:$id,input:$input){${documentFields}}}`, {
+      id, input: { title: 'Template draft', recipients: [{ email: 'template-signer@test.itemize', roleName: 'Signer' }] },
+    }).expect(200);
+    expect(instantiated.body.errors).toBeUndefined();
+    const documentId = Number(instantiated.body.data.instantiateSignatureTemplate.id);
+    const snapshot = await legacy(`/api/signatures/documents/${documentId}`).expect(200);
+    expect(snapshot.body.data.document).toMatchObject({ title: 'Template draft', template_id: id, status: 'draft' });
+    expect(snapshot.body.data.fields[0].recipient_id).toBe(snapshot.body.data.recipients[0].id);
+
+    await graphql(memberToken, organizationId, 'mutation Delete($id:Int!){deleteSignatureDraft(id:$id){id}}', { id: documentId }).expect(200);
+    const deleted = await graphql(memberToken, organizationId, 'mutation Delete($id:Int!){deleteSignatureTemplate(id:$id){id title}}', { id }).expect(200);
+    expect(deleted.body.errors).toBeUndefined();
+    expect(deleted.body.data.deleteSignatureTemplate.id).toBe(id);
+  });
+
+  it('serializes starter-plan monthly quota checks under concurrent draft creation', async () => {
+    const attempts = await Promise.all(Array.from({ length: 6 }, (_, index) => graphql(
+      memberToken,
+      organizationId,
+      'mutation Create($input:CreateSignatureDocumentInput!){createSignatureDocument(input:$input){id}}',
+      { input: { title: `Quota ${index}` } },
+    )));
+    const successfulIds = attempts.filter((result) => !result.body.errors).map((result) => Number(result.body.data.createSignatureDocument.id));
+    const failures = attempts.filter((result) => result.body.errors);
+    expect(successfulIds).toHaveLength(5);
+    expect(failures).toHaveLength(1);
+    expect(failures[0].body.errors[0].extensions).toMatchObject({ code: 'FORBIDDEN', reason: 'SIGNATURE_MONTHLY_LIMIT' });
+    await pool.query('DELETE FROM signature_documents WHERE id=ANY($1::int[])', [successfulIds]);
   });
 });

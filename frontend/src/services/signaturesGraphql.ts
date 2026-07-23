@@ -9,7 +9,7 @@ import type {
   SignatureTemplateField,
   SignatureTemplateRole,
 } from './signaturesApi';
-import { graphqlRequest } from './graphqlClient';
+import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 
 type GqlDocumentStatus =
   | 'DRAFT'
@@ -242,6 +242,81 @@ const mapTemplate = (template: GqlTemplate): SignatureTemplate => ({
   created_at: template.createdAt,
 });
 
+type DocumentMutationPayload = Partial<SignatureDocument> & {
+  recipients?: SignatureRecipient[];
+  fields?: SignatureField[];
+};
+
+const recipientInput = (recipient: SignatureRecipient) => ({
+  contactId: recipient.contact_id ?? null,
+  name: recipient.name ?? null,
+  email: recipient.email,
+  signingOrder: recipient.signing_order ?? 1,
+  roleName: recipient.role_name ?? null,
+  identityMethod: recipient.identity_method ?? 'none',
+});
+
+const fieldInput = (field: SignatureField) => ({
+  recipientId: field.recipient_id ?? null,
+  roleName: field.role_name ?? null,
+  fieldType: field.field_type,
+  pageNumber: field.page_number,
+  xPosition: field.x_position,
+  yPosition: field.y_position,
+  width: field.width,
+  height: field.height,
+  label: field.label ?? null,
+  isRequired: field.is_required ?? true,
+  value: field.value ?? null,
+  fontSize: field.font_size ?? null,
+  fontFamily: field.font_family ?? null,
+  textAlign: field.text_align ?? null,
+  locked: field.locked ?? false,
+});
+
+const documentInput = (payload: DocumentMutationPayload) => ({
+  ...(payload.title === undefined ? {} : { title: payload.title }),
+  ...(payload.document_number === undefined ? {} : { documentNumber: payload.document_number }),
+  ...(payload.description === undefined ? {} : { description: payload.description }),
+  ...(payload.message === undefined ? {} : { message: payload.message }),
+  ...(payload.expiration_days === undefined ? {} : { expirationDays: payload.expiration_days }),
+  ...(payload.sender_name === undefined ? {} : { senderName: payload.sender_name }),
+  ...(payload.sender_email === undefined ? {} : { senderEmail: payload.sender_email }),
+  ...(payload.routing_mode === undefined ? {} : { routingMode: payload.routing_mode }),
+  ...(payload.template_id === undefined ? {} : { templateId: payload.template_id }),
+  ...(payload.recipients === undefined ? {} : { recipients: payload.recipients.map(recipientInput) }),
+  ...(payload.fields === undefined ? {} : { fields: payload.fields.map(fieldInput) }),
+});
+
+const templateRoleInput = (role: SignatureTemplateRole) => ({
+  roleName: role.role_name,
+  signingOrder: role.signing_order ?? 1,
+});
+
+const templateFieldInput = (field: SignatureTemplateField) => ({
+  roleName: field.role_name ?? null,
+  fieldType: field.field_type,
+  pageNumber: field.page_number,
+  xPosition: field.x_position,
+  yPosition: field.y_position,
+  width: field.width,
+  height: field.height,
+  label: field.label ?? null,
+  isRequired: field.is_required ?? true,
+  fontSize: field.font_size ?? null,
+  fontFamily: field.font_family ?? null,
+  textAlign: field.text_align ?? null,
+  locked: field.locked ?? false,
+});
+
+const templateInput = (payload: Partial<SignatureTemplate> & { roles?: SignatureTemplateRole[]; fields?: SignatureTemplateField[] }) => ({
+  ...(payload.title === undefined ? {} : { title: payload.title }),
+  ...(payload.description === undefined ? {} : { description: payload.description }),
+  ...(payload.message === undefined ? {} : { message: payload.message }),
+  ...(payload.roles === undefined ? {} : { roles: payload.roles.map(templateRoleInput) }),
+  ...(payload.fields === undefined ? {} : { fields: payload.fields.map(templateFieldInput) }),
+});
+
 export const listSignatureDocumentsViaGraphql = async (
   params: { status?: SignatureStatus; page?: number; limit?: number } = {},
   organizationId?: number,
@@ -401,4 +476,41 @@ export const getSignatureTemplateViaGraphql = async (
       locked: field.locked,
     })),
   };
+};
+
+export const createSignatureDocumentViaGraphql = async (payload: DocumentMutationPayload, organizationId?: number): Promise<SignatureDocument> => {
+  const data = await graphqlMutationRequest<{createSignatureDocument:GqlDocument},{input:ReturnType<typeof documentInput>}>(`mutation CreateSignatureDocument($input:CreateSignatureDocumentInput!){createSignatureDocument(input:$input){${documentFields}}}`,{input:documentInput(payload)},organizationId);
+  return mapDocument(data.createSignatureDocument);
+};
+
+export const updateSignatureDocumentViaGraphql = async (id:number,payload:DocumentMutationPayload,organizationId?:number):Promise<SignatureDocument>=>{
+  const data=await graphqlMutationRequest<{updateSignatureDraft:GqlDocument},{id:number;input:ReturnType<typeof documentInput>}>(`mutation UpdateSignatureDraft($id:Int!,$input:UpdateSignatureDraftInput!){updateSignatureDraft(id:$id,input:$input){${documentFields}}}`,{id,input:documentInput(payload)},organizationId);
+  return mapDocument(data.updateSignatureDraft);
+};
+
+export const deleteSignatureDocumentViaGraphql=async(id:number,organizationId?:number):Promise<SignatureDocument>=>{
+  const data=await graphqlMutationRequest<{deleteSignatureDraft:GqlDocument},{id:number}>(`mutation DeleteSignatureDraft($id:Int!){deleteSignatureDraft(id:$id){${documentFields}}}`,{id},organizationId);
+  return mapDocument(data.deleteSignatureDraft);
+};
+
+export const createSignatureTemplateViaGraphql=async(payload:Partial<SignatureTemplate>,organizationId?:number):Promise<SignatureTemplate>=>{
+  const data=await graphqlMutationRequest<{createSignatureTemplate:GqlTemplate},{input:ReturnType<typeof templateInput>}>(`mutation CreateSignatureTemplate($input:CreateSignatureTemplateInput!){createSignatureTemplate(input:$input){${templateFields}}}`,{input:templateInput(payload)},organizationId);
+  return mapTemplate(data.createSignatureTemplate);
+};
+
+export const updateSignatureTemplateViaGraphql=async(id:number,payload:Partial<SignatureTemplate>&{roles?:SignatureTemplateRole[];fields?:SignatureTemplateField[]},organizationId?:number):Promise<SignatureTemplate>=>{
+  const data=await graphqlMutationRequest<{updateSignatureTemplate:GqlTemplate},{id:number;input:ReturnType<typeof templateInput>}>(`mutation UpdateSignatureTemplate($id:Int!,$input:UpdateSignatureTemplateInput!){updateSignatureTemplate(id:$id,input:$input){${templateFields}}}`,{id,input:templateInput(payload)},organizationId);
+  return mapTemplate(data.updateSignatureTemplate);
+};
+
+export const deleteSignatureTemplateViaGraphql=async(id:number,organizationId?:number):Promise<SignatureTemplate>=>{
+  const data=await graphqlMutationRequest<{deleteSignatureTemplate:GqlTemplate},{id:number}>(`mutation DeleteSignatureTemplate($id:Int!){deleteSignatureTemplate(id:$id){${templateFields}}}`,{id},organizationId);
+  return mapTemplate(data.deleteSignatureTemplate);
+};
+
+export const instantiateSignatureTemplateViaGraphql=async(id:number,payload:Record<string,unknown>,organizationId?:number):Promise<SignatureDocument>=>{
+  const source=payload as {title?:string;description?:string;message?:string;routing_mode?:string;expiration_days?:number;sender_name?:string;sender_email?:string;recipients?:SignatureRecipient[]};
+  const input={...(source.title===undefined?{}:{title:source.title}),...(source.description===undefined?{}:{description:source.description}),...(source.message===undefined?{}:{message:source.message}),...(source.routing_mode===undefined?{}:{routingMode:source.routing_mode}),...(source.expiration_days===undefined?{}:{expirationDays:source.expiration_days}),...(source.sender_name===undefined?{}:{senderName:source.sender_name}),...(source.sender_email===undefined?{}:{senderEmail:source.sender_email}),...(source.recipients===undefined?{}:{recipients:source.recipients.map(recipientInput)})};
+  const data=await graphqlMutationRequest<{instantiateSignatureTemplate:GqlDocument},{id:number;input:typeof input}>(`mutation InstantiateSignatureTemplate($id:Int!,$input:InstantiateSignatureTemplateInput!){instantiateSignatureTemplate(id:$id,input:$input){${documentFields}}}`,{id,input},organizationId);
+  return mapDocument(data.instantiateSignatureTemplate);
 };

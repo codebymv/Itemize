@@ -12474,7 +12474,7 @@
           "path": "/api/public/sign/:token",
           "rawPath": "/api/public/sign/${token}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 233,
+          "line": 236,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12515,7 +12515,7 @@
           "path": "/api/public/sign/:token",
           "rawPath": "/api/public/sign/${token}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 238,
+          "line": 241,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12562,7 +12562,7 @@
           "path": "/api/public/sign/:token/decline",
           "rawPath": "/api/public/sign/${token}/decline",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 243,
+          "line": 246,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14162,7 +14162,7 @@
           "path": "/api/signatures/documents",
           "rawPath": "/api/signatures/documents",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 161,
+          "line": 163,
           "client": "api",
           "literalInterpolation": false
         },
@@ -14171,7 +14171,7 @@
           "path": "/api/signatures/documents",
           "rawPath": "/api/signatures/documents",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 170,
+          "line": 172,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14205,7 +14205,7 @@
           "path": "/api/signatures/documents",
           "rawPath": "/api/signatures/documents",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 134,
+          "line": 135,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14224,8 +14224,8 @@
       "owner": "esignatures",
       "targetOperation": "createSignatureDocument",
       "targetModule": "SignatureDocumentsModule",
-      "parityStatus": "characterizing",
-      "notes": "Creates a draft only; validates template ownership, plan quota, routing, expiry, and sender metadata.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind the independent default-off document-mutation flag; creates one tenant-owned draft aggregate with serialized monthly plan quota, template/contact validation, bounded recipients/fields, and atomic rollback.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14246,7 +14246,7 @@
           "path": "/api/signatures/documents/:id",
           "rawPath": "/api/signatures/documents/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 192,
+          "line": 195,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14258,8 +14258,8 @@
       "owner": "esignatures",
       "targetOperation": "deleteSignatureDraft",
       "targetModule": "SignatureDocumentsModule",
-      "parityStatus": "characterized",
-      "notes": "Only drafts can be deleted; sent/completed documents and their legal audit evidence are immutable.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind the independent default-off document-mutation flag; the tenant-owned row is locked and only drafts can be deleted, while every non-draft lifecycle state fails with a conflict.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14280,7 +14280,7 @@
           "path": "/api/signatures/documents/:id",
           "rawPath": "/api/signatures/documents/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 177,
+          "line": 179,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14314,7 +14314,7 @@
           "path": "/api/signatures/documents/:id",
           "rawPath": "/api/signatures/documents/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 139,
+          "line": 141,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14363,8 +14363,8 @@
       "owner": "esignatures",
       "targetOperation": "updateSignatureDraft",
       "targetModule": "SignatureDocumentsModule",
-      "parityStatus": "characterizing",
-      "notes": "Draft-only atomic definition replacement; recipient contacts and field recipient IDs must belong to the document tenant.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind the independent default-off document-mutation flag as one row-locked metadata, recipient, and field transaction; invalid tenant references or role mappings roll back the complete aggregate.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14385,7 +14385,7 @@
           "path": "/api/signatures/documents/:id/audit",
           "rawPath": "/api/signatures/documents/${id}/audit",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 228,
+          "line": 231,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14419,7 +14419,7 @@
           "path": "/api/signatures/documents/:id/cancel",
           "rawPath": "/api/signatures/documents/${id}/cancel",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 187,
+          "line": 189,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14491,7 +14491,7 @@
           "path": "/api/signatures/documents/:id/file",
           "rawPath": "/api/signatures/documents/${id}/file",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 155,
+          "line": 157,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14562,7 +14562,7 @@
           "path": "/api/signatures/documents/:id/remind",
           "rawPath": "/api/signatures/documents/${id}/remind",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 197,
+          "line": 200,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14640,7 +14640,7 @@
           "path": "/api/signatures/documents/:id/send",
           "rawPath": "/api/signatures/documents/${id}/send",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 182,
+          "line": 184,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14699,7 +14699,7 @@
           "path": "/api/signatures/documents/upload",
           "rawPath": "/api/signatures/documents/upload",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 148,
+          "line": 150,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14746,7 +14746,7 @@
           "path": "/api/signatures/email/preview",
           "rawPath": "/api/signatures/email/preview",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 222,
+          "line": 225,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14780,7 +14780,7 @@
           "path": "/api/signatures/templates",
           "rawPath": "/api/signatures/templates",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 311,
+          "line": 316,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14814,7 +14814,7 @@
           "path": "/api/signatures/templates",
           "rawPath": "/api/signatures/templates",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 286,
+          "line": 290,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14826,8 +14826,8 @@
       "owner": "esignatures",
       "targetOperation": "createSignatureTemplate",
       "targetModule": "SignatureTemplatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Creates an organization-owned template definition under plan and size limits.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind the independent default-off template-mutation flag as one organization-owned metadata, unique-role, and bounded-field transaction.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14848,7 +14848,7 @@
           "path": "/api/signatures/templates/:id",
           "rawPath": "/api/signatures/templates/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 327,
+          "line": 334,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14860,8 +14860,8 @@
       "owner": "esignatures",
       "targetOperation": "deleteSignatureTemplate",
       "targetModule": "SignatureTemplatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Tenant-owned delete with explicit behavior for documents instantiated from the template.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind the independent default-off template-mutation flag as a row-locked tenant-owned delete; already-instantiated documents retain their immutable snapshot and advisory template ID.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14882,7 +14882,7 @@
           "path": "/api/signatures/templates/:id",
           "rawPath": "/api/signatures/templates/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 317,
+          "line": 322,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14916,7 +14916,7 @@
           "path": "/api/signatures/templates/:id",
           "rawPath": "/api/signatures/templates/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 294,
+          "line": 299,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14928,8 +14928,8 @@
       "owner": "esignatures",
       "targetOperation": "updateSignatureTemplate",
       "targetModule": "SignatureTemplatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Atomically replaces metadata, unique roles, and valid bounded fields; invalid input changes nothing.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind the independent default-off template-mutation flag; row-locked metadata, role, and field changes commit together and role changes cannot orphan existing role-bound fields.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14981,7 +14981,7 @@
           "path": "/api/signatures/templates/:id/instantiate",
           "rawPath": "/api/signatures/templates/${id}/instantiate",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 322,
+          "line": 328,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14993,8 +14993,8 @@
       "owner": "esignatures",
       "targetOperation": "instantiateSignatureTemplate",
       "targetModule": "SignatureTemplatesModule",
-      "parityStatus": "characterizing",
-      "notes": "Atomic tenant-owned template snapshot, role-recipient binding, contact validation, and field creation.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind the independent default-off template-mutation flag as an atomic tenant-owned file/metadata/role/field snapshot with serialized monthly quota and validated recipient contacts.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -15015,7 +15015,7 @@
           "path": "/api/signatures/templates/upload",
           "rawPath": "/api/signatures/templates/upload",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 303,
+          "line": 308,
           "client": "api",
           "literalInterpolation": false
         }

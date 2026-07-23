@@ -88,6 +88,8 @@ describe('Environment Validation', () => {
     expect(env.VITE_ADMIN_EMAIL_DELIVERY_GRAPHQL).toBe('false');
     expect(env.VITE_SIGNATURE_DOCUMENT_READS_GRAPHQL).toBe('false');
     expect(env.VITE_SIGNATURE_TEMPLATE_READS_GRAPHQL).toBe('false');
+    expect(env.VITE_SIGNATURE_DOCUMENT_MUTATIONS_GRAPHQL).toBe('false');
+    expect(env.VITE_SIGNATURE_TEMPLATE_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_DEV_AUTH_PROBE_WITHOUT_HINT).toBe('false');
   });
 });
