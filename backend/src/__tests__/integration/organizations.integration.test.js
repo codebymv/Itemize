@@ -452,4 +452,107 @@ describe('Organizations Integration Tests', () => {
             expect(userResult.rows[0].default_organization_id).toBe(owner.org.id);
         });
     });
+
+    describe('Organization deletion and signature evidence', () => {
+        async function createOrganization(name) {
+            const response = await request(app)
+                .post('/api/organizations')
+                .set('Cookie', [`itemize_auth=${owner.token}`])
+                .send({ name });
+            expect(response.status).toBe(201);
+            return response.body.data.id;
+        }
+
+        it('blocks non-draft evidence and durably queues draft/template files before cascade', async () => {
+            const retainedOrgId = await createOrganization('Retained Evidence Org');
+            const sent = await dbHelper.pool.query(
+                `INSERT INTO signature_documents
+                   (organization_id,title,status,file_url,file_name,file_type,
+                    file_size,original_sha256,created_by)
+                 VALUES ($1,'Sent evidence','sent',$2,'sent.pdf','application/pdf',
+                    128,$3,$4) RETURNING id`,
+                [
+                    retainedOrgId,
+                    '/uploads/signatures/retained-org-sent.pdf',
+                    'a'.repeat(64),
+                    owner.user.id,
+                ]
+            );
+            const denied = await request(app)
+                .delete(`/api/organizations/${retainedOrgId}`)
+                .set('Cookie', [`itemize_auth=${owner.token}`]);
+            expect(denied.status).toBe(409);
+            expect(denied.body.error.code).toBe('SIGNATURE_EVIDENCE_RETAINED');
+            expect((await dbHelper.pool.query(
+                'SELECT id FROM organizations WHERE id=$1',
+                [retainedOrgId]
+            )).rows).toHaveLength(1);
+            expect((await dbHelper.pool.query(
+                'SELECT id,file_url FROM signature_documents WHERE id=$1',
+                [sent.rows[0].id]
+            )).rows[0].file_url).toBe('/uploads/signatures/retained-org-sent.pdf');
+
+            const disposableOrgId = await createOrganization('Disposable Draft Org');
+            const draft = await dbHelper.pool.query(
+                `INSERT INTO signature_documents
+                   (organization_id,title,status,file_url,signed_file_url,created_by)
+                 VALUES ($1,'Draft','draft',$2,$3,$4) RETURNING id`,
+                [
+                    disposableOrgId,
+                    '/uploads/signatures/org-draft.pdf',
+                    '/uploads/signatures/org-draft-signed.pdf',
+                    owner.user.id,
+                ]
+            );
+            await dbHelper.pool.query(
+                `INSERT INTO signature_document_versions
+                   (document_id,version_number,file_url)
+                 VALUES ($1,1,$2)`,
+                [draft.rows[0].id, '/uploads/signatures/org-draft-version.pdf']
+            );
+            await dbHelper.pool.query(
+                `INSERT INTO signature_templates
+                   (organization_id,title,file_url,created_by)
+                 VALUES ($1,'Template',$2,$3)`,
+                [
+                    disposableOrgId,
+                    '/uploads/signatures/org-template.pdf',
+                    owner.user.id,
+                ]
+            );
+
+            const deleted = await request(app)
+                .delete(`/api/organizations/${disposableOrgId}`)
+                .set('Cookie', [`itemize_auth=${owner.token}`]);
+            expect(deleted.status).toBe(200);
+            expect((await dbHelper.pool.query(
+                'SELECT id FROM organizations WHERE id=$1',
+                [disposableOrgId]
+            )).rows).toHaveLength(0);
+            const jobs = await dbHelper.pool.query(
+                `SELECT file_url FROM signature_file_deletion_jobs
+                 WHERE organization_id=$1 ORDER BY file_url`,
+                [disposableOrgId]
+            );
+            expect(jobs.rows.map((row) => row.file_url)).toEqual([
+                '/uploads/signatures/org-draft-signed.pdf',
+                '/uploads/signatures/org-draft-version.pdf',
+                '/uploads/signatures/org-draft.pdf',
+                '/uploads/signatures/org-template.pdf',
+            ]);
+            await dbHelper.pool.query(
+                'DELETE FROM signature_file_deletion_jobs WHERE organization_id=$1',
+                [disposableOrgId]
+            );
+
+            await dbHelper.pool.query(
+                "UPDATE signature_documents SET status='draft' WHERE id=$1",
+                [sent.rows[0].id]
+            );
+            await dbHelper.pool.query(
+                'DELETE FROM organizations WHERE id=$1',
+                [retainedOrgId]
+            );
+        });
+    });
 });

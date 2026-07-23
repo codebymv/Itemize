@@ -257,37 +257,6 @@ async function removeDocumentFile(pool, organizationId, documentId) {
     });
 }
 
-async function deleteDocumentFile(pool, organizationId, documentId) {
-    return withTransaction(pool, async (client) => {
-        const current = await client.query(
-            `SELECT file_url FROM signature_documents
-             WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
-            [documentId, organizationId]
-        );
-        if (current.rows.length === 0) return null;
-
-        await enqueueDocumentFileDeletions(client, organizationId, documentId);
-        await client.query(
-            'DELETE FROM signature_document_versions WHERE document_id = $1',
-            [documentId]
-        );
-
-        const updated = await client.query(`
-            UPDATE signature_documents SET
-                file_url = NULL,
-                file_name = NULL,
-                file_size = NULL,
-                file_type = NULL,
-                original_sha256 = NULL,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = $1 AND organization_id = $2
-            RETURNING ${signatureDocumentColumns()}
-        `, [documentId, organizationId]);
-
-        return updated.rows[0] || null;
-    });
-}
-
 async function deleteDocument(pool, organizationId, documentId) {
     return withTransaction(pool, async (client) => {
         const docResult = await client.query(
@@ -615,7 +584,6 @@ module.exports = {
     updateDocument,
     uploadDocument,
     removeDocumentFile,
-    deleteDocumentFile,
     deleteDocument,
     replaceRecipients,
     replaceFields,

@@ -165,6 +165,68 @@ describe('Signature lifecycle PostgreSQL contract', () => {
         }
     });
 
+    it('retains sent source versions and audit evidence across draft-only deletion APIs', async () => {
+        const document = await createDocument(userA, 'Immutable sent evidence');
+        const sourceUrl = `/uploads/signatures/immutable-sent-${document.id}.pdf`;
+        await dbHelper.pool.query(
+            `UPDATE signature_documents SET
+               status='sent',file_url=$2,file_name='immutable-sent.pdf',
+               file_size=128,file_type='application/pdf',original_sha256=$3,
+               sent_at=CURRENT_TIMESTAMP
+             WHERE id=$1`,
+            [document.id, sourceUrl, 'a'.repeat(64)]
+        );
+        await dbHelper.pool.query(
+            `INSERT INTO signature_document_versions
+               (document_id,version_number,file_url,file_name,file_size,file_type,
+                original_sha256,created_by)
+             VALUES ($1,1,$2,'immutable-sent.pdf',128,'application/pdf',$3,$4)`,
+            [document.id, sourceUrl, 'a'.repeat(64), userA.id]
+        );
+        await dbHelper.pool.query(
+            `INSERT INTO signature_audit_log
+               (document_id,event_type,description)
+             VALUES ($1,'sent','Signature document sent')`,
+            [document.id]
+        );
+
+        await expect(
+            signatureService.removeDocumentFile(
+                dbHelper.pool,
+                userA.org.id,
+                document.id
+            )
+        ).resolves.toBeNull();
+        await expect(
+            signatureService.deleteDocument(
+                dbHelper.pool,
+                userA.org.id,
+                document.id
+            )
+        ).rejects.toThrow('Only draft documents can be deleted');
+
+        const retained = await dbHelper.pool.query(
+            `SELECT
+               document.status,document.file_url,document.original_sha256,
+               (SELECT COUNT(*) FROM signature_document_versions
+                WHERE document_id=document.id) AS versions,
+               (SELECT COUNT(*) FROM signature_audit_log
+                WHERE document_id=document.id) AS audits,
+               (SELECT COUNT(*) FROM signature_file_deletion_jobs
+                WHERE document_id=document.id) AS cleanup_jobs
+             FROM signature_documents document WHERE document.id=$1`,
+            [document.id]
+        );
+        expect(retained.rows[0]).toMatchObject({
+            status: 'sent',
+            file_url: sourceUrl,
+            original_sha256: 'a'.repeat(64),
+            versions: '1',
+            audits: '1',
+            cleanup_jobs: '0',
+        });
+    });
+
     it('serves explicit retained-route byte ranges and evidence validators', async () => {
         const document = await createDocument(userA, 'Retained range contract');
         const bytes = Buffer.from('%PDF-1.7\nretained-range-contract');

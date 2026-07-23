@@ -2333,7 +2333,7 @@
       ],
       "declaredPath": "/:organizationId/leave",
       "source": "backend/src/routes/organizations.routes.js",
-      "line": 328,
+      "line": 393,
       "dynamic": false
     },
     {
@@ -2343,7 +2343,7 @@
       ],
       "declaredPath": "/:organizationId/members",
       "source": "backend/src/routes/organizations.routes.js",
-      "line": 183,
+      "line": 248,
       "dynamic": false
     },
     {
@@ -2353,7 +2353,7 @@
       ],
       "declaredPath": "/:organizationId/members",
       "source": "backend/src/routes/organizations.routes.js",
-      "line": 198,
+      "line": 263,
       "dynamic": false
     },
     {
@@ -2363,7 +2363,7 @@
       ],
       "declaredPath": "/:organizationId/members/:memberId",
       "source": "backend/src/routes/organizations.routes.js",
-      "line": 290,
+      "line": 355,
       "dynamic": false
     },
     {
@@ -2373,7 +2373,7 @@
       ],
       "declaredPath": "/:organizationId/members/:memberId",
       "source": "backend/src/routes/organizations.routes.js",
-      "line": 244,
+      "line": 309,
       "dynamic": false
     },
     {
@@ -2383,7 +2383,7 @@
       ],
       "declaredPath": "/:organizationId/select",
       "source": "backend/src/routes/organizations.routes.js",
-      "line": 356,
+      "line": 421,
       "dynamic": false
     },
     {
@@ -2393,7 +2393,7 @@
       ],
       "declaredPath": "/ensure-default",
       "source": "backend/src/routes/organizations.routes.js",
-      "line": 379,
+      "line": 444,
       "dynamic": false
     },
     {

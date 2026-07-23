@@ -172,10 +172,75 @@ module.exports = (pool, authenticateJWT) => {
 
   // Delete an organization (owner only)
   router.delete('/:organizationId', authenticateJWT, requireOrgAccess(['owner']), asyncHandler(async (req, res) => {
-      await withDbClient(pool, async (client) => {
-        return client.query('DELETE FROM organizations WHERE id = $1', [req.organizationId]);
+      const outcome = await withTransaction(pool, async (client) => {
+        const organization = await client.query(
+          'SELECT id FROM organizations WHERE id=$1 FOR UPDATE',
+          [req.organizationId]
+        );
+        if (organization.rows.length === 0) return 'not_found';
+
+        const signatureDocuments = await client.query(
+          `SELECT id,status FROM signature_documents
+           WHERE organization_id=$1
+           ORDER BY id FOR UPDATE`,
+          [req.organizationId]
+        );
+        if (signatureDocuments.rows.some((document) => document.status !== 'draft')) {
+          return 'evidence_retained';
+        }
+
+        await client.query(
+          `INSERT INTO signature_file_deletion_jobs
+             (organization_id,document_id,file_url)
+           SELECT $1,NULL,file_url FROM (
+             SELECT file_url FROM signature_documents
+             WHERE organization_id=$1
+             UNION
+             SELECT signed_file_url AS file_url FROM signature_documents
+             WHERE organization_id=$1
+             UNION
+             SELECT version.file_url
+             FROM signature_document_versions version
+             JOIN signature_documents document ON document.id=version.document_id
+             WHERE document.organization_id=$1
+             UNION
+             SELECT file_url FROM signature_templates
+             WHERE organization_id=$1
+           ) files
+           WHERE file_url IS NOT NULL
+           ON CONFLICT (organization_id,file_url) DO UPDATE SET
+             document_id=NULL,
+             status=CASE
+               WHEN signature_file_deletion_jobs.status IN ('deleted','dead_letter')
+               THEN 'queued' ELSE signature_file_deletion_jobs.status END,
+             next_attempt_at=CASE
+               WHEN signature_file_deletion_jobs.status IN ('deleted','dead_letter')
+               THEN CURRENT_TIMESTAMP ELSE signature_file_deletion_jobs.next_attempt_at END,
+             deleted_at=CASE
+               WHEN signature_file_deletion_jobs.status IN ('deleted','dead_letter')
+               THEN NULL ELSE signature_file_deletion_jobs.deleted_at END,
+             last_error=CASE
+               WHEN signature_file_deletion_jobs.status IN ('deleted','dead_letter')
+               THEN NULL ELSE signature_file_deletion_jobs.last_error END,
+             updated_at=CURRENT_TIMESTAMP`,
+          [req.organizationId]
+        );
+        await client.query(
+          'DELETE FROM organizations WHERE id=$1',
+          [req.organizationId]
+        );
+        return 'deleted';
       });
 
+      if (outcome === 'not_found') return sendNotFound(res, 'Organization');
+      if (outcome === 'evidence_retained') {
+        return sendError(
+          res,
+          'Organization contains retained signature evidence',
+          409,
+          'SIGNATURE_EVIDENCE_RETAINED'
+        );
+      }
       return sendSuccess(res, { message: 'Organization deleted successfully' });
   }));
 

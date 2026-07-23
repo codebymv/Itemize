@@ -74,6 +74,8 @@ class SignatureFileCleanupService {
             `SELECT EXISTS (
                SELECT 1 FROM signature_documents WHERE file_url=$1
                UNION ALL
+               SELECT 1 FROM signature_documents WHERE signed_file_url=$1
+               UNION ALL
                SELECT 1 FROM signature_templates WHERE file_url=$1
                UNION ALL
                SELECT 1 FROM signature_document_versions WHERE file_url=$1

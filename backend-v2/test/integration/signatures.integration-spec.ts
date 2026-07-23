@@ -1028,6 +1028,23 @@ describe('E-signature GraphQL read contract', () => {
       code: 'CONFLICT',
       reason: 'SIGNATURE_DOCUMENT_NOT_DRAFT',
     });
+    const immutableDelete = await graphql(
+      memberToken,
+      organizationId,
+      'mutation Delete($id:Int!){deleteSignatureDraft(id:$id){id}}',
+      { id: sentId },
+    );
+    expect(immutableDelete.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'SIGNATURE_DOCUMENT_NOT_DRAFT',
+    });
+    expect((await pool.query(
+      'SELECT status,file_url FROM signature_documents WHERE id=$1',
+      [sentId],
+    )).rows[0]).toMatchObject({
+      status: 'sent',
+      file_url: '/uploads/signatures/sent.pdf',
+    });
 
     const deleted = await graphql(
       memberToken,

@@ -72,7 +72,7 @@ Opening the signing session is the documented idempotent first-view transition. 
 
 ## Audit and completion evidence
 
-Audit rows are append-only and include document/recipient identity, versioned event type, server timestamp, actor/capability class, request correlation, IP policy, user agent policy, and structured metadata. Database roles prevent update/delete outside an explicit retention workflow. Document deletion is draft-only; non-draft evidence cannot cascade away through ordinary product operations.
+Audit rows are append-only through the application and include document/recipient identity, versioned event type, server timestamp, actor/capability class, request correlation, IP policy, user agent policy, and structured metadata. Document and source-file deletion are draft-only. Ordinary organization deletion locks the tenant and its signature rows, refuses deletion while any non-draft evidence exists, and therefore cannot cascade sent, in-progress, completed, cancelled, or expired evidence away.
 
 Original and signed PDFs have SHA-256 hashes tied to immutable document versions. Both NestJS and the retained rollback path lock the draft, preserve any pre-existing active source not already represented, and append every accepted replacement at `MAX(version_number) + 1`. Replacements never enqueue a versioned source for deletion. Draft PDF removal and whole-draft deletion enqueue the current source plus every historical version before deleting the version rows.
 
@@ -132,7 +132,7 @@ Commit `8e756351` deployed through legacy backend `70c49ae0-0624-4778-a658-4dd76
 The authenticated read and draft/template mutation slices have completed production consumer validation. Delivery, draft-PDF removal, authenticated files, and public signing are implemented behind independent default-off switches. Final e-signature cutover still requires:
 
 1. production private-S3 and required malware-scanner rehearsal;
-2. audit evidence enforcement under database permissions plus defined retention/export and integrity verification;
+2. approved retention duration plus evidence export and tamper-verification policy;
 3. the request/reminder/completion workers receive one production owner/schedule and controlled provider/storage canaries;
 4. OTP remains impossible to configure unless its complete issuance/throttling/hash/expiry/replay protocol is implemented;
 5. the default-off transports and critical draft/send/sign/decline/cancel/download browser journeys pass production-like parity and rollback rehearsal.
@@ -234,3 +234,11 @@ Both paths also implement a bounded ClamAV `INSTREAM` client configured by `SIGN
 The retained unit suite passes 391/391, the Nest unit suite passes 421/421, targeted scanner framing and fail-closed tests pass, and the Nest build passes. A clean disposable database passes the complete retained integration gate 491/491 and Nest integration gate 225/225. Production scanner attachment, required-mode clean/infected/outage canaries, private-S3 credential rehearsal, and upload-route traffic cutover remain deferred to the final configuration phase.
 
 Commit `56d82680` deployed with compatibility defaults through retained backend `e41e24c8-613e-40cf-b1a6-5677a1369d59` and GraphQL `e6f38789-5e8a-4ab7-9300-219430624e30`. Both releases became healthy; itemize.cloud, production API health, and the same-origin GraphQL probe returned HTTP 200. Railway confirmed all four signature file/public-signing proxy flags and all scanner variables remain absent, while GraphQL still has no AWS variables. No upload, storage, scanner, worker, provider call, or production data mutation ran.
+
+## Implemented signature evidence-retention boundary
+
+All product deletion paths now preserve non-draft signature evidence. Both GraphQL mutations and the retained rollback service reject source removal and document deletion after draft state; an unused retained helper that could clear a non-draft source was removed. The retained organization-delete transaction locks the organization and every signature row, returns `SIGNATURE_EVIDENCE_RETAINED` with HTTP 409 when any document has left draft, and cannot race a lifecycle transition into an evidence-erasing cascade.
+
+A draft-only organization can still be deleted. Before its rows cascade, the transaction snapshots every active source, signed artifact, immutable document version, and template locator into `signature_file_deletion_jobs`. Migration 045 deliberately removes that queue's organization foreign key while retaining the immutable organization-ID snapshot, so cleanup authority survives deletion of the organization row. The cleanup worker now also treats `signed_file_url` as a live reference.
+
+Retained unit tests pass 392/392, Nest unit tests pass 422/422, and the Nest build passes. Fresh PostgreSQL passes the focused signature and organization contracts 41/41 plus the complete Nest integration gate 225/225. These tests prove non-draft deletion denial with source/hash/version/audit preservation and zero cleanup intents, draft-only cascade cleanup receipt survival, and the matching GraphQL conflict behavior. The product currently retains non-draft evidence indefinitely; defining a time-based purge, portable evidence export, and tamper-verification scheme remains a product/legal decision rather than an implicit delete cascade.

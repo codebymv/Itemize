@@ -329,7 +329,7 @@ describe('test database schema contract', () => {
         );
 
         expect(startupSource).toContain(
-            "WHERE version = '044_signature_completion_jobs'"
+            "WHERE version = '045_signature_evidence_retention'"
         );
     });
 
@@ -569,6 +569,18 @@ describe('test database schema contract', () => {
         expect(sql).toContain('idx_signature_completion_jobs_claim');
         expect(sql).toContain("'document_completed'");
         expect(sql).toContain("'signature_declined'");
+    });
+
+    test('production migration stream preserves cleanup authority after tenant deletion', async () => {
+        const migration = require('../../../scripts/migrations/045_signature_evidence_retention');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain(
+            'DROP CONSTRAINT IF EXISTS signature_file_deletion_jobs_organization_id_fkey'
+        );
+        expect(sql).toContain('cleanup authority survives organization deletion');
     });
 
     test('production migration stream creates replayable Stripe subscription reconciliation', async () => {

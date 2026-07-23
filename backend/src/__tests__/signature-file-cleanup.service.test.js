@@ -65,6 +65,9 @@ describe('SignatureFileCleanupService', () => {
         expect(query.mock.calls[0][0]).toContain(
             'SELECT 1 FROM signature_document_versions WHERE file_url=$1'
         );
+        expect(query.mock.calls[0][0]).toContain(
+            'SELECT 1 FROM signature_documents WHERE signed_file_url=$1'
+        );
         expect(query).toHaveBeenCalledWith(expect.any(String), [claim.file_url]);
     });
 

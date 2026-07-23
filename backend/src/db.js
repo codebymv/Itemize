@@ -89,6 +89,9 @@ const {
 const {
   runSignatureCompletionMigration,
 } = require('./db_signature_completion_migrations');
+const {
+  runSignatureEvidenceRetentionMigration,
+} = require('./db_signature_evidence_retention_migrations');
 
 // Import Forms migrations
 const { runAllFormsMigrations } = require('./db_forms_migrations');
@@ -608,6 +611,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'signature_delivery_outbox', runSignatureDeliveryMigration);
     await runMigrationOnce(pool, 'signature_file_deletion_jobs', runSignatureFileDeletionMigration);
     await runMigrationOnce(pool, 'signature_completion_jobs', runSignatureCompletionMigration);
+    await runMigrationOnce(pool, 'signature_evidence_retention', runSignatureEvidenceRetentionMigration);
     await runMigrationOnce(pool, 'module_vault', runVaultMigrations);
     
     // Admin email communications - extend email_logs for admin use
