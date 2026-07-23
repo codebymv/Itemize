@@ -1471,16 +1471,16 @@
       "notes": "Implemented behind the default-off integration flag with user-and-organization scoped connection status, bounded sync aggregates, and the ten newest safe durable-job projections including retry/dead-letter state and redacted diagnostics."
     },
     "GET /api/signatures/documents": {
-      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "signatureDocuments", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Organization-scoped strict status filter and bounded stable pagination."
+      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "signatureDocuments", "parityStatus": "implemented", "risk": "high",
+      "notes": "Implemented behind the default-off document-read flag with organization-scoped strict enum filtering, bounded stable pagination, REST-shape mapping, and fresh-PostgreSQL interoperability evidence."
     },
     "POST /api/signatures/documents": {
       "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "createSignatureDocument", "parityStatus": "characterizing", "risk": "high",
       "notes": "Creates a draft only; validates template ownership, plan quota, routing, expiry, and sender metadata."
     },
     "GET /api/signatures/documents/:id": {
-      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "signatureDocument", "parityStatus": "characterized", "risk": "high",
-      "notes": "Tenant-owned document definition, recipients, fields, and append-only audit projection with secret fields redacted."
+      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "signatureDocument", "parityStatus": "implemented", "risk": "high",
+      "notes": "Implemented behind the default-off document-read flag as one repeatable-read tenant-owned aggregate of document, recipients, fields, and ordered audit projection; token hashes, IP/user-agent, audit metadata, storage locations, and file hashes are excluded from the schema."
     },
     "PUT /api/signatures/documents/:id": {
       "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "updateSignatureDraft", "parityStatus": "characterizing", "risk": "high",
@@ -1507,8 +1507,8 @@
       "notes": "Organization-owned active document, bounded delay, active recipients, durable idempotent reminder work."
     },
     "GET /api/signatures/documents/:id/audit": {
-      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "signatureAuditTrail", "parityStatus": "characterized", "risk": "high",
-      "notes": "Tenant-owned append-only ordered evidence; redact sensitive metadata according to operator role."
+      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "signatureAuditTrail", "parityStatus": "implemented", "risk": "high",
+      "notes": "Implemented behind the default-off document-read flag as a repeatable-read tenant-owned ordered safe projection; IP, user-agent, and structured metadata remain deliberately absent."
     },
     "POST /api/signatures/documents/upload": {
       "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "uploadSignatureDraftPdf", "parityStatus": "characterized", "risk": "high",
@@ -1531,16 +1531,16 @@
       "notes": "Pure sanitized preview; server controls links/assets and output is not a delivery receipt."
     },
     "GET /api/signatures/templates": {
-      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "signatureTemplates", "parityStatus": "characterized", "risk": "high",
-      "notes": "Organization-scoped reusable definitions with deterministic ordering."
+      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "signatureTemplates", "parityStatus": "implemented", "risk": "high",
+      "notes": "Implemented behind the independent default-off template-read flag with organization scope, deterministic ordering, safe file-presence metadata, REST-shape mapping, and fresh-PostgreSQL interoperability evidence."
     },
     "POST /api/signatures/templates": {
       "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "createSignatureTemplate", "parityStatus": "characterizing", "risk": "high",
       "notes": "Creates an organization-owned template definition under plan and size limits."
     },
     "GET /api/signatures/templates/:id": {
-      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "signatureTemplate", "parityStatus": "characterized", "risk": "high",
-      "notes": "Tenant-owned template with ordered roles and fields."
+      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "signatureTemplate", "parityStatus": "implemented", "risk": "high",
+      "notes": "Implemented behind the independent default-off template-read flag as one repeatable-read tenant-owned aggregate with ordered roles and fields; storage locations and source hashes are excluded."
     },
     "GET /api/signatures/templates/:id/file": {
       "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "streamSignatureTemplatePdf", "parityStatus": "characterized", "risk": "high",

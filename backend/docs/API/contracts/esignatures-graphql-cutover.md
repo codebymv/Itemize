@@ -1,8 +1,8 @@
 # E-signatures GraphQL cutover contract
 
-**Status:** Phase 0 characterization
+**Status:** Phase 1 read slice implemented; mutation/public protocol work remains
 
-**Evidence date:** 2026-07-15
+**Evidence date:** 2026-07-22
 
 ## Decision
 
@@ -107,11 +107,19 @@ The legacy initial-send and immediate-reminder services call email inside databa
 | Files | PDF magic/parse/malware/limits, path traversal, tenant denial, SSRF denial, object orphan cleanup, safe stream/download headers |
 | Delivery/jobs | outbox atomicity, one provider call under worker race, provider success then crash, retry/dead-letter, reminder claim, cancellation race |
 
+## Implemented authenticated read slice
+
+`SignatureDocumentsModule` now implements `signatureDocuments`, `signatureDocument`, and `signatureAuditTrail`. `SignatureTemplatesModule` implements `signatureTemplates` and `signatureTemplate`. The frontend preserves its existing REST-shaped service contract and selects these queries through two independent default-off flags: `VITE_SIGNATURE_DOCUMENT_READS_GRAPHQL` and `VITE_SIGNATURE_TEMPLATE_READS_GRAPHQL`.
+
+Document and template details are repeatable-read aggregate snapshots. Root and child queries are tenant-qualified, list ordering is deterministic, plan access fails closed, and foreign IDs return `NOT_FOUND`. GraphQL exposes file-presence booleans that the authenticated frontend maps to retained HTTP streams; it does not expose capability hashes, IP/user-agent evidence, audit metadata, storage locations, or file hashes.
+
+Focused service and adapter tests pass. A disposable PostgreSQL contract proves enum filtering, stable pagination, document/recipient/field/audit aggregation, ordered template roles/fields, foreign-tenant concealment, safe projections, and interoperability with the retained Express read routes. Production consumer flags remain off until deployment and browser/log smoke evidence is recorded.
+
 ## Current evidence and exit gate
 
 Fresh PostgreSQL now covers concurrent initial-send exclusion, atomic cancellation and capability/reminder revocation, cancellation idempotency, cross-tenant reminder denial, invalid reminder delays, sent-definition immutability, selective reminder behavior, and unknown signing-field rejection. Existing generic database bootstrap verifies all signature tables are created from zero.
 
-The e-signature slice is not ready for traffic until:
+The implemented read slice is ready for staged consumer validation. The mutation, delivery, file-management, and public-signing remainder is not ready for GraphQL cutover until:
 
 1. document/template aggregate edits and quota enforcement are atomic and concurrency-safe;
 2. public field values, shared ownership, sequential routing, expiry, decline, and terminal races have complete validation and PostgreSQL coverage;
@@ -119,4 +127,4 @@ The e-signature slice is not ready for traffic until:
 4. audit evidence is append-only under database permissions with defined retention/export and integrity verification;
 5. PDF generation, initial delivery, completion notices, and reminders use durable idempotent jobs outside transactions;
 6. OTP verification is fully implemented and tested or remains impossible to configure;
-7. GraphQL operations, retained HTTP protocols, and critical draft/send/sign/decline/cancel/download browser journeys pass semantic parity and rollback tests.
+7. the remaining GraphQL mutations, retained HTTP protocols, and critical draft/send/sign/decline/cancel/download browser journeys pass semantic parity and rollback tests.

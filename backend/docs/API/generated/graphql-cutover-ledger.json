@@ -12474,7 +12474,7 @@
           "path": "/api/public/sign/:token",
           "rawPath": "/api/public/sign/${token}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 224,
+          "line": 233,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12515,7 +12515,7 @@
           "path": "/api/public/sign/:token",
           "rawPath": "/api/public/sign/${token}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 229,
+          "line": 238,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12562,7 +12562,7 @@
           "path": "/api/public/sign/:token/decline",
           "rawPath": "/api/public/sign/${token}/decline",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 234,
+          "line": 243,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14162,7 +14162,7 @@
           "path": "/api/signatures/documents",
           "rawPath": "/api/signatures/documents",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 158,
+          "line": 161,
           "client": "api",
           "literalInterpolation": false
         },
@@ -14171,7 +14171,7 @@
           "path": "/api/signatures/documents",
           "rawPath": "/api/signatures/documents",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 163,
+          "line": 170,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14183,8 +14183,8 @@
       "owner": "esignatures",
       "targetOperation": "signatureDocuments",
       "targetModule": "SignatureDocumentsModule",
-      "parityStatus": "characterizing",
-      "notes": "Organization-scoped strict status filter and bounded stable pagination.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind the default-off document-read flag with organization-scoped strict enum filtering, bounded stable pagination, REST-shape mapping, and fresh-PostgreSQL interoperability evidence.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14205,7 +14205,7 @@
           "path": "/api/signatures/documents",
           "rawPath": "/api/signatures/documents",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 132,
+          "line": 134,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14246,7 +14246,7 @@
           "path": "/api/signatures/documents/:id",
           "rawPath": "/api/signatures/documents/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 184,
+          "line": 192,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14280,7 +14280,7 @@
           "path": "/api/signatures/documents/:id",
           "rawPath": "/api/signatures/documents/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 169,
+          "line": 177,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14292,8 +14292,8 @@
       "owner": "esignatures",
       "targetOperation": "signatureDocument",
       "targetModule": "SignatureDocumentsModule",
-      "parityStatus": "characterized",
-      "notes": "Tenant-owned document definition, recipients, fields, and append-only audit projection with secret fields redacted.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind the default-off document-read flag as one repeatable-read tenant-owned aggregate of document, recipients, fields, and ordered audit projection; token hashes, IP/user-agent, audit metadata, storage locations, and file hashes are excluded from the schema.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14314,7 +14314,7 @@
           "path": "/api/signatures/documents/:id",
           "rawPath": "/api/signatures/documents/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 137,
+          "line": 139,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14385,7 +14385,7 @@
           "path": "/api/signatures/documents/:id/audit",
           "rawPath": "/api/signatures/documents/${id}/audit",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 219,
+          "line": 228,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14397,8 +14397,8 @@
       "owner": "esignatures",
       "targetOperation": "signatureAuditTrail",
       "targetModule": "SignatureDocumentsModule",
-      "parityStatus": "characterized",
-      "notes": "Tenant-owned append-only ordered evidence; redact sensitive metadata according to operator role.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind the default-off document-read flag as a repeatable-read tenant-owned ordered safe projection; IP, user-agent, and structured metadata remain deliberately absent.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14419,7 +14419,7 @@
           "path": "/api/signatures/documents/:id/cancel",
           "rawPath": "/api/signatures/documents/${id}/cancel",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 179,
+          "line": 187,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14491,7 +14491,7 @@
           "path": "/api/signatures/documents/:id/file",
           "rawPath": "/api/signatures/documents/${id}/file",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 153,
+          "line": 155,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14562,7 +14562,7 @@
           "path": "/api/signatures/documents/:id/remind",
           "rawPath": "/api/signatures/documents/${id}/remind",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 189,
+          "line": 197,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14640,7 +14640,7 @@
           "path": "/api/signatures/documents/:id/send",
           "rawPath": "/api/signatures/documents/${id}/send",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 174,
+          "line": 182,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14699,7 +14699,7 @@
           "path": "/api/signatures/documents/upload",
           "rawPath": "/api/signatures/documents/upload",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 146,
+          "line": 148,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14746,7 +14746,7 @@
           "path": "/api/signatures/email/preview",
           "rawPath": "/api/signatures/email/preview",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 214,
+          "line": 222,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14780,7 +14780,7 @@
           "path": "/api/signatures/templates",
           "rawPath": "/api/signatures/templates",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 301,
+          "line": 311,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14792,8 +14792,8 @@
       "owner": "esignatures",
       "targetOperation": "signatureTemplates",
       "targetModule": "SignatureTemplatesModule",
-      "parityStatus": "characterized",
-      "notes": "Organization-scoped reusable definitions with deterministic ordering.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind the independent default-off template-read flag with organization scope, deterministic ordering, safe file-presence metadata, REST-shape mapping, and fresh-PostgreSQL interoperability evidence.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14814,7 +14814,7 @@
           "path": "/api/signatures/templates",
           "rawPath": "/api/signatures/templates",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 277,
+          "line": 286,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14848,7 +14848,7 @@
           "path": "/api/signatures/templates/:id",
           "rawPath": "/api/signatures/templates/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 316,
+          "line": 327,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14882,7 +14882,7 @@
           "path": "/api/signatures/templates/:id",
           "rawPath": "/api/signatures/templates/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 306,
+          "line": 317,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14894,8 +14894,8 @@
       "owner": "esignatures",
       "targetOperation": "signatureTemplate",
       "targetModule": "SignatureTemplatesModule",
-      "parityStatus": "characterized",
-      "notes": "Tenant-owned template with ordered roles and fields.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind the independent default-off template-read flag as one repeatable-read tenant-owned aggregate with ordered roles and fields; storage locations and source hashes are excluded.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14916,7 +14916,7 @@
           "path": "/api/signatures/templates/:id",
           "rawPath": "/api/signatures/templates/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 285,
+          "line": 294,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14981,7 +14981,7 @@
           "path": "/api/signatures/templates/:id/instantiate",
           "rawPath": "/api/signatures/templates/${id}/instantiate",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 311,
+          "line": 322,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15015,7 +15015,7 @@
           "path": "/api/signatures/templates/upload",
           "rawPath": "/api/signatures/templates/upload",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 294,
+          "line": 303,
           "client": "api",
           "literalInterpolation": false
         }

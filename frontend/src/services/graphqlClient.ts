@@ -287,6 +287,12 @@ export const isAdminMessagingGraphqlEnabled = (): boolean =>
 export const isAdminEmailDeliveryGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_ADMIN_EMAIL_DELIVERY_GRAPHQL === 'true';
 
+export const isSignatureDocumentGraphqlReadsEnabled = (): boolean =>
+  import.meta.env.VITE_SIGNATURE_DOCUMENT_READS_GRAPHQL === 'true';
+
+export const isSignatureTemplateGraphqlReadsEnabled = (): boolean =>
+  import.meta.env.VITE_SIGNATURE_TEMPLATE_READS_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

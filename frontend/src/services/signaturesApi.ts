@@ -1,4 +1,6 @@
 import api, { getApiUrl } from '@/lib/api';
+import { isSignatureDocumentGraphqlReadsEnabled, isSignatureTemplateGraphqlReadsEnabled } from './graphqlClient';
+import { getSignatureAuditViaGraphql, getSignatureDocumentViaGraphql, getSignatureTemplateViaGraphql, listSignatureDocumentsViaGraphql, listSignatureTemplatesViaGraphql } from './signaturesGraphql';
 
 type ApiPayload = Record<string, unknown>;
 
@@ -155,17 +157,23 @@ export const deleteSignatureDocumentFile = async (id: number) => {
 };
 
 export const listSignatureDocuments = async (params: { status?: SignatureStatus; page?: number; limit?: number } = {}) => {
+  if (isSignatureDocumentGraphqlReadsEnabled()) return listSignatureDocumentsViaGraphql(params);
   const response = await api.get('/api/signatures/documents', { params });
   return unwrapResponse<{ items: SignatureDocument[]; pagination: Pagination }>(response.data);
 };
 
 export const getSignatures = async (params: { status?: SignatureStatus; page?: number; limit?: number; search?: string } = {}) => {
+  if (isSignatureDocumentGraphqlReadsEnabled()) {
+    const result = await listSignatureDocumentsViaGraphql(params);
+    return { documents: result.items, pagination: result.pagination };
+  }
   const response = await api.get('/api/signatures/documents', { params });
   const result = unwrapResponse<{ items: SignatureDocument[]; pagination: Pagination }>(response.data);
   return { documents: result.items, pagination: result.pagination };
 };
 
 export const getSignatureDocument = async (id: number) => {
+  if (isSignatureDocumentGraphqlReadsEnabled()) return getSignatureDocumentViaGraphql(id);
   const response = await api.get(`/api/signatures/documents/${id}`);
   return unwrapResponse<SignatureDocumentDetails>(response.data);
 };
@@ -216,6 +224,7 @@ export const getSignatureEmailPreview = async (data: SignatureEmailPreviewReques
 };
 
 export const getSignatureAudit = async (id: number) => {
+  if (isSignatureDocumentGraphqlReadsEnabled()) return getSignatureAuditViaGraphql(id);
   const response = await api.get(`/api/signatures/documents/${id}/audit`);
   return unwrapResponse<SignatureDocumentDetails['audit']>(response.data);
 };
@@ -298,11 +307,13 @@ export const uploadSignatureTemplate = async (templateId: number, file: File) =>
 };
 
 export const listSignatureTemplates = async () => {
+  if (isSignatureTemplateGraphqlReadsEnabled()) return listSignatureTemplatesViaGraphql();
   const response = await api.get('/api/signatures/templates');
   return unwrapResponse<SignatureTemplate[]>(response.data);
 };
 
 export const getSignatureTemplate = async (id: number) => {
+  if (isSignatureTemplateGraphqlReadsEnabled()) return getSignatureTemplateViaGraphql(id);
   const response = await api.get(`/api/signatures/templates/${id}`);
   return unwrapResponse<{ template: SignatureTemplate; roles: SignatureTemplateRole[]; fields: SignatureTemplateField[] }>(response.data);
 };
