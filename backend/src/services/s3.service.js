@@ -1,4 +1,10 @@
-const { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
+const {
+    S3Client,
+    PutObjectCommand,
+    DeleteObjectCommand,
+    GetObjectCommand,
+    HeadObjectCommand
+} = require('@aws-sdk/client-s3');
 const { logger } = require('../utils/logger');
 
 class S3Service {
@@ -62,7 +68,7 @@ class S3Service {
         }));
     }
 
-    async getFile(key) {
+    async getFile(key, options = {}) {
         if (!this.isConfigured) {
             throw new Error('S3 service is not configured');
         }
@@ -70,8 +76,19 @@ class S3Service {
         const response = await this.client.send(new GetObjectCommand({
             Bucket: this.bucket,
             Key: key,
+            ...(options.range ? { Range: options.range } : {}),
         }));
         return response;
+    }
+
+    async headFile(key) {
+        if (!this.isConfigured) {
+            throw new Error('S3 service is not configured');
+        }
+        return this.client.send(new HeadObjectCommand({
+            Bucket: this.bucket,
+            Key: key,
+        }));
     }
     
     async checkHealth() {

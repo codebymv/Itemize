@@ -9,6 +9,7 @@ import { SignatureFilesRepository } from './signature-files.repository';
 import { SignatureFilesService } from './signature-files.service';
 
 describe('SignatureFilesService', () => {
+  const head = jest.fn();
   const repository = {
     hasFeatureAccess: jest.fn(),
     canUploadDocument: jest.fn(),
@@ -21,6 +22,7 @@ describe('SignatureFilesService', () => {
   const storage = {
     store: jest.fn(),
     read: jest.fn(),
+    head,
     remove: jest.fn(),
   } as jest.Mocked<SignatureFileStorage>;
   const service = new SignatureFilesService(repository, storage);
@@ -54,6 +56,8 @@ describe('SignatureFilesService', () => {
       file_name: 'Agreement.pdf',
       file_size: pdf.length,
       file_type: 'application/pdf',
+      original_sha256: 'a'.repeat(64),
+      signed_sha256: null,
       status: 'draft',
       expiration_days: 30,
       expires_at: null,
@@ -80,6 +84,7 @@ describe('SignatureFilesService', () => {
     storage.store.mockResolvedValue('/uploads/signatures/new.pdf');
     storage.remove.mockResolvedValue(undefined);
     storage.read.mockResolvedValue(pdf);
+    head.mockResolvedValue({ totalLength: pdf.length });
     repository.replaceDocument.mockResolvedValue(document as never);
     repository.replaceTemplate.mockResolvedValue({
       id: 8,
@@ -91,6 +96,7 @@ describe('SignatureFilesService', () => {
       file_name: 'Template.pdf',
       file_size: pdf.length,
       file_type: 'application/pdf',
+      original_sha256: 'b'.repeat(64),
       created_by: 2,
       created_at: new Date(),
       updated_at: new Date(),
@@ -106,6 +112,7 @@ describe('SignatureFilesService', () => {
       file_name: 'Template.pdf',
       file_size: pdf.length,
       file_type: 'application/pdf',
+      original_sha256: 'b'.repeat(64),
       created_by: 2,
       created_at: new Date(),
       updated_at: new Date(),
@@ -168,6 +175,10 @@ describe('SignatureFilesService', () => {
     await expect(service.documentSource(4, '7')).resolves.toEqual({
       buffer: pdf,
       filename: 'Agreement.pdf',
+      etag: `"sha256-${'a'.repeat(64)}"`,
+      notModified: false,
+      range: null,
+      totalLength: pdf.length,
     });
     expect(storage.read).toHaveBeenCalledWith(
       '/uploads/signatures/new.pdf',
@@ -177,6 +188,16 @@ describe('SignatureFilesService', () => {
         error: { code: 'NOT_READY' },
       },
     });
+  });
+
+  it('short-circuits matching evidence validators after authorization', async () => {
+    await expect(service.documentSource(4, '7', {
+      ifNoneMatch: `"sha256-${'a'.repeat(64)}"`,
+    })).resolves.toMatchObject({
+      etag: `"sha256-${'a'.repeat(64)}"`,
+      notModified: true,
+    });
+    expect(storage.read).not.toHaveBeenCalled();
   });
 
   it('fails closed when the organization lacks signature access', async () => {

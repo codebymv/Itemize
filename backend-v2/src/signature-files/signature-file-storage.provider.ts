@@ -2,13 +2,19 @@ import { Injectable } from '@nestjs/common';
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, open, readFile, stat, unlink, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import {
+  SignatureFileRead,
+  signatureFileRange,
+  sliceSignatureFile,
+} from './signature-file-http';
 
 export const SIGNATURE_FILE_STORAGE = Symbol('SIGNATURE_FILE_STORAGE');
 
@@ -22,6 +28,11 @@ export interface SignatureFileStorage {
     scope: SignatureFileScope;
   }): Promise<string>;
   read(fileUrl: string): Promise<Buffer | null>;
+  readRange?(
+    fileUrl: string,
+    rangeHeader?: string,
+  ): Promise<SignatureFileRead | null>;
+  head?(fileUrl: string): Promise<{ totalLength: number } | null>;
   remove(fileUrl: string): Promise<void>;
 }
 
@@ -30,7 +41,11 @@ type LegacyS3Service = {
   region: string;
   isConfigured?: boolean;
   uploadFile?(buffer: Buffer, key: string, contentType: string): Promise<string>;
-  getFile?(key: string): Promise<{ Body?: unknown } | undefined>;
+  getFile?(
+    key: string,
+    options?: { range?: string },
+  ): Promise<{ Body?: unknown; ContentLength?: number } | undefined>;
+  headFile?(key: string): Promise<{ ContentLength?: number } | undefined>;
   deleteFile?(key: string): Promise<void>;
 };
 
@@ -81,6 +96,112 @@ export class LegacySignatureFileStorage implements SignatureFileStorage {
     const response = await s3.getFile(key);
     if (!response?.Body) return null;
     return this.bodyBuffer(response.Body);
+  }
+
+  async readRange(
+    fileUrl: string,
+    rangeHeader?: string,
+  ): Promise<SignatureFileRead | null> {
+    const local = this.localFilename(fileUrl);
+    if (local) {
+      for (const directory of this.localDirectories()) {
+        const path = resolve(directory, local);
+        let metadata;
+        try {
+          metadata = await stat(path);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+          throw error;
+        }
+        const range = signatureFileRange(rangeHeader, metadata.size);
+        if (!range) {
+          return {
+            buffer: await readFile(path),
+            totalLength: metadata.size,
+            range: null,
+          };
+        }
+        const length = range.end - range.start + 1;
+        const buffer = Buffer.alloc(length);
+        const handle = await open(path, 'r');
+        try {
+          const { bytesRead } = await handle.read(
+            buffer,
+            0,
+            length,
+            range.start,
+          );
+          if (bytesRead !== length) {
+            throw new Error('Signature file changed during ranged read');
+          }
+        } finally {
+          await handle.close();
+        }
+        return { buffer, totalLength: metadata.size, range };
+      }
+      return null;
+    }
+    const s3 = this.s3Service();
+    const key = this.s3Key(fileUrl, s3);
+    if (!key || !s3?.getFile) return null;
+    if (!rangeHeader) {
+      const response = await s3.getFile(key);
+      if (!response?.Body) return null;
+      const buffer = await this.bodyBuffer(response.Body);
+      return {
+        buffer,
+        totalLength: response.ContentLength ?? buffer.length,
+        range: null,
+      };
+    }
+    if (!s3.headFile) {
+      const buffer = await this.read(fileUrl);
+      return buffer ? sliceSignatureFile(buffer, rangeHeader) : null;
+    }
+    const metadata = await s3.headFile(key);
+    const totalLength = metadata?.ContentLength;
+    if (!Number.isSafeInteger(totalLength) || totalLength === undefined) {
+      throw new Error('Signature file storage returned an invalid length');
+    }
+    const range = signatureFileRange(rangeHeader, totalLength);
+    if (!range) throw new Error('Expected a normalized signature file range');
+    const response = await s3.getFile(key, {
+      range: `bytes=${range.start}-${range.end}`,
+    });
+    if (!response?.Body) return null;
+    const buffer = await this.bodyBuffer(response.Body);
+    if (buffer.length !== range.end - range.start + 1) {
+      throw new Error('Signature file storage returned an invalid range length');
+    }
+    return { buffer, totalLength, range };
+  }
+
+  async head(fileUrl: string): Promise<{ totalLength: number } | null> {
+    const local = this.localFilename(fileUrl);
+    if (local) {
+      for (const directory of this.localDirectories()) {
+        try {
+          const metadata = await stat(resolve(directory, local));
+          return { totalLength: metadata.size };
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        }
+      }
+      return null;
+    }
+    const s3 = this.s3Service();
+    const key = this.s3Key(fileUrl, s3);
+    if (!key) return null;
+    if (!s3?.headFile) {
+      const buffer = await this.read(fileUrl);
+      return buffer ? { totalLength: buffer.length } : null;
+    }
+    const metadata = await s3.headFile(key);
+    const totalLength = metadata?.ContentLength;
+    if (!Number.isSafeInteger(totalLength) || totalLength === undefined) {
+      throw new Error('Signature file storage returned an invalid length');
+    }
+    return { totalLength };
   }
 
   async remove(fileUrl: string): Promise<void> {
@@ -164,8 +285,16 @@ export class LegacySignatureFileStorage implements SignatureFileStorage {
         );
         return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
       },
-      getFile: async (key) =>
-        client.send(new GetObjectCommand({ Bucket: bucket, Key: key })),
+      getFile: async (key, options) =>
+        client.send(
+          new GetObjectCommand({
+            Bucket: bucket,
+            Key: key,
+            ...(options?.range ? { Range: options.range } : {}),
+          }),
+        ),
+      headFile: async (key) =>
+        client.send(new HeadObjectCommand({ Bucket: bucket, Key: key })),
       deleteFile: async (key) => {
         await client.send(
           new DeleteObjectCommand({ Bucket: bucket, Key: key }),

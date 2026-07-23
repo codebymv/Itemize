@@ -10,6 +10,14 @@ import {
   SignatureFileStorage,
 } from '../signature-files/signature-file-storage.provider';
 import {
+  DeliveredSignatureFile,
+  SignatureFileDeliveryRequest,
+  signatureFileEffectiveRange,
+  signatureFileEtag,
+  signatureFileNotModified,
+  sliceSignatureFile,
+} from '../signature-files/signature-file-http';
+import {
   PublicSigningAudit,
   PublicSigningRepository,
 } from './public-signing.repository';
@@ -125,19 +133,52 @@ export class PublicSigningService {
     return result;
   }
 
-  async file(token: string): Promise<{ buffer: Buffer; filename: string }> {
+  async file(
+    token: string,
+    request: SignatureFileDeliveryRequest = {},
+  ): Promise<DeliveredSignatureFile> {
     const row = await this.repository.file(this.tokenHash(token));
     if (!row) throw this.notFound();
-    const buffer = await this.storage.read(row.fileUrl);
-    if (!buffer) {
+    const etag = signatureFileEtag(row.originalSha256);
+    const filename = this.filename(row.fileName || 'document.pdf');
+    if (signatureFileNotModified(request.ifNoneMatch, etag)) {
+      const metadata = this.storage.head
+        ? await this.storage.head(row.fileUrl)
+        : await this.storage.read(row.fileUrl).then((buffer) =>
+            buffer ? { totalLength: buffer.length } : null,
+          );
+      if (!metadata) {
+        throw new NotFoundException({
+          success: false,
+          error: { message: 'File not found', code: 'NOT_FOUND' },
+        });
+      }
+      return {
+        buffer: Buffer.alloc(0),
+        filename,
+        etag,
+        notModified: true,
+        totalLength: metadata.totalLength,
+        range: null,
+      };
+    }
+    const range = signatureFileEffectiveRange(request, etag);
+    const file = this.storage.readRange
+      ? await this.storage.readRange(row.fileUrl, range)
+      : await this.storage.read(row.fileUrl).then((buffer) =>
+          buffer ? sliceSignatureFile(buffer, range) : null,
+        );
+    if (!file) {
       throw new NotFoundException({
         success: false,
         error: { message: 'File not found', code: 'NOT_FOUND' },
       });
     }
     return {
-      buffer,
-      filename: this.filename(row.fileName || 'document.pdf'),
+      ...file,
+      filename,
+      etag,
+      notModified: false,
     };
   }
 

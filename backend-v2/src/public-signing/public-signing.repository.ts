@@ -31,6 +31,7 @@ type CapabilityRow = {
   file_url: string | null;
   file_name: string | null;
   file_type: string | null;
+  original_sha256: string | null;
   document_status: string;
   expires_at: Date | null;
   routing_mode: string | null;
@@ -69,6 +70,7 @@ export type PublicSigningSessionRow = {
 export type PublicSigningFileRow = {
   fileUrl: string;
   fileName: string | null;
+  originalSha256: string | null;
 };
 
 export type PublicSigningSubmitResult = {
@@ -117,7 +119,11 @@ export class PublicSigningRepository {
   async file(tokenHash: string): Promise<PublicSigningFileRow | null> {
     const capability = await this.capability(this.pool, tokenHash, false);
     if (!capability?.file_url) return null;
-    return { fileUrl: capability.file_url, fileName: capability.file_name };
+    return {
+      fileUrl: capability.file_url,
+      fileName: capability.file_name,
+      originalSha256: capability.original_sha256,
+    };
   }
 
   submit(
@@ -337,7 +343,8 @@ export class PublicSigningRepository {
          recipient.identity_verified_at,
          document.id AS document_id,document.organization_id,document.title,
          document.description,document.message,document.file_url,document.file_name,
-         document.file_type,document.status AS document_status,document.expires_at,
+         document.file_type,document.original_sha256,
+         document.status AS document_status,document.expires_at,
          document.routing_mode,document.sender_name,document.sender_email
        FROM signature_recipients recipient
        JOIN signature_documents document ON document.id=recipient.document_id

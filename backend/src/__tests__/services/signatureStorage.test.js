@@ -5,7 +5,15 @@ const {
     getLocalFilePath,
     getS3KeyFromUrl,
 } = require('../../services/signature/storage');
-const { fileHeaders, safeFilename, sendSignatureFile } = require('../../services/signature/file-delivery');
+const {
+    effectiveRange,
+    fileHeaders,
+    notModified,
+    parseRange,
+    safeFilename,
+    sendSignatureFile,
+    strongEtag,
+} = require('../../services/signature/file-delivery');
 
 describe('signature local storage boundary', () => {
     it('resolves stored upload URLs under the backend uploads root', () => {
@@ -41,10 +49,25 @@ describe('signature local storage boundary', () => {
         expect(safeFilename('../../evil".html')).toBe('evil_.html.pdf');
         expect(fileHeaders('contract.pdf', 'attachment')).toMatchObject({
             'Cache-Control': 'private, no-store',
+            'Accept-Ranges': 'bytes',
             'Content-Disposition': 'attachment; filename="contract.pdf"',
             'Content-Type': 'application/pdf',
             'X-Content-Type-Options': 'nosniff',
         });
+    });
+
+    it('normalizes single ranges and applies evidence-backed validators', () => {
+        const etag = strongEtag('a'.repeat(64));
+        expect(etag).toBe(`"sha256-${'a'.repeat(64)}"`);
+        expect(parseRange('bytes=2-5', 10)).toEqual({ start: 2, end: 5 });
+        expect(parseRange('bytes=-3', 10)).toEqual({ start: 7, end: 9 });
+        expect(parseRange('bytes=10-', 10)).toBe(false);
+        expect(parseRange('bytes=0-1,3-4', 10)).toBe(false);
+        expect(notModified(`W/${etag}`, etag)).toBe(true);
+        expect(effectiveRange({ range: 'bytes=0-2', ifRange: etag }, etag))
+            .toBe('bytes=0-2');
+        expect(effectiveRange({ range: 'bytes=0-2', ifRange: '"stale"' }, etag))
+            .toBeNull();
     });
 
     it('refuses arbitrary remote file URLs instead of fetching them server-side', async () => {

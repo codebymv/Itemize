@@ -10,6 +10,7 @@ import {
   UseGuards,
   UseInterceptors,
   Body,
+  Headers,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -17,6 +18,12 @@ import { Response } from 'express';
 import { RequestContextService } from '../request-context/request-context.service';
 import { SignatureFileGuard } from './signature-file.guard';
 import { SignatureFilesService } from './signature-files.service';
+import {
+  sendSignatureFile,
+  sendSignatureRangeError,
+  SignatureFileDeliveryRequest,
+  SignatureFileRangeError,
+} from './signature-file-http';
 
 const pdfUpload = FileInterceptor('file', {
   storage: memoryStorage(),
@@ -90,44 +97,77 @@ export class SignatureFilesController {
   @Get('documents/:id/file')
   async documentSource(
     @Param('id') id: string,
+    @Headers() headers: Record<string, string | string[] | undefined>,
     @Res() response: Response,
   ): Promise<void> {
-    const file = await this.files.documentSource(this.organizationId(), id);
-    this.send(response, file, 'inline');
+    await this.deliver(
+      response,
+      () => this.files.documentSource(
+        this.organizationId(),
+        id,
+        this.deliveryRequest(headers),
+      ),
+      'inline',
+    );
   }
 
   @Get('documents/:id/download')
   async completedDocument(
     @Param('id') id: string,
+    @Headers() headers: Record<string, string | string[] | undefined>,
     @Res() response: Response,
   ): Promise<void> {
-    const file = await this.files.completedDocument(this.organizationId(), id);
-    this.send(response, file, 'attachment');
+    await this.deliver(
+      response,
+      () => this.files.completedDocument(
+        this.organizationId(),
+        id,
+        this.deliveryRequest(headers),
+      ),
+      'attachment',
+    );
   }
 
   @Get('templates/:id/file')
   async templateSource(
     @Param('id') id: string,
+    @Headers() headers: Record<string, string | string[] | undefined>,
     @Res() response: Response,
   ): Promise<void> {
-    const file = await this.files.templateSource(this.organizationId(), id);
-    this.send(response, file, 'inline');
+    await this.deliver(
+      response,
+      () => this.files.templateSource(
+        this.organizationId(),
+        id,
+        this.deliveryRequest(headers),
+      ),
+      'inline',
+    );
   }
 
-  private send(
+  private async deliver(
     response: Response,
-    file: { buffer: Buffer; filename: string },
+    load: () => ReturnType<SignatureFilesService['documentSource']>,
     disposition: 'inline' | 'attachment',
-  ): void {
-    response.set({
-      'Cache-Control': 'private, no-store',
-      'Content-Disposition': `${disposition}; filename="${file.filename}"`,
-      'Content-Length': String(file.buffer.length),
-      'Content-Security-Policy': 'sandbox',
-      'Content-Type': 'application/pdf',
-      'X-Content-Type-Options': 'nosniff',
-    });
-    response.send(file.buffer);
+  ): Promise<void> {
+    try {
+      sendSignatureFile(response, await load(), disposition);
+    } catch (error) {
+      if (!(error instanceof SignatureFileRangeError)) throw error;
+      sendSignatureRangeError(response, error);
+    }
+  }
+
+  private deliveryRequest(
+    headers: Record<string, string | string[] | undefined>,
+  ): SignatureFileDeliveryRequest {
+    const one = (value: string | string[] | undefined) =>
+      Array.isArray(value) ? value[0] : value;
+    return {
+      range: one(headers.range),
+      ifRange: one(headers['if-range']),
+      ifNoneMatch: one(headers['if-none-match']),
+    };
   }
 
   private organizationId(): number {

@@ -13,6 +13,8 @@ export type SignatureDocumentFileRow = {
   file_name: string | null;
   file_size: number | null;
   file_type: string | null;
+  original_sha256: string | null;
+  signed_sha256: string | null;
   status: string;
   expiration_days: number;
   expires_at: Date | null;
@@ -40,17 +42,19 @@ export type SignatureTemplateFileRow = {
   file_name: string | null;
   file_size: number | null;
   file_type: string | null;
+  original_sha256: string | null;
   created_by: number | null;
   created_at: Date;
   updated_at: Date;
 };
 
 const documentColumns = `id,organization_id,title,document_number,description,message,
-  file_url,file_name,file_size,file_type,status,expiration_days,expires_at,sender_name,
+  file_url,file_name,file_size,file_type,original_sha256,signed_sha256,status,
+  expiration_days,expires_at,sender_name,
   sender_email,sent_at,completed_at,signed_file_url,timezone,locale,created_by,created_at,
   updated_at,routing_mode,template_id`;
 const templateColumns = `id,organization_id,title,description,message,file_url,file_name,
-  file_size,file_type,created_by,created_at,updated_at`;
+  file_size,file_type,original_sha256,created_by,created_at,updated_at`;
 
 @Injectable()
 export class SignatureFilesRepository {

@@ -1,6 +1,9 @@
 const request = require('supertest');
 const express = require('express');
 const cookieParser = require('cookie-parser');
+const { createHash } = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 jest.mock('../../services/signature-email.service', () => ({
     sendSignatureRequest: jest.fn().mockResolvedValue(true),
@@ -147,6 +150,71 @@ describe('Signature lifecycle PostgreSQL contract', () => {
             'SELECT id FROM signature_document_versions WHERE document_id=$1',
             [document.id]
         )).rows).toHaveLength(0);
+    });
+
+    it('serves explicit retained-route byte ranges and evidence validators', async () => {
+        const document = await createDocument(userA, 'Retained range contract');
+        const bytes = Buffer.from('%PDF-1.7\nretained-range-contract');
+        const filename = `retained-range-${document.id}.pdf`;
+        const directory = path.resolve(__dirname, '../../../uploads/signatures');
+        const filePath = path.join(directory, filename);
+        await fs.promises.mkdir(directory, { recursive: true });
+        await fs.promises.writeFile(filePath, bytes, { flag: 'wx' });
+        const hash = createHash('sha256').update(bytes).digest('hex');
+        const etag = `"sha256-${hash}"`;
+        try {
+            await dbHelper.pool.query(
+                `UPDATE signature_documents SET
+                   file_url=$1,file_name=$2,file_size=$3,file_type='application/pdf',
+                   original_sha256=$4
+                 WHERE id=$5 AND organization_id=$6`,
+                [
+                    `/uploads/signatures/${filename}`,
+                    filename,
+                    bytes.length,
+                    hash,
+                    document.id,
+                    userA.org.id,
+                ]
+            );
+
+            const ranged = await authenticated(
+                request(app).get(`/api/signatures/documents/${document.id}/file`),
+                userA
+            ).set('Range', 'bytes=5-9');
+            expect(ranged.status).toBe(206);
+            expect(ranged.body).toEqual(bytes.subarray(5, 10));
+            expect(ranged.headers).toMatchObject({
+                'accept-ranges': 'bytes',
+                'content-range': `bytes 5-9/${bytes.length}`,
+                'content-length': '5',
+                etag,
+            });
+
+            await authenticated(
+                request(app).get(`/api/signatures/documents/${document.id}/file`),
+                userA
+            ).set('If-None-Match', etag).expect(304);
+
+            const stale = await authenticated(
+                request(app).get(`/api/signatures/documents/${document.id}/file`),
+                userA
+            )
+                .set('Range', 'bytes=0-3')
+                .set('If-Range', '"stale"');
+            expect(stale.status).toBe(200);
+            expect(stale.body).toEqual(bytes);
+
+            await authenticated(
+                request(app).get(`/api/signatures/documents/${document.id}/file`),
+                userA
+            )
+                .set('Range', 'bytes=999-')
+                .expect('Content-Range', `bytes */${bytes.length}`)
+                .expect(416);
+        } finally {
+            await fs.promises.unlink(filePath).catch(() => undefined);
+        }
     });
 
     it('allows exactly one concurrent initial send and records one sent event', async () => {

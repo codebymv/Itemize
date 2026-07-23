@@ -131,7 +131,7 @@ Commit `8e756351` deployed through legacy backend `70c49ae0-0624-4778-a658-4dd76
 
 The authenticated read and draft/template mutation slices have completed production consumer validation. Delivery, draft-PDF removal, authenticated files, and public signing are implemented behind independent default-off switches. Final e-signature cutover still requires:
 
-1. production S3 private-storage rehearsal, malware/quarantine policy, range behavior, and crash-abandoned-stage cleanup;
+1. production S3 private-storage rehearsal, malware/quarantine policy, and crash-abandoned-stage cleanup;
 2. audit evidence enforcement under database permissions plus defined retention/export and integrity verification;
 3. the request/reminder/completion workers receive one production owner/schedule and controlled provider/storage canaries;
 4. OTP remains impossible to configure unless its complete issuance/throttling/hash/expiry/replay protocol is implemented;
@@ -204,3 +204,11 @@ NestJS and the retained rollback upload path now serialize on the draft row, pre
 Draft PDF removal and whole-draft deletion collect the distinct active and historical locators inside the same transaction, enqueue each for durable deletion, and only then clear or delete the version rows. The cleanup worker now treats `signature_document_versions` as a live reference, so it cannot delete a historical source while evidence still retains it. Both implementations use the same behavior, preserving a safe rollback boundary.
 
 The retained unit suite passes 384/384, the Nest unit suite passes 401/401, the Nest build passes, and the clean-schema cross-stack gate passes 490/490 retained integration plus 225/225 Nest PostgreSQL tests. The PostgreSQL contracts prove the same monotonic version/removal behavior through both implementations, no premature cleanup intent, malformed full-PDF rejection before storage, all-version cleanup on removal/deletion, shared-reference deferral, and single-winner cleanup leasing. Commit `d322f844` deployed default-off through retained backend `9409092a-e540-483e-a951-50485db89231` and GraphQL `906891d1-3f36-4f1a-a63a-ff92c84838ef`; both became healthy and the same-origin GraphQL probe returned HTTP 200. The four signature file/public-signing proxy flags remain absent, no worker or storage operation ran, and no production data changed.
+
+## Implemented signature PDF range and conditional-delivery slice
+
+Authenticated source/template/completed reads and public capability-authorized source reads now share one explicit HTTP representation contract across NestJS and the retained rollback handlers. The persisted source/signed SHA-256 is emitted as a strong ETag. A matching `If-None-Match` returns `304`; one valid closed, open-ended, or suffix byte range returns `206` with exact `Accept-Ranges`, `Content-Range`, and `Content-Length`; and a stale `If-Range` returns the complete `200` representation. Multiple, malformed, or unsatisfiable ranges fail non-enumerating with `416` and `Content-Range: bytes */<total>`.
+
+Local storage opens and reads only the selected window. The standalone Nest S3 provider issues `HeadObject` before ranged `GetObject`, while the retained S3 provider uses the same bounded request contract. Both default-off read proxies forward only `Range`, `If-Range`, and `If-None-Match` from the client and copy only the hardened response-header allowlist, including ETag and range metadata.
+
+Focused range/parser, provider, service, proxy, and route tests pass. The retained unit suite passes 385/385, the Nest unit suite passes 414/414, the Nest build passes, and the clean-schema cross-stack gate passes 491/491 retained integration plus 225/225 Nest PostgreSQL tests. The integration contracts exercise authenticated and public delivery, exact partial bytes, conditional `304`, stale-validator full fallback, and unsatisfiable `416` behavior. Production deployment remains default-off pending the recorded release evidence below.

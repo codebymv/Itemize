@@ -259,6 +259,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         if (!template?.file_url) return sendNotFound(res, 'File not found');
         const sent = await sendSignatureFile(res, template.file_url, {
             filename: template.file_name || 'template.pdf',
+            sha256: template.original_sha256,
+            range: req.headers.range,
+            ifRange: req.headers['if-range'],
+            ifNoneMatch: req.headers['if-none-match'],
         });
         if (!sent) return sendNotFound(res, 'File not found');
         return undefined;
@@ -527,6 +531,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         const sent = await sendSignatureFile(res, data.document.signed_file_url, {
             filename: data.document.file_name || 'signed-document.pdf',
             disposition: 'attachment',
+            sha256: data.document.signed_sha256,
+            range: req.headers.range,
+            ifRange: req.headers['if-range'],
+            ifNoneMatch: req.headers['if-none-match'],
         });
         if (!sent) return sendNotFound(res, 'Signed file not found');
         return undefined;
@@ -540,6 +548,10 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
 
         const sent = await sendSignatureFile(res, data.document.file_url, {
             filename: data.document.file_name || 'document.pdf',
+            sha256: data.document.original_sha256,
+            range: req.headers.range,
+            ifRange: req.headers['if-range'],
+            ifNoneMatch: req.headers['if-none-match'],
         });
         if (!sent) return sendNotFound(res, 'File not found');
         return undefined;
@@ -640,6 +652,11 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         const sent = await sendSignatureFile(res, data.document.file_url, {
             filename: data.document.file_name || 'document.pdf',
             disposition: 'attachment',
+            sha256: data.document.original_sha256,
+            range: req.headers.range,
+            ifRange: req.headers['if-range'],
+            ifNoneMatch: req.headers['if-none-match'],
+            publicCapability: true,
         });
         if (!sent) return sendNotFound(res, 'File not found');
         return undefined;
@@ -656,6 +673,11 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         if (!data.document.file_url) return sendNotFound(res, 'File not found');
         const sent = await sendSignatureFile(res, data.document.file_url, {
             filename: data.document.file_name || 'document.pdf',
+            sha256: data.document.original_sha256,
+            range: req.headers.range,
+            ifRange: req.headers['if-range'],
+            ifNoneMatch: req.headers['if-none-match'],
+            publicCapability: true,
         });
         if (!sent) return sendNotFound(res, 'File not found');
         return undefined;

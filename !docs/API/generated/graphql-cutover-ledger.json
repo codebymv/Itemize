@@ -12469,7 +12469,7 @@
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 559
+          "line": 571
         }
       ],
       "consumerCallsites": [
@@ -12488,25 +12488,25 @@
           "method": "GET",
           "path": "/api/public/sign/:invalidToken",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1229
+          "line": 1292
         },
         {
           "method": "GET",
           "path": "/api/public/sign/:secondToken",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1347
+          "line": 1410
         },
         {
           "method": "GET",
           "path": "/api/public/sign/:secondToken",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1371
+          "line": 1434
         },
         {
           "method": "GET",
           "path": "/api/public/sign/:signingToken",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 219
+          "line": 287
         },
         {
           "method": "GET",
@@ -12524,13 +12524,13 @@
           "method": "GET",
           "path": "/api/public/sign/not-a-token",
           "source": "backend/src/__tests__/public-signing-proxy.test.js",
-          "line": 152
+          "line": 168
         },
         {
           "method": "GET",
           "path": "/api/public/sign/:token",
           "source": "backend/src/__tests__/public-signing-proxy.test.js",
-          "line": 154
+          "line": 170
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -12556,7 +12556,7 @@
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 586
+          "line": 598
         }
       ],
       "consumerCallsites": [
@@ -12575,19 +12575,19 @@
           "method": "POST",
           "path": "/api/public/sign/:token",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1323
+          "line": 1386
         },
         {
           "method": "POST",
           "path": "/api/public/sign/:signingToken",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 307
+          "line": 375
         },
         {
           "method": "POST",
           "path": "/api/public/sign/:signingToken",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 352
+          "line": 420
         },
         {
           "method": "POST",
@@ -12625,7 +12625,7 @@
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 617
+          "line": 629
         }
       ],
       "consumerCallsites": [
@@ -12644,7 +12644,7 @@
           "method": "POST",
           "path": "/api/public/sign/:secondToken/decline",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1350
+          "line": 1413
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -12670,7 +12670,7 @@
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 631
+          "line": 643
         }
       ],
       "consumerCallsites": [],
@@ -12698,7 +12698,7 @@
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 648
+          "line": 665
         }
       ],
       "consumerCallsites": [],
@@ -12707,7 +12707,7 @@
           "method": "GET",
           "path": "/api/public/sign/:token/file",
           "source": "backend/src/__tests__/public-signing-proxy.test.js",
-          "line": 134
+          "line": 138
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -12733,7 +12733,7 @@
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 582
+          "line": 594
         }
       ],
       "consumerCallsites": [],
@@ -14251,7 +14251,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 435
+          "line": 439
         }
       ],
       "consumerCallsites": [
@@ -14294,7 +14294,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 286
+          "line": 290
         }
       ],
       "consumerCallsites": [
@@ -14313,7 +14313,7 @@
           "method": "POST",
           "path": "/api/signatures/documents",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 74
+          "line": 77
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -14335,7 +14335,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 421
+          "line": 425
         }
       ],
       "consumerCallsites": [
@@ -14369,7 +14369,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 441
+          "line": 445
         }
       ],
       "consumerCallsites": [
@@ -14403,7 +14403,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 305
+          "line": 309
         }
       ],
       "consumerCallsites": [
@@ -14422,37 +14422,37 @@
           "method": "PUT",
           "path": "/api/signatures/documents/:documentId",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 83
+          "line": 86
         },
         {
           "method": "PUT",
           "path": "/api/signatures/documents/:id",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 256
+          "line": 324
         },
         {
           "method": "PUT",
           "path": "/api/signatures/documents/:id",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 331
+          "line": 399
         },
         {
           "method": "PUT",
           "path": "/api/signatures/documents/:id",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 377
+          "line": 445
         },
         {
           "method": "PUT",
           "path": "/api/signatures/documents/:id",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 398
+          "line": 466
         },
         {
           "method": "PUT",
           "path": "/api/signatures/documents/:id",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 410
+          "line": 478
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -14474,7 +14474,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 548
+          "line": 560
         }
       ],
       "consumerCallsites": [
@@ -14508,7 +14508,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 470
+          "line": 474
         }
       ],
       "consumerCallsites": [
@@ -14527,7 +14527,7 @@
           "method": "POST",
           "path": "/api/signatures/documents/:id/cancel",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 196
+          "line": 264
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -14553,7 +14553,7 @@
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 518
+          "line": 522
         }
       ],
       "consumerCallsites": [],
@@ -14568,13 +14568,13 @@
           "method": "GET",
           "path": "/api/signatures/documents/:id/download",
           "source": "backend/src/__tests__/signature-file-proxy.test.js",
-          "line": 88
+          "line": 91
         },
         {
           "method": "GET",
           "path": "/api/signatures/documents/7/download",
           "source": "backend/src/__tests__/signature-file-proxy.test.js",
-          "line": 99
+          "line": 102
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -14596,7 +14596,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 408
+          "line": 412
         }
       ],
       "consumerCallsites": [
@@ -14634,11 +14634,35 @@
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 535
+          "line": 543
         }
       ],
       "consumerCallsites": [],
       "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/signatures/documents/:id/file",
+          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
+          "line": 182
+        },
+        {
+          "method": "GET",
+          "path": "/api/signatures/documents/:id/file",
+          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
+          "line": 195
+        },
+        {
+          "method": "GET",
+          "path": "/api/signatures/documents/:id/file",
+          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
+          "line": 200
+        },
+        {
+          "method": "GET",
+          "path": "/api/signatures/documents/:id/file",
+          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
+          "line": 209
+        },
         {
           "method": "GET",
           "path": "/api/signatures/documents/12/file",
@@ -14683,7 +14707,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 482
+          "line": 486
         }
       ],
       "consumerCallsites": [
@@ -14702,7 +14726,7 @@
           "method": "POST",
           "path": "/api/signatures/documents/:id/remind",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 280
+          "line": 348
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -14724,7 +14748,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 502
+          "line": 506
         }
       ],
       "consumerCallsites": [],
@@ -14733,13 +14757,13 @@
           "method": "POST",
           "path": "/api/signatures/documents/:id/reminders",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 232
+          "line": 300
         },
         {
           "method": "POST",
           "path": "/api/signatures/documents/:id/reminders",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 250
+          "line": 318
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -14761,7 +14785,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 448
+          "line": 452
         }
       ],
       "consumerCallsites": [
@@ -14780,25 +14804,25 @@
           "method": "POST",
           "path": "/api/signatures/documents/:id/send",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 157
+          "line": 225
         },
         {
           "method": "POST",
           "path": "/api/signatures/documents/:id/send",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 181
+          "line": 249
         },
         {
           "method": "POST",
           "path": "/api/signatures/documents/:id/send",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 300
+          "line": 368
         },
         {
           "method": "POST",
           "path": "/api/signatures/documents/:id/send",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 344
+          "line": 412
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -14824,7 +14848,7 @@
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 348
+          "line": 352
         }
       ],
       "consumerCallsites": [
@@ -14843,7 +14867,7 @@
           "method": "POST",
           "path": "/api/signatures/documents/upload",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 538
+          "line": 576
         },
         {
           "method": "POST",
@@ -14885,31 +14909,31 @@
           "method": "POST",
           "path": "/api/signatures/documents/upload",
           "source": "backend/src/__tests__/signature-file-proxy.test.js",
-          "line": 115
+          "line": 127
         },
         {
           "method": "POST",
           "path": "/api/signatures/documents/upload",
           "source": "backend/src/__tests__/signature-file-proxy.test.js",
-          "line": 120
+          "line": 132
         },
         {
           "method": "POST",
           "path": "/api/signatures/documents/upload",
           "source": "backend/src/__tests__/signature-file-proxy.test.js",
-          "line": 123
+          "line": 135
         },
         {
           "method": "POST",
           "path": "/api/signatures/documents/upload",
           "source": "backend/src/__tests__/signature-file-proxy.test.js",
-          "line": 131
+          "line": 143
         },
         {
           "method": "POST",
           "path": "/api/signatures/documents/upload",
           "source": "backend/src/__tests__/signature-file-proxy.test.js",
-          "line": 133
+          "line": 145
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -14931,7 +14955,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 385
+          "line": 389
         }
       ],
       "consumerCallsites": [
@@ -15170,7 +15194,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 267
+          "line": 271
         }
       ],
       "consumerCallsites": [

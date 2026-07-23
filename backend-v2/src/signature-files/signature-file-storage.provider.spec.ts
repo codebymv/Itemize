@@ -1,12 +1,14 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
 } from '@aws-sdk/client-s3';
 import { LegacySignatureFileStorage } from './signature-file-storage.provider';
 
 describe('LegacySignatureFileStorage', () => {
   const getFile = jest.fn();
+  const headFile = jest.fn();
   const deleteFile = jest.fn();
   const uploadFile = jest.fn();
   const s3 = {
@@ -14,6 +16,7 @@ describe('LegacySignatureFileStorage', () => {
     region: 'us-west-2',
     isConfigured: true,
     getFile,
+    headFile,
     deleteFile,
     uploadFile,
   };
@@ -28,7 +31,9 @@ describe('LegacySignatureFileStorage', () => {
     jest.clearAllMocks();
     getFile.mockResolvedValue({
       Body: { transformToByteArray: async () => Buffer.from('%PDF-1.7') },
+      ContentLength: 8,
     });
+    headFile.mockResolvedValue({ ContentLength: 8 });
     deleteFile.mockResolvedValue(undefined);
     uploadFile.mockResolvedValue(
       'https://private-itemize.s3.us-west-2.amazonaws.com/signatures/new.pdf',
@@ -58,6 +63,25 @@ describe('LegacySignatureFileStorage', () => {
     expect(getFile).toHaveBeenCalledWith('signatures/owned.pdf');
     await expect(storage.remove(url)).resolves.toBeUndefined();
     expect(deleteFile).toHaveBeenCalledWith('signatures/owned.pdf');
+  });
+
+  it('normalizes and forwards only one satisfiable S3 byte range', async () => {
+    const url =
+      'https://private-itemize.s3.us-west-2.amazonaws.com/signatures/owned.pdf';
+    getFile.mockResolvedValueOnce({
+      Body: { transformToByteArray: async () => Buffer.from('PDF') },
+      ContentLength: 3,
+    });
+    await expect(storage.readRange(url, 'bytes=1-3')).resolves.toEqual({
+      buffer: Buffer.from('PDF'),
+      totalLength: 8,
+      range: { start: 1, end: 3 },
+    });
+    expect(headFile).toHaveBeenCalledWith('signatures/owned.pdf');
+    expect(getFile).toHaveBeenCalledWith(
+      'signatures/owned.pdf',
+      { range: 'bytes=1-3' },
+    );
   });
 
   it('rejects traversal, lookalike hosts, other prefixes, and arbitrary URLs', async () => {
@@ -91,12 +115,22 @@ describe('LegacySignatureFileStorage', () => {
     process.env.AWS_REGION = 'us-east-1';
     const send = jest.fn(async (command: unknown) => {
       if (command instanceof GetObjectCommand) {
+        if (command.input.Range) {
+          return {
+            Body: {
+              transformToByteArray: async () => Buffer.from('%PDF'),
+            },
+            ContentLength: 4,
+          };
+        }
         return {
           Body: {
             transformToByteArray: async () => Buffer.from('%PDF-native'),
           },
+          ContentLength: 11,
         };
       }
+      if (command instanceof HeadObjectCommand) return { ContentLength: 11 };
       return {};
     });
     class NativeStorage extends LegacySignatureFileStorage {
@@ -121,6 +155,11 @@ describe('LegacySignatureFileStorage', () => {
       await expect(native.read(url)).resolves.toEqual(
         Buffer.from('%PDF-native'),
       );
+      await expect(native.readRange(url, 'bytes=0-3')).resolves.toEqual({
+        buffer: Buffer.from('%PDF'),
+        totalLength: 11,
+        range: { start: 0, end: 3 },
+      });
       await expect(native.remove(url)).resolves.toBeUndefined();
       expect(send.mock.calls[0][0]).toBeInstanceOf(PutObjectCommand);
       expect((send.mock.calls[0][0] as PutObjectCommand).input).toMatchObject({
@@ -129,7 +168,11 @@ describe('LegacySignatureFileStorage', () => {
         ServerSideEncryption: 'AES256',
       });
       expect(send.mock.calls[1][0]).toBeInstanceOf(GetObjectCommand);
-      expect(send.mock.calls[2][0]).toBeInstanceOf(DeleteObjectCommand);
+      expect(send.mock.calls[2][0]).toBeInstanceOf(HeadObjectCommand);
+      expect(send.mock.calls[3][0]).toBeInstanceOf(GetObjectCommand);
+      expect((send.mock.calls[3][0] as GetObjectCommand).input.Range)
+        .toBe('bytes=0-3');
+      expect(send.mock.calls[4][0]).toBeInstanceOf(DeleteObjectCommand);
     } finally {
       const restore = (
         key: keyof typeof previous,

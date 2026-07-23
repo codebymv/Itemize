@@ -74,12 +74,15 @@ describe('Signature file NestJS proxies', () => {
         const fetchImpl = jest.fn().mockResolvedValue(new Response(
             Buffer.from('%PDF-1.7'),
             {
-                status: 200,
+                status: 206,
                 headers: {
+                    'accept-ranges': 'bytes',
                     'cache-control': 'private, no-store',
                     'content-disposition': 'attachment; filename="signed.pdf"',
+                    'content-range': 'bytes 0-8/20',
                     'content-security-policy': 'sandbox',
                     'content-type': 'application/pdf',
+                    etag: '"sha256-test"',
                     'x-content-type-options': 'nosniff',
                 },
             },
@@ -99,14 +102,23 @@ describe('Signature file NestJS proxies', () => {
             .get('/api/signatures/documents/7/download')
             .set('Cookie', 'itemize_auth=token')
             .set('Authorization', 'Bearer do-not-forward')
+            .set('Range', 'bytes=0-8')
+            .set('If-Range', '"sha256-test"')
+            .set('If-None-Match', '"older"')
             .set('X-Organization-Id', '4')
-            .expect(200);
+            .expect(206);
         const [target, options] = fetchImpl.mock.calls[0];
         expect(target.toString()).toBe(
             'https://graphql.internal/api/signatures/documents/7/download',
         );
         expect(options.headers.get('authorization')).toBeNull();
+        expect(options.headers.get('range')).toBe('bytes=0-8');
+        expect(options.headers.get('if-range')).toBe('"sha256-test"');
+        expect(options.headers.get('if-none-match')).toBe('"older"');
         expect(response.headers['content-disposition']).toContain('signed.pdf');
+        expect(response.headers['accept-ranges']).toBe('bytes');
+        expect(response.headers['content-range']).toBe('bytes 0-8/20');
+        expect(response.headers.etag).toBe('"sha256-test"');
         expect(response.headers['x-content-type-options']).toBe('nosniff');
     });
 

@@ -351,7 +351,7 @@
 | POST | `/api/signatures/documents/:id/cancel` | 1 | 1 | graphql-mutation | high | esignatures / SignatureDocumentsModule / cancelSignatureDocument |
 | GET | `/api/signatures/documents/:id/download` | 0 | 3 | retain-http | high | esignatures / SignatureFilesModule / downloadCompletedSignaturePdf |
 | DELETE | `/api/signatures/documents/:id/file` | 1 | 0 | graphql-mutation | high | esignatures / SignatureDocumentsModule / removeSignatureDraftPdf |
-| GET | `/api/signatures/documents/:id/file` | 0 | 4 | retain-http | high | esignatures / SignatureFilesModule / streamSignatureDraftPdf |
+| GET | `/api/signatures/documents/:id/file` | 0 | 8 | retain-http | high | esignatures / SignatureFilesModule / streamSignatureDraftPdf |
 | POST | `/api/signatures/documents/:id/remind` | 1 | 1 | graphql-mutation | high | esignatures / SignatureDeliveryModule / sendSignatureReminder |
 | POST | `/api/signatures/documents/:id/reminders` | 0 | 2 | graphql-mutation | high | esignatures / SignatureDeliveryModule / scheduleSignatureReminders |
 | POST | `/api/signatures/documents/:id/send` | 1 | 4 | graphql-mutation | high | esignatures / SignatureDeliveryModule / sendSignatureDocument |

@@ -139,6 +139,12 @@ const createPublicSigningProxy = ({
         headers.set('accept', read && kind !== 'session'
             ? 'application/pdf'
             : 'application/json');
+        if (read && kind !== 'session') {
+            for (const name of ['if-none-match', 'if-range', 'range']) {
+                const value = request.get(name);
+                if (value) headers.set(name, value);
+            }
+        }
         if (!read) headers.set('content-type', 'application/json');
         if (request.ip) headers.set('x-forwarded-for', String(request.ip));
         const userAgent = request.get('user-agent');
@@ -170,11 +176,14 @@ const createPublicSigningProxy = ({
             );
             response.status(upstream.status);
             copyHeaders(upstream, response, [
+                'accept-ranges',
                 'cache-control',
                 'content-disposition',
                 'content-length',
+                'content-range',
                 'content-security-policy',
                 'content-type',
+                'etag',
                 'referrer-policy',
                 'retry-after',
                 'x-content-type-options',

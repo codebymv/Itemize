@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  Headers,
   Param,
   Post,
   Req,
@@ -11,6 +12,12 @@ import {
 import { Request, Response } from 'express';
 import { PublicSigningAudit } from './public-signing.repository';
 import { PublicSigningService } from './public-signing.service';
+import {
+  sendSignatureFile,
+  sendSignatureRangeError,
+  SignatureFileDeliveryRequest,
+  SignatureFileRangeError,
+} from '../signature-files/signature-file-http';
 
 const REQUEST_ID = /^[A-Za-z0-9._:-]{1,128}$/;
 
@@ -42,19 +49,27 @@ export class PublicSigningController {
   @Get(':token/download')
   async download(
     @Param('token') token: string,
+    @Headers() headers: Record<string, string | string[] | undefined>,
     @Res() response: Response,
   ): Promise<void> {
-    const file = await this.signing.file(token);
-    this.send(response, file, 'attachment');
+    await this.deliver(
+      response,
+      () => this.signing.file(token, this.deliveryRequest(headers)),
+      'attachment',
+    );
   }
 
   @Get(':token/file')
   async file(
     @Param('token') token: string,
+    @Headers() headers: Record<string, string | string[] | undefined>,
     @Res() response: Response,
   ): Promise<void> {
-    const file = await this.signing.file(token);
-    this.send(response, file, 'inline');
+    await this.deliver(
+      response,
+      () => this.signing.file(token, this.deliveryRequest(headers)),
+      'inline',
+    );
   }
 
   @Get(':token')
@@ -95,20 +110,29 @@ export class PublicSigningController {
     };
   }
 
-  private send(
+  private async deliver(
     response: Response,
-    file: { buffer: Buffer; filename: string },
+    load: () => ReturnType<PublicSigningService['file']>,
     disposition: 'inline' | 'attachment',
-  ): void {
-    this.private(response);
-    response.set({
-      'Content-Disposition': `${disposition}; filename="${file.filename}"`,
-      'Content-Length': String(file.buffer.length),
-      'Content-Security-Policy': 'sandbox',
-      'Content-Type': 'application/pdf',
-      'X-Content-Type-Options': 'nosniff',
-    });
-    response.send(file.buffer);
+  ): Promise<void> {
+    try {
+      sendSignatureFile(response, await load(), disposition, true);
+    } catch (error) {
+      if (!(error instanceof SignatureFileRangeError)) throw error;
+      sendSignatureRangeError(response, error, true);
+    }
+  }
+
+  private deliveryRequest(
+    headers: Record<string, string | string[] | undefined>,
+  ): SignatureFileDeliveryRequest {
+    const one = (value: string | string[] | undefined) =>
+      Array.isArray(value) ? value[0] : value;
+    return {
+      range: one(headers.range),
+      ifRange: one(headers['if-range']),
+      ifNoneMatch: one(headers['if-none-match']),
+    };
   }
 
   private private(response: Response): void {

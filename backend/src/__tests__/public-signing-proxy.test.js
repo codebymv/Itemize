@@ -114,12 +114,15 @@ describe('public signing proxy', () => {
     it('streams bounded PDF responses with the hardened header allowlist', async () => {
         const bytes = Buffer.from('%PDF-public');
         const fetchImpl = jest.fn().mockResolvedValue(new Response(bytes, {
-            status: 200,
+            status: 206,
             headers: {
+                'accept-ranges': 'bytes',
                 'content-type': 'application/pdf',
                 'content-length': String(bytes.length),
                 'content-disposition': 'inline; filename="document.pdf"',
+                'content-range': `bytes 0-${bytes.length - 1}/30`,
                 'content-security-policy': 'sandbox',
+                etag: '"sha256-public"',
                 'x-content-type-options': 'nosniff',
                 'x-storage-key': 'secret',
             },
@@ -131,9 +134,22 @@ describe('public signing proxy', () => {
                 GRAPHQL_UPSTREAM_URL: 'https://graphql.internal',
             },
             fetchImpl,
-        })).get(`/api/public/sign/${token}/file`);
+        }))
+            .get(`/api/public/sign/${token}/file`)
+            .set('Range', `bytes=0-${bytes.length - 1}`)
+            .set('If-Range', '"sha256-public"')
+            .set('If-None-Match', '"older"');
 
-        expect(response.status).toBe(200);
+        expect(response.status).toBe(206);
+        const [, options] = fetchImpl.mock.calls[0];
+        expect(options.headers.get('range')).toBe(`bytes=0-${bytes.length - 1}`);
+        expect(options.headers.get('if-range')).toBe('"sha256-public"');
+        expect(options.headers.get('if-none-match')).toBe('"older"');
+        expect(response.headers['accept-ranges']).toBe('bytes');
+        expect(response.headers['content-range']).toBe(
+            `bytes 0-${bytes.length - 1}/30`
+        );
+        expect(response.headers.etag).toBe('"sha256-public"');
         expect(response.headers['content-type']).toContain('application/pdf');
         expect(response.headers['content-security-policy']).toBe('sandbox');
         expect(response.headers['x-storage-key']).toBeUndefined();

@@ -4,6 +4,7 @@ import { PublicSigningService } from './public-signing.service';
 import { SignatureFileStorage } from '../signature-files/signature-file-storage.provider';
 
 describe('PublicSigningService', () => {
+  const head = jest.fn();
   const repository = {
     openSession: jest.fn(),
     file: jest.fn(),
@@ -12,12 +13,16 @@ describe('PublicSigningService', () => {
   } as unknown as jest.Mocked<PublicSigningRepository>;
   const storage = {
     read: jest.fn(),
+    head,
   } as unknown as jest.Mocked<SignatureFileStorage>;
   const service = new PublicSigningService(repository, storage);
   const audit = { ipAddress: '203.0.113.5', userAgent: 'browser', requestId: 'request-1' };
   const token = 'a'.repeat(64);
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    head.mockResolvedValue({ totalLength: 9 });
+  });
 
   it('returns a locator-free signing projection and recipient-owned fields', async () => {
     repository.openSession.mockResolvedValue({
@@ -38,6 +43,7 @@ describe('PublicSigningService', () => {
         file_url: '/uploads/signatures/private.pdf',
         file_name: 'nda.pdf',
         file_type: 'application/pdf',
+        original_sha256: 'a'.repeat(64),
         document_status: 'sent',
         expires_at: null,
         routing_mode: 'parallel',
@@ -90,11 +96,16 @@ describe('PublicSigningService', () => {
     repository.file.mockResolvedValue({
       fileUrl: '/uploads/signatures/private.pdf',
       fileName: 'unsafe\"name.pdf',
+      originalSha256: 'a'.repeat(64),
     });
     storage.read.mockResolvedValue(Buffer.from('%PDF-file'));
     await expect(service.file(token)).resolves.toEqual({
       buffer: Buffer.from('%PDF-file'),
       filename: 'unsafe-name.pdf',
+      etag: `"sha256-${'a'.repeat(64)}"`,
+      notModified: false,
+      range: null,
+      totalLength: 9,
     });
   });
 });

@@ -274,6 +274,7 @@ async function getDocumentForSigning(pool, token, audit = {}) {
                 d.file_url,
                 d.file_name,
                 d.file_type,
+                d.original_sha256,
                 d.status AS document_status,
                 d.expires_at AS document_expires_at,
                 d.routing_mode,
@@ -337,6 +338,7 @@ async function getDocumentForSigning(pool, token, audit = {}) {
                 file_url: recipient.file_url,
                 file_name: recipient.file_name,
                 file_type: recipient.file_type,
+                original_sha256: recipient.original_sha256,
                 status: recipient.document_status,
                 expires_at: recipient.document_expires_at,
                 routing_mode: recipient.routing_mode

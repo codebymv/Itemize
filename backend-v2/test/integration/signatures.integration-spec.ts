@@ -410,12 +410,50 @@ describe('E-signature GraphQL read contract', () => {
     ).expect(200);
     expect(source.body).toEqual(firstPdf);
     expect(source.headers).toMatchObject({
+      'accept-ranges': 'bytes',
       'cache-control': 'private, no-store',
       'content-security-policy': 'sandbox',
       'content-type': 'application/pdf',
       'x-content-type-options': 'nosniff',
     });
     expect(source.headers['content-disposition']).toContain('inline');
+    expect(source.headers.etag).toBe(
+      `"sha256-${firstRow.rows[0].original_sha256}"`,
+    );
+
+    const ranged = await signatureFile(
+      `/api/signatures/documents/${secondDocumentId}/file`,
+    )
+      .set('Range', 'bytes=0-7')
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+        response.on('end', () => callback(null, Buffer.concat(chunks)));
+      });
+    expect(ranged.status).toBe(206);
+    expect(ranged.body).toEqual(firstPdf.subarray(0, 8));
+    expect(ranged.headers).toMatchObject({
+      'accept-ranges': 'bytes',
+      'content-range': `bytes 0-7/${firstPdf.length}`,
+      'content-length': '8',
+      etag: source.headers.etag,
+    });
+    await signatureFile(`/api/signatures/documents/${secondDocumentId}/file`)
+      .set('If-None-Match', source.headers.etag)
+      .expect('ETag', source.headers.etag)
+      .expect(304);
+    const staleIfRange = await signatureFile(
+      `/api/signatures/documents/${secondDocumentId}/file`,
+    )
+      .set('Range', 'bytes=0-7')
+      .set('If-Range', '"stale"')
+      .expect(200);
+    expect(staleIfRange.body).toEqual(firstPdf);
+    await signatureFile(`/api/signatures/documents/${secondDocumentId}/file`)
+      .set('Range', 'bytes=0-1,3-4')
+      .expect('Content-Range', `bytes */${firstPdf.length}`)
+      .expect(416);
 
     const secondPdf = await signaturePdf('replacement draft');
     await signatureUpload('/api/signatures/documents/upload')
@@ -1208,11 +1246,36 @@ describe('E-signature GraphQL read contract', () => {
       });
     expect(inline.status).toBe(200);
     expect(inline.headers).toMatchObject({
+      'accept-ranges': 'bytes',
       'content-type': 'application/pdf',
       'content-disposition': 'inline; filename="public-agreement.pdf"',
       'content-security-policy': 'sandbox',
     });
     expect(Buffer.isBuffer(inline.body)).toBe(true);
+    const publicRange = await request(app.getHttpServer())
+      .get(`${path}/file`)
+      .set('Range', 'bytes=-8')
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+        response.on('end', () => callback(null, Buffer.concat(chunks)));
+      });
+    expect(publicRange.status).toBe(206);
+    expect(publicRange.body).toEqual(inline.body.subarray(inline.body.length - 8));
+    expect(publicRange.headers).toMatchObject({
+      'accept-ranges': 'bytes',
+      'content-range': `bytes ${inline.body.length - 8}-${inline.body.length - 1}/${inline.body.length}`,
+      'content-length': '8',
+      etag: inline.headers.etag,
+      'referrer-policy': 'no-referrer',
+      'x-robots-tag': 'noindex, nofollow',
+    });
+    await request(app.getHttpServer())
+      .get(`${path}/download`)
+      .set('If-None-Match', inline.headers.etag)
+      .expect('ETag', inline.headers.etag)
+      .expect(304);
     const attachment = await request(app.getHttpServer())
       .get(`${path}/download`)
       .expect('Content-Disposition', 'attachment; filename="public-agreement.pdf"')

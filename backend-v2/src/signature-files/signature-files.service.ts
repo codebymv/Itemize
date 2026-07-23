@@ -21,17 +21,20 @@ import {
   inspectSignaturePdf,
   SignaturePdfValidationError,
 } from './signature-pdf.validator';
+import {
+  DeliveredSignatureFile,
+  SignatureFileDeliveryRequest,
+  signatureFileEffectiveRange,
+  signatureFileEtag,
+  signatureFileNotModified,
+  sliceSignatureFile,
+} from './signature-file-http';
 
 type UploadFile = {
   buffer: Buffer;
   mimetype: string;
   originalname: string;
   size: number;
-};
-
-export type DeliveredSignatureFile = {
-  buffer: Buffer;
-  filename: string;
 };
 
 @Injectable()
@@ -107,17 +110,26 @@ export class SignatureFilesService {
   async documentSource(
     organizationId: number,
     rawDocumentId: string,
+    request: SignatureFileDeliveryRequest = {},
   ): Promise<DeliveredSignatureFile> {
     await this.assertFeature(organizationId);
     const documentId = this.id(rawDocumentId, 'Document');
     const row = await this.repository.findDocument(organizationId, documentId);
     if (!row) this.notFound('Document');
-    return this.deliver(row.file_url, row.file_name, 'document.pdf', 'File');
+    return this.deliver(
+      row.file_url,
+      row.file_name,
+      row.original_sha256,
+      'document.pdf',
+      'File',
+      request,
+    );
   }
 
   async completedDocument(
     organizationId: number,
     rawDocumentId: string,
+    request: SignatureFileDeliveryRequest = {},
   ): Promise<DeliveredSignatureFile> {
     await this.assertFeature(organizationId);
     const documentId = this.id(rawDocumentId, 'Document');
@@ -135,20 +147,30 @@ export class SignatureFilesService {
     return this.deliver(
       row.signed_file_url,
       row.file_name,
+      row.signed_sha256,
       'signed-document.pdf',
       'Signed file',
+      request,
     );
   }
 
   async templateSource(
     organizationId: number,
     rawTemplateId: string,
+    request: SignatureFileDeliveryRequest = {},
   ): Promise<DeliveredSignatureFile> {
     await this.assertFeature(organizationId);
     const templateId = this.id(rawTemplateId, 'Template');
     const row = await this.repository.findTemplate(organizationId, templateId);
     if (!row) this.notFound('Template');
-    return this.deliver(row.file_url, row.file_name, 'template.pdf', 'File');
+    return this.deliver(
+      row.file_url,
+      row.file_name,
+      row.original_sha256,
+      'template.pdf',
+      'File',
+      request,
+    );
   }
 
   private async store(
@@ -204,13 +226,42 @@ export class SignatureFilesService {
   private async deliver(
     fileUrl: string | null,
     filename: string | null,
+    sha256: string | null,
     fallback: string,
     resource: string,
+    request: SignatureFileDeliveryRequest,
   ): Promise<DeliveredSignatureFile> {
     if (!fileUrl) this.notFound(resource);
-    const buffer = await this.storage.read(fileUrl);
-    if (!buffer) this.notFound(resource);
-    return { buffer, filename: this.filename(filename, fallback) };
+    const etag = signatureFileEtag(sha256);
+    if (signatureFileNotModified(request.ifNoneMatch, etag)) {
+      const metadata = this.storage.head
+        ? await this.storage.head(fileUrl)
+        : await this.storage.read(fileUrl).then((buffer) =>
+            buffer ? { totalLength: buffer.length } : null,
+          );
+      if (!metadata) this.notFound(resource);
+      return {
+        buffer: Buffer.alloc(0),
+        filename: this.filename(filename, fallback),
+        etag,
+        notModified: true,
+        totalLength: metadata.totalLength,
+        range: null,
+      };
+    }
+    const range = signatureFileEffectiveRange(request, etag);
+    const file = this.storage.readRange
+      ? await this.storage.readRange(fileUrl, range)
+      : await this.storage.read(fileUrl).then((buffer) =>
+          buffer ? sliceSignatureFile(buffer, range) : null,
+        );
+    if (!file) this.notFound(resource);
+    return {
+      ...file,
+      filename: this.filename(filename, fallback),
+      etag,
+      notModified: false,
+    };
   }
 
   private async assertFeature(organizationId: number): Promise<void> {
@@ -244,8 +295,9 @@ export class SignatureFilesService {
   }
 
   private document(row: SignatureDocumentFileRow): Record<string, unknown> {
+    const { original_sha256: _original, signed_sha256: _signed, ...safe } = row;
     return {
-      ...row,
+      ...safe,
       file_url: row.file_url
         ? `/api/signatures/documents/${row.id}/file`
         : null,
@@ -256,8 +308,9 @@ export class SignatureFilesService {
   }
 
   private template(row: SignatureTemplateFileRow): Record<string, unknown> {
+    const { original_sha256: _original, ...safe } = row;
     return {
-      ...row,
+      ...safe,
       file_url: row.file_url
         ? `/api/signatures/templates/${row.id}/file`
         : null,

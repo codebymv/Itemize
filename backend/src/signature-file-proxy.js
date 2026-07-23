@@ -215,6 +215,9 @@ const createSignatureFileReadProxy = ({
         const { headers, requestId } = forwardHeaders(req, [
             'accept',
             'cookie',
+            'if-none-match',
+            'if-range',
+            'range',
             'x-organization-id',
         ]);
         if (!headers.has('accept')) headers.set('accept', 'application/pdf');
@@ -227,11 +230,14 @@ const createSignatureFileReadProxy = ({
             );
             res.status(upstream.status);
             copyHeaders(upstream, res, [
+                'accept-ranges',
                 'cache-control',
                 'content-disposition',
                 'content-length',
+                'content-range',
                 'content-security-policy',
                 'content-type',
+                'etag',
                 'x-content-type-options',
                 'x-request-id',
             ]);
