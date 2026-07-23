@@ -138,6 +138,7 @@ describe('signature file transport routes', () => {
         expect(response.status).toBe(200);
         expect(response.body.data).toMatchObject({ id: 12, file_type: 'application/pdf' });
         const storedFile = signatureService.uploadDocument.mock.calls[0][3];
-        expect(storedFile.filename).toMatch(/^signature-7-.*\.pdf$/);
+        expect(storedFile.mimetype).toBe('application/pdf');
+        expect(storedFile.buffer.subarray(0, 5).toString('ascii')).toBe('%PDF-');
     });
 });

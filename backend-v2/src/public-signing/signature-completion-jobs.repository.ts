@@ -59,6 +59,23 @@ const redactedError = (error: unknown): string =>
 export class SignatureCompletionJobsRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
+  async stageArtifact(
+    claim: SignatureCompletionClaim,
+    fileUrl: string,
+  ): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO signature_file_deletion_jobs
+         (organization_id,document_id,file_url,next_attempt_at)
+       VALUES ($1,$2,$3,CURRENT_TIMESTAMP+INTERVAL '1 hour')
+       ON CONFLICT (organization_id,file_url) DO UPDATE SET
+         document_id=EXCLUDED.document_id,status='queued',attempt_count=0,
+         next_attempt_at=CURRENT_TIMESTAMP+INTERVAL '1 hour',
+         lease_expires_at=NULL,claimed_by=NULL,last_error=NULL,deleted_at=NULL,
+         updated_at=CURRENT_TIMESTAMP`,
+      [claim.organization_id, claim.document_id, fileUrl],
+    );
+  }
+
   claim(
     leaseSeconds: number,
     jobId: number | null = null,
@@ -225,6 +242,11 @@ export class SignatureCompletionJobsRepository {
            updated_at=CURRENT_TIMESTAMP
          WHERE id=$1 AND organization_id=$2`,
         [claim.document_id, claim.organization_id, artifact.fileUrl, artifact.sha256],
+      );
+      await client.query(
+        `DELETE FROM signature_file_deletion_jobs
+         WHERE organization_id=$1 AND file_url=$2`,
+        [claim.organization_id, artifact.fileUrl],
       );
       if (row.signed_file_url && row.signed_file_url !== artifact.fileUrl) {
         await client.query(

@@ -82,6 +82,70 @@ async function cleanupUploadedFile(file) {
     }
 }
 
+function allocateUploadedFile(organizationId, resourceId, originalname) {
+    const key = buildUploadKey(organizationId, resourceId, originalname);
+    if (s3Service?.isConfigured) {
+        return {
+            fileUrl: s3Service.getPublicUrl(key),
+            key,
+        };
+    }
+    return {
+        fileUrl: `/uploads/signatures/${path.basename(key)}`,
+        key: null,
+    };
+}
+
+async function storeAllocatedFile(file, allocation) {
+    if (!file?.buffer?.length) throw new Error('Signature upload bytes are unavailable');
+    if (allocation.key) {
+        await s3Service.uploadFile(file.buffer, allocation.key, 'application/pdf');
+        return allocation.fileUrl;
+    }
+    const localPath = getLocalFilePath(allocation.fileUrl);
+    if (!localPath) throw new Error('Signature file locator is not server-owned storage');
+    await fs.promises.mkdir(path.dirname(localPath), { recursive: true });
+    await fs.promises.writeFile(localPath, file.buffer, { flag: 'wx' });
+    return allocation.fileUrl;
+}
+
+async function removeUploadedFile(fileUrl) {
+    const localPath = getLocalFilePath(fileUrl);
+    if (localPath) {
+        await fs.promises.unlink(localPath).catch(error => {
+            if (error?.code !== 'ENOENT') throw error;
+        });
+        return;
+    }
+    const key = getS3KeyFromUrl(fileUrl);
+    if (!key || !s3Service?.isConfigured) {
+        throw new Error('Signature file locator is not server-owned storage');
+    }
+    await s3Service.deleteFile(key);
+}
+
+async function registerStagedFile(database, organizationId, documentId, fileUrl) {
+    await database.query(
+        `INSERT INTO signature_file_deletion_jobs
+           (organization_id,document_id,file_url,next_attempt_at)
+         VALUES ($1,$2,$3,CURRENT_TIMESTAMP+INTERVAL '1 hour')
+         ON CONFLICT (organization_id,file_url) DO UPDATE SET
+           document_id=EXCLUDED.document_id,status='queued',attempt_count=0,
+           next_attempt_at=CURRENT_TIMESTAMP+INTERVAL '1 hour',
+           lease_expires_at=NULL,claimed_by=NULL,last_error=NULL,deleted_at=NULL,
+           updated_at=CURRENT_TIMESTAMP`,
+        [organizationId, documentId, fileUrl]
+    );
+}
+
+async function finalizeStagedFile(database, organizationId, fileUrl) {
+    await database.query(
+        `DELETE FROM signature_file_deletion_jobs
+         WHERE organization_id=$1 AND file_url=$2`,
+        [organizationId, fileUrl]
+    );
+}
+
 function getUploadedFileUrl(file) {
     if (file?.filename) {
         return `/uploads/signatures/${file.filename}`;
@@ -94,11 +158,16 @@ function getUploadedFileUrl(file) {
 
 module.exports = {
     s3Service,
+    allocateUploadedFile,
     assertPdfUpload,
     computeSha256FromFile,
+    finalizeStagedFile,
     buildUploadKey,
     cleanupUploadedFile,
     getLocalFilePath,
     getS3KeyFromUrl,
     getUploadedFileUrl,
+    removeUploadedFile,
+    registerStagedFile,
+    storeAllocatedFile,
 };

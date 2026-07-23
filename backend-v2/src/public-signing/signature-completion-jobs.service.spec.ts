@@ -14,10 +14,12 @@ describe('SignatureCompletionJobsService', () => {
   const repository = {
     claim: jest.fn(),
     snapshot: jest.fn(),
+    stageArtifact: jest.fn(),
     complete: jest.fn(),
     fail: jest.fn(),
   } as unknown as jest.Mocked<SignatureCompletionJobsRepository>;
   const storage = {
+    allocate: jest.fn(),
     read: jest.fn(),
     store: jest.fn(),
     remove: jest.fn(),
@@ -29,7 +31,9 @@ describe('SignatureCompletionJobsService', () => {
     const source = await PDFDocument.create();
     source.addPage([612, 792]);
     storage.read.mockResolvedValue(Buffer.from(await source.save()));
+    storage.allocate.mockReturnValue('/uploads/signatures/completed.pdf');
     storage.store.mockResolvedValue('/uploads/signatures/completed.pdf');
+    repository.stageArtifact.mockResolvedValue(undefined);
     repository.claim
       .mockResolvedValueOnce(claim)
       .mockResolvedValueOnce(null);
@@ -81,10 +85,18 @@ describe('SignatureCompletionJobsService', () => {
       stale: 0,
     });
     expect(storage.store).toHaveBeenCalledWith(expect.objectContaining({
+      fileUrl: '/uploads/signatures/completed.pdf',
       organizationId: 3,
       resourceId: 11,
       scope: 'document',
     }));
+    expect(repository.stageArtifact).toHaveBeenCalledWith(
+      claim,
+      '/uploads/signatures/completed.pdf',
+    );
+    expect(repository.stageArtifact.mock.invocationCallOrder[0]).toBeLessThan(
+      storage.store.mock.invocationCallOrder[0],
+    );
     const completedBytes = storage.store.mock.calls[0][0].buffer;
     const completed = await PDFDocument.load(completedBytes);
     expect(completed.getPageCount()).toBe(2);

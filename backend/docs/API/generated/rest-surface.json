@@ -2793,7 +2793,7 @@
       ],
       "declaredPath": "/public/sign/:token",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 571,
+      "line": 566,
       "dynamic": false
     },
     {
@@ -2813,7 +2813,7 @@
       ],
       "declaredPath": "/public/sign/:token",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 598,
+      "line": 593,
       "dynamic": false
     },
     {
@@ -2833,7 +2833,7 @@
       ],
       "declaredPath": "/public/sign/:token/decline",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 629,
+      "line": 624,
       "dynamic": false
     },
     {
@@ -2853,7 +2853,7 @@
       ],
       "declaredPath": "/public/sign/:token/download",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 643,
+      "line": 638,
       "dynamic": false
     },
     {
@@ -2873,7 +2873,7 @@
       ],
       "declaredPath": "/public/sign/:token/file",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 665,
+      "line": 660,
       "dynamic": false
     },
     {
@@ -2893,7 +2893,7 @@
       ],
       "declaredPath": "/public/sign/:token/verify",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 594,
+      "line": 589,
       "dynamic": false
     },
     {
@@ -3283,7 +3283,7 @@
       ],
       "declaredPath": "/signatures/documents",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 439,
+      "line": 434,
       "dynamic": false
     },
     {
@@ -3293,7 +3293,7 @@
       ],
       "declaredPath": "/signatures/documents",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 290,
+      "line": 285,
       "dynamic": false
     },
     {
@@ -3303,7 +3303,7 @@
       ],
       "declaredPath": "/signatures/documents/:id",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 425,
+      "line": 420,
       "dynamic": false
     },
     {
@@ -3313,7 +3313,7 @@
       ],
       "declaredPath": "/signatures/documents/:id",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 445,
+      "line": 440,
       "dynamic": false
     },
     {
@@ -3323,7 +3323,7 @@
       ],
       "declaredPath": "/signatures/documents/:id",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 309,
+      "line": 304,
       "dynamic": false
     },
     {
@@ -3333,7 +3333,7 @@
       ],
       "declaredPath": "/signatures/documents/:id/audit",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 560,
+      "line": 555,
       "dynamic": false
     },
     {
@@ -3343,7 +3343,7 @@
       ],
       "declaredPath": "/signatures/documents/:id/cancel",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 474,
+      "line": 469,
       "dynamic": false
     },
     {
@@ -3363,7 +3363,7 @@
       ],
       "declaredPath": "/signatures/documents/:id/download",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 522,
+      "line": 517,
       "dynamic": false
     },
     {
@@ -3373,7 +3373,7 @@
       ],
       "declaredPath": "/signatures/documents/:id/file",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 412,
+      "line": 407,
       "dynamic": false
     },
     {
@@ -3393,7 +3393,7 @@
       ],
       "declaredPath": "/signatures/documents/:id/file",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 543,
+      "line": 538,
       "dynamic": false
     },
     {
@@ -3403,7 +3403,7 @@
       ],
       "declaredPath": "/signatures/documents/:id/remind",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 486,
+      "line": 481,
       "dynamic": false
     },
     {
@@ -3413,7 +3413,7 @@
       ],
       "declaredPath": "/signatures/documents/:id/reminders",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 506,
+      "line": 501,
       "dynamic": false
     },
     {
@@ -3423,7 +3423,7 @@
       ],
       "declaredPath": "/signatures/documents/:id/send",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 452,
+      "line": 447,
       "dynamic": false
     },
     {
@@ -3443,7 +3443,7 @@
       ],
       "declaredPath": "/signatures/documents/upload",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 352,
+      "line": 347,
       "dynamic": false
     },
     {
@@ -3453,7 +3453,7 @@
       ],
       "declaredPath": "/signatures/email/preview",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 389,
+      "line": 384,
       "dynamic": false
     },
     {
@@ -3463,7 +3463,7 @@
       ],
       "declaredPath": "/signatures/templates",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 242,
+      "line": 237,
       "dynamic": false
     },
     {
@@ -3473,7 +3473,7 @@
       ],
       "declaredPath": "/signatures/templates",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 163,
+      "line": 158,
       "dynamic": false
     },
     {
@@ -3483,7 +3483,7 @@
       ],
       "declaredPath": "/signatures/templates/:id",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 198,
+      "line": 193,
       "dynamic": false
     },
     {
@@ -3493,7 +3493,7 @@
       ],
       "declaredPath": "/signatures/templates/:id",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 247,
+      "line": 242,
       "dynamic": false
     },
     {
@@ -3503,7 +3503,7 @@
       ],
       "declaredPath": "/signatures/templates/:id",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 172,
+      "line": 167,
       "dynamic": false
     },
     {
@@ -3523,7 +3523,7 @@
       ],
       "declaredPath": "/signatures/templates/:id/file",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 254,
+      "line": 249,
       "dynamic": false
     },
     {
@@ -3533,7 +3533,7 @@
       ],
       "declaredPath": "/signatures/templates/:id/instantiate",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 271,
+      "line": 266,
       "dynamic": false
     },
     {
@@ -3553,7 +3553,7 @@
       ],
       "declaredPath": "/signatures/templates/upload",
       "source": "backend/src/routes/signatures.routes.js",
-      "line": 210,
+      "line": 205,
       "dynamic": false
     },
     {

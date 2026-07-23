@@ -41,12 +41,17 @@ describe('LegacySignatureFileStorage', () => {
   });
 
   it('stores under an unguessable signature key', async () => {
-    await storage.store({
+    const input = {
       buffer: Buffer.from('%PDF-1.7'),
       organizationId: 4,
       resourceId: 7,
-      scope: 'document',
-    });
+      scope: 'document' as const,
+    };
+    const fileUrl = storage.allocate(input);
+    await expect(storage.store({ ...input, fileUrl })).resolves.toBe(fileUrl);
+    expect(fileUrl).toMatch(
+      /^https:\/\/private-itemize\.s3\.us-west-2\.amazonaws\.com\/signatures\/signature-4-document-7-[0-9a-f-]+\.pdf$/,
+    );
     expect(uploadFile).toHaveBeenCalledWith(
       Buffer.from('%PDF-1.7'),
       expect.stringMatching(

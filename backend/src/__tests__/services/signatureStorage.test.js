@@ -1,9 +1,12 @@
 const path = require('path');
 const {
+    allocateUploadedFile,
     assertPdfUpload,
     buildUploadKey,
+    finalizeStagedFile,
     getLocalFilePath,
     getS3KeyFromUrl,
+    registerStagedFile,
 } = require('../../services/signature/storage');
 const {
     effectiveRange,
@@ -43,6 +46,23 @@ describe('signature local storage boundary', () => {
         expect(getS3KeyFromUrl('https://itemize-uploads.s3.us-west-2.amazonaws.com/logos/file.png')).toBeNull();
         expect(getS3KeyFromUrl('https://attacker.example/signatures/7/9/file.pdf')).toBeNull();
         expect(getS3KeyFromUrl('https://itemize-uploads.s3.attacker.example/signatures/7/9/file.pdf')).toBeNull();
+    });
+
+    it('registers a delayed cleanup receipt before finalization', async () => {
+        const allocation = allocateUploadedFile(7, 9, 'agreement.pdf');
+        expect(allocation).toMatchObject({
+            fileUrl: expect.stringMatching(/^\/uploads\/signatures\/agreement-.*\.pdf$/),
+            key: null,
+        });
+        const database = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+        await registerStagedFile(database, 7, 9, allocation.fileUrl);
+        await finalizeStagedFile(database, 7, allocation.fileUrl);
+        expect(database.query.mock.calls[0][0]).toContain("INTERVAL '1 hour'");
+        expect(database.query.mock.calls[0][1]).toEqual([7, 9, allocation.fileUrl]);
+        expect(database.query.mock.calls[1][0]).toContain(
+            'DELETE FROM signature_file_deletion_jobs'
+        );
+        expect(database.query.mock.calls[1][1]).toEqual([7, allocation.fileUrl]);
     });
 
     it('sets private PDF delivery headers and sanitizes filenames', () => {

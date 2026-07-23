@@ -23,6 +23,7 @@ const registerApiRoutes = require('../../bootstrap/register-api-routes');
 const { authenticateJWT, requireAdmin } = require('../../auth');
 const signatureEmailService = require('../../services/signature-email.service');
 const signatureService = require('../../services/signature.service');
+const { SignatureFileCleanupService } = require('../../services/signature-file-cleanup.service');
 
 function createApp(pool) {
     const app = express();
@@ -150,6 +151,18 @@ describe('Signature lifecycle PostgreSQL contract', () => {
             'SELECT id FROM signature_document_versions WHERE document_id=$1',
             [document.id]
         )).rows).toHaveLength(0);
+        const cleanupJobs = await dbHelper.pool.query(
+            `UPDATE signature_file_deletion_jobs SET next_attempt_at=NOW()
+             WHERE document_id=$1 RETURNING id`,
+            [document.id]
+        );
+        const cleanup = new SignatureFileCleanupService(dbHelper.pool);
+        for (const job of cleanupJobs.rows) {
+            await expect(cleanup.run({ jobId: Number(job.id) })).resolves.toMatchObject({
+                claimed: 1,
+                deleted: 1,
+            });
+        }
     });
 
     it('serves explicit retained-route byte ranges and evidence validators', async () => {

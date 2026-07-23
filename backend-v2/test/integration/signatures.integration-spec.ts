@@ -49,14 +49,22 @@ describe('E-signature GraphQL read contract', () => {
   const storedSignatureFiles = new Map<string, Buffer>();
   let storedSignatureSequence = 0;
   const signatureStorage = {
-    store: jest.fn(async (input: {
-      buffer: Buffer;
+    allocate: jest.fn((input: {
       organizationId: number;
       resourceId: number;
       scope: string;
     }) => {
       storedSignatureSequence += 1;
-      const url = `/uploads/signatures/integration-${input.organizationId}-${input.scope}-${input.resourceId}-${storedSignatureSequence}.pdf`;
+      return `/uploads/signatures/integration-${input.organizationId}-${input.scope}-${input.resourceId}-${storedSignatureSequence}.pdf`;
+    }),
+    store: jest.fn(async (input: {
+      buffer: Buffer;
+      organizationId: number;
+      resourceId: number;
+      scope: string;
+      fileUrl?: string;
+    }) => {
+      const url = input.fileUrl!;
       storedSignatureFiles.set(url, Buffer.from(input.buffer));
       return url;
     }),
@@ -373,6 +381,18 @@ describe('E-signature GraphQL read contract', () => {
 
   it('atomically owns authenticated PDF upload and private delivery boundaries', async () => {
     const firstPdf = await signaturePdf('first draft');
+    let stagedBeforeWrite = false;
+    signatureStorage.store.mockImplementationOnce(async (input) => {
+      const staged = await pool.query(
+        `SELECT 1 FROM signature_file_deletion_jobs
+         WHERE organization_id=$1 AND document_id=$2 AND file_url=$3
+           AND status='queued' AND next_attempt_at>CURRENT_TIMESTAMP`,
+        [organizationId, secondDocumentId, input.fileUrl],
+      );
+      stagedBeforeWrite = staged.rowCount === 1;
+      storedSignatureFiles.set(input.fileUrl!, Buffer.from(input.buffer));
+      return input.fileUrl!;
+    });
     const uploaded = await signatureUpload('/api/signatures/documents/upload')
       .field('document_id', String(secondDocumentId))
       .attach('file', firstPdf, {
@@ -392,6 +412,7 @@ describe('E-signature GraphQL read contract', () => {
       },
     });
     expect(uploaded.body.data.original_sha256).toBeUndefined();
+    expect(stagedBeforeWrite).toBe(true);
 
     const firstRow = await pool.query<{
       file_url: string;
@@ -402,6 +423,11 @@ describe('E-signature GraphQL read contract', () => {
       [secondDocumentId, organizationId],
     );
     const firstUrl = firstRow.rows[0].file_url;
+    expect((await pool.query(
+      `SELECT 1 FROM signature_file_deletion_jobs
+       WHERE organization_id=$1 AND file_url=$2`,
+      [organizationId, firstUrl],
+    )).rowCount).toBe(0);
     expect(firstRow.rows[0].original_sha256).toMatch(/^[a-f0-9]{64}$/);
     expect(storedSignatureFiles.get(firstUrl)).toEqual(firstPdf);
 
@@ -1347,10 +1373,23 @@ describe('E-signature GraphQL read contract', () => {
       [fixture.documentId],
     );
     expect(queued.rows).toHaveLength(1);
+    let completionStagedBeforeWrite = false;
+    signatureStorage.store.mockImplementationOnce(async (input) => {
+      const staged = await pool.query(
+        `SELECT 1 FROM signature_file_deletion_jobs
+         WHERE organization_id=$1 AND document_id=$2 AND file_url=$3
+           AND status='queued' AND next_attempt_at>CURRENT_TIMESTAMP`,
+        [organizationId, fixture.documentId, input.fileUrl],
+      );
+      completionStagedBeforeWrite = staged.rowCount === 1;
+      storedSignatureFiles.set(input.fileUrl!, Buffer.from(input.buffer));
+      return input.fileUrl!;
+    });
     await expect(completionJobs.run({ jobId: queued.rows[0].id })).resolves.toMatchObject({
       claimed: 1,
       completed: 1,
     });
+    expect(completionStagedBeforeWrite).toBe(true);
     const completed = await pool.query<{
       status: string;
       signed_file_url: string;
@@ -1365,6 +1404,11 @@ describe('E-signature GraphQL read contract', () => {
       signed_file_url: expect.stringMatching(/^\/uploads\/signatures\//),
       signed_sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
     });
+    expect((await pool.query(
+      `SELECT 1 FROM signature_file_deletion_jobs
+       WHERE organization_id=$1 AND file_url=$2`,
+      [organizationId, completed.rows[0].signed_file_url],
+    )).rowCount).toBe(0);
     const completedBytes = storedSignatureFiles.get(completed.rows[0].signed_file_url);
     expect(completedBytes?.subarray(0, 5).toString('ascii')).toBe('%PDF-');
     expect((await PDFDocument.load(completedBytes!)).getPageCount()).toBe(2);

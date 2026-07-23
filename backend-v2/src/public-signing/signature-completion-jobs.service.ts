@@ -145,11 +145,17 @@ export class SignatureCompletionJobsService {
     if (bytes.length > 25 * 1024 * 1024) {
       throw new SignatureCompletionError('Completed signature PDF is too large');
     }
-    const fileUrl = await this.storage.store({
-      buffer: bytes,
+    const storageInput = {
       organizationId: claim.organization_id,
       resourceId: claim.document_id,
-      scope: 'document',
+      scope: 'document' as const,
+    };
+    const fileUrl = this.storage.allocate(storageInput);
+    await this.repository.stageArtifact(claim, fileUrl);
+    await this.storage.store({
+      ...storageInput,
+      buffer: bytes,
+      fileUrl,
     });
     return {
       fileUrl,

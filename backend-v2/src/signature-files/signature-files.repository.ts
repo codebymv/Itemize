@@ -96,6 +96,24 @@ export class SignatureFilesRepository {
     return result.rowCount === 1;
   }
 
+  async stageUpload(
+    organizationId: number,
+    documentId: number | null,
+    fileUrl: string,
+  ): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO signature_file_deletion_jobs
+         (organization_id,document_id,file_url,next_attempt_at)
+       VALUES ($1,$2,$3,CURRENT_TIMESTAMP+INTERVAL '1 hour')
+       ON CONFLICT (organization_id,file_url) DO UPDATE SET
+         document_id=EXCLUDED.document_id,status='queued',attempt_count=0,
+         next_attempt_at=CURRENT_TIMESTAMP+INTERVAL '1 hour',
+         lease_expires_at=NULL,claimed_by=NULL,last_error=NULL,deleted_at=NULL,
+         updated_at=CURRENT_TIMESTAMP`,
+      [organizationId, documentId, fileUrl],
+    );
+  }
+
   findDocument(
     organizationId: number,
     documentId: number,
@@ -178,6 +196,7 @@ export class SignatureFilesRepository {
         type: 'application/pdf',
         createdBy: prior.created_by,
       });
+      await this.finalizeStagedUpload(client, organizationId, file.url);
       return updated.rows[0] ?? null;
     });
   }
@@ -215,8 +234,21 @@ export class SignatureFilesRepository {
           organizationId,
         ],
       );
+      await this.finalizeStagedUpload(client, organizationId, file.url);
       return updated.rows[0] ?? null;
     });
+  }
+
+  private async finalizeStagedUpload(
+    client: PoolClient,
+    organizationId: number,
+    fileUrl: string,
+  ): Promise<void> {
+    await client.query(
+      `DELETE FROM signature_file_deletion_jobs
+       WHERE organization_id=$1 AND file_url=$2`,
+      [organizationId, fileUrl],
+    );
   }
 
   private async enqueueOld(

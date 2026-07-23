@@ -33,15 +33,10 @@ try {
         fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
-    const storage = process.env.AWS_ACCESS_KEY_ID
-        ? multer.memoryStorage()
-        : multer.diskStorage({
-            destination: (req, file, cb) => cb(null, uploadsDir),
-            filename: (req, file, cb) => {
-                const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-                cb(null, `signature-${req.organizationId}-${uniqueSuffix}.pdf`);
-            }
-        });
+    // Keep bytes in memory until a durable cleanup receipt exists. The 5 MiB
+    // transport limit bounds memory and prevents a crash between Multer's disk
+    // write and database registration from leaving an untracked file.
+    const storage = multer.memoryStorage();
 
     const fileFilter = (req, file, cb) => {
         if (file.mimetype === 'application/pdf') {

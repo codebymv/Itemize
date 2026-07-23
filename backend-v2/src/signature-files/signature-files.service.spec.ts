@@ -14,12 +14,14 @@ describe('SignatureFilesService', () => {
     hasFeatureAccess: jest.fn(),
     canUploadDocument: jest.fn(),
     canUploadTemplate: jest.fn(),
+    stageUpload: jest.fn(),
     replaceDocument: jest.fn(),
     replaceTemplate: jest.fn(),
     findDocument: jest.fn(),
     findTemplate: jest.fn(),
   } as unknown as jest.Mocked<SignatureFilesRepository>;
   const storage = {
+    allocate: jest.fn(),
     store: jest.fn(),
     read: jest.fn(),
     head,
@@ -81,6 +83,8 @@ describe('SignatureFilesService', () => {
     repository.hasFeatureAccess.mockResolvedValue(true);
     repository.canUploadDocument.mockResolvedValue(true);
     repository.canUploadTemplate.mockResolvedValue(true);
+    repository.stageUpload.mockResolvedValue(undefined);
+    storage.allocate.mockReturnValue('/uploads/signatures/new.pdf');
     storage.store.mockResolvedValue('/uploads/signatures/new.pdf');
     storage.remove.mockResolvedValue(undefined);
     storage.read.mockResolvedValue(pdf);
@@ -127,10 +131,19 @@ describe('SignatureFilesService', () => {
     });
     expect(storage.store).toHaveBeenCalledWith({
       buffer: pdf,
+      fileUrl: '/uploads/signatures/new.pdf',
       organizationId: 4,
       resourceId: 7,
       scope: 'document',
     });
+    expect(repository.stageUpload).toHaveBeenCalledWith(
+      4,
+      7,
+      '/uploads/signatures/new.pdf',
+    );
+    expect(repository.stageUpload.mock.invocationCallOrder[0]).toBeLessThan(
+      storage.store.mock.invocationCallOrder[0],
+    );
     expect(repository.replaceDocument).toHaveBeenCalledWith(
       4,
       7,
@@ -149,6 +162,7 @@ describe('SignatureFilesService', () => {
       NotFoundException,
     );
     expect(storage.store).not.toHaveBeenCalled();
+    expect(repository.stageUpload).not.toHaveBeenCalled();
   });
 
   it('rejects MIME and structurally invalid PDF spoofing before storage', async () => {

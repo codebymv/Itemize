@@ -131,7 +131,7 @@ Commit `8e756351` deployed through legacy backend `70c49ae0-0624-4778-a658-4dd76
 
 The authenticated read and draft/template mutation slices have completed production consumer validation. Delivery, draft-PDF removal, authenticated files, and public signing are implemented behind independent default-off switches. Final e-signature cutover still requires:
 
-1. production S3 private-storage rehearsal, malware/quarantine policy, and crash-abandoned-stage cleanup;
+1. production S3 private-storage rehearsal and malware/quarantine policy;
 2. audit evidence enforcement under database permissions plus defined retention/export and integrity verification;
 3. the request/reminder/completion workers receive one production owner/schedule and controlled provider/storage canaries;
 4. OTP remains impossible to configure unless its complete issuance/throttling/hash/expiry/replay protocol is implemented;
@@ -214,3 +214,11 @@ Local storage opens and reads only the selected window. The standalone Nest S3 p
 Focused range/parser, provider, service, proxy, and route tests pass. The retained unit suite passes 385/385, the Nest unit suite passes 414/414, the Nest build passes, and the clean-schema cross-stack gate passes 491/491 retained integration plus 225/225 Nest PostgreSQL tests. The integration contracts exercise authenticated and public delivery, exact partial bytes, conditional `304`, stale-validator full fallback, and unsatisfiable `416` behavior.
 
 Commit `2f2aefff` deployed default-off through retained backend `ca9417d5-7b0c-4f0c-8a6e-b9c7e114d8db` and GraphQL `7a6a91fb-d395-408a-b77c-28702f78ee78`. Both releases became healthy; itemize.cloud, production API health, and the same-origin GraphQL probe returned HTTP 200. Railway confirmed all four signature file/public-signing proxy flags remain absent on both services and the GraphQL service still has no AWS variables. No valid capability, authenticated file request, S3 operation, worker, provider call, or production data mutation ran.
+
+## Implemented crash-abandoned signature artifact cleanup slice
+
+NestJS and the retained rollback upload path now allocate the final owned local/S3 locator, commit a delayed `signature_file_deletion_jobs` receipt, and only then write PDF bytes. Retained Multer uses bounded memory until that receipt exists. The locked document/template metadata transaction removes the receipt only after the new locator and immutable version data commit. Failed writes, authorization races, transaction failures, and process death therefore leave a retryable cleanup record; successful compensation may remove bytes immediately while the worker safely converges a missing object.
+
+The signed-PDF completion worker uses the same pre-registration boundary before storing its generated artifact. Its fenced completion transaction removes the receipt together with the completed locator/hash transition. A crash between storage and fencing can no longer produce an undiscoverable artifact, and a stale completion still attempts immediate removal.
+
+The retained unit suite passes 386/386, the Nest unit suite passes 414/414, and the Nest build passes. A clean disposable database passes the retained signature contract 11/11 plus the complete Nest integration gate 225/225. PostgreSQL observes a delayed queued receipt during upload and completion storage callbacks and proves it is absent only after each authoritative transaction commits. Deployment remains default-off pending the release evidence.

@@ -1,9 +1,11 @@
 const { withDbClient, withTransaction } = require('../../utils/db');
 const {
-    s3Service,
+    allocateUploadedFile,
     computeSha256FromFile,
-    buildUploadKey,
-    getUploadedFileUrl
+    finalizeStagedFile,
+    registerStagedFile,
+    removeUploadedFile,
+    storeAllocatedFile
 } = require('./storage');
 const {
     signatureDocumentColumns,
@@ -99,7 +101,26 @@ async function updateDocument(pool, organizationId, documentId, data) {
 }
 
 async function uploadDocument(pool, organizationId, documentId, file) {
-    return withTransaction(pool, async (client) => {
+    const preflight = await pool.query(
+        `SELECT 1 FROM signature_documents
+         WHERE id=$1 AND organization_id=$2 AND status='draft'`,
+        [documentId, organizationId]
+    );
+    if (preflight.rows.length === 0) return null;
+    const allocation = allocateUploadedFile(
+        organizationId,
+        documentId,
+        file?.originalname
+    );
+    await registerStagedFile(
+        pool,
+        organizationId,
+        documentId,
+        allocation.fileUrl
+    );
+    try {
+        await storeAllocatedFile(file, allocation);
+        const result = await withTransaction(pool, async (client) => {
         const authorized = await client.query(
             `SELECT id,file_url,file_name,file_size,file_type,original_sha256,created_by
              FROM signature_documents
@@ -111,14 +132,7 @@ async function uploadDocument(pool, organizationId, documentId, file) {
         const prior = authorized.rows[0];
 
         const sha256 = await computeSha256FromFile(file);
-        let fileUrl = null;
-
-        if (file?.buffer && s3Service && process.env.AWS_ACCESS_KEY_ID) {
-            const key = buildUploadKey(organizationId, documentId, file.originalname);
-            fileUrl = await s3Service.uploadFile(file.buffer, key, file.mimetype);
-        } else {
-            fileUrl = getUploadedFileUrl(file);
-        }
+        const fileUrl = allocation.fileUrl;
 
         if (prior.file_url) {
             const represented = await client.query(
@@ -169,10 +183,17 @@ async function uploadDocument(pool, organizationId, documentId, file) {
                 sha256,
                 createdBy: prior.created_by
             });
+            await finalizeStagedFile(client, organizationId, fileUrl);
         }
 
         return updateResult.rows[0] || null;
-    });
+        });
+        if (!result) await removeUploadedFile(allocation.fileUrl);
+        return result;
+    } catch (error) {
+        await removeUploadedFile(allocation.fileUrl).catch(() => undefined);
+        throw error;
+    }
 }
 
 async function appendDocumentVersion(client, documentId, file) {

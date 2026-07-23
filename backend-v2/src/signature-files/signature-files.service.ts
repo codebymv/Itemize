@@ -209,11 +209,21 @@ export class SignatureFilesService {
         },
       });
     }
-    const url = await this.storage.store({
-      buffer: file.buffer,
+    const storageInput = {
       organizationId,
       resourceId,
       scope,
+    };
+    const url = this.storage.allocate(storageInput);
+    await this.repository.stageUpload(
+      organizationId,
+      scope === 'document' ? resourceId : null,
+      url,
+    );
+    await this.storage.store({
+      ...storageInput,
+      buffer: file.buffer,
+      fileUrl: url,
     });
     return {
       url,

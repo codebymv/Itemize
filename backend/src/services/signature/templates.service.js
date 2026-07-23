@@ -1,9 +1,11 @@
 const { withDbClient, withTransaction } = require('../../utils/db');
 const {
-    s3Service,
+    allocateUploadedFile,
     computeSha256FromFile,
-    buildUploadKey,
-    getUploadedFileUrl
+    finalizeStagedFile,
+    registerStagedFile,
+    removeUploadedFile,
+    storeAllocatedFile
 } = require('./storage');
 const {
     signatureDocumentColumns,
@@ -67,7 +69,20 @@ async function deleteTemplate(pool, organizationId, templateId) {
 }
 
 async function uploadTemplateFile(pool, organizationId, templateId, file) {
-    return withTransaction(pool, async (client) => {
+    const preflight = await pool.query(
+        `SELECT 1 FROM signature_templates WHERE id=$1 AND organization_id=$2`,
+        [templateId, organizationId]
+    );
+    if (preflight.rows.length === 0) return null;
+    const allocation = allocateUploadedFile(
+        organizationId,
+        `template-${templateId}`,
+        file?.originalname
+    );
+    await registerStagedFile(pool, organizationId, null, allocation.fileUrl);
+    try {
+        await storeAllocatedFile(file, allocation);
+        const result = await withTransaction(pool, async (client) => {
         const authorized = await client.query(
             `SELECT id FROM signature_templates
              WHERE id = $1 AND organization_id = $2
@@ -77,14 +92,7 @@ async function uploadTemplateFile(pool, organizationId, templateId, file) {
         if (authorized.rows.length === 0) return null;
 
         const sha256 = await computeSha256FromFile(file);
-        let fileUrl = null;
-
-        if (file?.buffer && s3Service && process.env.AWS_ACCESS_KEY_ID) {
-            const key = buildUploadKey(organizationId, `template-${templateId}`, file.originalname);
-            fileUrl = await s3Service.uploadFile(file.buffer, key, file.mimetype);
-        } else {
-            fileUrl = getUploadedFileUrl(file);
-        }
+        const fileUrl = allocation.fileUrl;
 
         const updateResult = await client.query(`
             UPDATE signature_templates SET
@@ -106,8 +114,17 @@ async function uploadTemplateFile(pool, organizationId, templateId, file) {
             organizationId
         ]);
 
+        if (updateResult.rows[0]) {
+            await finalizeStagedFile(client, organizationId, fileUrl);
+        }
         return updateResult.rows[0] || null;
-    });
+        });
+        if (!result) await removeUploadedFile(allocation.fileUrl);
+        return result;
+    } catch (error) {
+        await removeUploadedFile(allocation.fileUrl).catch(() => undefined);
+        throw error;
+    }
 }
 
 async function replaceTemplateRoles(pool, templateId, roles) {

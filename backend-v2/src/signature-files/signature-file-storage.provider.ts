@@ -21,11 +21,17 @@ export const SIGNATURE_FILE_STORAGE = Symbol('SIGNATURE_FILE_STORAGE');
 export type SignatureFileScope = 'document' | 'template';
 
 export interface SignatureFileStorage {
+  allocate(input: {
+    organizationId: number;
+    resourceId: number;
+    scope: SignatureFileScope;
+  }): string;
   store(input: {
     buffer: Buffer;
     organizationId: number;
     resourceId: number;
     scope: SignatureFileScope;
+    fileUrl?: string;
   }): Promise<string>;
   read(fileUrl: string): Promise<Buffer | null>;
   readRange?(
@@ -53,29 +59,48 @@ type LegacyS3Service = {
 export class LegacySignatureFileStorage implements SignatureFileStorage {
   private resolvedS3: LegacyS3Service | null | undefined;
 
+  allocate(input: {
+    organizationId: number;
+    resourceId: number;
+    scope: SignatureFileScope;
+  }): string {
+    const filename =
+      `signature-${input.organizationId}-${input.scope}-${input.resourceId}-${randomUUID()}.pdf`;
+    const s3 = this.s3Service();
+    if (s3?.isConfigured && s3.uploadFile) {
+      return `https://${s3.bucket}.s3.${s3.region}.amazonaws.com/signatures/${filename}`;
+    }
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Shared signature file storage is unavailable');
+    }
+    return `/uploads/signatures/${filename}`;
+  }
+
   async store(input: {
     buffer: Buffer;
     organizationId: number;
     resourceId: number;
     scope: SignatureFileScope;
+    fileUrl?: string;
   }): Promise<string> {
-    const filename =
-      `signature-${input.organizationId}-${input.scope}-${input.resourceId}-${randomUUID()}.pdf`;
+    const fileUrl = input.fileUrl ?? this.allocate(input);
+    const local = this.localFilename(fileUrl);
+    if (local) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('Shared signature file storage is unavailable');
+      }
+      const directory = this.localDirectory();
+      await mkdir(directory, { recursive: true });
+      await writeFile(resolve(directory, local), input.buffer, { flag: 'wx' });
+      return fileUrl;
+    }
     const s3 = this.s3Service();
-    if (s3?.isConfigured && s3.uploadFile) {
-      return s3.uploadFile(
-        input.buffer,
-        `signatures/${filename}`,
-        'application/pdf',
-      );
+    const key = this.s3Key(fileUrl, s3);
+    if (!key || !s3?.isConfigured || !s3.uploadFile) {
+      throw new Error('Signature file locator is not server-owned storage');
     }
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('Shared signature file storage is unavailable');
-    }
-    const directory = this.localDirectory();
-    await mkdir(directory, { recursive: true });
-    await writeFile(resolve(directory, filename), input.buffer, { flag: 'wx' });
-    return `/uploads/signatures/${filename}`;
+    await s3.uploadFile(input.buffer, key, 'application/pdf');
+    return fileUrl;
   }
 
   async read(fileUrl: string): Promise<Buffer | null> {
