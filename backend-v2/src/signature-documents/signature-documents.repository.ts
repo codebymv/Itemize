@@ -212,6 +212,49 @@ export class SignatureDocumentsRepository {
     });
   }
 
+  async cancelDocument(organizationId: number, id: number): Promise<{ row: SignatureDocumentRow | null; status: string | null }> {
+    return this.transaction(async (client) => {
+      const current = await client.query<{ status: string }>(
+        'SELECT status FROM signature_documents WHERE id=$1 AND organization_id=$2 FOR UPDATE',
+        [id, organizationId],
+      );
+      if (!current.rows[0]) return { row: null, status: null };
+      const status = current.rows[0].status;
+      if (status === 'completed' || status === 'cancelled') {
+        return { row: await this.selectDocument(client, organizationId, id), status };
+      }
+
+      await client.query(
+        `UPDATE signature_recipients
+         SET signing_token_hash=NULL, token_expires_at=NULL, routing_status='locked'
+         WHERE document_id=$1 AND organization_id=$2
+           AND status IN ('pending','sent','viewed')`,
+        [id, organizationId],
+      );
+      await client.query(
+        `UPDATE signature_reminders SET status='cancelled'
+         WHERE document_id=$1 AND status='pending'`,
+        [id],
+      );
+      await client.query(
+        `INSERT INTO signature_audit_log
+           (document_id,event_type,description,created_at)
+         VALUES ($1,'cancelled','Signature document cancelled',CURRENT_TIMESTAMP)`,
+        [id],
+      );
+      await client.query(
+        `UPDATE signature_documents
+         SET status='cancelled',updated_at=CURRENT_TIMESTAMP
+         WHERE id=$1 AND organization_id=$2`,
+        [id, organizationId],
+      );
+      return {
+        row: await this.selectDocument(client, organizationId, id),
+        status: 'cancelled',
+      };
+    });
+  }
+
   private async lockQuota(client: PoolClient, organizationId:number):Promise<void>{
     const organization = await client.query<{plan:string|null}>('SELECT plan FROM organizations WHERE id=$1 FOR UPDATE',[organizationId]);
     if (!organization.rows[0]) throw new SignatureReferenceError('Organization not found');

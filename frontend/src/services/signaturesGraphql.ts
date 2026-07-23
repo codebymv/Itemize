@@ -2,6 +2,8 @@ import { getApiUrl } from '@/lib/api';
 import type {
   SignatureDocument,
   SignatureDocumentDetails,
+  SignatureEmailPreviewRequest,
+  SignatureEmailPreviewResponse,
   SignatureField,
   SignatureRecipient,
   SignatureStatus,
@@ -491,6 +493,17 @@ export const updateSignatureDocumentViaGraphql = async (id:number,payload:Docume
 export const deleteSignatureDocumentViaGraphql=async(id:number,organizationId?:number):Promise<SignatureDocument>=>{
   const data=await graphqlMutationRequest<{deleteSignatureDraft:GqlDocument},{id:number}>(`mutation DeleteSignatureDraft($id:Int!){deleteSignatureDraft(id:$id){${documentFields}}}`,{id},organizationId);
   return mapDocument(data.deleteSignatureDraft);
+};
+
+export const cancelSignatureDocumentViaGraphql=async(id:number,organizationId?:number):Promise<SignatureDocument>=>{
+  const data=await graphqlMutationRequest<{cancelSignatureDocument:GqlDocument},{id:number}>(`mutation CancelSignatureDocument($id:Int!){cancelSignatureDocument(id:$id){${documentFields}}}`,{id},organizationId);
+  return mapDocument(data.cancelSignatureDocument);
+};
+
+export const getSignatureEmailPreviewViaGraphql=async(input:SignatureEmailPreviewRequest,organizationId?:number):Promise<SignatureEmailPreviewResponse>=>{
+  const variables={input:{message:input.message,...(input.documentTitle===undefined?{}:{documentTitle:input.documentTitle}),...(input.senderName===undefined?{}:{senderName:input.senderName}),...(input.senderEmail===undefined?{}:{senderEmail:input.senderEmail}),...(input.recipientName===undefined?{}:{recipientName:input.recipientName}),...(input.expiresAt===undefined?{}:{expiresAt:input.expiresAt})}};
+  const data=await graphqlRequest<{previewSignatureEmail:SignatureEmailPreviewResponse},typeof variables>(`query SignatureEmailPreview($input:SignatureEmailPreviewInput!){previewSignatureEmail(input:$input){html subject}}`,variables,organizationId);
+  return data.previewSignatureEmail;
 };
 
 export const createSignatureTemplateViaGraphql=async(payload:Partial<SignatureTemplate>,organizationId?:number):Promise<SignatureTemplate>=>{

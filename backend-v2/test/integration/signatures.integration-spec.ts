@@ -426,6 +426,105 @@ describe('E-signature GraphQL read contract', () => {
     expect(deleted.body.data.deleteSignatureTemplate.id).toBe(id);
   });
 
+  it('cancels atomically and idempotently while previewing escaped server-controlled email HTML', async () => {
+    const inserted = await pool.query<{ id: number }>(
+      `INSERT INTO signature_documents
+         (organization_id,title,status,created_by,created_at,updated_at)
+       VALUES ($1,'Cancellation target','sent',$2,'2026-01-01T00:00:00Z','2026-01-01T00:00:00Z'),
+              ($1,'Completed target','completed',$2,'2026-01-01T00:00:00Z','2026-01-01T00:00:00Z')
+       RETURNING id`,
+      [organizationId, memberId],
+    );
+    const [cancelId, completedId] = inserted.rows.map((row) => Number(row.id));
+    const recipient = await pool.query<{ id: number }>(
+      `INSERT INTO signature_recipients
+         (document_id,organization_id,email,status,signing_token_hash,token_expires_at,routing_status)
+       VALUES ($1,$2,'cancel@test.itemize','sent','secret-capability',NOW()+INTERVAL '1 day','active')
+       RETURNING id`,
+      [cancelId, organizationId],
+    );
+    await pool.query(
+      `INSERT INTO signature_reminders (document_id,recipient_id,scheduled_at,status)
+       VALUES ($1,$2,NOW()+INTERVAL '1 day','pending')`,
+      [cancelId, recipient.rows[0].id],
+    );
+
+    const cancel = () => graphql(
+      memberToken,
+      organizationId,
+      `mutation Cancel($id:Int!){cancelSignatureDocument(id:$id){${documentFields}}}`,
+      { id: cancelId },
+    );
+    const first = await cancel();
+    const second = await cancel();
+    expect(first.body.errors).toBeUndefined();
+    expect(second.body.errors).toBeUndefined();
+    expect(second.body.data.cancelSignatureDocument.status).toBe('CANCELLED');
+    const state = await pool.query(
+      `SELECT d.status,r.signing_token_hash,r.token_expires_at,r.routing_status,
+              sr.status AS reminder_status,
+              (SELECT COUNT(*) FROM signature_audit_log a
+               WHERE a.document_id=d.id AND a.event_type='cancelled') AS cancelled_events
+       FROM signature_documents d
+       JOIN signature_recipients r ON r.document_id=d.id
+       JOIN signature_reminders sr ON sr.document_id=d.id
+       WHERE d.id=$1`,
+      [cancelId],
+    );
+    expect(state.rows[0]).toMatchObject({
+      status: 'cancelled', signing_token_hash: null, token_expires_at: null,
+      routing_status: 'locked', reminder_status: 'cancelled',
+    });
+    expect(Number(state.rows[0].cancelled_events)).toBe(1);
+
+    const completed = await graphql(
+      memberToken,
+      organizationId,
+      'mutation Cancel($id:Int!){cancelSignatureDocument(id:$id){id status}}',
+      { id: completedId },
+    );
+    expect(completed.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'SIGNATURE_DOCUMENT_COMPLETED',
+    });
+    expect((await pool.query('SELECT status FROM signature_documents WHERE id=$1', [completedId])).rows[0].status)
+      .toBe('completed');
+
+    const hidden = await graphql(
+      memberToken,
+      organizationId,
+      'mutation Cancel($id:Int!){cancelSignatureDocument(id:$id){id}}',
+      { id: foreignDocumentId },
+    );
+    expect(hidden.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const preview = await graphql(
+      memberToken,
+      organizationId,
+      `query Preview($input:SignatureEmailPreviewInput!){previewSignatureEmail(input:$input){subject html}}`,
+      { input: {
+        message: 'Please <script>alert(1)</script> sign',
+        documentTitle: '<b>NDA</b>',
+        senderName: 'Alice & Bob',
+        expiresAt: '2026-08-02T06:00:00.000Z',
+      } },
+    );
+    expect(preview.body.errors).toBeUndefined();
+    expect(preview.body.data.previewSignatureEmail.subject).toBe('Alice & Bob wants your signature');
+    expect(preview.body.data.previewSignatureEmail.html).toContain('Please &lt;script&gt;alert(1)&lt;/script&gt; sign');
+    expect(preview.body.data.previewSignatureEmail.html).toContain('/sign/preview');
+    expect(preview.body.data.previewSignatureEmail.html).not.toContain('<script>');
+
+    const invalidPreview = await graphql(
+      memberToken,
+      organizationId,
+      'query Preview($input:SignatureEmailPreviewInput!){previewSignatureEmail(input:$input){subject}}',
+      { input: { message: '  ' } },
+    );
+    expect(invalidPreview.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT', reason: 'EMPTY_SIGNATURE_EMAIL_MESSAGE',
+    });
+  });
+
   it('serializes starter-plan monthly quota checks under concurrent draft creation', async () => {
     const attempts = await Promise.all(Array.from({ length: 6 }, (_, index) => graphql(
       memberToken,

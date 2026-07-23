@@ -1,6 +1,6 @@
 # E-signatures GraphQL cutover contract
 
-**Status:** Phase 1 authenticated reads and Phase 2 draft/template mutations live behind independent rollback flags
+**Status:** Phase 1 authenticated reads and Phase 2 draft/template mutations live; provider-free cancellation and preview implemented behind rollback flags
 
 **Evidence date:** 2026-07-22
 
@@ -137,3 +137,11 @@ The authenticated read and draft/template mutation slices have completed product
 4. PDF generation, initial delivery, completion notices, and reminders use durable idempotent jobs outside transactions;
 5. OTP verification is fully implemented and tested or remains impossible to configure;
 6. the remaining GraphQL mutations, retained HTTP protocols, and critical draft/send/sign/decline/cancel/download browser journeys pass semantic parity and rollback tests.
+
+## Implemented provider-free lifecycle and preview slice
+
+`SignatureDocumentsModule` now implements `cancelSignatureDocument` as a CSRF-protected organization-scoped mutation. The document row is locked before state inspection; completed documents fail with `CONFLICT`, foreign IDs remain concealed, repeated cancellation returns the existing cancelled snapshot without another audit row, and the first transition atomically revokes active recipient capability hashes/expiry, locks routing, cancels pending reminders, changes document status, and appends one audit event.
+
+`SignatureDeliveryModule` now implements `previewSignatureEmail` as a pure organization-scoped query. It validates bounded content, escapes every user-controlled HTML insertion, derives the preview link and asset origin from server configuration, ignores the legacy browser-supplied `baseUrl`, performs no delivery, and returns only subject plus rendered HTML. Independent default-off flags `VITE_SIGNATURE_CANCELLATION_GRAPHQL` and `VITE_SIGNATURE_EMAIL_PREVIEW_GRAPHQL` preserve data-neutral REST rollback.
+
+Focused service/adapter tests and the disposable PostgreSQL gate pass: 489/489 retained Express tests and 218/218 Nest integration tests. PostgreSQL proves cancellation idempotency, capability/reminder revocation, one audit event, completed-state refusal, foreign-tenant concealment, escaped preview output, and invalid-message rejection without provider work.

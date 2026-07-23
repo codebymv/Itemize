@@ -58,6 +58,14 @@ export class SignatureDocumentsService {
     return this.document(result.row);
   }
 
+  async cancel(organizationId:number,id:number):Promise<SignatureDocument>{
+    await this.access(organizationId);this.id(id);
+    const result=await this.repository.cancelDocument(organizationId,id);
+    if(result.status===null||!result.row)throw itemizeGraphqlError('Signature document not found','NOT_FOUND');
+    if(result.status==='completed')throw itemizeGraphqlError('Completed documents cannot be cancelled','CONFLICT',{reason:'SIGNATURE_DOCUMENT_COMPLETED'});
+    return this.document(result.row);
+  }
+
   private async access(organizationId: number): Promise<void> { if (!(await this.repository.hasFeatureAccess(organizationId))) throw itemizeGraphqlError('E-Signatures require an upgrade.', 'FORBIDDEN', { reason: 'FEATURE_NOT_AVAILABLE' }); }
   private id(value: number): void { if (!Number.isInteger(value) || value < 1) throw itemizeGraphqlError('id must be a positive integer', 'BAD_USER_INPUT', { field: 'id' }); }
   private page(input: PageInput): { page: number; pageSize: number; offset: number } { const page=input.page??1,pageSize=input.pageSize??20; if(!Number.isInteger(page)||page<1)throw itemizeGraphqlError('page must be a positive integer','BAD_USER_INPUT',{field:'page'}); if(!Number.isInteger(pageSize)||pageSize<1||pageSize>100)throw itemizeGraphqlError('pageSize must be between 1 and 100','BAD_USER_INPUT',{field:'pageSize'}); return {page,pageSize,offset:(page-1)*pageSize}; }

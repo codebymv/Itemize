@@ -21,6 +21,8 @@ export class SignatureDocumentsResolver {
   updateSignatureDraft(@Args('id',{type:()=>Int}) id:number,@Args('input') input:UpdateSignatureDraftInput):Promise<SignatureDocument>{return this.service.update(this.organizationId(),id,input);}
   @CsrfProtected() @OrganizationScoped() @Mutation(() => SignatureDocument)
   deleteSignatureDraft(@Args('id',{type:()=>Int}) id:number):Promise<SignatureDocument>{return this.service.delete(this.organizationId(),id);}
+  @CsrfProtected() @OrganizationScoped() @Mutation(() => SignatureDocument)
+  cancelSignatureDocument(@Args('id',{type:()=>Int}) id:number):Promise<SignatureDocument>{return this.service.cancel(this.organizationId(),id);}
   private organizationId():number{const organization=this.context.current().organization;if(!organization)throw new Error('Verified organization context is unavailable');return organization.organizationId;}
   private userId():number{const identity=this.context.current().identity;if(!identity)throw new Error('Verified identity context is unavailable');return identity.userId;}
 }

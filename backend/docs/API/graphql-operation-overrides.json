@@ -1495,8 +1495,8 @@
       "notes": "Locks a draft so concurrent initial sends issue one token/email intent and one sent audit event."
     },
     "POST /api/signatures/documents/:id/cancel": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "cancelSignatureDocument", "parityStatus": "characterized", "risk": "high",
-      "notes": "Idempotently cancels non-completed documents, revokes active capability tokens, cancels reminders, and writes one audit event."
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "cancelSignatureDocument", "parityStatus": "implemented", "risk": "high",
+      "notes": "Implemented behind an independent default-off cancellation flag; one row-locked transaction idempotently cancels non-completed documents, revokes active capability tokens, cancels pending reminders, and writes exactly one audit event."
     },
     "POST /api/signatures/documents/:id/remind": {
       "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDeliveryModule", "targetOperation": "sendSignatureReminder", "parityStatus": "characterized", "risk": "high",
@@ -1527,8 +1527,8 @@
       "notes": "Tenant-authorized completed-PDF attachment with private no-store/nosniff/sandbox headers, a safe filename, and no permanent storage URL or arbitrary remote proxy."
     },
     "POST /api/signatures/email/preview": {
-      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDeliveryModule", "targetOperation": "previewSignatureEmail", "parityStatus": "characterized", "risk": "high",
-      "notes": "Pure sanitized preview; server controls links/assets and output is not a delivery receipt."
+      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDeliveryModule", "targetOperation": "previewSignatureEmail", "parityStatus": "implemented", "risk": "high",
+      "notes": "Implemented behind an independent default-off preview flag as a pure bounded query; all user content is HTML-escaped, the server controls links/assets, and output is not a delivery receipt."
     },
     "GET /api/signatures/templates": {
       "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "signatureTemplates", "parityStatus": "consumer-cutover-complete", "risk": "high",

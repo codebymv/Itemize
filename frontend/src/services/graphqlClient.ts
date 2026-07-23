@@ -299,6 +299,12 @@ export const isSignatureDocumentGraphqlMutationsEnabled = (): boolean =>
 export const isSignatureTemplateGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_SIGNATURE_TEMPLATE_MUTATIONS_GRAPHQL === 'true';
 
+export const isSignatureCancellationGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_SIGNATURE_CANCELLATION_GRAPHQL === 'true';
+
+export const isSignatureEmailPreviewGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_SIGNATURE_EMAIL_PREVIEW_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

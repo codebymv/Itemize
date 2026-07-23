@@ -25,6 +25,7 @@ import { EstimatesModule } from './estimates/estimates.module';
 import { EmailTemplatesModule } from './email-templates/email-templates.module';
 import { SmsTemplatesModule } from './sms-templates/sms-templates.module';
 import { SignatureDocumentsModule } from './signature-documents/signature-documents.module';
+import { SignatureDeliveryModule } from './signature-delivery/signature-delivery.module';
 import { SignatureTemplatesModule } from './signature-templates/signature-templates.module';
 import { FoundationModule } from './foundation/foundation.module';
 import { FormsModule } from './forms/forms.module';
@@ -86,6 +87,7 @@ const observabilityPlugins = [
     EmailTemplatesModule,
     SmsTemplatesModule,
     SignatureDocumentsModule,
+    SignatureDeliveryModule,
     SignatureTemplatesModule,
     EstimatesModule,
     PipelinesModule,

@@ -1,6 +1,6 @@
 import api, { getApiUrl } from '@/lib/api';
-import { isSignatureDocumentGraphqlMutationsEnabled, isSignatureDocumentGraphqlReadsEnabled, isSignatureTemplateGraphqlMutationsEnabled, isSignatureTemplateGraphqlReadsEnabled } from './graphqlClient';
-import { createSignatureDocumentViaGraphql, createSignatureTemplateViaGraphql, deleteSignatureDocumentViaGraphql, deleteSignatureTemplateViaGraphql, getSignatureAuditViaGraphql, getSignatureDocumentViaGraphql, getSignatureTemplateViaGraphql, instantiateSignatureTemplateViaGraphql, listSignatureDocumentsViaGraphql, listSignatureTemplatesViaGraphql, updateSignatureDocumentViaGraphql, updateSignatureTemplateViaGraphql } from './signaturesGraphql';
+import { isSignatureCancellationGraphqlEnabled, isSignatureDocumentGraphqlMutationsEnabled, isSignatureDocumentGraphqlReadsEnabled, isSignatureEmailPreviewGraphqlEnabled, isSignatureTemplateGraphqlMutationsEnabled, isSignatureTemplateGraphqlReadsEnabled } from './graphqlClient';
+import { cancelSignatureDocumentViaGraphql, createSignatureDocumentViaGraphql, createSignatureTemplateViaGraphql, deleteSignatureDocumentViaGraphql, deleteSignatureTemplateViaGraphql, getSignatureAuditViaGraphql, getSignatureDocumentViaGraphql, getSignatureEmailPreviewViaGraphql, getSignatureTemplateViaGraphql, instantiateSignatureTemplateViaGraphql, listSignatureDocumentsViaGraphql, listSignatureTemplatesViaGraphql, updateSignatureDocumentViaGraphql, updateSignatureTemplateViaGraphql } from './signaturesGraphql';
 
 type ApiPayload = Record<string, unknown>;
 
@@ -186,6 +186,7 @@ export const sendSignatureDocument = async (id: number) => {
 };
 
 export const cancelSignatureDocument = async (id: number) => {
+  if (isSignatureCancellationGraphqlEnabled()) return cancelSignatureDocumentViaGraphql(id);
   const response = await api.post(`/api/signatures/documents/${id}/cancel`);
   return unwrapResponse<SignatureDocument>(response.data);
 };
@@ -221,6 +222,7 @@ export interface SignatureEmailPreviewResponse {
 }
 
 export const getSignatureEmailPreview = async (data: SignatureEmailPreviewRequest) => {
+  if (isSignatureEmailPreviewGraphqlEnabled()) return getSignatureEmailPreviewViaGraphql(data);
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
   const response = await api.post('/api/signatures/email/preview', { ...data, baseUrl });
   return unwrapResponse<SignatureEmailPreviewResponse>(response.data);

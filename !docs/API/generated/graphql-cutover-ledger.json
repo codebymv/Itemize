@@ -12474,7 +12474,7 @@
           "path": "/api/public/sign/:token",
           "rawPath": "/api/public/sign/${token}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 236,
+          "line": 238,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12515,7 +12515,7 @@
           "path": "/api/public/sign/:token",
           "rawPath": "/api/public/sign/${token}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 241,
+          "line": 243,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12562,7 +12562,7 @@
           "path": "/api/public/sign/:token/decline",
           "rawPath": "/api/public/sign/${token}/decline",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 246,
+          "line": 248,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14246,7 +14246,7 @@
           "path": "/api/signatures/documents/:id",
           "rawPath": "/api/signatures/documents/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 195,
+          "line": 196,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14385,7 +14385,7 @@
           "path": "/api/signatures/documents/:id/audit",
           "rawPath": "/api/signatures/documents/${id}/audit",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 231,
+          "line": 233,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14419,7 +14419,7 @@
           "path": "/api/signatures/documents/:id/cancel",
           "rawPath": "/api/signatures/documents/${id}/cancel",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 189,
+          "line": 190,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14438,8 +14438,8 @@
       "owner": "esignatures",
       "targetOperation": "cancelSignatureDocument",
       "targetModule": "SignatureDocumentsModule",
-      "parityStatus": "characterized",
-      "notes": "Idempotently cancels non-completed documents, revokes active capability tokens, cancels reminders, and writes one audit event.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind an independent default-off cancellation flag; one row-locked transaction idempotently cancels non-completed documents, revokes active capability tokens, cancels pending reminders, and writes exactly one audit event.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14562,7 +14562,7 @@
           "path": "/api/signatures/documents/:id/remind",
           "rawPath": "/api/signatures/documents/${id}/remind",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 200,
+          "line": 201,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14746,7 +14746,7 @@
           "path": "/api/signatures/email/preview",
           "rawPath": "/api/signatures/email/preview",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 225,
+          "line": 227,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14758,8 +14758,8 @@
       "owner": "esignatures",
       "targetOperation": "previewSignatureEmail",
       "targetModule": "SignatureDeliveryModule",
-      "parityStatus": "characterized",
-      "notes": "Pure sanitized preview; server controls links/assets and output is not a delivery receipt.",
+      "parityStatus": "implemented",
+      "notes": "Implemented behind an independent default-off preview flag as a pure bounded query; all user content is HTML-escaped, the server controls links/assets, and output is not a delivery receipt.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14780,7 +14780,7 @@
           "path": "/api/signatures/templates",
           "rawPath": "/api/signatures/templates",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 316,
+          "line": 318,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14814,7 +14814,7 @@
           "path": "/api/signatures/templates",
           "rawPath": "/api/signatures/templates",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 290,
+          "line": 292,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14848,7 +14848,7 @@
           "path": "/api/signatures/templates/:id",
           "rawPath": "/api/signatures/templates/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 334,
+          "line": 336,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14882,7 +14882,7 @@
           "path": "/api/signatures/templates/:id",
           "rawPath": "/api/signatures/templates/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 322,
+          "line": 324,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14916,7 +14916,7 @@
           "path": "/api/signatures/templates/:id",
           "rawPath": "/api/signatures/templates/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 299,
+          "line": 301,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14981,7 +14981,7 @@
           "path": "/api/signatures/templates/:id/instantiate",
           "rawPath": "/api/signatures/templates/${id}/instantiate",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 328,
+          "line": 330,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15015,7 +15015,7 @@
           "path": "/api/signatures/templates/upload",
           "rawPath": "/api/signatures/templates/upload",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 308,
+          "line": 310,
           "client": "api",
           "literalInterpolation": false
         }
