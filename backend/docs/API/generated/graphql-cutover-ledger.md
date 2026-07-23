@@ -7,9 +7,9 @@
 - Registered method/path operations: 419
 - API operations under `/api`: 412
 - Non-API registered operations: 7
-- Static frontend callsites: 391
-- Operations with frontend consumers: 369
-- Operations referenced by backend tests: 216
+- Static frontend callsites: 386
+- Operations with frontend consumers: 364
+- Operations referenced by backend tests: 218
 - Recommended GraphQL queries: 125
 - Recommended GraphQL mutations: 244
 - Recommended retained HTTP endpoints: 42
@@ -418,11 +418,11 @@
 | PUT | `/api/whiteboards/:whiteboardId` | 1 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceWhiteboard |
 | DELETE | `/api/whiteboards/:whiteboardId/share` | 2 | 1 | graphql-mutation | high | sharing / WorkspaceSharingModule / disableWhiteboardSharing |
 | POST | `/api/whiteboards/:whiteboardId/share` | 2 | 2 | graphql-mutation | high | sharing / WorkspaceSharingModule / enableWhiteboardSharing |
-| GET | `/api/wireframes` | 1 | 0 | graphql-query | high | _unassigned_ |
-| POST | `/api/wireframes` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| PUT | `/api/wireframes/:id/position` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| DELETE | `/api/wireframes/:wireframeId` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| PUT | `/api/wireframes/:wireframeId` | 1 | 0 | graphql-mutation | high | _unassigned_ |
+| GET | `/api/wireframes` | 0 | 1 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceWireframes |
+| POST | `/api/wireframes` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / createWorkspaceWireframe |
+| PUT | `/api/wireframes/:id/position` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / batchCanvasPositions |
+| DELETE | `/api/wireframes/:wireframeId` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / deleteWorkspaceWireframe |
+| PUT | `/api/wireframes/:wireframeId` | 0 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceWireframe |
 | DELETE | `/api/wireframes/:wireframeId/share` | 1 | 2 | graphql-mutation | high | sharing / WorkspaceSharingModule / disableWireframeSharing |
 | POST | `/api/wireframes/:wireframeId/share` | 1 | 3 | graphql-mutation | high | sharing / WorkspaceSharingModule / enableWireframeSharing |
 | GET | `/api/workflows` | 1 | 3 | graphql-query | medium | automation / WorkflowsModule / workflows |

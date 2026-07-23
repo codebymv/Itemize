@@ -21,9 +21,12 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
   let mutationListId: number;
   let mutationNoteId: number;
   let mutationWhiteboardId: number;
+  let mutationWireframeId: number;
   const sharedListToken = 'f0b7d55d-ec6b-4eb6-aaf4-165c0d82e417';
   const sharedNoteToken = '87a47b12-f802-4e70-97af-8cf98bff3d4d';
   const sharedWhiteboardToken = '621ca66e-2b82-46a7-b2ba-e7343b6cbac2';
+  const sharedWireframeCrudToken =
+    'a0461f1b-9f99-46b9-a0e3-185c74282806';
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -107,6 +110,22 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
         outsiderId,
       ],
     );
+    await pool.query(
+      `INSERT INTO wireframes
+         (user_id, title, category, flow_data, position_x, position_y)
+       VALUES
+         ($1, 'Alpha wireframe', 'Work', $2::jsonb, 110, 120),
+         ($3, 'Outsider wireframe', 'General', $2::jsonb, 0, 0)`,
+      [
+        memberId,
+        JSON.stringify({
+          nodes: [],
+          edges: [],
+          viewport: { x: 0, y: 0, zoom: 1 },
+        }),
+        outsiderId,
+      ],
+    );
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PG_POOL)
@@ -124,6 +143,9 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     const createWhiteboardsRouter = require(
       '../../../backend/src/routes/whiteboards.routes',
     );
+    const createWireframesRouter = require(
+      '../../../backend/src/routes/wireframes.routes',
+    );
     const { authenticateJWT } = require('../../../backend/src/auth/middleware');
     const broadcast = {};
     legacyApp = express();
@@ -134,6 +156,10 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     legacyApp.use(
       '/api',
       createWhiteboardsRouter(pool, authenticateJWT, broadcast),
+    );
+    legacyApp.use(
+      '/api',
+      createWireframesRouter(pool, authenticateJWT, broadcast),
     );
   });
 
@@ -165,12 +191,21 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
                SELECT id FROM whiteboards WHERE user_id = ANY($1::int[])
              )
            )
+         ) OR (
+           aggregate_type = 'wireframe'
+           AND (
+             aggregate_id = $5
+             OR aggregate_id IN (
+               SELECT id FROM wireframes WHERE user_id = ANY($1::int[])
+             )
+           )
          )`,
         [
           [memberId, outsiderId].filter(Boolean),
           mutationNoteId || 0,
           mutationListId || 0,
           mutationWhiteboardId || 0,
+          mutationWireframeId || 0,
         ],
       );
       await pool.query('DELETE FROM users WHERE id = ANY($1::int[])', [
@@ -222,6 +257,10 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     id userId title category categoryId canvasData
     canvasWidth canvasHeight backgroundColor
     positionX positionY zIndex colorValue
+    shareToken isPublic sharedAt createdAt updatedAt`;
+  const wireframeFields = `
+    id userId title category categoryId flowData
+    positionX positionY width height zIndex colorValue
     shareToken isPublic sharedAt createdAt updatedAt`;
 
   it('returns deterministic user-scoped list pages and repairs category identity at read time', async () => {
@@ -941,6 +980,269 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     });
     await request(legacyApp)
       .put(`/api/whiteboards/${mutationWhiteboardId}`)
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .send({ title: 'Gone' })
+      .expect(404);
+  });
+
+  it('covers wireframe CRUD, revisions, tenant isolation, REST parity, and realtime delivery', async () => {
+    const page = await query(
+      memberToken,
+      `query Wireframes(
+        $filter: WorkspaceContentFilterInput
+        $page: PageInput
+      ) {
+        workspaceWireframes(filter: $filter, page: $page) {
+          nodes { ${wireframeFields} }
+          pageInfo { total totalPages }
+        }
+      }`,
+      {
+        filter: { search: 'Alpha', categoryId: workCategoryId },
+        page: { page: 1, pageSize: 10 },
+      },
+    ).expect(200);
+    expect(page.body.errors).toBeUndefined();
+    expect(page.body.data.workspaceWireframes).toMatchObject({
+      pageInfo: { total: 1, totalPages: 1 },
+      nodes: [expect.objectContaining({
+        userId: memberId,
+        title: 'Alpha wireframe',
+        category: 'Work',
+        categoryId: workCategoryId,
+      })],
+    });
+
+    const outsiderPage = await query(
+      outsiderToken,
+      `{ workspaceWireframes {
+        nodes { userId title }
+        pageInfo { total }
+      } }`,
+    ).expect(200);
+    expect(outsiderPage.body.data.workspaceWireframes.nodes).toEqual([
+      expect.objectContaining({
+        userId: outsiderId,
+        title: 'Outsider wireframe',
+      }),
+    ]);
+
+    const created = await mutation(
+      memberToken,
+      `mutation Create($input: CreateWorkspaceWireframeInput!) {
+        createWorkspaceWireframe(input: $input) { ${wireframeFields} }
+      }`,
+      {
+        input: {
+          title: ' GraphQL flow ',
+          category: 'work',
+          flowData: JSON.stringify({
+            nodes: [],
+            edges: [],
+            viewport: { x: 0, y: 0, zoom: 1 },
+          }),
+          positionX: 140.6,
+          positionY: 150.4,
+          width: 640,
+          height: 480,
+          colorValue: '#abcdef',
+        },
+      },
+    ).expect(200);
+    expect(created.body.errors).toBeUndefined();
+    expect(created.body.data.createWorkspaceWireframe).toMatchObject({
+      userId: memberId,
+      title: 'GraphQL flow',
+      category: 'Work',
+      categoryId: workCategoryId,
+      positionX: 141,
+      positionY: 150,
+      width: 640,
+      height: 480,
+      colorValue: '#ABCDEF',
+    });
+    mutationWireframeId =
+      created.body.data.createWorkspaceWireframe.id;
+
+    const rest = await request(legacyApp)
+      .get('/api/wireframes')
+      .set('Cookie', `itemize_auth=${memberToken}`)
+      .expect(200);
+    expect(rest.body.data.wireframes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: mutationWireframeId,
+          title: 'GraphQL flow',
+          category: 'Work',
+        }),
+      ]),
+    );
+
+    await pool.query(
+      `UPDATE wireframes
+       SET is_public = TRUE, share_token = $1, shared_at = CURRENT_TIMESTAMP
+       WHERE id = $2 AND user_id = $3`,
+      [sharedWireframeCrudToken, mutationWireframeId, memberId],
+    );
+    const revision = await pool.query<{ updated_at: Date }>(
+      'SELECT updated_at FROM wireframes WHERE id = $1',
+      [mutationWireframeId],
+    );
+    const expectedUpdatedAt = revision.rows[0].updated_at.toISOString();
+    const mutationId = '65d36343-6c3d-49b7-bbb7-77423bc71ae7';
+    const updateDocument = `mutation Update(
+      $id: Int!, $input: UpdateWorkspaceWireframeInput!
+    ) {
+      updateWorkspaceWireframe(id: $id, input: $input) {
+        ${wireframeFields}
+      }
+    }`;
+    const updated = await mutation(memberToken, updateDocument, {
+      id: mutationWireframeId,
+      input: {
+        mutationId,
+        expectedUpdatedAt,
+        title: 'Live flow',
+        flowData: JSON.stringify({
+          nodes: [{
+            id: 'start',
+            position: { x: 10, y: 20 },
+            data: { label: 'Start' },
+          }],
+          edges: [],
+          viewport: { x: 0, y: 0, zoom: 1 },
+        }),
+      },
+    }).expect(200);
+    expect(updated.body.errors).toBeUndefined();
+    expect(updated.body.data.updateWorkspaceWireframe).toMatchObject({
+      id: mutationWireframeId,
+      title: 'Live flow',
+      flowData: expect.stringContaining('"start"'),
+    });
+
+    const stale = await mutation(memberToken, updateDocument, {
+      id: mutationWireframeId,
+      input: {
+        mutationId: '6083205e-7219-431f-b092-14e1ad519dd7',
+        expectedUpdatedAt,
+        title: 'Stale overwrite',
+      },
+    }).expect(200);
+    expect(stale.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'STALE_WIREFRAME_REVISION',
+      currentUpdatedAt: expect.any(String),
+    });
+
+    const concealed = await mutation(outsiderToken, updateDocument, {
+      id: mutationWireframeId,
+      input: {
+        mutationId: 'bcbd5633-281d-48df-bea0-6767554745a0',
+        expectedUpdatedAt:
+          updated.body.data.updateWorkspaceWireframe.updatedAt,
+        title: 'Hijacked',
+      },
+    }).expect(200);
+    expect(concealed.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const events = await pool.query<{
+      id: string;
+      channel: string;
+      event_name: string;
+      event_type: string;
+    }>(
+      `SELECT id, channel, event_name, event_type
+       FROM realtime_event_outbox
+       WHERE event_key = ANY($1::text[])
+       ORDER BY channel`,
+      [[
+        `wireframe:${mutationWireframeId}:update:${mutationId}:shared`,
+        `wireframe:${mutationWireframeId}:update:${mutationId}:owner`,
+      ]],
+    );
+    expect(events.rows).toEqual([
+      expect.objectContaining({
+        channel: 'shared_wireframe',
+        event_name: 'wireframeUpdated',
+        event_type: 'wireframeUpdated',
+      }),
+      expect.objectContaining({
+        channel: 'user_wireframe',
+        event_name: 'userWireframeUpdated',
+        event_type: 'WIREFRAME_UPDATED',
+      }),
+    ]);
+    const wireframeUpdate = jest.fn();
+    const userWireframeUpdate = jest.fn();
+    const { runRealtimeOutboxJobs } = require(
+      '../../../backend/src/jobs/realtime-outbox-jobs',
+    );
+    for (const event of events.rows) {
+      await expect(runRealtimeOutboxJobs(
+        pool,
+        { wireframeUpdate, userWireframeUpdate },
+        {
+          batchSize: 1,
+          outboxId: event.id,
+          workerId: `wireframe-crud-${event.channel}`,
+        },
+      )).resolves.toMatchObject({ claimed: 1, sent: 1 });
+    }
+    expect(wireframeUpdate).toHaveBeenCalledWith(
+      sharedWireframeCrudToken,
+      'wireframeUpdated',
+      expect.objectContaining({
+        id: mutationWireframeId,
+        title: 'Live flow',
+      }),
+      expect.any(String),
+    );
+    expect(userWireframeUpdate).toHaveBeenCalledWith(
+      String(memberId),
+      'WIREFRAME_UPDATED',
+      expect.objectContaining({
+        id: mutationWireframeId,
+        title: 'Live flow',
+        width: 640,
+      }),
+      expect.any(String),
+    );
+
+    const deleteMutationId = '89a1b661-f658-4a19-80e0-80921cec5168';
+    const deleted = await mutation(
+      memberToken,
+      `mutation Delete($id: Int!, $mutationId: String!) {
+        deleteWorkspaceWireframe(id: $id, mutationId: $mutationId) {
+          deletedId
+        }
+      }`,
+      { id: mutationWireframeId, mutationId: deleteMutationId },
+    ).expect(200);
+    expect(deleted.body.errors).toBeUndefined();
+    expect(deleted.body.data.deleteWorkspaceWireframe.deletedId).toBe(
+      mutationWireframeId,
+    );
+    const deletionEvent = await pool.query<{
+      event_type: string;
+      payload: Record<string, unknown>;
+    }>(
+      `SELECT event_type, payload
+       FROM realtime_event_outbox
+       WHERE event_key = $1`,
+      [
+        `wireframe:${mutationWireframeId}:delete:${deleteMutationId}:shared`,
+      ],
+    );
+    expect(deletionEvent.rows[0]).toMatchObject({
+      event_type: 'wireframeDeleted',
+      payload: {
+        id: mutationWireframeId,
+        message: 'This wireframe has been deleted by the owner.',
+      },
+    });
+    await request(legacyApp)
+      .put(`/api/wireframes/${mutationWireframeId}`)
       .set('Cookie', `itemize_auth=${memberToken}`)
       .send({ title: 'Gone' })
       .expect(404);

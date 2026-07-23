@@ -3,6 +3,7 @@ import {
   WorkspaceListRow,
   WorkspaceNoteRow,
   WorkspaceWhiteboardRow,
+  WorkspaceWireframeRow,
 } from './workspace-content.repository';
 import { WorkspaceContentService } from './workspace-content.service';
 
@@ -76,6 +77,33 @@ const whiteboardRow = (
   ...values,
 });
 
+const wireframeRow = (
+  values: Partial<WorkspaceWireframeRow> = {},
+): WorkspaceWireframeRow => ({
+  id: 5,
+  user_id: 7,
+  title: 'Flow',
+  category: 'General',
+  category_id: 1,
+  flow_data: {
+    nodes: [],
+    edges: [],
+    viewport: { x: 0, y: 0, zoom: 1 },
+  },
+  position_x: 70,
+  position_y: 80,
+  width: 600,
+  height: 600,
+  z_index: 0,
+  color_value: '#3B82F6',
+  share_token: null,
+  is_public: false,
+  shared_at: null,
+  created_at: new Date('2026-07-18T12:00:00.000Z'),
+  updated_at: new Date('2026-07-18T12:01:00.000Z'),
+  ...values,
+});
+
 describe('WorkspaceContentService', () => {
   let repository: jest.Mocked<WorkspaceContentRepository>;
   let service: WorkspaceContentService;
@@ -85,16 +113,20 @@ describe('WorkspaceContentService', () => {
       createList: jest.fn(),
       createNote: jest.fn(),
       createWhiteboard: jest.fn(),
+      createWireframe: jest.fn(),
       batchCanvasPositions: jest.fn(),
       deleteList: jest.fn(),
       deleteNote: jest.fn(),
       deleteWhiteboard: jest.fn(),
+      deleteWireframe: jest.fn(),
       findLists: jest.fn(),
       findNotes: jest.fn(),
       findWhiteboards: jest.fn(),
+      findWireframes: jest.fn(),
       updateList: jest.fn(),
       updateNote: jest.fn(),
       updateWhiteboard: jest.fn(),
+      updateWireframe: jest.fn(),
     } as unknown as jest.Mocked<WorkspaceContentRepository>;
     service = new WorkspaceContentService(repository);
   });
@@ -486,6 +518,84 @@ describe('WorkspaceContentService', () => {
         reason: 'INVALID_WHITEBOARD_CANVAS',
       },
     });
+  });
+
+  it('maps, creates, and revision-guards canonical wireframes', async () => {
+    repository.findWireframes.mockResolvedValue({
+      rows: [wireframeRow()],
+      total: 1,
+    });
+    const page = await service.wireframes(7);
+    expect(page.nodes[0]).toMatchObject({
+      id: 5,
+      userId: 7,
+      flowData: expect.stringContaining('"viewport"'),
+      width: 600,
+    });
+
+    repository.createWireframe.mockResolvedValue({
+      kind: 'completed',
+      row: wireframeRow(),
+    });
+    await service.createWireframe(7, {
+      title: ' Flow ',
+      category: ' general ',
+      flowData:
+        ' { "nodes": [], "edges": [], "viewport": { "x": 0, "y": 0, "zoom": 1 } } ',
+      positionX: 70.6,
+      positionY: 80.4,
+      colorValue: '#abcdef',
+    });
+    expect(repository.createWireframe).toHaveBeenCalledWith(7, {
+      title: 'Flow',
+      category: 'general',
+      flowData:
+        '{"nodes":[],"edges":[],"viewport":{"x":0,"y":0,"zoom":1}}',
+      positionX: 71,
+      positionY: 80,
+      width: 600,
+      height: 600,
+      zIndex: 0,
+      colorValue: '#ABCDEF',
+    });
+
+    repository.updateWireframe.mockResolvedValue({
+      kind: 'conflict',
+      currentUpdatedAt: new Date('2026-07-18T12:02:00.000Z'),
+    });
+    await expect(service.updateWireframe(7, 5, {
+      mutationId: 'e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c',
+      expectedUpdatedAt: new Date('2026-07-18T12:01:00.000Z'),
+      title: 'Changed',
+    })).rejects.toMatchObject({
+      extensions: {
+        code: 'CONFLICT',
+        reason: 'STALE_WIREFRAME_REVISION',
+        currentUpdatedAt: '2026-07-18T12:02:00.000Z',
+      },
+    });
+  });
+
+  it('rejects invalid wireframe flow data and empty updates', async () => {
+    await expect(service.createWireframe(7, {
+      flowData: '[]',
+    })).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'INVALID_WIREFRAME_FLOW',
+      },
+    });
+    await expect(service.updateWireframe(7, 5, {
+      mutationId: 'e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c',
+      expectedUpdatedAt: new Date('2026-07-18T12:01:00.000Z'),
+    })).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'EMPTY_WIREFRAME_UPDATE',
+      },
+    });
+    expect(repository.createWireframe).not.toHaveBeenCalled();
+    expect(repository.updateWireframe).not.toHaveBeenCalled();
   });
 
   it('requires a whiteboard revision and surfaces stale updates', async () => {

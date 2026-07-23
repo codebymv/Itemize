@@ -230,6 +230,75 @@ export class DeleteWorkspaceWhiteboardResult {
 }
 
 @ObjectType()
+export class WorkspaceWireframe {
+  @Field(() => Int)
+  id: number;
+
+  @Field(() => Int)
+  userId: number;
+
+  @Field()
+  title: string;
+
+  @Field()
+  category: string;
+
+  @Field(() => Int, { nullable: true })
+  categoryId: number | null;
+
+  @Field()
+  flowData: string;
+
+  @Field(() => Float)
+  positionX: number;
+
+  @Field(() => Float)
+  positionY: number;
+
+  @Field(() => Int)
+  width: number;
+
+  @Field(() => Int)
+  height: number;
+
+  @Field(() => Int)
+  zIndex: number;
+
+  @Field()
+  colorValue: string;
+
+  @Field(() => String, { nullable: true })
+  shareToken: string | null;
+
+  @Field()
+  isPublic: boolean;
+
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  sharedAt: Date | null;
+
+  @Field(() => GraphQLISODateTime)
+  createdAt: Date;
+
+  @Field(() => GraphQLISODateTime)
+  updatedAt: Date;
+}
+
+@ObjectType()
+export class WorkspaceWireframePage {
+  @Field(() => [WorkspaceWireframe])
+  nodes: WorkspaceWireframe[];
+
+  @Field(() => PageInfo)
+  pageInfo: PageInfo;
+}
+
+@ObjectType()
+export class DeleteWorkspaceWireframeResult {
+  @Field(() => Int)
+  deletedId: number;
+}
+
+@ObjectType()
 export class CanvasPositionUpdateResult {
   @Field()
   type: string;

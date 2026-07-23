@@ -1,8 +1,8 @@
-# Workspace lists, notes, and whiteboards GraphQL cutover contract
+# Workspace lists, notes, whiteboards, and wireframes GraphQL cutover contract
 
 ## Scope and ownership
 
-Personal lists, notes, and whiteboards belong to the authenticated user and
+Personal lists, notes, whiteboards, and wireframes belong to the authenticated user and
 are independent of the selected organization. `WorkspaceContentModule` owns
 their private reads and reachable CRUD mutations. Public capability reads and
 share enable/disable operations remain owned by `PublicSharingModule` and
@@ -19,6 +19,7 @@ outbox atomically. The legacy socket host delivers those rows after commit.
 | `GET /api/canvas/lists` | repeated bounded `workspaceLists` pages |
 | `GET /api/notes` | `workspaceNotes(filter, page)` |
 | `GET /api/whiteboards` | `workspaceWhiteboards(filter, page)` |
+| `GET /api/wireframes` | `workspaceWireframes(filter, page)` |
 
 | Legacy note write | GraphQL mutation |
 | --- | --- |
@@ -32,6 +33,13 @@ outbox atomically. The legacy socket host delivers those rows after commit.
 | `PUT /api/whiteboards/:whiteboardId` | `updateWorkspaceWhiteboard(id, input)` |
 | `DELETE /api/whiteboards/:whiteboardId` | `deleteWorkspaceWhiteboard(id, mutationId)` |
 
+| Legacy wireframe write | GraphQL mutation |
+| --- | --- |
+| `POST /api/wireframes` | `createWorkspaceWireframe(input)` |
+| `PUT /api/wireframes/:wireframeId` | `updateWorkspaceWireframe(id, input)` |
+| `DELETE /api/wireframes/:wireframeId` | `deleteWorkspaceWireframe(id, mutationId)` |
+| `PUT /api/wireframes/:id/position` | `batchCanvasPositions(input)` |
+
 | Reachable legacy list write | GraphQL mutation |
 | --- | --- |
 | `POST /api/lists` | `createWorkspaceList(input)` |
@@ -44,7 +52,7 @@ outbox atomically. The legacy socket host delivers those rows after commit.
 
 ## Authentication and transport
 
-- All three queries require the verified `itemize_auth` cookie.
+- All four queries require the verified `itemize_auth` cookie.
 - Resolvers derive `userId` only from verified request context.
 - The active organization never changes the result.
 - All content mutations require the verified cookie and CSRF header/token pair.
@@ -59,6 +67,8 @@ outbox atomically. The legacy socket host delivers those rows after commit.
   whiteboard create/update/delete.
 - Mixed Canvas position persistence always uses GraphQL and has no REST
   fallback.
+- Wireframe read/create/update/delete and the exported position compatibility
+  adapter always use GraphQL and have no REST fallback.
 - All six flags default to false. Selected GraphQL requests never retry through
   REST after a GraphQL failure.
 
@@ -68,14 +78,14 @@ longer mounts its legacy `/lists` route, so it is not a shipped browser
 consumer. The current Canvas and Contents pages both use the canvas-list
 adapter: `GET /api/canvas/lists` on REST or repeated bounded
 `workspaceLists` pages on GraphQL. Canvas, Contents, and Global Search load
-whiteboards through the shared adapter. Canvas and Contents own the reachable
-whiteboard CRUD calls. The active debounced drag path uses
+whiteboards and wireframes through the shared adapters. Canvas and Contents own
+the reachable whiteboard and wireframe CRUD calls. The active debounced drag path uses
 `batchCanvasPositions` for lists, notes, whiteboards, wireframes, and vaults;
 the dedicated per-kind position adapters are not shipped call paths.
 
 ## Query contract
 
-All three queries return `nodes` plus the shared strict `PageInfo`. Page numbers are
+All four queries return `nodes` plus the shared strict `PageInfo`. Page numbers are
 one-indexed, page size is 1-100, and ordering is deterministic:
 `updatedAt DESC, id DESC`.
 
@@ -84,7 +94,7 @@ one-indexed, page size is 1-100, and ordering is deterministic:
 - `search`, trimmed and limited to 200 characters;
 - `categoryId`, a positive user-owned category ID.
 
-List and whiteboard search match titles. Note search matches title or content.
+List, whiteboard, and wireframe search match titles. Note search matches title or content.
 A category filter is resolved through the authenticated user's category rows
 and cannot use another user's identifier.
 
@@ -131,6 +141,11 @@ serialized size no larger than 1 MiB. Dimensions are 1-10,000, positions are
 finite floats, z-index is a safe integer, and colors are normalized six-digit
 hex values.
 
+Wireframe flow data must be valid JSON with an object root and a serialized
+size no larger than 1 MiB. Dimensions are 1-10,000, positions are finite and
+rounded to the legacy integer contract, z-index is a safe integer, and colors
+are normalized six-digit hex values.
+
 ## Typed list items
 
 List items are returned and mutated as `id`, `text`, and `completed`. Malformed
@@ -149,7 +164,7 @@ overwrite a newer item edit.
 
 ## Mutation status
 
-List, note, and whiteboard create/update/delete are implemented through the
+List, note, whiteboard, and wireframe create/update/delete are implemented through the
 mutations above.
 Note updates lock the row, so concurrent disjoint partial updates compose.
 List updates combine row locking with the required optimistic revision because
@@ -166,6 +181,25 @@ enqueues only `{ id, requires_refetch: true, updated_at }`. The public viewer
 then reloads the authoritative retained HTTP projection. Deletes enqueue the
 small terminal projection. Migration `029_whiteboard_realtime_outbox` extends
 the constrained outbox vocabulary without changing the single socket host.
+
+Wireframe updates require the preceding `updatedAt` revision and serialize
+rapid same-wireframe frontend writes. A stale revision fails with `CONFLICT`,
+`reason: STALE_WIREFRAME_REVISION`, and `currentUpdatedAt`. Update commits both
+the public-viewer and owner-canvas projections atomically with the row; delete
+commits the public-viewer terminal projection. Foreign rows are reported as
+`NOT_FOUND`.
+
+## Wireframe code-level gate
+
+The wireframe CRUD slice passed locally on 2026-07-23. A database built from
+zero verified 111 tables and 85 migration markers, then all 17 workspace
+integration cases passed. The wireframe case proves paginated tenant-scoped
+reads, GraphQL create/update/delete visibility through retained REST, canonical
+category resolution, integer geometry, stale-revision rejection, foreign-row
+concealment, shared and owner outbox delivery through the retained Socket.IO
+worker, and a retained REST miss after delete. Frontend tests prove JSON/casing
+adaptation, serialized revision updates, and absence of CRUD/position REST
+fallbacks.
 
 The following target mutations remain characterized but blocked because no
 shipped consumer needs them for this checkpoint:

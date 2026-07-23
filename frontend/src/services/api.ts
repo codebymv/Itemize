@@ -23,6 +23,7 @@ import {
   getWorkspaceListsViaGraphql,
   getWorkspaceNotesViaGraphql,
   getWorkspaceWhiteboardsViaGraphql,
+  getWorkspaceWireframesViaGraphql,
   updateCanvasPositionsViaGraphql,
 } from './workspaceContentGraphql';
 import {
@@ -40,6 +41,11 @@ import {
   deleteWorkspaceWhiteboardViaGraphql,
   updateWorkspaceWhiteboardViaGraphql,
 } from './workspaceWhiteboardMutationsGraphql';
+import {
+  createWorkspaceWireframeViaGraphql,
+  deleteWorkspaceWireframeViaGraphql,
+  updateWorkspaceWireframeViaGraphql,
+} from './workspaceWireframeMutationsGraphql';
 import {
   forgetWorkspaceWhiteboardRevision,
   rememberWorkspaceWhiteboardRevision,
@@ -529,6 +535,8 @@ export interface CreateWireframePayload {
   flow_data?: FlowData | string;
   position_x?: number;
   position_y?: number;
+  width?: number;
+  height?: number;
   z_index?: number;
   color_value?: string;
 }
@@ -540,44 +548,41 @@ export interface WireframePayload {
   flow_data?: FlowData | string;
   position_x?: number;
   position_y?: number;
+  width?: number;
+  height?: number;
   z_index?: number;
   color_value?: string;
 }
 
 export const getWireframes = async (token?: string) => {
-  const response = await api.get('/api/wireframes', {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return getWorkspaceWireframesViaGraphql();
 };
 
 export const createWireframe = async (wireframeData: CreateWireframePayload, token?: string) => {
-  const response = await api.post('/api/wireframes', wireframeData, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return createWorkspaceWireframeViaGraphql(wireframeData);
 };
 
 export const updateWireframe = async (wireframeId: number, wireframeData: WireframePayload, token?: string) => {
+  void token;
   logger.log('Sending wireframe update to backend:', { wireframeId, wireframeData });
-  const response = await api.put(`/api/wireframes/${wireframeId}`, wireframeData, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  return updateWorkspaceWireframeViaGraphql(wireframeId, wireframeData);
 };
 
 export const deleteWireframe = async (wireframeId: number, token?: string) => {
-  const response = await api.delete(`/api/wireframes/${wireframeId}`, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return deleteWorkspaceWireframeViaGraphql(wireframeId);
 };
 
 export const updateWireframePosition = async (wireframeId: number, x: number, y: number, token?: string) => {
-  const response = await api.put(`/api/wireframes/${wireframeId}/position`, { x, y }, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return updateCanvasPositionsViaGraphql([{
+    type: 'wireframe',
+    id: wireframeId,
+    position_x: x,
+    position_y: y,
+  }]);
 };
 
 // Category API functions

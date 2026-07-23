@@ -14,6 +14,8 @@ import {
   WorkspaceNotePage,
   WorkspaceWhiteboard,
   WorkspaceWhiteboardPage,
+  WorkspaceWireframe,
+  WorkspaceWireframePage,
   BatchCanvasPositionsResult,
 } from './workspace-content.types';
 import {
@@ -22,13 +24,16 @@ import {
   CreateWorkspaceListValues,
   CreateWorkspaceNoteValues,
   CreateWorkspaceWhiteboardValues,
+  CreateWorkspaceWireframeValues,
   UpdateWorkspaceListValues,
   UpdateWorkspaceWhiteboardValues,
+  UpdateWorkspaceWireframeValues,
   WorkspaceContentRepository,
   WorkspaceListRow,
   UpdateWorkspaceNoteValues,
   WorkspaceNoteRow,
   WorkspaceWhiteboardRow,
+  WorkspaceWireframeRow,
 } from './workspace-content.repository';
 import {
   CreateWorkspaceListInput,
@@ -43,6 +48,10 @@ import {
   CreateWorkspaceWhiteboardInput,
   UpdateWorkspaceWhiteboardInput,
 } from './workspace-whiteboard.inputs';
+import {
+  CreateWorkspaceWireframeInput,
+  UpdateWorkspaceWireframeInput,
+} from './workspace-wireframe.inputs';
 
 const DEFAULT_NOTE_COLOR = '#3B82F6';
 const DEFAULT_LIST_WIDTH = 340;
@@ -52,6 +61,8 @@ const MAX_LIST_ITEM_TEXT_LENGTH = 500;
 const MAX_LIST_ITEMS_JSON_BYTES = 40_000;
 const MAX_WHITEBOARD_JSON_BYTES = 1_048_576;
 const MAX_WHITEBOARD_DIMENSION = 10_000;
+const MAX_WIREFRAME_JSON_BYTES = 1_048_576;
+const MAX_WIREFRAME_DIMENSION = 10_000;
 const MAX_CANVAS_POSITION_UPDATES = 250;
 const CANVAS_POSITION_TYPES = new Set<CanvasPositionKind>([
   'list',
@@ -138,6 +149,33 @@ export class WorkspaceContentService {
       });
       return {
         nodes: result.rows.map((row) => this.mapWhiteboard(row)),
+        pageInfo: pageInfo(
+          normalizedPage.page,
+          normalizedPage.pageSize,
+          result.total,
+        ),
+      };
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async wireframes(
+    userId: number,
+    filter: WorkspaceContentFilterInput = {},
+    page: PageInput = new PageInput(),
+  ): Promise<WorkspaceWireframePage> {
+    const normalizedPage = this.normalizePage(page);
+    const normalizedFilter = this.normalizeFilter(filter);
+    try {
+      const result = await this.content.findWireframes({
+        userId,
+        ...normalizedFilter,
+        pageSize: normalizedPage.pageSize,
+        offset: normalizedPage.offset,
+      });
+      return {
+        nodes: result.rows.map((row) => this.mapWireframe(row)),
         pageInfo: pageInfo(
           normalizedPage.page,
           normalizedPage.pageSize,
@@ -599,6 +637,157 @@ export class WorkspaceContentService {
     }
   }
 
+  async createWireframe(
+    userId: number,
+    input: CreateWorkspaceWireframeInput,
+  ): Promise<WorkspaceWireframe> {
+    const values: CreateWorkspaceWireframeValues = {
+      title: input.title === undefined
+        ? 'Untitled Wireframe'
+        : this.wireframeTitle(input.title),
+      category: input.category === undefined
+        ? 'General'
+        : this.wireframeCategory(input.category),
+      flowData: input.flowData === undefined
+        ? '{"nodes":[],"edges":[],"viewport":{"x":0,"y":0,"zoom":1}}'
+        : this.wireframeFlowData(input.flowData),
+      positionX: input.positionX === undefined
+        ? 2000
+        : this.wireframeCoordinate(input.positionX, 'positionX'),
+      positionY: input.positionY === undefined
+        ? 2000
+        : this.wireframeCoordinate(input.positionY, 'positionY'),
+      width: input.width === undefined
+        ? 600
+        : this.wireframeDimension(input.width, 'width'),
+      height: input.height === undefined
+        ? 600
+        : this.wireframeDimension(input.height, 'height'),
+      zIndex: input.zIndex === undefined
+        ? 0
+        : this.wireframeInteger(input.zIndex, 'zIndex'),
+      colorValue: input.colorValue === undefined
+        ? '#3B82F6'
+        : this.wireframeColor(input.colorValue),
+    };
+    try {
+      const outcome = await this.content.createWireframe(userId, values);
+      if (outcome.kind === 'category_not_found') {
+        throw this.wireframeCategoryNotFound();
+      }
+      if (outcome.kind !== 'completed') {
+        throw itemizeGraphqlError(
+          'Workspace wireframe could not be created',
+          'SERVICE_UNAVAILABLE',
+        );
+      }
+      return this.mapWireframe(outcome.row);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async updateWireframe(
+    userId: number,
+    wireframeId: number,
+    input: UpdateWorkspaceWireframeInput,
+  ): Promise<WorkspaceWireframe> {
+    this.wireframeId(wireframeId);
+    const values: Partial<CreateWorkspaceWireframeValues> = {};
+    if (input.title !== undefined) {
+      values.title = this.wireframeTitle(input.title);
+    }
+    if (input.category !== undefined) {
+      values.category = this.wireframeCategory(input.category);
+    }
+    if (input.flowData !== undefined) {
+      values.flowData = this.wireframeFlowData(input.flowData);
+    }
+    if (input.positionX !== undefined) {
+      values.positionX = this.wireframeCoordinate(
+        input.positionX,
+        'positionX',
+      );
+    }
+    if (input.positionY !== undefined) {
+      values.positionY = this.wireframeCoordinate(
+        input.positionY,
+        'positionY',
+      );
+    }
+    if (input.width !== undefined) {
+      values.width = this.wireframeDimension(input.width, 'width');
+    }
+    if (input.height !== undefined) {
+      values.height = this.wireframeDimension(input.height, 'height');
+    }
+    if (input.zIndex !== undefined) {
+      values.zIndex = this.wireframeInteger(input.zIndex, 'zIndex');
+    }
+    if (input.colorValue !== undefined) {
+      values.colorValue = this.wireframeColor(input.colorValue);
+    }
+    if (Object.keys(values).length === 0) {
+      throw itemizeGraphqlError(
+        'Workspace wireframe update must include at least one field',
+        'BAD_USER_INPUT',
+        { reason: 'EMPTY_WIREFRAME_UPDATE' },
+      );
+    }
+    const update: UpdateWorkspaceWireframeValues = {
+      ...values,
+      mutationId: this.mutationId(input.mutationId),
+      expectedUpdatedAt: this.expectedUpdatedAt(
+        input.expectedUpdatedAt,
+        'WIREFRAME',
+      ),
+    };
+    try {
+      const outcome = await this.content.updateWireframe(
+        userId,
+        wireframeId,
+        update,
+      );
+      if (outcome.kind === 'not_found') throw this.wireframeNotFound();
+      if (outcome.kind === 'category_not_found') {
+        throw this.wireframeCategoryNotFound();
+      }
+      if (outcome.kind === 'conflict') {
+        throw itemizeGraphqlError(
+          'Workspace wireframe changed since it was loaded',
+          'CONFLICT',
+          {
+            reason: 'STALE_WIREFRAME_REVISION',
+            currentUpdatedAt: outcome.currentUpdatedAt.toISOString(),
+          },
+        );
+      }
+      return this.mapWireframe(outcome.row);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async deleteWireframe(
+    userId: number,
+    wireframeId: number,
+    mutationId: string,
+  ): Promise<number> {
+    this.wireframeId(wireframeId);
+    const normalizedMutationId = this.mutationId(mutationId);
+    try {
+      const outcome = await this.content.deleteWireframe(
+        userId,
+        wireframeId,
+        normalizedMutationId,
+      );
+      if (outcome.kind === 'not_found') throw this.wireframeNotFound();
+      return outcome.deletedId;
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
   async batchCanvasPositions(
     userId: number,
     input: BatchCanvasPositionsInput,
@@ -805,6 +994,32 @@ export class WorkspaceContentService {
       positionY: Number(row.position_y ?? 0),
       zIndex: Number(row.z_index ?? 0),
       colorValue: row.color_value,
+      shareToken: row.share_token,
+      isPublic: Boolean(row.is_public),
+      sharedAt: row.shared_at ? new Date(row.shared_at) : null,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+    };
+  }
+
+  private mapWireframe(row: WorkspaceWireframeRow): WorkspaceWireframe {
+    return {
+      id: Number(row.id),
+      userId: Number(row.user_id),
+      title: row.title ?? 'Untitled Wireframe',
+      category: row.category ?? 'General',
+      categoryId: row.category_id === null ? null : Number(row.category_id),
+      flowData: JSON.stringify(row.flow_data ?? {
+        nodes: [],
+        edges: [],
+        viewport: { x: 0, y: 0, zoom: 1 },
+      }),
+      positionX: Number(row.position_x ?? 0),
+      positionY: Number(row.position_y ?? 0),
+      width: Number(row.width ?? 600),
+      height: Number(row.height ?? 600),
+      zIndex: Number(row.z_index ?? 0),
+      colorValue: row.color_value ?? '#3B82F6',
       shareToken: row.share_token,
       isPublic: Boolean(row.is_public),
       sharedAt: row.shared_at ? new Date(row.shared_at) : null,
@@ -1195,6 +1410,134 @@ export class WorkspaceContentService {
       'Whiteboard category was not found',
       'BAD_USER_INPUT',
       { field: 'category', reason: 'WHITEBOARD_CATEGORY_NOT_FOUND' },
+    );
+  }
+
+  private wireframeId(value: number): void {
+    if (!Number.isSafeInteger(value) || value < 1) {
+      throw itemizeGraphqlError(
+        'Workspace wireframe ID must be a positive integer',
+        'BAD_USER_INPUT',
+        { field: 'id', reason: 'INVALID_WIREFRAME_ID' },
+      );
+    }
+  }
+
+  private wireframeTitle(value: string | null): string {
+    const title = value?.trim();
+    if (!title || title.length > 255) {
+      throw itemizeGraphqlError(
+        'Wireframe title must contain between 1 and 255 characters',
+        'BAD_USER_INPUT',
+        { field: 'title', reason: 'INVALID_WIREFRAME_TITLE' },
+      );
+    }
+    return title;
+  }
+
+  private wireframeCategory(value: string | null): string {
+    const category = value?.trim();
+    if (!category || category.length > 100) {
+      throw itemizeGraphqlError(
+        'Wireframe category must contain between 1 and 100 characters',
+        'BAD_USER_INPUT',
+        { field: 'category', reason: 'INVALID_WIREFRAME_CATEGORY' },
+      );
+    }
+    return category;
+  }
+
+  private wireframeFlowData(value: string | null): string {
+    if (
+      typeof value !== 'string' ||
+      Buffer.byteLength(value, 'utf8') > MAX_WIREFRAME_JSON_BYTES
+    ) {
+      throw itemizeGraphqlError(
+        'Wireframe flow data must not exceed 1048576 bytes',
+        'BAD_USER_INPUT',
+        { field: 'flowData', reason: 'WIREFRAME_FLOW_TOO_LARGE' },
+      );
+    }
+    try {
+      const parsed: unknown = JSON.parse(value);
+      if (
+        parsed === null ||
+        typeof parsed !== 'object' ||
+        Array.isArray(parsed)
+      ) {
+        throw new Error('Flow JSON must be an object');
+      }
+      return JSON.stringify(parsed);
+    } catch {
+      throw itemizeGraphqlError(
+        'Wireframe flow data must be valid object JSON',
+        'BAD_USER_INPUT',
+        { field: 'flowData', reason: 'INVALID_WIREFRAME_FLOW' },
+      );
+    }
+  }
+
+  private wireframeCoordinate(
+    value: number | null,
+    field: string,
+  ): number {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      throw itemizeGraphqlError(
+        `${field} must be a finite number`,
+        'BAD_USER_INPUT',
+        { field, reason: 'INVALID_WIREFRAME_GEOMETRY' },
+      );
+    }
+    return Math.round(value);
+  }
+
+  private wireframeDimension(value: number | null, field: string): number {
+    if (
+      !Number.isSafeInteger(value) ||
+      (value as number) < 1 ||
+      (value as number) > MAX_WIREFRAME_DIMENSION
+    ) {
+      throw itemizeGraphqlError(
+        `${field} must be an integer between 1 and ${MAX_WIREFRAME_DIMENSION}`,
+        'BAD_USER_INPUT',
+        { field, reason: 'INVALID_WIREFRAME_GEOMETRY' },
+      );
+    }
+    return value as number;
+  }
+
+  private wireframeInteger(value: number | null, field: string): number {
+    if (!Number.isSafeInteger(value)) {
+      throw itemizeGraphqlError(
+        `${field} must be an integer`,
+        'BAD_USER_INPUT',
+        { field, reason: 'INVALID_WIREFRAME_GEOMETRY' },
+      );
+    }
+    return value as number;
+  }
+
+  private wireframeColor(value: string | null): string {
+    const color = value?.trim();
+    if (!color || !COLOR_PATTERN.test(color)) {
+      throw itemizeGraphqlError(
+        'colorValue must be a six-digit hex color',
+        'BAD_USER_INPUT',
+        { field: 'colorValue', reason: 'INVALID_WIREFRAME_COLOR' },
+      );
+    }
+    return color.toUpperCase();
+  }
+
+  private wireframeNotFound(): GraphQLError {
+    return itemizeGraphqlError('Workspace wireframe not found', 'NOT_FOUND');
+  }
+
+  private wireframeCategoryNotFound(): GraphQLError {
+    return itemizeGraphqlError(
+      'Wireframe category was not found',
+      'BAD_USER_INPUT',
+      { field: 'category', reason: 'WIREFRAME_CATEGORY_NOT_FOUND' },
     );
   }
 

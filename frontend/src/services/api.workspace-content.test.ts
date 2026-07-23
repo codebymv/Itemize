@@ -4,6 +4,7 @@ import {
   fetchCanvasLists,
   getLists,
   getNotes,
+  getWireframes,
   updateCanvasPositions,
 } from './api';
 import {
@@ -14,6 +15,7 @@ import {
   getCanvasListsViaGraphql,
   getWorkspaceListsViaGraphql,
   getWorkspaceNotesViaGraphql,
+  getWorkspaceWireframesViaGraphql,
   updateCanvasPositionsViaGraphql,
 } from './workspaceContentGraphql';
 
@@ -32,8 +34,16 @@ vi.mock('./workspaceContentGraphql', () => ({
   getCanvasListsViaGraphql: vi.fn(),
   getWorkspaceListsViaGraphql: vi.fn(),
   getWorkspaceNotesViaGraphql: vi.fn(),
+  getWorkspaceWireframesViaGraphql: vi.fn(),
   updateCanvasPositionsViaGraphql: vi.fn(),
   whiteboardFields: '',
+  wireframeFields: '',
+}));
+
+vi.mock('./workspaceWireframeMutationsGraphql', () => ({
+  createWorkspaceWireframeViaGraphql: vi.fn(),
+  deleteWorkspaceWireframeViaGraphql: vi.fn(),
+  updateWorkspaceWireframeViaGraphql: vi.fn(),
 }));
 
 const list = {
@@ -150,5 +160,22 @@ describe('workspace content API transport selection', () => {
       failed: [],
     });
     expect(updateCanvasPositionsViaGraphql).toHaveBeenCalledWith(updates);
+  });
+
+  it('always reads wireframes through GraphQL without a REST fallback', async () => {
+    vi.mocked(getWorkspaceWireframesViaGraphql).mockResolvedValue({
+      wireframes: [],
+      pagination: {
+        page: 1,
+        limit: 50,
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false,
+      },
+    });
+    await expect(getWireframes()).resolves.toMatchObject({ wireframes: [] });
+    expect(getWorkspaceWireframesViaGraphql).toHaveBeenCalledOnce();
+    expect(api.get).not.toHaveBeenCalled();
   });
 });

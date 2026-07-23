@@ -20,6 +20,10 @@ import {
   UpdateWorkspaceWhiteboardInput,
 } from './workspace-whiteboard.inputs';
 import {
+  CreateWorkspaceWireframeInput,
+  UpdateWorkspaceWireframeInput,
+} from './workspace-wireframe.inputs';
+import {
   DeleteWorkspaceListResult,
   DeleteWorkspaceNoteResult,
   DeleteWorkspaceWhiteboardResult,
@@ -30,6 +34,9 @@ import {
   WorkspaceNotePage,
   WorkspaceWhiteboard,
   WorkspaceWhiteboardPage,
+  DeleteWorkspaceWireframeResult,
+  WorkspaceWireframe,
+  WorkspaceWireframePage,
 } from './workspace-content.types';
 
 @Resolver()
@@ -61,6 +68,14 @@ export class WorkspaceContentResolver {
     @Args('page', { nullable: true }) page?: PageInput,
   ): Promise<WorkspaceWhiteboardPage> {
     return this.content.whiteboards(this.userId(), filter, page);
+  }
+
+  @Query(() => WorkspaceWireframePage)
+  workspaceWireframes(
+    @Args('filter', { nullable: true }) filter?: WorkspaceContentFilterInput,
+    @Args('page', { nullable: true }) page?: PageInput,
+  ): Promise<WorkspaceWireframePage> {
+    return this.content.wireframes(this.userId(), filter, page);
   }
 
   @CsrfProtected()
@@ -152,6 +167,38 @@ export class WorkspaceContentResolver {
   ): Promise<DeleteWorkspaceWhiteboardResult> {
     return {
       deletedId: await this.content.deleteWhiteboard(
+        this.userId(),
+        id,
+        mutationId,
+      ),
+    };
+  }
+
+  @CsrfProtected()
+  @Mutation(() => WorkspaceWireframe)
+  createWorkspaceWireframe(
+    @Args('input') input: CreateWorkspaceWireframeInput,
+  ): Promise<WorkspaceWireframe> {
+    return this.content.createWireframe(this.userId(), input);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => WorkspaceWireframe)
+  updateWorkspaceWireframe(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('input') input: UpdateWorkspaceWireframeInput,
+  ): Promise<WorkspaceWireframe> {
+    return this.content.updateWireframe(this.userId(), id, input);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => DeleteWorkspaceWireframeResult)
+  async deleteWorkspaceWireframe(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('mutationId') mutationId: string,
+  ): Promise<DeleteWorkspaceWireframeResult> {
+    return {
+      deletedId: await this.content.deleteWireframe(
         this.userId(),
         id,
         mutationId,

@@ -1726,6 +1726,26 @@
       "disposition": "retain-http", "owner": "sharing", "targetModule": "VaultSharingModule", "targetOperation": "getSharedVault", "parityStatus": "characterizing", "risk": "high",
       "notes": "Rate-limited no-store bearer capability that returns decrypted secrets; hashed tokens, explicit consent, logging redaction, and browser coverage are required."
     },
+    "GET /api/wireframes": {
+      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceWireframes", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "All Canvas, Contents, Shared workspace, and Global Search consumers now use a tenant-scoped paginated GraphQL query with title/category filtering, deterministic ordering, canonical category identity, safe flow JSON mapping, and no REST fallback."
+    },
+    "POST /api/wireframes": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceWireframe", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "CSRF-protected user-scoped creation validates bounded object JSON, geometry, dimensions, colors, and canonical category identity. Coordinates preserve the legacy integer rounding contract and the frontend has no REST fallback."
+    },
+    "PUT /api/wireframes/:wireframeId": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceWireframe", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Row-locked updates require the preceding updatedAt revision, serialize rapid same-wireframe frontend saves, conceal foreign rows, and atomically enqueue both public-viewer and owner-canvas realtime projections. PostgreSQL proves stale-write rejection and retained REST visibility."
+    },
+    "DELETE /api/wireframes/:wireframeId": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "deleteWorkspaceWireframe", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "CSRF-protected user-scoped deletion uses a stable mutation ID and commits the public-viewer terminal projection in the same transaction. PostgreSQL proves worker delivery, tenant concealment, and the retained REST miss."
+    },
+    "PUT /api/wireframes/:id/position": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "batchCanvasPositions", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "The exported compatibility adapter and active debounced Canvas drag path both use the bounded mixed-aggregate GraphQL mutation. There is no wireframe position REST fallback."
+    },
     "POST /api/wireframes/:wireframeId/share": {
       "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "enableWireframeSharing", "parityStatus": "blocked", "risk": "high",
       "notes": "Issuance is concurrency-safe, but the product has no public wireframe API operation or frontend route; do not cut over a link that cannot resolve."

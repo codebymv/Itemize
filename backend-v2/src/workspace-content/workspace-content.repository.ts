@@ -70,6 +70,26 @@ export type WorkspaceWhiteboardRow = {
   updated_at: Date;
 };
 
+export type WorkspaceWireframeRow = {
+  id: number;
+  user_id: number;
+  title: string | null;
+  category: string | null;
+  category_id: number | null;
+  flow_data: unknown;
+  position_x: number | null;
+  position_y: number | null;
+  width: number | null;
+  height: number | null;
+  z_index: number | null;
+  color_value: string | null;
+  share_token: string | null;
+  is_public: boolean | null;
+  shared_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+};
+
 export type WorkspaceContentCriteria = {
   userId: number;
   search?: string;
@@ -137,6 +157,24 @@ export type UpdateWorkspaceWhiteboardValues =
     expectedUpdatedAt: Date;
   };
 
+export type CreateWorkspaceWireframeValues = {
+  title: string;
+  category: string;
+  flowData: string;
+  positionX: number;
+  positionY: number;
+  width: number;
+  height: number;
+  zIndex: number;
+  colorValue: string;
+};
+
+export type UpdateWorkspaceWireframeValues =
+  Partial<CreateWorkspaceWireframeValues> & {
+    mutationId: string;
+    expectedUpdatedAt: Date;
+  };
+
 export type WorkspaceNoteMutationOutcome =
   | { kind: 'completed'; row: WorkspaceNoteRow }
   | { kind: 'not_found' }
@@ -163,6 +201,16 @@ export type WorkspaceWhiteboardMutationOutcome =
   | { kind: 'conflict'; currentUpdatedAt: Date };
 
 export type DeleteWorkspaceWhiteboardOutcome =
+  | { kind: 'deleted'; deletedId: number }
+  | { kind: 'not_found' };
+
+export type WorkspaceWireframeMutationOutcome =
+  | { kind: 'completed'; row: WorkspaceWireframeRow }
+  | { kind: 'not_found' }
+  | { kind: 'category_not_found' }
+  | { kind: 'conflict'; currentUpdatedAt: Date };
+
+export type DeleteWorkspaceWireframeOutcome =
   | { kind: 'deleted'; deletedId: number }
   | { kind: 'not_found' };
 
@@ -247,6 +295,24 @@ const whiteboardMutationSelection = `
   background_color,
   position_x,
   position_y,
+  z_index,
+  color_value,
+  share_token,
+  is_public,
+  shared_at,
+  created_at,
+  updated_at`;
+
+const wireframeMutationSelection = `
+  id,
+  user_id,
+  title,
+  category,
+  flow_data,
+  position_x,
+  position_y,
+  width,
+  height,
   z_index,
   color_value,
   share_token,
@@ -454,6 +520,45 @@ export class WorkspaceContentRepository {
            content.background_color,
            content.position_x,
            content.position_y,
+           content.z_index,
+           content.color_value,
+           content.share_token,
+           content.is_public,
+           content.shared_at,
+           content.created_at,
+           content.updated_at
+         ${query.from}
+         ${query.where}
+         ORDER BY content.updated_at DESC, content.id DESC
+         LIMIT $${query.parameters.length + 1}
+         OFFSET $${query.parameters.length + 2}`,
+        [...query.parameters, criteria.pageSize, criteria.offset],
+      ),
+    ]);
+    return { rows: rows.rows, total: count.rows[0]?.total ?? 0 };
+  }
+
+  async findWireframes(
+    criteria: WorkspaceContentCriteria,
+  ): Promise<{ rows: WorkspaceWireframeRow[]; total: number }> {
+    const query = this.queryParts('wireframes', criteria, false);
+    const [count, rows] = await Promise.all([
+      this.pool.query<{ total: number }>(
+        `SELECT COUNT(*)::int AS total ${query.from} ${query.where}`,
+        query.parameters,
+      ),
+      this.pool.query<WorkspaceWireframeRow>(
+        `SELECT
+           content.id,
+           content.user_id,
+           content.title,
+           COALESCE(NULLIF(content.category, ''), 'General') AS category,
+           category.id AS category_id,
+           content.flow_data,
+           content.position_x,
+           content.position_y,
+           content.width,
+           content.height,
            content.z_index,
            content.color_value,
            content.share_token,
@@ -1003,8 +1108,189 @@ export class WorkspaceContentRepository {
     });
   }
 
+  async createWireframe(
+    userId: number,
+    values: CreateWorkspaceWireframeValues,
+  ): Promise<WorkspaceWireframeMutationOutcome> {
+    return this.transaction(async (client) => {
+      const category = await this.categoryForCreate(
+        client,
+        userId,
+        values.category,
+      );
+      if (!category) return { kind: 'category_not_found' };
+
+      const result = await client.query<WorkspaceWireframeRow>(
+        `INSERT INTO wireframes (
+           user_id, title, category, flow_data, position_x, position_y,
+           width, height, z_index, color_value
+         )
+         VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9, $10)
+         RETURNING ${wireframeMutationSelection}`,
+        [
+          userId,
+          values.title,
+          category.name,
+          values.flowData,
+          values.positionX,
+          values.positionY,
+          values.width,
+          values.height,
+          values.zIndex,
+          values.colorValue,
+        ],
+      );
+      return {
+        kind: 'completed',
+        row: { ...result.rows[0], category_id: category.id },
+      };
+    });
+  }
+
+  async updateWireframe(
+    userId: number,
+    wireframeId: number,
+    values: UpdateWorkspaceWireframeValues,
+  ): Promise<WorkspaceWireframeMutationOutcome> {
+    return this.transaction(async (client) => {
+      const currentResult = await client.query<WorkspaceWireframeRow>(
+        `SELECT ${wireframeMutationSelection}
+         FROM wireframes
+         WHERE id = $1 AND user_id = $2
+         FOR UPDATE`,
+        [wireframeId, userId],
+      );
+      const current = currentResult.rows[0];
+      if (!current) return { kind: 'not_found' };
+      if (
+        new Date(current.updated_at).getTime() !==
+        values.expectedUpdatedAt.getTime()
+      ) {
+        return {
+          kind: 'conflict',
+          currentUpdatedAt: new Date(current.updated_at),
+        };
+      }
+
+      const category = await this.category(
+        client,
+        userId,
+        values.category ?? current.category ?? 'General',
+      );
+      if (!category) return { kind: 'category_not_found' };
+
+      const updatedResult = await client.query<WorkspaceWireframeRow>(
+        `UPDATE wireframes SET
+           title = $1,
+           category = $2,
+           flow_data = $3::jsonb,
+           position_x = $4,
+           position_y = $5,
+           width = $6,
+           height = $7,
+           z_index = $8,
+           color_value = $9,
+           updated_at = GREATEST(
+             clock_timestamp(),
+             updated_at + INTERVAL '1 millisecond'
+           )
+         WHERE id = $10 AND user_id = $11
+         RETURNING ${wireframeMutationSelection}`,
+        [
+          values.title ?? current.title ?? 'Untitled Wireframe',
+          category.name,
+          values.flowData ?? JSON.stringify(current.flow_data ?? {}),
+          values.positionX ?? current.position_x ?? 0,
+          values.positionY ?? current.position_y ?? 0,
+          values.width ?? current.width ?? 600,
+          values.height ?? current.height ?? 600,
+          values.zIndex ?? current.z_index ?? 0,
+          values.colorValue ?? current.color_value ?? '#3B82F6',
+          wireframeId,
+          userId,
+        ],
+      );
+      const updated = {
+        ...updatedResult.rows[0],
+        category_id: category.id,
+      };
+      const occurredAt = new Date(updated.updated_at);
+      if (updated.is_public && updated.share_token) {
+        await this.realtimeOutbox.enqueue(client, {
+          eventKey:
+            `wireframe:${wireframeId}:update:${values.mutationId}:shared`,
+          aggregateType: 'wireframe',
+          aggregateId: wireframeId,
+          channel: 'shared_wireframe',
+          recipientKey: updated.share_token,
+          eventName: 'wireframeUpdated',
+          eventType: 'wireframeUpdated',
+          payload: this.sharedWireframePayload(updated),
+          occurredAt,
+        });
+      }
+      await this.realtimeOutbox.enqueue(client, {
+        eventKey:
+          `wireframe:${wireframeId}:update:${values.mutationId}:owner`,
+        aggregateType: 'wireframe',
+        aggregateId: wireframeId,
+        channel: 'user_wireframe',
+        recipientKey: String(userId),
+        eventName: 'userWireframeUpdated',
+        eventType: 'WIREFRAME_UPDATED',
+        payload: this.ownerWireframePayload(updated),
+        occurredAt,
+      });
+      return { kind: 'completed', row: updated };
+    });
+  }
+
+  async deleteWireframe(
+    userId: number,
+    wireframeId: number,
+    mutationId: string,
+  ): Promise<DeleteWorkspaceWireframeOutcome> {
+    return this.transaction(async (client) => {
+      const currentResult = await client.query<
+        WorkspaceWireframeRow & { mutation_occurred_at: Date }
+      >(
+        `SELECT ${wireframeMutationSelection},
+                clock_timestamp() AS mutation_occurred_at
+         FROM wireframes
+         WHERE id = $1 AND user_id = $2
+         FOR UPDATE`,
+        [wireframeId, userId],
+      );
+      const current = currentResult.rows[0];
+      if (!current) return { kind: 'not_found' };
+
+      await client.query(
+        'DELETE FROM wireframes WHERE id = $1 AND user_id = $2',
+        [wireframeId, userId],
+      );
+      if (current.is_public && current.share_token) {
+        await this.realtimeOutbox.enqueue(client, {
+          eventKey:
+            `wireframe:${wireframeId}:delete:${mutationId}:shared`,
+          aggregateType: 'wireframe',
+          aggregateId: wireframeId,
+          channel: 'shared_wireframe',
+          recipientKey: current.share_token,
+          eventName: 'wireframeUpdated',
+          eventType: 'wireframeDeleted',
+          payload: {
+            id: wireframeId,
+            message: 'This wireframe has been deleted by the owner.',
+          },
+          occurredAt: new Date(current.mutation_occurred_at),
+        });
+      }
+      return { kind: 'deleted', deletedId: wireframeId };
+    });
+  }
+
   private queryParts(
-    table: 'lists' | 'notes' | 'whiteboards',
+    table: 'lists' | 'notes' | 'whiteboards' | 'wireframes',
     criteria: WorkspaceContentCriteria,
     searchContent: boolean,
   ): QueryParts {
@@ -1109,6 +1395,31 @@ export class WorkspaceContentRepository {
       items: list.items,
       color_value: list.color_value,
       updated_at: new Date(list.updated_at).toISOString(),
+    };
+  }
+
+  private sharedWireframePayload(
+    wireframe: WorkspaceWireframeRow,
+  ): Record<string, unknown> {
+    return {
+      id: wireframe.id,
+      title: wireframe.title,
+      category: wireframe.category ?? 'General',
+      flow_data: wireframe.flow_data,
+      color_value: wireframe.color_value ?? '#3B82F6',
+      updated_at: new Date(wireframe.updated_at).toISOString(),
+    };
+  }
+
+  private ownerWireframePayload(
+    wireframe: WorkspaceWireframeRow,
+  ): Record<string, unknown> {
+    return {
+      ...this.sharedWireframePayload(wireframe),
+      position_x: Number(wireframe.position_x ?? 0),
+      position_y: Number(wireframe.position_y ?? 0),
+      width: Number(wireframe.width ?? 600),
+      height: Number(wireframe.height ?? 600),
     };
   }
 

@@ -1,6 +1,7 @@
 import type { CanvasPositionUpdate } from './api';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 import { rememberWorkspaceWhiteboardRevision } from './workspaceWhiteboardRevision';
+import { rememberWorkspaceWireframeRevision } from './workspaceWireframeRevision';
 
 type GraphqlPageInfo = {
   page: number;
@@ -72,6 +73,26 @@ export type GraphqlWorkspaceWhiteboard = {
   updatedAt: string;
 };
 
+export type GraphqlWorkspaceWireframe = {
+  id: number;
+  userId: number;
+  title: string;
+  category: string;
+  categoryId: number | null;
+  flowData: string;
+  positionX: number;
+  positionY: number;
+  width: number;
+  height: number;
+  zIndex: number;
+  colorValue: string;
+  shareToken: string | null;
+  isPublic: boolean;
+  sharedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type LegacyWorkspaceList = {
   id: number;
   user_id: number;
@@ -134,6 +155,26 @@ export type LegacyWorkspaceWhiteboard = {
   updated_at: string;
 };
 
+export type LegacyWorkspaceWireframe = {
+  id: number;
+  user_id: number;
+  title: string;
+  category: string;
+  category_id: number | null;
+  flow_data: unknown;
+  position_x: number;
+  position_y: number;
+  width: number;
+  height: number;
+  z_index: number;
+  color_value: string;
+  share_token: string | null;
+  is_public: boolean;
+  shared_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type LegacyPageInfo = {
   page: number;
   limit: number;
@@ -163,6 +204,12 @@ export const whiteboardFields = `
   shareToken isPublic sharedAt createdAt updatedAt
 `;
 
+export const wireframeFields = `
+  id userId title category categoryId flowData
+  positionX positionY width height zIndex colorValue
+  shareToken isPublic sharedAt createdAt updatedAt
+`;
+
 const listsQuery = `
   query WorkspaceLists($page: PageInput) {
     workspaceLists(page: $page) {
@@ -189,6 +236,17 @@ const whiteboardsQuery = `
   query WorkspaceWhiteboards($page: PageInput) {
     workspaceWhiteboards(page: $page) {
       nodes { ${whiteboardFields} }
+      pageInfo {
+        page pageSize total totalPages hasNextPage hasPreviousPage
+      }
+    }
+  }
+`;
+
+const wireframesQuery = `
+  query WorkspaceWireframes($page: PageInput) {
+    workspaceWireframes(page: $page) {
+      nodes { ${wireframeFields} }
       pageInfo {
         page pageSize total totalPages hasNextPage hasPreviousPage
       }
@@ -281,6 +339,41 @@ export const mapWhiteboard = (
   };
 };
 
+export const mapWireframe = (
+  wireframe: GraphqlWorkspaceWireframe,
+): LegacyWorkspaceWireframe => {
+  let flowData: unknown = {
+    nodes: [],
+    edges: [],
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
+  try {
+    flowData = JSON.parse(wireframe.flowData);
+  } catch {
+    // Preserve a safe, renderable empty diagram if persisted legacy JSON is bad.
+  }
+  rememberWorkspaceWireframeRevision(wireframe.id, wireframe.updatedAt);
+  return {
+    id: wireframe.id,
+    user_id: wireframe.userId,
+    title: wireframe.title,
+    category: wireframe.category,
+    category_id: wireframe.categoryId,
+    flow_data: flowData,
+    position_x: wireframe.positionX,
+    position_y: wireframe.positionY,
+    width: wireframe.width,
+    height: wireframe.height,
+    z_index: wireframe.zIndex,
+    color_value: wireframe.colorValue,
+    share_token: wireframe.shareToken,
+    is_public: wireframe.isPublic,
+    shared_at: wireframe.sharedAt,
+    created_at: wireframe.createdAt,
+    updated_at: wireframe.updatedAt,
+  };
+};
+
 const listPage = async (page: number, pageSize: number) => {
   const variables = { page: { page, pageSize } };
   const data = await graphqlRequest<{
@@ -348,6 +441,26 @@ export const getWorkspaceWhiteboardsViaGraphql = async (
   return {
     whiteboards: data.workspaceWhiteboards.nodes.map(mapWhiteboard),
     pagination: mapPage(data.workspaceWhiteboards.pageInfo),
+  };
+};
+
+export const getWorkspaceWireframesViaGraphql = async (
+  page = 1,
+  limit = 50,
+): Promise<{
+  wireframes: LegacyWorkspaceWireframe[];
+  pagination: LegacyPageInfo;
+}> => {
+  const variables = { page: { page, pageSize: limit } };
+  const data = await graphqlRequest<{
+    workspaceWireframes: {
+      nodes: GraphqlWorkspaceWireframe[];
+      pageInfo: GraphqlPageInfo;
+    };
+  }, typeof variables>(wireframesQuery, variables);
+  return {
+    wireframes: data.workspaceWireframes.nodes.map(mapWireframe),
+    pagination: mapPage(data.workspaceWireframes.pageInfo),
   };
 };
 

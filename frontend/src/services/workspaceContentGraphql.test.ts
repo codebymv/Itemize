@@ -9,6 +9,7 @@ import {
   getWorkspaceListsViaGraphql,
   getWorkspaceNotesViaGraphql,
   getWorkspaceWhiteboardsViaGraphql,
+  getWorkspaceWireframesViaGraphql,
 } from './workspaceContentGraphql';
 
 vi.mock('@/lib/api', () => ({
@@ -78,6 +79,27 @@ const whiteboard = {
   updatedAt: '2026-07-18T12:01:00.000Z',
 };
 
+const wireframe = {
+  id: 7,
+  userId: 7,
+  title: 'Flow',
+  category: 'Work',
+  categoryId: 2,
+  flowData:
+    '{"nodes":[],"edges":[],"viewport":{"x":0,"y":0,"zoom":1}}',
+  positionX: 70,
+  positionY: 80,
+  width: 600,
+  height: 600,
+  zIndex: 4,
+  colorValue: '#3B82F6',
+  shareToken: null,
+  isPublic: false,
+  sharedAt: null,
+  createdAt: '2026-07-18T12:00:00.000Z',
+  updatedAt: '2026-07-18T12:01:00.000Z',
+};
+
 const response = (payload: unknown): Response =>
   ({
     ok: true,
@@ -137,6 +159,41 @@ describe('workspace content GraphQL consumer', () => {
         canvas_width: 750,
         background_color: '#FFFFFF',
         updated_at: whiteboard.updatedAt,
+      }],
+      pagination: { page: 1, limit: 50, total: 1 },
+    });
+  });
+
+  it('maps wireframe flow JSON and geometry into the legacy UI envelope', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      response({
+        data: {
+          workspaceWireframes: {
+            nodes: [wireframe],
+            pageInfo: {
+              page: 1,
+              pageSize: 50,
+              total: 1,
+              totalPages: 1,
+              hasNextPage: false,
+              hasPreviousPage: false,
+            },
+          },
+        },
+      }),
+    );
+    await expect(getWorkspaceWireframesViaGraphql()).resolves.toMatchObject({
+      wireframes: [{
+        id: 7,
+        user_id: 7,
+        flow_data: {
+          nodes: [],
+          edges: [],
+          viewport: { x: 0, y: 0, zoom: 1 },
+        },
+        position_x: 70,
+        width: 600,
+        updated_at: wireframe.updatedAt,
       }],
       pagination: { page: 1, limit: 50, total: 1 },
     });
