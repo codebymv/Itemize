@@ -1,8 +1,8 @@
 # File, binary, and bulk-transfer cutover contract
 
-**Status:** Retained HTTP targets implemented for contact transfer and invoice PDF; durable invoice-logo deletion implemented; remaining file-service boundaries characterized
+**Status:** Retained HTTP targets implemented for contact transfer and invoice PDF; durable invoice-logo and signature draft-PDF deletion implemented; remaining file-service boundaries characterized
 
-**Evidence date:** 2026-07-20
+**Evidence date:** 2026-07-23
 
 ## Decision
 
@@ -15,6 +15,7 @@ Never persist or return a permanent public URL for a private signature document.
 | Surface | Protocol and authorization | Frozen boundary |
 | --- | --- | --- |
 | Signature source/template upload | Authenticated multipart HTTP plus organization membership and signature access | One `file`, 5 MiB maximum, actual `%PDF-` prefix, forced `.pdf` key, tenant-owned draft/template checked before storage metadata is committed |
+| Signature draft-PDF removal | CSRF-protected GraphQL metadata mutation | Tenant-owned draft row lock; idempotent metadata clear and audit; former exact storage locator committed to a leased cleanup job |
 | Signature template/source view | Authenticated HTTP PDF stream | Tenant lookup first; private/no-store, `nosniff`, sandbox CSP, safe inline filename; only the private signature local root or exact configured S3 bucket and `signatures/` prefix may be read |
 | Completed signature download | Authenticated HTTP attachment | Tenant-owned completed artifact only; safe filename and the same private delivery/storage allowlist |
 | Public signing PDF | Rate-limited signing capability over HTTP | Active, unexpired recipient/document capability first; private/no-store stream or attachment; no arbitrary URL proxy and no permanent object URL |
@@ -40,6 +41,8 @@ The server validates authorization and the owning draft/template before acceptin
 Database transactions cannot atomically commit object-store side effects. The NestJS target must use a staged object followed by a locked metadata commit and idempotent finalize/cleanup work. Failed commits, abandoned upload intents, replaced objects, and deleted drafts require a retryable garbage-collection path. Legal source/signed artifacts attached to sent or completed documents are immutable and follow the evidence-retention policy.
 
 Invoice-logo removal now follows that split boundary. Migration `037_invoice_logo_deletion_jobs` commits the tenant, scope, owner ID, and exact former URL with the metadata clear. Its leased one-shot worker preserves URLs still referenced by another tenant row and allows the terminal receipt to be requeued when the final reference is later removed. It accepts only a safe filename under the local public logo directory or an HTTPS object in the configured bucket's exact S3 host and `logos/` prefix. Missing local objects converge on success; provider errors retry with bounded backoff; malformed, foreign, or unsupported URLs dead-letter without an outbound request or filesystem traversal.
+
+Signature draft-PDF removal now uses the same durable split. Migration `043_signature_file_deletion_jobs` records the tenant, document snapshot, and former locator in the metadata transaction. The worker preserves any locator still referenced by a document or template, accepts only a traversal-safe path below the private signature root or the exact configured S3 host and `signatures/` prefix, treats a missing local object as success, retries transient errors, and dead-letters unowned locators without egress. Whole-draft deletion also enqueues an attached source PDF. `VITE_SIGNATURE_FILE_MUTATIONS_GRAPHQL` and worker scheduling remain default-off until production rehearsal.
 
 Persist at least byte length, normalized media type, SHA-256, storage key, uploader, organization, creation time, and lifecycle state. Log stable object/document IDs, never capabilities, raw storage URLs, or file contents.
 

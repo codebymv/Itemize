@@ -1519,8 +1519,8 @@
       "notes": "Tenant-authorized binary stream; never proxy an arbitrary stored URL and never expose a permanent public object URL."
     },
     "DELETE /api/signatures/documents/:id/file": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "removeSignatureDraftPdf", "parityStatus": "characterized", "risk": "high",
-      "notes": "Draft-only storage deletion; sent/completed source and signed artifacts are immutable."
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "removeSignatureDraftPdf", "parityStatus": "implemented", "risk": "high",
+      "notes": "Draft-only metadata removal atomically enqueues exact server-owned storage cleanup; sent/completed source and signed artifacts are immutable."
     },
     "GET /api/signatures/documents/:id/download": {
       "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "downloadCompletedSignaturePdf", "parityStatus": "characterized", "risk": "high",

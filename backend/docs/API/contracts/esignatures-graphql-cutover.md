@@ -1,8 +1,8 @@
 # E-signatures GraphQL cutover contract
 
-**Status:** Authenticated reads, draft/template mutations, provider-free cancellation, and email preview live; provider delivery, file management, and public signing remain
+**Status:** Authenticated reads, draft/template mutations, provider-free cancellation, and email preview live; durable delivery and draft-PDF removal implemented default-off; uploads, file delivery, and public signing remain HTTP
 
-**Evidence date:** 2026-07-22
+**Evidence date:** 2026-07-23
 
 ## Decision
 
@@ -14,7 +14,7 @@ The authoritative assignments for all 28 signature operations are in `graphql-op
 
 | Domain | NestJS owner | Target operations |
 | --- | --- | --- |
-| Documents and audit | `SignatureDocumentsModule` | `signatureDocuments`, `signatureDocument`, `createSignatureDocument`, `updateSignatureDraft`, `deleteSignatureDraft`, `cancelSignatureDocument`, `signatureAuditTrail` |
+| Documents and audit | `SignatureDocumentsModule` | `signatureDocuments`, `signatureDocument`, `createSignatureDocument`, `updateSignatureDraft`, `deleteSignatureDraft`, `removeSignatureDraftPdf`, `cancelSignatureDocument`, `signatureAuditTrail` |
 | Templates | `SignatureTemplatesModule` | `signatureTemplates`, `signatureTemplate`, `createSignatureTemplate`, `updateSignatureTemplate`, `deleteSignatureTemplate`, `instantiateSignatureTemplate` |
 | Delivery intent | `SignatureDeliveryModule` | `sendSignatureDocument`, `sendSignatureReminder`, `scheduleSignatureReminders`, `previewSignatureEmail` |
 | Binary storage/delivery | `SignatureFilesModule` | retained HTTP draft/template upload, tenant/private source stream, completed download, and capability-authorized signing stream/download |
@@ -121,7 +121,7 @@ Fresh PostgreSQL now covers concurrent initial-send exclusion, atomic cancellati
 
 ## Implemented draft and template mutation slice
 
-`SignatureDocumentsModule` now implements `createSignatureDocument`, `updateSignatureDraft`, and `deleteSignatureDraft`. `SignatureTemplatesModule` implements `createSignatureTemplate`, `updateSignatureTemplate`, `deleteSignatureTemplate`, and `instantiateSignatureTemplate`. The frontend selects them through independent production-enabled rollback flags: `VITE_SIGNATURE_DOCUMENT_MUTATIONS_GRAPHQL` and `VITE_SIGNATURE_TEMPLATE_MUTATIONS_GRAPHQL`; multipart source upload and deletion remain on their existing HTTP boundary.
+`SignatureDocumentsModule` now implements `createSignatureDocument`, `updateSignatureDraft`, and `deleteSignatureDraft`. `SignatureTemplatesModule` implements `createSignatureTemplate`, `updateSignatureTemplate`, `deleteSignatureTemplate`, and `instantiateSignatureTemplate`. The frontend selects them through independent production-enabled rollback flags: `VITE_SIGNATURE_DOCUMENT_MUTATIONS_GRAPHQL` and `VITE_SIGNATURE_TEMPLATE_MUTATIONS_GRAPHQL`; multipart source upload remains on its existing HTTP boundary and draft-PDF removal has a separate staged GraphQL switch.
 
 Document metadata, recipient replacement, field replacement, and role-to-recipient binding now share one row-locked transaction. Template metadata, unique roles, and role-bound fields likewise commit together. Creation and instantiation serialize on the organization row before enforcing the starter/unlimited monthly document quota, preventing concurrent requests from oversubscribing it. Inputs bind recipients to tenant-owned contacts, constrain email/role uniqueness, reject unimplemented OTP identity methods, bound aggregate sizes and geometry, and preserve explicit nullable metadata clearing. Non-draft deletion fails with `CONFLICT`.
 
@@ -129,7 +129,7 @@ Fresh PostgreSQL proves complete rollback when a child mapping fails after metad
 
 Commit `8e756351` deployed through legacy backend `70c49ae0-0624-4778-a658-4dd763cf6456`, GraphQL `7625d3ce-e69c-4504-aaf2-1c948715afcc`, and flag-enabled frontend `a8a0c352-1fa3-4f9d-8bef-ccab8ab588d7`. Railway confirms both mutation flags are `true`. An authenticated production browser created and edited a no-file template, instantiated it, edited the resulting draft, created a separate draft, and deleted both drafts and the template without console errors or provider work. Nest recorded successful zero-error operations for all seven mutation names, and the existing sent document remained untouched.
 
-The authenticated read and draft/template mutation slices have completed production consumer validation. Delivery is implemented behind a default-off consumer switch; file-management and public-signing are not ready for cutover until:
+The authenticated read and draft/template mutation slices have completed production consumer validation. Delivery and draft-PDF removal are implemented behind independent default-off consumer switches; uploads, binary delivery, and public-signing are not ready for cutover until:
 
 1. public field values, shared ownership, sequential routing, expiry, decline, and terminal races have complete validation and PostgreSQL coverage;
 2. source/signed artifacts use immutable versioned private storage with safe parsing, scanning, delivery, cleanup, and no arbitrary URL proxy;
@@ -159,3 +159,11 @@ The worker converts due schedules into recipient-scoped intents, leases work wit
 Focused service, renderer, adapter, and migration tests pass. The clean-schema gate passes 489/489 retained Express tests and 219/219 Nest PostgreSQL integration tests; the full Nest unit suite passes 373/373 and the frontend suite passes 355/355. PostgreSQL proves one initial-send winner, one provider call under concurrent workers, no raw capability in the outbox, scheduled reminder conversion, manual reminder supersession, bounded delays, audit fencing, and cancellation of queued delivery.
 
 Commit `5bcabdf2` deployed safely with the delivery consumer still off through retained backend `15f75079-ad47-45ea-8497-fb8f437b2298`, GraphQL `c2c42c73-278c-4a18-b49a-4f63eb486e86`, and frontend `f99512b2-23db-462d-b63f-a53476cbb74f`. Railway applied migration 042 and all services became healthy. Safe unauthenticated probes proved the three operations exist in the live schema, while the shipped frontend bundle retained REST send/remind code and omitted the GraphQL delivery operation text. No worker schedule or provider canary has run.
+
+## Implemented durable draft-PDF removal slice
+
+`SignatureDocumentsModule` now implements CSRF-protected `removeSignatureDraftPdf`. The transaction locks the tenant-owned document, rejects non-drafts, is idempotent once metadata is absent, atomically clears every original/signed file locator and hash, appends one `file_removed` audit event, and enqueues the former locator before commit. `deleteSignatureDraft` uses the same enqueue boundary, closing the pre-existing orphan-object path. The frontend routes only this call through `VITE_SIGNATURE_FILE_MUTATIONS_GRAPHQL`, which remains default-off independently of draft metadata mutations and multipart upload.
+
+Migration 043 adds `signature_file_deletion_jobs`. The standalone retained-backend worker leases with `SKIP LOCKED`, fences completion by claim generation, defers while any document or template still references the locator, and deletes only traversal-safe local signature paths or the exact configured S3 bucket plus `signatures/` prefix. Missing local files converge on success, transient failures retry with bounded backoff, and unsupported locators dead-letter without filesystem or network access. Worker scheduling remains deferred to the final operational cutover.
+
+Focused migration, service, adapter, and unit tests pass. The clean-schema gate passes 489/489 retained Express tests and 220/220 Nest PostgreSQL integration tests. The disposable e-signature contract proves tenant concealment, lifecycle refusal, idempotent metadata clearing, one audit event, durable cleanup on whole-draft deletion, shared-reference preservation, and exactly one completion when two workers race.

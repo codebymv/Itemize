@@ -537,6 +537,128 @@ describe('E-signature GraphQL read contract', () => {
     });
   });
 
+  it('removes draft PDF metadata atomically and durably cleans unreferenced owned storage', async () => {
+    const sharedUrl = '/uploads/signatures/shared-removal.pdf';
+    const inserted = await pool.query<{ id: number }>(
+      `INSERT INTO signature_documents
+         (organization_id,title,file_url,file_name,file_size,file_type,original_sha256,
+          status,created_by,created_at,updated_at)
+       VALUES
+         ($1,'Removal target',$3,'shared-removal.pdf',600,'application/pdf','hash-one',
+          'draft',$2,'2026-01-01T00:00:00Z','2026-01-01T00:00:00Z'),
+         ($1,'Shared reference',$3,'shared-removal.pdf',600,'application/pdf','hash-two',
+          'draft',$2,'2026-01-01T00:00:00Z','2026-01-01T00:00:00Z'),
+         ($1,'Delete target','/uploads/signatures/delete-draft.pdf','delete-draft.pdf',
+          500,'application/pdf','hash-three','draft',$2,
+          '2026-01-01T00:00:00Z','2026-01-01T00:00:00Z'),
+         ($1,'Sent immutable','/uploads/signatures/sent.pdf','sent.pdf',500,
+          'application/pdf','hash-four','sent',$2,
+          '2026-01-01T00:00:00Z','2026-01-01T00:00:00Z')
+       RETURNING id`,
+      [organizationId, memberId, sharedUrl],
+    );
+    const [removeId, sharedId, deleteId, sentId] = inserted.rows.map((row) => Number(row.id));
+    const remove = () => graphql(
+      memberToken,
+      organizationId,
+      `mutation Remove($id:Int!){removeSignatureDraftPdf(id:$id){${documentFields}}}`,
+      { id: removeId },
+    );
+    const first = await remove();
+    const repeated = await remove();
+    expect(first.body.errors).toBeUndefined();
+    expect(first.body.data.removeSignatureDraftPdf).toMatchObject({
+      id: removeId,
+      status: 'DRAFT',
+      hasFile: false,
+      hasSignedFile: false,
+      fileName: null,
+      fileType: null,
+      fileSize: null,
+    });
+    expect(repeated.body.errors).toBeUndefined();
+    const state = await pool.query(
+      `SELECT
+         (SELECT COUNT(*) FROM signature_file_deletion_jobs
+          WHERE organization_id=$1 AND file_url=$3) AS jobs,
+         (SELECT COUNT(*) FROM signature_audit_log
+          WHERE document_id=$2 AND event_type='file_removed') AS audits`,
+      [organizationId, removeId, sharedUrl],
+    );
+    expect(Number(state.rows[0].jobs)).toBe(1);
+    expect(Number(state.rows[0].audits)).toBe(1);
+
+    const hidden = await graphql(
+      memberToken,
+      organizationId,
+      'mutation Remove($id:Int!){removeSignatureDraftPdf(id:$id){id}}',
+      { id: foreignDocumentId },
+    );
+    expect(hidden.body.errors[0].extensions.code).toBe('NOT_FOUND');
+    const immutable = await graphql(
+      memberToken,
+      organizationId,
+      'mutation Remove($id:Int!){removeSignatureDraftPdf(id:$id){id}}',
+      { id: sentId },
+    );
+    expect(immutable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'SIGNATURE_DOCUMENT_NOT_DRAFT',
+    });
+
+    const deleted = await graphql(
+      memberToken,
+      organizationId,
+      'mutation Delete($id:Int!){deleteSignatureDraft(id:$id){id}}',
+      { id: deleteId },
+    );
+    expect(deleted.body.errors).toBeUndefined();
+    expect((await pool.query(
+      `SELECT id FROM signature_file_deletion_jobs
+       WHERE organization_id=$1 AND file_url='/uploads/signatures/delete-draft.pdf'`,
+      [organizationId],
+    )).rows).toHaveLength(1);
+
+    const { SignatureFileCleanupService } = require(
+      '../../../backend/src/services/signature-file-cleanup.service',
+    );
+    const unlink = jest.fn().mockResolvedValue(undefined);
+    const cleanup = new SignatureFileCleanupService(pool, {
+      unlink,
+      getLocalFilePath: (value: string) =>
+        value.startsWith('/uploads/signatures/') ? `C:\\safe\\${value.split('/').pop()}` : null,
+      s3Service: null,
+    });
+    const job = await pool.query<{ id: number }>(
+      `SELECT id FROM signature_file_deletion_jobs
+       WHERE organization_id=$1 AND file_url=$2`,
+      [organizationId, sharedUrl],
+    );
+    await expect(cleanup.run({ jobId: Number(job.rows[0].id) })).resolves.toMatchObject({
+      claimed: 1,
+      deferred: 1,
+      deleted: 0,
+    });
+    expect(unlink).not.toHaveBeenCalled();
+    await pool.query('UPDATE signature_documents SET file_url=NULL WHERE id=$1', [sharedId]);
+    await pool.query(
+      `UPDATE signature_file_deletion_jobs SET next_attempt_at=NOW()
+       WHERE id=$1`,
+      [job.rows[0].id],
+    );
+    const race = await Promise.all([
+      cleanup.run({ jobId: Number(job.rows[0].id) }),
+      cleanup.run({ jobId: Number(job.rows[0].id) }),
+    ]);
+    expect(race.reduce((sum: number, result: { deleted: number }) => sum + result.deleted, 0))
+      .toBe(1);
+    expect(unlink).toHaveBeenCalledTimes(1);
+    expect((await pool.query(
+      'SELECT status FROM signature_file_deletion_jobs WHERE id=$1',
+      [job.rows[0].id],
+    )).rows[0].status).toBe('deleted');
+  });
+
   it('durably sends, reminds, schedules, and cancels without persisting raw signing capabilities', async () => {
     deliveryEmail.send.mockReset().mockResolvedValue({ providerId: 'signature-provider-1' });
     const inserted = await pool.query<{ id: number }>(

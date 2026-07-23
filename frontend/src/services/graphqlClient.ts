@@ -308,6 +308,9 @@ export const isSignatureEmailPreviewGraphqlEnabled = (): boolean =>
 export const isSignatureDeliveryGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_SIGNATURE_DELIVERY_GRAPHQL === 'true';
 
+export const isSignatureFileMutationsGraphqlEnabled = (): boolean =>
+  import.meta.env.VITE_SIGNATURE_FILE_MUTATIONS_GRAPHQL === 'true';
+
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

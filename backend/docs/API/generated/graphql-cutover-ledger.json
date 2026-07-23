@@ -12474,7 +12474,7 @@
           "path": "/api/public/sign/:token",
           "rawPath": "/api/public/sign/${token}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 240,
+          "line": 241,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12515,7 +12515,7 @@
           "path": "/api/public/sign/:token",
           "rawPath": "/api/public/sign/${token}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 245,
+          "line": 246,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12562,7 +12562,7 @@
           "path": "/api/public/sign/:token/decline",
           "rawPath": "/api/public/sign/${token}/decline",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 250,
+          "line": 251,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14162,7 +14162,7 @@
           "path": "/api/signatures/documents",
           "rawPath": "/api/signatures/documents",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 163,
+          "line": 164,
           "client": "api",
           "literalInterpolation": false
         },
@@ -14171,7 +14171,7 @@
           "path": "/api/signatures/documents",
           "rawPath": "/api/signatures/documents",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 172,
+          "line": 173,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14246,7 +14246,7 @@
           "path": "/api/signatures/documents/:id",
           "rawPath": "/api/signatures/documents/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 197,
+          "line": 198,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14280,7 +14280,7 @@
           "path": "/api/signatures/documents/:id",
           "rawPath": "/api/signatures/documents/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 179,
+          "line": 180,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14385,7 +14385,7 @@
           "path": "/api/signatures/documents/:id/audit",
           "rawPath": "/api/signatures/documents/${id}/audit",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 235,
+          "line": 236,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14419,7 +14419,7 @@
           "path": "/api/signatures/documents/:id/cancel",
           "rawPath": "/api/signatures/documents/${id}/cancel",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 191,
+          "line": 192,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14491,7 +14491,7 @@
           "path": "/api/signatures/documents/:id/file",
           "rawPath": "/api/signatures/documents/${id}/file",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 157,
+          "line": 158,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14502,9 +14502,9 @@
       "disposition": "graphql-mutation",
       "owner": "esignatures",
       "targetOperation": "removeSignatureDraftPdf",
-      "targetModule": "SignatureFilesModule",
-      "parityStatus": "characterized",
-      "notes": "Draft-only storage deletion; sent/completed source and signed artifacts are immutable.",
+      "targetModule": "SignatureDocumentsModule",
+      "parityStatus": "implemented",
+      "notes": "Draft-only metadata removal atomically enqueues exact server-owned storage cleanup; sent/completed source and signed artifacts are immutable.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14562,7 +14562,7 @@
           "path": "/api/signatures/documents/:id/remind",
           "rawPath": "/api/signatures/documents/${id}/remind",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 203,
+          "line": 204,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14640,7 +14640,7 @@
           "path": "/api/signatures/documents/:id/send",
           "rawPath": "/api/signatures/documents/${id}/send",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 185,
+          "line": 186,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14746,7 +14746,7 @@
           "path": "/api/signatures/email/preview",
           "rawPath": "/api/signatures/email/preview",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 229,
+          "line": 230,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14780,7 +14780,7 @@
           "path": "/api/signatures/templates",
           "rawPath": "/api/signatures/templates",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 320,
+          "line": 321,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14814,7 +14814,7 @@
           "path": "/api/signatures/templates",
           "rawPath": "/api/signatures/templates",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 294,
+          "line": 295,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14848,7 +14848,7 @@
           "path": "/api/signatures/templates/:id",
           "rawPath": "/api/signatures/templates/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 338,
+          "line": 339,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14882,7 +14882,7 @@
           "path": "/api/signatures/templates/:id",
           "rawPath": "/api/signatures/templates/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 326,
+          "line": 327,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14916,7 +14916,7 @@
           "path": "/api/signatures/templates/:id",
           "rawPath": "/api/signatures/templates/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 303,
+          "line": 304,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14981,7 +14981,7 @@
           "path": "/api/signatures/templates/:id/instantiate",
           "rawPath": "/api/signatures/templates/${id}/instantiate",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 332,
+          "line": 333,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15015,7 +15015,7 @@
           "path": "/api/signatures/templates/upload",
           "rawPath": "/api/signatures/templates/upload",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 312,
+          "line": 313,
           "client": "api",
           "literalInterpolation": false
         }

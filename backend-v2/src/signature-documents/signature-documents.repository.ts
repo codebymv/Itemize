@@ -203,12 +203,42 @@ export class SignatureDocumentsRepository {
 
   async deleteDraft(organizationId: number, id: number): Promise<{ row: SignatureDocumentRow | null; status: string | null }> {
     return this.transaction(async (client) => {
-      const current = await client.query<{ status:string }>('SELECT status FROM signature_documents WHERE id=$1 AND organization_id=$2 FOR UPDATE', [id, organizationId]);
+      const current = await client.query<{ status:string; file_url:string|null }>('SELECT status,file_url FROM signature_documents WHERE id=$1 AND organization_id=$2 FOR UPDATE', [id, organizationId]);
       if (!current.rows[0]) return { row:null, status:null };
       if (current.rows[0].status !== 'draft') return { row:null, status:current.rows[0].status };
       const row = await this.selectDocument(client, organizationId, id);
+      await this.enqueueFileDeletion(client, organizationId, id, current.rows[0].file_url);
       await client.query('DELETE FROM signature_documents WHERE id=$1 AND organization_id=$2 AND status=\'draft\'', [id, organizationId]);
       return { row, status:'draft' };
+    });
+  }
+
+  async removeDraftFile(organizationId:number,id:number):Promise<{row:SignatureDocumentRow|null;status:string|null}>{
+    return this.transaction(async client=>{
+      const current=await client.query<{status:string;file_url:string|null}>(
+        'SELECT status,file_url FROM signature_documents WHERE id=$1 AND organization_id=$2 FOR UPDATE',
+        [id,organizationId],
+      );
+      if(!current.rows[0])return{row:null,status:null};
+      if(current.rows[0].status!=='draft')return{row:null,status:current.rows[0].status};
+      if(current.rows[0].file_url===null){
+        return{row:await this.selectDocument(client,organizationId,id),status:'draft'};
+      }
+      await this.enqueueFileDeletion(client,organizationId,id,current.rows[0].file_url);
+      await client.query(
+        `UPDATE signature_documents SET file_url=NULL,file_name=NULL,file_size=NULL,
+           file_type=NULL,original_sha256=NULL,signed_file_url=NULL,signed_sha256=NULL,
+           updated_at=CURRENT_TIMESTAMP
+         WHERE id=$1 AND organization_id=$2 AND status='draft'`,
+        [id,organizationId],
+      );
+      await client.query(
+        `INSERT INTO signature_audit_log
+           (document_id,event_type,description,created_at)
+         VALUES ($1,'file_removed','Document file removed',CURRENT_TIMESTAMP)`,
+        [id],
+      );
+      return{row:await this.selectDocument(client,organizationId,id),status:'draft'};
     });
   }
 
@@ -300,6 +330,32 @@ export class SignatureDocumentsRepository {
   private async remapFieldsByRole(client:PoolClient,documentId:number,recipients:Map<string,number>):Promise<void>{
     await client.query('UPDATE signature_fields SET recipient_id=NULL WHERE document_id=$1',[documentId]);
     for(const [role,id]of recipients)await client.query('UPDATE signature_fields SET recipient_id=$1 WHERE document_id=$2 AND role_name=$3',[id,documentId,role]);
+  }
+
+  private async enqueueFileDeletion(
+    client:PoolClient,
+    organizationId:number,
+    documentId:number,
+    fileUrl:string|null,
+  ):Promise<void>{
+    if(!fileUrl)return;
+    await client.query(
+      `INSERT INTO signature_file_deletion_jobs
+         (organization_id,document_id,file_url)
+       VALUES ($1,$2,$3)
+       ON CONFLICT (organization_id,file_url) DO UPDATE SET
+         document_id=EXCLUDED.document_id,
+         status=CASE WHEN signature_file_deletion_jobs.status IN ('deleted','dead_letter')
+           THEN 'queued' ELSE signature_file_deletion_jobs.status END,
+         next_attempt_at=CASE WHEN signature_file_deletion_jobs.status IN ('deleted','dead_letter')
+           THEN CURRENT_TIMESTAMP ELSE signature_file_deletion_jobs.next_attempt_at END,
+         deleted_at=CASE WHEN signature_file_deletion_jobs.status IN ('deleted','dead_letter')
+           THEN NULL ELSE signature_file_deletion_jobs.deleted_at END,
+         last_error=CASE WHEN signature_file_deletion_jobs.status IN ('deleted','dead_letter')
+           THEN NULL ELSE signature_file_deletion_jobs.last_error END,
+         updated_at=CURRENT_TIMESTAMP`,
+      [organizationId,documentId,fileUrl],
+    );
   }
 
   private async selectDocument(client:PoolClient,organizationId:number,id:number):Promise<SignatureDocumentRow>{

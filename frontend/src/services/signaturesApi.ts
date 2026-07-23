@@ -1,6 +1,6 @@
 import api, { getApiUrl } from '@/lib/api';
-import { isSignatureCancellationGraphqlEnabled, isSignatureDeliveryGraphqlEnabled, isSignatureDocumentGraphqlMutationsEnabled, isSignatureDocumentGraphqlReadsEnabled, isSignatureEmailPreviewGraphqlEnabled, isSignatureTemplateGraphqlMutationsEnabled, isSignatureTemplateGraphqlReadsEnabled } from './graphqlClient';
-import { cancelSignatureDocumentViaGraphql, createSignatureDocumentViaGraphql, createSignatureTemplateViaGraphql, deleteSignatureDocumentViaGraphql, deleteSignatureTemplateViaGraphql, getSignatureAuditViaGraphql, getSignatureDocumentViaGraphql, getSignatureEmailPreviewViaGraphql, getSignatureTemplateViaGraphql, instantiateSignatureTemplateViaGraphql, listSignatureDocumentsViaGraphql, listSignatureTemplatesViaGraphql, remindSignatureDocumentViaGraphql, sendSignatureDocumentViaGraphql, updateSignatureDocumentViaGraphql, updateSignatureTemplateViaGraphql } from './signaturesGraphql';
+import { isSignatureCancellationGraphqlEnabled, isSignatureDeliveryGraphqlEnabled, isSignatureDocumentGraphqlMutationsEnabled, isSignatureDocumentGraphqlReadsEnabled, isSignatureEmailPreviewGraphqlEnabled, isSignatureFileMutationsGraphqlEnabled, isSignatureTemplateGraphqlMutationsEnabled, isSignatureTemplateGraphqlReadsEnabled } from './graphqlClient';
+import { cancelSignatureDocumentViaGraphql, createSignatureDocumentViaGraphql, createSignatureTemplateViaGraphql, deleteSignatureDocumentViaGraphql, deleteSignatureTemplateViaGraphql, getSignatureAuditViaGraphql, getSignatureDocumentViaGraphql, getSignatureEmailPreviewViaGraphql, getSignatureTemplateViaGraphql, instantiateSignatureTemplateViaGraphql, listSignatureDocumentsViaGraphql, listSignatureTemplatesViaGraphql, remindSignatureDocumentViaGraphql, removeSignatureDocumentFileViaGraphql, sendSignatureDocumentViaGraphql, updateSignatureDocumentViaGraphql, updateSignatureTemplateViaGraphql } from './signaturesGraphql';
 
 type ApiPayload = Record<string, unknown>;
 
@@ -154,6 +154,7 @@ export const uploadSignatureDocument = async (documentId: number, file: File) =>
 };
 
 export const deleteSignatureDocumentFile = async (id: number) => {
+  if (isSignatureFileMutationsGraphqlEnabled()) return removeSignatureDocumentFileViaGraphql(id);
   const response = await api.delete(`/api/signatures/documents/${id}/file`);
   return unwrapResponse<SignatureDocument>(response.data);
 };

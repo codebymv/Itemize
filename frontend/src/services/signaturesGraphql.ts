@@ -495,6 +495,11 @@ export const deleteSignatureDocumentViaGraphql=async(id:number,organizationId?:n
   return mapDocument(data.deleteSignatureDraft);
 };
 
+export const removeSignatureDocumentFileViaGraphql=async(id:number,organizationId?:number):Promise<SignatureDocument>=>{
+  const data=await graphqlMutationRequest<{removeSignatureDraftPdf:GqlDocument},{id:number}>(`mutation RemoveSignatureDraftPdf($id:Int!){removeSignatureDraftPdf(id:$id){${documentFields}}}`,{id},organizationId);
+  return mapDocument(data.removeSignatureDraftPdf);
+};
+
 export const cancelSignatureDocumentViaGraphql=async(id:number,organizationId?:number):Promise<SignatureDocument>=>{
   const data=await graphqlMutationRequest<{cancelSignatureDocument:GqlDocument},{id:number}>(`mutation CancelSignatureDocument($id:Int!){cancelSignatureDocument(id:$id){${documentFields}}}`,{id},organizationId);
   return mapDocument(data.cancelSignatureDocument);

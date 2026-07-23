@@ -24,7 +24,8 @@
     "workflow:rollout:canary": "node scripts/workflow-rollout.js canary",
     "workflow:rollout:drain": "node scripts/workflow-rollout.js drain",
     "db:test:reset": "node scripts/initialize-test-database.js --reset --confirm-reset",
-    "db:test:verify": "node scripts/initialize-test-database.js"
+    "db:test:verify": "node scripts/initialize-test-database.js",
+    "jobs:signature-file-cleanup": "node scripts/run-signature-file-cleanup.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.975.0",

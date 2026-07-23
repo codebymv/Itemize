@@ -58,6 +58,15 @@ export class SignatureDocumentsService {
     return this.document(result.row);
   }
 
+  async removeFile(organizationId:number,id:number):Promise<SignatureDocument>{
+    await this.access(organizationId);this.id(id);
+    const result=await this.repository.removeDraftFile(organizationId,id);
+    if(result.status===null)throw itemizeGraphqlError('Signature document not found','NOT_FOUND');
+    if(result.status!=='draft')throw itemizeGraphqlError('Only draft document files can be removed','CONFLICT',{reason:'SIGNATURE_DOCUMENT_NOT_DRAFT'});
+    if(!result.row)throw new Error('Updated signature draft snapshot is unavailable');
+    return this.document(result.row);
+  }
+
   async cancel(organizationId:number,id:number):Promise<SignatureDocument>{
     await this.access(organizationId);this.id(id);
     const result=await this.repository.cancelDocument(organizationId,id);

@@ -329,7 +329,7 @@ describe('test database schema contract', () => {
         );
 
         expect(startupSource).toContain(
-            "WHERE version = '042_signature_delivery_outbox'"
+            "WHERE version = '043_signature_file_deletion_jobs'"
         );
     });
 
@@ -546,6 +546,17 @@ describe('test database schema contract', () => {
         expect(sql).toContain('idx_signature_delivery_outbox_claim');
         expect(sql).toContain('idempotency_key VARCHAR(255) NOT NULL UNIQUE');
         expect(sql).toContain("'dead_letter'");
+    });
+
+    test('production migration stream creates durable signature file deletion jobs', async () => {
+        const migration = require('../../../scripts/migrations/043_signature_file_deletion_jobs');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS signature_file_deletion_jobs');
+        expect(sql).toContain('signature_file_deletion_identity');
+        expect(sql).toContain('idx_signature_file_deletion_jobs_claim');
     });
 
     test('production migration stream creates replayable Stripe subscription reconciliation', async () => {
