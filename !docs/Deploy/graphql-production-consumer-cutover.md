@@ -56,12 +56,14 @@ The authenticated e-signature read cutover completed on 2026-07-22 from commit `
 
 The atomic e-signature draft/template mutation cutover completed on 2026-07-22 from commit `8e756351` with legacy backend deployment `70c49ae0-0624-4778-a658-4dd763cf6456`, GraphQL deployment `7625d3ce-e69c-4504-aaf2-1c948715afcc`, and flag-enabled frontend deployment `a8a0c352-1fa3-4f9d-8bef-ccab8ab588d7`. Railway confirmed `VITE_SIGNATURE_DOCUMENT_MUTATIONS_GRAPHQL=true` and `VITE_SIGNATURE_TEMPLATE_MUTATIONS_GRAPHQL=true`. An authenticated browser created and edited a disposable no-file template, instantiated it, edited the resulting draft, created a direct draft, and removed both drafts and the template. The console remained clean, no provider or file side effect occurred, and Nest recorded successful zero-error `CreateSignatureDocument`, `UpdateSignatureDraft`, `DeleteSignatureDraft`, `CreateSignatureTemplate`, `UpdateSignatureTemplate`, `DeleteSignatureTemplate`, and `InstantiateSignatureTemplate` operations. Delivery/lifecycle, binary protocols, and public signing remain on their documented boundaries.
 
+The durable e-signature delivery implementation deployed default-off on 2026-07-22 from commit `5bcabdf2` through retained backend `15f75079-ad47-45ea-8497-fb8f437b2298`, GraphQL `c2c42c73-278c-4a18-b49a-4f63eb486e86`, and frontend `f99512b2-23db-462d-b63f-a53476cbb74f`. The backend pre-deploy log executed migration `042_signature_delivery_outbox.js`; Nest started successfully; production health returned `healthy`; and unauthenticated probes resolved `sendSignatureDocument`, `sendSignatureReminder`, and `scheduleSignatureReminders` before returning `UNAUTHENTICATED`. The deployed frontend bundle contains the retained REST send/remind paths and no delivery-mutation operation text, proving `VITE_SIGNATURE_DELIVERY_GRAPHQL` remained compiled off. No worker schedule, provider call, or data mutation was performed.
+
 After deployment, verify:
 
 1. `https://itemize.cloud` returns HTTP `200`;
 2. production `/api/health` returns HTTP `200`;
 3. a proxied GraphQL `__typename` query returns HTTP `200`;
-4. all 85 domain `VITE_*_GRAPHQL` variables plus `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` are `true`;
+4. all approved consumer `VITE_*_GRAPHQL` variables are `true`, while every documented staged/default-off switch such as `VITE_SIGNATURE_DELIVERY_GRAPHQL` remains `false`;
 5. the frontend and backend deployments resolve to the Git commit containing this document;
 6. GraphQL logs contain no internal-error spike after the frontend replacement.
 
