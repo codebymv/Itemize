@@ -286,31 +286,13 @@ const changeEnrollmentState = async (
   enrollmentId: number,
   organizationId: number,
 ): Promise<WorkflowEnrollment> => {
-  if (isWorkflowEnrollmentsGraphqlEnabled()) {
-    if (action === 'pause') {
-      return pauseWorkflowEnrollmentViaGraphql(workflowId, enrollmentId, organizationId);
-    }
-    if (action === 'resume') {
-      return resumeWorkflowEnrollmentViaGraphql(workflowId, enrollmentId, organizationId);
-    }
-    return retryWorkflowEnrollmentViaGraphql(workflowId, enrollmentId, organizationId);
+  if (action === 'pause') {
+    return pauseWorkflowEnrollmentViaGraphql(workflowId, enrollmentId, organizationId);
   }
-  const body = { organization_id: organizationId };
-  const response = action === 'pause'
-    ? await api.post(
-      `/api/workflows/${workflowId}/enrollments/${enrollmentId}/pause`,
-      body,
-    )
-    : action === 'resume'
-      ? await api.post(
-        `/api/workflows/${workflowId}/enrollments/${enrollmentId}/resume`,
-        body,
-      )
-      : await api.post(
-        `/api/workflows/${workflowId}/enrollments/${enrollmentId}/retry`,
-        body,
-      );
-  return unwrapResponse<WorkflowEnrollment>(response.data);
+  if (action === 'resume') {
+    return resumeWorkflowEnrollmentViaGraphql(workflowId, enrollmentId, organizationId);
+  }
+  return retryWorkflowEnrollmentViaGraphql(workflowId, enrollmentId, organizationId);
 };
 
 export const pauseEnrollment = (workflowId: number, enrollmentId: number, organizationId: number) =>

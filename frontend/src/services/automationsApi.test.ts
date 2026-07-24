@@ -88,11 +88,14 @@ describe('workflow API transport selection', () => {
     expect(api.post).not.toHaveBeenCalled();
   });
 
-  it('retains enrollment operations on REST by default', async () => {
+  it('retains enrollment create/read/cancel on REST but always uses GraphQL lifecycle mutations', async () => {
     const page = { enrollments: [enrollment], pagination: { page: 1, limit: 50, total: 1, totalPages: 1 } };
     vi.mocked(api.post).mockResolvedValue({ data: { success: true, data: enrollment } });
     vi.mocked(api.get).mockResolvedValue({ data: { success: true, data: page } });
     vi.mocked(api.delete).mockResolvedValue({ data: { success: true, data: { ...enrollment, status: 'cancelled' } } });
+    vi.mocked(pauseWorkflowEnrollmentViaGraphql).mockResolvedValue({ ...enrollment, status: 'paused' });
+    vi.mocked(resumeWorkflowEnrollmentViaGraphql).mockResolvedValue(enrollment);
+    vi.mocked(retryWorkflowEnrollmentViaGraphql).mockResolvedValue(enrollment);
     await enrollContact(9, 22, 4, { source: 'manual' });
     await getWorkflowEnrollments(9, 4, { status: 'active', page: 1, limit: 50 });
     await cancelEnrollment(9, 14, 4);
@@ -108,9 +111,10 @@ describe('workflow API transport selection', () => {
     expect(api.delete).toHaveBeenCalledWith('/api/workflows/9/enrollments/14', {
       params: { organization_id: 4 },
     });
-    expect(api.post).toHaveBeenCalledWith('/api/workflows/9/enrollments/14/pause', { organization_id: 4 });
-    expect(api.post).toHaveBeenCalledWith('/api/workflows/9/enrollments/14/resume', { organization_id: 4 });
-    expect(api.post).toHaveBeenCalledWith('/api/workflows/9/enrollments/14/retry', { organization_id: 4 });
+    expect(pauseWorkflowEnrollmentViaGraphql).toHaveBeenCalledWith(9, 14, 4);
+    expect(resumeWorkflowEnrollmentViaGraphql).toHaveBeenCalledWith(9, 14, 4);
+    expect(retryWorkflowEnrollmentViaGraphql).toHaveBeenCalledWith(9, 14, 4);
+    expect(api.post).toHaveBeenCalledTimes(1);
   });
 
   it('routes enrollment operations through their independent GraphQL flag', async () => {

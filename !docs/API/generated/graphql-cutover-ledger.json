@@ -9,8 +9,8 @@
     "operationCount": 420,
     "apiOperationCount": 413,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 374,
-    "operationsWithFrontendConsumers": 360,
+    "frontendCallsiteCount": 368,
+    "operationsWithFrontendConsumers": 354,
     "operationsWithBackendTests": 219,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
@@ -5336,7 +5336,7 @@
           "path": "/api/email-templates",
           "rawPath": "/api/email-templates",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 347,
+          "line": 329,
           "client": "api",
           "literalInterpolation": false
         },
@@ -5422,7 +5422,7 @@
           "path": "/api/email-templates",
           "rawPath": "/api/email-templates",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 375,
+          "line": 357,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5505,7 +5505,7 @@
           "path": "/api/email-templates/:id",
           "rawPath": "/api/email-templates/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 402,
+          "line": 384,
           "client": "api",
           "literalInterpolation": false
         },
@@ -5567,7 +5567,7 @@
           "path": "/api/email-templates/:id",
           "rawPath": "/api/email-templates/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 357,
+          "line": 339,
           "client": "api",
           "literalInterpolation": false
         },
@@ -5623,7 +5623,7 @@
           "path": "/api/email-templates/:id",
           "rawPath": "/api/email-templates/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 394,
+          "line": 376,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5670,7 +5670,7 @@
           "path": "/api/email-templates/:id/duplicate",
           "rawPath": "/api/email-templates/${id}/duplicate",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 425,
+          "line": 407,
           "client": "api",
           "literalInterpolation": false
         },
@@ -5726,7 +5726,7 @@
           "path": "/api/email-templates/:templateId/send-test",
           "rawPath": "/api/email-templates/${templateId}/send-test",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 413,
+          "line": 395,
           "client": "api",
           "literalInterpolation": false
         },
@@ -5769,7 +5769,7 @@
           "path": "/api/email-templates/categories/list",
           "rawPath": "/api/email-templates/categories/list",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 437,
+          "line": 419,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12393,7 +12393,7 @@
           "path": "/api/public/sign/:token",
           "rawPath": "/api/public/sign/${token}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 241,
+          "line": 235,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12480,7 +12480,7 @@
           "path": "/api/public/sign/:token",
           "rawPath": "/api/public/sign/${token}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 246,
+          "line": 240,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12549,7 +12549,7 @@
           "path": "/api/public/sign/:token/decline",
           "rawPath": "/api/public/sign/${token}/decline",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 251,
+          "line": 245,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14231,7 +14231,7 @@
           "path": "/api/signatures/documents",
           "rawPath": "/api/signatures/documents",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 164,
+          "line": 162,
           "client": "api",
           "literalInterpolation": false
         },
@@ -14240,7 +14240,7 @@
           "path": "/api/signatures/documents",
           "rawPath": "/api/signatures/documents",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 173,
+          "line": 171,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14315,7 +14315,7 @@
           "path": "/api/signatures/documents/:id",
           "rawPath": "/api/signatures/documents/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 198,
+          "line": 194,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14349,7 +14349,7 @@
           "path": "/api/signatures/documents/:id",
           "rawPath": "/api/signatures/documents/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 180,
+          "line": 178,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14454,7 +14454,7 @@
           "path": "/api/signatures/documents/:id/audit",
           "rawPath": "/api/signatures/documents/${id}/audit",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 236,
+          "line": 230,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14488,7 +14488,7 @@
           "path": "/api/signatures/documents/:id/cancel",
           "rawPath": "/api/signatures/documents/${id}/cancel",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 192,
+          "line": 188,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14570,17 +14570,7 @@
           "line": 423
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/signatures/documents/:id/file",
-          "rawPath": "/api/signatures/documents/${id}/file",
-          "source": "frontend/src/services/signaturesApi.ts",
-          "line": 158,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
@@ -14588,8 +14578,8 @@
       "owner": "esignatures",
       "targetOperation": "removeSignatureDraftPdf",
       "targetModule": "SignatureDocumentsModule",
-      "parityStatus": "implemented",
-      "notes": "Draft-only metadata removal atomically enqueues exact server-owned storage cleanup; sent/completed source and signed artifacts are immutable.",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "The active frontend always uses GraphQL without REST fallback. Draft-only metadata removal atomically enqueues exact server-owned storage cleanup; sent/completed source and signed artifacts are immutable.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14681,17 +14671,7 @@
           "line": 497
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/signatures/documents/:id/remind",
-          "rawPath": "/api/signatures/documents/${id}/remind",
-          "source": "frontend/src/services/signaturesApi.ts",
-          "line": 204,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [
         {
           "method": "POST",
@@ -14706,8 +14686,8 @@
       "owner": "esignatures",
       "targetOperation": "sendSignatureReminder",
       "targetModule": "SignatureDeliveryModule",
-      "parityStatus": "implemented",
-      "notes": "Implemented behind the default-off delivery flag. Active unsigned recipients receive new hash-only capabilities and durable reminder intents; queued/retry work is superseded, processing work fails closed with a conflict, and signed/declined recipients remain terminal.",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "The active frontend always uses GraphQL without REST fallback. Active unsigned recipients receive new hash-only capabilities and durable reminder intents; queued/retry work is superseded, processing work fails closed with a conflict, and signed/declined recipients remain terminal.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14759,17 +14739,7 @@
           "line": 463
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/signatures/documents/:id/send",
-          "rawPath": "/api/signatures/documents/${id}/send",
-          "source": "frontend/src/services/signaturesApi.ts",
-          "line": 186,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [
         {
           "method": "POST",
@@ -14802,8 +14772,8 @@
       "owner": "esignatures",
       "targetOperation": "sendSignatureDocument",
       "targetModule": "SignatureDeliveryModule",
-      "parityStatus": "implemented",
-      "notes": "Implemented behind a default-off delivery flag. One document-row-locked transaction moves the draft to sent, derives hash-only recipient capabilities, and appends immutable delivery intents; a leased worker uses stable provider idempotency keys with retry/dead-letter state, and PostgreSQL proves one winner and one provider call under concurrent mutation/worker races.",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "The active frontend always uses GraphQL without REST fallback. One document-row-locked transaction moves the draft to sent, derives hash-only recipient capabilities, and appends immutable delivery intents; a leased worker uses stable provider idempotency keys with retry/dead-letter state, and PostgreSQL proves one winner and one provider call under concurrent mutation/worker races.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14941,7 +14911,7 @@
           "path": "/api/signatures/email/preview",
           "rawPath": "/api/signatures/email/preview",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 230,
+          "line": 224,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14975,7 +14945,7 @@
           "path": "/api/signatures/templates",
           "rawPath": "/api/signatures/templates",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 321,
+          "line": 315,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15009,7 +14979,7 @@
           "path": "/api/signatures/templates",
           "rawPath": "/api/signatures/templates",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 295,
+          "line": 289,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15043,7 +15013,7 @@
           "path": "/api/signatures/templates/:id",
           "rawPath": "/api/signatures/templates/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 339,
+          "line": 333,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15077,7 +15047,7 @@
           "path": "/api/signatures/templates/:id",
           "rawPath": "/api/signatures/templates/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 327,
+          "line": 321,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15111,7 +15081,7 @@
           "path": "/api/signatures/templates/:id",
           "rawPath": "/api/signatures/templates/${id}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 304,
+          "line": 298,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15180,7 +15150,7 @@
           "path": "/api/signatures/templates/:id/instantiate",
           "rawPath": "/api/signatures/templates/${id}/instantiate",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 333,
+          "line": 327,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15218,7 +15188,7 @@
           "path": "/api/signatures/templates/upload",
           "rawPath": "/api/signatures/templates/upload",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 313,
+          "line": 307,
           "client": "api",
           "literalInterpolation": false
         }
@@ -18068,7 +18038,7 @@
           "path": "/api/workflows/:id/duplicate",
           "rawPath": "/api/workflows/${id}/duplicate",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 329,
+          "line": 311,
           "client": "api",
           "literalInterpolation": false
         }
@@ -18262,17 +18232,7 @@
           "line": 1182
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/workflows/:workflowId/enrollments/:enrollmentId/pause",
-          "rawPath": "/api/workflows/${workflowId}/enrollments/${enrollmentId}/pause",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 300,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [
         {
           "method": "POST",
@@ -18287,8 +18247,8 @@
       "owner": "automation",
       "targetOperation": "pauseWorkflowEnrollment",
       "targetModule": "WorkflowEnrollmentsModule",
-      "parityStatus": "implemented",
-      "notes": "Pause only an active tenant-scoped enrollment, record the manual reason, and clear its live execution claim. Workflow activation must not resume this pause.",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "The active frontend always uses GraphQL without REST fallback. Pause accepts only an active tenant-scoped enrollment, records the manual reason, and clears its live execution claim; workflow activation does not resume this pause.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -18303,17 +18263,7 @@
           "line": 1216
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/workflows/:workflowId/enrollments/:enrollmentId/resume",
-          "rawPath": "/api/workflows/${workflowId}/enrollments/${enrollmentId}/resume",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 305,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [
         {
           "method": "POST",
@@ -18334,8 +18284,8 @@
       "owner": "automation",
       "targetOperation": "resumeWorkflowEnrollment",
       "targetModule": "WorkflowEnrollmentsModule",
-      "parityStatus": "implemented",
-      "notes": "Resume only an explicitly paused enrollment while its organization-owned workflow is active; deactivation pauses resume through workflow activation instead.",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "The active frontend always uses GraphQL without REST fallback. Resume accepts only an explicitly paused enrollment while its organization-owned workflow is active; deactivation pauses resume through workflow activation instead.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -18350,17 +18300,7 @@
           "line": 1259
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/workflows/:workflowId/enrollments/:enrollmentId/retry",
-          "rawPath": "/api/workflows/${workflowId}/enrollments/${enrollmentId}/retry",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 309,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [
         {
           "method": "POST",
@@ -18375,8 +18315,8 @@
       "owner": "automation",
       "targetOperation": "retryWorkflowEnrollment",
       "targetModule": "WorkflowEnrollmentsModule",
-      "parityStatus": "implemented",
-      "notes": "Retry only a failed enrollment under an active tenant-owned workflow, preserving current_step so completed steps are not replayed.",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "The active frontend always uses GraphQL without REST fallback. Retry accepts only a failed enrollment under an active tenant-owned workflow and preserves current_step so completed steps are not replayed.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },

@@ -906,27 +906,27 @@
       "owner": "automation",
       "targetModule": "WorkflowEnrollmentsModule",
       "targetOperation": "pauseWorkflowEnrollment",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Pause only an active tenant-scoped enrollment, record the manual reason, and clear its live execution claim. Workflow activation must not resume this pause."
+      "notes": "The active frontend always uses GraphQL without REST fallback. Pause accepts only an active tenant-scoped enrollment, records the manual reason, and clears its live execution claim; workflow activation does not resume this pause."
     },
     "POST /api/workflows/:id/enrollments/:enrollmentId/resume": {
       "disposition": "graphql-mutation",
       "owner": "automation",
       "targetModule": "WorkflowEnrollmentsModule",
       "targetOperation": "resumeWorkflowEnrollment",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Resume only an explicitly paused enrollment while its organization-owned workflow is active; deactivation pauses resume through workflow activation instead."
+      "notes": "The active frontend always uses GraphQL without REST fallback. Resume accepts only an explicitly paused enrollment while its organization-owned workflow is active; deactivation pauses resume through workflow activation instead."
     },
     "POST /api/workflows/:id/enrollments/:enrollmentId/retry": {
       "disposition": "graphql-mutation",
       "owner": "automation",
       "targetModule": "WorkflowEnrollmentsModule",
       "targetOperation": "retryWorkflowEnrollment",
-      "parityStatus": "implemented",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Retry only a failed enrollment under an active tenant-owned workflow, preserving current_step so completed steps are not replayed."
+      "notes": "The active frontend always uses GraphQL without REST fallback. Retry accepts only a failed enrollment under an active tenant-owned workflow and preserves current_step so completed steps are not replayed."
     },
     "POST /api/workflows/:id/side-effects/:sideEffectId/retry": {
       "disposition": "graphql-mutation",
@@ -1491,16 +1491,16 @@
       "notes": "Production consumer enabled through the independent document-mutation flag; the tenant-owned row is locked and only drafts can be deleted, every non-draft lifecycle state fails with a conflict, and both disposable production drafts were removed successfully."
     },
     "POST /api/signatures/documents/:id/send": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDeliveryModule", "targetOperation": "sendSignatureDocument", "parityStatus": "implemented", "risk": "high",
-      "notes": "Implemented behind a default-off delivery flag. One document-row-locked transaction moves the draft to sent, derives hash-only recipient capabilities, and appends immutable delivery intents; a leased worker uses stable provider idempotency keys with retry/dead-letter state, and PostgreSQL proves one winner and one provider call under concurrent mutation/worker races."
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDeliveryModule", "targetOperation": "sendSignatureDocument", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "The active frontend always uses GraphQL without REST fallback. One document-row-locked transaction moves the draft to sent, derives hash-only recipient capabilities, and appends immutable delivery intents; a leased worker uses stable provider idempotency keys with retry/dead-letter state, and PostgreSQL proves one winner and one provider call under concurrent mutation/worker races."
     },
     "POST /api/signatures/documents/:id/cancel": {
       "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "cancelSignatureDocument", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Production consumer enabled through the independent cancellation flag. One row-locked transaction idempotently cancels non-completed documents, revokes active capability tokens, locks routing, cancels pending reminders, and writes exactly one audit event; an authenticated disposable production fixture proved every postcondition and was removed."
     },
     "POST /api/signatures/documents/:id/remind": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDeliveryModule", "targetOperation": "sendSignatureReminder", "parityStatus": "implemented", "risk": "high",
-      "notes": "Implemented behind the default-off delivery flag. Active unsigned recipients receive new hash-only capabilities and durable reminder intents; queued/retry work is superseded, processing work fails closed with a conflict, and signed/declined recipients remain terminal."
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDeliveryModule", "targetOperation": "sendSignatureReminder", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "The active frontend always uses GraphQL without REST fallback. Active unsigned recipients receive new hash-only capabilities and durable reminder intents; queued/retry work is superseded, processing work fails closed with a conflict, and signed/declined recipients remain terminal."
     },
     "POST /api/signatures/documents/:id/reminders": {
       "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDeliveryModule", "targetOperation": "scheduleSignatureReminders", "parityStatus": "implemented", "risk": "high",
@@ -1519,8 +1519,8 @@
       "notes": "NestJS owns the unchanged authenticated URL behind a default-off read proxy. Tenant lookup precedes an allowlisted local/S3 read; successful responses use private no-store/nosniff/sandbox headers and a safe inline filename without exposing a permanent storage URL."
     },
     "DELETE /api/signatures/documents/:id/file": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "removeSignatureDraftPdf", "parityStatus": "implemented", "risk": "high",
-      "notes": "Draft-only metadata removal atomically enqueues exact server-owned storage cleanup; sent/completed source and signed artifacts are immutable."
+      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "removeSignatureDraftPdf", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "The active frontend always uses GraphQL without REST fallback. Draft-only metadata removal atomically enqueues exact server-owned storage cleanup; sent/completed source and signed artifacts are immutable."
     },
     "GET /api/signatures/documents/:id/download": {
       "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "downloadCompletedSignaturePdf", "parityStatus": "implemented", "risk": "high",
