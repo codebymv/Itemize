@@ -3,15 +3,15 @@
  * Handles staging, versioning, and rollback
  */
 
-import api from '@/lib/api';
 import type { PageSection, PageSettings, PageTheme } from './pagesApi';
-
-const unwrapResponse = <T>(payload: unknown): T => {
-    if (payload && typeof payload === 'object' && 'data' in payload) {
-        return payload.data as T;
-    }
-    return payload as T;
-};
+import {
+    createLandingPageVersionViaGraphql,
+    deleteLandingPageVersionViaGraphql,
+    getLandingPageVersionViaGraphql,
+    getLandingPageVersionsViaGraphql,
+    publishLandingPageVersionViaGraphql,
+    restoreLandingPageVersionViaGraphql,
+} from './landingPageVersionsGraphql';
 
 // ======================
 // Types
@@ -23,7 +23,7 @@ export interface PageVersion {
     version_number: number;
     content: PageContent;
     description: string;
-    created_by: number;
+    created_by?: number;
     created_by_name?: string;
     created_at: string;
     published_at?: string;
@@ -54,10 +54,7 @@ export const getPageVersions = async (
     pageId: number,
     organizationId?: number
 ): Promise<{ versions: PageVersion[]; currentVersionId: number | null }> => {
-    const response = await api.get(`/api/pages/${pageId}/versions`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<{ versions: PageVersion[]; currentVersionId: number | null }>(response.data);
+    return getLandingPageVersionsViaGraphql(pageId, organizationId);
 };
 
 export const createPageVersion = async (
@@ -65,12 +62,7 @@ export const createPageVersion = async (
     description?: string,
     organizationId?: number
 ): Promise<PageVersion> => {
-    const response = await api.post(
-        `/api/pages/${pageId}/versions`,
-        { description },
-        { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
-    );
-    return unwrapResponse<PageVersion>(response.data);
+    return createLandingPageVersionViaGraphql(pageId, description, organizationId);
 };
 
 export const getPageVersion = async (
@@ -78,11 +70,7 @@ export const getPageVersion = async (
     versionId: number,
     organizationId?: number
 ): Promise<PageVersion> => {
-    const response = await api.get(
-        `/api/pages/${pageId}/versions/${versionId}`,
-        { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
-    );
-    return unwrapResponse<PageVersion>(response.data);
+    return getLandingPageVersionViaGraphql(pageId, versionId, organizationId);
 };
 
 export const publishPageVersion = async (
@@ -90,12 +78,7 @@ export const publishPageVersion = async (
     versionId: number,
     organizationId?: number
 ): Promise<PageVersion> => {
-    const response = await api.post(
-        `/api/pages/${pageId}/versions/${versionId}/publish`,
-        {},
-        { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
-    );
-    return unwrapResponse<PageVersion>(response.data);
+    return publishLandingPageVersionViaGraphql(pageId, versionId, organizationId);
 };
 
 export const deletePageVersion = async (
@@ -103,11 +86,7 @@ export const deletePageVersion = async (
     versionId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
-    const response = await api.delete(
-        `/api/pages/${pageId}/versions/${versionId}`,
-        { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
-    );
-    return unwrapResponse<{ success: boolean }>(response.data);
+    return deleteLandingPageVersionViaGraphql(pageId, versionId, organizationId);
 };
 
 export const restorePageVersion = async (
@@ -115,12 +94,7 @@ export const restorePageVersion = async (
     versionId: number,
     organizationId?: number
 ): Promise<PageVersion> => {
-    const response = await api.post(
-        `/api/pages/${pageId}/versions/${versionId}/restore`,
-        {},
-        { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
-    );
-    return unwrapResponse<PageVersion>(response.data);
+    return restoreLandingPageVersionViaGraphql(pageId, versionId, organizationId);
 };
 
 export default {

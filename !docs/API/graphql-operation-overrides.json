@@ -2056,6 +2056,30 @@
       "disposition": "graphql-query", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "landingPageAnalytics", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Organization-qualified analytics bounds the period to 1-365 days and returns views, visitors, engagement, conversions, devices, referrers, and UTM aggregates."
     },
+    "GET /api/pages/:id/versions": {
+      "disposition": "graphql-query", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "landingPageVersions", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Organization-qualified deterministic version history returns the authoritative current-version pointer and creator projection through a direct GraphQL frontend consumer."
+    },
+    "POST /api/pages/:id/versions": {
+      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "createLandingPageVersion", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "CSRF-protected page-row-locked snapshot creation stores the complete page configuration and ordered sections with race-free monotonic numbering."
+    },
+    "GET /api/pages/:id/versions/:versionId": {
+      "disposition": "graphql-query", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "landingPageVersion", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Organization-, page-, and version-qualified detail conceals foreign and mismatched identifiers as NOT_FOUND."
+    },
+    "POST /api/pages/:id/versions/:versionId/publish": {
+      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "publishLandingPageVersion", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "CSRF-protected transaction validates the snapshot, restores the complete page configuration and ordered sections, moves the authoritative current pointer, and stamps publication."
+    },
+    "DELETE /api/pages/:id/versions/:versionId": {
+      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "deleteLandingPageVersion", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Page-row-locked organization-qualified delete rejects the current published version and returns exact deleted identity."
+    },
+    "POST /api/pages/:id/versions/:versionId/restore": {
+      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "restoreLandingPageVersion", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "CSRF-protected restore clones the selected snapshot as a new non-current version, preserves the documented restoration numbering gap, and attributes the action to the verified actor."
+    },
     "GET /api/pages/public/page/:slug": {
       "disposition": "retain-http", "owner": "growth", "targetModule": "PublicLandingPagesModule", "targetOperation": "getPublicLandingPage", "parityStatus": "characterized", "risk": "high",
       "notes": "Retain anonymous page delivery over HTTP for browser navigation, password capability checks, expiry enforcement, cache policy, and public rendering."

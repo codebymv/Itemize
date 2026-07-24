@@ -9,9 +9,9 @@
     "operationCount": 420,
     "apiOperationCount": 413,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 356,
-    "operationsWithFrontendConsumers": 342,
-    "operationsWithBackendTests": 220,
+    "frontendCallsiteCount": 350,
+    "operationsWithFrontendConsumers": 336,
+    "operationsWithBackendTests": 221,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
@@ -11190,26 +11190,23 @@
           "line": 23
         }
       ],
-      "consumerCallsites": [
+      "consumerCallsites": [],
+      "testCallsites": [
         {
           "method": "GET",
           "path": "/api/pages/:pageId/versions",
-          "rawPath": "/api/pages/${pageId}/versions",
-          "source": "frontend/src/services/pageVersionsApi.ts",
-          "line": 57,
-          "client": "api",
-          "literalInterpolation": false
+          "source": "backend-v2/test/integration/landing-page-versions.integration-spec.ts",
+          "line": 215
         }
       ],
-      "testCallsites": [],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "landingPageVersions",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "Organization-qualified deterministic version history returns the authoritative current-version pointer and creator projection through a direct GraphQL frontend consumer.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -11224,26 +11221,16 @@
           "line": 80
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/pages/:pageId/versions",
-          "rawPath": "/api/pages/${pageId}/versions",
-          "source": "frontend/src/services/pageVersionsApi.ts",
-          "line": 68,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "createLandingPageVersion",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "CSRF-protected page-row-locked snapshot creation stores the complete page configuration and ordered sections with race-free monotonic numbering.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -11258,26 +11245,16 @@
           "line": 298
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/pages/:pageId/versions/:versionId",
-          "rawPath": "/api/pages/${pageId}/versions/${versionId}",
-          "source": "frontend/src/services/pageVersionsApi.ts",
-          "line": 106,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "deleteLandingPageVersion",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "Page-row-locked organization-qualified delete rejects the current published version and returns exact deleted identity.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -11292,26 +11269,16 @@
           "line": 161
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/pages/:pageId/versions/:versionId",
-          "rawPath": "/api/pages/${pageId}/versions/${versionId}",
-          "source": "frontend/src/services/pageVersionsApi.ts",
-          "line": 81,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "landingPageVersion",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "Organization-, page-, and version-qualified detail conceals foreign and mismatched identifiers as NOT_FOUND.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -11326,26 +11293,16 @@
           "line": 212
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/pages/:pageId/versions/:versionId/publish",
-          "rawPath": "/api/pages/${pageId}/versions/${versionId}/publish",
-          "source": "frontend/src/services/pageVersionsApi.ts",
-          "line": 93,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "publishLandingPageVersion",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "CSRF-protected transaction validates the snapshot, restores the complete page configuration and ordered sections, moves the authoritative current pointer, and stamps publication.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -11360,26 +11317,16 @@
           "line": 348
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/pages/:pageId/versions/:versionId/restore",
-          "rawPath": "/api/pages/${pageId}/versions/${versionId}/restore",
-          "source": "frontend/src/services/pageVersionsApi.ts",
-          "line": 118,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "restoreLandingPageVersion",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "CSRF-protected restore clones the selected snapshot as a new non-current version, preserves the documented restoration numbering gap, and attributes the action to the verified actor.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
