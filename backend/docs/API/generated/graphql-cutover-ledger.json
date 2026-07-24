@@ -9,16 +9,16 @@
     "operationCount": 420,
     "apiOperationCount": 413,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 368,
-    "operationsWithFrontendConsumers": 354,
-    "operationsWithBackendTests": 219,
+    "frontendCallsiteCount": 356,
+    "operationsWithFrontendConsumers": 342,
+    "operationsWithBackendTests": 220,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 8,
-    "retainHttpCount": 43,
-    "graphqlQueryCount": 125,
-    "graphqlMutationCount": 244,
+    "retainHttpCount": 45,
+    "graphqlQueryCount": 124,
+    "graphqlMutationCount": 243,
     "highRiskCount": 339,
     "literalInterpolationRiskCount": 0
   },
@@ -10823,26 +10823,23 @@
           "line": 19
         }
       ],
-      "consumerCallsites": [
+      "consumerCallsites": [],
+      "testCallsites": [
         {
           "method": "GET",
           "path": "/api/pages",
-          "rawPath": "/api/pages",
-          "source": "frontend/src/services/pagesApi.ts",
-          "line": 317,
-          "client": "api",
-          "literalInterpolation": false
+          "source": "backend-v2/test/integration/landing-pages.integration-spec.ts",
+          "line": 206
         }
       ],
-      "testCallsites": [],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "landingPages",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "Organization-scoped bounded list with validated status/search filters, deterministic ordering, exact totals, and a direct GraphQL frontend consumer.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -10857,26 +10854,16 @@
           "line": 119
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/pages",
-          "rawPath": "/api/pages",
-          "source": "frontend/src/services/pagesApi.ts",
-          "line": 349,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "createLandingPage",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "CSRF-protected transactional create serializes the organization plan limit, validates bounded page and section content, allocates unique generated slugs, and rejects conflicting explicit slugs.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -10891,26 +10878,16 @@
           "line": 361
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/pages/:pageId",
-          "rawPath": "/api/pages/${pageId}",
-          "source": "frontend/src/services/pagesApi.ts",
-          "line": 370,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "deleteLandingPage",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "CSRF-protected organization-qualified exact-identity delete relies on the characterized page cascade and conceals foreign identifiers.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -10925,26 +10902,16 @@
           "line": 78
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/pages/:pageId",
-          "rawPath": "/api/pages/${pageId}",
-          "source": "frontend/src/services/pagesApi.ts",
-          "line": 328,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "landingPage",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "Organization-qualified detail returns the complete ordered section aggregate and conceals foreign identifiers as NOT_FOUND.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -10959,26 +10926,16 @@
           "line": 227
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/pages/:pageId",
-          "rawPath": "/api/pages/${pageId}",
-          "source": "frontend/src/services/pagesApi.ts",
-          "line": 360,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "updateLandingPage",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "Organization-qualified partial update preserves omitted fields, clears explicit nullable values, validates status and slug constraints, and stamps first publication.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -10993,26 +10950,16 @@
           "line": 14
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/pages/:pageId/analytics",
-          "rawPath": "/api/pages/${pageId}/analytics",
-          "source": "frontend/src/services/pagesApi.ts",
-          "line": 461,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "landingPageAnalytics",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "Organization-qualified analytics bounds the period to 1-365 days and returns views, visitors, engagement, conversions, devices, referrers, and UTM aggregates.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -11027,26 +10974,16 @@
           "line": 385
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/pages/:pageId/duplicate",
-          "rawPath": "/api/pages/${pageId}/duplicate",
-          "source": "frontend/src/services/pagesApi.ts",
-          "line": 380,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "duplicateLandingPage",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "Transactional draft duplication copies the complete ordered section aggregate, allocates a unique slug, and serializes the organization plan limit.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -11109,26 +11046,16 @@
           "line": 87
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/pages/:pageId/sections",
-          "rawPath": "/api/pages/${pageId}/sections",
-          "source": "frontend/src/services/pagesApi.ts",
-          "line": 412,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "addLandingPageSection",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "Row-locked insert clamps the optional position, shifts later sections, and keeps the page timestamp authoritative.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -11143,26 +11070,16 @@
           "line": 15
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/pages/:pageId/sections",
-          "rawPath": "/api/pages/${pageId}/sections",
-          "source": "frontend/src/services/pagesApi.ts",
-          "line": 395,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "replaceLandingPageSections",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "CSRF-protected organization-qualified full replacement validates every bounded section and atomically installs contiguous zero-based order.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -11177,26 +11094,16 @@
           "line": 224
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/pages/:pageId/sections/:sectionId",
-          "rawPath": "/api/pages/${pageId}/sections/${sectionId}",
-          "source": "frontend/src/services/pagesApi.ts",
-          "line": 435,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "deleteLandingPageSection",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "Organization- and page-qualified delete transactionally compacts later zero-based positions and updates the parent page.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -11211,26 +11118,16 @@
           "line": 162
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/pages/:pageId/sections/:sectionId",
-          "rawPath": "/api/pages/${pageId}/sections/${sectionId}",
-          "source": "frontend/src/services/pagesApi.ts",
-          "line": 424,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "updateLandingPageSection",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "Organization- and page-qualified partial section update validates the type and bounded JSON payload while preserving omitted values.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -11245,26 +11142,16 @@
           "line": 266
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/pages/:pageId/sections/reorder",
-          "rawPath": "/api/pages/${pageId}/sections/reorder",
-          "source": "frontend/src/services/pagesApi.ts",
-          "line": 446,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "reorderLandingPageSections",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "Row-locked reorder requires the exact authoritative section-ID set and atomically assigns contiguous zero-based positions.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -11513,7 +11400,7 @@
           "path": "/api/pages/public/page/:slug",
           "rawPath": "/api/pages/public/page/${slug}",
           "source": "frontend/src/services/pagesApi.ts",
-          "line": 473,
+          "line": 449,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11521,12 +11408,12 @@
       "testCallsites": [],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "disposition": "retain-http",
+      "owner": "growth",
+      "targetOperation": "getPublicLandingPage",
+      "targetModule": "PublicLandingPagesModule",
+      "parityStatus": "characterized",
+      "notes": "Retain anonymous page delivery over HTTP for browser navigation, password capability checks, expiry enforcement, cache policy, and public rendering.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -11547,7 +11434,7 @@
           "path": "/api/pages/public/page/:slug/analytics",
           "rawPath": "/api/pages/public/page/${slug}/analytics",
           "source": "frontend/src/services/pagesApi.ts",
-          "line": 491,
+          "line": 467,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11555,12 +11442,12 @@
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "disposition": "retain-http",
+      "owner": "growth",
+      "targetOperation": "recordPublicLandingPageAnalytics",
+      "targetModule": "PublicLandingPagesModule",
+      "parityStatus": "characterized",
+      "notes": "Retain the anonymous rate-limited analytics beacon over HTTP; it validates the published page and records request-derived device and attribution evidence.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },

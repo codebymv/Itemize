@@ -2007,6 +2007,62 @@
     "DELETE /api/onboarding/reset": {
       "disposition": "graphql-mutation", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "resetOnboarding", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "CSRF-protected feature or full user reset; historical onboarding events are retained."
+    },
+    "GET /api/pages": {
+      "disposition": "graphql-query", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "landingPages", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Organization-scoped bounded list with validated status/search filters, deterministic ordering, exact totals, and a direct GraphQL frontend consumer."
+    },
+    "GET /api/pages/:id": {
+      "disposition": "graphql-query", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "landingPage", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Organization-qualified detail returns the complete ordered section aggregate and conceals foreign identifiers as NOT_FOUND."
+    },
+    "POST /api/pages": {
+      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "createLandingPage", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "CSRF-protected transactional create serializes the organization plan limit, validates bounded page and section content, allocates unique generated slugs, and rejects conflicting explicit slugs."
+    },
+    "PUT /api/pages/:id": {
+      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "updateLandingPage", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Organization-qualified partial update preserves omitted fields, clears explicit nullable values, validates status and slug constraints, and stamps first publication."
+    },
+    "DELETE /api/pages/:id": {
+      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "deleteLandingPage", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "CSRF-protected organization-qualified exact-identity delete relies on the characterized page cascade and conceals foreign identifiers."
+    },
+    "POST /api/pages/:id/duplicate": {
+      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "duplicateLandingPage", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Transactional draft duplication copies the complete ordered section aggregate, allocates a unique slug, and serializes the organization plan limit."
+    },
+    "PUT /api/pages/:id/sections": {
+      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "replaceLandingPageSections", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "CSRF-protected organization-qualified full replacement validates every bounded section and atomically installs contiguous zero-based order."
+    },
+    "POST /api/pages/:id/sections": {
+      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "addLandingPageSection", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Row-locked insert clamps the optional position, shifts later sections, and keeps the page timestamp authoritative."
+    },
+    "PUT /api/pages/:id/sections/:sectionId": {
+      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "updateLandingPageSection", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Organization- and page-qualified partial section update validates the type and bounded JSON payload while preserving omitted values."
+    },
+    "DELETE /api/pages/:id/sections/:sectionId": {
+      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "deleteLandingPageSection", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Organization- and page-qualified delete transactionally compacts later zero-based positions and updates the parent page."
+    },
+    "POST /api/pages/:id/sections/reorder": {
+      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "reorderLandingPageSections", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Row-locked reorder requires the exact authoritative section-ID set and atomically assigns contiguous zero-based positions."
+    },
+    "GET /api/pages/:id/analytics": {
+      "disposition": "graphql-query", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "landingPageAnalytics", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Organization-qualified analytics bounds the period to 1-365 days and returns views, visitors, engagement, conversions, devices, referrers, and UTM aggregates."
+    },
+    "GET /api/pages/public/page/:slug": {
+      "disposition": "retain-http", "owner": "growth", "targetModule": "PublicLandingPagesModule", "targetOperation": "getPublicLandingPage", "parityStatus": "characterized", "risk": "high",
+      "notes": "Retain anonymous page delivery over HTTP for browser navigation, password capability checks, expiry enforcement, cache policy, and public rendering."
+    },
+    "POST /api/pages/public/page/:slug/analytics": {
+      "disposition": "retain-http", "owner": "growth", "targetModule": "PublicLandingPagesModule", "targetOperation": "recordPublicLandingPageAnalytics", "parityStatus": "characterized", "risk": "high",
+      "notes": "Retain the anonymous rate-limited analytics beacon over HTTP; it validates the published page and records request-derived device and attribution evidence."
     }
   },
   "runtimeExpressions": [

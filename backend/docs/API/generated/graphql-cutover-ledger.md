@@ -7,12 +7,12 @@
 - Registered method/path operations: 420
 - API operations under `/api`: 413
 - Non-API registered operations: 7
-- Static frontend callsites: 368
-- Operations with frontend consumers: 354
-- Operations referenced by backend tests: 219
-- Recommended GraphQL queries: 125
-- Recommended GraphQL mutations: 244
-- Recommended retained HTTP endpoints: 43
+- Static frontend callsites: 356
+- Operations with frontend consumers: 342
+- Operations referenced by backend tests: 220
+- Recommended GraphQL queries: 124
+- Recommended GraphQL mutations: 243
+- Recommended retained HTTP endpoints: 45
 - High-risk operations: 339
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
@@ -260,20 +260,20 @@
 | PUT | `/api/organizations/:organizationId/members/:memberId` | 1 | 5 | graphql-mutation | medium | workspace / OrganizationsModule / updateOrganizationMemberRole |
 | POST | `/api/organizations/:organizationId/select` | 1 | 3 | graphql-mutation | medium | workspace / OrganizationsModule / selectOrganization |
 | POST | `/api/organizations/ensure-default` | 1 | 3 | graphql-mutation | medium | workspace / OrganizationsModule / ensureDefaultOrganization |
-| GET | `/api/pages` | 1 | 0 | graphql-query | high | _unassigned_ |
-| POST | `/api/pages` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| DELETE | `/api/pages/:id` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/pages/:id` | 1 | 0 | graphql-query | high | _unassigned_ |
-| PUT | `/api/pages/:id` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/pages/:id/analytics` | 1 | 0 | graphql-query | high | _unassigned_ |
-| POST | `/api/pages/:id/duplicate` | 1 | 0 | graphql-mutation | high | _unassigned_ |
+| GET | `/api/pages` | 0 | 1 | graphql-query | high | growth / LandingPagesModule / landingPages |
+| POST | `/api/pages` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / createLandingPage |
+| DELETE | `/api/pages/:id` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / deleteLandingPage |
+| GET | `/api/pages/:id` | 0 | 0 | graphql-query | high | growth / LandingPagesModule / landingPage |
+| PUT | `/api/pages/:id` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / updateLandingPage |
+| GET | `/api/pages/:id/analytics` | 0 | 0 | graphql-query | high | growth / LandingPagesModule / landingPageAnalytics |
+| POST | `/api/pages/:id/duplicate` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / duplicateLandingPage |
 | DELETE | `/api/pages/:id/password` | 0 | 0 | graphql-mutation | high | _unassigned_ |
 | POST | `/api/pages/:id/password` | 0 | 0 | graphql-mutation | high | _unassigned_ |
-| POST | `/api/pages/:id/sections` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| PUT | `/api/pages/:id/sections` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| DELETE | `/api/pages/:id/sections/:sectionId` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| PUT | `/api/pages/:id/sections/:sectionId` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| POST | `/api/pages/:id/sections/reorder` | 1 | 0 | graphql-mutation | high | _unassigned_ |
+| POST | `/api/pages/:id/sections` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / addLandingPageSection |
+| PUT | `/api/pages/:id/sections` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / replaceLandingPageSections |
+| DELETE | `/api/pages/:id/sections/:sectionId` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / deleteLandingPageSection |
+| PUT | `/api/pages/:id/sections/:sectionId` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / updateLandingPageSection |
+| POST | `/api/pages/:id/sections/reorder` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / reorderLandingPageSections |
 | POST | `/api/pages/:id/verify-password` | 0 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/pages/:id/versions` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/pages/:id/versions` | 1 | 0 | graphql-mutation | high | _unassigned_ |
@@ -281,8 +281,8 @@
 | GET | `/api/pages/:id/versions/:versionId` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/pages/:id/versions/:versionId/publish` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | POST | `/api/pages/:id/versions/:versionId/restore` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/pages/public/page/:slug` | 1 | 0 | graphql-query | high | _unassigned_ |
-| POST | `/api/pages/public/page/:slug/analytics` | 1 | 0 | graphql-mutation | high | _unassigned_ |
+| GET | `/api/pages/public/page/:slug` | 1 | 0 | retain-http | high | growth / PublicLandingPagesModule / getPublicLandingPage |
+| POST | `/api/pages/public/page/:slug/analytics` | 1 | 0 | retain-http | high | growth / PublicLandingPagesModule / recordPublicLandingPageAnalytics |
 | GET | `/api/pipelines` | 1 | 4 | graphql-query | high | crm / PipelinesModule / pipelines |
 | POST | `/api/pipelines` | 1 | 10 | graphql-mutation | high | crm / PipelinesModule / createPipeline |
 | DELETE | `/api/pipelines/:id` | 1 | 3 | graphql-mutation | high | crm / PipelinesModule / deletePipeline |

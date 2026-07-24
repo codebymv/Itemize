@@ -38,6 +38,7 @@ import { InvoiceLogoUploadsModule } from './invoice-logo-uploads/invoice-logo-up
 import { InvoiceSettingsModule } from './invoice-settings/invoice-settings.module';
 import { InvoiceWebhooksModule } from './invoice-webhooks/invoice-webhooks.module';
 import { InvoicesModule } from './invoices/invoices.module';
+import { LandingPagesModule } from './landing-pages/landing-pages.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { OrganizationContextGuard } from './organizations/organization-context.guard';
 import { OrganizationsModule } from './organizations/organizations.module';
@@ -110,6 +111,7 @@ const observabilityPlugins = [
     InvoiceSettingsModule,
     InvoiceWebhooksModule,
     InvoicesModule,
+    LandingPagesModule,
     OnboardingModule,
     FoundationModule,
     WorkflowsModule,

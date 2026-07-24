@@ -3,6 +3,20 @@
  * Handles page CRUD, section management, and public page access
  */
 import api from '@/lib/api';
+import {
+    addLandingPageSectionViaGraphql,
+    createLandingPageViaGraphql,
+    deleteLandingPageSectionViaGraphql,
+    deleteLandingPageViaGraphql,
+    duplicateLandingPageViaGraphql,
+    getLandingPageAnalyticsViaGraphql,
+    getLandingPageViaGraphql,
+    getLandingPagesViaGraphql,
+    reorderLandingPageSectionsViaGraphql,
+    replaceLandingPageSectionsViaGraphql,
+    updateLandingPageSectionViaGraphql,
+    updateLandingPageViaGraphql,
+} from './landingPagesGraphql';
 
 export type PageContentRecord = Record<string, unknown>;
 
@@ -314,21 +328,14 @@ export const getPages = async (
     } = {},
     organizationId?: number
 ): Promise<{ pages: Page[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
-    const response = await api.get('/api/pages', {
-        params,
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<{ pages: Page[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(response.data);
+    return getLandingPagesViaGraphql(params, organizationId);
 };
 
 export const getPage = async (
     pageId: number,
     organizationId?: number
 ): Promise<Page> => {
-    const response = await api.get(`/api/pages/${pageId}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<Page>(response.data);
+    return getLandingPageViaGraphql(pageId, organizationId);
 };
 
 export const createPage = async (
@@ -346,10 +353,7 @@ export const createPage = async (
     },
     organizationId?: number
 ): Promise<Page> => {
-    const response = await api.post('/api/pages', page, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<Page>(response.data);
+    return createLandingPageViaGraphql(page, organizationId);
 };
 
 export const updatePage = async (
@@ -357,30 +361,21 @@ export const updatePage = async (
     page: Partial<Omit<Page, 'id' | 'organization_id' | 'created_at' | 'updated_at' | 'sections'>>,
     organizationId?: number
 ): Promise<Page> => {
-    const response = await api.put(`/api/pages/${pageId}`, page, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<Page>(response.data);
+    return updateLandingPageViaGraphql(pageId, page, organizationId);
 };
 
 export const deletePage = async (
     pageId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
-    const response = await api.delete(`/api/pages/${pageId}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<{ success: boolean }>(response.data);
+    return deleteLandingPageViaGraphql(pageId, organizationId);
 };
 
 export const duplicatePage = async (
     pageId: number,
     organizationId?: number
 ): Promise<Page> => {
-    const response = await api.post(`/api/pages/${pageId}/duplicate`, {}, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<Page>(response.data);
+    return duplicateLandingPageViaGraphql(pageId, organizationId);
 };
 
 // ======================
@@ -392,10 +387,7 @@ export const updatePageSections = async (
     sections: Partial<PageSection>[],
     organizationId?: number
 ): Promise<{ sections: PageSection[] }> => {
-    const response = await api.put(`/api/pages/${pageId}/sections`, { sections }, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<{ sections: PageSection[] }>(response.data);
+    return replaceLandingPageSectionsViaGraphql(pageId, sections, organizationId);
 };
 
 export const addSection = async (
@@ -409,10 +401,7 @@ export const addSection = async (
     },
     organizationId?: number
 ): Promise<PageSection> => {
-    const response = await api.post(`/api/pages/${pageId}/sections`, section, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<PageSection>(response.data);
+    return addLandingPageSectionViaGraphql(pageId, section, organizationId);
 };
 
 export const updateSection = async (
@@ -421,10 +410,7 @@ export const updateSection = async (
     section: Partial<Pick<PageSection, 'section_type' | 'name' | 'content' | 'settings'>>,
     organizationId?: number
 ): Promise<PageSection> => {
-    const response = await api.put(`/api/pages/${pageId}/sections/${sectionId}`, section, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<PageSection>(response.data);
+    return updateLandingPageSectionViaGraphql(pageId, sectionId, section, organizationId);
 };
 
 export const deleteSection = async (
@@ -432,10 +418,7 @@ export const deleteSection = async (
     sectionId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
-    const response = await api.delete(`/api/pages/${pageId}/sections/${sectionId}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<{ success: boolean }>(response.data);
+    return deleteLandingPageSectionViaGraphql(pageId, sectionId, organizationId);
 };
 
 export const reorderSections = async (
@@ -443,10 +426,7 @@ export const reorderSections = async (
     sectionIds: number[],
     organizationId?: number
 ): Promise<{ sections: PageSection[] }> => {
-    const response = await api.post(`/api/pages/${pageId}/sections/reorder`, { section_ids: sectionIds }, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<{ sections: PageSection[] }>(response.data);
+    return reorderLandingPageSectionsViaGraphql(pageId, sectionIds, organizationId);
 };
 
 // ======================
@@ -458,11 +438,7 @@ export const getPageAnalytics = async (
     period: number = 30,
     organizationId?: number
 ): Promise<PageAnalytics> => {
-    const response = await api.get(`/api/pages/${pageId}/analytics`, {
-        params: { period },
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<PageAnalytics>(response.data);
+    return getLandingPageAnalyticsViaGraphql(pageId, period, organizationId);
 };
 
 // ======================
