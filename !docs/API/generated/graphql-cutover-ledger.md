@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 420
-- API operations under `/api`: 413
+- Registered method/path operations: 418
+- API operations under `/api`: 411
 - Non-API registered operations: 7
 - Static frontend callsites: 350
 - Operations with frontend consumers: 336
 - Operations referenced by backend tests: 222
-- Recommended GraphQL queries: 124
+- Recommended GraphQL queries: 123
 - Recommended GraphQL mutations: 242
-- Recommended retained HTTP endpoints: 46
-- High-risk operations: 339
+- Recommended retained HTTP endpoints: 45
+- High-risk operations: 338
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -274,14 +274,13 @@
 | DELETE | `/api/pages/:id/sections/:sectionId` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / deleteLandingPageSection |
 | PUT | `/api/pages/:id/sections/:sectionId` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / updateLandingPageSection |
 | POST | `/api/pages/:id/sections/reorder` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / reorderLandingPageSections |
-| POST | `/api/pages/:id/verify-password` | 0 | 2 | retain-http | high | growth / PublicLandingPagesModule / verifyPublicLandingPagePassword |
 | GET | `/api/pages/:id/versions` | 0 | 1 | graphql-query | high | growth / LandingPagesModule / landingPageVersions |
 | POST | `/api/pages/:id/versions` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / createLandingPageVersion |
 | DELETE | `/api/pages/:id/versions/:versionId` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / deleteLandingPageVersion |
 | GET | `/api/pages/:id/versions/:versionId` | 0 | 0 | graphql-query | high | growth / LandingPagesModule / landingPageVersion |
 | POST | `/api/pages/:id/versions/:versionId/publish` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / publishLandingPageVersion |
 | POST | `/api/pages/:id/versions/:versionId/restore` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / restoreLandingPageVersion |
-| GET | `/api/pages/public/page/:slug` | 1 | 0 | retain-http | high | growth / PublicLandingPagesModule / getPublicLandingPage |
+| GET | `/api/pages/public/page/:slug` | 1 | 2 | retain-http | high | growth / PublicLandingPagesModule / getPublicLandingPage |
 | POST | `/api/pages/public/page/:slug/analytics` | 1 | 0 | retain-http | high | growth / PublicLandingPagesModule / recordPublicLandingPageAnalytics |
 | GET | `/api/pipelines` | 1 | 4 | graphql-query | high | crm / PipelinesModule / pipelines |
 | POST | `/api/pipelines` | 1 | 10 | graphql-mutation | high | crm / PipelinesModule / createPipeline |
@@ -297,7 +296,6 @@
 | PATCH | `/api/pipelines/deals/:id/stage` | 1 | 2 | graphql-mutation | high | crm / DealsModule / moveDeal |
 | POST | `/api/pipelines/deals/:id/won` | 1 | 2 | graphql-mutation | high | crm / DealsModule / markDealWon |
 | GET | `/api/pipelines/deals/all` | 1 | 2 | graphql-query | high | crm / DealsModule / deals |
-| GET | `/api/preview/version/:versionId` | 0 | 0 | graphql-query | unknown | _unassigned_ |
 | GET | `/api/public/sign/:token` | 1 | 8 | retain-http | high | esignatures / PublicSigningModule / getSigningSession |
 | POST | `/api/public/sign/:token` | 1 | 5 | retain-http | high | esignatures / PublicSigningModule / submitSignature |
 | POST | `/api/public/sign/:token/decline` | 1 | 1 | retain-http | high | esignatures / PublicSigningModule / declineSignature |

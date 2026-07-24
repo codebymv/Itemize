@@ -106,6 +106,7 @@ export const isPublicAuthSkipPath = (pathname: string): boolean => {
   if (exact.includes(pathname)) return true;
   if (pathname.startsWith('/help')) return true;
   if (pathname.startsWith('/shared/')) return true;
+  if (pathname.startsWith('/p/')) return true;
   if (pathname.startsWith('/legal/')) return true;
   return false;
 };

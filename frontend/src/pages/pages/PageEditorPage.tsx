@@ -647,8 +647,8 @@ export function PageEditorPage() {
                         setShowPreview(false);
                         setPreviewVersionId(undefined);
                     }}
-                    pageSlug={page.slug}
-                    pageName={page.name}
+                    page={page}
+                    organizationId={organizationId!}
                     versionId={previewVersionId}
                 />
             )}

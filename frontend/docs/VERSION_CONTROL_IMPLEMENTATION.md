@@ -17,18 +17,12 @@ Implemented a comprehensive staging and version control system for the landing p
   - Added `current_version_id` column to track production version
   - Foreign key reference to page_versions
 
-#### API Routes (`backend/src/routes/`)
+#### GraphQL API (`backend-v2/src/landing-pages/`)
 
-**File: `pageVersions.routes.js`**
-- `GET /api/pages/:id/versions` - List all versions with current version indicator
-- `POST /api/pages/:id/versions` - Create new version snapshot
-- `GET /api/pages/:id/versions/:versionId` - Get specific version details
-- `POST /api/pages/:id/versions/:versionId/publish` - Deploy version to production
-- `DELETE /api/pages/:id/versions/:versionId` - Delete version (blocks current version)
-- `POST /api/pages/:id/versions/:versionId/restore` - Restore as new version (rollback)
-
-**File: `preview.routes.js`**
-- `GET /api/preview/version/:versionId` - Serve version content for preview
+`LandingPageVersionsResolver` provides organization-qualified version history,
+detail, create, publish, delete, and restore operations. Draft preview uses the
+same authenticated `landingPageVersion` query as version detail. The former
+anonymous numeric-ID preview route was removed.
 
 #### Database Migrations
 - Updated `db_pages_migrations.js`:
@@ -75,7 +69,8 @@ restorePageVersion(pageId, versionId, organizationId)
 
 **File: `PagePreviewDialog.tsx`** (Updated)
 - Added `versionId` prop for version preview
-- Dynamic preview URL: `/api/preview/version/:versionId`
+- Loads saved versions through authenticated GraphQL
+- Renders current and historical content through the shared page document builder
 - Badge shows "Live Preview" vs "Version Preview"
 - Integrated with QR code and share link
 
@@ -108,7 +103,7 @@ restorePageVersion(pageId, versionId, organizationId)
 
 #### Preview Capabilities
 - Preview production page: `/p/{slug}`
-- Preview version: `/api/preview/version/{versionId}`
+- Preview a saved version from authenticated version history
 - Device selector: Desktop/Tablet/Mobile
 - QR code generation
 - Shareable public link
@@ -152,14 +147,14 @@ restorePageVersion(pageId, versionId, organizationId)
 
 ### 5. Security & Permissions
 - Organization-based access control
-- JWT authentication required for version APIs
-- Version preview endpoint has rate limiting (100 req/15min)
+- Verified cookie authentication and CSRF protection for version operations
+- Draft previews are organization-qualified GraphQL reads
+- Custom page code runs in a sandboxed iframe without same-origin access
 - Prevents version ownership tampering
 
 ### 6. Performance Considerations
 - Indexed queries on (page_id, version_number)
 - Content stored as JSONB for efficient storage
-- Preview endpoint rate-limited
 - Version creation is atomic (transaction)
 
 ### 7. Database Migration Safe
@@ -197,10 +192,9 @@ restorePageVersion(pageId, versionId, organizationId)
 ### Backend Files
 | File | Status | Description |
 |------|--------|-------------|
-| `routes/pageVersions.routes.js` | ✅ Created | Version management API |
-| `routes/preview.routes.js` | ✅ Created | Version preview endpoint |
+| `backend-v2/src/landing-pages/landing-page-versions.resolver.ts` | ✅ Created | Version GraphQL API |
+| `backend-v2/src/landing-pages/landing-page-versions.service.ts` | ✅ Created | Version policy and lifecycle |
 | `db_pages_migrations.js` | 🔄 Modified | Added pageVersions table |
-| `index.js` | 🔄 Modified | Registered version routes |
 
 ### Frontend Files
 | File | Status | Description |

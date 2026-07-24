@@ -8,9 +8,8 @@ The public rendering boundary remains HTTP:
 
 - `GET /api/pages/public/page/:slug`
 - `POST /api/pages/public/page/:slug/analytics`
-- `POST /api/pages/:id/verify-password`
 
-Those endpoints are anonymous browser-navigation, verification, and telemetry protocols. Version preview remains an HTTP iframe/document boundary even though authenticated version data and mutations use GraphQL.
+Those endpoints are anonymous browser-navigation and telemetry protocols. The page-delivery response itself performs any password check, so there is no separate public password oracle. Published `/p/:slug` pages render that retained public JSON contract inside an isolated document. Authenticated version preview reads the organization-qualified snapshot through `landingPageVersion`; there is no public numeric-ID preview endpoint.
 
 ## GraphQL operations
 
@@ -58,12 +57,14 @@ Those endpoints are anonymous browser-navigation, verification, and telemetry pr
 - Password assignment accepts 4 or more characters but rejects values over bcrypt's 72-byte boundary instead of silently truncating them. The cost factor remains compatible with retained verification.
 - Password writes patch only the `password` JSONB key, so concurrent or pre-existing page settings are not replaced by a stale read/modify/write object.
 - Page and version GraphQL projections remove password hashes from generic settings/snapshot JSON and expose only `passwordProtected`; the server retains the hash for publication and public verification.
-- Public password verification remains rate-limited HTTP because it bootstraps anonymous page delivery. It supports bcrypt hashes and characterized legacy plaintext rows while all new assignments are hashed.
+- Draft previews use the authenticated, organization-qualified `landingPageVersion` query. The former anonymous `/api/preview/version/:versionId` route was removed because enumerable IDs exposed unpublished page snapshots and the JSON response did not render in its iframe consumer.
+- Published and draft content render through the same document builder. Custom HTML is sanitized, URL schemes are allowlisted, and custom script executes only in a sandboxed iframe without same-origin access to the authenticated application.
+- Public password verification is part of the rate-limited page-delivery request. It supports bcrypt hashes and characterized legacy plaintext rows while all new assignments are hashed; the redundant standalone verification endpoint was removed.
 - The retained Express version router omitted its passed organization middleware and could return false 404s; the GraphQL path derives organization exclusively from verified request context and repairs that unreachable authenticated surface.
 
 ## Compatibility boundary
 
-`frontend/src/services/pagesApi.ts` and `pageVersionsApi.ts` remain the stable legacy-shaped TypeScript facades used by the page list, editor, and version-history dialog. Their authenticated functions—including password assignment/removal—delegate directly to `landingPagesGraphql.ts` and `landingPageVersionsGraphql.ts`, which map GraphQL camelCase fields back to the existing snake_case UI model. Only `getPublicPage`, `updatePublicPageAnalytics`, public password verification, and iframe-oriented version preview use HTTP.
+`frontend/src/services/pagesApi.ts` and `pageVersionsApi.ts` remain the stable legacy-shaped TypeScript facades used by the page list, editor, and version-history dialog. Their authenticated functions—including password assignment/removal and version preview—delegate directly to `landingPagesGraphql.ts` and `landingPageVersionsGraphql.ts`, which map GraphQL camelCase fields back to the existing snake_case UI model. Only public page delivery and analytics use HTTP.
 
 No landing-page rollout flag was added. This repository has no active customer data, the operations have clean-database parity coverage, and retaining an unused authenticated REST branch would weaken cutover evidence.
 

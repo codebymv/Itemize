@@ -17,7 +17,7 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
     const protectedContext = { pool, authenticateJWT, requireOrganization };
 
     router.use(publicRoutes({ pool, publicRateLimit }));
-    router.use(passwordRoutes({ ...protectedContext, publicRateLimit }));
+    router.use(passwordRoutes(protectedContext));
     router.use(sectionsRoutes(protectedContext));
     router.use(analyticsRoutes(protectedContext));
     router.use(crudRoutes(protectedContext));

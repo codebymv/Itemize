@@ -468,7 +468,7 @@ describe('Authenticated landing-pages REST/GraphQL PostgreSQL parity', () => {
     });
   });
 
-  it('sets and removes a bounded password while retaining public HTTP verification', async () => {
+  it('sets and removes a bounded password while retaining public HTTP delivery', async () => {
     const noCsrf = await graphql(
       memberToken,
       organizationId,
@@ -534,13 +534,16 @@ describe('Authenticated landing-pages REST/GraphQL PostgreSQL parity', () => {
     ).toBeUndefined();
 
     await request(legacyApp)
-      .post(`/api/pages/${pageId}/verify-password`)
-      .send({ password: 'wrong-password' })
+      .get('/api/pages/public/page/launch')
+      .set('x-page-password', 'wrong-password')
       .expect(401);
     await request(legacyApp)
-      .post(`/api/pages/${pageId}/verify-password`)
-      .send({ password: 'open-sesame' })
-      .expect(200, { valid: true });
+      .get('/api/pages/public/page/launch')
+      .set('x-page-password', 'open-sesame')
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({ id: pageId, slug: 'launch' });
+      });
 
     const outsiderCsrf = 'outsider-page-password-csrf';
     const foreign = await request(graphqlApp.getHttpServer())

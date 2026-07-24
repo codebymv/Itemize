@@ -6,8 +6,8 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 420,
-    "apiOperationCount": 413,
+    "operationCount": 418,
+    "apiOperationCount": 411,
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 350,
     "operationsWithFrontendConsumers": 336,
@@ -16,10 +16,10 @@
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 8,
-    "retainHttpCount": 46,
-    "graphqlQueryCount": 124,
+    "retainHttpCount": 45,
+    "graphqlQueryCount": 123,
     "graphqlMutationCount": 242,
-    "highRiskCount": 339,
+    "highRiskCount": 338,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -962,7 +962,7 @@
           "path": "/api/auth/login",
           "rawPath": "/api/auth/login",
           "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 262,
+          "line": 263,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1033,7 +1033,7 @@
           "path": "/api/auth/logout",
           "rawPath": "/api/auth/logout",
           "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 344,
+          "line": 345,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1074,7 +1074,7 @@
           "path": "/api/auth/me",
           "rawPath": "/api/auth/me",
           "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 212,
+          "line": 213,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1199,7 +1199,7 @@
           "path": "/api/auth/register",
           "rawPath": "/api/auth/register",
           "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 298,
+          "line": 299,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3724,7 +3724,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 62
+          "line": 61
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -4939,7 +4939,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 224
+          "line": 223
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -5014,7 +5014,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 225
+          "line": 224
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -6995,7 +6995,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 270
+          "line": 269
         },
         {
           "source": "backend/src/routes/invoices/actions.routes.js",
@@ -7483,7 +7483,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 262
+          "line": 261
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -8763,7 +8763,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 266
+          "line": 265
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -8801,7 +8801,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 258
+          "line": 257
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -9174,7 +9174,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 58
+          "line": 57
         },
         {
           "source": "backend/src/routes/lists.routes.js",
@@ -11156,43 +11156,6 @@
       "risk": "high"
     },
     {
-      "id": "POST /api/pages/:id/verify-password",
-      "key": "POST /api/pages/:*/verify-password",
-      "method": "POST",
-      "path": "/api/pages/:id/verify-password",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/pages/password.routes.js",
-          "line": 92
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/pages/:pageId/verify-password",
-          "source": "backend-v2/test/integration/landing-pages.integration-spec.ts",
-          "line": 537
-        },
-        {
-          "method": "POST",
-          "path": "/api/pages/:pageId/verify-password",
-          "source": "backend-v2/test/integration/landing-pages.integration-spec.ts",
-          "line": 541
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "retain-http",
-      "owner": "growth",
-      "targetOperation": "verifyPublicLandingPagePassword",
-      "targetModule": "PublicLandingPagesModule",
-      "parityStatus": "characterized",
-      "notes": "Retain the anonymous rate-limited password-verification bootstrap over HTTP as part of public page delivery; bcrypt and legacy plaintext verification semantics remain characterized.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "GET /api/pages/:id/versions",
       "key": "GET /api/pages/:*/versions",
       "method": "GET",
@@ -11365,7 +11328,20 @@
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/pages/public/page/launch",
+          "source": "backend-v2/test/integration/landing-pages.integration-spec.ts",
+          "line": 537
+        },
+        {
+          "method": "GET",
+          "path": "/api/pages/public/page/launch",
+          "source": "backend-v2/test/integration/landing-pages.integration-spec.ts",
+          "line": 541
+        }
+      ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "retain-http",
@@ -12196,30 +12172,6 @@
       "risk": "high"
     },
     {
-      "id": "GET /api/preview/version/:versionId",
-      "key": "GET /api/preview/version/:*",
-      "method": "GET",
-      "path": "/api/preview/version/:versionId",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/preview.routes.js",
-          "line": 24
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "unknown"
-    },
-    {
       "id": "GET /api/public/sign/:token",
       "key": "GET /api/public/sign/:*",
       "method": "GET",
@@ -12227,7 +12179,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 326
+          "line": 323
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12314,7 +12266,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 346
+          "line": 343
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12383,7 +12335,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 342
+          "line": 339
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12428,7 +12380,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 334
+          "line": 331
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12456,7 +12408,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 330
+          "line": 327
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12491,7 +12443,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 338
+          "line": 335
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -14367,7 +14319,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 312
+          "line": 309
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -14438,7 +14390,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 308
+          "line": 305
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -14632,7 +14584,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 294
+          "line": 291
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -14953,7 +14905,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 316
+          "line": 313
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -15022,7 +14974,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 301
+          "line": 298
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -15907,7 +15859,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 126
+          "line": 125
         }
       ],
       "consumerCallsites": [
@@ -15941,7 +15893,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 70
+          "line": 69
         }
       ],
       "consumerCallsites": [
@@ -16636,7 +16588,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 61
+          "line": 60
         },
         {
           "source": "backend/src/routes/vaults/crud.routes.js",
@@ -16980,7 +16932,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 59
+          "line": 58
         },
         {
           "source": "backend/src/routes/whiteboards.routes.js",
@@ -17216,7 +17168,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 60
+          "line": 59
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",

@@ -29,7 +29,6 @@ const reputationRoutes = require('../routes/reputation.routes');
 const socialRoutes = require('../routes/social.routes');
 const pagesRoutes = require('../routes/pages.routes');
 const pageVersionsRoutes = require('../routes/pageVersions.routes');
-const previewRoutes = require('../routes/preview.routes');
 const calendarsRoutes = require('../routes/calendars.routes');
 const bookingsRoutes = require('../routes/bookings.routes');
 const formsRoutes = require('../routes/forms.routes');
@@ -283,8 +282,6 @@ function registerApiRoutes({
     app.use('/api/pages', pageVersionsRoutes(pool, authenticateJWT, requireOrganization));
     logger.info('Page Versions routes initialized');
 
-    app.use('/api/preview', previewRoutes(pool));
-    logger.info('Preview routes initialized');
     app.use('/api/calendars', calendarsRoutes(pool, authenticateJWT));
     logger.info('Calendars routes initialized');
     app.use('/api/bookings', bookingsRoutes(pool, authenticateJWT, publicRateLimit));

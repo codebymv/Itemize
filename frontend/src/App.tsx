@@ -67,6 +67,7 @@ const EmailTemplatesPage = React.lazy(() => import("./pages/email-templates/Emai
 const SMSTemplatesPage = React.lazy(() => import("./pages/sms-templates/SMSTemplatesPage"));
 const LandingPagesPage = React.lazy(() => import("./pages/pages/LandingPagesPage"));
 const PageEditorPage = React.lazy(() => import("./pages/pages/PageEditorPage"));
+const PublicLandingPage = React.lazy(() => import("./pages/pages/PublicLandingPage"));
 const ChatWidgetPage = React.lazy(() => import("./pages/chat-widget/ChatWidgetPage"));
 const SocialPage = React.lazy(() => import("./pages/social/SocialPage"));
 const ReputationPage = React.lazy(() => import("./pages/reputation/ReputationPage"));
@@ -253,6 +254,7 @@ const AppContent = () => {
   const isPublicRoute = publicRoutes.includes(location.pathname) ||
     location.pathname.startsWith('/shared/') ||
     location.pathname.startsWith('/form/') ||
+    location.pathname.startsWith('/p/') ||
     location.pathname.startsWith('/review/') ||
     location.pathname.startsWith('/r/');
   const marketingChatRoutes = ['/home', '/status', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
@@ -287,6 +289,7 @@ const AppContent = () => {
       <Route path="/shared/vault/:token" element={<SharedVaultPage />} />
       <Route path="/sign/:token" element={<SignPage />} />
       <Route path="/form/:identifier" element={<PublicFormPage />} />
+      <Route path="/p/:slug" element={<PublicLandingPage />} />
       <Route path="/review/:token" element={<PublicReviewPage />} />
       <Route path="/r/:token" element={<LegacyReviewRedirect />} />
 
