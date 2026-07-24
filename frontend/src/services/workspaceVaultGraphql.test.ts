@@ -5,7 +5,9 @@ import {
   createVaultViaGraphql,
   deleteVaultItemViaGraphql,
   getVaultsViaGraphql,
+  removeVaultPasswordViaGraphql,
   reorderVaultItemsViaGraphql,
+  setVaultPasswordViaGraphql,
   updateVaultItemViaGraphql,
   updateVaultViaGraphql,
 } from './workspaceVaultGraphql';
@@ -202,6 +204,52 @@ describe('workspace vault GraphQL consumer', () => {
       { vaultId: 12, itemId: 2, input: { label: 'New token' } },
       { vaultId: 12, itemId: 2 },
       { vaultId: 12, itemIds: [2] },
+    ]);
+  });
+
+  it('uses CSRF-protected password mutations without REST password shapes', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        response({
+          data: {
+            setWorkspaceVaultPassword: {
+              vaultId: 12,
+              isLocked: true,
+              encryptionSalt: 'salt',
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        response({
+          data: {
+            removeWorkspaceVaultPassword: {
+              vaultId: 12,
+              isLocked: false,
+              encryptionSalt: null,
+            },
+          },
+        }),
+      );
+
+    await expect(
+      setVaultPasswordViaGraphql(12, 'password2', 'password1'),
+    ).resolves.toMatchObject({ vaultId: 12, isLocked: true });
+    await expect(
+      removeVaultPasswordViaGraphql(12, 'password2'),
+    ).resolves.toMatchObject({ vaultId: 12, isLocked: false });
+
+    const calls = vi.mocked(fetch).mock.calls;
+    expect(calls[0][1]?.headers).toMatchObject({ 'x-csrf-token': 'csrf' });
+    expect(
+      calls.map(([, init]) => JSON.parse(String(init?.body)).variables),
+    ).toEqual([
+      {
+        vaultId: 12,
+        newPassword: 'password2',
+        currentPassword: 'password1',
+      },
+      { vaultId: 12, password: 'password2' },
     ]);
   });
 });

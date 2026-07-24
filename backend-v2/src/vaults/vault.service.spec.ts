@@ -40,6 +40,8 @@ describe('VaultService', () => {
       updateItem: jest.fn(),
       deleteItem: jest.fn(),
       reorderItems: jest.fn(),
+      setPassword: jest.fn(),
+      removePassword: jest.fn(),
     } as unknown as jest.Mocked<VaultRepository>;
     service = new VaultService(repository);
   });
@@ -111,6 +113,19 @@ describe('VaultService', () => {
     });
   });
 
+  it('fails closed when a locked vault has no password hash', async () => {
+    repository.find.mockResolvedValue({
+      vault: { ...row, is_locked: true, master_password_hash: null },
+      items: [],
+    });
+    await expect(service.get(7, 12)).rejects.toMatchObject({
+      extensions: {
+        code: 'INTERNAL_SERVER_ERROR',
+        reason: 'INVALID_VAULT_LOCK_STATE',
+      },
+    });
+  });
+
   it('validates and hashes a new locked vault', async () => {
     repository.create.mockImplementation(async (_userId, value) => ({
       ...row,
@@ -153,6 +168,63 @@ describe('VaultService', () => {
     repository.delete.mockResolvedValue(false);
     await expect(service.delete(7, 12)).rejects.toMatchObject({
       extensions: { code: 'NOT_FOUND' },
+    });
+  });
+
+  it('hashes a new password and preserves the locked transition result', async () => {
+    repository.setPassword.mockImplementation(
+      async (
+        _userId,
+        _vaultId,
+        passwordHash,
+        encryptionSalt,
+      ) => ({
+        ...row,
+        is_locked: true,
+        encryption_salt: encryptionSalt,
+        master_password_hash: passwordHash,
+      }),
+    );
+    await expect(
+      service.setPassword(7, 12, 'password2'),
+    ).resolves.toMatchObject({
+      vaultId: 12,
+      isLocked: true,
+      encryptionSalt: expect.any(String),
+    });
+    const [, , passwordHash, salt] = repository.setPassword.mock.calls[0];
+    expect(passwordHash).not.toBe('password2');
+    await expect(bcrypt.compare('password2', passwordHash)).resolves.toBe(true);
+    expect(salt).toEqual(expect.any(String));
+  });
+
+  it('returns stable password transition errors without exposing hashes', async () => {
+    repository.setPassword.mockResolvedValue('current-password-required');
+    await expect(
+      service.setPassword(7, 12, 'password2'),
+    ).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'CURRENT_PASSWORD_REQUIRED',
+      },
+    });
+    repository.removePassword.mockResolvedValue('invalid-password');
+    await expect(
+      service.removePassword(7, 12, 'wrong'),
+    ).rejects.toMatchObject({
+      extensions: {
+        code: 'UNAUTHENTICATED',
+        reason: 'INVALID_MASTER_PASSWORD',
+      },
+    });
+    repository.removePassword.mockResolvedValue('vault-not-locked');
+    await expect(
+      service.removePassword(7, 12, 'password2'),
+    ).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'VAULT_NOT_LOCKED',
+      },
     });
   });
 

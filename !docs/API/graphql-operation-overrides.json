@@ -2028,6 +2028,14 @@
       "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "reorderWorkspaceVaultItems", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Vault-row-locked exact-set reorder rejects missing, foreign, duplicate, or extra IDs and atomically installs contiguous zero-based order."
     },
+    "POST /api/vaults/:vaultId/lock": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "setWorkspaceVaultPassword", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Direct CSRF-protected consumer sets or rotates the bcrypt master-password gate under an owned vault row lock. Rotation requires current-password proof, rejects bcrypt-truncated inputs, refreshes compatibility salt metadata, and never returns password material."
+    },
+    "POST /api/vaults/:vaultId/unlock": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "removeWorkspaceVaultPassword", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Direct CSRF-protected consumer removes the password gate only after row-locked current-password proof; foreign, already-unlocked, invalid-password, and malformed-lock states fail closed."
+    },
     "GET /api/onboarding/progress": {
       "disposition": "graphql-query", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "onboardingProgress", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Authenticated user-scoped progress, independent of selected organization, with deterministic typed feature projections."

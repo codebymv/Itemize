@@ -66,7 +66,9 @@ import {
   deleteVaultViaGraphql,
   getVaultsViaGraphql,
   getVaultViaGraphql,
+  removeVaultPasswordViaGraphql,
   reorderVaultItemsViaGraphql,
+  setVaultPasswordViaGraphql,
   updateVaultItemViaGraphql,
   updateVaultViaGraphql,
 } from './workspaceVaultGraphql';
@@ -769,23 +771,14 @@ export const getSharedVault = async (shareToken: string) => {
 
 // Lock vault with master password
 export const lockVault = async (vaultId: number, masterPassword: string, currentPassword?: string, token?: string) => {
-  const response = await api.post(`/api/vaults/${vaultId}/lock`, {
-    master_password: masterPassword,
-    current_password: currentPassword
-  }, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return setVaultPasswordViaGraphql(vaultId, masterPassword, currentPassword);
 };
 
 // Unlock vault (remove master password)
 export const unlockVault = async (vaultId: number, masterPassword: string, token?: string) => {
-  const response = await api.post(`/api/vaults/${vaultId}/unlock`, {
-    master_password: masterPassword
-  }, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return removeVaultPasswordViaGraphql(vaultId, masterPassword);
 };
 
 // Share list

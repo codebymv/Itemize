@@ -12,8 +12,21 @@ import {
   deleteVaultItem,
   bulkAddVaultItems,
   reorderVaultItems,
-  getVault
+  getVault,
+  lockVault,
+  unlockVault,
 } from '@/services/api';
+
+export type VaultSecurityDialogMode =
+  | 'unlock'
+  | 'set-password'
+  | 'change-password'
+  | 'remove-password';
+
+const hasCompleteVaultItems = (vault: Vault): boolean => {
+  const items = vault.items || [];
+  return !vault.is_locked && items.length >= (vault.item_count ?? items.length);
+};
 
 interface UseVaultCardLogicProps {
   vault: Vault;
@@ -48,7 +61,7 @@ export const useVaultCardLogic = ({
   // Items state
   const [items, setItems] = useState<VaultItem[]>(vault.items || []);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
-  const [itemsLoaded, setItemsLoaded] = useState(!!vault.items);
+  const [itemsLoaded, setItemsLoaded] = useState(hasCompleteVaultItems(vault));
   
   // Item editing state
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
@@ -64,9 +77,16 @@ export const useVaultCardLogic = ({
   // Visibility state for items (which items are showing values)
   const [visibleItems, setVisibleItems] = useState<Set<number>>(new Set());
   
-  // Lock state
+  // Lock state. A successful password verifies this vault only for this
+  // component session; the server remains the authority on every read.
+  const [isVaultLocked, setIsVaultLocked] = useState(vault.is_locked);
+  const [isUnlockedForSession, setIsUnlockedForSession] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [masterPasswordInput, setMasterPasswordInput] = useState('');
+  const [newMasterPasswordInput, setNewMasterPasswordInput] = useState('');
+  const [confirmMasterPasswordInput, setConfirmMasterPasswordInput] = useState('');
+  const [securityDialogMode, setSecurityDialogMode] =
+    useState<VaultSecurityDialogMode | null>(null);
   
   // Refs
   const newItemLabelRef = useRef<HTMLInputElement>(null);
@@ -75,20 +95,50 @@ export const useVaultCardLogic = ({
   useEffect(() => {
     if (vault.items) {
       setItems(vault.items);
-      setItemsLoaded(true);
+      setItemsLoaded(hasCompleteVaultItems(vault));
+      if (vault.is_locked) setIsUnlockedForSession(false);
     }
-  }, [vault.items]);
+  }, [vault.items, vault.item_count, vault.is_locked]);
+
+  useEffect(() => {
+    setIsVaultLocked(vault.is_locked);
+    if (!vault.is_locked) setIsUnlockedForSession(false);
+  }, [vault.is_locked]);
+
+  const closeSecurityDialog = useCallback(() => {
+    if (isUnlocking) return;
+    setSecurityDialogMode(null);
+    setMasterPasswordInput('');
+    setNewMasterPasswordInput('');
+    setConfirmMasterPasswordInput('');
+  }, [isUnlocking]);
+
+  const openSecurityDialog = useCallback((mode: VaultSecurityDialogMode) => {
+    setMasterPasswordInput('');
+    setNewMasterPasswordInput('');
+    setConfirmMasterPasswordInput('');
+    setSecurityDialogMode(mode);
+  }, []);
   
   // Load items if not loaded
-  const loadItems = useCallback(async () => {
+  const loadItems = useCallback(async (masterPassword?: string) => {
+    if (isVaultLocked && !isUnlockedForSession && !masterPassword) {
+      openSecurityDialog('unlock');
+      return;
+    }
     if (itemsLoaded || isLoadingItems) return;
-    
+
     setIsLoadingItems(true);
     try {
-      const fullVault = await getVault(vault.id, undefined, token || undefined);
+      const fullVault = await getVault(
+        vault.id,
+        masterPassword,
+        token || undefined,
+      );
       if (fullVault.items) {
         setItems(fullVault.items);
         setItemsLoaded(true);
+        if (isVaultLocked) setIsUnlockedForSession(true);
       }
     } catch (error) {
       console.error('Failed to load vault items:', error);
@@ -100,7 +150,118 @@ export const useVaultCardLogic = ({
     } finally {
       setIsLoadingItems(false);
     }
-  }, [vault.id, token, itemsLoaded, isLoadingItems, toast]);
+  }, [
+    vault.id,
+    token,
+    itemsLoaded,
+    isLoadingItems,
+    isVaultLocked,
+    isUnlockedForSession,
+    openSecurityDialog,
+    toast,
+  ]);
+
+  const handleSecuritySubmit = useCallback(async () => {
+    if (!securityDialogMode) return;
+    if (
+      securityDialogMode !== 'set-password' &&
+      !masterPasswordInput
+    ) {
+      toast({
+        title: 'Password required',
+        description: 'Enter the vault master password.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (
+      securityDialogMode === 'set-password' ||
+      securityDialogMode === 'change-password'
+    ) {
+      if (newMasterPasswordInput.length < 8) {
+        toast({
+          title: 'Password too short',
+          description: 'Use at least 8 characters.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (newMasterPasswordInput !== confirmMasterPasswordInput) {
+        toast({
+          title: 'Passwords do not match',
+          description: 'Re-enter the new password.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
+    setIsUnlocking(true);
+    try {
+      if (securityDialogMode === 'unlock') {
+        const fullVault = await getVault(
+          vault.id,
+          masterPasswordInput,
+          token || undefined,
+        );
+        setItems(fullVault.items || []);
+        setItemsLoaded(true);
+        setIsUnlockedForSession(true);
+        toast({ title: 'Vault opened' });
+      } else if (securityDialogMode === 'remove-password') {
+        await unlockVault(
+          vault.id,
+          masterPasswordInput,
+          token || undefined,
+        );
+        setIsVaultLocked(false);
+        setIsUnlockedForSession(false);
+        setItemsLoaded(false);
+        toast({ title: 'Password removed' });
+      } else {
+        await lockVault(
+          vault.id,
+          newMasterPasswordInput,
+          securityDialogMode === 'change-password'
+            ? masterPasswordInput
+            : undefined,
+          token || undefined,
+        );
+        setIsVaultLocked(true);
+        setIsUnlockedForSession(false);
+        setItems([]);
+        setItemsLoaded(false);
+        setVisibleItems(new Set());
+        toast({
+          title:
+            securityDialogMode === 'change-password'
+              ? 'Password changed'
+              : 'Vault protected',
+        });
+      }
+      setSecurityDialogMode(null);
+      setMasterPasswordInput('');
+      setNewMasterPasswordInput('');
+      setConfirmMasterPasswordInput('');
+    } catch (error) {
+      console.error('Failed to update vault password:', error);
+      toast({
+        title: 'Password rejected',
+        description: 'Check the password and try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUnlocking(false);
+    }
+  }, [
+    securityDialogMode,
+    masterPasswordInput,
+    newMasterPasswordInput,
+    confirmMasterPasswordInput,
+    toast,
+    vault.id,
+    token,
+  ]);
   
   const {
     isEditing,
@@ -471,10 +632,19 @@ export const useVaultCardLogic = ({
     parseEnvFormat,
     
     // Lock state
+    isVaultLocked,
+    isUnlockedForSession,
     isUnlocking,
-    setIsUnlocking,
     masterPasswordInput,
     setMasterPasswordInput,
+    newMasterPasswordInput,
+    setNewMasterPasswordInput,
+    confirmMasterPasswordInput,
+    setConfirmMasterPasswordInput,
+    securityDialogMode,
+    openSecurityDialog,
+    closeSecurityDialog,
+    handleSecuritySubmit,
     
     // Refs
     titleEditRef,

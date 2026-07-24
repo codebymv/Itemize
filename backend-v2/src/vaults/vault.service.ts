@@ -27,6 +27,7 @@ import {
   WorkspaceVault,
   WorkspaceVaultItem,
   WorkspaceVaultItemsResult,
+  WorkspaceVaultPasswordResult,
   WorkspaceVaultPage,
 } from './vault.types';
 
@@ -63,9 +64,10 @@ export class VaultService {
     this.id(vaultId);
     const aggregate = await this.vaults.find(userId, vaultId);
     if (!aggregate) throw this.notFound();
-    const locked =
-      aggregate.vault.is_locked &&
-      Boolean(aggregate.vault.master_password_hash);
+    const locked = aggregate.vault.is_locked;
+    if (locked && !aggregate.vault.master_password_hash) {
+      throw this.invalidLockState();
+    }
     if (locked && !masterPassword) {
       return this.map(aggregate.vault, [], true);
     }
@@ -159,6 +161,70 @@ export class VaultService {
     this.id(vaultId);
     if (!(await this.vaults.delete(userId, vaultId))) throw this.notFound();
     return { deletedId: vaultId };
+  }
+
+  async setPassword(
+    userId: number,
+    vaultId: number,
+    newPassword: string,
+    currentPassword?: string,
+  ): Promise<WorkspaceVaultPasswordResult> {
+    this.id(vaultId);
+    const normalizedNewPassword = this.password(newPassword);
+    const normalizedCurrentPassword =
+      currentPassword === undefined
+        ? undefined
+        : this.passwordCandidate(currentPassword);
+    const result = await this.vaults.setPassword(
+      userId,
+      vaultId,
+      await bcrypt.hash(normalizedNewPassword, 12),
+      generateVaultSalt(),
+      normalizedCurrentPassword,
+      bcrypt.compare,
+    );
+    if (result === 'vault-not-found') throw this.notFound();
+    if (result === 'current-password-required') {
+      throw itemizeGraphqlError(
+        'Current password is required',
+        'BAD_USER_INPUT',
+        { reason: 'CURRENT_PASSWORD_REQUIRED', field: 'currentPassword' },
+      );
+    }
+    if (result === 'invalid-password') throw this.invalidMasterPassword();
+    if (result === 'invalid-lock-state') throw this.invalidLockState();
+    return {
+      vaultId: result.id,
+      isLocked: result.is_locked,
+      encryptionSalt: result.encryption_salt,
+    };
+  }
+
+  async removePassword(
+    userId: number,
+    vaultId: number,
+    password: string,
+  ): Promise<WorkspaceVaultPasswordResult> {
+    this.id(vaultId);
+    const result = await this.vaults.removePassword(
+      userId,
+      vaultId,
+      this.passwordCandidate(password),
+      bcrypt.compare,
+    );
+    if (result === 'vault-not-found') throw this.notFound();
+    if (result === 'vault-not-locked') {
+      throw itemizeGraphqlError('Vault is not locked', 'BAD_USER_INPUT', {
+        reason: 'VAULT_NOT_LOCKED',
+      });
+    }
+    if (result === 'invalid-password') throw this.invalidMasterPassword();
+    if (result === 'invalid-lock-state') throw this.invalidLockState();
+    return {
+      vaultId: result.id,
+      isLocked: result.is_locked,
+      encryptionSalt: result.encryption_salt,
+    };
   }
 
   async addItem(
@@ -474,6 +540,29 @@ export class VaultService {
       );
     }
     return value;
+  }
+
+  private passwordCandidate(value: string): string {
+    if (typeof value !== 'string' || Buffer.byteLength(value, 'utf8') > 72) {
+      throw this.invalidMasterPassword();
+    }
+    return value;
+  }
+
+  private invalidMasterPassword() {
+    return itemizeGraphqlError(
+      'Invalid master password',
+      'UNAUTHENTICATED',
+      { reason: 'INVALID_MASTER_PASSWORD' },
+    );
+  }
+
+  private invalidLockState() {
+    return itemizeGraphqlError(
+      'Vault lock configuration is invalid',
+      'INTERNAL_SERVER_ERROR',
+      { reason: 'INVALID_VAULT_LOCK_STATE' },
+    );
   }
 
   private id(value: number): number {

@@ -58,3 +58,10 @@ export class WorkspaceVaultItemsResult {
 export class DeleteWorkspaceVaultItemResult {
   @Field(() => Int) deletedId: number;
 }
+
+@ObjectType()
+export class WorkspaceVaultPasswordResult {
+  @Field(() => Int) vaultId: number;
+  @Field() isLocked: boolean;
+  @Field(() => String, { nullable: true }) encryptionSalt: string | null;
+}

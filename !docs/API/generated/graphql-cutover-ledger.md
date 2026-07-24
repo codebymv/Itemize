@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 408
-- API operations under `/api`: 401
+- Registered method/path operations: 406
+- API operations under `/api`: 399
 - Non-API registered operations: 7
-- Static frontend callsites: 339
-- Operations with frontend consumers: 325
+- Static frontend callsites: 337
+- Operations with frontend consumers: 323
 - Operations referenced by backend tests: 222
 - Recommended GraphQL queries: 121
-- Recommended GraphQL mutations: 234
+- Recommended GraphQL mutations: 232
 - Recommended retained HTTP endpoints: 45
-- High-risk operations: 328
+- High-risk operations: 326
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -394,11 +394,9 @@
 | DELETE | `/api/tags/:id` | 0 | 7 | graphql-mutation | high | crm / TagsModule / deleteTag |
 | PUT | `/api/tags/:id` | 0 | 5 | graphql-mutation | high | crm / TagsModule / updateTag |
 | GET | `/api/tags/suggestions` | 0 | 2 | graphql-query | medium | crm / TagsModule / contactTagSuggestions |
-| POST | `/api/vaults/:vaultId/lock` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | PUT | `/api/vaults/:vaultId/position` | 0 | 0 | graphql-mutation | high | workspace-content / VaultModule / updateWorkspaceVault |
 | DELETE | `/api/vaults/:vaultId/share` | 2 | 2 | graphql-mutation | high | sharing / VaultSharingModule / disableVaultSharing |
 | POST | `/api/vaults/:vaultId/share` | 2 | 4 | graphql-mutation | high | sharing / VaultSharingModule / enableVaultSharing |
-| POST | `/api/vaults/:vaultId/unlock` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | POST | `/api/webhooks/:workflowId` | 0 | 6 | retain-http | high | automation / WorkflowWebhooksModule / processWorkflowWebhook |
 | GET | `/api/whiteboards` | 1 | 3 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceWhiteboards |
 | POST | `/api/whiteboards` | 1 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / createWorkspaceWhiteboard |
@@ -445,7 +443,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 8
-- Orphaned manual overrides: 12
+- Orphaned manual overrides: 14
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

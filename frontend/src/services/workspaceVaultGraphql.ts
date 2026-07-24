@@ -49,6 +49,12 @@ type GraphqlPageInfo = {
   hasPreviousPage: boolean;
 };
 
+type GraphqlVaultPasswordResult = {
+  vaultId: number;
+  isLocked: boolean;
+  encryptionSalt: string | null;
+};
+
 const VAULT_FIELDS = `
   id userId title category colorValue positionX positionY width height zIndex
   isLocked encryptionSalt itemCount requiresUnlock shareToken isPublic sharedAt
@@ -358,5 +364,73 @@ export const reorderVaultItemsViaGraphql = async (
   return {
     message: 'Items reordered successfully',
     items: data.reorderWorkspaceVaultItems.items.map(legacyVaultItem),
+  };
+};
+
+export const setVaultPasswordViaGraphql = async (
+  vaultId: number,
+  newPassword: string,
+  currentPassword?: string,
+): Promise<{
+  message: string;
+  vaultId: number;
+  isLocked: boolean;
+  encryptionSalt: string | null;
+}> => {
+  const data = await graphqlMutationRequest<
+    { setWorkspaceVaultPassword: GraphqlVaultPasswordResult },
+    { vaultId: number; newPassword: string; currentPassword?: string }
+  >(
+    `mutation SetWorkspaceVaultPassword(
+      $vaultId: Int!
+      $newPassword: String!
+      $currentPassword: String
+    ) {
+      setWorkspaceVaultPassword(
+        vaultId: $vaultId
+        newPassword: $newPassword
+        currentPassword: $currentPassword
+      ) {
+        vaultId isLocked encryptionSalt
+      }
+    }`,
+    {
+      vaultId,
+      newPassword,
+      ...(currentPassword ? { currentPassword } : {}),
+    },
+  );
+  return {
+    message: 'Vault locked successfully',
+    ...data.setWorkspaceVaultPassword,
+  };
+};
+
+export const removeVaultPasswordViaGraphql = async (
+  vaultId: number,
+  password: string,
+): Promise<{
+  message: string;
+  vaultId: number;
+  isLocked: boolean;
+  encryptionSalt: string | null;
+}> => {
+  const data = await graphqlMutationRequest<
+    { removeWorkspaceVaultPassword: GraphqlVaultPasswordResult },
+    { vaultId: number; password: string }
+  >(
+    `mutation RemoveWorkspaceVaultPassword(
+      $vaultId: Int!
+      $password: String!
+    ) {
+      removeWorkspaceVaultPassword(vaultId: $vaultId, password: $password) {
+        vaultId isLocked encryptionSalt
+      }
+    }`,
+    { vaultId, password },
+  );
+  return {
+    message: 'Vault unlocked successfully',
+    ...data.removeWorkspaceVaultPassword,
   };
 };

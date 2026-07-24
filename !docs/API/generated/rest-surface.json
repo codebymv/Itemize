@@ -3,11 +3,11 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 429,
-    "resolvedDeclarationCount": 429,
+    "declarationCount": 427,
+    "resolvedDeclarationCount": 427,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 408,
-    "sourceFileCount": 79
+    "uniqueResolvedOperationCount": 406,
+    "sourceFileCount": 78
   },
   "caveats": [
     "This is static source analysis; it does not execute application modules.",
@@ -3847,16 +3847,6 @@
       "dynamic": false
     },
     {
-      "method": "POST",
-      "publicPaths": [
-        "/api/vaults/:vaultId/lock"
-      ],
-      "declaredPath": "/vaults/:vaultId/lock",
-      "source": "backend/src/routes/vaults/password.routes.js",
-      "line": 14,
-      "dynamic": false
-    },
-    {
       "method": "PUT",
       "publicPaths": [
         "/api/vaults/:vaultId/position"
@@ -3884,16 +3874,6 @@
       "declaredPath": "/vaults/:vaultId/share",
       "source": "backend/src/routes/vaults/sharing.routes.js",
       "line": 17,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/vaults/:vaultId/unlock"
-      ],
-      "declaredPath": "/vaults/:vaultId/unlock",
-      "source": "backend/src/routes/vaults/password.routes.js",
-      "line": 78,
       "dynamic": false
     },
     {

@@ -13,6 +13,14 @@ import { VaultCardProps, Category } from '@/types';
 import { CategorySelector } from '../CategorySelector';
 import { VaultItemRow } from './VaultItemRow';
 import { DeleteDialog } from '../ui/delete-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
 import { useTheme } from 'next-themes';
 import {
   DndContext,
@@ -144,6 +152,21 @@ export const VaultCard: React.FC<VaultCardProps> = ({
     handleBulkAddItems,
     handleReorderItems,
     parseEnvFormat,
+
+    // Password protection
+    isVaultLocked,
+    isUnlockedForSession,
+    isUnlocking,
+    masterPasswordInput,
+    setMasterPasswordInput,
+    newMasterPasswordInput,
+    setNewMasterPasswordInput,
+    confirmMasterPasswordInput,
+    setConfirmMasterPasswordInput,
+    securityDialogMode,
+    openSecurityDialog,
+    closeSecurityDialog,
+    handleSecuritySubmit,
     
     // Refs
     titleEditRef,
@@ -215,10 +238,18 @@ export const VaultCard: React.FC<VaultCardProps> = ({
 
   // Load items when collapsible opens
   useEffect(() => {
-    if (isCollapsibleOpen) {
+    if (
+      isCollapsibleOpen &&
+      (!isVaultLocked || isUnlockedForSession)
+    ) {
       loadItems();
     }
-  }, [isCollapsibleOpen, loadItems]);
+  }, [
+    isCollapsibleOpen,
+    isVaultLocked,
+    isUnlockedForSession,
+    loadItems,
+  ]);
 
   // Implement click outside handler for title editing
   useEffect(() => {
@@ -325,7 +356,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                     </Button>
                   </ColorPicker>
                   {/* Type icon */}
-                  {vault.is_locked ? (
+                  {isVaultLocked ? (
                     <Lock className="h-4 w-4" style={{ color: vaultDisplayColor }} />
                   ) : (
                     <KeyRound className="h-4 w-4" style={{ color: vaultDisplayColor }} />
@@ -360,7 +391,40 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                         <Edit3 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
                         Edit Title
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleShareVault} className="group/menu font-raleway">
+                      {isVaultLocked && !isUnlockedForSession && (
+                        <DropdownMenuItem
+                          onClick={() => openSecurityDialog('unlock')}
+                          className="group/menu font-raleway"
+                        >
+                          <KeyRound className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
+                          Open Vault
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem
+                        onClick={() =>
+                          openSecurityDialog(
+                            isVaultLocked ? 'change-password' : 'set-password',
+                          )
+                        }
+                        className="group/menu font-raleway"
+                      >
+                        <Lock className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
+                        {isVaultLocked ? 'Change Password' : 'Add Password'}
+                      </DropdownMenuItem>
+                      {isVaultLocked && (
+                        <DropdownMenuItem
+                          onClick={() => openSecurityDialog('remove-password')}
+                          className="group/menu font-raleway"
+                        >
+                          <KeyRound className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
+                          Remove Password
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem
+                        onClick={handleShareVault}
+                        disabled={isVaultLocked}
+                        className="group/menu font-raleway"
+                      >
                         <Share2 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
                         Share
                       </DropdownMenuItem>
@@ -407,6 +471,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                 variant="outline"
                 onClick={() => setShowAddItem(true)}
                 className="h-7"
+                disabled={isVaultLocked && !isUnlockedForSession}
               >
                 <Plus className="h-3.5 w-3.5 mr-1" />
                 Add Item
@@ -468,7 +533,20 @@ export const VaultCard: React.FC<VaultCardProps> = ({
               )}
 
               {/* Items list */}
-              {isLoadingItems ? (
+              {isVaultLocked && !isUnlockedForSession ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Lock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">This vault is password protected</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-3"
+                    onClick={() => openSecurityDialog('unlock')}
+                  >
+                    Open Vault
+                  </Button>
+                </div>
+              ) : isLoadingItems ? (
                 <div className="flex items-center justify-center py-8">
                   <Spinner size="md" />
                 </div>
@@ -527,6 +605,92 @@ export const VaultCard: React.FC<VaultCardProps> = ({
         itemColor={vaultDisplayColor}
         onConfirm={handleConfirmDelete}
       />
+
+      <Dialog
+        open={securityDialogMode !== null}
+        onOpenChange={(open) => {
+          if (!open) closeSecurityDialog();
+        }}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              {securityDialogMode === 'unlock' && 'Open Vault'}
+              {securityDialogMode === 'set-password' && 'Add Password'}
+              {securityDialogMode === 'change-password' && 'Change Password'}
+              {securityDialogMode === 'remove-password' && 'Remove Password'}
+            </DialogTitle>
+            <DialogDescription>
+              {securityDialogMode === 'unlock'
+                ? 'Enter the master password to view this vault.'
+                : securityDialogMode === 'remove-password'
+                  ? 'Enter the current master password.'
+                  : 'Master passwords must be at least 8 characters.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {(securityDialogMode === 'unlock' ||
+            securityDialogMode === 'change-password' ||
+            securityDialogMode === 'remove-password') && (
+            <Input
+              type="password"
+              value={masterPasswordInput}
+              onChange={(event) => setMasterPasswordInput(event.target.value)}
+              placeholder={
+                securityDialogMode === 'unlock'
+                  ? 'Master password'
+                  : 'Current password'
+              }
+              autoComplete="current-password"
+              autoFocus
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') void handleSecuritySubmit();
+              }}
+            />
+          )}
+
+          {(securityDialogMode === 'set-password' ||
+            securityDialogMode === 'change-password') && (
+            <>
+              <Input
+                type="password"
+                value={newMasterPasswordInput}
+                onChange={(event) =>
+                  setNewMasterPasswordInput(event.target.value)
+                }
+                placeholder="New password"
+                autoComplete="new-password"
+                autoFocus={securityDialogMode === 'set-password'}
+              />
+              <Input
+                type="password"
+                value={confirmMasterPasswordInput}
+                onChange={(event) =>
+                  setConfirmMasterPasswordInput(event.target.value)
+                }
+                placeholder="Confirm new password"
+                autoComplete="new-password"
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') void handleSecuritySubmit();
+                }}
+              />
+            </>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={closeSecurityDialog}
+              disabled={isUnlocking}
+            >
+              Cancel
+            </Button>
+            <Button onClick={() => void handleSecuritySubmit()} disabled={isUnlocking}>
+              {isUnlocking ? <Spinner size="xs" /> : 'Continue'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Collapsible>
   );
 };

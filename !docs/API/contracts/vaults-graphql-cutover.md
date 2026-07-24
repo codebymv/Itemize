@@ -1,6 +1,6 @@
 # Vaults GraphQL cutover contract
 
-**Status:** Shell and item lifecycle consumer cutover complete; lock-management and sharing slices remain
+**Status:** Shell, item, and password lifecycle consumer cutover complete; sharing remains
 
 ## Shipped boundary
 
@@ -44,17 +44,41 @@ batch before writing instead of silently skipping malformed entries. Reorder
 requires the exact authoritative item-ID set, and deletion compacts later
 positions.
 
+## Password lifecycle
+
+Adding, rotating, and removing a master password use direct CSRF-protected
+GraphQL mutations with no REST fallback. Each transition locks the owned vault
+row before inspecting current state. Rotation requires the current password
+when the vault is already locked; removal always requires it. Foreign IDs,
+wrong passwords, already-unlocked removal, and inconsistent locked rows fail
+closed with stable error reasons.
+
+The frontend now prompts before reading a locked vault, retains successful
+verification only for that mounted card session, and offers concise add,
+change, and remove actions. Locked cards no longer render an empty vault as if
+it contained no items. List projections distinguish an intentionally unloaded
+item collection from a complete empty vault, repairing lazy loading for
+non-empty vaults.
+
+The password is an authenticated-owner read gate, not an encryption-derived
+key. Stored item bytes continue to use the server-held `VAULT_ENCRYPTION_KEY`,
+so password rotation/removal does not rewrite ciphertext. This preserves the
+existing storage contract while avoiding a false client-side or zero-knowledge
+encryption claim.
+
 ## Remaining slices
 
-1. Lock, unlock, and password lifecycle mutations.
-2. The explicit-consent vault-sharing model documented in
+1. The explicit-consent vault-sharing model documented in
    `sharing-graphql-cutover.md`; its anonymous bearer-link read remains an HTTP
    protocol.
 
 ## Verification
 
-Focused Nest tests cover pagination mapping, locked metadata, invalid-password
-failure, bcrypt creation, partial position update, ownership, and delete
-postconditions. Focused frontend tests cover legacy field mapping, CSRF, and
-mutation input identities. The production migration stream contract and both
-production builds also pass.
+Focused Nest tests cover pagination mapping, locked metadata, malformed-lock
+denial, invalid-password failure, bcrypt creation/rotation, partial position
+update, ownership, and delete postconditions. Fresh PostgreSQL covers the full
+five-scenario vault lifecycle, including CSRF, foreign-ID concealment,
+current-password rotation, old-password invalidation, ciphertext continuity,
+removal, and already-unlocked denial. Focused frontend tests cover legacy field
+mapping, CSRF, item mutations, and both password mutations. The production
+migration stream contract and both production builds also pass.

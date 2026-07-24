@@ -314,6 +314,133 @@ describe('Vault GraphQL PostgreSQL lifecycle', () => {
     expect(removed.body.data.deleteWorkspaceVaultItem.deletedId).toBe(addedId);
   });
 
+  it('rotates and removes the password transactionally with current-password proof', async () => {
+    const setDocument = `mutation SetPassword(
+      $vaultId: Int!
+      $newPassword: String!
+      $currentPassword: String
+    ) {
+      setWorkspaceVaultPassword(
+        vaultId: $vaultId
+        newPassword: $newPassword
+        currentPassword: $currentPassword
+      ) { vaultId isLocked encryptionSalt }
+    }`;
+
+    const noCsrf = await query(memberToken, setDocument, {
+      vaultId,
+      newPassword: 'password2',
+      currentPassword: 'password1',
+    }).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+
+    const missingCurrent = await mutation(memberToken, setDocument, {
+      vaultId,
+      newPassword: 'password2',
+    }).expect(200);
+    expect(missingCurrent.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'CURRENT_PASSWORD_REQUIRED',
+    });
+
+    const wrongCurrent = await mutation(memberToken, setDocument, {
+      vaultId,
+      newPassword: 'password2',
+      currentPassword: 'wrong',
+    }).expect(200);
+    expect(wrongCurrent.body.errors[0].extensions).toMatchObject({
+      code: 'UNAUTHENTICATED',
+      reason: 'INVALID_MASTER_PASSWORD',
+    });
+
+    const concealed = await mutation(outsiderToken, setDocument, {
+      vaultId,
+      newPassword: 'password2',
+    }).expect(200);
+    expect(concealed.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const changed = await mutation(memberToken, setDocument, {
+      vaultId,
+      newPassword: 'password2',
+      currentPassword: 'password1',
+    }).expect(200);
+    expect(changed.body.errors).toBeUndefined();
+    expect(changed.body.data.setWorkspaceVaultPassword).toMatchObject({
+      vaultId,
+      isLocked: true,
+      encryptionSalt: expect.any(String),
+    });
+
+    const oldPassword = await query(
+      memberToken,
+      `query {
+        workspaceVault(id: ${vaultId}, masterPassword: "password1") { id }
+      }`,
+    ).expect(200);
+    expect(oldPassword.body.errors[0].extensions.reason).toBe(
+      'INVALID_MASTER_PASSWORD',
+    );
+    const newPassword = await query(
+      memberToken,
+      `query {
+        workspaceVault(id: ${vaultId}, masterPassword: "password2") {
+          items { value }
+        }
+      }`,
+    ).expect(200);
+    expect(
+      newPassword.body.data.workspaceVault.items.map(
+        (item: { value: string }) => item.value,
+      ),
+    ).toContain('secret-value');
+
+    const removeDocument = `mutation RemovePassword(
+      $vaultId: Int!
+      $password: String!
+    ) {
+      removeWorkspaceVaultPassword(vaultId: $vaultId, password: $password) {
+        vaultId isLocked encryptionSalt
+      }
+    }`;
+    const rejected = await mutation(memberToken, removeDocument, {
+      vaultId,
+      password: 'password1',
+    }).expect(200);
+    expect(rejected.body.errors[0].extensions.reason).toBe(
+      'INVALID_MASTER_PASSWORD',
+    );
+
+    const removed = await mutation(memberToken, removeDocument, {
+      vaultId,
+      password: 'password2',
+    }).expect(200);
+    expect(removed.body.errors).toBeUndefined();
+    expect(removed.body.data.removeWorkspaceVaultPassword).toEqual({
+      vaultId,
+      isLocked: false,
+      encryptionSalt: null,
+    });
+
+    const nowOpen = await query(
+      memberToken,
+      `query { workspaceVault(id: ${vaultId}) { items { value } } }`,
+    ).expect(200);
+    expect(
+      nowOpen.body.data.workspaceVault.items.map(
+        (item: { value: string }) => item.value,
+      ),
+    ).toContain('secret-value');
+
+    const alreadyOpen = await mutation(memberToken, removeDocument, {
+      vaultId,
+      password: 'password2',
+    }).expect(200);
+    expect(alreadyOpen.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'VAULT_NOT_LOCKED',
+    });
+  });
+
   it('creates, updates, and deletes with CSRF and exact ownership', async () => {
     const noCsrf = await query(
       memberToken,

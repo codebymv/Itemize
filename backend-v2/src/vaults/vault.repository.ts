@@ -66,6 +66,20 @@ export type EncryptedVaultItemValue = {
   iv: string;
 };
 
+export type SetVaultPasswordResult =
+  | 'vault-not-found'
+  | 'current-password-required'
+  | 'invalid-password'
+  | 'invalid-lock-state'
+  | VaultRow;
+
+export type RemoveVaultPasswordResult =
+  | 'vault-not-found'
+  | 'invalid-password'
+  | 'invalid-lock-state'
+  | 'vault-not-locked'
+  | VaultRow;
+
 const VAULT_COLUMNS = `
   v.id, v.user_id, v.title, v.category, v.color_value,
   v.position_x, v.position_y, v.width, v.height, v.z_index,
@@ -206,6 +220,66 @@ export class VaultRepository {
       [vaultId, userId],
     );
     return result.rowCount === 1;
+  }
+
+  async setPassword(
+    userId: number,
+    vaultId: number,
+    newPasswordHash: string,
+    encryptionSalt: string,
+    currentPassword: string | undefined,
+    verifyPassword: (password: string, hash: string) => Promise<boolean>,
+  ): Promise<SetVaultPasswordResult> {
+    return this.transaction(async (client) => {
+      const current = await this.lockOwnedVaultRow(client, userId, vaultId);
+      if (!current) return 'vault-not-found';
+      if (current.is_locked) {
+        if (!currentPassword) return 'current-password-required';
+        if (!current.master_password_hash) return 'invalid-lock-state';
+        if (!(await verifyPassword(currentPassword, current.master_password_hash))) {
+          return 'invalid-password';
+        }
+      }
+      const result = await client.query<VaultRow>(
+        `UPDATE vaults
+         SET is_locked = TRUE, encryption_salt = $1,
+             master_password_hash = $2, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3 AND user_id = $4
+         RETURNING *, (
+           SELECT COUNT(*)::int FROM vault_items WHERE vault_id = vaults.id
+         ) AS item_count`,
+        [encryptionSalt, newPasswordHash, vaultId, userId],
+      );
+      return result.rows[0];
+    });
+  }
+
+  async removePassword(
+    userId: number,
+    vaultId: number,
+    password: string,
+    verifyPassword: (password: string, hash: string) => Promise<boolean>,
+  ): Promise<RemoveVaultPasswordResult> {
+    return this.transaction(async (client) => {
+      const current = await this.lockOwnedVaultRow(client, userId, vaultId);
+      if (!current) return 'vault-not-found';
+      if (!current.is_locked) return 'vault-not-locked';
+      if (!current.master_password_hash) return 'invalid-lock-state';
+      if (!(await verifyPassword(password, current.master_password_hash))) {
+        return 'invalid-password';
+      }
+      const result = await client.query<VaultRow>(
+        `UPDATE vaults
+         SET is_locked = FALSE, encryption_salt = NULL,
+             master_password_hash = NULL, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND user_id = $2
+         RETURNING *, (
+           SELECT COUNT(*)::int FROM vault_items WHERE vault_id = vaults.id
+         ) AS item_count`,
+        [vaultId, userId],
+      );
+      return result.rows[0];
+    });
   }
 
   async addItem(
@@ -401,13 +475,24 @@ export class VaultRepository {
     userId: number,
     vaultId: number,
   ): Promise<boolean> {
-    const result = await client.query(
-      `SELECT id FROM vaults
-       WHERE id = $1 AND user_id = $2
+    return Boolean(await this.lockOwnedVaultRow(client, userId, vaultId));
+  }
+
+  private async lockOwnedVaultRow(
+    client: PoolClient,
+    userId: number,
+    vaultId: number,
+  ): Promise<VaultRow | null> {
+    const result = await client.query<VaultRow>(
+      `SELECT ${VAULT_COLUMNS}, (
+         SELECT COUNT(*)::int FROM vault_items WHERE vault_id = v.id
+       ) AS item_count
+       FROM vaults v
+       WHERE v.id = $1 AND v.user_id = $2
        FOR UPDATE`,
       [vaultId, userId],
     );
-    return result.rowCount === 1;
+    return result.rows[0] ?? null;
   }
 
   private async touch(client: PoolClient, vaultId: number): Promise<void> {

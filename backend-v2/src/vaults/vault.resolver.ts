@@ -16,6 +16,7 @@ import {
   WorkspaceVault,
   WorkspaceVaultItem,
   WorkspaceVaultItemsResult,
+  WorkspaceVaultPasswordResult,
   WorkspaceVaultPage,
 } from './vault.types';
 
@@ -65,6 +66,30 @@ export class VaultResolver {
     @Args('id', { type: () => Int }) id: number,
   ): Promise<DeleteWorkspaceVaultResult> {
     return this.vaults.delete(this.userId(), id);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => WorkspaceVaultPasswordResult)
+  setWorkspaceVaultPassword(
+    @Args('vaultId', { type: () => Int }) vaultId: number,
+    @Args('newPassword') newPassword: string,
+    @Args('currentPassword', { nullable: true }) currentPassword?: string,
+  ): Promise<WorkspaceVaultPasswordResult> {
+    return this.vaults.setPassword(
+      this.userId(),
+      vaultId,
+      newPassword,
+      currentPassword,
+    );
+  }
+
+  @CsrfProtected()
+  @Mutation(() => WorkspaceVaultPasswordResult)
+  removeWorkspaceVaultPassword(
+    @Args('vaultId', { type: () => Int }) vaultId: number,
+    @Args('password') password: string,
+  ): Promise<WorkspaceVaultPasswordResult> {
+    return this.vaults.removePassword(this.userId(), vaultId, password);
   }
 
   @CsrfProtected()
