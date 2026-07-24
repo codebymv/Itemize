@@ -19,6 +19,7 @@ import { CalendarsModule } from './calendars/calendars.module';
 import { formatItemizeGraphqlError } from './common/graphql-error';
 import { ContactTransfersModule } from './contact-transfers/contact-transfers.module';
 import { ContactsModule } from './contacts/contacts.module';
+import { ConversationsModule } from './conversations/conversations.module';
 import { DatabaseModule } from './database/database.module';
 import { DealsModule } from './deals/deals.module';
 import { EstimatesModule } from './estimates/estimates.module';
@@ -88,6 +89,7 @@ const observabilityPlugins = [
     WorkspaceContentModule,
     RealtimeOutboxModule,
     ContactsModule,
+    ConversationsModule,
     ContactTransfersModule,
     DealsModule,
     EmailTemplatesModule,

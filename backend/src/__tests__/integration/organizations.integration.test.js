@@ -6,7 +6,7 @@ const TestDbHelper = require('./test-db-helper');
 const registerApiRoutes = require('../../bootstrap/register-api-routes');
 const { authenticateJWT, requireAdmin } = require('../../auth');
 
-describe('Retired organization REST surface', () => {
+describe('Retired GraphQL-cutover REST surfaces', () => {
     let dbHelper;
     let app;
 
@@ -56,6 +56,13 @@ describe('Retired organization REST surface', () => {
         ['put', '/api/organizations/1/members/1'],
         ['delete', '/api/organizations/1/members/1'],
         ['post', '/api/organizations/1/leave'],
+        ['get', '/api/conversations'],
+        ['post', '/api/conversations'],
+        ['get', '/api/conversations/1'],
+        ['patch', '/api/conversations/1'],
+        ['post', '/api/conversations/1/assign'],
+        ['post', '/api/conversations/1/messages'],
+        ['patch', '/api/conversations/1/read'],
     ])('returns 404 for retired %s %s', async (method, path) => {
         const response = await request(app)[method](path).send({});
         expect(response.status).toBe(404);

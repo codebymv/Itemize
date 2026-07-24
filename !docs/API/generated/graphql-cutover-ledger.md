@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 392
-- API operations under `/api`: 385
+- Registered method/path operations: 385
+- API operations under `/api`: 378
 - Non-API registered operations: 7
-- Static frontend callsites: 321
-- Operations with frontend consumers: 309
+- Static frontend callsites: 314
+- Operations with frontend consumers: 302
 - Operations referenced by backend tests: 208
-- Recommended GraphQL queries: 118
-- Recommended GraphQL mutations: 221
+- Recommended GraphQL queries: 116
+- Recommended GraphQL mutations: 216
 - Recommended retained HTTP endpoints: 45
-- High-risk operations: 323
+- High-risk operations: 316
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -144,13 +144,6 @@
 | POST | `/api/contacts/bulk-update` | 1 | 2 | graphql-mutation | high | crm / ContactsModule / bulkUpdateContacts |
 | GET | `/api/contacts/export/csv` | 1 | 6 | retain-http | high | crm / ContactTransfersModule / exportContactsCsv |
 | POST | `/api/contacts/import/csv` | 1 | 6 | retain-http | high | crm / ContactTransfersModule / importContactsCsv |
-| GET | `/api/conversations` | 1 | 0 | graphql-query | high | _unassigned_ |
-| POST | `/api/conversations` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/conversations/:id` | 1 | 0 | graphql-query | high | _unassigned_ |
-| PATCH | `/api/conversations/:id` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| POST | `/api/conversations/:id/assign` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| POST | `/api/conversations/:id/messages` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| PATCH | `/api/conversations/:id/read` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/email-templates` | 2 | 7 | graphql-query | medium | messaging / EmailTemplatesModule / emailTemplates |
 | POST | `/api/email-templates` | 1 | 8 | graphql-mutation | medium | messaging / EmailTemplatesModule / createEmailTemplate |
 | DELETE | `/api/email-templates/:id` | 2 | 3 | graphql-mutation | medium | messaging / EmailTemplatesModule / deleteEmailTemplate |

@@ -41,7 +41,6 @@ const {
     publicSigningMutationsEnabled,
     publicSigningReadsEnabled,
 } = require('../public-signing-proxy');
-const conversationsRoutes = require('../routes/conversations.routes');
 const analyticsRoutes = require('../routes/analytics.routes');
 const contactProfileRoutes = require('../routes/contact-profile.routes');
 const searchRoutes = require('../routes/search.routes');
@@ -343,8 +342,6 @@ function registerApiRoutes({
     );
     app.use('/api', signaturesRoutes(pool, authenticateJWT, publicRateLimit));
     logger.info('Signatures routes initialized');
-    app.use('/api/conversations', conversationsRoutes(pool, authenticateJWT));
-    logger.info('Conversations routes initialized');
     app.use('/api/analytics', analyticsRoutes(pool, authenticateJWT));
     logger.info('Analytics routes initialized');
     app.use('/api/contacts', contactProfileRoutes(pool, authenticateJWT));
