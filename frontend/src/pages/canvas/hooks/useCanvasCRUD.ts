@@ -608,7 +608,7 @@ export function useCanvasCRUD(
     try {
       await apiUnshareVault(vaultId, token);
       setVaults(prev => prev.map(v => v.id === vaultId 
-        ? { ...v, is_public: false } 
+        ? { ...v, is_public: false, share_token: undefined, shared_at: undefined }
         : v
       ));
     } catch (error) {

@@ -17,6 +17,7 @@ import {
   WorkspaceVaultItem,
   WorkspaceVaultItemsResult,
   WorkspaceVaultPasswordResult,
+  WorkspaceVaultSharingResult,
   WorkspaceVaultPage,
 } from './vault.types';
 
@@ -90,6 +91,27 @@ export class VaultResolver {
     @Args('password') password: string,
   ): Promise<WorkspaceVaultPasswordResult> {
     return this.vaults.removePassword(this.userId(), vaultId, password);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => WorkspaceVaultSharingResult)
+  enableWorkspaceVaultSharing(
+    @Args('vaultId', { type: () => Int }) vaultId: number,
+    @Args('confirmDecryptedSharing') confirmDecryptedSharing: boolean,
+  ): Promise<WorkspaceVaultSharingResult> {
+    return this.vaults.enableSharing(
+      this.userId(),
+      vaultId,
+      confirmDecryptedSharing,
+    );
+  }
+
+  @CsrfProtected()
+  @Mutation(() => WorkspaceVaultSharingResult)
+  disableWorkspaceVaultSharing(
+    @Args('vaultId', { type: () => Int }) vaultId: number,
+  ): Promise<WorkspaceVaultSharingResult> {
+    return this.vaults.disableSharing(this.userId(), vaultId);
   }
 
   @CsrfProtected()

@@ -42,6 +42,8 @@ describe('VaultService', () => {
       reorderItems: jest.fn(),
       setPassword: jest.fn(),
       removePassword: jest.fn(),
+      enableSharing: jest.fn(),
+      disableSharing: jest.fn(),
     } as unknown as jest.Mocked<VaultRepository>;
     service = new VaultService(repository);
   });
@@ -226,6 +228,48 @@ describe('VaultService', () => {
         reason: 'VAULT_NOT_LOCKED',
       },
     });
+  });
+
+  it('issues stable vault share links, refuses locked vaults, and revokes idempotently', async () => {
+    const originalFrontendUrl = process.env.FRONTEND_URL;
+    process.env.FRONTEND_URL = 'https://app.test.itemize/';
+    repository.enableSharing.mockResolvedValue({
+      ...row,
+      share_token: '00000000-0000-4000-8000-000000000001',
+      is_public: true,
+      shared_at: row.updated_at,
+    });
+    await expect(service.enableSharing(7, 12, true)).resolves.toEqual({
+      vaultId: 12,
+      shareToken: '00000000-0000-4000-8000-000000000001',
+      shareUrl:
+        'https://app.test.itemize/shared/vault/00000000-0000-4000-8000-000000000001',
+      isPublic: true,
+      sharedAt: row.updated_at,
+    });
+
+    repository.enableSharing.mockResolvedValue('vault-locked');
+    await expect(service.enableSharing(7, 12, true)).rejects.toMatchObject({
+      extensions: { code: 'BAD_USER_INPUT', reason: 'VAULT_LOCKED' },
+    });
+
+    await expect(service.enableSharing(7, 12, false)).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'DECRYPTED_SHARING_CONFIRMATION_REQUIRED',
+      },
+    });
+
+    repository.disableSharing.mockResolvedValue(row);
+    await expect(service.disableSharing(7, 12)).resolves.toMatchObject({
+      vaultId: 12,
+      shareToken: null,
+      shareUrl: null,
+      isPublic: false,
+      sharedAt: null,
+    });
+    if (originalFrontendUrl === undefined) delete process.env.FRONTEND_URL;
+    else process.env.FRONTEND_URL = originalFrontendUrl;
   });
 
   it('encrypts item creates and returns only plaintext projection', async () => {

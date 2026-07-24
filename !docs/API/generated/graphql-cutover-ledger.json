@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 406,
-    "apiOperationCount": 399,
+    "operationCount": 404,
+    "apiOperationCount": 397,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 337,
-    "operationsWithFrontendConsumers": 323,
-    "operationsWithBackendTests": 222,
+    "frontendCallsiteCount": 333,
+    "operationsWithFrontendConsumers": 321,
+    "operationsWithBackendTests": 220,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 8,
+    "unmatchedBackendTestCallCount": 12,
     "retainHttpCount": 45,
     "graphqlQueryCount": 121,
-    "graphqlMutationCount": 232,
-    "highRiskCount": 326,
+    "graphqlMutationCount": 230,
+    "highRiskCount": 324,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -3680,7 +3680,7 @@
           "path": "/api/canvas/lists",
           "rawPath": "/api/canvas/lists",
           "source": "frontend/src/services/api.ts",
-          "line": 203,
+          "line": 205,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3761,7 +3761,7 @@
           "path": "/api/categories",
           "rawPath": "/api/categories",
           "source": "frontend/src/services/api.ts",
-          "line": 615,
+          "line": 617,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3802,7 +3802,7 @@
           "path": "/api/categories",
           "rawPath": "/api/categories",
           "source": "frontend/src/services/api.ts",
-          "line": 625,
+          "line": 627,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3843,7 +3843,7 @@
           "path": "/api/categories/:categoryId",
           "rawPath": "/api/categories/${categoryId}",
           "source": "frontend/src/services/api.ts",
-          "line": 645,
+          "line": 647,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3884,7 +3884,7 @@
           "path": "/api/categories/:categoryId",
           "rawPath": "/api/categories/${categoryId}",
           "source": "frontend/src/services/api.ts",
-          "line": 635,
+          "line": 637,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8917,7 +8917,7 @@
           "path": "/api/lists",
           "rawPath": "/api/lists",
           "source": "frontend/src/services/api.ts",
-          "line": 233,
+          "line": 235,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8976,7 +8976,7 @@
           "path": "/api/lists",
           "rawPath": "/api/lists",
           "source": "frontend/src/services/api.ts",
-          "line": 277,
+          "line": 279,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9017,7 +9017,7 @@
           "path": "/api/lists/:listId",
           "rawPath": "/api/lists/${listId}",
           "source": "frontend/src/services/api.ts",
-          "line": 372,
+          "line": 374,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9064,7 +9064,7 @@
           "path": "/api/lists/:id",
           "rawPath": "/api/lists/${listData.id}",
           "source": "frontend/src/services/api.ts",
-          "line": 343,
+          "line": 345,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9187,7 +9187,7 @@
           "path": "/api/lists/:listId/position",
           "rawPath": "/api/lists/${listId}/position",
           "source": "frontend/src/services/api.ts",
-          "line": 379,
+          "line": 381,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9459,7 +9459,7 @@
           "path": "/api/notes",
           "rawPath": "/api/notes",
           "source": "frontend/src/services/api.ts",
-          "line": 394,
+          "line": 396,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9554,7 +9554,7 @@
           "path": "/api/notes",
           "rawPath": "/api/notes",
           "source": "frontend/src/services/api.ts",
-          "line": 404,
+          "line": 406,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9625,7 +9625,7 @@
           "path": "/api/notes/:noteId",
           "rawPath": "/api/notes/${noteId}",
           "source": "frontend/src/services/api.ts",
-          "line": 458,
+          "line": 460,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9684,7 +9684,7 @@
           "path": "/api/notes/:noteId",
           "rawPath": "/api/notes/${noteId}",
           "source": "frontend/src/services/api.ts",
-          "line": 414,
+          "line": 416,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9731,7 +9731,7 @@
           "path": "/api/notes/:noteId/category",
           "rawPath": "/api/notes/${noteId}/category",
           "source": "frontend/src/services/api.ts",
-          "line": 445,
+          "line": 447,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9778,7 +9778,7 @@
           "path": "/api/notes/:noteId/content",
           "rawPath": "/api/notes/${noteId}/content",
           "source": "frontend/src/services/api.ts",
-          "line": 425,
+          "line": 427,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9874,7 +9874,7 @@
           "method": "POST",
           "path": "/api/notes/:noteId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 253
+          "line": 273
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -9905,7 +9905,7 @@
           "path": "/api/notes/:noteId/title",
           "rawPath": "/api/notes/${noteId}/title",
           "source": "frontend/src/services/api.ts",
-          "line": 435,
+          "line": 437,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13769,7 +13769,7 @@
           "method": "GET",
           "path": "/api/shared/list/not-a-token",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 284
+          "line": 304
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -13819,13 +13819,13 @@
           "method": "GET",
           "path": "/api/shared/note/:shareToken",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 257
+          "line": 277
         },
         {
           "method": "GET",
           "path": "/api/shared/note/not-a-token",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 285
+          "line": 305
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -13847,7 +13847,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/vaults/sharing.routes.js",
-          "line": 84
+          "line": 14
         }
       ],
       "consumerCallsites": [
@@ -13856,7 +13856,7 @@
           "path": "/api/shared/vault/:shareToken",
           "rawPath": "/api/shared/vault/${shareToken}",
           "source": "frontend/src/services/api.ts",
-          "line": 768,
+          "line": 766,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13864,21 +13864,21 @@
       "testCallsites": [
         {
           "method": "GET",
-          "path": "/api/shared/vault/:oldToken",
+          "path": "/api/shared/vault/:shareToken",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 210
+          "line": 215
         },
         {
           "method": "GET",
-          "path": "/api/shared/vault/:oldToken",
+          "path": "/api/shared/vault/:shareToken",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 218
+          "line": 240
         },
         {
           "method": "GET",
           "path": "/api/shared/vault/not-a-token",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 287
+          "line": 307
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -13886,9 +13886,9 @@
       "disposition": "retain-http",
       "owner": "sharing",
       "targetOperation": "getSharedVault",
-      "targetModule": "VaultSharingModule",
-      "parityStatus": "characterizing",
-      "notes": "Rate-limited no-store bearer capability that returns decrypted secrets; hashed tokens, explicit consent, logging redaction, and browser coverage are required.",
+      "targetModule": "VaultModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "Intentional rate-limited no-store public-link boundary. It rejects malformed, unknown, revoked, and locked capabilities; returns an allowlisted decrypted projection; and fails the complete response closed on any item decryption error. Hash-at-rest and browser telemetry verification remain security hardening.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -13937,13 +13937,13 @@
           "method": "GET",
           "path": "/api/shared/whiteboard/:shareToken",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 275
+          "line": 295
         },
         {
           "method": "GET",
           "path": "/api/shared/whiteboard/not-a-token",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 286
+          "line": 306
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -16231,130 +16231,6 @@
       "risk": "high"
     },
     {
-      "id": "DELETE /api/vaults/:vaultId/share",
-      "key": "DELETE /api/vaults/:*/share",
-      "method": "DELETE",
-      "path": "/api/vaults/:vaultId/share",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/vaults/sharing.routes.js",
-          "line": 58
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/vaults/:vaultId/share",
-          "rawPath": "/api/vaults/${vaultId}/share",
-          "source": "frontend/src/pages/canvas/hooks/useCanvasSharing.ts",
-          "line": 122,
-          "client": "api",
-          "literalInterpolation": false
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/vaults/:vaultId/share",
-          "rawPath": "/api/vaults/${vaultId}/share",
-          "source": "frontend/src/services/api.ts",
-          "line": 760,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/vaults/:vaultId/share",
-          "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 169
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/vaults/:vaultId/share",
-          "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 216
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "sharing",
-      "targetOperation": "disableVaultSharing",
-      "targetModule": "VaultSharingModule",
-      "parityStatus": "characterized",
-      "notes": "Owner-only revocation clears the capability; existing and future caches must not retain decrypted content.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/vaults/:vaultId/share",
-      "key": "POST /api/vaults/:*/share",
-      "method": "POST",
-      "path": "/api/vaults/:vaultId/share",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/vaults/sharing.routes.js",
-          "line": 17
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/vaults/:vaultId/share",
-          "rawPath": "/api/vaults/${vaultId}/share",
-          "source": "frontend/src/pages/canvas/hooks/useCanvasSharing.ts",
-          "line": 112,
-          "client": "api",
-          "literalInterpolation": false
-        },
-        {
-          "method": "POST",
-          "path": "/api/vaults/:vaultId/share",
-          "rawPath": "/api/vaults/${vaultId}/share",
-          "source": "frontend/src/services/api.ts",
-          "line": 752,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/vaults/:vaultId/share",
-          "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 168
-        },
-        {
-          "method": "POST",
-          "path": "/api/vaults/:vaultId/share",
-          "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 203
-        },
-        {
-          "method": "POST",
-          "path": "/api/vaults/:vaultId/share",
-          "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 204
-        },
-        {
-          "method": "POST",
-          "path": "/api/vaults/:vaultId/share",
-          "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 221
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "sharing",
-      "targetOperation": "enableVaultSharing",
-      "targetModule": "VaultSharingModule",
-      "parityStatus": "characterizing",
-      "notes": "Owner-only atomic issuance; must explicitly confirm that sharing decrypts every item to any bearer and prohibit sharing while locked.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "POST /api/webhooks/:workflowId",
       "key": "POST /api/webhooks/:*",
       "method": "POST",
@@ -16432,7 +16308,7 @@
           "path": "/api/whiteboards",
           "rawPath": "/api/whiteboards",
           "source": "frontend/src/services/api.ts",
-          "line": 471,
+          "line": 473,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16485,7 +16361,7 @@
           "path": "/api/whiteboards",
           "rawPath": "/api/whiteboards",
           "source": "frontend/src/services/api.ts",
-          "line": 491,
+          "line": 493,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16523,7 +16399,7 @@
           "path": "/api/whiteboards/:whiteboardId/position",
           "rawPath": "/api/whiteboards/${whiteboardId}/position",
           "source": "frontend/src/services/api.ts",
-          "line": 528,
+          "line": 530,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16557,7 +16433,7 @@
           "path": "/api/whiteboards/:whiteboardId",
           "rawPath": "/api/whiteboards/${whiteboardId}",
           "source": "frontend/src/services/api.ts",
-          "line": 520,
+          "line": 522,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16591,7 +16467,7 @@
           "path": "/api/whiteboards/:whiteboardId",
           "rawPath": "/api/whiteboards/${whiteboardId}",
           "source": "frontend/src/services/api.ts",
-          "line": 509,
+          "line": 511,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16669,7 +16545,7 @@
           "method": "POST",
           "path": "/api/whiteboards/:whiteboardId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 271
+          "line": 291
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -16844,7 +16720,7 @@
           "method": "DELETE",
           "path": "/api/wireframes/:wireframeId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 238
+          "line": 258
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -16881,13 +16757,13 @@
           "method": "POST",
           "path": "/api/wireframes/:wireframeId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 228
+          "line": 248
         },
         {
           "method": "POST",
           "path": "/api/wireframes/:wireframeId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 229
+          "line": 249
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -18085,6 +17961,18 @@
     },
     {
       "method": "POST",
+      "path": "/api/vaults/:vaultId/share",
+      "source": "backend/src/__tests__/integration/sharing.integration.test.js",
+      "line": 168
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/vaults/:vaultId/share",
+      "source": "backend/src/__tests__/integration/sharing.integration.test.js",
+      "line": 169
+    },
+    {
+      "method": "POST",
       "path": "/api/:kinds/:id/share",
       "source": "backend/src/__tests__/integration/sharing.integration.test.js",
       "line": 188
@@ -18094,6 +17982,18 @@
       "path": "/api/:kinds/:id/share",
       "source": "backend/src/__tests__/integration/sharing.integration.test.js",
       "line": 194
+    },
+    {
+      "method": "POST",
+      "path": "/api/vaults/:vaultId/share",
+      "source": "backend/src/__tests__/integration/sharing.integration.test.js",
+      "line": 210
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/vaults/:vaultId/share",
+      "source": "backend/src/__tests__/integration/sharing.integration.test.js",
+      "line": 211
     },
     {
       "method": "POST",
@@ -18117,6 +18017,7 @@
   "orphanedOverrides": [
     "DELETE /api/vaults/:vaultId",
     "DELETE /api/vaults/:vaultId/items/:itemId",
+    "DELETE /api/vaults/:vaultId/share",
     "GET /api/forms/public/form/:slug",
     "GET /api/vaults",
     "GET /api/vaults/:vaultId",
@@ -18125,6 +18026,7 @@
     "POST /api/vaults/:vaultId/items",
     "POST /api/vaults/:vaultId/items/bulk",
     "POST /api/vaults/:vaultId/lock",
+    "POST /api/vaults/:vaultId/share",
     "POST /api/vaults/:vaultId/unlock",
     "PUT /api/vaults/:vaultId",
     "PUT /api/vaults/:vaultId/items/:itemId",

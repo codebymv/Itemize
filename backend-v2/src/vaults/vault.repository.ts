@@ -80,6 +80,11 @@ export type RemoveVaultPasswordResult =
   | 'vault-not-locked'
   | VaultRow;
 
+export type EnableVaultSharingResult =
+  | 'vault-not-found'
+  | 'vault-locked'
+  | VaultRow;
+
 const VAULT_COLUMNS = `
   v.id, v.user_id, v.title, v.category, v.color_value,
   v.position_x, v.position_y, v.width, v.height, v.z_index,
@@ -243,7 +248,9 @@ export class VaultRepository {
       const result = await client.query<VaultRow>(
         `UPDATE vaults
          SET is_locked = TRUE, encryption_salt = $1,
-             master_password_hash = $2, updated_at = CURRENT_TIMESTAMP
+             master_password_hash = $2,
+             is_public = FALSE, share_token = NULL, shared_at = NULL,
+             updated_at = CURRENT_TIMESTAMP
          WHERE id = $3 AND user_id = $4
          RETURNING *, (
            SELECT COUNT(*)::int FROM vault_items WHERE vault_id = vaults.id
@@ -272,6 +279,53 @@ export class VaultRepository {
         `UPDATE vaults
          SET is_locked = FALSE, encryption_salt = NULL,
              master_password_hash = NULL, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND user_id = $2
+         RETURNING *, (
+           SELECT COUNT(*)::int FROM vault_items WHERE vault_id = vaults.id
+         ) AS item_count`,
+        [vaultId, userId],
+      );
+      return result.rows[0];
+    });
+  }
+
+  async enableSharing(
+    userId: number,
+    vaultId: number,
+    shareToken: string,
+  ): Promise<EnableVaultSharingResult> {
+    return this.transaction(async (client) => {
+      const current = await this.lockOwnedVaultRow(client, userId, vaultId);
+      if (!current) return 'vault-not-found';
+      if (current.is_locked) return 'vault-locked';
+      if (current.is_public && current.share_token) return current;
+      const result = await client.query<VaultRow>(
+        `UPDATE vaults
+         SET share_token = $1, is_public = TRUE,
+             shared_at = CURRENT_TIMESTAMP
+         WHERE id = $2 AND user_id = $3
+         RETURNING *, (
+           SELECT COUNT(*)::int FROM vault_items WHERE vault_id = vaults.id
+         ) AS item_count`,
+        [shareToken, vaultId, userId],
+      );
+      return result.rows[0];
+    });
+  }
+
+  async disableSharing(
+    userId: number,
+    vaultId: number,
+  ): Promise<VaultRow | null> {
+    return this.transaction(async (client) => {
+      const current = await this.lockOwnedVaultRow(client, userId, vaultId);
+      if (!current) return null;
+      if (!current.is_public && !current.share_token && !current.shared_at) {
+        return current;
+      }
+      const result = await client.query<VaultRow>(
+        `UPDATE vaults
+         SET share_token = NULL, is_public = FALSE, shared_at = NULL
          WHERE id = $1 AND user_id = $2
          RETURNING *, (
            SELECT COUNT(*)::int FROM vault_items WHERE vault_id = vaults.id

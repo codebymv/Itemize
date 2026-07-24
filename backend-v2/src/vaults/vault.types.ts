@@ -65,3 +65,12 @@ export class WorkspaceVaultPasswordResult {
   @Field() isLocked: boolean;
   @Field(() => String, { nullable: true }) encryptionSalt: string | null;
 }
+
+@ObjectType()
+export class WorkspaceVaultSharingResult {
+  @Field(() => Int) vaultId: number;
+  @Field(() => String, { nullable: true }) shareToken: string | null;
+  @Field(() => String, { nullable: true }) shareUrl: string | null;
+  @Field() isPublic: boolean;
+  @Field(() => Date, { nullable: true }) sharedAt: Date | null;
+}

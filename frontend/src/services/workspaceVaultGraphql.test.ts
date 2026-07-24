@@ -4,6 +4,8 @@ import {
   addVaultItemViaGraphql,
   createVaultViaGraphql,
   deleteVaultItemViaGraphql,
+  disableVaultSharingViaGraphql,
+  enableVaultSharingViaGraphql,
   getVaultsViaGraphql,
   removeVaultPasswordViaGraphql,
   reorderVaultItemsViaGraphql,
@@ -251,5 +253,57 @@ describe('workspace vault GraphQL consumer', () => {
       },
       { vaultId: 12, password: 'password2' },
     ]);
+  });
+
+  it('uses CSRF-protected vault sharing mutations without REST fallback', async () => {
+    const token = '00000000-0000-4000-8000-000000000001';
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        response({
+          data: {
+            enableWorkspaceVaultSharing: {
+              vaultId: 12,
+              shareToken: token,
+              shareUrl: `https://itemize.cloud/shared/vault/${token}`,
+              isPublic: true,
+              sharedAt: '2026-07-24T01:00:00.000Z',
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        response({
+          data: {
+            disableWorkspaceVaultSharing: {
+              vaultId: 12,
+              shareToken: null,
+              shareUrl: null,
+              isPublic: false,
+              sharedAt: null,
+            },
+          },
+        }),
+      );
+
+    await expect(enableVaultSharingViaGraphql(12)).resolves.toEqual({
+      shareToken: token,
+      shareUrl: `https://itemize.cloud/shared/vault/${token}`,
+    });
+    await expect(disableVaultSharingViaGraphql(12)).resolves.toEqual({
+      message: 'Vault sharing disabled',
+    });
+    const calls = vi.mocked(fetch).mock.calls;
+    expect(calls.map(([, init]) => JSON.parse(String(init?.body)))).toEqual([
+      expect.objectContaining({
+        query: expect.stringContaining('enableWorkspaceVaultSharing'),
+        variables: { vaultId: 12, confirmDecryptedSharing: true },
+      }),
+      expect.objectContaining({
+        query: expect.stringContaining('disableWorkspaceVaultSharing'),
+        variables: { vaultId: 12 },
+      }),
+    ]);
+    expect(calls[0][1]?.headers).toMatchObject({ 'x-csrf-token': 'csrf' });
+    expect(calls[1][1]?.headers).toMatchObject({ 'x-csrf-token': 'csrf' });
   });
 });

@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 406
-- API operations under `/api`: 399
+- Registered method/path operations: 404
+- API operations under `/api`: 397
 - Non-API registered operations: 7
-- Static frontend callsites: 337
-- Operations with frontend consumers: 323
-- Operations referenced by backend tests: 222
+- Static frontend callsites: 333
+- Operations with frontend consumers: 321
+- Operations referenced by backend tests: 220
 - Recommended GraphQL queries: 121
-- Recommended GraphQL mutations: 232
+- Recommended GraphQL mutations: 230
 - Recommended retained HTTP endpoints: 45
-- High-risk operations: 326
+- High-risk operations: 324
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -338,7 +338,7 @@
 | POST | `/api/segments/preview` | 1 | 0 | graphql-query | high | audiences / SegmentsModule / previewSegment |
 | GET | `/api/shared/list/:token` | 2 | 4 | retain-http | high | sharing / PublicSharingModule / getSharedList |
 | GET | `/api/shared/note/:token` | 2 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedNote |
-| GET | `/api/shared/vault/:token` | 1 | 3 | retain-http | high | sharing / VaultSharingModule / getSharedVault |
+| GET | `/api/shared/vault/:token` | 1 | 3 | retain-http | high | sharing / VaultModule / getSharedVault |
 | GET | `/api/shared/whiteboard/:token` | 3 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedWhiteboard |
 | GET | `/api/shared/wireframe/:token` | 2 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedWireframe |
 | GET | `/api/signatures/documents` | 2 | 0 | graphql-query | high | esignatures / SignatureDocumentsModule / signatureDocuments |
@@ -395,8 +395,6 @@
 | PUT | `/api/tags/:id` | 0 | 5 | graphql-mutation | high | crm / TagsModule / updateTag |
 | GET | `/api/tags/suggestions` | 0 | 2 | graphql-query | medium | crm / TagsModule / contactTagSuggestions |
 | PUT | `/api/vaults/:vaultId/position` | 0 | 0 | graphql-mutation | high | workspace-content / VaultModule / updateWorkspaceVault |
-| DELETE | `/api/vaults/:vaultId/share` | 2 | 2 | graphql-mutation | high | sharing / VaultSharingModule / disableVaultSharing |
-| POST | `/api/vaults/:vaultId/share` | 2 | 4 | graphql-mutation | high | sharing / VaultSharingModule / enableVaultSharing |
 | POST | `/api/webhooks/:workflowId` | 0 | 6 | retain-http | high | automation / WorkflowWebhooksModule / processWorkflowWebhook |
 | GET | `/api/whiteboards` | 1 | 3 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceWhiteboards |
 | POST | `/api/whiteboards` | 1 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / createWorkspaceWhiteboard |
@@ -442,8 +440,8 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 8
-- Orphaned manual overrides: 14
+- Unmatched backend test calls: 12
+- Orphaned manual overrides: 16
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls
@@ -472,8 +470,12 @@
 | GET | `/api/campaigns:path` | `backend-v2/test/integration/campaigns.integration-spec.ts:126` |
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1057` |
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1079` |
+| POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:168` |
+| DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:169` |
 | POST | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:188` |
 | DELETE | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:194` |
+| POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:210` |
+| DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:211` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:32` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:128` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:133` |

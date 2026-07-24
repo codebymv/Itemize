@@ -198,29 +198,49 @@ describe('Public sharing PostgreSQL capability contract', () => {
         expect(broadcast.revokeShared).toHaveBeenCalledWith(kind, shareToken);
     });
 
-    it('serializes vault sharing, unwraps the frontend contract, and rotates revoked links', async () => {
-        const [first, second] = await Promise.all([
+    it('retains only the public vault capability read after authenticated GraphQL cutover', async () => {
+        const shareToken = '00000000-0000-4000-8000-000000000001';
+        await dbHelper.pool.query(
+            `UPDATE vaults
+             SET share_token = $1, is_public = TRUE, shared_at = CURRENT_TIMESTAMP
+             WHERE id = $2`,
+            [shareToken, vaultId]
+        );
+        const retired = await Promise.all([
             request(app).post(`/api/vaults/${vaultId}/share`).set('Cookie', auth(owner)),
-            request(app).post(`/api/vaults/${vaultId}/share`).set('Cookie', auth(owner)),
+            request(app).delete(`/api/vaults/${vaultId}/share`).set('Cookie', auth(owner)),
         ]);
-        expect(first.status).toBe(200);
-        expect(first.body.data.shareToken).toBe(second.body.data.shareToken);
-        const oldToken = first.body.data.shareToken;
+        expect(retired.map(response => response.status)).toEqual([404, 404]);
 
-        const publicVault = await request(app).get(`/api/shared/vault/${oldToken}`);
+        const publicVault = await request(app).get(`/api/shared/vault/${shareToken}`);
         expect(publicVault.status).toBe(200);
-        expect(publicVault.headers['cache-control']).toBe('private, no-store');
+        expect(publicVault.headers).toMatchObject({
+            'cache-control': 'private, no-store',
+            'referrer-policy': 'no-referrer',
+            'x-robots-tag': 'noindex, nofollow',
+        });
         expect(publicVault.body.data).toMatchObject({ title: 'Shared vault', items: [], is_shared: true });
+    });
 
-        expect((await request(app)
-            .delete(`/api/vaults/${vaultId}/share`)
-            .set('Cookie', auth(owner))).status).toBe(200);
-        expect((await request(app).get(`/api/shared/vault/${oldToken}`)).status).toBe(404);
+    it('fails the complete public vault response closed when one item cannot decrypt', async () => {
+        const shareToken = '00000000-0000-4000-8000-000000000002';
+        await dbHelper.pool.query(
+            `UPDATE vaults
+             SET share_token = $1, is_public = TRUE, shared_at = CURRENT_TIMESTAMP
+             WHERE id = $2`,
+            [shareToken, vaultId]
+        );
+        await dbHelper.pool.query(
+            `INSERT INTO vault_items (
+               vault_id, item_type, label, encrypted_value, iv, order_index
+             ) VALUES ($1, 'key_value', 'Broken secret', 'invalid', 'invalid', 0)`,
+            [vaultId]
+        );
 
-        const reshared = await request(app)
-            .post(`/api/vaults/${vaultId}/share`)
-            .set('Cookie', auth(owner));
-        expect(reshared.body.data.shareToken).not.toBe(oldToken);
+        const response = await request(app).get(`/api/shared/vault/${shareToken}`);
+        expect(response.status).toBe(500);
+        expect(JSON.stringify(response.body)).not.toContain('DECRYPTION_ERROR');
+        expect(JSON.stringify(response.body)).not.toContain('Broken secret');
     });
 
     it('serializes wireframe sharing and clears the capability on revoke', async () => {

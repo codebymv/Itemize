@@ -3,10 +3,10 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 427,
-    "resolvedDeclarationCount": 427,
+    "declarationCount": 425,
+    "resolvedDeclarationCount": 425,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 406,
+    "uniqueResolvedOperationCount": 404,
     "sourceFileCount": 78
   },
   "caveats": [
@@ -3243,7 +3243,7 @@
       ],
       "declaredPath": "/shared/vault/:token",
       "source": "backend/src/routes/vaults/sharing.routes.js",
-      "line": 84,
+      "line": 14,
       "dynamic": false
     },
     {
@@ -3854,26 +3854,6 @@
       "declaredPath": "/api/vaults/:vaultId/position",
       "source": "backend/src/bootstrap/register-api-routes.js",
       "line": 60,
-      "dynamic": false
-    },
-    {
-      "method": "DELETE",
-      "publicPaths": [
-        "/api/vaults/:vaultId/share"
-      ],
-      "declaredPath": "/vaults/:vaultId/share",
-      "source": "backend/src/routes/vaults/sharing.routes.js",
-      "line": 58,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/vaults/:vaultId/share"
-      ],
-      "declaredPath": "/vaults/:vaultId/share",
-      "source": "backend/src/routes/vaults/sharing.routes.js",
-      "line": 17,
       "dynamic": false
     },
     {

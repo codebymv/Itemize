@@ -1719,16 +1719,16 @@
       "notes": "Intentional public-link protocol boundary. The rate-limited non-enumerating capability read returns an allowlisted recursively sanitized projection with no-store/noindex/no-referrer headers; the shipped read-only viewer handles live updates, deletion, and durable revocation."
     },
     "POST /api/vaults/:vaultId/share": {
-      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "VaultSharingModule", "targetOperation": "enableVaultSharing", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Owner-only atomic issuance; must explicitly confirm that sharing decrypts every item to any bearer and prohibit sharing while locked."
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "VaultModule", "targetOperation": "enableWorkspaceVaultSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "CSRF-protected owner-only GraphQL issuance requires confirmDecryptedSharing=true, is serialized, preserves one active token and shared_at, retries capability collisions, refuses locked vaults, and is reached only after an explicit decrypted-secret warning. Both authenticated REST handlers are retired."
     },
     "DELETE /api/vaults/:vaultId/share": {
-      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "VaultSharingModule", "targetOperation": "disableVaultSharing", "parityStatus": "characterized", "risk": "high",
-      "notes": "Owner-only revocation clears the capability; existing and future caches must not retain decrypted content."
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "VaultModule", "targetOperation": "disableWorkspaceVaultSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "CSRF-protected owner-only GraphQL revocation idempotently clears the capability, public state, and timestamp. Applying a vault password also revokes any active link so later unlock cannot resurrect prior consent."
     },
     "GET /api/shared/vault/:token": {
-      "disposition": "retain-http", "owner": "sharing", "targetModule": "VaultSharingModule", "targetOperation": "getSharedVault", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Rate-limited no-store bearer capability that returns decrypted secrets; hashed tokens, explicit consent, logging redaction, and browser coverage are required."
+      "disposition": "retain-http", "owner": "sharing", "targetModule": "VaultModule", "targetOperation": "getSharedVault", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Intentional rate-limited no-store public-link boundary. It rejects malformed, unknown, revoked, and locked capabilities; returns an allowlisted decrypted projection; and fails the complete response closed on any item decryption error. Hash-at-rest and browser telemetry verification remain security hardening."
     },
     "GET /api/wireframes": {
       "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceWireframes", "parityStatus": "consumer-cutover-complete", "risk": "high",

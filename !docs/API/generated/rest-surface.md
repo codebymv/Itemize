@@ -6,10 +6,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 427
-- Resolved declarations: 427
+- Route declarations: 425
+- Resolved declarations: 425
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 406
+- Unique resolved method/path operations: 404
 - Files containing declarations: 78
 
 ## Interpretation limits
@@ -345,7 +345,7 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/segments/preview` | `/preview` | `backend/src/routes/segments.routes.js:149` |
 | GET | `/api/shared/list/:token` | `/shared/list/:token` | `backend/src/routes/sharing.routes.js:234` |
 | GET | `/api/shared/note/:token` | `/shared/note/:token` | `backend/src/routes/sharing.routes.js:279` |
-| GET | `/api/shared/vault/:token` | `/shared/vault/:token` | `backend/src/routes/vaults/sharing.routes.js:84` |
+| GET | `/api/shared/vault/:token` | `/shared/vault/:token` | `backend/src/routes/vaults/sharing.routes.js:14` |
 | GET | `/api/shared/whiteboard/:token` | `/shared/whiteboard/:token` | `backend/src/routes/sharing.routes.js:320` |
 | GET | `/api/shared/wireframe/:token` | `/shared/wireframe/:token` | `backend/src/routes/sharing.routes.js:371` |
 | GET | `/api/signatures/documents` | `/signatures/documents` | `backend/src/routes/signatures.routes.js:450` |
@@ -407,8 +407,6 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | PUT | `/api/tags/:id` | `/:id` | `backend/src/routes/tags.routes.js:91` |
 | GET | `/api/tags/suggestions` | `/suggestions` | `backend/src/routes/tags.routes.js:195` |
 | PUT | `/api/vaults/:vaultId/position` | `/api/vaults/:vaultId/position` | `backend/src/bootstrap/register-api-routes.js:60` |
-| DELETE | `/api/vaults/:vaultId/share` | `/vaults/:vaultId/share` | `backend/src/routes/vaults/sharing.routes.js:58` |
-| POST | `/api/vaults/:vaultId/share` | `/vaults/:vaultId/share` | `backend/src/routes/vaults/sharing.routes.js:17` |
 | POST | `/api/webhooks/:workflowId` | `/:workflowId` | `backend/src/routes/webhooks.routes.js:54` |
 | GET | `/api/whiteboards` | `/whiteboards` | `backend/src/routes/whiteboards.routes.js:27` |
 | POST | `/api/whiteboards` | `/whiteboards` | `backend/src/routes/whiteboards.routes.js:93` |

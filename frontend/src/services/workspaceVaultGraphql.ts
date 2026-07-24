@@ -55,6 +55,14 @@ type GraphqlVaultPasswordResult = {
   encryptionSalt: string | null;
 };
 
+type GraphqlVaultSharingResult = {
+  vaultId: number;
+  shareToken: string | null;
+  shareUrl: string | null;
+  isPublic: boolean;
+  sharedAt: string | null;
+};
+
 const VAULT_FIELDS = `
   id userId title category colorValue positionX positionY width height zIndex
   isLocked encryptionSalt itemCount requiresUnlock shareToken isPublic sharedAt
@@ -433,4 +441,64 @@ export const removeVaultPasswordViaGraphql = async (
     message: 'Vault unlocked successfully',
     ...data.removeWorkspaceVaultPassword,
   };
+};
+
+export const enableVaultSharingViaGraphql = async (
+  vaultId: number,
+): Promise<{ shareToken: string; shareUrl: string }> => {
+  const data = await graphqlMutationRequest<
+    { enableWorkspaceVaultSharing: GraphqlVaultSharingResult },
+    { vaultId: number; confirmDecryptedSharing: boolean }
+  >(
+    `mutation EnableWorkspaceVaultSharing(
+      $vaultId: Int!
+      $confirmDecryptedSharing: Boolean!
+    ) {
+      enableWorkspaceVaultSharing(
+        vaultId: $vaultId
+        confirmDecryptedSharing: $confirmDecryptedSharing
+      ) {
+        vaultId shareToken shareUrl isPublic sharedAt
+      }
+    }`,
+    { vaultId, confirmDecryptedSharing: true },
+  );
+  const result = data.enableWorkspaceVaultSharing;
+  if (
+    result.vaultId !== vaultId ||
+    !result.shareToken ||
+    !result.shareUrl ||
+    !result.isPublic ||
+    !result.sharedAt
+  ) {
+    throw new Error('GraphQL vault sharing mutation returned an invalid link');
+  }
+  return { shareToken: result.shareToken, shareUrl: result.shareUrl };
+};
+
+export const disableVaultSharingViaGraphql = async (
+  vaultId: number,
+): Promise<{ message: string }> => {
+  const data = await graphqlMutationRequest<
+    { disableWorkspaceVaultSharing: GraphqlVaultSharingResult },
+    { vaultId: number }
+  >(
+    `mutation DisableWorkspaceVaultSharing($vaultId: Int!) {
+      disableWorkspaceVaultSharing(vaultId: $vaultId) {
+        vaultId shareToken shareUrl isPublic sharedAt
+      }
+    }`,
+    { vaultId },
+  );
+  const result = data.disableWorkspaceVaultSharing;
+  if (
+    result.vaultId !== vaultId ||
+    result.isPublic ||
+    result.shareToken ||
+    result.shareUrl ||
+    result.sharedAt
+  ) {
+    throw new Error('GraphQL vault sharing revocation did not commit');
+  }
+  return { message: 'Vault sharing disabled' };
 };

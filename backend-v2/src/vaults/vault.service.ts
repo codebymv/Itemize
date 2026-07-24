@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
+import { randomUUID } from 'node:crypto';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { PageInput, pageInfo } from '../common/pagination';
 import {
@@ -15,6 +16,7 @@ import {
   generateVaultSalt,
 } from './vault.crypto';
 import {
+  EnableVaultSharingResult,
   UpdateVaultValue,
   VaultAggregate,
   VaultItemRow,
@@ -28,6 +30,7 @@ import {
   WorkspaceVaultItem,
   WorkspaceVaultItemsResult,
   WorkspaceVaultPasswordResult,
+  WorkspaceVaultSharingResult,
   WorkspaceVaultPage,
 } from './vault.types';
 
@@ -224,6 +227,73 @@ export class VaultService {
       vaultId: result.id,
       isLocked: result.is_locked,
       encryptionSalt: result.encryption_salt,
+    };
+  }
+
+  async enableSharing(
+    userId: number,
+    vaultId: number,
+    confirmDecryptedSharing: boolean,
+  ): Promise<WorkspaceVaultSharingResult> {
+    this.id(vaultId);
+    if (confirmDecryptedSharing !== true) {
+      throw itemizeGraphqlError(
+        'Confirm that anyone with the link can view decrypted vault contents',
+        'BAD_USER_INPUT',
+        { reason: 'DECRYPTED_SHARING_CONFIRMATION_REQUIRED' },
+      );
+    }
+    let result: EnableVaultSharingResult | undefined;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        result = await this.vaults.enableSharing(userId, vaultId, randomUUID());
+        break;
+      } catch (error) {
+        if ((error as { code?: string })?.code !== '23505' || attempt === 2) {
+          throw error;
+        }
+      }
+    }
+    if (!result || result === 'vault-not-found') throw this.notFound();
+    if (result === 'vault-locked') {
+      throw itemizeGraphqlError(
+        'Locked vaults cannot be shared',
+        'BAD_USER_INPUT',
+        { reason: 'VAULT_LOCKED' },
+      );
+    }
+    if (!result.share_token || !result.is_public || !result.shared_at) {
+      throw itemizeGraphqlError(
+        'Vault sharing transition did not commit',
+        'INTERNAL_SERVER_ERROR',
+        { reason: 'INVALID_VAULT_SHARING_STATE' },
+      );
+    }
+    const frontendUrl = (
+      process.env.FRONTEND_URL || 'https://itemize.cloud'
+    ).replace(/\/+$/, '');
+    return {
+      vaultId: result.id,
+      shareToken: result.share_token,
+      shareUrl: `${frontendUrl}/shared/vault/${result.share_token}`,
+      isPublic: result.is_public,
+      sharedAt: result.shared_at,
+    };
+  }
+
+  async disableSharing(
+    userId: number,
+    vaultId: number,
+  ): Promise<WorkspaceVaultSharingResult> {
+    this.id(vaultId);
+    const result = await this.vaults.disableSharing(userId, vaultId);
+    if (!result) throw this.notFound();
+    return {
+      vaultId: result.id,
+      shareToken: null,
+      shareUrl: null,
+      isPublic: false,
+      sharedAt: null,
     };
   }
 

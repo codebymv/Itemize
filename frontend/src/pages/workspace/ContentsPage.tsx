@@ -59,6 +59,7 @@ import {
   shareNote as apiShareNote,
   shareWhiteboard as apiShareWhiteboard,
   shareVault,
+  unshareVault,
 } from '@/services/api';
 import { List, Note, Whiteboard, Wireframe, Vault, Category } from '@/types';
 import { useDatabaseCategories } from '@/hooks/useDatabaseCategories';
@@ -74,6 +75,7 @@ import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
+import { ShareModal } from '@/components/ShareModal';
 
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
 type SortOption = 'updated' | 'created' | 'title';
@@ -114,6 +116,7 @@ export function ContentsPage() {
   const [showNewWhiteboardModal, setShowNewWhiteboardModal] = useState(false);
   const [showNewWireframeModal, setShowNewWireframeModal] = useState(false);
   const [showNewVaultModal, setShowNewVaultModal] = useState(false);
+  const [vaultToShare, setVaultToShare] = useState<Vault | null>(null);
 
   const {
     categories: dbCategories,
@@ -432,18 +435,35 @@ export function ContentsPage() {
     }
   }, [token, toast, fetchAllContent]);
 
-  const handleVaultShare = useCallback(async (id: number) => {
-    try {
-      await shareVault(id, token);
-      toast({ title: 'Shared', description: 'Vault link copied' });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to share vault',
-        variant: 'destructive',
-      });
-    }
-  }, [token, toast]);
+  const handleVaultShare = useCallback((id: number) => {
+    const vault = vaults.find((candidate) => candidate.id === id);
+    if (vault) setVaultToShare(vault);
+  }, [vaults]);
+
+  const enableSelectedVaultSharing = useCallback(async (id: number) => {
+    const result = await shareVault(id, token);
+    setVaults((current) => current.map((vault) => vault.id === id
+      ? {
+          ...vault,
+          is_public: true,
+          share_token: result.shareToken,
+          shared_at: new Date().toISOString(),
+        }
+      : vault));
+    return result;
+  }, [token]);
+
+  const disableSelectedVaultSharing = useCallback(async (id: number) => {
+    await unshareVault(id, token);
+    setVaults((current) => current.map((vault) => vault.id === id
+      ? {
+          ...vault,
+          is_public: false,
+          share_token: undefined,
+          shared_at: undefined,
+        }
+      : vault));
+  }, [token]);
 
   const filteredAndSortedLists = useMemo(() => {
     let filtered = [...lists];
@@ -833,6 +853,28 @@ export function ContentsPage() {
       {showNewWhiteboardModal && <CreateItemModal open={showNewWhiteboardModal} onOpenChange={(open) => { setShowNewWhiteboardModal(open); if (!open) fetchAllContent(); }} itemType="whiteboard" onCreate={createWhiteboard} existingCategories={categoriesForModal} />}
       {showNewWireframeModal && <CreateItemModal open={showNewWireframeModal} onOpenChange={(open) => { setShowNewWireframeModal(open); if (!open) fetchAllContent(); }} itemType="wireframe" onCreate={createWireframe} existingCategories={categoriesForModal} />}
       {showNewVaultModal && <CreateItemModal open={showNewVaultModal} onOpenChange={(open) => { setShowNewVaultModal(open); if (!open) fetchAllContent(); }} itemType="vault" onCreate={createVault} existingCategories={categoriesForModal} />}
+      {vaultToShare && (
+        <ShareModal
+          open
+          onOpenChange={(open) => {
+            if (!open) setVaultToShare(null);
+          }}
+          itemType="vault"
+          itemId={vaultToShare.id}
+          itemTitle={vaultToShare.title || 'Untitled Vault'}
+          onShare={enableSelectedVaultSharing}
+          onUnshare={disableSelectedVaultSharing}
+          existingShareData={vaultToShare.share_token && vaultToShare.is_public
+            ? {
+                shareToken: vaultToShare.share_token,
+                shareUrl: `${window.location.origin}/shared/vault/${vaultToShare.share_token}`,
+              }
+            : undefined}
+          isLocked={vaultToShare.is_locked}
+          showWarning
+          autoGenerate={false}
+        />
+      )}
 
       {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
         <OnboardingModal

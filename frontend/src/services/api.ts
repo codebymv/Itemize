@@ -64,6 +64,8 @@ import {
   createVaultViaGraphql,
   deleteVaultItemViaGraphql,
   deleteVaultViaGraphql,
+  disableVaultSharingViaGraphql,
+  enableVaultSharingViaGraphql,
   getVaultsViaGraphql,
   getVaultViaGraphql,
   removeVaultPasswordViaGraphql,
@@ -749,18 +751,14 @@ export const reorderVaultItems = async (vaultId: number, itemIds: number[], toke
 
 // Enable vault sharing
 export const shareVault = async (vaultId: number, token?: string) => {
-  const response = await api.post(`/api/vaults/${vaultId}/share`, {}, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data.data;
+  void token;
+  return enableVaultSharingViaGraphql(vaultId);
 };
 
 // Disable vault sharing
 export const unshareVault = async (vaultId: number, token?: string) => {
-  const response = await api.delete(`/api/vaults/${vaultId}/share`, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data.data;
+  void token;
+  return disableVaultSharingViaGraphql(vaultId);
 };
 
 // Get shared vault (public)

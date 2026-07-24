@@ -1,8 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
-import api from '@/lib/api';
 import { List, Note, Whiteboard, Wireframe, Vault } from '@/types';
+import {
+  disableVaultSharingViaGraphql,
+  enableVaultSharingViaGraphql,
+} from '@/services/workspaceVaultGraphql';
 import {
   disableWorkspaceWireframeSharingViaGraphql,
   enableWorkspaceWireframeSharingViaGraphql,
@@ -109,8 +112,7 @@ export function useCanvasSharing(
 
   const handleVaultShare = async (vaultId: number): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
-      const response = await api.post(`/api/vaults/${vaultId}/share`, {});
-      return response.data;
+      return await enableVaultSharingViaGraphql(vaultId);
     } catch (error) {
       logger.error('Error sharing vault:', error);
       throw error;
@@ -119,7 +121,7 @@ export function useCanvasSharing(
 
   const handleVaultUnshare = async (vaultId: number): Promise<void> => {
     try {
-      await api.delete(`/api/vaults/${vaultId}/share`);
+      await disableVaultSharingViaGraphql(vaultId);
     } catch (error) {
       logger.error('Error unsharing vault:', error);
       throw error;

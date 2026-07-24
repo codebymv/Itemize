@@ -199,6 +199,33 @@ describe('Vault GraphQL PostgreSQL lifecycle', () => {
     });
   });
 
+  it('refuses to create a dormant share capability while the vault is locked', async () => {
+    const result = await mutation(
+      memberToken,
+      `mutation {
+        enableWorkspaceVaultSharing(
+          vaultId: ${vaultId}
+          confirmDecryptedSharing: true
+        ) {
+          vaultId shareToken isPublic
+        }
+      }`,
+    ).expect(200);
+    expect(result.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'VAULT_LOCKED',
+    });
+    const stored = await pool.query(
+      'SELECT share_token, is_public, shared_at FROM vaults WHERE id = $1',
+      [vaultId],
+    );
+    expect(stored.rows[0]).toMatchObject({
+      share_token: null,
+      is_public: false,
+      shared_at: null,
+    });
+  });
+
   it('atomically adds, bulk imports, updates, exact-set reorders, and deletes items', async () => {
     const added = await mutation(
       memberToken,
@@ -315,6 +342,13 @@ describe('Vault GraphQL PostgreSQL lifecycle', () => {
   });
 
   it('rotates and removes the password transactionally with current-password proof', async () => {
+    await pool.query(
+      `UPDATE vaults
+       SET share_token = '00000000-0000-4000-8000-000000000099',
+           is_public = TRUE, shared_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      [vaultId],
+    );
     const setDocument = `mutation SetPassword(
       $vaultId: Int!
       $newPassword: String!
@@ -369,6 +403,15 @@ describe('Vault GraphQL PostgreSQL lifecycle', () => {
       vaultId,
       isLocked: true,
       encryptionSalt: expect.any(String),
+    });
+    const revokedByLock = await pool.query(
+      'SELECT share_token, is_public, shared_at FROM vaults WHERE id = $1',
+      [vaultId],
+    );
+    expect(revokedByLock.rows[0]).toMatchObject({
+      share_token: null,
+      is_public: false,
+      shared_at: null,
     });
 
     const oldPassword = await query(
@@ -439,6 +482,90 @@ describe('Vault GraphQL PostgreSQL lifecycle', () => {
       code: 'BAD_USER_INPUT',
       reason: 'VAULT_NOT_LOCKED',
     });
+  });
+
+  it('serializes issuance, conceals ownership, revokes, and rotates capabilities', async () => {
+    const enableDocument = `mutation Enable(
+      $vaultId: Int!
+      $confirmDecryptedSharing: Boolean!
+    ) {
+      enableWorkspaceVaultSharing(
+        vaultId: $vaultId
+        confirmDecryptedSharing: $confirmDecryptedSharing
+      ) {
+        vaultId shareToken shareUrl isPublic sharedAt
+      }
+    }`;
+    const missingConsent = await mutation(memberToken, enableDocument, {
+      vaultId,
+      confirmDecryptedSharing: false,
+    }).expect(200);
+    expect(missingConsent.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'DECRYPTED_SHARING_CONFIRMATION_REQUIRED',
+    });
+    const [first, second] = await Promise.all([
+      mutation(memberToken, enableDocument, {
+        vaultId,
+        confirmDecryptedSharing: true,
+      }),
+      mutation(memberToken, enableDocument, {
+        vaultId,
+        confirmDecryptedSharing: true,
+      }),
+    ]);
+    expect(first.body.errors).toBeUndefined();
+    expect(second.body.errors).toBeUndefined();
+    expect(first.body.data.enableWorkspaceVaultSharing).toMatchObject({
+      vaultId,
+      isPublic: true,
+      shareToken: expect.any(String),
+      shareUrl: expect.stringContaining('/shared/vault/'),
+      sharedAt: expect.any(String),
+    });
+    const oldToken =
+      first.body.data.enableWorkspaceVaultSharing.shareToken as string;
+    expect(second.body.data.enableWorkspaceVaultSharing.shareToken).toBe(
+      oldToken,
+    );
+    expect(second.body.data.enableWorkspaceVaultSharing.sharedAt).toBe(
+      first.body.data.enableWorkspaceVaultSharing.sharedAt,
+    );
+
+    const concealed = await mutation(outsiderToken, enableDocument, {
+      vaultId,
+      confirmDecryptedSharing: true,
+    }).expect(200);
+    expect(concealed.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const disableDocument = `mutation Disable($vaultId: Int!) {
+      disableWorkspaceVaultSharing(vaultId: $vaultId) {
+        vaultId shareToken shareUrl isPublic sharedAt
+      }
+    }`;
+    const disabled = await mutation(memberToken, disableDocument, {
+      vaultId,
+    }).expect(200);
+    expect(disabled.body.errors).toBeUndefined();
+    expect(disabled.body.data.disableWorkspaceVaultSharing).toEqual({
+      vaultId,
+      shareToken: null,
+      shareUrl: null,
+      isPublic: false,
+      sharedAt: null,
+    });
+    const disabledAgain = await mutation(memberToken, disableDocument, {
+      vaultId,
+    }).expect(200);
+    expect(disabledAgain.body.errors).toBeUndefined();
+
+    const reshared = await mutation(memberToken, enableDocument, {
+      vaultId,
+      confirmDecryptedSharing: true,
+    }).expect(200);
+    expect(
+      reshared.body.data.enableWorkspaceVaultSharing.shareToken,
+    ).not.toBe(oldToken);
   });
 
   it('creates, updates, and deletes with CSRF and exact ownership', async () => {
