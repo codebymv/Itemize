@@ -53,6 +53,8 @@ describe('LandingPagesService', () => {
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      setPasswordHash: jest.fn(),
+      removePassword: jest.fn(),
       duplicate: jest.fn(),
       replaceSections: jest.fn(),
       addSection: jest.fn(),
@@ -210,5 +212,46 @@ describe('LandingPagesService', () => {
       }),
     });
     expect(repository.analytics).toHaveBeenCalledTimes(1);
+  });
+
+  it('hashes bounded page passwords and removes them without leaking the hash', async () => {
+    repository.setPasswordHash.mockResolvedValue(true);
+    await expect(service.setPassword(4, 12, 'open-sesame')).resolves.toEqual({
+      pageId: 12,
+      passwordProtected: true,
+    });
+    expect(repository.setPasswordHash).toHaveBeenCalledWith(
+      4,
+      12,
+      expect.stringMatching(/^\$2[aby]\$/),
+    );
+    expect(repository.setPasswordHash.mock.calls[0][2]).not.toContain(
+      'open-sesame',
+    );
+
+    repository.removePassword.mockResolvedValue(true);
+    await expect(service.removePassword(4, 12)).resolves.toEqual({
+      pageId: 12,
+      passwordProtected: false,
+    });
+    expect(repository.removePassword).toHaveBeenCalledWith(4, 12);
+  });
+
+  it('rejects passwords that bcrypt would truncate before hashing', async () => {
+    await expect(service.setPassword(4, 12, 'abc')).rejects.toMatchObject({
+      extensions: expect.objectContaining({
+        code: 'BAD_USER_INPUT',
+        field: 'password',
+      }),
+    });
+    await expect(
+      service.setPassword(4, 12, 'é'.repeat(37)),
+    ).rejects.toMatchObject({
+      extensions: expect.objectContaining({
+        code: 'BAD_USER_INPUT',
+        field: 'password',
+      }),
+    });
+    expect(repository.setPasswordHash).not.toHaveBeenCalled();
   });
 });

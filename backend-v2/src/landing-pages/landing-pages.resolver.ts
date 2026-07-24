@@ -16,6 +16,7 @@ import {
   LandingPage,
   LandingPageAnalytics,
   LandingPagePage,
+  LandingPagePasswordResult,
   LandingPageSection,
   LandingPageSectionsResult,
 } from './landing-page.types';
@@ -78,6 +79,25 @@ export class LandingPagesResolver {
     @Args('id', { type: () => Int }) id: number,
   ): Promise<DeleteLandingPageResult> {
     return this.pages.delete(this.organizationId(), id);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => LandingPagePasswordResult)
+  setLandingPagePassword(
+    @Args('pageId', { type: () => Int }) pageId: number,
+    @Args('password') password: string,
+  ): Promise<LandingPagePasswordResult> {
+    return this.pages.setPassword(this.organizationId(), pageId, password);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => LandingPagePasswordResult)
+  removeLandingPagePassword(
+    @Args('pageId', { type: () => Int }) pageId: number,
+  ): Promise<LandingPagePasswordResult> {
+    return this.pages.removePassword(this.organizationId(), pageId);
   }
 
   @CsrfProtected()

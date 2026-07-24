@@ -38,6 +38,7 @@ type GqlPage = {
   customJs: string | null;
   customHead: string | null;
   settings: Page['settings'];
+  passwordProtected: boolean;
   currentVersionId: number | null;
   viewCount: number;
   uniqueVisitors: number;
@@ -65,6 +66,7 @@ const sectionFields = `
 const pageFields = `
   id organizationId name description slug status seoTitle seoDescription
   seoKeywords ogImage faviconUrl theme customCss customJs customHead settings
+  passwordProtected
   currentVersionId viewCount uniqueVisitors publishedAt createdBy createdByName
   createdAt updatedAt sectionCount sections { ${sectionFields} }
 `;
@@ -101,6 +103,7 @@ const mapPage = (page: GqlPage): Page => ({
   ...(page.customJs === null ? {} : { custom_js: page.customJs }),
   ...(page.customHead === null ? {} : { custom_head: page.customHead }),
   settings: page.settings,
+  password_protected: page.passwordProtected,
   view_count: page.viewCount,
   unique_visitors: page.uniqueVisitors,
   ...(page.publishedAt === null ? {} : { published_at: page.publishedAt }),
@@ -255,6 +258,48 @@ export const deleteLandingPageViaGraphql = async (
   );
   return { success: data.deleteLandingPage.deletedId === id };
 };
+
+const landingPagePasswordMutation = async (
+  operation: 'set' | 'remove',
+  pageId: number,
+  password: string | undefined,
+  organizationId?: number,
+): Promise<{ pageId: number; passwordProtected: boolean }> => {
+  const field =
+    operation === 'set'
+      ? 'setLandingPagePassword'
+      : 'removeLandingPagePassword';
+  const variables = {
+    pageId,
+    ...(password === undefined ? {} : { password }),
+  };
+  const data = await graphqlMutationRequest<
+    Record<string, { pageId: number; passwordProtected: boolean }>,
+    typeof variables
+  >(
+    `mutation ${operation === 'set' ? 'Set' : 'Remove'}LandingPagePassword(
+      $pageId: Int!${operation === 'set' ? ', $password: String!' : ''}
+    ) {
+      ${field}(
+        pageId: $pageId${operation === 'set' ? ', password: $password' : ''}
+      ) { pageId passwordProtected }
+    }`,
+    variables,
+    organizationId,
+  );
+  return data[field];
+};
+
+export const setLandingPagePasswordViaGraphql = (
+  pageId: number,
+  password: string,
+  organizationId?: number,
+) => landingPagePasswordMutation('set', pageId, password, organizationId);
+
+export const removeLandingPagePasswordViaGraphql = (
+  pageId: number,
+  organizationId?: number,
+) => landingPagePasswordMutation('remove', pageId, undefined, organizationId);
 
 export const duplicateLandingPageViaGraphql = async (
   id: number,

@@ -9,10 +9,10 @@
 - Non-API registered operations: 7
 - Static frontend callsites: 350
 - Operations with frontend consumers: 336
-- Operations referenced by backend tests: 221
+- Operations referenced by backend tests: 222
 - Recommended GraphQL queries: 124
-- Recommended GraphQL mutations: 243
-- Recommended retained HTTP endpoints: 45
+- Recommended GraphQL mutations: 242
+- Recommended retained HTTP endpoints: 46
 - High-risk operations: 339
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
@@ -267,14 +267,14 @@
 | PUT | `/api/pages/:id` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / updateLandingPage |
 | GET | `/api/pages/:id/analytics` | 0 | 0 | graphql-query | high | growth / LandingPagesModule / landingPageAnalytics |
 | POST | `/api/pages/:id/duplicate` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / duplicateLandingPage |
-| DELETE | `/api/pages/:id/password` | 0 | 0 | graphql-mutation | high | _unassigned_ |
-| POST | `/api/pages/:id/password` | 0 | 0 | graphql-mutation | high | _unassigned_ |
+| DELETE | `/api/pages/:id/password` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / removeLandingPagePassword |
+| POST | `/api/pages/:id/password` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / setLandingPagePassword |
 | POST | `/api/pages/:id/sections` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / addLandingPageSection |
 | PUT | `/api/pages/:id/sections` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / replaceLandingPageSections |
 | DELETE | `/api/pages/:id/sections/:sectionId` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / deleteLandingPageSection |
 | PUT | `/api/pages/:id/sections/:sectionId` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / updateLandingPageSection |
 | POST | `/api/pages/:id/sections/reorder` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / reorderLandingPageSections |
-| POST | `/api/pages/:id/verify-password` | 0 | 0 | graphql-mutation | high | _unassigned_ |
+| POST | `/api/pages/:id/verify-password` | 0 | 2 | retain-http | high | growth / PublicLandingPagesModule / verifyPublicLandingPagePassword |
 | GET | `/api/pages/:id/versions` | 0 | 1 | graphql-query | high | growth / LandingPagesModule / landingPageVersions |
 | POST | `/api/pages/:id/versions` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / createLandingPageVersion |
 | DELETE | `/api/pages/:id/versions/:versionId` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / deleteLandingPageVersion |

@@ -13,7 +13,9 @@ import {
     getLandingPageViaGraphql,
     getLandingPagesViaGraphql,
     reorderLandingPageSectionsViaGraphql,
+    removeLandingPagePasswordViaGraphql,
     replaceLandingPageSectionsViaGraphql,
+    setLandingPagePasswordViaGraphql,
     updateLandingPageSectionViaGraphql,
     updateLandingPageViaGraphql,
 } from './landingPagesGraphql';
@@ -101,6 +103,7 @@ export interface Page {
     custom_js?: string;
     custom_head?: string;
     settings: PageSettings;
+    password_protected: boolean;
     view_count: number;
     unique_visitors: number;
     published_at?: string;
@@ -376,6 +379,29 @@ export const duplicatePage = async (
     organizationId?: number
 ): Promise<Page> => {
     return duplicateLandingPageViaGraphql(pageId, organizationId);
+};
+
+export const setPagePassword = async (
+    pageId: number,
+    password: string,
+    organizationId?: number
+): Promise<{ success: boolean; passwordProtected: boolean }> => {
+    const result = await setLandingPagePasswordViaGraphql(pageId, password, organizationId);
+    return {
+        success: result.pageId === pageId && result.passwordProtected,
+        passwordProtected: result.passwordProtected
+    };
+};
+
+export const removePagePassword = async (
+    pageId: number,
+    organizationId?: number
+): Promise<{ success: boolean; passwordProtected: boolean }> => {
+    const result = await removeLandingPagePasswordViaGraphql(pageId, organizationId);
+    return {
+        success: result.pageId === pageId && !result.passwordProtected,
+        passwordProtected: result.passwordProtected
+    };
 };
 
 // ======================
@@ -719,6 +745,8 @@ export default {
     updatePage,
     deletePage,
     duplicatePage,
+    setPagePassword,
+    removePagePassword,
     // Sections
     updatePageSections,
     addSection,

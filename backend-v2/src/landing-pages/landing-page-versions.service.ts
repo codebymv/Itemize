@@ -133,10 +133,11 @@ export class LandingPageVersionsService {
   }
 
   private map(row: LandingPageVersionRow): LandingPageVersion {
-    const content =
+    const rawContent =
       typeof row.content === 'string'
         ? (JSON.parse(row.content) as Record<string, unknown>)
         : row.content;
+    const content = this.redactedContent(rawContent);
     return {
       id: row.id,
       pageId: row.page_id,
@@ -148,6 +149,25 @@ export class LandingPageVersionsService {
       publishedAt: row.published_at,
       isCurrent: Boolean(row.is_current),
       createdAt: row.created_at,
+    };
+  }
+
+  private redactedContent(
+    content: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const rawSettings =
+      content.settings &&
+      typeof content.settings === 'object' &&
+      !Array.isArray(content.settings)
+        ? (content.settings as Record<string, unknown>)
+        : {};
+    const { password: _password, ...settings } = rawSettings;
+    return {
+      ...content,
+      settings,
+      password_protected:
+        typeof rawSettings.password === 'string' &&
+        rawSettings.password.length > 0,
     };
   }
 

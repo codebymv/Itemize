@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import bcrypt from 'bcryptjs';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { PageInput, pageInfo } from '../common/pagination';
 import {
@@ -15,6 +16,7 @@ import {
   LandingPage,
   LandingPageAnalytics,
   LandingPagePage,
+  LandingPagePasswordResult,
   LandingPageSection,
   LandingPageSectionsResult,
 } from './landing-page.types';
@@ -239,6 +241,47 @@ export class LandingPagesService {
     return { deletedId: pageId };
   }
 
+  async setPassword(
+    organizationId: number,
+    pageId: number,
+    password: string,
+  ): Promise<LandingPagePasswordResult> {
+    this.id(pageId, 'pageId');
+    if (
+      typeof password !== 'string' ||
+      password.length < 4 ||
+      Buffer.byteLength(password, 'utf8') > 72
+    ) {
+      throw itemizeGraphqlError(
+        'password must contain at least 4 characters and at most 72 UTF-8 bytes',
+        'BAD_USER_INPUT',
+        { field: 'password' },
+      );
+    }
+    const passwordHash = await bcrypt.hash(password, 10);
+    if (
+      !(await this.pages.setPasswordHash(
+        organizationId,
+        pageId,
+        passwordHash,
+      ))
+    ) {
+      throw this.notFound();
+    }
+    return { pageId, passwordProtected: true };
+  }
+
+  async removePassword(
+    organizationId: number,
+    pageId: number,
+  ): Promise<LandingPagePasswordResult> {
+    this.id(pageId, 'pageId');
+    if (!(await this.pages.removePassword(organizationId, pageId))) {
+      throw this.notFound();
+    }
+    return { pageId, passwordProtected: false };
+  }
+
   async duplicate(
     organizationId: number,
     userId: number,
@@ -437,6 +480,8 @@ export class LandingPagesService {
     row: LandingPageRow,
     sections: LandingPageSectionRow[],
   ): LandingPage {
+    const rawSettings = row.settings ?? {};
+    const { password: _password, ...settings } = rawSettings;
     return {
       id: row.id,
       organizationId: row.organization_id,
@@ -453,7 +498,10 @@ export class LandingPagesService {
       customCss: row.custom_css,
       customJs: row.custom_js,
       customHead: row.custom_head,
-      settings: row.settings ?? {},
+      settings,
+      passwordProtected:
+        typeof rawSettings.password === 'string' &&
+        rawSettings.password.length > 0,
       currentVersionId: row.current_version_id,
       viewCount: Number(row.view_count ?? 0),
       uniqueVisitors: Number(row.unique_visitors ?? 0),

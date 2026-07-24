@@ -10,7 +10,9 @@ import {
   getLandingPageViaGraphql,
   getLandingPagesViaGraphql,
   reorderLandingPageSectionsViaGraphql,
+  removeLandingPagePasswordViaGraphql,
   replaceLandingPageSectionsViaGraphql,
+  setLandingPagePasswordViaGraphql,
   updateLandingPageSectionViaGraphql,
   updateLandingPageViaGraphql,
 } from './landingPagesGraphql';
@@ -51,6 +53,7 @@ const page = {
   customJs: null,
   customHead: null,
   settings: { enableAnalytics: true },
+  passwordProtected: false,
   currentVersionId: null,
   viewCount: 3,
   uniqueVisitors: 2,
@@ -151,6 +154,26 @@ describe('landing-page GraphQL consumers', () => {
       )
       .mockResolvedValueOnce(
         response({ data: { deleteLandingPage: { deletedId: 12 } } }),
+      )
+      .mockResolvedValueOnce(
+        response({
+          data: {
+            setLandingPagePassword: {
+              pageId: 12,
+              passwordProtected: true,
+            },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        response({
+          data: {
+            removeLandingPagePassword: {
+              pageId: 12,
+              passwordProtected: false,
+            },
+          },
+        }),
       );
 
     await createLandingPageViaGraphql(
@@ -190,6 +213,12 @@ describe('landing-page GraphQL consumers', () => {
     await expect(deleteLandingPageViaGraphql(12, 4)).resolves.toEqual({
       success: true,
     });
+    await expect(
+      setLandingPagePasswordViaGraphql(12, 'open-sesame', 4),
+    ).resolves.toEqual({ pageId: 12, passwordProtected: true });
+    await expect(
+      removeLandingPagePasswordViaGraphql(12, 4),
+    ).resolves.toEqual({ pageId: 12, passwordProtected: false });
 
     const bodies = requestBodies();
     expect(bodies.map(({ query }) => query)).toEqual([
@@ -202,6 +231,8 @@ describe('landing-page GraphQL consumers', () => {
       expect.stringContaining('reorderLandingPageSections'),
       expect.stringContaining('deleteLandingPageSection'),
       expect.stringContaining('deleteLandingPage'),
+      expect.stringContaining('setLandingPagePassword'),
+      expect.stringContaining('removeLandingPagePassword'),
     ]);
     expect(bodies[0].variables).toEqual({
       input: {
@@ -220,7 +251,12 @@ describe('landing-page GraphQL consumers', () => {
       id: 12,
       input: { customCss: '.hero {}', description: null },
     });
-    expect(fetchCsrfToken).toHaveBeenCalledTimes(9);
+    expect(bodies[9].variables).toEqual({
+      pageId: 12,
+      password: 'open-sesame',
+    });
+    expect(bodies[10].variables).toEqual({ pageId: 12 });
+    expect(fetchCsrfToken).toHaveBeenCalledTimes(11);
     for (const call of vi.mocked(fetch).mock.calls) {
       expect((call[1] as RequestInit).headers).toMatchObject({
         'x-organization-id': '4',

@@ -52,6 +52,31 @@ describe('LandingPageVersionsService', () => {
     expect(repository.create).toHaveBeenCalledWith(4, 12, 7, 'Snapshot');
   });
 
+  it('redacts stored password hashes from version content', async () => {
+    repository.find.mockResolvedValue({
+      ...versionRow,
+      content: {
+        name: 'Launch',
+        slug: 'launch',
+        settings: {
+          enableAnalytics: true,
+          password: '$2b$10$not-a-real-test-hash',
+        },
+        sections: [],
+      },
+    });
+    await expect(service.get(4, 12, 31)).resolves.toMatchObject({
+      content: {
+        settings: { enableAnalytics: true },
+        password_protected: true,
+      },
+    });
+    const result = await service.get(4, 12, 31);
+    expect(
+      (result.content.settings as Record<string, unknown>).password,
+    ).toBeUndefined();
+  });
+
   it('rejects invalid identifiers and unbounded descriptions before querying', async () => {
     await expect(service.get(4, 0, 31)).rejects.toMatchObject({
       extensions: expect.objectContaining({

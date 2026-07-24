@@ -40,6 +40,7 @@ export class LandingPage {
   @Field(() => String, { nullable: true }) customJs: string | null;
   @Field(() => String, { nullable: true }) customHead: string | null;
   @Field(() => GraphQLJSON) settings: Record<string, unknown>;
+  @Field() passwordProtected: boolean;
   @Field(() => Int, { nullable: true }) currentVersionId: number | null;
   @Field(() => Int) viewCount: number;
   @Field(() => Int) uniqueVisitors: number;
@@ -71,6 +72,12 @@ export class DeleteLandingPageResult {
 @ObjectType()
 export class DeleteLandingPageSectionResult {
   @Field(() => Int) deletedId: number;
+}
+
+@ObjectType()
+export class LandingPagePasswordResult {
+  @Field(() => Int) pageId: number;
+  @Field() passwordProtected: boolean;
 }
 
 @ObjectType()

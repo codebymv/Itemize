@@ -281,6 +281,42 @@ export class LandingPagesRepository {
     return (result.rowCount ?? 0) === 1;
   }
 
+  async setPasswordHash(
+    organizationId: number,
+    pageId: number,
+    passwordHash: string,
+  ): Promise<boolean> {
+    const result = await this.pool.query(
+      `UPDATE pages
+       SET settings = jsonb_set(
+             COALESCE(settings, '{}'::jsonb),
+             '{password}',
+             to_jsonb($3::text),
+             true
+           ),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND organization_id = $2
+       RETURNING id`,
+      [pageId, organizationId, passwordHash],
+    );
+    return result.rowCount === 1;
+  }
+
+  async removePassword(
+    organizationId: number,
+    pageId: number,
+  ): Promise<boolean> {
+    const result = await this.pool.query(
+      `UPDATE pages
+       SET settings = COALESCE(settings, '{}'::jsonb) - 'password',
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND organization_id = $2
+       RETURNING id`,
+      [pageId, organizationId],
+    );
+    return result.rowCount === 1;
+  }
+
   async duplicate(
     organizationId: number,
     userId: number,

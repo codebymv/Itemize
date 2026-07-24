@@ -11,14 +11,14 @@
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 350,
     "operationsWithFrontendConsumers": 336,
-    "operationsWithBackendTests": 221,
+    "operationsWithBackendTests": 222,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 8,
-    "retainHttpCount": 45,
+    "retainHttpCount": 46,
     "graphqlQueryCount": 124,
-    "graphqlMutationCount": 243,
+    "graphqlMutationCount": 242,
     "highRiskCount": 339,
     "literalInterpolationRiskCount": 0
   },
@@ -10829,7 +10829,7 @@
           "method": "GET",
           "path": "/api/pages",
           "source": "backend-v2/test/integration/landing-pages.integration-spec.ts",
-          "line": 206
+          "line": 207
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -11003,11 +11003,11 @@
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "removeLandingPagePassword",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "CSRF-protected organization-qualified JSONB key removal preserves unrelated settings and returns only protection state.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -11027,11 +11027,11 @@
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "growth",
+      "targetOperation": "setLandingPagePassword",
+      "targetModule": "LandingPagesModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "CSRF-protected organization-qualified bcrypt update rejects truncation-prone inputs, atomically preserves unrelated JSON settings, and returns only protection state.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -11167,15 +11167,28 @@
         }
       ],
       "consumerCallsites": [],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/pages/:pageId/verify-password",
+          "source": "backend-v2/test/integration/landing-pages.integration-spec.ts",
+          "line": 537
+        },
+        {
+          "method": "POST",
+          "path": "/api/pages/:pageId/verify-password",
+          "source": "backend-v2/test/integration/landing-pages.integration-spec.ts",
+          "line": 541
+        }
+      ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "disposition": "retain-http",
+      "owner": "growth",
+      "targetOperation": "verifyPublicLandingPagePassword",
+      "targetModule": "PublicLandingPagesModule",
+      "parityStatus": "characterized",
+      "notes": "Retain the anonymous rate-limited password-verification bootstrap over HTTP as part of public page delivery; bcrypt and legacy plaintext verification semantics remain characterized.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -11347,7 +11360,7 @@
           "path": "/api/pages/public/page/:slug",
           "rawPath": "/api/pages/public/page/${slug}",
           "source": "frontend/src/services/pagesApi.ts",
-          "line": 449,
+          "line": 475,
           "client": "api",
           "literalInterpolation": false
         }
@@ -11381,7 +11394,7 @@
           "path": "/api/pages/public/page/:slug/analytics",
           "rawPath": "/api/pages/public/page/${slug}/analytics",
           "source": "frontend/src/services/pagesApi.ts",
-          "line": 467,
+          "line": 493,
           "client": "api",
           "literalInterpolation": false
         }

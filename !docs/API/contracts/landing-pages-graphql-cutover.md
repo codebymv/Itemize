@@ -2,14 +2,15 @@
 
 ## Scope
 
-The authenticated landing-page builder now uses `LandingPagesModule` directly for page CRUD, section CRUD/replacement/reordering, analytics, and the complete page-version lifecycle. The browser has no REST fallback for these operations.
+The authenticated landing-page builder now uses `LandingPagesModule` directly for page CRUD, section CRUD/replacement/reordering, analytics, password assignment/removal, and the complete page-version lifecycle. The browser has no REST fallback for these operations.
 
 The public rendering boundary remains HTTP:
 
 - `GET /api/pages/public/page/:slug`
 - `POST /api/pages/public/page/:slug/analytics`
+- `POST /api/pages/:id/verify-password`
 
-Those endpoints are anonymous browser-navigation and telemetry protocols. Password assignment and verification remain a separate unfinished slice and are not implied complete by this contract. Version preview remains an HTTP iframe/document boundary even though authenticated version data and mutations use GraphQL.
+Those endpoints are anonymous browser-navigation, verification, and telemetry protocols. Version preview remains an HTTP iframe/document boundary even though authenticated version data and mutations use GraphQL.
 
 ## GraphQL operations
 
@@ -27,6 +28,8 @@ Those endpoints are anonymous browser-navigation and telemetry protocols. Passwo
 | Mutation | `updateLandingPageSection` | Page- and organization-qualified bounded partial update |
 | Mutation | `deleteLandingPageSection` | Transactional delete with order compaction |
 | Mutation | `reorderLandingPageSections` | Exact-set row-locked reorder with contiguous zero-based order |
+| Mutation | `setLandingPagePassword` | CSRF-protected organization-qualified bounded bcrypt update that preserves unrelated settings |
+| Mutation | `removeLandingPagePassword` | CSRF-protected organization-qualified password-key removal that preserves unrelated settings |
 | Query | `landingPageVersions` | Organization-qualified deterministic history with creator projection and the authoritative current-version pointer |
 | Query | `landingPageVersion` | Organization-, page-, and version-qualified snapshot detail |
 | Mutation | `createLandingPageVersion` | CSRF-protected complete page/section snapshot with page-row serialization and monotonic numbering |
@@ -52,11 +55,15 @@ Those endpoints are anonymous browser-navigation and telemetry protocols. Passwo
 - Publication validates the stored JSON snapshot before mutation and restores all captured page fields plus ordered sections in one transaction. A conflicting historical slug returns `CONFLICT` without partial publication.
 - `pages.current_version_id` is authoritative; `page_versions.is_current` is reconciled in the same transaction. The current version cannot be deleted.
 - Restore records the verified current actor rather than copying stale authorship from the source snapshot.
+- Password assignment accepts 4 or more characters but rejects values over bcrypt's 72-byte boundary instead of silently truncating them. The cost factor remains compatible with retained verification.
+- Password writes patch only the `password` JSONB key, so concurrent or pre-existing page settings are not replaced by a stale read/modify/write object.
+- Page and version GraphQL projections remove password hashes from generic settings/snapshot JSON and expose only `passwordProtected`; the server retains the hash for publication and public verification.
+- Public password verification remains rate-limited HTTP because it bootstraps anonymous page delivery. It supports bcrypt hashes and characterized legacy plaintext rows while all new assignments are hashed.
 - The retained Express version router omitted its passed organization middleware and could return false 404s; the GraphQL path derives organization exclusively from verified request context and repairs that unreachable authenticated surface.
 
 ## Compatibility boundary
 
-`frontend/src/services/pagesApi.ts` and `pageVersionsApi.ts` remain the stable legacy-shaped TypeScript facades used by the page list, editor, and version-history dialog. Their authenticated functions delegate directly to `landingPagesGraphql.ts` and `landingPageVersionsGraphql.ts`, which map GraphQL camelCase fields back to the existing snake_case UI model. Only `getPublicPage`, `updatePublicPageAnalytics`, and iframe-oriented version preview use HTTP.
+`frontend/src/services/pagesApi.ts` and `pageVersionsApi.ts` remain the stable legacy-shaped TypeScript facades used by the page list, editor, and version-history dialog. Their authenticated functions—including password assignment/removal—delegate directly to `landingPagesGraphql.ts` and `landingPageVersionsGraphql.ts`, which map GraphQL camelCase fields back to the existing snake_case UI model. Only `getPublicPage`, `updatePublicPageAnalytics`, public password verification, and iframe-oriented version preview use HTTP.
 
 No landing-page rollout flag was added. This repository has no active customer data, the operations have clean-database parity coverage, and retaining an unused authenticated REST branch would weaken cutover evidence.
 
@@ -66,6 +73,6 @@ The slice is complete only when all of the following pass:
 
 - NestJS build and landing-page/page-version service unit coverage.
 - Frontend typecheck, targeted lint, and landing-page/page-version GraphQL mapping and transport tests.
-- Disposable PostgreSQL integration coverage for REST/read parity, tenant isolation, CSRF, generated and explicit slugs, plan limits, page lifecycle, complete section lifecycle, exact-set reordering, zero-based ordering, analytics, duplication, version snapshot completeness, full publication, restoration, current-version protection, and delete concealment.
-- Generated API surface and cutover ledger checks with all 18 authenticated operations at `consumer-cutover-complete`.
+- Disposable PostgreSQL integration coverage for REST/read parity, tenant isolation, CSRF, generated and explicit slugs, plan limits, page lifecycle, complete section lifecycle, exact-set reordering, zero-based ordering, analytics, duplication, password hashing/redaction/public verification/removal, version snapshot completeness, full publication, restoration, current-version protection, and delete concealment.
+- Generated API surface and cutover ledger checks with all 20 authenticated operations at `consumer-cutover-complete`.
 - Production schema canaries resolve the new query and mutation fields and reject anonymous access with `UNAUTHENTICATED`.

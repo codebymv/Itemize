@@ -2056,6 +2056,18 @@
       "disposition": "graphql-query", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "landingPageAnalytics", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Organization-qualified analytics bounds the period to 1-365 days and returns views, visitors, engagement, conversions, devices, referrers, and UTM aggregates."
     },
+    "POST /api/pages/:id/password": {
+      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "setLandingPagePassword", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "CSRF-protected organization-qualified bcrypt update rejects truncation-prone inputs, atomically preserves unrelated JSON settings, and returns only protection state."
+    },
+    "DELETE /api/pages/:id/password": {
+      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "removeLandingPagePassword", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "CSRF-protected organization-qualified JSONB key removal preserves unrelated settings and returns only protection state."
+    },
+    "POST /api/pages/:id/verify-password": {
+      "disposition": "retain-http", "owner": "growth", "targetModule": "PublicLandingPagesModule", "targetOperation": "verifyPublicLandingPagePassword", "parityStatus": "characterized", "risk": "high",
+      "notes": "Retain the anonymous rate-limited password-verification bootstrap over HTTP as part of public page delivery; bcrypt and legacy plaintext verification semantics remain characterized."
+    },
     "GET /api/pages/:id/versions": {
       "disposition": "graphql-query", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "landingPageVersions", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Organization-qualified deterministic version history returns the authoritative current-version pointer and creator projection through a direct GraphQL frontend consumer."

@@ -1,6 +1,7 @@
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
+import bcrypt from 'bcryptjs';
 import cookieParser from 'cookie-parser';
 import express, { Express } from 'express';
 import { Pool } from 'pg';
@@ -465,6 +466,119 @@ describe('Authenticated landing-pages REST/GraphQL PostgreSQL parity', () => {
       ]),
       utmSources: [{ utmSource: 'newsletter', count: 1 }],
     });
+  });
+
+  it('sets and removes a bounded password while retaining public HTTP verification', async () => {
+    const noCsrf = await graphql(
+      memberToken,
+      organizationId,
+      `mutation {
+        setLandingPagePassword(pageId: ${pageId}, password: "open-sesame") {
+          pageId passwordProtected
+        }
+      }`,
+    ).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+
+    const set = await mutation(
+      memberToken,
+      organizationId,
+      `mutation {
+        setLandingPagePassword(pageId: ${pageId}, password: "open-sesame") {
+          pageId passwordProtected
+        }
+      }`,
+    ).expect(200);
+    expect(set.body.errors).toBeUndefined();
+    expect(set.body.data.setLandingPagePassword).toEqual({
+      pageId,
+      passwordProtected: true,
+    });
+    const stored = await pool.query<{
+      settings: Record<string, unknown>;
+    }>('SELECT settings FROM pages WHERE id = $1', [pageId]);
+    expect(stored.rows[0].settings).toMatchObject({ enableAnalytics: true });
+    expect(stored.rows[0].settings.password).not.toBe('open-sesame');
+    await expect(
+      bcrypt.compare(
+        'open-sesame',
+        String(stored.rows[0].settings.password),
+      ),
+    ).resolves.toBe(true);
+    const redacted = await graphql(
+      memberToken,
+      organizationId,
+      `query {
+        landingPage(id: ${pageId}) { settings passwordProtected }
+      }`,
+    ).expect(200);
+    expect(redacted.body.data.landingPage).toEqual({
+      settings: { enableAnalytics: true },
+      passwordProtected: true,
+    });
+    const version = await mutation(
+      memberToken,
+      organizationId,
+      `mutation {
+        createLandingPageVersion(pageId: ${pageId}, description: "Protected") {
+          content
+        }
+      }`,
+    ).expect(200);
+    expect(version.body.data.createLandingPageVersion.content).toMatchObject({
+      settings: { enableAnalytics: true },
+      password_protected: true,
+    });
+    expect(
+      version.body.data.createLandingPageVersion.content.settings.password,
+    ).toBeUndefined();
+
+    await request(legacyApp)
+      .post(`/api/pages/${pageId}/verify-password`)
+      .send({ password: 'wrong-password' })
+      .expect(401);
+    await request(legacyApp)
+      .post(`/api/pages/${pageId}/verify-password`)
+      .send({ password: 'open-sesame' })
+      .expect(200, { valid: true });
+
+    const outsiderCsrf = 'outsider-page-password-csrf';
+    const foreign = await request(graphqlApp.getHttpServer())
+      .post('/graphql')
+      .set(
+        'Cookie',
+        `itemize_auth=${outsiderToken}; csrf-token=${outsiderCsrf}`,
+      )
+      .set('x-csrf-token', outsiderCsrf)
+      .set('x-organization-id', String(outsiderOrganizationId))
+      .send({
+        query: `mutation {
+          removeLandingPagePassword(pageId: ${pageId}) {
+            pageId passwordProtected
+          }
+        }`,
+      })
+      .expect(200);
+    expect(foreign.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const removed = await mutation(
+      memberToken,
+      organizationId,
+      `mutation {
+        removeLandingPagePassword(pageId: ${pageId}) {
+          pageId passwordProtected
+        }
+      }`,
+    ).expect(200);
+    expect(removed.body.data.removeLandingPagePassword).toEqual({
+      pageId,
+      passwordProtected: false,
+    });
+    const after = await pool.query<{ settings: Record<string, unknown> }>(
+      'SELECT settings FROM pages WHERE id = $1',
+      [pageId],
+    );
+    expect(after.rows[0].settings).toEqual({ enableAnalytics: true });
   });
 
   it('duplicates complete drafts, enforces limits, and tenant-privately deletes', async () => {
