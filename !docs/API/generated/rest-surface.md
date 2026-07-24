@@ -6,11 +6,11 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 440
-- Resolved declarations: 440
+- Route declarations: 434
+- Resolved declarations: 434
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 418
-- Files containing declarations: 81
+- Unique resolved method/path operations: 413
+- Files containing declarations: 80
 
 ## Interpretation limits
 
@@ -406,11 +406,6 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | DELETE | `/api/tags/:id` | `/:id` | `backend/src/routes/tags.routes.js:156` |
 | PUT | `/api/tags/:id` | `/:id` | `backend/src/routes/tags.routes.js:91` |
 | GET | `/api/tags/suggestions` | `/suggestions` | `backend/src/routes/tags.routes.js:195` |
-| GET | `/api/vaults` | `/vaults` | `backend/src/routes/vaults/crud.routes.js:16` |
-| POST | `/api/vaults` | `/vaults` | `backend/src/routes/vaults/crud.routes.js:160` |
-| DELETE | `/api/vaults/:vaultId` | `/vaults/:vaultId` | `backend/src/routes/vaults/crud.routes.js:302` |
-| GET | `/api/vaults/:vaultId` | `/vaults/:vaultId` | `backend/src/routes/vaults/crud.routes.js:68` |
-| PUT | `/api/vaults/:vaultId` | `/vaults/:vaultId` | `backend/src/routes/vaults/crud.routes.js:219` |
 | POST | `/api/vaults/:vaultId/items` | `/vaults/:vaultId/items` | `backend/src/routes/vaults/items.routes.js:59` |
 | DELETE | `/api/vaults/:vaultId/items/:itemId` | `/vaults/:vaultId/items/:itemId` | `backend/src/routes/vaults/items.routes.js:304` |
 | PUT | `/api/vaults/:vaultId/items/:itemId` | `/vaults/:vaultId/items/:itemId` | `backend/src/routes/vaults/items.routes.js:226` |
@@ -418,7 +413,6 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | PUT | `/api/vaults/:vaultId/items/reorder` | `/vaults/:vaultId/items/reorder` | `backend/src/routes/vaults/items.routes.js:13` |
 | POST | `/api/vaults/:vaultId/lock` | `/vaults/:vaultId/lock` | `backend/src/routes/vaults/password.routes.js:14` |
 | PUT | `/api/vaults/:vaultId/position` | `/api/vaults/:vaultId/position` | `backend/src/bootstrap/register-api-routes.js:60` |
-| PUT | `/api/vaults/:vaultId/position` | `/vaults/:vaultId/position` | `backend/src/routes/vaults/crud.routes.js:270` |
 | DELETE | `/api/vaults/:vaultId/share` | `/vaults/:vaultId/share` | `backend/src/routes/vaults/sharing.routes.js:58` |
 | POST | `/api/vaults/:vaultId/share` | `/vaults/:vaultId/share` | `backend/src/routes/vaults/sharing.routes.js:17` |
 | POST | `/api/vaults/:vaultId/unlock` | `/vaults/:vaultId/unlock` | `backend/src/routes/vaults/password.routes.js:78` |

@@ -54,6 +54,7 @@ import { RequestContextMiddleware } from './request-context/request-context.midd
 import { RequestContextModule } from './request-context/request-context.module';
 import { SegmentsModule } from './segments/segments.module';
 import { TagsModule } from './tags/tags.module';
+import { VaultModule } from './vaults/vault.module';
 import { WorkspaceContentModule } from './workspace-content/workspace-content.module';
 import { RealtimeOutboxModule } from './realtime-outbox/realtime-outbox.module';
 import { WorkflowsModule } from './workflows/workflows.module';
@@ -83,6 +84,7 @@ const observabilityPlugins = [
     CampaignDeliveryModule,
     BookingsModule,
     CategoriesModule,
+    VaultModule,
     WorkspaceContentModule,
     RealtimeOutboxModule,
     ContactsModule,

@@ -3,7 +3,6 @@
  * Handles encrypted vault CRUD operations and sharing
  */
 const express = require('express');
-const crudRoutes = require('./vaults/crud.routes');
 const itemsRoutes = require('./vaults/items.routes');
 const sharingRoutes = require('./vaults/sharing.routes');
 const passwordRoutes = require('./vaults/password.routes');
@@ -17,7 +16,6 @@ const passwordRoutes = require('./vaults/password.routes');
 module.exports = (pool, authenticateJWT, _broadcast, publicRateLimit) => {
     const router = express.Router();
 
-    router.use(crudRoutes(pool, authenticateJWT));
     router.use(itemsRoutes(pool, authenticateJWT));
     router.use(sharingRoutes(pool, authenticateJWT, publicRateLimit));
     router.use(passwordRoutes(pool, authenticateJWT));

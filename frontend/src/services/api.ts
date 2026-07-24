@@ -58,6 +58,13 @@ import {
   forgetWorkspaceWhiteboardRevision,
   rememberWorkspaceWhiteboardRevision,
 } from './workspaceWhiteboardRevision';
+import {
+  createVaultViaGraphql,
+  deleteVaultViaGraphql,
+  getVaultsViaGraphql,
+  getVaultViaGraphql,
+  updateVaultViaGraphql,
+} from './workspaceVaultGraphql';
 
 // Types for API requests
 export interface CreateNotePayload {
@@ -669,62 +676,38 @@ export interface VaultItemPayload {
 
 // Get all vaults
 export const getVaults = async (token?: string) => {
-  const response = await api.get('/api/vaults', {
-    headers: getAuthHeaders(token)
-  });
-  const payload = response.data;
-  if (payload?.data) {
-    return { vaults: payload.data, pagination: payload.pagination };
-  }
-  if (payload?.vaults) {
-    return payload;
-  }
-  if (Array.isArray(payload)) {
-    return { vaults: payload };
-  }
-  return payload;
+  void token;
+  return getVaultsViaGraphql();
 };
 
 // Get a single vault with decrypted items
 export const getVault = async (vaultId: number, masterPassword?: string, token?: string) => {
-  const params = masterPassword ? { master_password: masterPassword } : {};
-  const response = await api.get(`/api/vaults/${vaultId}`, {
-    headers: getAuthHeaders(token),
-    params
-  });
-  return response.data;
+  void token;
+  return getVaultViaGraphql(vaultId, masterPassword);
 };
 
 // Create a new vault
 export const createVault = async (vaultData: CreateVaultPayload, token?: string) => {
-  const response = await api.post('/api/vaults', vaultData, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return createVaultViaGraphql(vaultData);
 };
 
 // Update a vault
 export const updateVault = async (vaultId: number, vaultData: VaultPayload, token?: string) => {
-  const response = await api.put(`/api/vaults/${vaultId}`, vaultData, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return updateVaultViaGraphql(vaultId, vaultData);
 };
 
 // Update vault position
 export const updateVaultPosition = async (vaultId: number, x: number, y: number, token?: string) => {
-  const response = await api.put(`/api/vaults/${vaultId}/position`, { position_x: x, position_y: y }, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return updateVaultViaGraphql(vaultId, { position_x: x, position_y: y });
 };
 
 // Delete a vault
 export const deleteVault = async (vaultId: number, token?: string) => {
-  const response = await api.delete(`/api/vaults/${vaultId}`, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return deleteVaultViaGraphql(vaultId);
 };
 
 // Add item to vault

@@ -3,11 +3,11 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 440,
-    "resolvedDeclarationCount": 440,
+    "declarationCount": 434,
+    "resolvedDeclarationCount": 434,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 418,
-    "sourceFileCount": 81
+    "uniqueResolvedOperationCount": 413,
+    "sourceFileCount": 80
   },
   "caveats": [
     "This is static source analysis; it does not execute application modules.",
@@ -3847,56 +3847,6 @@
       "dynamic": false
     },
     {
-      "method": "GET",
-      "publicPaths": [
-        "/api/vaults"
-      ],
-      "declaredPath": "/vaults",
-      "source": "backend/src/routes/vaults/crud.routes.js",
-      "line": 16,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/vaults"
-      ],
-      "declaredPath": "/vaults",
-      "source": "backend/src/routes/vaults/crud.routes.js",
-      "line": 160,
-      "dynamic": false
-    },
-    {
-      "method": "DELETE",
-      "publicPaths": [
-        "/api/vaults/:vaultId"
-      ],
-      "declaredPath": "/vaults/:vaultId",
-      "source": "backend/src/routes/vaults/crud.routes.js",
-      "line": 302,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/vaults/:vaultId"
-      ],
-      "declaredPath": "/vaults/:vaultId",
-      "source": "backend/src/routes/vaults/crud.routes.js",
-      "line": 68,
-      "dynamic": false
-    },
-    {
-      "method": "PUT",
-      "publicPaths": [
-        "/api/vaults/:vaultId"
-      ],
-      "declaredPath": "/vaults/:vaultId",
-      "source": "backend/src/routes/vaults/crud.routes.js",
-      "line": 219,
-      "dynamic": false
-    },
-    {
       "method": "POST",
       "publicPaths": [
         "/api/vaults/:vaultId/items"
@@ -3964,16 +3914,6 @@
       "declaredPath": "/api/vaults/:vaultId/position",
       "source": "backend/src/bootstrap/register-api-routes.js",
       "line": 60,
-      "dynamic": false
-    },
-    {
-      "method": "PUT",
-      "publicPaths": [
-        "/api/vaults/:vaultId/position"
-      ],
-      "declaredPath": "/vaults/:vaultId/position",
-      "source": "backend/src/routes/vaults/crud.routes.js",
-      "line": 270,
       "dynamic": false
     },
     {

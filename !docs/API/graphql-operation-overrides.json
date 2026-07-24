@@ -1984,6 +1984,30 @@
       "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "deleteCategory", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "User-owned transactional delete; all personal content is reassigned to General and the invariant category cannot be removed."
     },
+    "GET /api/vaults": {
+      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "workspaceVaults", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Authenticated user-scoped bounded list with escaped category/search filters, deterministic ordering, exact item counts, and no password material."
+    },
+    "GET /api/vaults/:vaultId": {
+      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "workspaceVault", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "User-qualified detail moves the optional master password out of the URL, returns locked metadata without items until verified, and never returns hashes or ciphertext."
+    },
+    "POST /api/vaults": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "createWorkspaceVault", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "CSRF-protected user-owned create validates dimensions and color, rejects bcrypt-truncated passwords, and preserves the legacy AES key plus optional bcrypt lock model."
+    },
+    "PUT /api/vaults/:vaultId": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "updateWorkspaceVault", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "CSRF-protected user-qualified partial update preserves omitted values and validates all mutable shell fields."
+    },
+    "PUT /api/vaults/:vaultId/position": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "updateWorkspaceVault", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Canvas position writes use the same user-qualified CSRF-protected partial update mutation without a parallel REST contract."
+    },
+    "DELETE /api/vaults/:vaultId": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "deleteWorkspaceVault", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "CSRF-protected exact user-owned deletion cascades stored items and conceals foreign identifiers as NOT_FOUND."
+    },
     "GET /api/onboarding/progress": {
       "disposition": "graphql-query", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "onboardingProgress", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Authenticated user-scoped progress, independent of selected organization, with deterministic typed feature projections."

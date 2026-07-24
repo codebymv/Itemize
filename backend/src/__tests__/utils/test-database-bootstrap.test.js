@@ -324,6 +324,26 @@ describe('test database schema contract', () => {
         expect(client.release).toHaveBeenCalled();
     });
 
+    test('production migration stream installs encrypted vault storage', async () => {
+        const migration = require('../../../scripts/migrations/050_vault_storage');
+        const client = {
+            query: jest.fn().mockResolvedValue({ rows: [] }),
+            release: jest.fn(),
+        };
+        const pool = { connect: jest.fn().mockResolvedValue(client) };
+
+        await migration.up(pool);
+        const sql = client.query.mock.calls
+            .map(([statement]) => statement)
+            .join('\n');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS vaults');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS vault_items');
+        expect(sql).toContain('idx_vault_items_order');
+        expect(sql).toContain('trigger_vault_item_updated_at');
+        expect(client.query).toHaveBeenLastCalledWith('COMMIT');
+        expect(client.release).toHaveBeenCalled();
+    });
+
     test('production migration stream installs authoritative booking availability', async () => {
         const migration = require('../../../scripts/migrations/030_booking_availability_policy');
         const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
@@ -384,7 +404,7 @@ describe('test database schema contract', () => {
         );
 
         expect(startupSource).toContain(
-            "WHERE version = '049_landing_page_versions'"
+            "WHERE version = '050_vault_storage'"
         );
     });
 
