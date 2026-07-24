@@ -37,6 +37,8 @@ import {
   DeleteWorkspaceWireframeResult,
   WorkspaceWireframe,
   WorkspaceWireframePage,
+  WorkspaceShareLink,
+  DisableWorkspaceSharingResult,
 } from './workspace-content.types';
 
 @Resolver()
@@ -199,6 +201,29 @@ export class WorkspaceContentResolver {
   ): Promise<DeleteWorkspaceWireframeResult> {
     return {
       deletedId: await this.content.deleteWireframe(
+        this.userId(),
+        id,
+        mutationId,
+      ),
+    };
+  }
+
+  @CsrfProtected()
+  @Mutation(() => WorkspaceShareLink)
+  enableWireframeSharing(
+    @Args('id', { type: () => Int }) id: number,
+  ): Promise<WorkspaceShareLink> {
+    return this.content.enableWireframeSharing(this.userId(), id);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => DisableWorkspaceSharingResult)
+  async disableWireframeSharing(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('mutationId') mutationId: string,
+  ): Promise<DisableWorkspaceSharingResult> {
+    return {
+      sharingDisabled: await this.content.disableWireframeSharing(
         this.userId(),
         id,
         mutationId,

@@ -2,7 +2,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 
 interface NotAvailableCTAProps {
-  contentType: 'list' | 'note' | 'whiteboard' | 'vault';
+  contentType: 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
   error?: string;
   onBackToHome: () => void;
 }
@@ -17,6 +17,7 @@ export const NotAvailableCTA: React.FC<NotAvailableCTAProps> = ({
       case 'list': return 'list';
       case 'note': return 'note';
       case 'whiteboard': return 'whiteboard';
+      case 'wireframe': return 'wireframe';
       default: return 'content';
     }
   };

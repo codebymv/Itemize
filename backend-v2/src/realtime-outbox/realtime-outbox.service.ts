@@ -14,6 +14,7 @@ const CHANNEL_EVENTS: Record<string, ReadonlySet<RealtimeEventName>> = {
   shared_whiteboard: new Set(['whiteboardUpdated']),
   shared_wireframe: new Set(['wireframeUpdated']),
   user_wireframe: new Set(['userWireframeUpdated']),
+  shared_revocation: new Set(['sharedContentRevoked']),
 };
 const SHARE_TOKEN_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -145,10 +146,15 @@ export class RealtimeOutboxService {
         input.aggregateType !== 'wireframe'
       ) ||
       (
+        input.channel === 'shared_revocation' &&
+        input.aggregateType !== 'wireframe'
+      ) ||
+      (
         ![
           'shared_note',
           'shared_whiteboard',
           'shared_wireframe',
+          'shared_revocation',
           'user_wireframe',
         ].includes(input.channel) &&
         input.aggregateType !== 'list'

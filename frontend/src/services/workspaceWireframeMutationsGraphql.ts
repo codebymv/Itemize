@@ -40,6 +40,23 @@ const deleteWireframeMutation = `
   }
 `;
 
+const enableWireframeSharingMutation = `
+  mutation EnableWireframeSharing($id: Int!) {
+    enableWireframeSharing(id: $id) {
+      shareToken
+      shareUrl
+    }
+  }
+`;
+
+const disableWireframeSharingMutation = `
+  mutation DisableWireframeSharing($id: Int!, $mutationId: String!) {
+    disableWireframeSharing(id: $id, mutationId: $mutationId) {
+      sharingDisabled
+    }
+  }
+`;
+
 const serializeFlow = (
   value: CreateWireframePayload['flow_data'],
 ): string => typeof value === 'string' ? value : JSON.stringify(value);
@@ -109,4 +126,29 @@ export const deleteWorkspaceWireframeViaGraphql = async (
   }
   forgetWorkspaceWireframeRevision(id);
   return { message: 'Wireframe deleted successfully' };
+};
+
+export const enableWorkspaceWireframeSharingViaGraphql = async (
+  id: number,
+): Promise<{ shareToken: string; shareUrl: string }> => {
+  const variables = { id };
+  const data = await graphqlMutationRequest<{
+    enableWireframeSharing: {
+      shareToken: string;
+      shareUrl: string;
+    };
+  }, typeof variables>(enableWireframeSharingMutation, variables);
+  return data.enableWireframeSharing;
+};
+
+export const disableWorkspaceWireframeSharingViaGraphql = async (
+  id: number,
+): Promise<void> => {
+  const variables = { id, mutationId: crypto.randomUUID() };
+  const data = await graphqlMutationRequest<{
+    disableWireframeSharing: { sharingDisabled: boolean };
+  }, typeof variables>(disableWireframeSharingMutation, variables);
+  if (!data.disableWireframeSharing.sharingDisabled) {
+    throw new Error('GraphQL wireframe sharing revocation did not commit');
+  }
 };

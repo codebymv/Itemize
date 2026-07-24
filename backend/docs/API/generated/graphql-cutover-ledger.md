@@ -4,17 +4,17 @@
 
 ## Summary
 
-- Registered method/path operations: 419
-- API operations under `/api`: 412
+- Registered method/path operations: 420
+- API operations under `/api`: 413
 - Non-API registered operations: 7
-- Static frontend callsites: 386
-- Operations with frontend consumers: 364
-- Operations referenced by backend tests: 218
+- Static frontend callsites: 388
+- Operations with frontend consumers: 366
+- Operations referenced by backend tests: 219
 - Recommended GraphQL queries: 125
 - Recommended GraphQL mutations: 244
-- Recommended retained HTTP endpoints: 42
-- High-risk operations: 338
-- Unmatched frontend calls: 1
+- Recommended retained HTTP endpoints: 43
+- High-risk operations: 339
+- Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
 - Literal string interpolation callsites: 0
@@ -342,6 +342,7 @@
 | GET | `/api/shared/note/:token` | 2 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedNote |
 | GET | `/api/shared/vault/:token` | 1 | 3 | retain-http | high | sharing / VaultSharingModule / getSharedVault |
 | GET | `/api/shared/whiteboard/:token` | 3 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedWhiteboard |
+| GET | `/api/shared/wireframe/:token` | 2 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedWireframe |
 | GET | `/api/signatures/documents` | 2 | 0 | graphql-query | high | esignatures / SignatureDocumentsModule / signatureDocuments |
 | POST | `/api/signatures/documents` | 1 | 1 | graphql-mutation | high | esignatures / SignatureDocumentsModule / createSignatureDocument |
 | DELETE | `/api/signatures/documents/:id` | 1 | 0 | graphql-mutation | high | esignatures / SignatureDocumentsModule / deleteSignatureDraft |
@@ -423,8 +424,8 @@
 | PUT | `/api/wireframes/:id/position` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / batchCanvasPositions |
 | DELETE | `/api/wireframes/:wireframeId` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / deleteWorkspaceWireframe |
 | PUT | `/api/wireframes/:wireframeId` | 0 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceWireframe |
-| DELETE | `/api/wireframes/:wireframeId/share` | 1 | 2 | graphql-mutation | high | sharing / WorkspaceSharingModule / disableWireframeSharing |
-| POST | `/api/wireframes/:wireframeId/share` | 1 | 3 | graphql-mutation | high | sharing / WorkspaceSharingModule / enableWireframeSharing |
+| DELETE | `/api/wireframes/:wireframeId/share` | 0 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / disableWireframeSharing |
+| POST | `/api/wireframes/:wireframeId/share` | 0 | 3 | graphql-mutation | high | workspace-content / WorkspaceContentModule / enableWireframeSharing |
 | GET | `/api/workflows` | 1 | 3 | graphql-query | medium | automation / WorkflowsModule / workflows |
 | POST | `/api/workflows` | 1 | 17 | graphql-mutation | medium | automation / WorkflowsModule / createWorkflow |
 | DELETE | `/api/workflows/:id` | 1 | 5 | graphql-mutation | medium | automation / WorkflowsModule / deleteWorkflow |
@@ -436,9 +437,9 @@
 | POST | `/api/workflows/:id/enroll` | 1 | 5 | graphql-mutation | medium | automation / WorkflowEnrollmentsModule / enrollContactInWorkflow |
 | GET | `/api/workflows/:id/enrollments` | 1 | 1 | graphql-query | medium | automation / WorkflowEnrollmentsModule / workflowEnrollments |
 | DELETE | `/api/workflows/:id/enrollments/:enrollmentId` | 1 | 2 | graphql-mutation | high | automation / WorkflowEnrollmentsModule / cancelWorkflowEnrollment |
-| POST | `/api/workflows/:id/enrollments/:enrollmentId/pause` | 0 | 1 | graphql-mutation | high | automation / WorkflowEnrollmentsModule / pauseWorkflowEnrollment |
-| POST | `/api/workflows/:id/enrollments/:enrollmentId/resume` | 0 | 2 | graphql-mutation | high | automation / WorkflowEnrollmentsModule / resumeWorkflowEnrollment |
-| POST | `/api/workflows/:id/enrollments/:enrollmentId/retry` | 0 | 1 | graphql-mutation | high | automation / WorkflowEnrollmentsModule / retryWorkflowEnrollment |
+| POST | `/api/workflows/:id/enrollments/:enrollmentId/pause` | 1 | 1 | graphql-mutation | high | automation / WorkflowEnrollmentsModule / pauseWorkflowEnrollment |
+| POST | `/api/workflows/:id/enrollments/:enrollmentId/resume` | 1 | 2 | graphql-mutation | high | automation / WorkflowEnrollmentsModule / resumeWorkflowEnrollment |
+| POST | `/api/workflows/:id/enrollments/:enrollmentId/retry` | 1 | 1 | graphql-mutation | high | automation / WorkflowEnrollmentsModule / retryWorkflowEnrollment |
 | GET | `/api/workflows/:id/execution-summary` | 0 | 3 | graphql-query | high | automation / WorkflowExecutionModule / workflowExecutionSummary |
 | GET | `/api/workflows/:id/side-effects` | 0 | 4 | graphql-query | high | automation / WorkflowExecutionModule / workflowSideEffects |
 | POST | `/api/workflows/:id/side-effects/:sideEffectId/reconcile` | 0 | 4 | graphql-mutation | high | automation / WorkflowExecutionModule / reconcileWorkflowSmsSideEffect |
@@ -452,7 +453,7 @@
 
 ## Review queues
 
-- Unmatched frontend calls: 1
+- Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 6
@@ -463,7 +464,7 @@
 
 | Method | Requested path | Source | Review note |
 | --- | --- | --- | --- |
-| POST | `/api/workflows/:workflowId/enrollments/:enrollmentId/:action` | `frontend/src/services/automationsApi.ts:298` | No matching registered REST operation. |
+| — | — | — | None |
 
 ### Runtime URL expressions
 

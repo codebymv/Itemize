@@ -299,6 +299,21 @@ export class DeleteWorkspaceWireframeResult {
 }
 
 @ObjectType()
+export class WorkspaceShareLink {
+  @Field()
+  shareToken: string;
+
+  @Field()
+  shareUrl: string;
+}
+
+@ObjectType()
+export class DisableWorkspaceSharingResult {
+  @Field()
+  sharingDisabled: boolean;
+}
+
+@ObjectType()
 export class CanvasPositionUpdateResult {
   @Field()
   type: string;

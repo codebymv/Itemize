@@ -158,6 +158,15 @@ async function dispatchRealtimeEvent(claim, broadcast) {
       occurredAt
     );
   }
+  if (claim.channel === 'shared_revocation' && claim.event_name === 'sharedContentRevoked') {
+    if (typeof broadcast.revokeShared !== 'function') {
+      throw new Error('revokeShared broadcast adapter is unavailable');
+    }
+    return broadcast.revokeShared(
+      claim.aggregate_type,
+      claim.recipient_key
+    );
+  }
 
   const error = new Error('Unsupported realtime outbox channel/event combination');
   error.retryable = false;

@@ -9,7 +9,8 @@ export type RealtimeChannel =
   | 'shared_note'
   | 'shared_whiteboard'
   | 'shared_wireframe'
-  | 'user_wireframe';
+  | 'user_wireframe'
+  | 'shared_revocation';
 export type RealtimeEventName =
   | 'userListUpdated'
   | 'userListDeleted'
@@ -17,7 +18,8 @@ export type RealtimeEventName =
   | 'noteUpdated'
   | 'whiteboardUpdated'
   | 'wireframeUpdated'
-  | 'userWireframeUpdated';
+  | 'userWireframeUpdated'
+  | 'sharedContentRevoked';
 
 export interface EnqueueRealtimeEventInput {
   eventKey: string;

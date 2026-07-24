@@ -2,7 +2,7 @@ import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
-import express, { Express } from 'express';
+import express, { Express, NextFunction, Request, Response } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -25,8 +25,6 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
   const sharedListToken = 'f0b7d55d-ec6b-4eb6-aaf4-165c0d82e417';
   const sharedNoteToken = '87a47b12-f802-4e70-97af-8cf98bff3d4d';
   const sharedWhiteboardToken = '621ca66e-2b82-46a7-b2ba-e7343b6cbac2';
-  const sharedWireframeCrudToken =
-    'a0461f1b-9f99-46b9-a0e3-185c74282806';
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -146,6 +144,9 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     const createWireframesRouter = require(
       '../../../backend/src/routes/wireframes.routes',
     );
+    const createSharingRouter = require(
+      '../../../backend/src/routes/sharing.routes',
+    );
     const { authenticateJWT } = require('../../../backend/src/auth/middleware');
     const broadcast = {};
     legacyApp = express();
@@ -160,6 +161,16 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     legacyApp.use(
       '/api',
       createWireframesRouter(pool, authenticateJWT, broadcast),
+    );
+    legacyApp.use(
+      '/api',
+      createSharingRouter(
+        pool,
+        authenticateJWT,
+        (_req: Request, _res: Response, next: NextFunction) =>
+          next(),
+        broadcast,
+      ),
     );
   });
 
@@ -1078,12 +1089,45 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       ]),
     );
 
-    await pool.query(
-      `UPDATE wireframes
-       SET is_public = TRUE, share_token = $1, shared_at = CURRENT_TIMESTAMP
-       WHERE id = $2 AND user_id = $3`,
-      [sharedWireframeCrudToken, mutationWireframeId, memberId],
+    const shareDocument = `mutation Share($id: Int!) {
+      enableWireframeSharing(id: $id) { shareToken shareUrl }
+    }`;
+    const shared = await mutation(memberToken, shareDocument, {
+      id: mutationWireframeId,
+    }).expect(200);
+    expect(shared.body.errors).toBeUndefined();
+    const sharedWireframeToken =
+      shared.body.data.enableWireframeSharing.shareToken as string;
+    expect(sharedWireframeToken).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
     );
+    expect(shared.body.data.enableWireframeSharing.shareUrl).toBe(
+      `https://itemize.cloud/shared/wireframe/${sharedWireframeToken}`,
+    );
+    const sharedAgain = await mutation(memberToken, shareDocument, {
+      id: mutationWireframeId,
+    }).expect(200);
+    expect(sharedAgain.body.data.enableWireframeSharing.shareToken).toBe(
+      sharedWireframeToken,
+    );
+    const concealedShare = await mutation(outsiderToken, shareDocument, {
+      id: mutationWireframeId,
+    }).expect(200);
+    expect(concealedShare.body.errors[0].extensions.code).toBe('NOT_FOUND');
+    const publicWireframe = await request(legacyApp)
+      .get(`/api/shared/wireframe/${sharedWireframeToken}`)
+      .expect(200);
+    expect(publicWireframe.headers).toMatchObject({
+      'cache-control': 'private, no-store',
+      'referrer-policy': 'no-referrer',
+      'x-robots-tag': 'noindex, nofollow',
+    });
+    expect(publicWireframe.body).toMatchObject({
+      id: mutationWireframeId,
+      title: 'GraphQL flow',
+      type: 'wireframe',
+      creator_name: 'Workspace Member',
+    });
     const revision = await pool.query<{ updated_at: Date }>(
       'SELECT updated_at FROM wireframes WHERE id = $1',
       [mutationWireframeId],
@@ -1190,7 +1234,7 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       )).resolves.toMatchObject({ claimed: 1, sent: 1 });
     }
     expect(wireframeUpdate).toHaveBeenCalledWith(
-      sharedWireframeCrudToken,
+      sharedWireframeToken,
       'wireframeUpdated',
       expect.objectContaining({
         id: mutationWireframeId,
@@ -1207,6 +1251,65 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
         width: 640,
       }),
       expect.any(String),
+    );
+
+    const disableMutationId =
+      'e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c';
+    const disabled = await mutation(
+      memberToken,
+      `mutation Disable(
+        $id: Int!, $mutationId: String!
+      ) {
+        disableWireframeSharing(id: $id, mutationId: $mutationId) {
+          sharingDisabled
+        }
+      }`,
+      { id: mutationWireframeId, mutationId: disableMutationId },
+    ).expect(200);
+    expect(disabled.body.errors).toBeUndefined();
+    expect(
+      disabled.body.data.disableWireframeSharing.sharingDisabled,
+    ).toBe(true);
+    await request(legacyApp)
+      .get(`/api/shared/wireframe/${sharedWireframeToken}`)
+      .expect(404);
+    const revocation = await pool.query<{
+      id: string;
+      channel: string;
+      recipient_key: string;
+    }>(
+      `SELECT id, channel, recipient_key
+       FROM realtime_event_outbox
+       WHERE event_key = $1`,
+      [
+        `wireframe:${mutationWireframeId}:sharing-revoked:${disableMutationId}`,
+      ],
+    );
+    expect(revocation.rows[0]).toMatchObject({
+      channel: 'shared_revocation',
+      recipient_key: sharedWireframeToken,
+    });
+    const revokeShared = jest.fn();
+    await expect(runRealtimeOutboxJobs(
+      pool,
+      { revokeShared },
+      {
+        batchSize: 1,
+        outboxId: revocation.rows[0].id,
+        workerId: 'wireframe-sharing-revocation',
+      },
+    )).resolves.toMatchObject({ claimed: 1, sent: 1 });
+    expect(revokeShared).toHaveBeenCalledWith(
+      'wireframe',
+      sharedWireframeToken,
+    );
+
+    const reshared = await mutation(memberToken, shareDocument, {
+      id: mutationWireframeId,
+    }).expect(200);
+    expect(reshared.body.errors).toBeUndefined();
+    expect(reshared.body.data.enableWireframeSharing.shareToken).not.toBe(
+      sharedWireframeToken,
     );
 
     const deleteMutationId = '89a1b661-f658-4a19-80e0-80921cec5168';

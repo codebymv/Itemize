@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 interface SharedContentLayoutProps {
   children: React.ReactNode;
   title: string;
-  contentType: 'list' | 'note' | 'whiteboard' | 'vault';
+  contentType: 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
   onBackToHome?: () => void;
   showCTA?: boolean; // Whether to show the "Create your own..." CTA section
   isError?: boolean; // Whether this is an error state (reduces spacing)
@@ -44,6 +44,7 @@ export const SharedContentLayout: React.FC<SharedContentLayoutProps> = ({
       case 'list': return 'List';
       case 'note': return 'Note';
       case 'whiteboard': return 'Whiteboard';
+      case 'wireframe': return 'Wireframe';
       default: return 'Content';
     }
   };

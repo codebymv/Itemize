@@ -54,6 +54,7 @@ describe('test database schema contract', () => {
             'deal_activity_contract_v1',
             'module_crm',
             'realtime_event_outbox',
+            'shared_revocation_realtime_outbox',
             'email_webhook_events',
             'email_webhook_reconciliation',
             'workflow_webhook_idempotency',
@@ -284,6 +285,21 @@ describe('test database schema contract', () => {
         expect(sql).toContain("'userWireframeUpdated'");
     });
 
+    test('production migration stream adds durable sharing revocation', async () => {
+        const migration = require('../../../scripts/migrations/047_shared_revocation_realtime_outbox');
+        const {
+            runSharedRevocationRealtimeOutboxMigration,
+        } = require('../../db_realtime_outbox_migrations');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        expect(migration.up).toBe(runSharedRevocationRealtimeOutboxMigration);
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain("'shared_revocation'");
+        expect(sql).toContain("'sharedContentRevoked'");
+        expect(sql).toContain("'wireframe'");
+    });
+
     test('production migration stream installs authoritative booking availability', async () => {
         const migration = require('../../../scripts/migrations/030_booking_availability_policy');
         const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
@@ -344,7 +360,7 @@ describe('test database schema contract', () => {
         );
 
         expect(startupSource).toContain(
-            "WHERE version = '045_signature_evidence_retention'"
+            "WHERE version = '047_shared_revocation_realtime_outbox'"
         );
     });
 

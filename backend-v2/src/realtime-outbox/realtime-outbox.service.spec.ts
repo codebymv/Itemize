@@ -141,6 +141,38 @@ describe('RealtimeOutboxService', () => {
     })).resolves.toMatchObject({ inserted: true });
   });
 
+  it('accepts a wireframe sharing revocation capability event', async () => {
+    const revocation: EnqueueRealtimeEventInput = {
+      eventKey:
+        'wireframe:8:sharing-revoked:e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c',
+      aggregateType: 'wireframe',
+      aggregateId: 8,
+      channel: 'shared_revocation',
+      recipientKey: '621ca66e-2b82-46a7-b2ba-e7343b6cbac2',
+      eventName: 'sharedContentRevoked',
+      eventType: 'sharing_revoked',
+      payload: { kind: 'wireframe', reason: 'sharing_revoked' },
+    };
+    const query = jest.fn().mockResolvedValue({
+      rows: [{
+        ...row,
+        event_key: revocation.eventKey,
+        aggregate_type: revocation.aggregateType,
+        aggregate_id: revocation.aggregateId,
+        channel: revocation.channel,
+        recipient_key: revocation.recipientKey,
+        event_name: revocation.eventName,
+        event_type: revocation.eventType,
+        payload: revocation.payload,
+      }],
+    });
+
+    await expect(service.enqueue(
+      { query } as unknown as PoolClient,
+      revocation,
+    )).resolves.toMatchObject({ inserted: true });
+  });
+
   it('rejects unsupported channel/event combinations before querying', async () => {
     const query = jest.fn();
     await expect(

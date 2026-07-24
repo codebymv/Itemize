@@ -4,8 +4,10 @@
 
 Personal lists, notes, whiteboards, and wireframes belong to the authenticated user and
 are independent of the selected organization. `WorkspaceContentModule` owns
-their private reads and reachable CRUD mutations. Public capability reads and
-share enable/disable operations remain owned by `PublicSharingModule` and
+their private reads and reachable CRUD mutations. It also owns wireframe
+sharing mutations because they operate on the same personal aggregate and
+transactional realtime outbox. Public capability reads remain owned by
+`PublicSharingModule`; list/note/whiteboard sharing targets
 `WorkspaceSharingModule`.
 
 Each content type has independent default-off read and mutation flags.
@@ -39,6 +41,8 @@ outbox atomically. The legacy socket host delivers those rows after commit.
 | `PUT /api/wireframes/:wireframeId` | `updateWorkspaceWireframe(id, input)` |
 | `DELETE /api/wireframes/:wireframeId` | `deleteWorkspaceWireframe(id, mutationId)` |
 | `PUT /api/wireframes/:id/position` | `batchCanvasPositions(input)` |
+| `POST /api/wireframes/:wireframeId/share` | `enableWireframeSharing(id)` |
+| `DELETE /api/wireframes/:wireframeId/share` | `disableWireframeSharing(id, mutationId)` |
 
 | Reachable legacy list write | GraphQL mutation |
 | --- | --- |
@@ -67,8 +71,8 @@ outbox atomically. The legacy socket host delivers those rows after commit.
   whiteboard create/update/delete.
 - Mixed Canvas position persistence always uses GraphQL and has no REST
   fallback.
-- Wireframe read/create/update/delete and the exported position compatibility
-  adapter always use GraphQL and have no REST fallback.
+- Wireframe read/create/update/delete, share/unshare, and the exported position
+  compatibility adapter always use GraphQL and have no REST fallback.
 - All six flags default to false. Selected GraphQL requests never retry through
   REST after a GraphQL failure.
 
@@ -189,16 +193,24 @@ the public-viewer and owner-canvas projections atomically with the row; delete
 commits the public-viewer terminal projection. Foreign rows are reported as
 `NOT_FOUND`.
 
+Wireframe share enable preserves the active token, while disable clears
+`is_public`, `share_token`, and `shared_at` in the same transaction that
+enqueues `sharedContentRevoked`. The retained public HTTP projection and
+read-only frontend viewer are link-oriented protocol boundaries; they are not
+session application-data REST fallbacks.
+
 ## Wireframe code-level gate
 
-The wireframe CRUD slice passed locally on 2026-07-23. A database built from
-zero verified 111 tables and 85 migration markers, then all 17 workspace
+The wireframe CRUD and sharing slice passed locally on 2026-07-23. A database
+built from zero verified 111 tables and 87 migration markers, then all 17 workspace
 integration cases passed. The wireframe case proves paginated tenant-scoped
 reads, GraphQL create/update/delete visibility through retained REST, canonical
 category resolution, integer geometry, stale-revision rejection, foreign-row
-concealment, shared and owner outbox delivery through the retained Socket.IO
-worker, and a retained REST miss after delete. Frontend tests prove JSON/casing
-adaptation, serialized revision updates, and absence of CRUD/position REST
+concealment, GraphQL share reuse and re-share rotation, retained public
+projection headers, old-token denial, durable revocation and shared/owner
+outbox delivery through the retained Socket.IO worker, and a retained REST miss
+after delete. Frontend tests prove JSON/casing adaptation, serialized revision
+updates, share/unshare transport, and absence of CRUD/position/sharing REST
 fallbacks.
 
 The following target mutations remain characterized but blocked because no

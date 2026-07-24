@@ -119,6 +119,8 @@ describe('WorkspaceContentService', () => {
       deleteNote: jest.fn(),
       deleteWhiteboard: jest.fn(),
       deleteWireframe: jest.fn(),
+      disableWireframeSharing: jest.fn(),
+      enableWireframeSharing: jest.fn(),
       findLists: jest.fn(),
       findNotes: jest.fn(),
       findWhiteboards: jest.fn(),
@@ -596,6 +598,57 @@ describe('WorkspaceContentService', () => {
     });
     expect(repository.createWireframe).not.toHaveBeenCalled();
     expect(repository.updateWireframe).not.toHaveBeenCalled();
+  });
+
+  it('enables and durably disables owner-scoped wireframe sharing', async () => {
+    const originalFrontendUrl = process.env.FRONTEND_URL;
+    process.env.FRONTEND_URL = 'https://app.test.itemize/';
+    repository.enableWireframeSharing.mockResolvedValue({
+      kind: 'completed',
+      shareToken: '621ca66e-2b82-46a7-b2ba-e7343b6cbac2',
+    });
+    repository.disableWireframeSharing.mockResolvedValue({
+      kind: 'completed',
+    });
+
+    await expect(service.enableWireframeSharing(7, 5)).resolves.toEqual({
+      shareToken: '621ca66e-2b82-46a7-b2ba-e7343b6cbac2',
+      shareUrl:
+        'https://app.test.itemize/shared/wireframe/621ca66e-2b82-46a7-b2ba-e7343b6cbac2',
+    });
+    await expect(service.disableWireframeSharing(
+      7,
+      5,
+      'e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c',
+    )).resolves.toBe(true);
+    expect(repository.disableWireframeSharing).toHaveBeenCalledWith(
+      7,
+      5,
+      'e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c',
+    );
+
+    if (originalFrontendUrl === undefined) delete process.env.FRONTEND_URL;
+    else process.env.FRONTEND_URL = originalFrontendUrl;
+  });
+
+  it('conceals missing wireframes during sharing changes', async () => {
+    repository.enableWireframeSharing.mockResolvedValue({
+      kind: 'not_found',
+    });
+    repository.disableWireframeSharing.mockResolvedValue({
+      kind: 'not_found',
+    });
+
+    await expect(service.enableWireframeSharing(7, 5)).rejects.toMatchObject({
+      extensions: { code: 'NOT_FOUND' },
+    });
+    await expect(service.disableWireframeSharing(
+      7,
+      5,
+      'e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c',
+    )).rejects.toMatchObject({
+      extensions: { code: 'NOT_FOUND' },
+    });
   });
 
   it('requires a whiteboard revision and surfaces stale updates', async () => {

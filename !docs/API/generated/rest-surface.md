@@ -6,10 +6,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 441
-- Resolved declarations: 441
+- Route declarations: 442
+- Resolved declarations: 442
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 419
+- Unique resolved method/path operations: 420
 - Files containing declarations: 82
 
 ## Interpretation limits
@@ -349,6 +349,7 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/shared/note/:token` | `/shared/note/:token` | `backend/src/routes/sharing.routes.js:279` |
 | GET | `/api/shared/vault/:token` | `/shared/vault/:token` | `backend/src/routes/vaults/sharing.routes.js:84` |
 | GET | `/api/shared/whiteboard/:token` | `/shared/whiteboard/:token` | `backend/src/routes/sharing.routes.js:320` |
+| GET | `/api/shared/wireframe/:token` | `/shared/wireframe/:token` | `backend/src/routes/sharing.routes.js:371` |
 | GET | `/api/signatures/documents` | `/signatures/documents` | `backend/src/routes/signatures.routes.js:450` |
 | POST | `/api/signatures/documents` | `/signatures/documents` | `backend/src/routes/signatures.routes.js:293` |
 | DELETE | `/api/signatures/documents/:id` | `/signatures/documents/:id` | `backend/src/routes/signatures.routes.js:436` |

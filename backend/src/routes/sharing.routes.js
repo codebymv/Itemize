@@ -367,5 +367,46 @@ module.exports = (pool, authenticateJWT, publicRateLimit, broadcast = {}) => {
         }
     });
 
+    // Get shared wireframe (public capability read)
+    router.get('/shared/wireframe/:token', publicRateLimit, async (req, res) => {
+        try {
+            const { token } = req.params;
+            setCapabilityResponseHeaders(res);
+            if (!isShareToken(token)) {
+                return res.status(404).json({ error: 'Shared content not found or no longer available' });
+            }
+            const result = await withDbClient(pool, async (client) => client.query(`
+        SELECT w.id, w.title, w.category, w.flow_data, w.width, w.height,
+               w.color_value, w.created_at, w.updated_at,
+               u.name AS creator_name
+        FROM wireframes w
+        JOIN users u ON w.user_id = u.id
+        WHERE w.share_token = $1 AND w.is_public = TRUE
+      `, [token]));
+
+            if (result.rows.length === 0) {
+                return res.status(404).json({ error: 'Shared content not found or no longer available' });
+            }
+
+            const wireframe = result.rows[0];
+            res.json({
+                id: wireframe.id,
+                title: sanitizeContent(wireframe.title),
+                category: sanitizeContent(wireframe.category),
+                flow_data: sanitizeContent(wireframe.flow_data),
+                width: wireframe.width,
+                height: wireframe.height,
+                color_value: wireframe.color_value,
+                created_at: wireframe.created_at,
+                updated_at: wireframe.updated_at,
+                creator_name: sanitizeContent(wireframe.creator_name),
+                type: 'wireframe'
+            });
+        } catch (error) {
+            console.error('Error fetching shared wireframe:', error);
+            return sendError(res, 'Internal server error while fetching shared content');
+        }
+    });
+
     return router;
 };

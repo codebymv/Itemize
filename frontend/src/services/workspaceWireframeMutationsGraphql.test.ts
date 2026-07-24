@@ -3,6 +3,8 @@ import { fetchCsrfToken } from '@/lib/api';
 import {
   createWorkspaceWireframeViaGraphql,
   deleteWorkspaceWireframeViaGraphql,
+  disableWorkspaceWireframeSharingViaGraphql,
+  enableWorkspaceWireframeSharingViaGraphql,
   updateWorkspaceWireframeViaGraphql,
 } from './workspaceWireframeMutationsGraphql';
 
@@ -80,6 +82,20 @@ describe('workspace wireframe GraphQL mutation consumer', () => {
       }))
       .mockResolvedValueOnce(response({
         data: { deleteWorkspaceWireframe: { deletedId: 10 } },
+      }))
+      .mockResolvedValueOnce(response({
+        data: {
+          enableWireframeSharing: {
+            shareToken: '621ca66e-2b82-46a7-b2ba-e7343b6cbac2',
+            shareUrl:
+              'https://itemize.cloud/shared/wireframe/621ca66e-2b82-46a7-b2ba-e7343b6cbac2',
+          },
+        },
+      }))
+      .mockResolvedValueOnce(response({
+        data: {
+          disableWireframeSharing: { sharingDisabled: true },
+        },
       }));
 
     await createWorkspaceWireframeViaGraphql({
@@ -97,6 +113,16 @@ describe('workspace wireframe GraphQL mutation consumer', () => {
     await expect(
       deleteWorkspaceWireframeViaGraphql(10),
     ).resolves.toEqual({ message: 'Wireframe deleted successfully' });
+    await expect(
+      enableWorkspaceWireframeSharingViaGraphql(10),
+    ).resolves.toEqual({
+      shareToken: '621ca66e-2b82-46a7-b2ba-e7343b6cbac2',
+      shareUrl:
+        'https://itemize.cloud/shared/wireframe/621ca66e-2b82-46a7-b2ba-e7343b6cbac2',
+    });
+    await expect(
+      disableWorkspaceWireframeSharingViaGraphql(10),
+    ).resolves.toBeUndefined();
 
     const bodies = vi.mocked(fetch).mock.calls.map((call) =>
       JSON.parse(String((call[1] as RequestInit).body)),
@@ -116,6 +142,8 @@ describe('workspace wireframe GraphQL mutation consumer', () => {
       title: 'Second',
     });
     expect(bodies[3].variables).toEqual({ id: 10, mutationId });
-    expect(fetchCsrfToken).toHaveBeenCalledTimes(4);
+    expect(bodies[4].variables).toEqual({ id: 10 });
+    expect(bodies[5].variables).toEqual({ id: 10, mutationId });
+    expect(fetchCsrfToken).toHaveBeenCalledTimes(6);
   });
 });

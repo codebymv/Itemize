@@ -12,6 +12,7 @@ import StatusPage from './pages/StatusPage';
 import SharedListPage from './pages/SharedListPage';
 import SharedNotePage from './pages/SharedNotePage';
 import SharedWhiteboardPage from './pages/SharedWhiteboardPage';
+import SharedWireframePage from './pages/SharedWireframePage';
 
 // Import layout
 import Layout from './components/Layout';
@@ -37,6 +38,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/shared/list/:token" element={<SharedListPage />} />
       <Route path="/shared/note/:token" element={<SharedNotePage />} />
       <Route path="/shared/whiteboard/:token" element={<SharedWhiteboardPage />} />
+      <Route path="/shared/wireframe/:token" element={<SharedWireframePage />} />
 
       {/* Protected routes */}
       <Route path="/lists" element={withAuth(UserHome)({})} />

@@ -3,6 +3,10 @@ import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import api from '@/lib/api';
 import { List, Note, Whiteboard, Wireframe, Vault } from '@/types';
+import {
+  disableWorkspaceWireframeSharingViaGraphql,
+  enableWorkspaceWireframeSharingViaGraphql,
+} from '@/services/workspaceWireframeMutationsGraphql';
 
 interface ShareItem {
   id: string | number;
@@ -82,8 +86,7 @@ export function useCanvasSharing(
 
   const handleWireframeShare = async (wireframeId: number): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
-      const response = await api.post(`/api/wireframes/${wireframeId}/share`, {});
-      return response.data;
+      return await enableWorkspaceWireframeSharingViaGraphql(wireframeId);
     } catch (error) {
       logger.error('Error sharing wireframe:', error);
       throw error;
@@ -92,7 +95,7 @@ export function useCanvasSharing(
 
   const handleWireframeUnshare = async (wireframeId: number): Promise<void> => {
     try {
-      await api.delete(`/api/wireframes/${wireframeId}/share`);
+      await disableWorkspaceWireframeSharingViaGraphql(wireframeId);
     } catch (error) {
       logger.error('Error unsharing wireframe:', error);
       throw error;

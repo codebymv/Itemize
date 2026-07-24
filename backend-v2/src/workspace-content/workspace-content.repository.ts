@@ -214,6 +214,14 @@ export type DeleteWorkspaceWireframeOutcome =
   | { kind: 'deleted'; deletedId: number }
   | { kind: 'not_found' };
 
+export type EnableWireframeSharingOutcome =
+  | { kind: 'completed'; shareToken: string }
+  | { kind: 'not_found' };
+
+export type DisableWireframeSharingOutcome =
+  | { kind: 'completed' }
+  | { kind: 'not_found' };
+
 export type CanvasPositionKind =
   | 'list'
   | 'note'
@@ -1286,6 +1294,91 @@ export class WorkspaceContentRepository {
         });
       }
       return { kind: 'deleted', deletedId: wireframeId };
+    });
+  }
+
+  async enableWireframeSharing(
+    userId: number,
+    wireframeId: number,
+  ): Promise<EnableWireframeSharingOutcome> {
+    return this.transaction(async (client) => {
+      const result = await client.query<{ share_token: string }>(
+        `UPDATE wireframes
+         SET share_token = CASE
+               WHEN is_public = TRUE AND share_token IS NOT NULL
+                 THEN share_token
+               ELSE gen_random_uuid()
+             END,
+             is_public = TRUE,
+             shared_at = CASE
+               WHEN is_public = TRUE AND share_token IS NOT NULL
+                 THEN shared_at
+               ELSE CURRENT_TIMESTAMP
+             END,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND user_id = $2
+         RETURNING share_token`,
+        [wireframeId, userId],
+      );
+      const row = result.rows[0];
+      return row
+        ? { kind: 'completed', shareToken: row.share_token }
+        : { kind: 'not_found' };
+    });
+  }
+
+  async disableWireframeSharing(
+    userId: number,
+    wireframeId: number,
+    mutationId: string,
+  ): Promise<DisableWireframeSharingOutcome> {
+    return this.transaction(async (client) => {
+      const result = await client.query<{
+        id: number;
+        share_token: string | null;
+        occurred_at: Date;
+      }>(
+        `WITH target AS (
+           SELECT id, share_token
+           FROM wireframes
+           WHERE id = $1 AND user_id = $2
+           FOR UPDATE
+         ),
+         updated AS (
+           UPDATE wireframes AS wireframe
+           SET is_public = FALSE,
+               share_token = NULL,
+               shared_at = NULL,
+               updated_at = CURRENT_TIMESTAMP
+           FROM target
+           WHERE wireframe.id = target.id
+           RETURNING wireframe.id, clock_timestamp() AS occurred_at
+         )
+         SELECT updated.id, target.share_token, updated.occurred_at
+         FROM updated
+         JOIN target ON target.id = updated.id`,
+        [wireframeId, userId],
+      );
+      const row = result.rows[0];
+      if (!row) return { kind: 'not_found' };
+      if (row.share_token) {
+        await this.realtimeOutbox.enqueue(client, {
+          eventKey:
+            `wireframe:${wireframeId}:sharing-revoked:${mutationId}`,
+          aggregateType: 'wireframe',
+          aggregateId: wireframeId,
+          channel: 'shared_revocation',
+          recipientKey: row.share_token,
+          eventName: 'sharedContentRevoked',
+          eventType: 'sharing_revoked',
+          payload: {
+            kind: 'wireframe',
+            reason: 'sharing_revoked',
+          },
+          occurredAt: new Date(row.occurred_at),
+        });
+      }
+      return { kind: 'completed' };
     });
   }
 

@@ -3,10 +3,10 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 441,
-    "resolvedDeclarationCount": 441,
+    "declarationCount": 442,
+    "resolvedDeclarationCount": 442,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 419,
+    "uniqueResolvedOperationCount": 420,
     "sourceFileCount": 82
   },
   "caveats": [
@@ -3274,6 +3274,16 @@
       "declaredPath": "/shared/whiteboard/:token",
       "source": "backend/src/routes/sharing.routes.js",
       "line": 320,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/shared/wireframe/:token"
+      ],
+      "declaredPath": "/shared/wireframe/:token",
+      "source": "backend/src/routes/sharing.routes.js",
+      "line": 371,
       "dynamic": false
     },
     {

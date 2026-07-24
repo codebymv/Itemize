@@ -16,6 +16,7 @@ import {
   WorkspaceWhiteboardPage,
   WorkspaceWireframe,
   WorkspaceWireframePage,
+  WorkspaceShareLink,
   BatchCanvasPositionsResult,
 } from './workspace-content.types';
 import {
@@ -783,6 +784,50 @@ export class WorkspaceContentService {
       );
       if (outcome.kind === 'not_found') throw this.wireframeNotFound();
       return outcome.deletedId;
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async enableWireframeSharing(
+    userId: number,
+    wireframeId: number,
+  ): Promise<WorkspaceShareLink> {
+    this.wireframeId(wireframeId);
+    try {
+      const outcome = await this.content.enableWireframeSharing(
+        userId,
+        wireframeId,
+      );
+      if (outcome.kind === 'not_found') throw this.wireframeNotFound();
+      const frontendUrl = (
+        process.env.FRONTEND_URL || 'https://itemize.cloud'
+      ).replace(/\/+$/, '');
+      return {
+        shareToken: outcome.shareToken,
+        shareUrl:
+          `${frontendUrl}/shared/wireframe/${outcome.shareToken}`,
+      };
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async disableWireframeSharing(
+    userId: number,
+    wireframeId: number,
+    mutationId: string,
+  ): Promise<boolean> {
+    this.wireframeId(wireframeId);
+    const normalizedMutationId = this.mutationId(mutationId);
+    try {
+      const outcome = await this.content.disableWireframeSharing(
+        userId,
+        wireframeId,
+        normalizedMutationId,
+      );
+      if (outcome.kind === 'not_found') throw this.wireframeNotFound();
+      return true;
     } catch (error) {
       this.rethrow(error);
     }

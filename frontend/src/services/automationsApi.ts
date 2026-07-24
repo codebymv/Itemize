@@ -295,9 +295,21 @@ const changeEnrollmentState = async (
     }
     return retryWorkflowEnrollmentViaGraphql(workflowId, enrollmentId, organizationId);
   }
-  const response = await api.post(`/api/workflows/${workflowId}/enrollments/${enrollmentId}/${action}`, {
-    organization_id: organizationId,
-  });
+  const body = { organization_id: organizationId };
+  const response = action === 'pause'
+    ? await api.post(
+      `/api/workflows/${workflowId}/enrollments/${enrollmentId}/pause`,
+      body,
+    )
+    : action === 'resume'
+      ? await api.post(
+        `/api/workflows/${workflowId}/enrollments/${enrollmentId}/resume`,
+        body,
+      )
+      : await api.post(
+        `/api/workflows/${workflowId}/enrollments/${enrollmentId}/retry`,
+        body,
+      );
   return unwrapResponse<WorkflowEnrollment>(response.data);
 };
 

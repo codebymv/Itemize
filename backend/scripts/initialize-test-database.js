@@ -35,7 +35,8 @@ function discoverExpectedTables() {
 function discoverExpectedMigrationMarkers() {
     const contents = fs.readFileSync(path.join(sourceRoot, 'db.js'), 'utf8');
     const markers = new Set();
-    const pattern = /runMigrationOnce\(pool,\s*['"]([^'"]+)['"]/g;
+    const pattern =
+        /runMigrationOnce\(\s*pool\s*,\s*['"]([^'"]+)['"]/g;
     let match;
     while ((match = pattern.exec(contents))) markers.add(match[1]);
     return [...markers].sort();

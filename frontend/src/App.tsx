@@ -38,6 +38,7 @@ const StatusPage = React.lazy(() => import("./pages/StatusPage"));
 const SharedListPage = React.lazy(() => import("./pages/SharedListPage"));
 const SharedNotePage = React.lazy(() => import("./pages/SharedNotePage"));
 const SharedWhiteboardPage = React.lazy(() => import("./pages/SharedWhiteboardPage"));
+const SharedWireframePage = React.lazy(() => import("./pages/SharedWireframePage"));
 const SharedVaultPage = React.lazy(() => import("./pages/SharedVaultPage"));
 const CanvasPage = React.lazy(() => import("./pages/canvas"));
 const DashboardPage = React.lazy(() => import("./pages/DashboardPage"));
@@ -282,6 +283,7 @@ const AppContent = () => {
       <Route path="/shared/list/:token" element={<SharedListPage />} />
       <Route path="/shared/note/:token" element={<SharedNotePage />} />
       <Route path="/shared/whiteboard/:token" element={<SharedWhiteboardPage />} />
+      <Route path="/shared/wireframe/:token" element={<SharedWireframePage />} />
       <Route path="/shared/vault/:token" element={<SharedVaultPage />} />
       <Route path="/sign/:token" element={<SignPage />} />
       <Route path="/form/:identifier" element={<PublicFormPage />} />
