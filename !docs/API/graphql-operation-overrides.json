@@ -1251,48 +1251,48 @@
       "notes": "Despite the legacy path, this accepts JSON contact rows rather than multipart CSV. Retain HTTP during cutover with an exact object envelope, strict boolean duplicate policy, a 10,000-row limit, bounded 500-row inserts, and serialized plan-limit enforcement."
     },
     "GET /api/forms": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "forms", "parityStatus": "characterized", "risk": "high",
-      "notes": "Organization-scoped form list with explicit status enum, deterministic ordering, counts, and pagination."
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "forms", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Organization-scoped form list is now a direct GraphQL consumer with explicit status enum, deterministic ordering, and counts."
     },
     "POST /api/forms": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "createForm", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "createForm", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Form plus ordered fields commit atomically and the per-organization form limit is concurrency-safe."
     },
     "GET /api/forms/:id": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "form", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "form", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Organization-owned definition with ordered fields and explicit null/default semantics."
     },
     "PUT /api/forms/:id": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "updateForm", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "updateForm", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Validate lifecycle enums, redirect URL, notification recipients, contact mappings, and omitted-versus-null settings."
     },
     "DELETE /api/forms/:id": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "deleteForm", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "deleteForm", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Organization-scoped deletion with explicit submission retention/export policy."
     },
     "POST /api/forms/:id/duplicate": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "duplicateForm", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "duplicateForm", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Atomically copy definition and ordered fields as a draft while enforcing the form plan limit."
     },
     "PUT /api/forms/:id/fields": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "replaceFormFields", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "replaceFormFields", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Atomic ordered replacement with field-type, option, validation, condition, width, and contact-mapping validation."
     },
     "GET /api/forms/:id/submissions": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "FormSubmissionsModule", "targetOperation": "formSubmissions", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-query", "owner": "crm", "targetModule": "FormSubmissionsModule", "targetOperation": "formSubmissions", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Scope through the organization-owned form and return a deterministic paginated connection."
     },
     "DELETE /api/forms/:id/submissions/:subId": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormSubmissionsModule", "targetOperation": "deleteFormSubmission", "parityStatus": "characterized", "risk": "high",
+      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormSubmissionsModule", "targetOperation": "deleteFormSubmission", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Both form and submission organization boundaries must match; define audit and retention behavior."
     },
-    "GET /api/forms/public/form/:slug": {
-      "disposition": "retain-http", "owner": "crm", "targetModule": "PublicFormsModule", "targetOperation": "getPublicForm", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Retain anonymous rate-limited HTTP for embedded forms; public identity must become globally unambiguous rather than relying on an organization-local slug."
+    "GET /api/forms/public/form/:identifier": {
+      "disposition": "retain-http", "owner": "crm", "targetModule": "PublicFormsModule", "targetOperation": "getPublicForm", "parityStatus": "implemented", "risk": "high",
+      "notes": "Retained anonymous rate-limited HTTP for embeds uses the global public identifier, with ambiguous legacy slugs failing closed."
     },
-    "POST /api/forms/public/form/:slug": {
-      "disposition": "retain-http", "owner": "crm", "targetModule": "PublicFormsModule", "targetOperation": "submitPublicForm", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Retain anonymous rate-limited HTTP; contact reuse and submission now commit transactionally with same-email race serialization. Add durable notification/event delivery and complete field validation."
+    "POST /api/forms/public/form/:identifier": {
+      "disposition": "retain-http", "owner": "crm", "targetModule": "PublicFormsModule", "targetOperation": "submitPublicForm", "parityStatus": "implemented", "risk": "high",
+      "notes": "Retained anonymous rate-limited HTTP commits contact reuse and submission transactionally with same-email serialization, complete field validation, and durable notification/event delivery."
     },
     "GET /api/pipelines": {
       "disposition": "graphql-query", "owner": "crm", "targetModule": "PipelinesModule", "targetOperation": "pipelines", "parityStatus": "consumer-cutover-complete", "risk": "high",

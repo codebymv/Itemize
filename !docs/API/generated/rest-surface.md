@@ -6,10 +6,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 406
-- Resolved declarations: 406
+- Route declarations: 397
+- Resolved declarations: 397
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 385
+- Unique resolved method/path operations: 376
 - Files containing declarations: 76
 
 ## Interpretation limits
@@ -150,17 +150,8 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/email-templates/categories/list` | `/categories/list` | `backend/src/routes/email-templates.routes.js:80` |
 | POST | `/api/email-templates/send-to-contact` | `/send-to-contact` | `backend/src/routes/email-templates.routes.js:387` |
 | POST | `/api/email/webhook/resend` | `/webhook/resend` | `backend/src/routes/email-webhooks.routes.js:35` |
-| GET | `/api/forms` | `/` | `backend/src/routes/forms.routes.js:184` |
-| POST | `/api/forms` | `/` | `backend/src/routes/forms.routes.js:255` |
-| DELETE | `/api/forms/:id` | `/:id` | `backend/src/routes/forms.routes.js:652` |
-| GET | `/api/forms/:id` | `/:id` | `backend/src/routes/forms.routes.js:217` |
-| PUT | `/api/forms/:id` | `/:id` | `backend/src/routes/forms.routes.js:440` |
-| POST | `/api/forms/:id/duplicate` | `/:id/duplicate` | `backend/src/routes/forms.routes.js:676` |
-| PUT | `/api/forms/:id/fields` | `/:id/fields` | `backend/src/routes/forms.routes.js:531` |
-| GET | `/api/forms/:id/submissions` | `/:id/submissions` | `backend/src/routes/forms.routes.js:824` |
-| DELETE | `/api/forms/:id/submissions/:subId` | `/:id/submissions/:subId` | `backend/src/routes/forms.routes.js:887` |
-| GET | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:916` |
-| POST | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:961` |
+| GET | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:88` |
+| POST | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:123` |
 | GET | `/api/health` | `/api/health` | `backend/src/index.js:246` |
 | GET | `/api/invoices` | `/` | `backend/src/routes/invoices/crud.routes.js:18` |
 | POST | `/api/invoices` | `/` | `backend/src/routes/invoices/crud.routes.js:145` |

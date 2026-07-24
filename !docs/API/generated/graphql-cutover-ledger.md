@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 385
-- API operations under `/api`: 378
+- Registered method/path operations: 376
+- API operations under `/api`: 369
 - Non-API registered operations: 7
-- Static frontend callsites: 314
-- Operations with frontend consumers: 302
-- Operations referenced by backend tests: 208
-- Recommended GraphQL queries: 116
-- Recommended GraphQL mutations: 216
-- Recommended retained HTTP endpoints: 45
-- High-risk operations: 316
+- Static frontend callsites: 305
+- Operations with frontend consumers: 293
+- Operations referenced by backend tests: 199
+- Recommended GraphQL queries: 112
+- Recommended GraphQL mutations: 209
+- Recommended retained HTTP endpoints: 47
+- High-risk operations: 309
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -154,17 +154,8 @@
 | GET | `/api/email-templates/categories/list` | 1 | 1 | graphql-query | medium | messaging / EmailTemplatesModule / emailTemplateCategories |
 | POST | `/api/email-templates/send-to-contact` | 1 | 2 | graphql-mutation | high | messaging / MessagingDeliveryModule / enqueueContactEmail |
 | POST | `/api/email/webhook/resend` | 0 | 1 | retain-http | high | messaging / EmailWebhooksModule / processResendEmailEvent |
-| GET | `/api/forms` | 1 | 4 | graphql-query | high | crm / FormsModule / forms |
-| POST | `/api/forms` | 1 | 12 | graphql-mutation | high | crm / FormsModule / createForm |
-| DELETE | `/api/forms/:id` | 1 | 3 | graphql-mutation | high | crm / FormsModule / deleteForm |
-| GET | `/api/forms/:id` | 1 | 3 | graphql-query | high | crm / FormsModule / form |
-| PUT | `/api/forms/:id` | 1 | 6 | graphql-mutation | high | crm / FormsModule / updateForm |
-| POST | `/api/forms/:id/duplicate` | 1 | 3 | graphql-mutation | high | crm / FormsModule / duplicateForm |
-| PUT | `/api/forms/:id/fields` | 1 | 4 | graphql-mutation | high | crm / FormsModule / replaceFormFields |
-| GET | `/api/forms/:id/submissions` | 1 | 2 | graphql-query | high | crm / FormSubmissionsModule / formSubmissions |
-| DELETE | `/api/forms/:id/submissions/:subId` | 1 | 2 | graphql-mutation | high | crm / FormSubmissionsModule / deleteFormSubmission |
-| GET | `/api/forms/public/form/:identifier` | 1 | 3 | graphql-query | medium | _unassigned_ |
-| POST | `/api/forms/public/form/:identifier` | 1 | 5 | graphql-mutation | medium | _unassigned_ |
+| GET | `/api/forms/public/form/:identifier` | 1 | 3 | retain-http | high | crm / PublicFormsModule / getPublicForm |
+| POST | `/api/forms/public/form/:identifier` | 1 | 5 | retain-http | high | crm / PublicFormsModule / submitPublicForm |
 | GET | `/api/health` | 0 | 0 | graphql-query | unknown | _unassigned_ |
 | GET | `/api/invoices` | 1 | 5 | graphql-query | medium | billing / InvoicesModule / invoices |
 | POST | `/api/invoices` | 1 | 13 | graphql-mutation | medium | billing / InvoicesModule / createInvoice |
@@ -422,7 +413,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 12
-- Orphaned manual overrides: 28
+- Orphaned manual overrides: 35
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

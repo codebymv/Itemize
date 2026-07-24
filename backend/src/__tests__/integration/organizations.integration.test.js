@@ -63,6 +63,15 @@ describe('Retired GraphQL-cutover REST surfaces', () => {
         ['post', '/api/conversations/1/assign'],
         ['post', '/api/conversations/1/messages'],
         ['patch', '/api/conversations/1/read'],
+        ['get', '/api/forms'],
+        ['post', '/api/forms'],
+        ['get', '/api/forms/1'],
+        ['put', '/api/forms/1'],
+        ['delete', '/api/forms/1'],
+        ['post', '/api/forms/1/duplicate'],
+        ['put', '/api/forms/1/fields'],
+        ['get', '/api/forms/1/submissions'],
+        ['delete', '/api/forms/1/submissions/1'],
     ])('returns 404 for retired %s %s', async (method, path) => {
         const response = await request(app)[method](path).send({});
         expect(response.status).toBe(404);

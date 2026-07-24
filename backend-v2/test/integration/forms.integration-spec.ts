@@ -1,17 +1,14 @@
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
-import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
 
-describe('Authenticated forms REST/GraphQL PostgreSQL parity', () => {
+describe('Authenticated forms GraphQL PostgreSQL contract', () => {
   let graphqlApp: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   let organizationId: number;
   let outsiderOrganizationId: number;
@@ -125,19 +122,6 @@ describe('Authenticated forms REST/GraphQL PostgreSQL parity', () => {
     configureApp(graphqlApp);
     await graphqlApp.init();
 
-    const createFormsRouter = require('../../../backend/src/routes/forms.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use(
-      '/api/forms',
-      createFormsRouter(
-        pool,
-        authenticateJWT,
-        (_req: unknown, _res: unknown, next: () => void) => next(),
-      ),
-    );
   });
 
   afterAll(async () => {
@@ -184,11 +168,6 @@ describe('Authenticated forms REST/GraphQL PostgreSQL parity', () => {
   };
 
   it('matches list/detail projections and keeps foreign forms private', async () => {
-    const legacy = await request(legacyApp)
-      .get('/api/forms')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
     const target = await graphql(
       memberToken,
       organizationId,
@@ -203,15 +182,12 @@ describe('Authenticated forms REST/GraphQL PostgreSQL parity', () => {
       }`,
     ).expect(200);
     expect(target.body.errors).toBeUndefined();
-    const legacyForm = legacy.body.data.forms.find(
-      (form: { id: number }) => form.id === formId,
-    );
     expect(target.body.data.forms).toContainEqual(
       expect.objectContaining({
-        id: legacyForm.id,
-        organizationId: legacyForm.organization_id,
-        name: legacyForm.name,
-        status: legacyForm.status,
+        id: formId,
+        organizationId,
+        name: 'Intake',
+        status: 'draft',
         submissionCount: 1,
         fieldCount: 2,
         fields: expect.arrayContaining([

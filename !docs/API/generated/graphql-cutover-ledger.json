@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 385,
-    "apiOperationCount": 378,
+    "operationCount": 376,
+    "apiOperationCount": 369,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 314,
-    "operationsWithFrontendConsumers": 302,
-    "operationsWithBackendTests": 208,
+    "frontendCallsiteCount": 305,
+    "operationsWithFrontendConsumers": 293,
+    "operationsWithBackendTests": 199,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 12,
-    "retainHttpCount": 45,
-    "graphqlQueryCount": 116,
-    "graphqlMutationCount": 216,
-    "highRiskCount": 316,
+    "retainHttpCount": 47,
+    "graphqlQueryCount": 112,
+    "graphqlMutationCount": 209,
+    "highRiskCount": 309,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -5634,555 +5634,6 @@
       "risk": "high"
     },
     {
-      "id": "GET /api/forms",
-      "key": "GET /api/forms",
-      "method": "GET",
-      "path": "/api/forms",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/forms.routes.js",
-          "line": 184
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/forms",
-          "rawPath": "/api/forms",
-          "source": "frontend/src/services/formsApi.ts",
-          "line": 61,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/forms",
-          "source": "backend-v2/test/integration/forms.integration-spec.ts",
-          "line": 188
-        },
-        {
-          "method": "GET",
-          "path": "/api/forms",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 124
-        },
-        {
-          "method": "GET",
-          "path": "/api/forms",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 136
-        },
-        {
-          "method": "GET",
-          "path": "/api/forms",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 862
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "crm",
-      "targetOperation": "forms",
-      "targetModule": "FormsModule",
-      "parityStatus": "characterized",
-      "notes": "Organization-scoped form list with explicit status enum, deterministic ordering, counts, and pagination.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/forms",
-      "key": "POST /api/forms",
-      "method": "POST",
-      "path": "/api/forms",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/forms.routes.js",
-          "line": 255
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/forms",
-          "rawPath": "/api/forms",
-          "source": "frontend/src/services/formsApi.ts",
-          "line": 82,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/forms",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 70
-        },
-        {
-          "method": "POST",
-          "path": "/api/forms",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 95
-        },
-        {
-          "method": "POST",
-          "path": "/api/forms",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 114
-        },
-        {
-          "method": "POST",
-          "path": "/api/forms",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 223
-        },
-        {
-          "method": "POST",
-          "path": "/api/forms",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 322
-        },
-        {
-          "method": "POST",
-          "path": "/api/forms",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 375
-        },
-        {
-          "method": "POST",
-          "path": "/api/forms",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 441
-        },
-        {
-          "method": "POST",
-          "path": "/api/forms",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 499
-        },
-        {
-          "method": "POST",
-          "path": "/api/forms",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 548
-        },
-        {
-          "method": "POST",
-          "path": "/api/forms",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 813
-        },
-        {
-          "method": "POST",
-          "path": "/api/forms",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 820
-        },
-        {
-          "method": "POST",
-          "path": "/api/forms",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 839
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "createForm",
-      "targetModule": "FormsModule",
-      "parityStatus": "characterized",
-      "notes": "Form plus ordered fields commit atomically and the per-organization form limit is concurrency-safe.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/forms/:id",
-      "key": "DELETE /api/forms/:*",
-      "method": "DELETE",
-      "path": "/api/forms/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/forms.routes.js",
-          "line": 652
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/forms/:id",
-          "rawPath": "/api/forms/${id}",
-          "source": "frontend/src/services/formsApi.ts",
-          "line": 106,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/forms/:id",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 107
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/forms/:formId",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 199
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/forms/:formId",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 208
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "deleteForm",
-      "targetModule": "FormsModule",
-      "parityStatus": "characterized",
-      "notes": "Organization-scoped deletion with explicit submission retention/export policy.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/forms/:id",
-      "key": "GET /api/forms/:*",
-      "method": "GET",
-      "path": "/api/forms/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/forms.routes.js",
-          "line": 217
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/forms/:id",
-          "rawPath": "/api/forms/${id}",
-          "source": "frontend/src/services/formsApi.ts",
-          "line": 72,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/forms/:formId",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 147
-        },
-        {
-          "method": "GET",
-          "path": "/api/forms/:formId",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 163
-        },
-        {
-          "method": "GET",
-          "path": "/api/forms/:formId",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 255
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "crm",
-      "targetOperation": "form",
-      "targetModule": "FormsModule",
-      "parityStatus": "characterized",
-      "notes": "Organization-owned definition with ordered fields and explicit null/default semantics.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/forms/:id",
-      "key": "PUT /api/forms/:*",
-      "method": "PUT",
-      "path": "/api/forms/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/forms.routes.js",
-          "line": 440
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/forms/:id",
-          "rawPath": "/api/forms/${id}",
-          "source": "frontend/src/services/formsApi.ts",
-          "line": 96,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/forms/:formId",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 172
-        },
-        {
-          "method": "PUT",
-          "path": "/api/forms/:formId",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 189
-        },
-        {
-          "method": "PUT",
-          "path": "/api/forms/:id",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 448
-        },
-        {
-          "method": "PUT",
-          "path": "/api/forms/:id",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 538
-        },
-        {
-          "method": "PUT",
-          "path": "/api/forms/:id",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 555
-        },
-        {
-          "method": "PUT",
-          "path": "/api/forms/:id",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 596
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "updateForm",
-      "targetModule": "FormsModule",
-      "parityStatus": "characterized",
-      "notes": "Validate lifecycle enums, redirect URL, notification recipients, contact mappings, and omitted-versus-null settings.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/forms/:id/duplicate",
-      "key": "POST /api/forms/:*/duplicate",
-      "method": "POST",
-      "path": "/api/forms/:id/duplicate",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/forms.routes.js",
-          "line": 676
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/forms/:id/duplicate",
-          "rawPath": "/api/forms/${id}/duplicate",
-          "source": "frontend/src/services/formsApi.ts",
-          "line": 129,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/forms/:formId/duplicate",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 283
-        },
-        {
-          "method": "POST",
-          "path": "/api/forms/:sourceId/duplicate",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 343
-        },
-        {
-          "method": "POST",
-          "path": "/api/forms/:sourceId/duplicate",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 359
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "duplicateForm",
-      "targetModule": "FormsModule",
-      "parityStatus": "characterized",
-      "notes": "Atomically copy definition and ordered fields as a draft while enforcing the form plan limit.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/forms/:id/fields",
-      "key": "PUT /api/forms/:*/fields",
-      "method": "PUT",
-      "path": "/api/forms/:id/fields",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/forms.routes.js",
-          "line": 531
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/forms/:id/fields",
-          "rawPath": "/api/forms/${id}/fields",
-          "source": "frontend/src/services/formsApi.ts",
-          "line": 119,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/forms/:formId/fields",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 242
-        },
-        {
-          "method": "PUT",
-          "path": "/api/forms/:formId/fields",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 261
-        },
-        {
-          "method": "PUT",
-          "path": "/api/forms/:formId/fields",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 296
-        },
-        {
-          "method": "PUT",
-          "path": "/api/forms/:formId/fields",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 306
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "replaceFormFields",
-      "targetModule": "FormsModule",
-      "parityStatus": "characterized",
-      "notes": "Atomic ordered replacement with field-type, option, validation, condition, width, and contact-mapping validation.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/forms/:id/submissions",
-      "key": "GET /api/forms/:*/submissions",
-      "method": "GET",
-      "path": "/api/forms/:id/submissions",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/forms.routes.js",
-          "line": 824
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/forms/:formId/submissions",
-          "rawPath": "/api/forms/${formId}/submissions",
-          "source": "frontend/src/services/formsApi.ts",
-          "line": 147,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/forms/:formId/submissions",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 398
-        },
-        {
-          "method": "GET",
-          "path": "/api/forms/:formId/submissions",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 409
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "crm",
-      "targetOperation": "formSubmissions",
-      "targetModule": "FormSubmissionsModule",
-      "parityStatus": "characterized",
-      "notes": "Scope through the organization-owned form and return a deterministic paginated connection.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/forms/:id/submissions/:subId",
-      "key": "DELETE /api/forms/:*/submissions/:*",
-      "method": "DELETE",
-      "path": "/api/forms/:id/submissions/:subId",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/forms.routes.js",
-          "line": 887
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/forms/:formId/submissions/:submissionId",
-          "rawPath": "/api/forms/${formId}/submissions/${submissionId}",
-          "source": "frontend/src/services/formsApi.ts",
-          "line": 162,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/forms/:formId/submissions/:submissionId",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 418
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/forms/:formId/submissions/:submissionId",
-          "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 427
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "deleteFormSubmission",
-      "targetModule": "FormSubmissionsModule",
-      "parityStatus": "characterized",
-      "notes": "Both form and submission organization boundaries must match; define audit and retention behavior.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "GET /api/forms/public/form/:identifier",
       "key": "GET /api/forms/public/form/:*",
       "method": "GET",
@@ -6190,7 +5641,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 916
+          "line": 88
         }
       ],
       "consumerCallsites": [
@@ -6199,7 +5650,7 @@
           "path": "/api/forms/public/form/:identifier",
           "rawPath": "/api/forms/public/form/${identifier}",
           "source": "frontend/src/services/formsApi.ts",
-          "line": 187,
+          "line": 128,
           "client": "api",
           "literalInterpolation": false
         }
@@ -6209,31 +5660,31 @@
           "method": "GET",
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 571
+          "line": 162
         },
         {
           "method": "GET",
           "path": "/api/forms/public/form/:slug",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 585
+          "line": 174
         },
         {
           "method": "GET",
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 589
+          "line": 177
         }
       ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "disposition": "retain-http",
+      "owner": "crm",
+      "targetOperation": "getPublicForm",
+      "targetModule": "PublicFormsModule",
+      "parityStatus": "implemented",
+      "notes": "Retained anonymous rate-limited HTTP for embeds uses the global public identifier, with ambiguous legacy slugs failing closed.",
       "literalInterpolationRisk": false,
-      "risk": "medium"
+      "risk": "high"
     },
     {
       "id": "POST /api/forms/public/form/:identifier",
@@ -6243,7 +5694,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/forms.routes.js",
-          "line": 961
+          "line": 123
         }
       ],
       "consumerCallsites": [
@@ -6252,7 +5703,7 @@
           "path": "/api/forms/public/form/:identifier",
           "rawPath": "/api/forms/public/form/${identifier}",
           "source": "frontend/src/services/formsApi.ts",
-          "line": 195,
+          "line": 136,
           "client": "api",
           "literalInterpolation": false
         }
@@ -6260,45 +5711,45 @@
       "testCallsites": [
         {
           "method": "POST",
-          "path": "/api/forms/public/form/:slug",
+          "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 463
+          "line": 186
         },
         {
           "method": "POST",
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 609
+          "line": 221
         },
         {
           "method": "POST",
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 685
+          "line": 294
         },
         {
           "method": "POST",
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 695
+          "line": 304
         },
         {
           "method": "POST",
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
-          "line": 706
+          "line": 315
         }
       ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "disposition": "retain-http",
+      "owner": "crm",
+      "targetOperation": "submitPublicForm",
+      "targetModule": "PublicFormsModule",
+      "parityStatus": "implemented",
+      "notes": "Retained anonymous rate-limited HTTP commits contact reuse and submission transactionally with same-email serialization, complete field validation, and durable notification/event delivery.",
       "literalInterpolationRisk": false,
-      "risk": "medium"
+      "risk": "high"
     },
     {
       "id": "GET /api/health",
@@ -17111,18 +16562,23 @@
     }
   ],
   "orphanedOverrides": [
+    "DELETE /api/forms/:id",
+    "DELETE /api/forms/:id/submissions/:subId",
     "DELETE /api/organizations/:organizationId",
     "DELETE /api/organizations/:organizationId/members/:memberId",
     "DELETE /api/vaults/:vaultId",
     "DELETE /api/vaults/:vaultId/items/:itemId",
     "DELETE /api/vaults/:vaultId/share",
-    "GET /api/forms/public/form/:slug",
+    "GET /api/forms",
+    "GET /api/forms/:id",
+    "GET /api/forms/:id/submissions",
     "GET /api/organizations",
     "GET /api/organizations/:organizationId",
     "GET /api/organizations/:organizationId/members",
     "GET /api/vaults",
     "GET /api/vaults/:vaultId",
-    "POST /api/forms/public/form/:slug",
+    "POST /api/forms",
+    "POST /api/forms/:id/duplicate",
     "POST /api/organizations",
     "POST /api/organizations/:organizationId/leave",
     "POST /api/organizations/:organizationId/members",
@@ -17134,6 +16590,8 @@
     "POST /api/vaults/:vaultId/lock",
     "POST /api/vaults/:vaultId/share",
     "POST /api/vaults/:vaultId/unlock",
+    "PUT /api/forms/:id",
+    "PUT /api/forms/:id/fields",
     "PUT /api/organizations/:organizationId",
     "PUT /api/organizations/:organizationId/members/:memberId",
     "PUT /api/vaults/:vaultId",

@@ -8,11 +8,6 @@ import {
   replaceFormFieldsViaGraphql,
   updateFormViaGraphql,
 } from './formsGraphql';
-import {
-  isFormGraphqlMutationsEnabled,
-  isFormGraphqlReadsEnabled,
-  isFormSubmissionGraphqlEnabled,
-} from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(),
@@ -78,22 +73,6 @@ describe('forms GraphQL consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('keeps all three authenticated rollback boundaries independent', () => {
-    vi.stubEnv('VITE_FORM_READS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_FORM_MUTATIONS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_FORM_SUBMISSIONS_GRAPHQL', 'false');
-    expect(isFormGraphqlReadsEnabled()).toBe(false);
-    expect(isFormGraphqlMutationsEnabled()).toBe(false);
-    expect(isFormSubmissionGraphqlEnabled()).toBe(false);
-
-    vi.stubEnv('VITE_FORM_READS_GRAPHQL', 'true');
-    vi.stubEnv('VITE_FORM_MUTATIONS_GRAPHQL', 'true');
-    vi.stubEnv('VITE_FORM_SUBMISSIONS_GRAPHQL', 'true');
-    expect(isFormGraphqlReadsEnabled()).toBe(true);
-    expect(isFormGraphqlMutationsEnabled()).toBe(true);
-    expect(isFormSubmissionGraphqlEnabled()).toBe(true);
   });
 
   it('maps form list and detail reads into the retained consumer shape', async () => {

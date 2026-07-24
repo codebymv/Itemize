@@ -59,15 +59,6 @@ export const isDealGraphqlReadsEnabled = (): boolean =>
 export const isDealGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_DEAL_MUTATIONS_GRAPHQL === 'true';
 
-export const isFormGraphqlReadsEnabled = (): boolean =>
-  import.meta.env.VITE_FORM_READS_GRAPHQL === 'true';
-
-export const isFormGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_FORM_MUTATIONS_GRAPHQL === 'true';
-
-export const isFormSubmissionGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_FORM_SUBMISSIONS_GRAPHQL === 'true';
-
 export const isOnboardingGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_ONBOARDING_READS_GRAPHQL === 'true';
 
