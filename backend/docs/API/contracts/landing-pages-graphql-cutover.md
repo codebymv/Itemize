@@ -51,6 +51,7 @@ Those endpoints are anonymous browser-navigation and telemetry protocols. The pa
 - Analytics periods are bounded and SQL interval input remains parameterized.
 - Version reads qualify page ownership in SQL and conceal foreign page/version pairs as `NOT_FOUND`.
 - Version creation locks the page before allocating the next number, preventing duplicate numbering under concurrent saves.
+- Numbered production migration `049_landing_page_versions` installs the version table, authoritative page pointer, foreign key, and indexes before startup; startup refuses to run without that marker.
 - Publication validates the stored JSON snapshot before mutation and restores all captured page fields plus ordered sections in one transaction. A conflicting historical slug returns `CONFLICT` without partial publication.
 - `pages.current_version_id` is authoritative; `page_versions.is_current` is reconciled in the same transaction. The current version cannot be deleted.
 - Restore records the verified current actor rather than copying stale authorship from the source snapshot.

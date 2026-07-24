@@ -304,6 +304,26 @@ describe('test database schema contract', () => {
         );
     });
 
+    test('production migration stream installs landing-page version storage', async () => {
+        const migration = require('../../../scripts/migrations/049_landing_page_versions');
+        const client = {
+            query: jest.fn().mockResolvedValue({ rows: [] }),
+            release: jest.fn(),
+        };
+        const pool = { connect: jest.fn().mockResolvedValue(client) };
+
+        await migration.up(pool);
+        const sql = client.query.mock.calls
+            .map(([statement]) => statement)
+            .join('\n');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS page_versions');
+        expect(sql).toContain('ADD COLUMN IF NOT EXISTS current_version_id');
+        expect(sql).toContain('pages_current_version_id_fkey');
+        expect(sql).toContain('idx_pages_version');
+        expect(client.query).toHaveBeenLastCalledWith('COMMIT');
+        expect(client.release).toHaveBeenCalled();
+    });
+
     test('production migration stream installs authoritative booking availability', async () => {
         const migration = require('../../../scripts/migrations/030_booking_availability_policy');
         const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
@@ -364,7 +384,7 @@ describe('test database schema contract', () => {
         );
 
         expect(startupSource).toContain(
-            "WHERE version = '048_workspace_shared_revocation_realtime_outbox'"
+            "WHERE version = '049_landing_page_versions'"
         );
     });
 
