@@ -5,15 +5,24 @@ import {
   bulkDeleteContacts,
   bulkUpdateContacts,
   createContact,
+  createOrganization,
   deleteContact,
+  deleteOrganization,
   ensureDefaultOrganization,
   getContact,
   getContactActivities,
   getContactContent,
   getContacts,
+  getOrganization,
+  getOrganizationMembers,
   getOrganizations,
+  inviteMember,
+  leaveOrganization,
+  removeMember,
   selectOrganization,
   updateContact,
+  updateMemberRole,
+  updateOrganization,
 } from './contactsApi';
 import {
   addContactActivityViaGraphql,
@@ -28,9 +37,18 @@ import {
   updateContactViaGraphql,
 } from './contactsGraphql';
 import {
+  addOrganizationMemberViaGraphql,
+  createOrganizationViaGraphql,
+  deleteOrganizationViaGraphql,
   ensureDefaultOrganizationViaGraphql,
+  getOrganizationMembersViaGraphql,
+  getOrganizationViaGraphql,
   getOrganizationsViaGraphql,
+  leaveOrganizationViaGraphql,
+  removeOrganizationMemberViaGraphql,
   selectOrganizationViaGraphql,
+  updateOrganizationMemberRoleViaGraphql,
+  updateOrganizationViaGraphql,
 } from './organizationsGraphql';
 import {
   isContactGraphqlActivitiesEnabled,
@@ -38,8 +56,6 @@ import {
   isContactGraphqlContentEnabled,
   isContactGraphqlMutationsEnabled,
   isContactGraphqlReadsEnabled,
-  isOrganizationGraphqlMutationsEnabled,
-  isOrganizationGraphqlReadsEnabled,
 } from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
@@ -65,9 +81,18 @@ vi.mock('./contactsGraphql', () => ({
 }));
 
 vi.mock('./organizationsGraphql', () => ({
+  addOrganizationMemberViaGraphql: vi.fn(),
+  createOrganizationViaGraphql: vi.fn(),
+  deleteOrganizationViaGraphql: vi.fn(),
   ensureDefaultOrganizationViaGraphql: vi.fn(),
+  getOrganizationMembersViaGraphql: vi.fn(),
+  getOrganizationViaGraphql: vi.fn(),
   getOrganizationsViaGraphql: vi.fn(),
+  leaveOrganizationViaGraphql: vi.fn(),
+  removeOrganizationMemberViaGraphql: vi.fn(),
   selectOrganizationViaGraphql: vi.fn(),
+  updateOrganizationMemberRoleViaGraphql: vi.fn(),
+  updateOrganizationViaGraphql: vi.fn(),
 }));
 
 vi.mock('./graphqlClient', () => ({
@@ -76,8 +101,6 @@ vi.mock('./graphqlClient', () => ({
   isContactGraphqlContentEnabled: vi.fn(),
   isContactGraphqlReadsEnabled: vi.fn(),
   isContactGraphqlMutationsEnabled: vi.fn(),
-  isOrganizationGraphqlReadsEnabled: vi.fn(),
-  isOrganizationGraphqlMutationsEnabled: vi.fn(),
 }));
 
 describe('contacts API read transport', () => {
@@ -88,11 +111,9 @@ describe('contacts API read transport', () => {
     vi.mocked(isContactGraphqlBulkMutationsEnabled).mockReturnValue(false);
     vi.mocked(isContactGraphqlActivitiesEnabled).mockReturnValue(false);
     vi.mocked(isContactGraphqlContentEnabled).mockReturnValue(false);
-    vi.mocked(isOrganizationGraphqlReadsEnabled).mockReturnValue(false);
-    vi.mocked(isOrganizationGraphqlMutationsEnabled).mockReturnValue(false);
   });
 
-  it('keeps workspace selector reads and writes on REST by default', async () => {
+  it('routes the complete organization administration surface directly through GraphQL', async () => {
     const organization = {
       id: 4,
       name: 'Alpha',
@@ -103,53 +124,57 @@ describe('contacts API read transport', () => {
       created_at: '2026-07-18T12:00:00.000Z',
       updated_at: '2026-07-18T12:01:00.000Z',
     };
-    vi.mocked(api.get).mockResolvedValue({ data: { data: [organization] } });
-    vi.mocked(api.post)
-      .mockResolvedValueOnce({ data: { data: organization } })
-      .mockResolvedValueOnce({ data: { data: organization } });
-
-    await expect(getOrganizations()).resolves.toEqual([organization]);
-    await expect(ensureDefaultOrganization()).resolves.toEqual(organization);
-    await expect(selectOrganization(4)).resolves.toEqual(organization);
-
-    expect(api.get).toHaveBeenCalledWith('/api/organizations');
-    expect(api.post).toHaveBeenNthCalledWith(
-      1,
-      '/api/organizations/ensure-default',
-    );
-    expect(api.post).toHaveBeenNthCalledWith(
-      2,
-      '/api/organizations/4/select',
-    );
-    expect(getOrganizationsViaGraphql).not.toHaveBeenCalled();
-  });
-
-  it('routes workspace selector operations independently through GraphQL', async () => {
-    const organization = {
-      id: 4,
-      name: 'Alpha',
-      slug: 'alpha',
-      settings: {},
-      role: 'owner' as const,
-      is_default: true,
-      created_at: '2026-07-18T12:00:00.000Z',
-      updated_at: '2026-07-18T12:01:00.000Z',
+    const member = {
+      id: 8,
+      organization_id: 4,
+      user_id: 9,
+      role: 'member' as const,
+      invited_at: organization.created_at,
+      email: 'member@test.itemize',
     };
-    vi.mocked(isOrganizationGraphqlReadsEnabled).mockReturnValue(true);
-    vi.mocked(isOrganizationGraphqlMutationsEnabled).mockReturnValue(true);
     vi.mocked(getOrganizationsViaGraphql).mockResolvedValue([organization]);
+    vi.mocked(getOrganizationViaGraphql).mockResolvedValue(organization);
+    vi.mocked(createOrganizationViaGraphql).mockResolvedValue(organization);
+    vi.mocked(updateOrganizationViaGraphql).mockResolvedValue(organization);
+    vi.mocked(getOrganizationMembersViaGraphql).mockResolvedValue([member]);
+    vi.mocked(addOrganizationMemberViaGraphql).mockResolvedValue(member);
+    vi.mocked(updateOrganizationMemberRoleViaGraphql).mockResolvedValue(member);
     vi.mocked(ensureDefaultOrganizationViaGraphql).mockResolvedValue(organization);
     vi.mocked(selectOrganizationViaGraphql).mockResolvedValue(organization);
 
-    await getOrganizations();
-    await ensureDefaultOrganization();
-    await selectOrganization(4);
+    await expect(getOrganizations()).resolves.toEqual([organization]);
+    await expect(getOrganization(4)).resolves.toEqual(organization);
+    await expect(createOrganization({ name: 'Alpha' })).resolves.toEqual(organization);
+    await expect(updateOrganization(4, { name: 'Alpha' })).resolves.toEqual(organization);
+    await deleteOrganization(4);
+    await expect(ensureDefaultOrganization()).resolves.toEqual(organization);
+    await expect(selectOrganization(4)).resolves.toEqual(organization);
+    await expect(getOrganizationMembers(4)).resolves.toEqual([member]);
+    await expect(inviteMember(4, member.email, 'member')).resolves.toEqual(member);
+    await expect(updateMemberRole(4, 8, 'viewer')).resolves.toEqual(member);
+    await removeMember(4, 8);
+    await leaveOrganization(4);
 
-    expect(getOrganizationsViaGraphql).toHaveBeenCalledTimes(1);
-    expect(ensureDefaultOrganizationViaGraphql).toHaveBeenCalledTimes(1);
+    expect(createOrganizationViaGraphql).toHaveBeenCalledWith({ name: 'Alpha' });
+    expect(updateOrganizationViaGraphql).toHaveBeenCalledWith(4, { name: 'Alpha' });
+    expect(deleteOrganizationViaGraphql).toHaveBeenCalledWith(4);
     expect(selectOrganizationViaGraphql).toHaveBeenCalledWith(4);
+    expect(addOrganizationMemberViaGraphql).toHaveBeenCalledWith(
+      4,
+      member.email,
+      'member',
+    );
+    expect(updateOrganizationMemberRoleViaGraphql).toHaveBeenCalledWith(
+      4,
+      8,
+      'viewer',
+    );
+    expect(removeOrganizationMemberViaGraphql).toHaveBeenCalledWith(4, 8);
+    expect(leaveOrganizationViaGraphql).toHaveBeenCalledWith(4);
     expect(api.get).not.toHaveBeenCalled();
     expect(api.post).not.toHaveBeenCalled();
+    expect(api.put).not.toHaveBeenCalled();
+    expect(api.delete).not.toHaveBeenCalled();
   });
 
   it('uses REST by default and retains the organization header contract', async () => {

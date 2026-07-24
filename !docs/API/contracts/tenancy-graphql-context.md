@@ -1,6 +1,6 @@
 # Tenancy and organization GraphQL contract
 
-**Status:** Workspace selector implemented; remaining management operations characterized
+**Status:** Complete authenticated organization surface cut over to GraphQL; REST routes retired
 **Owner:** Workspace, with Platform Security owning request-context enforcement  
 **NestJS boundary:** `OrganizationsModule` plus a global organization-context guard
 
@@ -10,7 +10,7 @@ Every organization-scoped resolver derives its context from the authenticated us
 
 The GraphQL transport accepts an optional `x-organization-id` header. If absent, context uses the user's current default organization. The context loader validates a positive integer, verifies active membership, and attaches `{ organizationId, organizationRole }` for the request. Public and explicitly user-global operations opt out; organization-scoped resolvers fail closed when context is absent.
 
-Legacy REST routes continue accepting organization ID from query, body, or header during migration. New GraphQL application operations use the header/default context only. Organization-management operations take an explicit organization ID argument and independently verify membership because they may inspect an organization other than the current UI selection.
+Organization-management operations take an explicit organization ID argument and independently verify membership because they may inspect an organization other than the current UI selection. The former authenticated organization REST routes are retired.
 
 ## Context algorithm
 
@@ -58,10 +58,10 @@ Owner transfer is not implemented in the current REST surface. Do not make owner
 | Missing/invalid user identity | `UNAUTHENTICATED` |
 | Missing organization and no valid default | `ORGANIZATION_REQUIRED` |
 | Malformed organization ID | `BAD_USER_INPUT` with `reason=INVALID_ORGANIZATION_ID` |
-| Not a current member | `FORBIDDEN` |
-| Role does not allow operation | `FORBIDDEN` with `reason=INSUFFICIENT_ORGANIZATION_ROLE` |
+| Not a current member | `NOT_FOUND` for organization-management operations |
+| Role does not allow operation | `NOT_FOUND` when concealment is required, otherwise `FORBIDDEN` with a stable reason |
 | Organization/member absent after authorized lookup | `NOT_FOUND` |
-| Duplicate membership | `CONFLICT` |
+| Duplicate membership | `BAD_USER_INPUT` with `reason=ALREADY_MEMBER` |
 | Database unavailable | `SERVICE_UNAVAILABLE` |
 
 Outsider responses must not distinguish an existing organization from an unknown ID. Logs may retain the internal distinction with correlation ID and actor ID but must not include session tokens.
@@ -72,7 +72,7 @@ Outsider responses must not distinguish an existing organization from an unknown
 - `ensureDefaultOrganization` is idempotent under concurrency and cannot create multiple personal organizations for simultaneous calls.
 - Adding a member performs lookup, duplicate protection, insert, and inviter attribution within one transaction backed by a unique `(organization_id, user_id)` constraint.
 - Leaving or removing a member repairs `users.default_organization_id` when it points to the departed organization.
-- Deleting an organization defines and tests cascade behavior, default-organization cleanup, last-owner rules, and audit requirements before implementation. It currently has no backend characterization test and remains high risk.
+- Deleting an organization is owner-only, locks all signature documents, refuses non-draft evidence with `SIGNATURE_EVIDENCE_RETAINED`, and durably queues current, signed, versioned, and template artifact locators before the organization cascade. Foreign-key behavior clears selected defaults.
 - Every resource query and mutation includes `organization_id` in the SQL predicate even after context authorization. Context authorization alone is not row-level isolation.
 
 ## Required parity scenarios
@@ -88,7 +88,7 @@ Outsider responses must not distinguish an existing organization from an unknown
 
 Current executable evidence covers explicit membership resolution, default fallback, outsider denial, malformed-ID rejection before PostgreSQL, missing-auth rejection, role enforcement, optional-context behavior, and connection release on failure. The legacy organizations suite passes against disposable PostgreSQL and proves selected-workspace persistence, non-member selection denial, and repair when a stored default is no longer a membership. The frontend uses one shared provider, exposes a compact selector only for multi-workspace users, persists selection, and clears tenant-scoped query caches on change. Four provider tests cover initialization, selection, first-workspace creation, and repair. The Phase 1 NestJS guard chain adds focused GraphQL operation tests plus 4 real-PostgreSQL context cases proving default membership, current-role re-read, outsider denial, and immediate denial after membership deletion. Contact mutation integration cases additionally reject a cross-tenant assignee, hide a foreign contact on update/delete, and confirm an owned delete exactly. A staging boundary rehearsal queried the same search under two valid memberships: the default organization returned zero rows and the explicitly selected temporary organization returned its single owned row.
 
-The workspace-selector checkpoint implements `organizations`, `selectOrganization`, and `ensureDefaultOrganization` in `OrganizationsModule`. Four additional fresh-PostgreSQL cases prove membership/default projection, GraphQL-to-retained-REST interoperability, outsider denial without existence disclosure, CSRF rejection without mutation, and concurrent first-workspace creation producing exactly one organization, owner membership, and default. Three frontend adapter cases prove retained-shape mapping, CSRF mutation transport, and independent default-off `VITE_ORGANIZATION_READS_GRAPHQL` and `VITE_ORGANIZATION_MUTATIONS_GRAPHQL` rollback. Static consumer inspection found no shipped imports for the other nine organization-management adapters, so they remain on REST and are not claimed as implemented. `deleteOrganization` remains blocked on the cascade/default/audit contract.
+The complete organization checkpoint implements list/detail/create/update/delete, selection/default repair, member listing/addition/role update/removal, and leave in `OrganizationsModule`. Frontend services call these operations directly with retained-shape mapping and CSRF-protected mutations; the two selector rollout flags and every authenticated Express organization route were removed. Fresh PostgreSQL proves tenant concealment, concurrent default creation, member-role boundaries, duplicate denial, default repair after leave/removal, owner/admin restrictions, signature-evidence refusal, durable draft-artifact cleanup, and exact deletion. The clean-schema gate passes 477 retained Express assertions and 244 NestJS assertions.
 
 The deployed selector gate passed on 2026-07-17. In the real frontend, each of two workspaces exposed only its own distinctive contact, selecting the second workspace persisted the server-side default across reload, and switching back restored the original tenant. The GraphQL trace paired the selection write with `POST /graphql`; the rollback trace used `GET /api/contacts` with the selected organization ID. The original default was restored, all temporary tenant/contact rows were removed, and a database query confirmed zero fixture residue.
 

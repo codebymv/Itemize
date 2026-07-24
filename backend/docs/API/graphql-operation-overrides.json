@@ -134,52 +134,52 @@
       "targetOperation": "organizations",
       "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "The active workspace selector lists only current database memberships, includes the caller's current role and selected default, preserves the retained frontend shape, and has an independent default-off REST rollback flag. The real staging provider passed both GraphQL selection and flag-off REST reads with the same persisted default."
+      "notes": "The active workspace selector lists only current database memberships, includes the caller's current role and selected default, and maps directly into the retained frontend shape. The authenticated REST route is retired."
     },
     "POST /api/organizations": {
       "disposition": "graphql-mutation",
       "owner": "workspace",
       "targetModule": "OrganizationsModule",
       "targetOperation": "createOrganization",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "Create organization, owner membership, and initial default assignment in one transaction."
+      "notes": "CSRF-protected creation commits the organization, owner membership, and initial default assignment under one user-row-serialized transaction. The frontend calls GraphQL directly and the REST route is retired."
     },
     "DELETE /api/organizations/:organizationId": {
       "disposition": "graphql-mutation",
       "owner": "workspace",
       "targetModule": "OrganizationsModule",
       "targetOperation": "deleteOrganization",
-      "parityStatus": "not-started",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Owner-only destructive operation; characterize default-organization cleanup, cascades, last-owner behavior, and audit requirements before implementation."
+      "notes": "Owner-only deletion locks signature evidence, refuses any non-draft document, durably queues every draft/template artifact before cascade, and relies on the database foreign key to clear defaults. The frontend calls GraphQL directly and the REST route is retired."
     },
     "GET /api/organizations/:organizationId": {
       "disposition": "graphql-query",
       "owner": "workspace",
       "targetModule": "OrganizationsModule",
       "targetOperation": "organization",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "Require current membership and return the caller's role without exposing organization existence to outsiders."
+      "notes": "Current-membership detail returns the caller's database role and conceals organization existence from outsiders. The frontend calls GraphQL directly and the REST route is retired."
     },
     "PUT /api/organizations/:organizationId": {
       "disposition": "graphql-mutation",
       "owner": "workspace",
       "targetModule": "OrganizationsModule",
       "targetOperation": "updateOrganization",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "Owner/admin only; preserve partial name, settings, and logo updates with current membership authorization."
+      "notes": "Owner/admin-only updates lock and re-read membership, bound name/settings/logo inputs, and support explicit logo clearing. The frontend calls GraphQL directly and the REST route is retired."
     },
     "POST /api/organizations/:organizationId/leave": {
       "disposition": "graphql-mutation",
       "owner": "workspace",
       "targetModule": "OrganizationsModule",
       "targetOperation": "leaveOrganization",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "Owners cannot leave; remove only the authenticated user's membership and repair an invalid default organization."
+      "notes": "Owners cannot leave; the mutation removes only the authenticated member and atomically repairs a selected default. The frontend calls GraphQL directly and the REST route is retired."
     },
     "POST /api/organizations/:organizationId/select": {
       "disposition": "graphql-mutation",
@@ -188,43 +188,43 @@
       "targetOperation": "selectOrganization",
       "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "The active workspace selector re-reads current membership without existence disclosure, persists the selected default under a user lock, requires CSRF, clears tenant-scoped client caches, and preserves an independent default-off REST rollback flag. The staging browser passed GraphQL selection and reload persistence, then REST selection and reload persistence without data repair."
+      "notes": "The active workspace selector re-reads current membership without existence disclosure, persists the selected default under a user lock, requires CSRF, and clears tenant-scoped client caches. The frontend calls GraphQL directly and the REST route is retired."
     },
     "GET /api/organizations/:organizationId/members": {
       "disposition": "graphql-query",
       "owner": "workspace",
       "targetModule": "OrganizationsModule",
       "targetOperation": "organizationMembers",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "Any current member may list members; membership and role facts are read from PostgreSQL per request."
+      "notes": "Any current member may list members; authorization and the member snapshot share one transaction so a concurrent removal cannot leak a post-revocation list. The frontend calls GraphQL directly and the REST route is retired."
     },
     "POST /api/organizations/:organizationId/members": {
       "disposition": "graphql-mutation",
       "owner": "workspace",
       "targetModule": "OrganizationsModule",
       "targetOperation": "addOrganizationMember",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "Owner/admin only; accept admin/member/viewer, reject duplicates, and record the inviting user atomically."
+      "notes": "Owner/admin-only addition accepts admin/member/viewer, rejects duplicate or unknown users, and records inviter attribution atomically. The frontend calls GraphQL directly and the REST route is retired."
     },
     "DELETE /api/organizations/:organizationId/members/:memberId": {
       "disposition": "graphql-mutation",
       "owner": "workspace",
       "targetModule": "OrganizationsModule",
       "targetOperation": "removeOrganizationMember",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "Protect owners; admins cannot remove admins; scope both lookup and delete to the organization."
+      "notes": "Owner memberships are immutable, admins cannot remove admins, member identity is organization-scoped, and selected defaults are repaired atomically. The frontend calls GraphQL directly and the REST route is retired."
     },
     "PUT /api/organizations/:organizationId/members/:memberId": {
       "disposition": "graphql-mutation",
       "owner": "workspace",
       "targetModule": "OrganizationsModule",
       "targetOperation": "updateOrganizationMemberRole",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "Protect owners; admins cannot modify admins; allow only admin/member/viewer and scope updates to the organization."
+      "notes": "Owner memberships are immutable, admins cannot modify admins, roles are limited to admin/member/viewer, and both lookup and update are organization-scoped. The frontend calls GraphQL directly and the REST route is retired."
     },
     "POST /api/organizations/ensure-default": {
       "disposition": "graphql-mutation",
@@ -233,7 +233,7 @@
       "targetOperation": "ensureDefaultOrganization",
       "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "The active workspace selector idempotently selects an existing membership or atomically creates one personal organization, owner membership, and default assignment; concurrent first-workspace requests serialize on the user row and share the mutation rollback flag. Repeated authenticated staging GraphQL probes returned the existing selected membership; first-workspace creation remains proven by fresh PostgreSQL rather than the disposable staging browser."
+      "notes": "The active workspace selector idempotently selects an existing membership or atomically creates one personal organization, owner membership, and default assignment; concurrent first-workspace requests serialize on the user row. The frontend calls GraphQL directly and the REST route is retired."
     },
     "GET /api/invoices": {
       "disposition": "graphql-query",
@@ -1719,16 +1719,16 @@
       "notes": "Intentional public-link protocol boundary. The rate-limited non-enumerating capability read returns an allowlisted recursively sanitized projection with no-store/noindex/no-referrer headers; the shipped read-only viewer handles live updates, deletion, and durable revocation."
     },
     "POST /api/vaults/:vaultId/share": {
-      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "VaultSharingModule", "targetOperation": "enableVaultSharing", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Owner-only atomic issuance; must explicitly confirm that sharing decrypts every item to any bearer and prohibit sharing while locked."
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "VaultModule", "targetOperation": "enableWorkspaceVaultSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "CSRF-protected owner-only GraphQL issuance requires confirmDecryptedSharing=true, is serialized, preserves one active token and shared_at, retries capability collisions, refuses locked vaults, and is reached only after an explicit decrypted-secret warning. Both authenticated REST handlers are retired."
     },
     "DELETE /api/vaults/:vaultId/share": {
-      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "VaultSharingModule", "targetOperation": "disableVaultSharing", "parityStatus": "characterized", "risk": "high",
-      "notes": "Owner-only revocation clears the capability; existing and future caches must not retain decrypted content."
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "VaultModule", "targetOperation": "disableWorkspaceVaultSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "CSRF-protected owner-only GraphQL revocation idempotently clears the capability, public state, and timestamp. Applying a vault password also revokes any active link so later unlock cannot resurrect prior consent."
     },
     "GET /api/shared/vault/:token": {
-      "disposition": "retain-http", "owner": "sharing", "targetModule": "VaultSharingModule", "targetOperation": "getSharedVault", "parityStatus": "characterizing", "risk": "high",
-      "notes": "Rate-limited no-store bearer capability that returns decrypted secrets; hashed tokens, explicit consent, logging redaction, and browser coverage are required."
+      "disposition": "retain-http", "owner": "sharing", "targetModule": "VaultModule", "targetOperation": "getSharedVault", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Intentional rate-limited no-store public-link boundary. It rejects malformed, unknown, revoked, and locked capabilities; returns an allowlisted decrypted projection; and fails the complete response closed on any item decryption error. Hash-at-rest and browser telemetry verification remain security hardening."
     },
     "GET /api/wireframes": {
       "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceWireframes", "parityStatus": "consumer-cutover-complete", "risk": "high",

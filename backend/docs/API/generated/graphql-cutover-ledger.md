@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 406
-- API operations under `/api`: 399
+- Registered method/path operations: 392
+- API operations under `/api`: 385
 - Non-API registered operations: 7
-- Static frontend callsites: 337
-- Operations with frontend consumers: 323
-- Operations referenced by backend tests: 222
-- Recommended GraphQL queries: 121
-- Recommended GraphQL mutations: 232
+- Static frontend callsites: 321
+- Operations with frontend consumers: 309
+- Operations referenced by backend tests: 208
+- Recommended GraphQL queries: 118
+- Recommended GraphQL mutations: 221
 - Recommended retained HTTP endpoints: 45
-- High-risk operations: 326
+- High-risk operations: 323
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -248,18 +248,6 @@
 | GET | `/api/onboarding/progress` | 1 | 1 | graphql-query | high | onboarding / OnboardingModule / onboardingProgress |
 | GET | `/api/onboarding/progress/:featureKey` | 1 | 0 | graphql-query | high | onboarding / OnboardingModule / onboardingFeatureProgress |
 | DELETE | `/api/onboarding/reset` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / resetOnboarding |
-| GET | `/api/organizations` | 1 | 4 | graphql-query | medium | workspace / OrganizationsModule / organizations |
-| POST | `/api/organizations` | 1 | 5 | graphql-mutation | medium | workspace / OrganizationsModule / createOrganization |
-| DELETE | `/api/organizations/:organizationId` | 1 | 2 | graphql-mutation | high | workspace / OrganizationsModule / deleteOrganization |
-| GET | `/api/organizations/:organizationId` | 1 | 3 | graphql-query | medium | workspace / OrganizationsModule / organization |
-| PUT | `/api/organizations/:organizationId` | 1 | 2 | graphql-mutation | medium | workspace / OrganizationsModule / updateOrganization |
-| POST | `/api/organizations/:organizationId/leave` | 1 | 2 | graphql-mutation | medium | workspace / OrganizationsModule / leaveOrganization |
-| GET | `/api/organizations/:organizationId/members` | 1 | 3 | graphql-query | medium | workspace / OrganizationsModule / organizationMembers |
-| POST | `/api/organizations/:organizationId/members` | 1 | 7 | graphql-mutation | medium | workspace / OrganizationsModule / addOrganizationMember |
-| DELETE | `/api/organizations/:organizationId/members/:memberId` | 1 | 2 | graphql-mutation | medium | workspace / OrganizationsModule / removeOrganizationMember |
-| PUT | `/api/organizations/:organizationId/members/:memberId` | 1 | 5 | graphql-mutation | medium | workspace / OrganizationsModule / updateOrganizationMemberRole |
-| POST | `/api/organizations/:organizationId/select` | 1 | 3 | graphql-mutation | medium | workspace / OrganizationsModule / selectOrganization |
-| POST | `/api/organizations/ensure-default` | 1 | 3 | graphql-mutation | medium | workspace / OrganizationsModule / ensureDefaultOrganization |
 | GET | `/api/pages` | 0 | 1 | graphql-query | high | growth / LandingPagesModule / landingPages |
 | POST | `/api/pages` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / createLandingPage |
 | DELETE | `/api/pages/:id` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / deleteLandingPage |
@@ -338,7 +326,7 @@
 | POST | `/api/segments/preview` | 1 | 0 | graphql-query | high | audiences / SegmentsModule / previewSegment |
 | GET | `/api/shared/list/:token` | 2 | 4 | retain-http | high | sharing / PublicSharingModule / getSharedList |
 | GET | `/api/shared/note/:token` | 2 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedNote |
-| GET | `/api/shared/vault/:token` | 1 | 3 | retain-http | high | sharing / VaultSharingModule / getSharedVault |
+| GET | `/api/shared/vault/:token` | 1 | 3 | retain-http | high | sharing / VaultModule / getSharedVault |
 | GET | `/api/shared/whiteboard/:token` | 3 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedWhiteboard |
 | GET | `/api/shared/wireframe/:token` | 2 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedWireframe |
 | GET | `/api/signatures/documents` | 2 | 0 | graphql-query | high | esignatures / SignatureDocumentsModule / signatureDocuments |
@@ -395,8 +383,6 @@
 | PUT | `/api/tags/:id` | 0 | 5 | graphql-mutation | high | crm / TagsModule / updateTag |
 | GET | `/api/tags/suggestions` | 0 | 2 | graphql-query | medium | crm / TagsModule / contactTagSuggestions |
 | PUT | `/api/vaults/:vaultId/position` | 0 | 0 | graphql-mutation | high | workspace-content / VaultModule / updateWorkspaceVault |
-| DELETE | `/api/vaults/:vaultId/share` | 2 | 2 | graphql-mutation | high | sharing / VaultSharingModule / disableVaultSharing |
-| POST | `/api/vaults/:vaultId/share` | 2 | 4 | graphql-mutation | high | sharing / VaultSharingModule / enableVaultSharing |
 | POST | `/api/webhooks/:workflowId` | 0 | 6 | retain-http | high | automation / WorkflowWebhooksModule / processWorkflowWebhook |
 | GET | `/api/whiteboards` | 1 | 3 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceWhiteboards |
 | POST | `/api/whiteboards` | 1 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / createWorkspaceWhiteboard |
@@ -442,8 +428,8 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 8
-- Orphaned manual overrides: 14
+- Unmatched backend test calls: 12
+- Orphaned manual overrides: 28
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls
@@ -472,8 +458,12 @@
 | GET | `/api/campaigns:path` | `backend-v2/test/integration/campaigns.integration-spec.ts:126` |
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1057` |
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1079` |
+| POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:168` |
+| DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:169` |
 | POST | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:188` |
 | DELETE | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:194` |
+| POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:210` |
+| DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:211` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:32` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:128` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:133` |

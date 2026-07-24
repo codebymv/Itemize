@@ -1,11 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { GraphQLError } from 'graphql';
 import { itemizeGraphqlError } from '../common/graphql-error';
-import { Organization } from './organization.types';
 import {
+  AddOrganizationMemberInput,
+  CreateOrganizationInput,
+  UpdateOrganizationInput,
+} from './organization.inputs';
+import { Organization, OrganizationMember } from './organization.types';
+import {
+  OrganizationAccessRole,
+  OrganizationMemberRow,
   OrganizationRow,
   OrganizationsRepository,
 } from './organizations.repository';
+
+const MEMBER_ROLES: OrganizationAccessRole[] = ['admin', 'member', 'viewer'];
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 @Injectable()
 export class OrganizationsService {
@@ -14,6 +24,227 @@ export class OrganizationsService {
   async list(userId: number): Promise<Organization[]> {
     try {
       return (await this.organizations.listForUser(userId)).map(this.map);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async get(userId: number, organizationId: number): Promise<Organization> {
+    this.id(organizationId);
+    try {
+      const organization = await this.organizations.findForUser(
+        userId,
+        organizationId,
+      );
+      if (!organization) {
+        throw itemizeGraphqlError('Organization not found', 'NOT_FOUND');
+      }
+      return this.map(organization);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async create(
+    userId: number,
+    input: CreateOrganizationInput,
+  ): Promise<Organization> {
+    const name = this.name(input.name);
+    const settings = this.settingsInput(input.settings ?? {});
+    try {
+      const organization = await this.organizations.create(userId, {
+        name,
+        settings,
+      });
+      if (!organization) {
+        throw itemizeGraphqlError('User not found', 'NOT_FOUND');
+      }
+      return this.map(organization);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async update(
+    userId: number,
+    organizationId: number,
+    input: UpdateOrganizationInput,
+  ): Promise<Organization> {
+    this.id(organizationId);
+    if (
+      input.name === undefined &&
+      input.settings === undefined &&
+      input.logoUrl === undefined
+    ) {
+      throw itemizeGraphqlError(
+        'Organization update must include at least one field',
+        'BAD_USER_INPUT',
+        { reason: 'EMPTY_ORGANIZATION_UPDATE' },
+      );
+    }
+    if (input.name === null || input.settings === null) {
+      throw itemizeGraphqlError(
+        'Organization name and settings cannot be null',
+        'BAD_USER_INPUT',
+        { reason: 'NULL_ORGANIZATION_FIELD' },
+      );
+    }
+    const values = {
+      ...(input.name !== undefined ? { name: this.name(input.name) } : {}),
+      ...(input.settings !== undefined
+        ? { settings: this.settingsInput(input.settings) }
+        : {}),
+      ...(input.logoUrl !== undefined
+        ? { logoUrl: this.logoUrl(input.logoUrl) }
+        : {}),
+    };
+    try {
+      const outcome = await this.organizations.update(
+        userId,
+        organizationId,
+        values,
+      );
+      if (outcome.kind === 'forbidden') {
+        throw itemizeGraphqlError('Organization not found', 'NOT_FOUND');
+      }
+      if (outcome.kind === 'not_found') {
+        throw itemizeGraphqlError('Organization not found', 'NOT_FOUND');
+      }
+      return this.map(outcome.value);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async delete(userId: number, organizationId: number): Promise<number> {
+    this.id(organizationId);
+    try {
+      const outcome = await this.organizations.delete(userId, organizationId);
+      if (outcome.kind === 'forbidden' || outcome.kind === 'not_found') {
+        throw itemizeGraphqlError('Organization not found', 'NOT_FOUND');
+      }
+      if (outcome.kind === 'evidence_retained') {
+        throw itemizeGraphqlError(
+          'Organization contains retained signature evidence',
+          'CONFLICT',
+          { reason: 'SIGNATURE_EVIDENCE_RETAINED' },
+        );
+      }
+      return organizationId;
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async members(
+    userId: number,
+    organizationId: number,
+  ): Promise<OrganizationMember[]> {
+    this.id(organizationId);
+    try {
+      const outcome = await this.organizations.listMembers(
+        userId,
+        organizationId,
+      );
+      if (outcome.kind !== 'ok') {
+        throw itemizeGraphqlError('Organization not found', 'NOT_FOUND');
+      }
+      return outcome.value.map(this.mapMember);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async addMember(
+    userId: number,
+    organizationId: number,
+    input: AddOrganizationMemberInput,
+  ): Promise<OrganizationMember> {
+    this.id(organizationId);
+    const email = this.email(input.email);
+    const role = this.memberRole(input.role);
+    try {
+      const outcome = await this.organizations.addMember(userId, organizationId, {
+        email,
+        role,
+      });
+      if (outcome.kind === 'forbidden') {
+        throw itemizeGraphqlError('Organization not found', 'NOT_FOUND');
+      }
+      if (outcome.kind === 'user_not_found') {
+        throw itemizeGraphqlError('User not found', 'NOT_FOUND');
+      }
+      if (outcome.kind === 'already_member') {
+        throw itemizeGraphqlError(
+          'User is already a member of this organization',
+          'BAD_USER_INPUT',
+          { field: 'email', reason: 'ALREADY_MEMBER' },
+        );
+      }
+      if (outcome.kind !== 'ok') {
+        throw itemizeGraphqlError('Member cannot be added', 'FORBIDDEN');
+      }
+      return this.mapMember(outcome.row);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async updateMemberRole(
+    userId: number,
+    organizationId: number,
+    memberId: number,
+    roleValue: string,
+  ): Promise<OrganizationMember> {
+    this.id(organizationId);
+    this.memberId(memberId);
+    const role = this.memberRole(roleValue);
+    try {
+      const outcome = await this.organizations.updateMemberRole(
+        userId,
+        organizationId,
+        memberId,
+        role,
+      );
+      return this.memberMutationOutcome(outcome);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async removeMember(
+    userId: number,
+    organizationId: number,
+    memberId: number,
+  ): Promise<number> {
+    this.id(organizationId);
+    this.memberId(memberId);
+    try {
+      const outcome = await this.organizations.removeMember(
+        userId,
+        organizationId,
+        memberId,
+      );
+      if (outcome.kind === 'removed') return memberId;
+      this.memberFailure(outcome.kind);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async leave(userId: number, organizationId: number): Promise<boolean> {
+    this.id(organizationId);
+    try {
+      const outcome = await this.organizations.leave(userId, organizationId);
+      if (outcome.kind === 'left') return true;
+      if (outcome.kind === 'owner_cannot_leave') {
+        throw itemizeGraphqlError(
+          'Owner cannot leave the organization',
+          'FORBIDDEN',
+          { reason: 'OWNER_CANNOT_LEAVE' },
+        );
+      }
+      throw itemizeGraphqlError('Organization not found', 'NOT_FOUND');
     } catch (error) {
       this.rethrow(error);
     }
@@ -64,6 +295,82 @@ export class OrganizationsService {
     }
   }
 
+  private memberId(value: number): void {
+    if (!Number.isSafeInteger(value) || value < 1) {
+      throw itemizeGraphqlError(
+        'Member ID must be a positive integer',
+        'BAD_USER_INPUT',
+        { field: 'memberId', reason: 'INVALID_MEMBER_ID' },
+      );
+    }
+  }
+
+  private name(value: string): string {
+    const name = value?.trim();
+    if (!name || name.length > 255) {
+      throw itemizeGraphqlError(
+        'Organization name must contain between 1 and 255 characters',
+        'BAD_USER_INPUT',
+        { field: 'name', reason: 'INVALID_ORGANIZATION_NAME' },
+      );
+    }
+    return name;
+  }
+
+  private email(value: string): string {
+    const email = value?.trim().toLowerCase();
+    if (!email || email.length > 320 || !EMAIL_PATTERN.test(email)) {
+      throw itemizeGraphqlError('A valid email is required', 'BAD_USER_INPUT', {
+        field: 'email',
+        reason: 'INVALID_EMAIL',
+      });
+    }
+    return email;
+  }
+
+  private memberRole(value: string): OrganizationAccessRole {
+    if (!MEMBER_ROLES.includes(value as OrganizationAccessRole)) {
+      throw itemizeGraphqlError(
+        'Role must be admin, member, or viewer',
+        'BAD_USER_INPUT',
+        { field: 'role', reason: 'INVALID_ORGANIZATION_ROLE' },
+      );
+    }
+    return value as OrganizationAccessRole;
+  }
+
+  private logoUrl(value: string | null): string | null {
+    if (value === null) return null;
+    const logoUrl = value.trim();
+    if (logoUrl.length > 500) {
+      throw itemizeGraphqlError(
+        'Organization logo URL cannot exceed 500 characters',
+        'BAD_USER_INPUT',
+        { field: 'logoUrl', reason: 'INVALID_LOGO_URL' },
+      );
+    }
+    return logoUrl || null;
+  }
+
+  private settingsInput(value: unknown): Record<string, unknown> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      throw itemizeGraphqlError(
+        'Organization settings must be an object',
+        'BAD_USER_INPUT',
+        { field: 'settings', reason: 'INVALID_SETTINGS' },
+      );
+    }
+    const serialized = JSON.stringify(value);
+    if (Buffer.byteLength(serialized, 'utf8') > 64 * 1024) {
+      throw itemizeGraphqlError(
+        'Organization settings cannot exceed 64 KiB',
+        'BAD_USER_INPUT',
+        { field: 'settings', reason: 'SETTINGS_TOO_LARGE' },
+      );
+    }
+    return value as Record<string, unknown>;
+  }
+
   private readonly map = (row: OrganizationRow): Organization => ({
     id: Number(row.id),
     name: row.name,
@@ -76,6 +383,53 @@ export class OrganizationsService {
     updatedAt: new Date(row.updated_at),
   });
 
+  private readonly mapMember = (
+    row: OrganizationMemberRow,
+  ): OrganizationMember => ({
+    id: Number(row.id),
+    organizationId: Number(row.organization_id),
+    userId: Number(row.user_id),
+    role: row.role,
+    invitedAt: new Date(row.invited_at),
+    joinedAt: row.joined_at ? new Date(row.joined_at) : null,
+    invitedBy: row.invited_by === null ? null : Number(row.invited_by),
+    userName: row.user_name,
+    email: row.email,
+  });
+
+  private memberMutationOutcome(
+    outcome: Awaited<
+      ReturnType<OrganizationsRepository['updateMemberRole']>
+    >,
+  ): OrganizationMember {
+    if (outcome.kind === 'ok') return this.mapMember(outcome.row);
+    this.memberFailure(outcome.kind);
+  }
+
+  private memberFailure(kind: string): never {
+    if (kind === 'member_not_found' || kind === 'forbidden') {
+      throw itemizeGraphqlError('Organization member not found', 'NOT_FOUND');
+    }
+    if (kind === 'owner_immutable') {
+      throw itemizeGraphqlError(
+        'The organization owner cannot be changed or removed',
+        'FORBIDDEN',
+        { reason: 'OWNER_IMMUTABLE' },
+      );
+    }
+    if (kind === 'admin_peer_forbidden') {
+      throw itemizeGraphqlError(
+        'Administrators cannot modify other administrators',
+        'FORBIDDEN',
+        { reason: 'ADMIN_PEER_FORBIDDEN' },
+      );
+    }
+    throw itemizeGraphqlError(
+      'Organization member operation failed',
+      'SERVICE_UNAVAILABLE',
+    );
+  }
+
   private settings(value: unknown): Record<string, unknown> {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
     return value as Record<string, unknown>;
@@ -83,6 +437,12 @@ export class OrganizationsService {
 
   private rethrow(error: unknown): never {
     if (error instanceof GraphQLError) throw error;
+    if ((error as { code?: string })?.code === '23505') {
+      throw itemizeGraphqlError(
+        'Organization state changed concurrently; retry the operation',
+        'CONFLICT',
+      );
+    }
     throw itemizeGraphqlError(
       'Organization service is unavailable',
       'SERVICE_UNAVAILABLE',

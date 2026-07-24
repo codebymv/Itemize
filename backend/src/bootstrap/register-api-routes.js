@@ -5,7 +5,6 @@ const whiteboardsRoutes = require('../routes/whiteboards.routes');
 const wireframesRoutes = require('../routes/wireframes.routes');
 const vaultsRoutes = require('../routes/vaults.routes');
 const categoriesRoutes = require('../routes/categories.routes');
-const organizationsRoutes = require('../routes/organizations.routes');
 const contactsRoutes = require('../routes/contacts.routes');
 const { createContactTransferProxy } = require('../contact-transfer-proxy');
 const tagsRoutes = require('../routes/tags.routes');
@@ -217,8 +216,6 @@ function registerApiRoutes({
     logger.info('Vaults routes initialized');
     app.use('/api', categoriesRoutes(pool, authenticateJWT));
     logger.info('Categories routes initialized');
-    app.use('/api/organizations', organizationsRoutes(pool, authenticateJWT));
-    logger.info('Organizations routes initialized');
     const contactTransferProxy = createContactTransferProxy({ logger });
     app.get('/api/contacts/export/csv', contactTransferProxy);
     app.post('/api/contacts/import/csv', contactTransferProxy);

@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 404
-- API operations under `/api`: 397
+- Registered method/path operations: 392
+- API operations under `/api`: 385
 - Non-API registered operations: 7
-- Static frontend callsites: 333
-- Operations with frontend consumers: 321
-- Operations referenced by backend tests: 220
-- Recommended GraphQL queries: 121
-- Recommended GraphQL mutations: 230
+- Static frontend callsites: 321
+- Operations with frontend consumers: 309
+- Operations referenced by backend tests: 208
+- Recommended GraphQL queries: 118
+- Recommended GraphQL mutations: 221
 - Recommended retained HTTP endpoints: 45
-- High-risk operations: 324
+- High-risk operations: 323
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -248,18 +248,6 @@
 | GET | `/api/onboarding/progress` | 1 | 1 | graphql-query | high | onboarding / OnboardingModule / onboardingProgress |
 | GET | `/api/onboarding/progress/:featureKey` | 1 | 0 | graphql-query | high | onboarding / OnboardingModule / onboardingFeatureProgress |
 | DELETE | `/api/onboarding/reset` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / resetOnboarding |
-| GET | `/api/organizations` | 1 | 4 | graphql-query | medium | workspace / OrganizationsModule / organizations |
-| POST | `/api/organizations` | 1 | 5 | graphql-mutation | medium | workspace / OrganizationsModule / createOrganization |
-| DELETE | `/api/organizations/:organizationId` | 1 | 2 | graphql-mutation | high | workspace / OrganizationsModule / deleteOrganization |
-| GET | `/api/organizations/:organizationId` | 1 | 3 | graphql-query | medium | workspace / OrganizationsModule / organization |
-| PUT | `/api/organizations/:organizationId` | 1 | 2 | graphql-mutation | medium | workspace / OrganizationsModule / updateOrganization |
-| POST | `/api/organizations/:organizationId/leave` | 1 | 2 | graphql-mutation | medium | workspace / OrganizationsModule / leaveOrganization |
-| GET | `/api/organizations/:organizationId/members` | 1 | 3 | graphql-query | medium | workspace / OrganizationsModule / organizationMembers |
-| POST | `/api/organizations/:organizationId/members` | 1 | 7 | graphql-mutation | medium | workspace / OrganizationsModule / addOrganizationMember |
-| DELETE | `/api/organizations/:organizationId/members/:memberId` | 1 | 2 | graphql-mutation | medium | workspace / OrganizationsModule / removeOrganizationMember |
-| PUT | `/api/organizations/:organizationId/members/:memberId` | 1 | 5 | graphql-mutation | medium | workspace / OrganizationsModule / updateOrganizationMemberRole |
-| POST | `/api/organizations/:organizationId/select` | 1 | 3 | graphql-mutation | medium | workspace / OrganizationsModule / selectOrganization |
-| POST | `/api/organizations/ensure-default` | 1 | 3 | graphql-mutation | medium | workspace / OrganizationsModule / ensureDefaultOrganization |
 | GET | `/api/pages` | 0 | 1 | graphql-query | high | growth / LandingPagesModule / landingPages |
 | POST | `/api/pages` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / createLandingPage |
 | DELETE | `/api/pages/:id` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / deleteLandingPage |
@@ -441,7 +429,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 12
-- Orphaned manual overrides: 16
+- Orphaned manual overrides: 28
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

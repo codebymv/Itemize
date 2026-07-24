@@ -22,13 +22,20 @@ import {
   isContactGraphqlContentEnabled,
   isContactGraphqlMutationsEnabled,
   isContactGraphqlReadsEnabled,
-  isOrganizationGraphqlMutationsEnabled,
-  isOrganizationGraphqlReadsEnabled,
 } from './graphqlClient';
 import {
+  addOrganizationMemberViaGraphql,
+  createOrganizationViaGraphql,
+  deleteOrganizationViaGraphql,
   ensureDefaultOrganizationViaGraphql,
+  getOrganizationMembersViaGraphql,
+  getOrganizationViaGraphql,
   getOrganizationsViaGraphql,
+  leaveOrganizationViaGraphql,
+  removeOrganizationMemberViaGraphql,
   selectOrganizationViaGraphql,
+  updateOrganizationMemberRoleViaGraphql,
+  updateOrganizationViaGraphql,
 } from './organizationsGraphql';
 
 const unwrapResponse = <T>(payload: unknown): T => {
@@ -43,70 +50,52 @@ const unwrapResponse = <T>(payload: unknown): T => {
 // ======================
 
 export const getOrganizations = async (): Promise<Organization[]> => {
-  if (isOrganizationGraphqlReadsEnabled()) {
-    return getOrganizationsViaGraphql();
-  }
-  const response = await api.get('/api/organizations');
-  return unwrapResponse<Organization[]>(response.data);
+  return getOrganizationsViaGraphql();
 };
 
 export const getOrganization = async (id: number): Promise<Organization> => {
-  const response = await api.get(`/api/organizations/${id}`);
-  return unwrapResponse<Organization>(response.data);
+  return getOrganizationViaGraphql(id);
 };
 
 export const createOrganization = async (data: { name: string; settings?: JsonRecord }): Promise<Organization> => {
-  const response = await api.post('/api/organizations', data);
-  return unwrapResponse<Organization>(response.data);
+  return createOrganizationViaGraphql(data);
 };
 
 export const updateOrganization = async (id: number, data: Partial<Organization>): Promise<Organization> => {
-  const response = await api.put(`/api/organizations/${id}`, data);
-  return unwrapResponse<Organization>(response.data);
+  return updateOrganizationViaGraphql(id, data);
 };
 
 export const deleteOrganization = async (id: number): Promise<void> => {
-  await api.delete(`/api/organizations/${id}`);
+  await deleteOrganizationViaGraphql(id);
 };
 
 export const ensureDefaultOrganization = async (): Promise<Organization> => {
-  if (isOrganizationGraphqlMutationsEnabled()) {
-    return ensureDefaultOrganizationViaGraphql();
-  }
-  const response = await api.post('/api/organizations/ensure-default');
-  return unwrapResponse<Organization>(response.data);
+  return ensureDefaultOrganizationViaGraphql();
 };
 
 export const selectOrganization = async (id: number): Promise<Organization> => {
-  if (isOrganizationGraphqlMutationsEnabled()) {
-    return selectOrganizationViaGraphql(id);
-  }
-  const response = await api.post(`/api/organizations/${id}/select`);
-  return unwrapResponse<Organization>(response.data);
+  return selectOrganizationViaGraphql(id);
 };
 
 // Organization members
 export const getOrganizationMembers = async (orgId: number): Promise<OrganizationMember[]> => {
-  const response = await api.get(`/api/organizations/${orgId}/members`);
-  return unwrapResponse<OrganizationMember[]>(response.data);
+  return getOrganizationMembersViaGraphql(orgId);
 };
 
 export const inviteMember = async (orgId: number, email: string, role: string): Promise<OrganizationMember> => {
-  const response = await api.post(`/api/organizations/${orgId}/members`, { email, role });
-  return unwrapResponse<OrganizationMember>(response.data);
+  return addOrganizationMemberViaGraphql(orgId, email, role);
 };
 
 export const updateMemberRole = async (orgId: number, memberId: number, role: string): Promise<OrganizationMember> => {
-  const response = await api.put(`/api/organizations/${orgId}/members/${memberId}`, { role });
-  return unwrapResponse<OrganizationMember>(response.data);
+  return updateOrganizationMemberRoleViaGraphql(orgId, memberId, role);
 };
 
 export const removeMember = async (orgId: number, memberId: number): Promise<void> => {
-  await api.delete(`/api/organizations/${orgId}/members/${memberId}`);
+  await removeOrganizationMemberViaGraphql(orgId, memberId);
 };
 
 export const leaveOrganization = async (orgId: number): Promise<void> => {
-  await api.post(`/api/organizations/${orgId}/leave`);
+  await leaveOrganizationViaGraphql(orgId);
 };
 
 // ======================

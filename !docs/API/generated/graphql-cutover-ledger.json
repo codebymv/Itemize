@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 404,
-    "apiOperationCount": 397,
+    "operationCount": 392,
+    "apiOperationCount": 385,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 333,
-    "operationsWithFrontendConsumers": 321,
-    "operationsWithBackendTests": 220,
+    "frontendCallsiteCount": 321,
+    "operationsWithFrontendConsumers": 309,
+    "operationsWithBackendTests": 208,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 12,
     "retainHttpCount": 45,
-    "graphqlQueryCount": 121,
-    "graphqlMutationCount": 230,
-    "highRiskCount": 324,
+    "graphqlQueryCount": 118,
+    "graphqlMutationCount": 221,
+    "highRiskCount": 323,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -3724,7 +3724,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 61
+          "line": 60
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -4419,7 +4419,7 @@
           "path": "/api/contacts",
           "rawPath": "/api/contacts",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 133,
+          "line": 122,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4472,7 +4472,7 @@
           "path": "/api/contacts",
           "rawPath": "/api/contacts",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 176,
+          "line": 165,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4543,7 +4543,7 @@
           "path": "/api/contacts/:id",
           "rawPath": "/api/contacts/${id}",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 196,
+          "line": 185,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4590,7 +4590,7 @@
           "path": "/api/contacts/:id",
           "rawPath": "/api/contacts/${id}",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 144,
+          "line": 133,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4643,7 +4643,7 @@
           "path": "/api/contacts/:id",
           "rawPath": "/api/contacts/${id}",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 186,
+          "line": 175,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4702,7 +4702,7 @@
           "path": "/api/contacts/:contactId/activities",
           "rawPath": "/api/contacts/${contactId}/activities",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 243,
+          "line": 232,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4743,7 +4743,7 @@
           "path": "/api/contacts/:contactId/activities",
           "rawPath": "/api/contacts/${contactId}/activities",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 263,
+          "line": 252,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4777,7 +4777,7 @@
           "path": "/api/contacts/:contactId/content",
           "rawPath": "/api/contacts/${contactId}/content",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 283,
+          "line": 272,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4867,7 +4867,7 @@
           "path": "/api/contacts/bulk-delete",
           "rawPath": "/api/contacts/bulk-delete",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 227,
+          "line": 216,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4901,7 +4901,7 @@
           "path": "/api/contacts/bulk-update",
           "rawPath": "/api/contacts/bulk-update",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 217,
+          "line": 206,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4939,7 +4939,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 223
+          "line": 220
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -4952,7 +4952,7 @@
           "path": "/api/contacts/export/csv",
           "rawPath": "/api/contacts/export/csv",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 324,
+          "line": 313,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5014,7 +5014,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 224
+          "line": 221
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -5027,7 +5027,7 @@
           "path": "/api/contacts/import/csv",
           "rawPath": "/api/contacts/import/csv",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 347,
+          "line": 336,
           "client": "api",
           "literalInterpolation": false
         }
@@ -6995,7 +6995,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 269
+          "line": 266
         },
         {
           "source": "backend/src/routes/invoices/actions.routes.js",
@@ -7483,7 +7483,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 261
+          "line": 258
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -8763,7 +8763,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 265
+          "line": 262
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -8801,7 +8801,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 257
+          "line": 254
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -9174,7 +9174,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 57
+          "line": 56
         },
         {
           "source": "backend/src/routes/lists.routes.js",
@@ -10145,672 +10145,6 @@
       "notes": "CSRF-protected feature or full user reset; historical onboarding events are retained.",
       "literalInterpolationRisk": false,
       "risk": "high"
-    },
-    {
-      "id": "GET /api/organizations",
-      "key": "GET /api/organizations",
-      "method": "GET",
-      "path": "/api/organizations",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/organizations.routes.js",
-          "line": 83
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/organizations",
-          "rawPath": "/api/organizations",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 49,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/organizations",
-          "source": "backend-v2/test/integration/organizations.integration-spec.ts",
-          "line": 231
-        },
-        {
-          "method": "GET",
-          "path": "/api/organizations",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 68
-        },
-        {
-          "method": "GET",
-          "path": "/api/organizations",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 78
-        },
-        {
-          "method": "GET",
-          "path": "/api/organizations",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 415
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "workspace",
-      "targetOperation": "organizations",
-      "targetModule": "OrganizationsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The active workspace selector lists only current database memberships, includes the caller's current role and selected default, preserves the retained frontend shape, and has an independent default-off REST rollback flag. The real staging provider passed both GraphQL selection and flag-off REST reads with the same persisted default.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/organizations",
-      "key": "POST /api/organizations",
-      "method": "POST",
-      "path": "/api/organizations",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/organizations.routes.js",
-          "line": 115
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/organizations",
-          "rawPath": "/api/organizations",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 59,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/organizations",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 90
-        },
-        {
-          "method": "POST",
-          "path": "/api/organizations",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 103
-        },
-        {
-          "method": "POST",
-          "path": "/api/organizations",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 332
-        },
-        {
-          "method": "POST",
-          "path": "/api/organizations",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 391
-        },
-        {
-          "method": "POST",
-          "path": "/api/organizations",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 459
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace",
-      "targetOperation": "createOrganization",
-      "targetModule": "OrganizationsModule",
-      "parityStatus": "characterizing",
-      "notes": "Create organization, owner membership, and initial default assignment in one transaction.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "DELETE /api/organizations/:organizationId",
-      "key": "DELETE /api/organizations/:*",
-      "method": "DELETE",
-      "path": "/api/organizations/:organizationId",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/organizations.routes.js",
-          "line": 174
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/organizations/:id",
-          "rawPath": "/api/organizations/${id}",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 69,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/organizations/:retainedOrgId",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 482
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/organizations/:disposableOrgId",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 525
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace",
-      "targetOperation": "deleteOrganization",
-      "targetModule": "OrganizationsModule",
-      "parityStatus": "not-started",
-      "notes": "Owner-only destructive operation; characterize default-organization cleanup, cascades, last-owner behavior, and audit requirements before implementation.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/organizations/:organizationId",
-      "key": "GET /api/organizations/:*",
-      "method": "GET",
-      "path": "/api/organizations/:organizationId",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/organizations.routes.js",
-          "line": 99
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/organizations/:id",
-          "rawPath": "/api/organizations/${id}",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 54,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/organizations/:createdOrgId",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 112
-        },
-        {
-          "method": "GET",
-          "path": "/api/organizations/:createdOrgId",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 122
-        },
-        {
-          "method": "GET",
-          "path": "/api/organizations/not-an-id",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 130
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "workspace",
-      "targetOperation": "organization",
-      "targetModule": "OrganizationsModule",
-      "parityStatus": "characterizing",
-      "notes": "Require current membership and return the caller's role without exposing organization existence to outsiders.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "PUT /api/organizations/:organizationId",
-      "key": "PUT /api/organizations/:*",
-      "method": "PUT",
-      "path": "/api/organizations/:organizationId",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/organizations.routes.js",
-          "line": 151
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/organizations/:id",
-          "rawPath": "/api/organizations/${id}",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 64,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/organizations/:createdOrgId",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 138
-        },
-        {
-          "method": "PUT",
-          "path": "/api/organizations/:createdOrgId",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 148
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace",
-      "targetOperation": "updateOrganization",
-      "targetModule": "OrganizationsModule",
-      "parityStatus": "characterizing",
-      "notes": "Owner/admin only; preserve partial name, settings, and logo updates with current membership authorization.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/organizations/:organizationId/leave",
-      "key": "POST /api/organizations/:*/leave",
-      "method": "POST",
-      "path": "/api/organizations/:organizationId/leave",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/organizations.routes.js",
-          "line": 393
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/organizations/:orgId/leave",
-          "rawPath": "/api/organizations/${orgId}/leave",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 109,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/organizations/:leaveOrgId/leave",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 357
-        },
-        {
-          "method": "POST",
-          "path": "/api/organizations/:leaveOrgId/leave",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 370
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace",
-      "targetOperation": "leaveOrganization",
-      "targetModule": "OrganizationsModule",
-      "parityStatus": "characterizing",
-      "notes": "Owners cannot leave; remove only the authenticated user's membership and repair an invalid default organization.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "GET /api/organizations/:organizationId/members",
-      "key": "GET /api/organizations/:*/members",
-      "method": "GET",
-      "path": "/api/organizations/:organizationId/members",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/organizations.routes.js",
-          "line": 248
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/organizations/:orgId/members",
-          "rawPath": "/api/organizations/${orgId}/members",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 90,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/organizations/:sharedOrgId/members",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 225
-        },
-        {
-          "method": "GET",
-          "path": "/api/organizations/:sharedOrgId/members",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 265
-        },
-        {
-          "method": "GET",
-          "path": "/api/organizations/:sharedOrgId/members",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 309
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "workspace",
-      "targetOperation": "organizationMembers",
-      "targetModule": "OrganizationsModule",
-      "parityStatus": "characterizing",
-      "notes": "Any current member may list members; membership and role facts are read from PostgreSQL per request.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/organizations/:organizationId/members",
-      "key": "POST /api/organizations/:*/members",
-      "method": "POST",
-      "path": "/api/organizations/:organizationId/members",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/organizations.routes.js",
-          "line": 263
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/organizations/:orgId/members",
-          "rawPath": "/api/organizations/${orgId}/members",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 95,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/organizations/:sharedOrgId/members",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 177
-        },
-        {
-          "method": "POST",
-          "path": "/api/organizations/:sharedOrgId/members",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 188
-        },
-        {
-          "method": "POST",
-          "path": "/api/organizations/:sharedOrgId/members",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 198
-        },
-        {
-          "method": "POST",
-          "path": "/api/organizations/:sharedOrgId/members",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 207
-        },
-        {
-          "method": "POST",
-          "path": "/api/organizations/:sharedOrgId/members",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 216
-        },
-        {
-          "method": "POST",
-          "path": "/api/organizations/:sharedOrgId/members",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 286
-        },
-        {
-          "method": "POST",
-          "path": "/api/organizations/:leaveOrgId/members",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 338
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace",
-      "targetOperation": "addOrganizationMember",
-      "targetModule": "OrganizationsModule",
-      "parityStatus": "characterizing",
-      "notes": "Owner/admin only; accept admin/member/viewer, reject duplicates, and record the inviting user atomically.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "DELETE /api/organizations/:organizationId/members/:memberId",
-      "key": "DELETE /api/organizations/:*/members/:*",
-      "method": "DELETE",
-      "path": "/api/organizations/:organizationId/members/:memberId",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/organizations.routes.js",
-          "line": 355
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/organizations/:orgId/members/:memberId",
-          "rawPath": "/api/organizations/${orgId}/members/${memberId}",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 105,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/organizations/:sharedOrgId/members/:memberMemberId",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 301
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/organizations/:sharedOrgId/members/:id",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 317
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace",
-      "targetOperation": "removeOrganizationMember",
-      "targetModule": "OrganizationsModule",
-      "parityStatus": "characterizing",
-      "notes": "Protect owners; admins cannot remove admins; scope both lookup and delete to the organization.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "PUT /api/organizations/:organizationId/members/:memberId",
-      "key": "PUT /api/organizations/:*/members/:*",
-      "method": "PUT",
-      "path": "/api/organizations/:organizationId/members/:memberId",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/organizations.routes.js",
-          "line": 309
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/organizations/:orgId/members/:memberId",
-          "rawPath": "/api/organizations/${orgId}/members/${memberId}",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 100,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/organizations/:sharedOrgId/members/:memberMemberId",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 236
-        },
-        {
-          "method": "PUT",
-          "path": "/api/organizations/:sharedOrgId/members/:memberMemberId",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 246
-        },
-        {
-          "method": "PUT",
-          "path": "/api/organizations/:sharedOrgId/members/not-an-id",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 255
-        },
-        {
-          "method": "PUT",
-          "path": "/api/organizations/:sharedOrgId/members/:id",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 273
-        },
-        {
-          "method": "PUT",
-          "path": "/api/organizations/:sharedOrgId/members/:secondAdminMemberId",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 292
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace",
-      "targetOperation": "updateOrganizationMemberRole",
-      "targetModule": "OrganizationsModule",
-      "parityStatus": "characterizing",
-      "notes": "Protect owners; admins cannot modify admins; allow only admin/member/viewer and scope updates to the organization.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/organizations/:organizationId/select",
-      "key": "POST /api/organizations/:*/select",
-      "method": "POST",
-      "path": "/api/organizations/:organizationId/select",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/organizations.routes.js",
-          "line": 421
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/organizations/:id/select",
-          "rawPath": "/api/organizations/${id}/select",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 84,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/organizations/:leaveOrgId/select",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 352
-        },
-        {
-          "method": "POST",
-          "path": "/api/organizations/:selectedId/select",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 398
-        },
-        {
-          "method": "POST",
-          "path": "/api/organizations/:id/select",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 430
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace",
-      "targetOperation": "selectOrganization",
-      "targetModule": "OrganizationsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The active workspace selector re-reads current membership without existence disclosure, persists the selected default under a user lock, requires CSRF, clears tenant-scoped client caches, and preserves an independent default-off REST rollback flag. The staging browser passed GraphQL selection and reload persistence, then REST selection and reload persistence without data repair.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/organizations/ensure-default",
-      "key": "POST /api/organizations/ensure-default",
-      "method": "POST",
-      "path": "/api/organizations/ensure-default",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/organizations.routes.js",
-          "line": 444
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/organizations/ensure-default",
-          "rawPath": "/api/organizations/ensure-default",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 76,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/organizations/ensure-default",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 382
-        },
-        {
-          "method": "POST",
-          "path": "/api/organizations/ensure-default",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 409
-        },
-        {
-          "method": "POST",
-          "path": "/api/organizations/ensure-default",
-          "source": "backend/src/__tests__/integration/organizations.integration.test.js",
-          "line": 443
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace",
-      "targetOperation": "ensureDefaultOrganization",
-      "targetModule": "OrganizationsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The active workspace selector idempotently selects an existing membership or atomically creates one personal organization, owner membership, and default assignment; concurrent first-workspace requests serialize on the user row and share the mutation rollback flag. Repeated authenticated staging GraphQL probes returned the existing selected membership; first-workspace creation remains proven by fresh PostgreSQL rather than the disposable staging browser.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
     },
     {
       "id": "GET /api/pages",
@@ -12179,7 +11513,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 323
+          "line": 320
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12266,7 +11600,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 343
+          "line": 340
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12335,7 +11669,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 339
+          "line": 336
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12380,7 +11714,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 331
+          "line": 328
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12408,7 +11742,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 327
+          "line": 324
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12443,7 +11777,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 335
+          "line": 332
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -14319,7 +13653,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 309
+          "line": 306
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -14390,7 +13724,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 305
+          "line": 302
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -14584,7 +13918,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 291
+          "line": 288
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -14905,7 +14239,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 313
+          "line": 310
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -14974,7 +14308,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 298
+          "line": 295
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -15859,7 +15193,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 125
+          "line": 124
         }
       ],
       "consumerCallsites": [
@@ -15893,7 +15227,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 69
+          "line": 68
         }
       ],
       "consumerCallsites": [
@@ -16214,7 +15548,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 60
+          "line": 59
         }
       ],
       "consumerCallsites": [],
@@ -16386,7 +15720,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 58
+          "line": 57
         },
         {
           "source": "backend/src/routes/whiteboards.routes.js",
@@ -16622,7 +15956,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 59
+          "line": 58
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",
@@ -18015,19 +17349,31 @@
     }
   ],
   "orphanedOverrides": [
+    "DELETE /api/organizations/:organizationId",
+    "DELETE /api/organizations/:organizationId/members/:memberId",
     "DELETE /api/vaults/:vaultId",
     "DELETE /api/vaults/:vaultId/items/:itemId",
     "DELETE /api/vaults/:vaultId/share",
     "GET /api/forms/public/form/:slug",
+    "GET /api/organizations",
+    "GET /api/organizations/:organizationId",
+    "GET /api/organizations/:organizationId/members",
     "GET /api/vaults",
     "GET /api/vaults/:vaultId",
     "POST /api/forms/public/form/:slug",
+    "POST /api/organizations",
+    "POST /api/organizations/:organizationId/leave",
+    "POST /api/organizations/:organizationId/members",
+    "POST /api/organizations/:organizationId/select",
+    "POST /api/organizations/ensure-default",
     "POST /api/vaults",
     "POST /api/vaults/:vaultId/items",
     "POST /api/vaults/:vaultId/items/bulk",
     "POST /api/vaults/:vaultId/lock",
     "POST /api/vaults/:vaultId/share",
     "POST /api/vaults/:vaultId/unlock",
+    "PUT /api/organizations/:organizationId",
+    "PUT /api/organizations/:organizationId/members/:memberId",
     "PUT /api/vaults/:vaultId",
     "PUT /api/vaults/:vaultId/items/:itemId",
     "PUT /api/vaults/:vaultId/items/reorder"

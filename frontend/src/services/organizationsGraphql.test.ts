@@ -1,14 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCsrfToken } from '@/lib/api';
 import {
+  addOrganizationMemberViaGraphql,
+  createOrganizationViaGraphql,
+  deleteOrganizationViaGraphql,
   ensureDefaultOrganizationViaGraphql,
+  getOrganizationMembersViaGraphql,
+  getOrganizationViaGraphql,
   getOrganizationsViaGraphql,
+  leaveOrganizationViaGraphql,
+  removeOrganizationMemberViaGraphql,
   selectOrganizationViaGraphql,
+  updateOrganizationMemberRoleViaGraphql,
+  updateOrganizationViaGraphql,
 } from './organizationsGraphql';
-import {
-  isOrganizationGraphqlMutationsEnabled,
-  isOrganizationGraphqlReadsEnabled,
-} from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(),
@@ -45,20 +50,6 @@ describe('organization GraphQL consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('keeps read and selection rollback flags independent and default-off', () => {
-    vi.stubEnv('VITE_ORGANIZATION_READS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_ORGANIZATION_MUTATIONS_GRAPHQL', 'false');
-    expect(isOrganizationGraphqlReadsEnabled()).toBe(false);
-    expect(isOrganizationGraphqlMutationsEnabled()).toBe(false);
-
-    vi.stubEnv('VITE_ORGANIZATION_READS_GRAPHQL', 'true');
-    expect(isOrganizationGraphqlReadsEnabled()).toBe(true);
-    expect(isOrganizationGraphqlMutationsEnabled()).toBe(false);
-
-    vi.stubEnv('VITE_ORGANIZATION_MUTATIONS_GRAPHQL', 'true');
-    expect(isOrganizationGraphqlMutationsEnabled()).toBe(true);
   });
 
   it('maps organization membership casing into the retained UI shape', async () => {
@@ -105,5 +96,80 @@ describe('organization GraphQL consumer', () => {
     expect(bodies[0].variables).toEqual({ id: 4 });
     expect(bodies[1].variables).toEqual({});
     expect(fetchCsrfToken).toHaveBeenCalledTimes(2);
+  });
+
+  it('maps detail, CRUD, and member administration without a REST fallback', async () => {
+    const member = {
+      id: 8,
+      organizationId: 4,
+      userId: 12,
+      role: 'member' as const,
+      invitedAt: organization.createdAt,
+      joinedAt: null,
+      invitedBy: 7,
+      userName: 'Workspace Member',
+      email: 'member@test.itemize',
+    };
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response({ data: { organization } }))
+      .mockResolvedValueOnce(
+        response({ data: { organizationMembers: [member] } }),
+      )
+      .mockResolvedValueOnce(response({ data: { createOrganization: organization } }))
+      .mockResolvedValueOnce(response({ data: { updateOrganization: organization } }))
+      .mockResolvedValueOnce(response({ data: { deleteOrganization: { deletedId: 4 } } }))
+      .mockResolvedValueOnce(response({ data: { addOrganizationMember: member } }))
+      .mockResolvedValueOnce(
+        response({ data: { updateOrganizationMemberRole: member } }),
+      )
+      .mockResolvedValueOnce(
+        response({ data: { removeOrganizationMember: { removedMemberId: 8 } } }),
+      )
+      .mockResolvedValueOnce(response({ data: { leaveOrganization: true } }));
+
+    await expect(getOrganizationViaGraphql(4)).resolves.toMatchObject({ id: 4 });
+    await expect(getOrganizationMembersViaGraphql(4)).resolves.toEqual([
+      {
+        id: 8,
+        organization_id: 4,
+        user_id: 12,
+        role: 'member',
+        invited_at: organization.createdAt,
+        invited_by: 7,
+        user_name: 'Workspace Member',
+        email: 'member@test.itemize',
+      },
+    ]);
+    await createOrganizationViaGraphql({ name: 'Alpha', settings: { tier: 1 } });
+    await updateOrganizationViaGraphql(4, {
+      name: 'Renamed',
+      logo_url: undefined,
+    });
+    await deleteOrganizationViaGraphql(4);
+    await addOrganizationMemberViaGraphql(4, member.email, 'member');
+    await updateOrganizationMemberRoleViaGraphql(4, 8, 'viewer');
+    await removeOrganizationMemberViaGraphql(4, 8);
+    await leaveOrganizationViaGraphql(4);
+
+    const bodies = vi.mocked(fetch).mock.calls.map((call) =>
+      JSON.parse(String((call[1] as RequestInit).body)),
+    );
+    expect(bodies[2].variables).toEqual({
+      input: { name: 'Alpha', settings: { tier: 1 } },
+    });
+    expect(bodies[3].variables).toEqual({
+      id: 4,
+      input: { name: 'Renamed', logoUrl: null },
+    });
+    expect(bodies[5].variables).toEqual({
+      organizationId: 4,
+      input: { email: member.email, role: 'member' },
+    });
+    expect(bodies[6].variables).toEqual({
+      organizationId: 4,
+      memberId: 8,
+      role: 'viewer',
+    });
+    expect(fetchCsrfToken).toHaveBeenCalledTimes(9);
   });
 });

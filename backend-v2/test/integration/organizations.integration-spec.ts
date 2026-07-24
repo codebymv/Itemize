@@ -1,8 +1,6 @@
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
-import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -11,17 +9,22 @@ import { PG_POOL } from '../../src/database/database.module';
 
 describe('Organization selector GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   let memberId: number;
   let outsiderId: number;
   let emptyUserId: number;
+  let adminUserId: number;
+  let invitedUserId: number;
   let memberToken: string;
   let outsiderToken: string;
   let emptyUserToken: string;
+  let adminUserToken: string;
+  let invitedUserToken: string;
   let alphaId: number;
   let betaId: number;
   let outsiderOrganizationId: number;
+  let adminEmail: string;
+  let invitedEmail: string;
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -39,21 +42,26 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     });
 
     const suffix = `${Date.now()}-${process.pid}`;
+    adminEmail = `workspace-admin-${suffix}@test.itemize`;
+    invitedEmail = `workspace-invitee-${suffix}@test.itemize`;
     const users = await pool.query<{ id: number }>(
       `INSERT INTO users (email, name, provider, email_verified)
        VALUES ($1, 'Workspace Member', 'email', true),
               ($2, 'Workspace Outsider', 'email', true),
-              ($3, 'Workspace Empty', 'email', true)
+              ($3, 'Workspace Empty', 'email', true),
+              ($4, 'Workspace Admin', 'email', true),
+              ($5, 'Workspace Invitee', 'email', true)
        RETURNING id`,
       [
         `workspace-member-${suffix}@test.itemize`,
         `workspace-outsider-${suffix}@test.itemize`,
         `workspace-empty-${suffix}@test.itemize`,
+        adminEmail,
+        invitedEmail,
       ],
     );
-    [memberId, outsiderId, emptyUserId] = users.rows.map((row) =>
-      Number(row.id),
-    );
+    [memberId, outsiderId, emptyUserId, adminUserId, invitedUserId] =
+      users.rows.map((row) => Number(row.id));
 
     const organizations = await pool.query<{ id: number }>(
       `INSERT INTO organizations (name, slug, settings)
@@ -109,6 +117,14 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
       { id: emptyUserId },
       { secret: process.env.JWT_SECRET, expiresIn: '15m' },
     );
+    adminUserToken = await jwt.signAsync(
+      { id: adminUserId },
+      { secret: process.env.JWT_SECRET, expiresIn: '15m' },
+    );
+    invitedUserToken = await jwt.signAsync(
+      { id: invitedUserId },
+      { secret: process.env.JWT_SECRET, expiresIn: '15m' },
+    );
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PG_POOL)
@@ -121,20 +137,17 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     configureApp(app);
     await app.init();
 
-    const createOrganizationsRouter = require('../../../backend/src/routes/organizations.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use(
-      '/api/organizations',
-      createOrganizationsRouter(pool, authenticateJWT),
-    );
   });
 
   afterAll(async () => {
     if (pool && (memberId || outsiderId || emptyUserId)) {
-      const userIds = [memberId, outsiderId, emptyUserId].filter(Boolean);
+      const userIds = [
+        memberId,
+        outsiderId,
+        emptyUserId,
+        adminUserId,
+        invitedUserId,
+      ].filter(Boolean);
       await pool.query(
         `DELETE FROM organizations
          WHERE id IN (
@@ -212,7 +225,7 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     ]);
   });
 
-  it('selects only a current membership and remains readable through REST', async () => {
+  it('selects only a current membership and remains readable through GraphQL', async () => {
     const selected = await mutation(
       memberToken,
       `mutation Select($id: Int!) {
@@ -227,15 +240,15 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
       isDefault: true,
     });
 
-    const legacy = await request(legacyApp)
-      .get('/api/organizations')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .expect(200);
+    const readback = await query(
+      memberToken,
+      `{ organizations { id isDefault } }`,
+    ).expect(200);
     expect(
-      legacy.body.data.find(
+      readback.body.data.organizations.find(
         (organization: { id: number }) => organization.id === betaId,
       ),
-    ).toMatchObject({ is_default: true });
+    ).toMatchObject({ isDefault: true });
 
     const forbidden = await mutation(
       outsiderToken,
@@ -304,6 +317,227 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     });
     expect(Number(persisted.rows[0].default_organization_id)).toBe(
       first.body.data.ensureDefaultOrganization.id,
+    );
+  });
+
+  it('owns organization CRUD, member administration, leave, and evidence-safe deletion', async () => {
+    const created = await mutation(
+      memberToken,
+      `mutation Create($input: CreateOrganizationInput!) {
+        createOrganization(input: $input) { ${fields} }
+      }`,
+      { input: { name: 'GraphQL Workspace', settings: { tier: 'test' } } },
+    ).expect(200);
+    expect(created.body.errors).toBeUndefined();
+    const organizationId = Number(created.body.data.createOrganization.id);
+    expect(created.body.data.createOrganization).toMatchObject({
+      name: 'GraphQL Workspace',
+      role: 'owner',
+      settings: { tier: 'test' },
+    });
+
+    const detail = await query(
+      memberToken,
+      `query Detail($id: Int!) { organization(id: $id) { ${fields} } }`,
+      { id: organizationId },
+    ).expect(200);
+    expect(detail.body.data.organization.id).toBe(organizationId);
+    const concealed = await query(
+      outsiderToken,
+      `query Detail($id: Int!) { organization(id: $id) { id } }`,
+      { id: organizationId },
+    ).expect(200);
+    expect(concealed.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const updated = await mutation(
+      memberToken,
+      `mutation Update($id: Int!, $input: UpdateOrganizationInput!) {
+        updateOrganization(id: $id, input: $input) { ${fields} }
+      }`,
+      {
+        id: organizationId,
+        input: {
+          name: 'GraphQL Workspace Renamed',
+          settings: { tier: 'updated' },
+          logoUrl: 'https://cdn.test/workspace.png',
+        },
+      },
+    ).expect(200);
+    expect(updated.body.data.updateOrganization).toMatchObject({
+      name: 'GraphQL Workspace Renamed',
+      settings: { tier: 'updated' },
+      logoUrl: 'https://cdn.test/workspace.png',
+    });
+
+    const memberFields =
+      'id organizationId userId role invitedAt joinedAt invitedBy userName email';
+    const admin = await mutation(
+      memberToken,
+      `mutation Add($organizationId: Int!, $input: AddOrganizationMemberInput!) {
+        addOrganizationMember(organizationId: $organizationId, input: $input) {
+          ${memberFields}
+        }
+      }`,
+      { organizationId, input: { email: adminEmail, role: 'admin' } },
+    ).expect(200);
+    expect(admin.body.errors).toBeUndefined();
+    const adminMemberId = Number(admin.body.data.addOrganizationMember.id);
+
+    const invited = await mutation(
+      memberToken,
+      `mutation Add($organizationId: Int!, $input: AddOrganizationMemberInput!) {
+        addOrganizationMember(organizationId: $organizationId, input: $input) {
+          ${memberFields}
+        }
+      }`,
+      { organizationId, input: { email: invitedEmail, role: 'member' } },
+    ).expect(200);
+    const invitedMemberId = Number(invited.body.data.addOrganizationMember.id);
+
+    const duplicate = await mutation(
+      memberToken,
+      `mutation Add($organizationId: Int!, $input: AddOrganizationMemberInput!) {
+        addOrganizationMember(organizationId: $organizationId, input: $input) { id }
+      }`,
+      { organizationId, input: { email: invitedEmail, role: 'member' } },
+    ).expect(200);
+    expect(duplicate.body.errors[0].extensions.reason).toBe('ALREADY_MEMBER');
+
+    const listed = await query(
+      invitedUserToken,
+      `query Members($organizationId: Int!) {
+        organizationMembers(organizationId: $organizationId) { ${memberFields} }
+      }`,
+      { organizationId },
+    ).expect(200);
+    expect(listed.body.data.organizationMembers).toHaveLength(3);
+
+    const roleChanged = await mutation(
+      memberToken,
+      `mutation Role($organizationId: Int!, $memberId: Int!, $role: String!) {
+        updateOrganizationMemberRole(
+          organizationId: $organizationId
+          memberId: $memberId
+          role: $role
+        ) { ${memberFields} }
+      }`,
+      { organizationId, memberId: invitedMemberId, role: 'viewer' },
+    ).expect(200);
+    expect(roleChanged.body.data.updateOrganizationMemberRole.role).toBe(
+      'viewer',
+    );
+
+    const adminPeerDenied = await mutation(
+      adminUserToken,
+      `mutation Role($organizationId: Int!, $memberId: Int!, $role: String!) {
+        updateOrganizationMemberRole(
+          organizationId: $organizationId
+          memberId: $memberId
+          role: $role
+        ) { id }
+      }`,
+      { organizationId, memberId: adminMemberId, role: 'member' },
+    ).expect(200);
+    expect(adminPeerDenied.body.errors[0].extensions.reason).toBe(
+      'ADMIN_PEER_FORBIDDEN',
+    );
+
+    const selected = await mutation(
+      invitedUserToken,
+      `mutation Select($id: Int!) { selectOrganization(id: $id) { id } }`,
+      { id: organizationId },
+    ).expect(200);
+    expect(selected.body.errors).toBeUndefined();
+    const left = await mutation(
+      invitedUserToken,
+      `mutation Leave($organizationId: Int!) {
+        leaveOrganization(organizationId: $organizationId)
+      }`,
+      { organizationId },
+    ).expect(200);
+    expect(left.body.data.leaveOrganization).toBe(true);
+    expect(
+      (
+        await pool.query<{ default_organization_id: number | null }>(
+          'SELECT default_organization_id FROM users WHERE id = $1',
+          [invitedUserId],
+        )
+      ).rows[0].default_organization_id,
+    ).toBeNull();
+
+    const readded = await mutation(
+      memberToken,
+      `mutation Add($organizationId: Int!, $input: AddOrganizationMemberInput!) {
+        addOrganizationMember(organizationId: $organizationId, input: $input) { id }
+      }`,
+      { organizationId, input: { email: invitedEmail, role: 'member' } },
+    ).expect(200);
+    const readdedMemberId = Number(readded.body.data.addOrganizationMember.id);
+    const removed = await mutation(
+      memberToken,
+      `mutation Remove($organizationId: Int!, $memberId: Int!) {
+        removeOrganizationMember(
+          organizationId: $organizationId
+          memberId: $memberId
+        ) { removedMemberId }
+      }`,
+      { organizationId, memberId: readdedMemberId },
+    ).expect(200);
+    expect(removed.body.data.removeOrganizationMember.removedMemberId).toBe(
+      readdedMemberId,
+    );
+
+    const document = await pool.query<{ id: number }>(
+      `INSERT INTO signature_documents (
+         organization_id, title, status, file_url, file_name, file_type,
+         file_size, original_sha256, created_by
+       ) VALUES ($1, 'Retained evidence', 'sent', $2, 'source.pdf',
+         'application/pdf', 128, $3, $4)
+       RETURNING id`,
+      [
+        organizationId,
+        '/uploads/signatures/graphql-organization-source.pdf',
+        'b'.repeat(64),
+        memberId,
+      ],
+    );
+    const deniedDelete = await mutation(
+      memberToken,
+      `mutation Delete($id: Int!) {
+        deleteOrganization(id: $id) { deletedId }
+      }`,
+      { id: organizationId },
+    ).expect(200);
+    expect(deniedDelete.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'SIGNATURE_EVIDENCE_RETAINED',
+    });
+
+    await pool.query(
+      `UPDATE signature_documents SET status = 'draft' WHERE id = $1`,
+      [document.rows[0].id],
+    );
+    const deleted = await mutation(
+      memberToken,
+      `mutation Delete($id: Int!) {
+        deleteOrganization(id: $id) { deletedId }
+      }`,
+      { id: organizationId },
+    ).expect(200);
+    expect(deleted.body.data.deleteOrganization.deletedId).toBe(
+      organizationId,
+    );
+    const cleanup = await pool.query<{ file_url: string }>(
+      `SELECT file_url FROM signature_file_deletion_jobs
+       WHERE organization_id = $1`,
+      [organizationId],
+    );
+    expect(cleanup.rows).toEqual([
+      { file_url: '/uploads/signatures/graphql-organization-source.pdf' },
+    ]);
+    await pool.query(
+      'DELETE FROM signature_file_deletion_jobs WHERE organization_id = $1',
+      [organizationId],
     );
   });
 });

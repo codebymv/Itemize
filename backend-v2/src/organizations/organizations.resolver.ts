@@ -1,7 +1,17 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { CsrfProtected } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
-import { Organization } from './organization.types';
+import {
+  AddOrganizationMemberInput,
+  CreateOrganizationInput,
+  UpdateOrganizationInput,
+} from './organization.inputs';
+import {
+  DeleteOrganizationResult,
+  Organization,
+  OrganizationMember,
+  RemoveOrganizationMemberResult,
+} from './organization.types';
 import { OrganizationsService } from './organizations.service';
 
 @Resolver(() => Organization)
@@ -14,6 +24,92 @@ export class OrganizationsResolver {
   @Query(() => [Organization], { name: 'organizations' })
   organizationsList(): Promise<Organization[]> {
     return this.organizations.list(this.userId());
+  }
+
+  @Query(() => Organization, { name: 'organization' })
+  organization(
+    @Args('id', { type: () => Int }) id: number,
+  ): Promise<Organization> {
+    return this.organizations.get(this.userId(), id);
+  }
+
+  @Query(() => [OrganizationMember])
+  organizationMembers(
+    @Args('organizationId', { type: () => Int }) organizationId: number,
+  ): Promise<OrganizationMember[]> {
+    return this.organizations.members(this.userId(), organizationId);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => Organization)
+  createOrganization(
+    @Args('input') input: CreateOrganizationInput,
+  ): Promise<Organization> {
+    return this.organizations.create(this.userId(), input);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => Organization)
+  updateOrganization(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('input') input: UpdateOrganizationInput,
+  ): Promise<Organization> {
+    return this.organizations.update(this.userId(), id, input);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => DeleteOrganizationResult)
+  async deleteOrganization(
+    @Args('id', { type: () => Int }) id: number,
+  ): Promise<DeleteOrganizationResult> {
+    return { deletedId: await this.organizations.delete(this.userId(), id) };
+  }
+
+  @CsrfProtected()
+  @Mutation(() => OrganizationMember)
+  addOrganizationMember(
+    @Args('organizationId', { type: () => Int }) organizationId: number,
+    @Args('input') input: AddOrganizationMemberInput,
+  ): Promise<OrganizationMember> {
+    return this.organizations.addMember(this.userId(), organizationId, input);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => OrganizationMember)
+  updateOrganizationMemberRole(
+    @Args('organizationId', { type: () => Int }) organizationId: number,
+    @Args('memberId', { type: () => Int }) memberId: number,
+    @Args('role') role: string,
+  ): Promise<OrganizationMember> {
+    return this.organizations.updateMemberRole(
+      this.userId(),
+      organizationId,
+      memberId,
+      role,
+    );
+  }
+
+  @CsrfProtected()
+  @Mutation(() => RemoveOrganizationMemberResult)
+  async removeOrganizationMember(
+    @Args('organizationId', { type: () => Int }) organizationId: number,
+    @Args('memberId', { type: () => Int }) memberId: number,
+  ): Promise<RemoveOrganizationMemberResult> {
+    return {
+      removedMemberId: await this.organizations.removeMember(
+        this.userId(),
+        organizationId,
+        memberId,
+      ),
+    };
+  }
+
+  @CsrfProtected()
+  @Mutation(() => Boolean)
+  leaveOrganization(
+    @Args('organizationId', { type: () => Int }) organizationId: number,
+  ): Promise<boolean> {
+    return this.organizations.leave(this.userId(), organizationId);
   }
 
   @CsrfProtected()
