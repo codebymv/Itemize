@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 376
-- API operations under `/api`: 369
+- Registered method/path operations: 370
+- API operations under `/api`: 363
 - Non-API registered operations: 7
-- Static frontend callsites: 305
-- Operations with frontend consumers: 293
-- Operations referenced by backend tests: 199
-- Recommended GraphQL queries: 112
-- Recommended GraphQL mutations: 209
+- Static frontend callsites: 299
+- Operations with frontend consumers: 287
+- Operations referenced by backend tests: 197
+- Recommended GraphQL queries: 109
+- Recommended GraphQL mutations: 206
 - Recommended retained HTTP endpoints: 47
-- High-risk operations: 309
+- High-risk operations: 305
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -65,13 +65,7 @@
 | POST | `/api/auth/resend-verification` | 1 | 0 | graphql-mutation | high | identity / AuthModule / resendVerificationEmail |
 | POST | `/api/auth/reset-password` | 1 | 0 | graphql-mutation | high | identity / AuthModule / resetPassword |
 | POST | `/api/auth/verify-email` | 1 | 0 | graphql-mutation | high | identity / AuthModule / verifyEmail |
-| GET | `/api/billing` | 1 | 1 | graphql-query | medium | _unassigned_ |
-| POST | `/api/billing/acknowledge-trial-end` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| POST | `/api/billing/checkout` | 1 | 2 | graphql-mutation | medium | _unassigned_ |
-| GET | `/api/billing/plans` | 1 | 0 | graphql-query | high | _unassigned_ |
-| POST | `/api/billing/portal` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/billing/usage` | 1 | 0 | graphql-query | high | _unassigned_ |
-| POST | `/api/billing/webhook` | 0 | 1 | retain-http | high | billing / SubscriptionWebhooksModule / processStripeSubscriptionEvent |
+| POST | `/api/billing/webhook` | 0 | 3 | retain-http | high | billing / SubscriptionWebhooksModule / processStripeSubscriptionEvent |
 | GET | `/api/bookings` | 1 | 8 | graphql-query | high | scheduling / BookingsModule / bookings |
 | POST | `/api/bookings` | 1 | 12 | graphql-mutation | high | scheduling / BookingsModule / createBooking |
 | GET | `/api/bookings/:id` | 1 | 3 | graphql-query | high | scheduling / BookingsModule / booking |
@@ -413,7 +407,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 12
-- Orphaned manual overrides: 35
+- Orphaned manual overrides: 41
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

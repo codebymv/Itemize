@@ -6,10 +6,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 397
-- Resolved declarations: 397
+- Route declarations: 391
+- Resolved declarations: 391
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 376
+- Unique resolved method/path operations: 370
 - Files containing declarations: 76
 
 ## Interpretation limits
@@ -58,13 +58,7 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/auth/resend-verification` | `/resend-verification` | `backend/src/auth/credentials.routes.js:272` |
 | POST | `/api/auth/reset-password` | `/reset-password` | `backend/src/auth/credentials.routes.js:403` |
 | POST | `/api/auth/verify-email` | `/verify-email` | `backend/src/auth/credentials.routes.js:194` |
-| GET | `/api/billing` | `/` | `backend/src/routes/billing.routes.js:81` |
-| POST | `/api/billing/acknowledge-trial-end` | `/acknowledge-trial-end` | `backend/src/routes/billing.routes.js:149` |
-| POST | `/api/billing/checkout` | `/checkout` | `backend/src/routes/billing.routes.js:99` |
-| GET | `/api/billing/plans` | `/plans` | `backend/src/routes/billing.routes.js:93` |
-| POST | `/api/billing/portal` | `/portal` | `backend/src/routes/billing.routes.js:132` |
-| GET | `/api/billing/usage` | `/usage` | `backend/src/routes/billing.routes.js:160` |
-| POST | `/api/billing/webhook` | `/webhook` | `backend/src/routes/billing.routes.js:33` |
+| POST | `/api/billing/webhook` | `/webhook` | `backend/src/routes/billing.routes.js:28` |
 | GET | `/api/bookings` | `/` | `backend/src/routes/bookings.routes.js:109` |
 | POST | `/api/bookings` | `/` | `backend/src/routes/bookings.routes.js:238` |
 | GET | `/api/bookings/:id` | `/:id` | `backend/src/routes/bookings.routes.js:207` |

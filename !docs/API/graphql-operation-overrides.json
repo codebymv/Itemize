@@ -649,6 +649,60 @@
       "risk": "medium",
       "notes": "NestJS retains the signed webhook over HTTP, verifies the exact raw bytes with Stripe's SDK, fails closed without its secret, and commits the event claim, payment, PostgreSQL balance update, and one paid-workflow trigger transactionally. A default-off legacy-origin proxy preserves rollback."
     },
+    "GET /api/billing": {
+      "disposition": "graphql-query",
+      "owner": "billing",
+      "targetModule": "BillingModule",
+      "targetOperation": "billingStatus",
+      "parityStatus": "consumer-cutover-complete",
+      "risk": "high",
+      "notes": "Returns the verified selected organization's persisted subscription, limits, usage counters, trial, and cancellation state. A bounded best-effort Stripe reconciliation may repair locally stale state but provider failure never hides the persisted snapshot."
+    },
+    "POST /api/billing/acknowledge-trial-end": {
+      "disposition": "graphql-mutation",
+      "owner": "billing",
+      "targetModule": "BillingModule",
+      "targetOperation": "acknowledgeBillingTrialEnd",
+      "parityStatus": "consumer-cutover-complete",
+      "risk": "low",
+      "notes": "CSRF-protected and organization-scoped. Repeated acknowledgement is idempotent and stores the latest acknowledgement timestamp."
+    },
+    "POST /api/billing/checkout": {
+      "disposition": "graphql-mutation",
+      "owner": "billing",
+      "targetModule": "BillingModule",
+      "targetOperation": "createBillingCheckoutSession",
+      "parityStatus": "consumer-cutover-complete",
+      "risk": "high",
+      "notes": "CSRF-protected subscription checkout accepts only the three published plans and configured monthly/yearly price allowlist. Redirect origins are bounded to configured application origins, organization locking and provider idempotency prevent duplicate customers, caller idempotency protects session retries, and an existing active subscription returns a portal session."
+    },
+    "GET /api/billing/plans": {
+      "disposition": "graphql-query",
+      "owner": "billing",
+      "targetModule": "BillingModule",
+      "targetOperation": "billingPlans",
+      "parityStatus": "consumer-cutover-complete",
+      "risk": "low",
+      "notes": "Public metadata query returns only the three complete purchasable plans. Unlimited limits use the existing application sentinel -1 instead of the legacy JSON null produced by Infinity."
+    },
+    "POST /api/billing/portal": {
+      "disposition": "graphql-mutation",
+      "owner": "billing",
+      "targetModule": "BillingModule",
+      "targetOperation": "createBillingPortalSession",
+      "parityStatus": "consumer-cutover-complete",
+      "risk": "high",
+      "notes": "CSRF-protected and organization-scoped. It requires a persisted tenant billing customer, validates the configured application return origin, uses provider idempotency, and returns a provider-hosted portal URL without exposing credentials."
+    },
+    "GET /api/billing/usage": {
+      "disposition": "graphql-query",
+      "owner": "billing",
+      "targetModule": "BillingModule",
+      "targetOperation": "billingUsage",
+      "parityStatus": "consumer-cutover-complete",
+      "risk": "medium",
+      "notes": "Returns selected-organization counters and resource counts from one tenant-qualified PostgreSQL statement. GraphQL carries -1 as the unlimited sentinel and the frontend facade preserves the retained unlimited string."
+    },
     "POST /api/billing/webhook": {
       "disposition": "retain-http",
       "owner": "billing",

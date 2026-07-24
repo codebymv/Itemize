@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 376,
-    "apiOperationCount": 369,
+    "operationCount": 370,
+    "apiOperationCount": 363,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 305,
-    "operationsWithFrontendConsumers": 293,
-    "operationsWithBackendTests": 199,
+    "frontendCallsiteCount": 299,
+    "operationsWithFrontendConsumers": 287,
+    "operationsWithBackendTests": 197,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 12,
     "retainHttpCount": 47,
-    "graphqlQueryCount": 112,
-    "graphqlMutationCount": 209,
-    "highRiskCount": 309,
+    "graphqlQueryCount": 109,
+    "graphqlMutationCount": 206,
+    "highRiskCount": 305,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -1319,230 +1319,6 @@
       "risk": "high"
     },
     {
-      "id": "GET /api/billing",
-      "key": "GET /api/billing",
-      "method": "GET",
-      "path": "/api/billing",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/billing.routes.js",
-          "line": 81
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/billing",
-          "rawPath": "/api/billing",
-          "source": "frontend/src/services/billingApi.ts",
-          "line": 132,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/billing",
-          "source": "backend/src/__tests__/routes/billing.routes.test.js",
-          "line": 78
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/billing/acknowledge-trial-end",
-      "key": "POST /api/billing/acknowledge-trial-end",
-      "method": "POST",
-      "path": "/api/billing/acknowledge-trial-end",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/billing.routes.js",
-          "line": 149
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/billing/acknowledge-trial-end",
-          "rawPath": "/api/billing/acknowledge-trial-end",
-          "source": "frontend/src/services/billingApi.ts",
-          "line": 257,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/billing/checkout",
-      "key": "POST /api/billing/checkout",
-      "method": "POST",
-      "path": "/api/billing/checkout",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/billing.routes.js",
-          "line": 99
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/billing/checkout",
-          "rawPath": "/api/billing/checkout",
-          "source": "frontend/src/services/billingApi.ts",
-          "line": 169,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/billing/checkout",
-          "source": "backend/src/__tests__/routes/billing.routes.test.js",
-          "line": 89
-        },
-        {
-          "method": "POST",
-          "path": "/api/billing/checkout",
-          "source": "backend/src/__tests__/routes/billing.routes.test.js",
-          "line": 107
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "GET /api/billing/plans",
-      "key": "GET /api/billing/plans",
-      "method": "GET",
-      "path": "/api/billing/plans",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/billing.routes.js",
-          "line": 93
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/billing/plans",
-          "rawPath": "/api/billing/plans",
-          "source": "frontend/src/services/billingApi.ts",
-          "line": 147,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/billing/portal",
-      "key": "POST /api/billing/portal",
-      "method": "POST",
-      "path": "/api/billing/portal",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/billing.routes.js",
-          "line": 132
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/billing/portal",
-          "rawPath": "/api/billing/portal",
-          "source": "frontend/src/services/billingApi.ts",
-          "line": 184,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/billing/usage",
-      "key": "GET /api/billing/usage",
-      "method": "GET",
-      "path": "/api/billing/usage",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/billing.routes.js",
-          "line": 160
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/billing/usage",
-          "rawPath": "/api/billing/usage",
-          "source": "frontend/src/services/billingApi.ts",
-          "line": 199,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "POST /api/billing/webhook",
       "key": "POST /api/billing/webhook",
       "method": "POST",
@@ -1550,7 +1326,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/billing.routes.js",
-          "line": 33
+          "line": 28
         }
       ],
       "consumerCallsites": [],
@@ -1560,6 +1336,18 @@
           "path": "/api/billing/webhook",
           "source": "backend/src/__tests__/integration/subscription-webhook.integration.test.js",
           "line": 28
+        },
+        {
+          "method": "POST",
+          "path": "/api/billing/webhook",
+          "source": "backend/src/__tests__/routes/billing.routes.test.js",
+          "line": 42
+        },
+        {
+          "method": "POST",
+          "path": "/api/billing/webhook",
+          "source": "backend/src/__tests__/routes/billing.routes.test.js",
+          "line": 73
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -16569,6 +16357,9 @@
     "DELETE /api/vaults/:vaultId",
     "DELETE /api/vaults/:vaultId/items/:itemId",
     "DELETE /api/vaults/:vaultId/share",
+    "GET /api/billing",
+    "GET /api/billing/plans",
+    "GET /api/billing/usage",
     "GET /api/forms",
     "GET /api/forms/:id",
     "GET /api/forms/:id/submissions",
@@ -16577,6 +16368,9 @@
     "GET /api/organizations/:organizationId/members",
     "GET /api/vaults",
     "GET /api/vaults/:vaultId",
+    "POST /api/billing/acknowledge-trial-end",
+    "POST /api/billing/checkout",
+    "POST /api/billing/portal",
     "POST /api/forms",
     "POST /api/forms/:id/duplicate",
     "POST /api/organizations",

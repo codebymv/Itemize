@@ -3,10 +3,10 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 397,
-    "resolvedDeclarationCount": 397,
+    "declarationCount": 391,
+    "resolvedDeclarationCount": 391,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 376,
+    "uniqueResolvedOperationCount": 370,
     "sourceFileCount": 76
   },
   "caveats": [
@@ -367,73 +367,13 @@
       "dynamic": false
     },
     {
-      "method": "GET",
-      "publicPaths": [
-        "/api/billing"
-      ],
-      "declaredPath": "/",
-      "source": "backend/src/routes/billing.routes.js",
-      "line": 81,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/billing/acknowledge-trial-end"
-      ],
-      "declaredPath": "/acknowledge-trial-end",
-      "source": "backend/src/routes/billing.routes.js",
-      "line": 149,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/billing/checkout"
-      ],
-      "declaredPath": "/checkout",
-      "source": "backend/src/routes/billing.routes.js",
-      "line": 99,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/billing/plans"
-      ],
-      "declaredPath": "/plans",
-      "source": "backend/src/routes/billing.routes.js",
-      "line": 93,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/billing/portal"
-      ],
-      "declaredPath": "/portal",
-      "source": "backend/src/routes/billing.routes.js",
-      "line": 132,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/billing/usage"
-      ],
-      "declaredPath": "/usage",
-      "source": "backend/src/routes/billing.routes.js",
-      "line": 160,
-      "dynamic": false
-    },
-    {
       "method": "POST",
       "publicPaths": [
         "/api/billing/webhook"
       ],
       "declaredPath": "/webhook",
       "source": "backend/src/routes/billing.routes.js",
-      "line": 33,
+      "line": 28,
       "dynamic": false
     },
     {
