@@ -996,6 +996,116 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       .expect(404);
   });
 
+  it('covers list, note, and whiteboard GraphQL sharing with durable revocation', async () => {
+    const rows = await pool.query<{
+      id: number;
+      kind: 'list' | 'note' | 'whiteboard';
+    }>(
+      `SELECT id, 'list'::text AS kind
+       FROM lists WHERE user_id = $1 AND title = 'Alpha tasks'
+       UNION ALL
+       SELECT id, 'note'::text AS kind
+       FROM notes WHERE user_id = $1 AND title = 'Alpha note'
+       UNION ALL
+       SELECT id, 'whiteboard'::text AS kind
+       FROM whiteboards WHERE user_id = $1 AND title = 'Alpha whiteboard'
+       ORDER BY kind`,
+      [memberId],
+    );
+    const mutationIds = {
+      list: '51b2fdcf-24da-42a8-9a99-7b0366451996',
+      note: '98d12bea-990a-4bd6-b08b-20387cb6db82',
+      whiteboard: 'cffc4a52-2f18-477d-9a72-bfc619623f0f',
+    };
+    const fields = {
+      list: ['enableListSharing', 'disableListSharing'],
+      note: ['enableNoteSharing', 'disableNoteSharing'],
+      whiteboard: ['enableWhiteboardSharing', 'disableWhiteboardSharing'],
+    } as const;
+    const { runRealtimeOutboxJobs } = require(
+      '../../../backend/src/jobs/realtime-outbox-jobs',
+    );
+
+    for (const row of rows.rows) {
+      const [enableField, disableField] = fields[row.kind];
+      const enableDocument = `mutation Share($id: Int!) {
+        ${enableField}(id: $id) { shareToken shareUrl }
+      }`;
+      const first = await mutation(memberToken, enableDocument, {
+        id: row.id,
+      }).expect(200);
+      expect(first.body.errors).toBeUndefined();
+      const link = first.body.data[enableField] as {
+        shareToken: string;
+        shareUrl: string;
+      };
+      expect(link.shareUrl).toBe(
+        `https://itemize.cloud/shared/${row.kind}/${link.shareToken}`,
+      );
+      const repeated = await mutation(memberToken, enableDocument, {
+        id: row.id,
+      }).expect(200);
+      expect(repeated.body.data[enableField].shareToken).toBe(
+        link.shareToken,
+      );
+      const concealed = await mutation(outsiderToken, enableDocument, {
+        id: row.id,
+      }).expect(200);
+      expect(concealed.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+      const publicRead = await request(legacyApp)
+        .get(`/api/shared/${row.kind}/${link.shareToken}`)
+        .expect(200);
+      expect(publicRead.headers).toMatchObject({
+        'cache-control': 'private, no-store',
+        'referrer-policy': 'no-referrer',
+        'x-robots-tag': 'noindex, nofollow',
+      });
+      expect(publicRead.body).toMatchObject({ id: row.id, type: row.kind });
+
+      const mutationId = mutationIds[row.kind];
+      const disabled = await mutation(
+        memberToken,
+        `mutation Disable($id: Int!, $mutationId: String!) {
+          ${disableField}(id: $id, mutationId: $mutationId) {
+            sharingDisabled
+          }
+        }`,
+        { id: row.id, mutationId },
+      ).expect(200);
+      expect(disabled.body.errors).toBeUndefined();
+      expect(disabled.body.data[disableField].sharingDisabled).toBe(true);
+      await request(legacyApp)
+        .get(`/api/shared/${row.kind}/${link.shareToken}`)
+        .expect(404);
+
+      const revocation = await pool.query<{ id: string }>(
+        `SELECT id
+         FROM realtime_event_outbox
+         WHERE event_key = $1`,
+        [`${row.kind}:${row.id}:sharing-revoked:${mutationId}`],
+      );
+      const revokeShared = jest.fn();
+      await expect(runRealtimeOutboxJobs(
+        pool,
+        { revokeShared },
+        {
+          batchSize: 1,
+          outboxId: revocation.rows[0].id,
+          workerId: `${row.kind}-sharing-revocation`,
+        },
+      )).resolves.toMatchObject({ claimed: 1, sent: 1 });
+      expect(revokeShared).toHaveBeenCalledWith(row.kind, link.shareToken);
+
+      const reshared = await mutation(memberToken, enableDocument, {
+        id: row.id,
+      }).expect(200);
+      expect(reshared.body.data[enableField].shareToken).not.toBe(
+        link.shareToken,
+      );
+    }
+  });
+
   it('covers wireframe CRUD, revisions, tenant isolation, REST parity, and realtime delivery', async () => {
     const page = await query(
       memberToken,

@@ -11,6 +11,10 @@ import { ShareModal } from "@/components/ShareModal";
 import QuickAddForm from "@/components/QuickAddForm";
 import { useDatabaseCategories } from '@/hooks/useDatabaseCategories';
 import api from '@/lib/api';
+import {
+  disableListSharingViaGraphql,
+  enableListSharingViaGraphql,
+} from '@/services/workspaceSharingMutationsGraphql';
 
 interface ListItem {
   id: string;
@@ -156,8 +160,7 @@ const Index = () => {
 
   const handleListShare = async (listId: string): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
-      const response = await api.post(`/api/lists/${listId}/share`, {});
-      return response.data;
+      return await enableListSharingViaGraphql(Number(listId));
     } catch (error) {
       console.error('Error sharing list:', error);
       throw error;
@@ -166,7 +169,7 @@ const Index = () => {
 
   const handleListUnshare = async (listId: string): Promise<void> => {
     try {
-      await api.delete(`/api/lists/${listId}/share`);
+      await disableListSharingViaGraphql(Number(listId));
     } catch (error) {
       console.error('Error unsharing list:', error);
       throw error;

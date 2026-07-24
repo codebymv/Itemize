@@ -47,6 +47,14 @@ import {
   updateWorkspaceWireframeViaGraphql,
 } from './workspaceWireframeMutationsGraphql';
 import {
+  disableListSharingViaGraphql,
+  disableNoteSharingViaGraphql,
+  disableWhiteboardSharingViaGraphql,
+  enableListSharingViaGraphql,
+  enableNoteSharingViaGraphql,
+  enableWhiteboardSharingViaGraphql,
+} from './workspaceSharingMutationsGraphql';
+import {
   forgetWorkspaceWhiteboardRevision,
   rememberWorkspaceWhiteboardRevision,
 } from './workspaceWhiteboardRevision';
@@ -803,51 +811,36 @@ export const unlockVault = async (vaultId: number, masterPassword: string, token
 };
 
 // Share list
-export const shareList = async (listId: string, token?: string) => {
-  const response = await api.post(`/api/lists/${listId}/share`, {}, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+export const shareList = async (listId: string, _token?: string) => {
+  return enableListSharingViaGraphql(Number(listId));
 };
 
 // Unshare list
-export const unshareList = async (listId: string, token?: string) => {
-  const response = await api.delete(`/api/lists/${listId}/share`, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+export const unshareList = async (listId: string, _token?: string) => {
+  await disableListSharingViaGraphql(Number(listId));
+  return { message: 'List sharing revoked successfully' };
 };
 
 // Share note
-export const shareNote = async (noteId: number, token?: string) => {
-  const response = await api.post(`/api/notes/${noteId}/share`, {}, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+export const shareNote = async (noteId: number, _token?: string) => {
+  return enableNoteSharingViaGraphql(noteId);
 };
 
 // Unshare note
-export const unshareNote = async (noteId: number, token?: string) => {
-  const response = await api.delete(`/api/notes/${noteId}/share`, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+export const unshareNote = async (noteId: number, _token?: string) => {
+  await disableNoteSharingViaGraphql(noteId);
+  return { message: 'Note sharing revoked successfully' };
 };
 
 // Share whiteboard
-export const shareWhiteboard = async (whiteboardId: number, token?: string) => {
-  const response = await api.post(`/api/whiteboards/${whiteboardId}/share`, {}, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+export const shareWhiteboard = async (whiteboardId: number, _token?: string) => {
+  return enableWhiteboardSharingViaGraphql(whiteboardId);
 };
 
 // Unshare whiteboard
-export const unshareWhiteboard = async (whiteboardId: number, token?: string) => {
-  const response = await api.delete(`/api/whiteboards/${whiteboardId}/share`, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+export const unshareWhiteboard = async (whiteboardId: number, _token?: string) => {
+  await disableWhiteboardSharingViaGraphql(whiteboardId);
+  return { message: 'Whiteboard sharing revoked successfully' };
 };
 
 export default api;

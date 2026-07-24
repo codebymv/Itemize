@@ -9,13 +9,13 @@
     "operationCount": 420,
     "apiOperationCount": 413,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 388,
-    "operationsWithFrontendConsumers": 366,
+    "frontendCallsiteCount": 374,
+    "operationsWithFrontendConsumers": 360,
     "operationsWithBackendTests": 219,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 6,
+    "unmatchedBackendTestCallCount": 8,
     "retainHttpCount": 43,
     "graphqlQueryCount": 125,
     "graphqlMutationCount": 244,
@@ -3680,7 +3680,7 @@
           "path": "/api/canvas/lists",
           "rawPath": "/api/canvas/lists",
           "source": "frontend/src/services/api.ts",
-          "line": 181,
+          "line": 189,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3696,13 +3696,13 @@
           "method": "GET",
           "path": "/api/canvas/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1601
+          "line": 1711
         },
         {
           "method": "GET",
           "path": "/api/canvas/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1628
+          "line": 1738
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -3761,7 +3761,7 @@
           "path": "/api/categories",
           "rawPath": "/api/categories",
           "source": "frontend/src/services/api.ts",
-          "line": 593,
+          "line": 601,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3802,7 +3802,7 @@
           "path": "/api/categories",
           "rawPath": "/api/categories",
           "source": "frontend/src/services/api.ts",
-          "line": 603,
+          "line": 611,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3843,7 +3843,7 @@
           "path": "/api/categories/:categoryId",
           "rawPath": "/api/categories/${categoryId}",
           "source": "frontend/src/services/api.ts",
-          "line": 623,
+          "line": 631,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3884,7 +3884,7 @@
           "path": "/api/categories/:categoryId",
           "rawPath": "/api/categories/${categoryId}",
           "source": "frontend/src/services/api.ts",
-          "line": 613,
+          "line": 621,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8917,7 +8917,7 @@
           "path": "/api/lists",
           "rawPath": "/api/lists",
           "source": "frontend/src/services/api.ts",
-          "line": 211,
+          "line": 219,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8927,13 +8927,13 @@
           "method": "GET",
           "path": "/api/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1597
+          "line": 1707
         },
         {
           "method": "GET",
           "path": "/api/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1623
+          "line": 1733
         },
         {
           "method": "GET",
@@ -8976,7 +8976,7 @@
           "path": "/api/lists",
           "rawPath": "/api/lists",
           "source": "frontend/src/services/api.ts",
-          "line": 255,
+          "line": 263,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9017,7 +9017,7 @@
           "path": "/api/lists/:listId",
           "rawPath": "/api/lists/${listId}",
           "source": "frontend/src/services/api.ts",
-          "line": 350,
+          "line": 358,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9064,7 +9064,7 @@
           "path": "/api/lists/:id",
           "rawPath": "/api/lists/${listData.id}",
           "source": "frontend/src/services/api.ts",
-          "line": 321,
+          "line": 329,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9187,7 +9187,7 @@
           "path": "/api/lists/:listId/position",
           "rawPath": "/api/lists/${listId}/position",
           "source": "frontend/src/services/api.ts",
-          "line": 357,
+          "line": 365,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9259,35 +9259,7 @@
           "line": 126
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/lists/:listId/share",
-          "rawPath": "/api/lists/${listId}/share",
-          "source": "frontend/src/pages/Index.tsx",
-          "line": 169,
-          "client": "api",
-          "literalInterpolation": false
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/lists/:listId/share",
-          "rawPath": "/api/lists/${listId}/share",
-          "source": "frontend/src/pages/canvas/hooks/useCanvasSharing.ts",
-          "line": 42,
-          "client": "api",
-          "literalInterpolation": false
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/lists/:listId/share",
-          "rawPath": "/api/lists/${listId}/share",
-          "source": "frontend/src/services/api.ts",
-          "line": 815,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [
         {
           "method": "DELETE",
@@ -9307,9 +9279,9 @@
       "disposition": "graphql-mutation",
       "owner": "sharing",
       "targetOperation": "disableListSharing",
-      "targetModule": "WorkspaceSharingModule",
-      "parityStatus": "characterized",
-      "notes": "Owner-only idempotent revocation clears the stored capability and public cacheability.",
+      "targetModule": "WorkspaceContentModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Revocation atomically clears the capability and enqueues durable token-free viewer eviction.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -9324,35 +9296,7 @@
           "line": 103
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/lists/:listId/share",
-          "rawPath": "/api/lists/${listId}/share",
-          "source": "frontend/src/pages/Index.tsx",
-          "line": 159,
-          "client": "api",
-          "literalInterpolation": false
-        },
-        {
-          "method": "POST",
-          "path": "/api/lists/:listId/share",
-          "rawPath": "/api/lists/${listId}/share",
-          "source": "frontend/src/pages/canvas/hooks/useCanvasSharing.ts",
-          "line": 32,
-          "client": "api",
-          "literalInterpolation": false
-        },
-        {
-          "method": "POST",
-          "path": "/api/lists/:listId/share",
-          "rawPath": "/api/lists/${listId}/share",
-          "source": "frontend/src/services/api.ts",
-          "line": 807,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [
         {
           "method": "POST",
@@ -9390,9 +9334,9 @@
       "disposition": "graphql-mutation",
       "owner": "sharing",
       "targetOperation": "enableListSharing",
-      "targetModule": "WorkspaceSharingModule",
-      "parityStatus": "characterized",
-      "notes": "Owner-only atomic capability issuance; concurrent calls return one token and re-enable after revoke rotates the token.",
+      "targetModule": "WorkspaceContentModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Atomic issuance reuses one active token, and re-enable after revoke rotates it.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -9515,7 +9459,7 @@
           "path": "/api/notes",
           "rawPath": "/api/notes",
           "source": "frontend/src/services/api.ts",
-          "line": 372,
+          "line": 380,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9531,13 +9475,13 @@
           "method": "GET",
           "path": "/api/notes",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1605
+          "line": 1715
         },
         {
           "method": "GET",
           "path": "/api/notes",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1633
+          "line": 1743
         },
         {
           "method": "GET",
@@ -9610,7 +9554,7 @@
           "path": "/api/notes",
           "rawPath": "/api/notes",
           "source": "frontend/src/services/api.ts",
-          "line": 382,
+          "line": 390,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9681,7 +9625,7 @@
           "path": "/api/notes/:noteId",
           "rawPath": "/api/notes/${noteId}",
           "source": "frontend/src/services/api.ts",
-          "line": 436,
+          "line": 444,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9740,7 +9684,7 @@
           "path": "/api/notes/:noteId",
           "rawPath": "/api/notes/${noteId}",
           "source": "frontend/src/services/api.ts",
-          "line": 392,
+          "line": 400,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9787,7 +9731,7 @@
           "path": "/api/notes/:noteId/category",
           "rawPath": "/api/notes/${noteId}/category",
           "source": "frontend/src/services/api.ts",
-          "line": 423,
+          "line": 431,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9834,7 +9778,7 @@
           "path": "/api/notes/:noteId/content",
           "rawPath": "/api/notes/${noteId}/content",
           "source": "frontend/src/services/api.ts",
-          "line": 403,
+          "line": 411,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9887,26 +9831,7 @@
           "line": 169
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/notes/:noteId/share",
-          "rawPath": "/api/notes/${noteId}/share",
-          "source": "frontend/src/pages/canvas/hooks/useCanvasSharing.ts",
-          "line": 61,
-          "client": "api",
-          "literalInterpolation": false
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/notes/:noteId/share",
-          "rawPath": "/api/notes/${noteId}/share",
-          "source": "frontend/src/services/api.ts",
-          "line": 831,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [
         {
           "method": "DELETE",
@@ -9920,9 +9845,9 @@
       "disposition": "graphql-mutation",
       "owner": "sharing",
       "targetOperation": "disableNoteSharing",
-      "targetModule": "WorkspaceSharingModule",
-      "parityStatus": "characterized",
-      "notes": "Owner-only idempotent revocation clears the stored capability.",
+      "targetModule": "WorkspaceContentModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Revocation atomically clears the capability and enqueues durable token-free viewer eviction.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -9937,26 +9862,7 @@
           "line": 146
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/notes/:noteId/share",
-          "rawPath": "/api/notes/${noteId}/share",
-          "source": "frontend/src/pages/canvas/hooks/useCanvasSharing.ts",
-          "line": 51,
-          "client": "api",
-          "literalInterpolation": false
-        },
-        {
-          "method": "POST",
-          "path": "/api/notes/:noteId/share",
-          "rawPath": "/api/notes/${noteId}/share",
-          "source": "frontend/src/services/api.ts",
-          "line": 823,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [
         {
           "method": "POST",
@@ -9976,9 +9882,9 @@
       "disposition": "graphql-mutation",
       "owner": "sharing",
       "targetOperation": "enableNoteSharing",
-      "targetModule": "WorkspaceSharingModule",
-      "parityStatus": "characterized",
-      "notes": "Owner-only atomic capability issuance; concurrent calls return one token and re-enable after revoke rotates the token.",
+      "targetModule": "WorkspaceContentModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Atomic issuance reuses one active token, and re-enable after revoke rotates it.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -9999,7 +9905,7 @@
           "path": "/api/notes/:noteId/title",
           "rawPath": "/api/notes/${noteId}/title",
           "source": "frontend/src/services/api.ts",
-          "line": 413,
+          "line": 421,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14151,7 +14057,7 @@
           "path": "/api/shared/vault/:shareToken",
           "rawPath": "/api/shared/vault/${shareToken}",
           "source": "frontend/src/services/api.ts",
-          "line": 780,
+          "line": 788,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14288,13 +14194,13 @@
           "method": "GET",
           "path": "/api/shared/wireframe/:sharedWireframeToken",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1118
+          "line": 1228
         },
         {
           "method": "GET",
           "path": "/api/shared/wireframe/:sharedWireframeToken",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1274
+          "line": 1384
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -16548,7 +16454,7 @@
           "path": "/api/vaults",
           "rawPath": "/api/vaults",
           "source": "frontend/src/services/api.ts",
-          "line": 664,
+          "line": 672,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16582,7 +16488,7 @@
           "path": "/api/vaults",
           "rawPath": "/api/vaults",
           "source": "frontend/src/services/api.ts",
-          "line": 692,
+          "line": 700,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16616,7 +16522,7 @@
           "path": "/api/vaults/:vaultId",
           "rawPath": "/api/vaults/${vaultId}",
           "source": "frontend/src/services/api.ts",
-          "line": 716,
+          "line": 724,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16650,7 +16556,7 @@
           "path": "/api/vaults/:vaultId",
           "rawPath": "/api/vaults/${vaultId}",
           "source": "frontend/src/services/api.ts",
-          "line": 683,
+          "line": 691,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16684,7 +16590,7 @@
           "path": "/api/vaults/:vaultId",
           "rawPath": "/api/vaults/${vaultId}",
           "source": "frontend/src/services/api.ts",
-          "line": 700,
+          "line": 708,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16718,7 +16624,7 @@
           "path": "/api/vaults/:vaultId/items",
           "rawPath": "/api/vaults/${vaultId}/items",
           "source": "frontend/src/services/api.ts",
-          "line": 724,
+          "line": 732,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16752,7 +16658,7 @@
           "path": "/api/vaults/:vaultId/items/:itemId",
           "rawPath": "/api/vaults/${vaultId}/items/${itemId}",
           "source": "frontend/src/services/api.ts",
-          "line": 748,
+          "line": 756,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16786,7 +16692,7 @@
           "path": "/api/vaults/:vaultId/items/:itemId",
           "rawPath": "/api/vaults/${vaultId}/items/${itemId}",
           "source": "frontend/src/services/api.ts",
-          "line": 740,
+          "line": 748,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16820,7 +16726,7 @@
           "path": "/api/vaults/:vaultId/items/bulk",
           "rawPath": "/api/vaults/${vaultId}/items/bulk",
           "source": "frontend/src/services/api.ts",
-          "line": 732,
+          "line": 740,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16854,7 +16760,7 @@
           "path": "/api/vaults/:vaultId/items/reorder",
           "rawPath": "/api/vaults/${vaultId}/items/reorder",
           "source": "frontend/src/services/api.ts",
-          "line": 756,
+          "line": 764,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16888,7 +16794,7 @@
           "path": "/api/vaults/:vaultId/lock",
           "rawPath": "/api/vaults/${vaultId}/lock",
           "source": "frontend/src/services/api.ts",
-          "line": 786,
+          "line": 794,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16926,7 +16832,7 @@
           "path": "/api/vaults/:vaultId/position",
           "rawPath": "/api/vaults/${vaultId}/position",
           "source": "frontend/src/services/api.ts",
-          "line": 708,
+          "line": 716,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16960,7 +16866,7 @@
           "path": "/api/vaults/:vaultId/share",
           "rawPath": "/api/vaults/${vaultId}/share",
           "source": "frontend/src/pages/canvas/hooks/useCanvasSharing.ts",
-          "line": 117,
+          "line": 122,
           "client": "api",
           "literalInterpolation": false
         },
@@ -16969,7 +16875,7 @@
           "path": "/api/vaults/:vaultId/share",
           "rawPath": "/api/vaults/${vaultId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 772,
+          "line": 780,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17016,7 +16922,7 @@
           "path": "/api/vaults/:vaultId/share",
           "rawPath": "/api/vaults/${vaultId}/share",
           "source": "frontend/src/pages/canvas/hooks/useCanvasSharing.ts",
-          "line": 107,
+          "line": 112,
           "client": "api",
           "literalInterpolation": false
         },
@@ -17025,7 +16931,7 @@
           "path": "/api/vaults/:vaultId/share",
           "rawPath": "/api/vaults/${vaultId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 764,
+          "line": 772,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17084,7 +16990,7 @@
           "path": "/api/vaults/:vaultId/unlock",
           "rawPath": "/api/vaults/${vaultId}/unlock",
           "source": "frontend/src/services/api.ts",
-          "line": 797,
+          "line": 805,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17179,7 +17085,7 @@
           "path": "/api/whiteboards",
           "rawPath": "/api/whiteboards",
           "source": "frontend/src/services/api.ts",
-          "line": 449,
+          "line": 457,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17195,13 +17101,13 @@
           "method": "GET",
           "path": "/api/whiteboards",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1609
+          "line": 1719
         },
         {
           "method": "GET",
           "path": "/api/whiteboards",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1638
+          "line": 1748
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -17232,7 +17138,7 @@
           "path": "/api/whiteboards",
           "rawPath": "/api/whiteboards",
           "source": "frontend/src/services/api.ts",
-          "line": 469,
+          "line": 477,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17270,7 +17176,7 @@
           "path": "/api/whiteboards/:whiteboardId/position",
           "rawPath": "/api/whiteboards/${whiteboardId}/position",
           "source": "frontend/src/services/api.ts",
-          "line": 506,
+          "line": 514,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17304,7 +17210,7 @@
           "path": "/api/whiteboards/:whiteboardId",
           "rawPath": "/api/whiteboards/${whiteboardId}",
           "source": "frontend/src/services/api.ts",
-          "line": 498,
+          "line": 506,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17338,7 +17244,7 @@
           "path": "/api/whiteboards/:whiteboardId",
           "rawPath": "/api/whiteboards/${whiteboardId}",
           "source": "frontend/src/services/api.ts",
-          "line": 487,
+          "line": 495,
           "client": "api",
           "literalInterpolation": false
         }
@@ -17373,26 +17279,7 @@
           "line": 212
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/whiteboards/:whiteboardId/share",
-          "rawPath": "/api/whiteboards/${whiteboardId}/share",
-          "source": "frontend/src/pages/canvas/hooks/useCanvasSharing.ts",
-          "line": 80,
-          "client": "api",
-          "literalInterpolation": false
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/whiteboards/:whiteboardId/share",
-          "rawPath": "/api/whiteboards/${whiteboardId}/share",
-          "source": "frontend/src/services/api.ts",
-          "line": 847,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [
         {
           "method": "DELETE",
@@ -17406,9 +17293,9 @@
       "disposition": "graphql-mutation",
       "owner": "sharing",
       "targetOperation": "disableWhiteboardSharing",
-      "targetModule": "WorkspaceSharingModule",
-      "parityStatus": "characterized",
-      "notes": "Owner-only idempotent revocation clears the stored capability.",
+      "targetModule": "WorkspaceContentModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Revocation atomically clears the capability and enqueues durable token-free viewer eviction.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -17423,26 +17310,7 @@
           "line": 189
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/whiteboards/:whiteboardId/share",
-          "rawPath": "/api/whiteboards/${whiteboardId}/share",
-          "source": "frontend/src/pages/canvas/hooks/useCanvasSharing.ts",
-          "line": 70,
-          "client": "api",
-          "literalInterpolation": false
-        },
-        {
-          "method": "POST",
-          "path": "/api/whiteboards/:whiteboardId/share",
-          "rawPath": "/api/whiteboards/${whiteboardId}/share",
-          "source": "frontend/src/services/api.ts",
-          "line": 839,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [
         {
           "method": "POST",
@@ -17462,9 +17330,9 @@
       "disposition": "graphql-mutation",
       "owner": "sharing",
       "targetOperation": "enableWhiteboardSharing",
-      "targetModule": "WorkspaceSharingModule",
-      "parityStatus": "characterized",
-      "notes": "Owner-only atomic capability issuance with stable concurrent results and rotate-after-revoke semantics.",
+      "targetModule": "WorkspaceContentModule",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Atomic issuance reuses one active token, and re-enable after revoke rotates it.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -17485,7 +17353,7 @@
           "method": "GET",
           "path": "/api/wireframes",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1079
+          "line": 1189
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -17592,7 +17460,7 @@
           "method": "PUT",
           "path": "/api/wireframes/:mutationWireframeId",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1348
+          "line": 1458
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -18885,6 +18753,18 @@
       "path": "/api/campaigns:path",
       "source": "backend-v2/test/integration/campaigns.integration-spec.ts",
       "line": 126
+    },
+    {
+      "method": "GET",
+      "path": "/api/shared/:kind/:shareToken",
+      "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
+      "line": 1057
+    },
+    {
+      "method": "GET",
+      "path": "/api/shared/:kind/:shareToken",
+      "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
+      "line": 1079
     },
     {
       "method": "POST",

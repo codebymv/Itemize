@@ -482,7 +482,7 @@ app.use(dbMonitor(pool));
             const requiredMigrationCheck = await pool.query(`
                 SELECT EXISTS (
                     SELECT 1 FROM schema_migrations
-                    WHERE version = '047_shared_revocation_realtime_outbox'
+                    WHERE version = '048_workspace_shared_revocation_realtime_outbox'
                 ) AS has_required_migration
             `);
             if (!requiredMigrationCheck.rows[0]?.has_required_migration) {

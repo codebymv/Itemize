@@ -189,10 +189,12 @@ async function runSharedRevocationRealtimeOutboxMigration(pool) {
         OR (channel = 'shared_note' AND aggregate_type = 'note')
         OR (channel = 'shared_whiteboard' AND aggregate_type = 'whiteboard')
         OR (
-          channel IN (
-            'shared_wireframe', 'user_wireframe', 'shared_revocation'
-          )
+          channel IN ('shared_wireframe', 'user_wireframe')
           AND aggregate_type = 'wireframe'
+        )
+        OR (
+          channel = 'shared_revocation'
+          AND aggregate_type IN ('list', 'note', 'whiteboard', 'wireframe')
         )
       ),
       ADD CONSTRAINT realtime_event_outbox_recipient_check CHECK (

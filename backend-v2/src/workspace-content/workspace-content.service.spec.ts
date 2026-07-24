@@ -119,7 +119,13 @@ describe('WorkspaceContentService', () => {
       deleteNote: jest.fn(),
       deleteWhiteboard: jest.fn(),
       deleteWireframe: jest.fn(),
+      disableListSharing: jest.fn(),
+      disableNoteSharing: jest.fn(),
+      disableWhiteboardSharing: jest.fn(),
       disableWireframeSharing: jest.fn(),
+      enableListSharing: jest.fn(),
+      enableNoteSharing: jest.fn(),
+      enableWhiteboardSharing: jest.fn(),
       enableWireframeSharing: jest.fn(),
       findLists: jest.fn(),
       findNotes: jest.fn(),
@@ -600,14 +606,31 @@ describe('WorkspaceContentService', () => {
     expect(repository.updateWireframe).not.toHaveBeenCalled();
   });
 
-  it('enables and durably disables owner-scoped wireframe sharing', async () => {
+  it('enables and durably disables owner-scoped workspace sharing', async () => {
     const originalFrontendUrl = process.env.FRONTEND_URL;
     process.env.FRONTEND_URL = 'https://app.test.itemize/';
     repository.enableWireframeSharing.mockResolvedValue({
       kind: 'completed',
       shareToken: '621ca66e-2b82-46a7-b2ba-e7343b6cbac2',
     });
+    repository.enableListSharing.mockResolvedValue({
+      kind: 'completed',
+      shareToken: '621ca66e-2b82-46a7-b2ba-e7343b6cbac2',
+    });
+    repository.enableNoteSharing.mockResolvedValue({
+      kind: 'completed',
+      shareToken: '621ca66e-2b82-46a7-b2ba-e7343b6cbac2',
+    });
+    repository.enableWhiteboardSharing.mockResolvedValue({
+      kind: 'completed',
+      shareToken: '621ca66e-2b82-46a7-b2ba-e7343b6cbac2',
+    });
     repository.disableWireframeSharing.mockResolvedValue({
+      kind: 'completed',
+    });
+    repository.disableListSharing.mockResolvedValue({ kind: 'completed' });
+    repository.disableNoteSharing.mockResolvedValue({ kind: 'completed' });
+    repository.disableWhiteboardSharing.mockResolvedValue({
       kind: 'completed',
     });
 
@@ -626,6 +649,33 @@ describe('WorkspaceContentService', () => {
       5,
       'e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c',
     );
+    await expect(service.enableListSharing(7, 2)).resolves.toMatchObject({
+      shareUrl:
+        'https://app.test.itemize/shared/list/621ca66e-2b82-46a7-b2ba-e7343b6cbac2',
+    });
+    await expect(service.enableNoteSharing(7, 3)).resolves.toMatchObject({
+      shareUrl:
+        'https://app.test.itemize/shared/note/621ca66e-2b82-46a7-b2ba-e7343b6cbac2',
+    });
+    await expect(service.enableWhiteboardSharing(7, 4)).resolves.toMatchObject({
+      shareUrl:
+        'https://app.test.itemize/shared/whiteboard/621ca66e-2b82-46a7-b2ba-e7343b6cbac2',
+    });
+    await expect(service.disableListSharing(
+      7,
+      2,
+      'e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c',
+    )).resolves.toBe(true);
+    await expect(service.disableNoteSharing(
+      7,
+      3,
+      'e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c',
+    )).resolves.toBe(true);
+    await expect(service.disableWhiteboardSharing(
+      7,
+      4,
+      'e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c',
+    )).resolves.toBe(true);
 
     if (originalFrontendUrl === undefined) delete process.env.FRONTEND_URL;
     else process.env.FRONTEND_URL = originalFrontendUrl;

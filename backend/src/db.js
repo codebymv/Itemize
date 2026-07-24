@@ -517,6 +517,11 @@ const initializeDatabase = async (pool) => {
       'shared_revocation_realtime_outbox',
       runSharedRevocationRealtimeOutboxMigration,
     );
+    await runMigrationOnce(
+      pool,
+      'workspace_shared_revocation_realtime_outbox',
+      runSharedRevocationRealtimeOutboxMigration,
+    );
     await runMigrationOnce(pool, 'workflow_lifecycle', runWorkflowLifecycleMigration);
     await runMigrationOnce(pool, 'workflow_sms_reconciliation', runWorkflowSmsReconciliationMigration);
     await runMigrationOnce(pool, 'sms_webhook_idempotency', runSmsWebhookIdempotencyMigration);

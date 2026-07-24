@@ -171,6 +171,18 @@ describe('RealtimeOutboxService', () => {
       { query } as unknown as PoolClient,
       revocation,
     )).resolves.toMatchObject({ inserted: true });
+
+    await expect(service.enqueue(
+      { query } as unknown as PoolClient,
+      {
+        ...revocation,
+        eventKey:
+          'list:42:sharing-revoked:e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c',
+        aggregateType: 'list',
+        aggregateId: 42,
+        payload: { kind: 'list', reason: 'sharing_revoked' },
+      },
+    )).resolves.toMatchObject({ inserted: true });
   });
 
   it('rejects unsupported channel/event combinations before querying', async () => {

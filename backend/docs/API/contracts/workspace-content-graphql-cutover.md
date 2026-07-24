@@ -4,11 +4,10 @@
 
 Personal lists, notes, whiteboards, and wireframes belong to the authenticated user and
 are independent of the selected organization. `WorkspaceContentModule` owns
-their private reads and reachable CRUD mutations. It also owns wireframe
-sharing mutations because they operate on the same personal aggregate and
+their private reads, reachable CRUD mutations, and authenticated sharing
+mutations because they operate on the same personal aggregates and
 transactional realtime outbox. Public capability reads remain owned by
-`PublicSharingModule`; list/note/whiteboard sharing targets
-`WorkspaceSharingModule`.
+`PublicSharingModule`.
 
 Each content type has independent default-off read and mutation flags.
 Shared-content updates/deletes and private list-canvas events write the domain
@@ -28,12 +27,16 @@ outbox atomically. The legacy socket host delivers those rows after commit.
 | `POST /api/notes` | `createWorkspaceNote(input)` |
 | `PUT /api/notes/:noteId` and the content/title/category variants | `updateWorkspaceNote(id, input)` |
 | `DELETE /api/notes/:noteId` | `deleteWorkspaceNote(id, mutationId)` |
+| `POST /api/notes/:noteId/share` | `enableNoteSharing(id)` |
+| `DELETE /api/notes/:noteId/share` | `disableNoteSharing(id, mutationId)` |
 
 | Legacy whiteboard write | GraphQL mutation |
 | --- | --- |
 | `POST /api/whiteboards` | `createWorkspaceWhiteboard(input)` |
 | `PUT /api/whiteboards/:whiteboardId` | `updateWorkspaceWhiteboard(id, input)` |
 | `DELETE /api/whiteboards/:whiteboardId` | `deleteWorkspaceWhiteboard(id, mutationId)` |
+| `POST /api/whiteboards/:whiteboardId/share` | `enableWhiteboardSharing(id)` |
+| `DELETE /api/whiteboards/:whiteboardId/share` | `disableWhiteboardSharing(id, mutationId)` |
 
 | Legacy wireframe write | GraphQL mutation |
 | --- | --- |
@@ -49,6 +52,8 @@ outbox atomically. The legacy socket host delivers those rows after commit.
 | `POST /api/lists` | `createWorkspaceList(input)` |
 | `PUT /api/lists/:id` | `updateWorkspaceList(id, input)` |
 | `DELETE /api/lists/:id` | `deleteWorkspaceList(id, mutationId)` |
+| `POST /api/lists/:listId/share` | `enableListSharing(id)` |
+| `DELETE /api/lists/:listId/share` | `disableListSharing(id, mutationId)` |
 
 | Legacy canvas write | GraphQL mutation |
 | --- | --- |
@@ -70,6 +75,8 @@ outbox atomically. The legacy socket host delivers those rows after commit.
 - `VITE_WORKSPACE_WHITEBOARD_MUTATIONS_GRAPHQL` independently controls
   whiteboard create/update/delete.
 - Mixed Canvas position persistence always uses GraphQL and has no REST
+  fallback.
+- List, note, and whiteboard share/unshare always use GraphQL and have no REST
   fallback.
 - Wireframe read/create/update/delete, share/unshare, and the exported position
   compatibility adapter always use GraphQL and have no REST fallback.
@@ -168,8 +175,8 @@ overwrite a newer item edit.
 
 ## Mutation status
 
-List, note, whiteboard, and wireframe create/update/delete are implemented through the
-mutations above.
+List, note, whiteboard, and wireframe create/update/delete and authenticated
+share/unshare are implemented through the mutations above.
 Note updates lock the row, so concurrent disjoint partial updates compose.
 List updates combine row locking with the required optimistic revision because
 the current consumer replaces the item array. Update/delete clients supply a
@@ -199,14 +206,14 @@ enqueues `sharedContentRevoked`. The retained public HTTP projection and
 read-only frontend viewer are link-oriented protocol boundaries; they are not
 session application-data REST fallbacks.
 
-## Wireframe code-level gate
+## Workspace-sharing code-level gate
 
-The wireframe CRUD and sharing slice passed locally on 2026-07-23. A database
-built from zero verified 111 tables and 87 migration markers, then all 17 workspace
-integration cases passed. The wireframe case proves paginated tenant-scoped
+The workspace CRUD and sharing slice passed locally on 2026-07-23. A database
+built from zero verified 111 tables and 88 migration markers, then all 18 workspace
+integration cases passed. The workspace cases prove paginated tenant-scoped
 reads, GraphQL create/update/delete visibility through retained REST, canonical
 category resolution, integer geometry, stale-revision rejection, foreign-row
-concealment, GraphQL share reuse and re-share rotation, retained public
+concealment, GraphQL list/note/whiteboard/wireframe share reuse and re-share rotation, retained public
 projection headers, old-token denial, durable revocation and shared/owner
 outbox delivery through the retained Socket.IO worker, and a retained REST miss
 after delete. Frontend tests prove JSON/casing adaptation, serialized revision

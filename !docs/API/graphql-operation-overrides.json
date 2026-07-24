@@ -1631,12 +1631,12 @@
       "notes": "Blocked on post-commit public-share realtime parity."
     },
     "POST /api/lists/:listId/share": {
-      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "enableListSharing", "parityStatus": "characterized", "risk": "high",
-      "notes": "Owner-only atomic capability issuance; concurrent calls return one token and re-enable after revoke rotates the token."
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceContentModule", "targetOperation": "enableListSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Atomic issuance reuses one active token, and re-enable after revoke rotates it."
     },
     "DELETE /api/lists/:listId/share": {
-      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "disableListSharing", "parityStatus": "characterized", "risk": "high",
-      "notes": "Owner-only idempotent revocation clears the stored capability and public cacheability."
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceContentModule", "targetOperation": "disableListSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Revocation atomically clears the capability and enqueues durable token-free viewer eviction."
     },
     "GET /api/shared/list/:token": {
       "disposition": "retain-http", "owner": "sharing", "targetModule": "PublicSharingModule", "targetOperation": "getSharedList", "parityStatus": "characterized", "risk": "high",
@@ -1671,12 +1671,12 @@
       "notes": "The shared row-locked partial-update mutation validates title and preserves granular realtime event semantics."
     },
     "POST /api/notes/:noteId/share": {
-      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "enableNoteSharing", "parityStatus": "characterized", "risk": "high",
-      "notes": "Owner-only atomic capability issuance; concurrent calls return one token and re-enable after revoke rotates the token."
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceContentModule", "targetOperation": "enableNoteSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Atomic issuance reuses one active token, and re-enable after revoke rotates it."
     },
     "DELETE /api/notes/:noteId/share": {
-      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "disableNoteSharing", "parityStatus": "characterized", "risk": "high",
-      "notes": "Owner-only idempotent revocation clears the stored capability."
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceContentModule", "targetOperation": "disableNoteSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Revocation atomically clears the capability and enqueues durable token-free viewer eviction."
     },
     "GET /api/shared/note/:token": {
       "disposition": "retain-http", "owner": "sharing", "targetModule": "PublicSharingModule", "targetOperation": "getSharedNote", "parityStatus": "characterized", "risk": "high",
@@ -1703,12 +1703,12 @@
       "notes": "No shipped consumer uses this dedicated adapter; active drag writes use batchCanvasPositions through GraphQL. Remove this dead retained adapter when legacy application-data routes are retired."
     },
     "POST /api/whiteboards/:whiteboardId/share": {
-      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "enableWhiteboardSharing", "parityStatus": "characterized", "risk": "high",
-      "notes": "Owner-only atomic capability issuance with stable concurrent results and rotate-after-revoke semantics."
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceContentModule", "targetOperation": "enableWhiteboardSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Atomic issuance reuses one active token, and re-enable after revoke rotates it."
     },
     "DELETE /api/whiteboards/:whiteboardId/share": {
-      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceSharingModule", "targetOperation": "disableWhiteboardSharing", "parityStatus": "characterized", "risk": "high",
-      "notes": "Owner-only idempotent revocation clears the stored capability."
+      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceContentModule", "targetOperation": "disableWhiteboardSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Revocation atomically clears the capability and enqueues durable token-free viewer eviction."
     },
     "GET /api/shared/whiteboard/:token": {
       "disposition": "retain-http", "owner": "sharing", "targetModule": "PublicSharingModule", "targetOperation": "getSharedWhiteboard", "parityStatus": "characterizing", "risk": "high",

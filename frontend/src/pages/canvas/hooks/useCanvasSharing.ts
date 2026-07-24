@@ -7,6 +7,14 @@ import {
   disableWorkspaceWireframeSharingViaGraphql,
   enableWorkspaceWireframeSharingViaGraphql,
 } from '@/services/workspaceWireframeMutationsGraphql';
+import {
+  disableListSharingViaGraphql,
+  disableNoteSharingViaGraphql,
+  disableWhiteboardSharingViaGraphql,
+  enableListSharingViaGraphql,
+  enableNoteSharingViaGraphql,
+  enableWhiteboardSharingViaGraphql,
+} from '@/services/workspaceSharingMutationsGraphql';
 
 interface ShareItem {
   id: string | number;
@@ -29,8 +37,7 @@ export function useCanvasSharing(
 
   const handleListShare = async (listId: string): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
-      const response = await api.post(`/api/lists/${listId}/share`, {});
-      return response.data;
+      return await enableListSharingViaGraphql(Number(listId));
     } catch (error) {
       logger.error('Error sharing list:', error);
       throw error;
@@ -39,7 +46,7 @@ export function useCanvasSharing(
 
   const handleListUnshare = async (listId: string): Promise<void> => {
     try {
-      await api.delete(`/api/lists/${listId}/share`);
+      await disableListSharingViaGraphql(Number(listId));
     } catch (error) {
       logger.error('Error unsharing list:', error);
       throw error;
@@ -48,8 +55,7 @@ export function useCanvasSharing(
 
   const handleNoteShare = async (noteId: number): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
-      const response = await api.post(`/api/notes/${noteId}/share`, {});
-      return response.data;
+      return await enableNoteSharingViaGraphql(noteId);
     } catch (error) {
       logger.error('Error sharing note:', error);
       throw error;
@@ -58,7 +64,7 @@ export function useCanvasSharing(
 
   const handleNoteUnshare = async (noteId: number): Promise<void> => {
     try {
-      await api.delete(`/api/notes/${noteId}/share`);
+      await disableNoteSharingViaGraphql(noteId);
     } catch (error) {
       logger.error('Error unsharing note:', error);
       throw error;
@@ -67,8 +73,7 @@ export function useCanvasSharing(
 
   const handleWhiteboardShare = async (whiteboardId: number): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
-      const response = await api.post(`/api/whiteboards/${whiteboardId}/share`, {});
-      return response.data;
+      return await enableWhiteboardSharingViaGraphql(whiteboardId);
     } catch (error) {
       logger.error('Error sharing whiteboard:', error);
       throw error;
@@ -77,7 +82,7 @@ export function useCanvasSharing(
 
   const handleWhiteboardUnshare = async (whiteboardId: number): Promise<void> => {
     try {
-      await api.delete(`/api/whiteboards/${whiteboardId}/share`);
+      await disableWhiteboardSharingViaGraphql(whiteboardId);
     } catch (error) {
       logger.error('Error unsharing whiteboard:', error);
       throw error;

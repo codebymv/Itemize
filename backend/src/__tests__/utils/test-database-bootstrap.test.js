@@ -55,6 +55,7 @@ describe('test database schema contract', () => {
             'module_crm',
             'realtime_event_outbox',
             'shared_revocation_realtime_outbox',
+            'workspace_shared_revocation_realtime_outbox',
             'email_webhook_events',
             'email_webhook_reconciliation',
             'workflow_webhook_idempotency',
@@ -286,7 +287,7 @@ describe('test database schema contract', () => {
     });
 
     test('production migration stream adds durable sharing revocation', async () => {
-        const migration = require('../../../scripts/migrations/047_shared_revocation_realtime_outbox');
+        const migration = require('../../../scripts/migrations/048_workspace_shared_revocation_realtime_outbox');
         const {
             runSharedRevocationRealtimeOutboxMigration,
         } = require('../../db_realtime_outbox_migrations');
@@ -298,6 +299,9 @@ describe('test database schema contract', () => {
         expect(sql).toContain("'shared_revocation'");
         expect(sql).toContain("'sharedContentRevoked'");
         expect(sql).toContain("'wireframe'");
+        expect(sql).toContain(
+            "aggregate_type IN ('list', 'note', 'whiteboard', 'wireframe')"
+        );
     });
 
     test('production migration stream installs authoritative booking availability', async () => {
@@ -360,7 +364,7 @@ describe('test database schema contract', () => {
         );
 
         expect(startupSource).toContain(
-            "WHERE version = '047_shared_revocation_realtime_outbox'"
+            "WHERE version = '048_workspace_shared_revocation_realtime_outbox'"
         );
     });
 

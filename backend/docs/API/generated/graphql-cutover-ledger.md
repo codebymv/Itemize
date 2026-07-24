@@ -7,8 +7,8 @@
 - Registered method/path operations: 420
 - API operations under `/api`: 413
 - Non-API registered operations: 7
-- Static frontend callsites: 388
-- Operations with frontend consumers: 366
+- Static frontend callsites: 374
+- Operations with frontend consumers: 360
 - Operations referenced by backend tests: 219
 - Recommended GraphQL queries: 125
 - Recommended GraphQL mutations: 244
@@ -228,8 +228,8 @@
 | PUT | `/api/lists/:id/items/:itemId/toggle` | 0 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / toggleWorkspaceListItem |
 | PUT | `/api/lists/:id/position` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / moveWorkspaceList |
 | PUT | `/api/lists/:id/title` | 0 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / renameWorkspaceList |
-| DELETE | `/api/lists/:listId/share` | 3 | 2 | graphql-mutation | high | sharing / WorkspaceSharingModule / disableListSharing |
-| POST | `/api/lists/:listId/share` | 3 | 5 | graphql-mutation | high | sharing / WorkspaceSharingModule / enableListSharing |
+| DELETE | `/api/lists/:listId/share` | 0 | 2 | graphql-mutation | high | sharing / WorkspaceContentModule / disableListSharing |
+| POST | `/api/lists/:listId/share` | 0 | 5 | graphql-mutation | high | sharing / WorkspaceContentModule / enableListSharing |
 | POST | `/api/marketing-chat/ask` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/marketing-chat/token` | 1 | 0 | graphql-query | high | _unassigned_ |
 | POST | `/api/note-suggestions` | 1 | 0 | graphql-mutation | high | _unassigned_ |
@@ -239,8 +239,8 @@
 | PUT | `/api/notes/:noteId` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceNote |
 | PUT | `/api/notes/:noteId/category` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceNote |
 | PUT | `/api/notes/:noteId/content` | 1 | 4 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceNote |
-| DELETE | `/api/notes/:noteId/share` | 2 | 1 | graphql-mutation | high | sharing / WorkspaceSharingModule / disableNoteSharing |
-| POST | `/api/notes/:noteId/share` | 2 | 2 | graphql-mutation | high | sharing / WorkspaceSharingModule / enableNoteSharing |
+| DELETE | `/api/notes/:noteId/share` | 0 | 1 | graphql-mutation | high | sharing / WorkspaceContentModule / disableNoteSharing |
+| POST | `/api/notes/:noteId/share` | 0 | 2 | graphql-mutation | high | sharing / WorkspaceContentModule / enableNoteSharing |
 | PUT | `/api/notes/:noteId/title` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceNote |
 | POST | `/api/onboarding/complete-step` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / completeOnboardingStep |
 | POST | `/api/onboarding/dismiss` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / dismissOnboarding |
@@ -417,8 +417,8 @@
 | PUT | `/api/whiteboards/:id/position` | 1 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / moveWorkspaceWhiteboard |
 | DELETE | `/api/whiteboards/:whiteboardId` | 1 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / deleteWorkspaceWhiteboard |
 | PUT | `/api/whiteboards/:whiteboardId` | 1 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceWhiteboard |
-| DELETE | `/api/whiteboards/:whiteboardId/share` | 2 | 1 | graphql-mutation | high | sharing / WorkspaceSharingModule / disableWhiteboardSharing |
-| POST | `/api/whiteboards/:whiteboardId/share` | 2 | 2 | graphql-mutation | high | sharing / WorkspaceSharingModule / enableWhiteboardSharing |
+| DELETE | `/api/whiteboards/:whiteboardId/share` | 0 | 1 | graphql-mutation | high | sharing / WorkspaceContentModule / disableWhiteboardSharing |
+| POST | `/api/whiteboards/:whiteboardId/share` | 0 | 2 | graphql-mutation | high | sharing / WorkspaceContentModule / enableWhiteboardSharing |
 | GET | `/api/wireframes` | 0 | 1 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceWireframes |
 | POST | `/api/wireframes` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / createWorkspaceWireframe |
 | PUT | `/api/wireframes/:id/position` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / batchCanvasPositions |
@@ -456,7 +456,7 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 6
+- Unmatched backend test calls: 8
 - Orphaned manual overrides: 2
 - Orphaned runtime-expression overrides: 0
 
@@ -484,6 +484,8 @@
 | Method | Requested path | Source |
 | --- | --- | --- |
 | GET | `/api/campaigns:path` | `backend-v2/test/integration/campaigns.integration-spec.ts:126` |
+| GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1057` |
+| GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1079` |
 | POST | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:188` |
 | DELETE | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:194` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:32` |

@@ -800,14 +800,7 @@ export class WorkspaceContentService {
         wireframeId,
       );
       if (outcome.kind === 'not_found') throw this.wireframeNotFound();
-      const frontendUrl = (
-        process.env.FRONTEND_URL || 'https://itemize.cloud'
-      ).replace(/\/+$/, '');
-      return {
-        shareToken: outcome.shareToken,
-        shareUrl:
-          `${frontendUrl}/shared/wireframe/${outcome.shareToken}`,
-      };
+      return this.workspaceShareLink('wireframe', outcome.shareToken);
     } catch (error) {
       this.rethrow(error);
     }
@@ -827,6 +820,111 @@ export class WorkspaceContentService {
         normalizedMutationId,
       );
       if (outcome.kind === 'not_found') throw this.wireframeNotFound();
+      return true;
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async enableListSharing(
+    userId: number,
+    listId: number,
+  ): Promise<WorkspaceShareLink> {
+    this.listId(listId);
+    try {
+      const outcome = await this.content.enableListSharing(userId, listId);
+      if (outcome.kind === 'not_found') throw this.listNotFound();
+      return this.workspaceShareLink('list', outcome.shareToken);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async disableListSharing(
+    userId: number,
+    listId: number,
+    mutationId: string,
+  ): Promise<boolean> {
+    this.listId(listId);
+    const normalizedMutationId = this.mutationId(mutationId);
+    try {
+      const outcome = await this.content.disableListSharing(
+        userId,
+        listId,
+        normalizedMutationId,
+      );
+      if (outcome.kind === 'not_found') throw this.listNotFound();
+      return true;
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async enableNoteSharing(
+    userId: number,
+    noteId: number,
+  ): Promise<WorkspaceShareLink> {
+    this.id(noteId);
+    try {
+      const outcome = await this.content.enableNoteSharing(userId, noteId);
+      if (outcome.kind === 'not_found') throw this.noteNotFound();
+      return this.workspaceShareLink('note', outcome.shareToken);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async disableNoteSharing(
+    userId: number,
+    noteId: number,
+    mutationId: string,
+  ): Promise<boolean> {
+    this.id(noteId);
+    const normalizedMutationId = this.mutationId(mutationId);
+    try {
+      const outcome = await this.content.disableNoteSharing(
+        userId,
+        noteId,
+        normalizedMutationId,
+      );
+      if (outcome.kind === 'not_found') throw this.noteNotFound();
+      return true;
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async enableWhiteboardSharing(
+    userId: number,
+    whiteboardId: number,
+  ): Promise<WorkspaceShareLink> {
+    this.whiteboardId(whiteboardId);
+    try {
+      const outcome = await this.content.enableWhiteboardSharing(
+        userId,
+        whiteboardId,
+      );
+      if (outcome.kind === 'not_found') throw this.whiteboardNotFound();
+      return this.workspaceShareLink('whiteboard', outcome.shareToken);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async disableWhiteboardSharing(
+    userId: number,
+    whiteboardId: number,
+    mutationId: string,
+  ): Promise<boolean> {
+    this.whiteboardId(whiteboardId);
+    const normalizedMutationId = this.mutationId(mutationId);
+    try {
+      const outcome = await this.content.disableWhiteboardSharing(
+        userId,
+        whiteboardId,
+        normalizedMutationId,
+      );
+      if (outcome.kind === 'not_found') throw this.whiteboardNotFound();
       return true;
     } catch (error) {
       this.rethrow(error);
@@ -1576,6 +1674,19 @@ export class WorkspaceContentService {
 
   private wireframeNotFound(): GraphQLError {
     return itemizeGraphqlError('Workspace wireframe not found', 'NOT_FOUND');
+  }
+
+  private workspaceShareLink(
+    kind: 'list' | 'note' | 'whiteboard' | 'wireframe',
+    shareToken: string,
+  ): WorkspaceShareLink {
+    const frontendUrl = (
+      process.env.FRONTEND_URL || 'https://itemize.cloud'
+    ).replace(/\/+$/, '');
+    return {
+      shareToken,
+      shareUrl: `${frontendUrl}/shared/${kind}/${shareToken}`,
+    };
   }
 
   private wireframeCategoryNotFound(): GraphQLError {

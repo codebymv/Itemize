@@ -214,11 +214,11 @@ export type DeleteWorkspaceWireframeOutcome =
   | { kind: 'deleted'; deletedId: number }
   | { kind: 'not_found' };
 
-export type EnableWireframeSharingOutcome =
+export type EnableWorkspaceSharingOutcome =
   | { kind: 'completed'; shareToken: string }
   | { kind: 'not_found' };
 
-export type DisableWireframeSharingOutcome =
+export type DisableWorkspaceSharingOutcome =
   | { kind: 'completed' }
   | { kind: 'not_found' };
 
@@ -1300,14 +1300,50 @@ export class WorkspaceContentRepository {
   async enableWireframeSharing(
     userId: number,
     wireframeId: number,
-  ): Promise<EnableWireframeSharingOutcome> {
+  ): Promise<EnableWorkspaceSharingOutcome> {
+    return this.enableWorkspaceSharing(userId, wireframeId, 'wireframes');
+  }
+
+  async enableListSharing(
+    userId: number,
+    listId: number,
+  ): Promise<EnableWorkspaceSharingOutcome> {
+    return this.enableWorkspaceSharing(userId, listId, 'lists');
+  }
+
+  async enableNoteSharing(
+    userId: number,
+    noteId: number,
+  ): Promise<EnableWorkspaceSharingOutcome> {
+    return this.enableWorkspaceSharing(userId, noteId, 'notes');
+  }
+
+  async enableWhiteboardSharing(
+    userId: number,
+    whiteboardId: number,
+  ): Promise<EnableWorkspaceSharingOutcome> {
+    return this.enableWorkspaceSharing(
+      userId,
+      whiteboardId,
+      'whiteboards',
+    );
+  }
+
+  private async enableWorkspaceSharing(
+    userId: number,
+    contentId: number,
+    table: 'lists' | 'notes' | 'whiteboards' | 'wireframes',
+  ): Promise<EnableWorkspaceSharingOutcome> {
     return this.transaction(async (client) => {
+      const newToken = table === 'wireframes'
+        ? 'gen_random_uuid()'
+        : 'gen_random_uuid()::text';
       const result = await client.query<{ share_token: string }>(
-        `UPDATE wireframes
+        `UPDATE ${table}
          SET share_token = CASE
                WHEN is_public = TRUE AND share_token IS NOT NULL
                  THEN share_token
-               ELSE gen_random_uuid()
+               ELSE ${newToken}
              END,
              is_public = TRUE,
              shared_at = CASE
@@ -1318,7 +1354,7 @@ export class WorkspaceContentRepository {
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $1 AND user_id = $2
          RETURNING share_token`,
-        [wireframeId, userId],
+        [contentId, userId],
       );
       const row = result.rows[0];
       return row
@@ -1331,7 +1367,65 @@ export class WorkspaceContentRepository {
     userId: number,
     wireframeId: number,
     mutationId: string,
-  ): Promise<DisableWireframeSharingOutcome> {
+  ): Promise<DisableWorkspaceSharingOutcome> {
+    return this.disableWorkspaceSharing(
+      userId,
+      wireframeId,
+      mutationId,
+      'wireframe',
+      'wireframes',
+    );
+  }
+
+  async disableListSharing(
+    userId: number,
+    listId: number,
+    mutationId: string,
+  ): Promise<DisableWorkspaceSharingOutcome> {
+    return this.disableWorkspaceSharing(
+      userId,
+      listId,
+      mutationId,
+      'list',
+      'lists',
+    );
+  }
+
+  async disableNoteSharing(
+    userId: number,
+    noteId: number,
+    mutationId: string,
+  ): Promise<DisableWorkspaceSharingOutcome> {
+    return this.disableWorkspaceSharing(
+      userId,
+      noteId,
+      mutationId,
+      'note',
+      'notes',
+    );
+  }
+
+  async disableWhiteboardSharing(
+    userId: number,
+    whiteboardId: number,
+    mutationId: string,
+  ): Promise<DisableWorkspaceSharingOutcome> {
+    return this.disableWorkspaceSharing(
+      userId,
+      whiteboardId,
+      mutationId,
+      'whiteboard',
+      'whiteboards',
+    );
+  }
+
+  private async disableWorkspaceSharing(
+    userId: number,
+    contentId: number,
+    mutationId: string,
+    kind: 'list' | 'note' | 'whiteboard' | 'wireframe',
+    table: 'lists' | 'notes' | 'whiteboards' | 'wireframes',
+  ): Promise<DisableWorkspaceSharingOutcome> {
     return this.transaction(async (client) => {
       const result = await client.query<{
         id: number;
@@ -1340,39 +1434,39 @@ export class WorkspaceContentRepository {
       }>(
         `WITH target AS (
            SELECT id, share_token
-           FROM wireframes
+           FROM ${table}
            WHERE id = $1 AND user_id = $2
            FOR UPDATE
          ),
          updated AS (
-           UPDATE wireframes AS wireframe
+           UPDATE ${table} AS content
            SET is_public = FALSE,
                share_token = NULL,
                shared_at = NULL,
                updated_at = CURRENT_TIMESTAMP
            FROM target
-           WHERE wireframe.id = target.id
-           RETURNING wireframe.id, clock_timestamp() AS occurred_at
+           WHERE content.id = target.id
+           RETURNING content.id, clock_timestamp() AS occurred_at
          )
          SELECT updated.id, target.share_token, updated.occurred_at
          FROM updated
          JOIN target ON target.id = updated.id`,
-        [wireframeId, userId],
+        [contentId, userId],
       );
       const row = result.rows[0];
       if (!row) return { kind: 'not_found' };
       if (row.share_token) {
         await this.realtimeOutbox.enqueue(client, {
           eventKey:
-            `wireframe:${wireframeId}:sharing-revoked:${mutationId}`,
-          aggregateType: 'wireframe',
-          aggregateId: wireframeId,
+            `${kind}:${contentId}:sharing-revoked:${mutationId}`,
+          aggregateType: kind,
+          aggregateId: contentId,
           channel: 'shared_revocation',
           recipientKey: row.share_token,
           eventName: 'sharedContentRevoked',
           eventType: 'sharing_revoked',
           payload: {
-            kind: 'wireframe',
+            kind,
             reason: 'sharing_revoked',
           },
           occurredAt: new Date(row.occurred_at),

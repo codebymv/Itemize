@@ -146,10 +146,6 @@ export class RealtimeOutboxService {
         input.aggregateType !== 'wireframe'
       ) ||
       (
-        input.channel === 'shared_revocation' &&
-        input.aggregateType !== 'wireframe'
-      ) ||
-      (
         ![
           'shared_note',
           'shared_whiteboard',

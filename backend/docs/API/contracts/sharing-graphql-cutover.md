@@ -1,14 +1,14 @@
 # Public sharing GraphQL cutover contract
 
-**Status:** Wireframe consumer cutover complete; remaining sharing domains characterized
+**Status:** List, note, whiteboard, and wireframe consumer cutover complete; vault policy unresolved
 
-**Evidence date:** 2026-07-15
+**Evidence date:** 2026-07-23
 
 ## Decision
 
-Authenticated enable/disable operations move to GraphQL. Public capability reads remain rate-limited HTTP because they are link-oriented, unauthenticated protocols and must work without a GraphQL client or session. The 14 registered list, note, whiteboard, wireframe, and vault sharing operations are assigned in `graphql-operation-overrides.json`.
+Authenticated enable/disable operations move to GraphQL. Public capability reads remain rate-limited HTTP because they are link-oriented, unauthenticated protocols and must work without a GraphQL client or session. The 15 registered list, note, whiteboard, wireframe, and vault sharing operations are assigned in `graphql-operation-overrides.json`.
 
-`WorkspaceSharingModule` is the target owner for list, note, and whiteboard issuance/revocation. `WorkspaceContentModule` now owns the shipped wireframe enable/disable mutations. `VaultSharingModule` owns vault issuance/revocation and its retained public read. `PublicSharingModule` owns retained list, note, whiteboard, and wireframe reads. The wireframe Canvas consumer uses GraphQL without REST fallback, and `/shared/wireframe/:token` is a real read-only public viewer.
+`WorkspaceContentModule` owns the shipped list, note, whiteboard, and wireframe enable/disable mutations. `VaultSharingModule` remains the target owner for vault issuance/revocation and its retained public read. `PublicSharingModule` owns retained list, note, whiteboard, and wireframe reads. Active Canvas consumers use GraphQL without REST fallback, while `/shared/:kind/:token` remains the intentional read-only public-link HTTP boundary.
 
 ## Ownership and authority
 
@@ -42,7 +42,7 @@ Responses contain an allowlisted public projection only. They omit owner email, 
 
 Public note HTML is sanitized on the server immediately before output and rendered only through the approved sanitized-content component. Lists sanitize every item recursively. Whiteboard/canvas data is recursively traversed without converting arrays to objects, and prototype keys are discarded.
 
-DOM sanitization alone is not a complete canvas schema. Before cutover, define allowed node types, field names, URL schemes, embedded media behavior, maximum nesting/node/string/aggregate sizes, and handling of malformed JSON. Do not allow a canvas renderer to fetch arbitrary internal or credential-bearing URLs. The same rule applies if a public wireframe viewer is implemented.
+DOM sanitization alone is not a complete canvas schema. Define allowed node types, field names, URL schemes, embedded media behavior, maximum nesting/node/string/aggregate sizes, and handling of malformed JSON. Do not allow a canvas renderer to fetch arbitrary internal or credential-bearing URLs. The same rule applies to the public wireframe viewer.
 
 Output encoding remains contextual: React text, sanitized HTML, SVG/canvas attributes, CSS values, and URLs do not share one sanitizer contract. Sanitized source content must never be reinterpreted in a more powerful context by a consumer.
 
@@ -66,11 +66,11 @@ Legacy Socket.IO rooms are keyed by raw share token. New joins verify that the o
 
 The target freezes room authorization, event names, payload projections, reconnect behavior, rate limits, and revocation semantics in the separate realtime contract. GraphQL subscriptions do not inherit authorization merely because the initial HTTP query was authorized. Active subscribers must be disconnected or denied on their next event immediately after revoke.
 
-## Wireframe implementation
+## Workspace-sharing implementation
 
-`enableWireframeSharing(id)` and `disableWireframeSharing(id, mutationId)` are authenticated, CSRF-protected GraphQL mutations. Owner scope is enforced in the update itself; foreign and absent IDs return the same `NOT_FOUND` result. Enable preserves an existing active token, disable atomically clears public state and enqueues durable revocation, and re-enable rotates the capability.
+`enableListSharing`, `enableNoteSharing`, `enableWhiteboardSharing`, and `enableWireframeSharing`, plus their corresponding disable mutations, are authenticated and CSRF protected. Owner scope is enforced in the update itself; foreign and absent IDs return the same `NOT_FOUND` result. Enable preserves an existing active token, disable atomically clears public state and enqueues durable revocation, and re-enable rotates the capability.
 
-`GET /api/shared/wireframe/:token` remains HTTP as an intentional unauthenticated public-link boundary. It validates the UUID capability, requires a public row, returns a recursively sanitized allowlist, and sends no-store/noindex/no-referrer headers. The lazy `/shared/wireframe/:token` page renders `WireframeCanvas` read-only, consumes retained Socket.IO updates, and clears state on deletion or `sharedContentRevoked`.
+`GET /api/shared/list/:token`, `/note/:token`, `/whiteboard/:token`, and `/wireframe/:token` remain HTTP as intentional unauthenticated public-link boundaries. They require a public row and send no-store/noindex/no-referrer privacy headers. Their read-only pages consume retained Socket.IO updates and clear state on deletion or `sharedContentRevoked`.
 
 ## Required parity scenarios
 
@@ -89,9 +89,9 @@ The target freezes room authorization, event names, payload projections, reconne
 
 ## Current evidence and exit gate
 
-Fresh PostgreSQL coverage proves stable concurrent list, vault, and wireframe issuance; owner-only mutation across all five object types; immediate list, note, whiteboard, wireframe, and vault revocation; token clearing and rotation; malformed-token handling; nested whiteboard sanitization; note markup sanitization; and no-store privacy headers. The workspace integration suite additionally proves the live GraphQL wireframe enable/reuse/foreign concealment/disable/re-enable lifecycle, the retained public projection, durable outbox delivery to `revokeShared`, old-token denial, and rotation. Live Socket.IO coverage proves two active viewers receive a redacted revocation event and are evicted. Focused frontend tests prove GraphQL transport and mutation identity; the shipped wireframe page consumes updates and revocation without exposing an editing path.
+Fresh PostgreSQL coverage proves stable concurrent list, vault, and wireframe issuance; owner-only mutation across all five object types; immediate list, note, whiteboard, wireframe, and vault revocation; token clearing and rotation; malformed-token handling; nested whiteboard sanitization; note markup sanitization; and no-store privacy headers. The workspace integration suite additionally proves the live GraphQL enable/reuse/foreign-concealment/disable/re-enable lifecycle for list, note, whiteboard, and wireframe, retained public projections, durable outbox delivery to `revokeShared`, old-token denial, and rotation. Live Socket.IO coverage proves two active viewers receive a redacted revocation event and are evicted. Focused frontend tests prove all eight GraphQL transports and mutation identities with no application-data REST fallback.
 
-This slice is not ready for traffic until:
+The application-data transport cutover for non-vault workspace sharing is complete. Broader sharing security hardening remains incomplete until:
 
 1. raw tokens are replaced with hashed high-entropy capabilities and token redaction is verified end to end;
 2. public response size/schema limits and context-specific content/URL safety are executable;

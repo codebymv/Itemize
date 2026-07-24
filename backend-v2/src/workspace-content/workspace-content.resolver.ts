@@ -232,6 +232,75 @@ export class WorkspaceContentResolver {
   }
 
   @CsrfProtected()
+  @Mutation(() => WorkspaceShareLink)
+  enableListSharing(
+    @Args('id', { type: () => Int }) id: number,
+  ): Promise<WorkspaceShareLink> {
+    return this.content.enableListSharing(this.userId(), id);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => DisableWorkspaceSharingResult)
+  async disableListSharing(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('mutationId') mutationId: string,
+  ): Promise<DisableWorkspaceSharingResult> {
+    return {
+      sharingDisabled: await this.content.disableListSharing(
+        this.userId(),
+        id,
+        mutationId,
+      ),
+    };
+  }
+
+  @CsrfProtected()
+  @Mutation(() => WorkspaceShareLink)
+  enableNoteSharing(
+    @Args('id', { type: () => Int }) id: number,
+  ): Promise<WorkspaceShareLink> {
+    return this.content.enableNoteSharing(this.userId(), id);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => DisableWorkspaceSharingResult)
+  async disableNoteSharing(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('mutationId') mutationId: string,
+  ): Promise<DisableWorkspaceSharingResult> {
+    return {
+      sharingDisabled: await this.content.disableNoteSharing(
+        this.userId(),
+        id,
+        mutationId,
+      ),
+    };
+  }
+
+  @CsrfProtected()
+  @Mutation(() => WorkspaceShareLink)
+  enableWhiteboardSharing(
+    @Args('id', { type: () => Int }) id: number,
+  ): Promise<WorkspaceShareLink> {
+    return this.content.enableWhiteboardSharing(this.userId(), id);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => DisableWorkspaceSharingResult)
+  async disableWhiteboardSharing(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('mutationId') mutationId: string,
+  ): Promise<DisableWorkspaceSharingResult> {
+    return {
+      sharingDisabled: await this.content.disableWhiteboardSharing(
+        this.userId(),
+        id,
+        mutationId,
+      ),
+    };
+  }
+
+  @CsrfProtected()
   @Mutation(() => BatchCanvasPositionsResult)
   batchCanvasPositions(
     @Args('input') input: BatchCanvasPositionsInput,
