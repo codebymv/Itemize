@@ -3,20 +3,30 @@ import bcrypt from 'bcryptjs';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { PageInput, pageInfo } from '../common/pagination';
 import {
+  CreateWorkspaceVaultItemInput,
   CreateWorkspaceVaultInput,
+  UpdateWorkspaceVaultItemInput,
   UpdateWorkspaceVaultInput,
   WorkspaceVaultFilterInput,
 } from './vault.inputs';
-import { decryptVaultValue, generateVaultSalt } from './vault.crypto';
+import {
+  decryptVaultValue,
+  encryptVaultValue,
+  generateVaultSalt,
+} from './vault.crypto';
 import {
   UpdateVaultValue,
   VaultAggregate,
+  VaultItemRow,
   VaultRepository,
   VaultRow,
 } from './vault.repository';
 import {
   DeleteWorkspaceVaultResult,
+  DeleteWorkspaceVaultItemResult,
   WorkspaceVault,
+  WorkspaceVaultItem,
+  WorkspaceVaultItemsResult,
   WorkspaceVaultPage,
 } from './vault.types';
 
@@ -151,6 +161,172 @@ export class VaultService {
     return { deletedId: vaultId };
   }
 
+  async addItem(
+    userId: number,
+    vaultId: number,
+    input: CreateWorkspaceVaultItemInput,
+  ): Promise<WorkspaceVaultItem> {
+    this.id(vaultId);
+    const value = this.itemInput(input);
+    const encrypted = encryptVaultValue(value.value);
+    const row = await this.vaults.addItem(userId, vaultId, {
+      itemType: value.itemType,
+      label: value.label,
+      encryptedValue: encrypted.encrypted,
+      iv: encrypted.iv,
+    });
+    if (!row) throw this.notFound();
+    return this.mapItem(row, value.value);
+  }
+
+  async addItems(
+    userId: number,
+    vaultId: number,
+    inputs: CreateWorkspaceVaultItemInput[],
+  ): Promise<WorkspaceVaultItemsResult> {
+    this.id(vaultId);
+    if (!Array.isArray(inputs) || inputs.length < 1 || inputs.length > 500) {
+      throw itemizeGraphqlError(
+        'items must contain between 1 and 500 entries',
+        'BAD_USER_INPUT',
+        { field: 'items' },
+      );
+    }
+    const values = inputs.map((input) => this.itemInput(input));
+    const encrypted = values.map((value) => ({
+      ...value,
+      ...encryptVaultValue(value.value),
+    }));
+    const rows = await this.vaults.addItems(
+      userId,
+      vaultId,
+      encrypted.map((value) => ({
+        itemType: value.itemType,
+        label: value.label,
+        encryptedValue: value.encrypted,
+        iv: value.iv,
+      })),
+    );
+    if (!rows) throw this.notFound();
+    return {
+      items: rows.map((row, index) =>
+        this.mapItem(row, encrypted[index].value),
+      ),
+      count: rows.length,
+    };
+  }
+
+  async updateItem(
+    userId: number,
+    vaultId: number,
+    itemId: number,
+    input: UpdateWorkspaceVaultItemInput,
+  ): Promise<WorkspaceVaultItem> {
+    this.id(vaultId);
+    this.id(itemId);
+    if (input.label === null || input.value === null) {
+      throw itemizeGraphqlError(
+        'label and value cannot be null',
+        'BAD_USER_INPUT',
+      );
+    }
+    if (input.label === undefined && input.value === undefined) {
+      throw itemizeGraphqlError(
+        'At least one item field is required',
+        'BAD_USER_INPUT',
+      );
+    }
+    const label =
+      input.label === undefined
+        ? undefined
+        : this.text(input.label, 'label', 255);
+    const plaintext =
+      input.value === undefined
+        ? undefined
+        : this.itemValue(input.value);
+    const encrypted =
+      plaintext === undefined ? undefined : encryptVaultValue(plaintext);
+    const result = await this.vaults.updateItem(userId, vaultId, itemId, {
+      ...(label !== undefined ? { label } : {}),
+      ...(encrypted
+        ? { encryptedValue: encrypted.encrypted, iv: encrypted.iv }
+        : {}),
+    });
+    if (result === 'vault-not-found') throw this.notFound();
+    if (result === 'item-not-found') throw this.itemNotFound();
+    let value = plaintext;
+    if (value === undefined) {
+      try {
+        value = decryptVaultValue(result.encrypted_value, result.iv);
+      } catch {
+        throw itemizeGraphqlError(
+          'Vault item could not be decrypted',
+          'INTERNAL_SERVER_ERROR',
+          { reason: 'VAULT_DECRYPTION_FAILED' },
+        );
+      }
+    }
+    return this.mapItem(result, value);
+  }
+
+  async deleteItem(
+    userId: number,
+    vaultId: number,
+    itemId: number,
+  ): Promise<DeleteWorkspaceVaultItemResult> {
+    this.id(vaultId);
+    this.id(itemId);
+    const result = await this.vaults.deleteItem(userId, vaultId, itemId);
+    if (result === 'vault-not-found') throw this.notFound();
+    if (result === 'item-not-found') throw this.itemNotFound();
+    return { deletedId: itemId };
+  }
+
+  async reorderItems(
+    userId: number,
+    vaultId: number,
+    itemIds: number[],
+  ): Promise<WorkspaceVaultItemsResult> {
+    this.id(vaultId);
+    if (
+      itemIds.length > 500 ||
+      new Set(itemIds).size !== itemIds.length
+    ) {
+      throw itemizeGraphqlError(
+        'itemIds must contain at most 500 unique IDs',
+        'BAD_USER_INPUT',
+        { field: 'itemIds' },
+      );
+    }
+    itemIds.forEach((id) => this.id(id));
+    const result = await this.vaults.reorderItems(userId, vaultId, itemIds);
+    if (result === 'vault-not-found') throw this.notFound();
+    if (result === 'item-set-mismatch') {
+      throw itemizeGraphqlError(
+        'itemIds must exactly match the vault items',
+        'BAD_USER_INPUT',
+        { field: 'itemIds', reason: 'ITEM_SET_MISMATCH' },
+      );
+    }
+    return {
+      items: result.map((row) => {
+        try {
+          return this.mapItem(
+            row,
+            decryptVaultValue(row.encrypted_value, row.iv),
+          );
+        } catch {
+          throw itemizeGraphqlError(
+            'Vault item could not be decrypted',
+            'INTERNAL_SERVER_ERROR',
+            { reason: 'VAULT_DECRYPTION_FAILED' },
+          );
+        }
+      }),
+      count: result.length,
+    };
+  }
+
   private mapAggregate(value: VaultAggregate): WorkspaceVault {
     const items = value.items.map((item) => {
       let decrypted = '[DECRYPTION_ERROR]';
@@ -159,18 +335,53 @@ export class VaultService {
       } catch {
         // Preserve legacy fail-soft rendering without exposing ciphertext.
       }
-      return {
-        id: item.id,
-        vaultId: item.vault_id,
-        itemType: item.item_type,
-        label: item.label,
-        value: decrypted,
-        orderIndex: item.order_index,
-        createdAt: item.created_at,
-        updatedAt: item.updated_at,
-      };
+      return this.mapItem(item, decrypted);
     });
     return this.map(value.vault, items, false);
+  }
+
+  private mapItem(row: VaultItemRow, value: string): WorkspaceVaultItem {
+    return {
+      id: row.id,
+      vaultId: row.vault_id,
+      itemType: row.item_type,
+      label: row.label,
+      value,
+      orderIndex: row.order_index,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  private itemInput(input: CreateWorkspaceVaultItemInput): {
+    itemType: string;
+    label: string;
+    value: string;
+  } {
+    if (!['key_value', 'secure_note'].includes(input.itemType)) {
+      throw itemizeGraphqlError('Unsupported vault item type', 'BAD_USER_INPUT', {
+        field: 'itemType',
+      });
+    }
+    return {
+      itemType: input.itemType,
+      label: this.text(input.label, 'label', 255),
+      value: this.itemValue(input.value),
+    };
+  }
+
+  private itemValue(value: string): string {
+    if (
+      typeof value !== 'string' ||
+      Buffer.byteLength(value, 'utf8') > 1_048_576
+    ) {
+      throw itemizeGraphqlError(
+        'value cannot exceed 1 MiB',
+        'BAD_USER_INPUT',
+        { field: 'value' },
+      );
+    }
+    return value;
   }
 
   private map(
@@ -291,5 +502,9 @@ export class VaultService {
 
   private notFound() {
     return itemizeGraphqlError('Vault not found', 'NOT_FOUND');
+  }
+
+  private itemNotFound() {
+    return itemizeGraphqlError('Vault item not found', 'NOT_FOUND');
   }
 }

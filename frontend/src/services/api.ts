@@ -59,10 +59,15 @@ import {
   rememberWorkspaceWhiteboardRevision,
 } from './workspaceWhiteboardRevision';
 import {
+  addVaultItemsViaGraphql,
+  addVaultItemViaGraphql,
   createVaultViaGraphql,
+  deleteVaultItemViaGraphql,
   deleteVaultViaGraphql,
   getVaultsViaGraphql,
   getVaultViaGraphql,
+  reorderVaultItemsViaGraphql,
+  updateVaultItemViaGraphql,
   updateVaultViaGraphql,
 } from './workspaceVaultGraphql';
 
@@ -712,42 +717,32 @@ export const deleteVault = async (vaultId: number, token?: string) => {
 
 // Add item to vault
 export const addVaultItem = async (vaultId: number, item: VaultItemPayload, token?: string) => {
-  const response = await api.post(`/api/vaults/${vaultId}/items`, item, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return addVaultItemViaGraphql(vaultId, item);
 };
 
 // Bulk add items to vault (for .env import)
 export const bulkAddVaultItems = async (vaultId: number, items: VaultItemPayload[], token?: string) => {
-  const response = await api.post(`/api/vaults/${vaultId}/items/bulk`, { items }, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return addVaultItemsViaGraphql(vaultId, items);
 };
 
 // Update a vault item
 export const updateVaultItem = async (vaultId: number, itemId: number, data: { label?: string; value?: string }, token?: string) => {
-  const response = await api.put(`/api/vaults/${vaultId}/items/${itemId}`, data, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return updateVaultItemViaGraphql(vaultId, itemId, data);
 };
 
 // Delete a vault item
 export const deleteVaultItem = async (vaultId: number, itemId: number, token?: string) => {
-  const response = await api.delete(`/api/vaults/${vaultId}/items/${itemId}`, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return deleteVaultItemViaGraphql(vaultId, itemId);
 };
 
 // Reorder vault items
 export const reorderVaultItems = async (vaultId: number, itemIds: number[], token?: string) => {
-  const response = await api.put(`/api/vaults/${vaultId}/items/reorder`, { item_ids: itemIds }, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return reorderVaultItemsViaGraphql(vaultId, itemIds);
 };
 
 // Enable vault sharing

@@ -6,11 +6,11 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 413,
-    "apiOperationCount": 406,
+    "operationCount": 408,
+    "apiOperationCount": 401,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 344,
-    "operationsWithFrontendConsumers": 330,
+    "frontendCallsiteCount": 339,
+    "operationsWithFrontendConsumers": 325,
     "operationsWithBackendTests": 222,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
@@ -18,8 +18,8 @@
     "unmatchedBackendTestCallCount": 8,
     "retainHttpCount": 45,
     "graphqlQueryCount": 121,
-    "graphqlMutationCount": 239,
-    "highRiskCount": 333,
+    "graphqlMutationCount": 234,
+    "highRiskCount": 328,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -3680,7 +3680,7 @@
           "path": "/api/canvas/lists",
           "rawPath": "/api/canvas/lists",
           "source": "frontend/src/services/api.ts",
-          "line": 196,
+          "line": 201,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3761,7 +3761,7 @@
           "path": "/api/categories",
           "rawPath": "/api/categories",
           "source": "frontend/src/services/api.ts",
-          "line": 608,
+          "line": 613,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3802,7 +3802,7 @@
           "path": "/api/categories",
           "rawPath": "/api/categories",
           "source": "frontend/src/services/api.ts",
-          "line": 618,
+          "line": 623,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3843,7 +3843,7 @@
           "path": "/api/categories/:categoryId",
           "rawPath": "/api/categories/${categoryId}",
           "source": "frontend/src/services/api.ts",
-          "line": 638,
+          "line": 643,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3884,7 +3884,7 @@
           "path": "/api/categories/:categoryId",
           "rawPath": "/api/categories/${categoryId}",
           "source": "frontend/src/services/api.ts",
-          "line": 628,
+          "line": 633,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8917,7 +8917,7 @@
           "path": "/api/lists",
           "rawPath": "/api/lists",
           "source": "frontend/src/services/api.ts",
-          "line": 226,
+          "line": 231,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8976,7 +8976,7 @@
           "path": "/api/lists",
           "rawPath": "/api/lists",
           "source": "frontend/src/services/api.ts",
-          "line": 270,
+          "line": 275,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9017,7 +9017,7 @@
           "path": "/api/lists/:listId",
           "rawPath": "/api/lists/${listId}",
           "source": "frontend/src/services/api.ts",
-          "line": 365,
+          "line": 370,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9064,7 +9064,7 @@
           "path": "/api/lists/:id",
           "rawPath": "/api/lists/${listData.id}",
           "source": "frontend/src/services/api.ts",
-          "line": 336,
+          "line": 341,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9187,7 +9187,7 @@
           "path": "/api/lists/:listId/position",
           "rawPath": "/api/lists/${listId}/position",
           "source": "frontend/src/services/api.ts",
-          "line": 372,
+          "line": 377,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9459,7 +9459,7 @@
           "path": "/api/notes",
           "rawPath": "/api/notes",
           "source": "frontend/src/services/api.ts",
-          "line": 387,
+          "line": 392,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9554,7 +9554,7 @@
           "path": "/api/notes",
           "rawPath": "/api/notes",
           "source": "frontend/src/services/api.ts",
-          "line": 397,
+          "line": 402,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9625,7 +9625,7 @@
           "path": "/api/notes/:noteId",
           "rawPath": "/api/notes/${noteId}",
           "source": "frontend/src/services/api.ts",
-          "line": 451,
+          "line": 456,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9684,7 +9684,7 @@
           "path": "/api/notes/:noteId",
           "rawPath": "/api/notes/${noteId}",
           "source": "frontend/src/services/api.ts",
-          "line": 407,
+          "line": 412,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9731,7 +9731,7 @@
           "path": "/api/notes/:noteId/category",
           "rawPath": "/api/notes/${noteId}/category",
           "source": "frontend/src/services/api.ts",
-          "line": 438,
+          "line": 443,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9778,7 +9778,7 @@
           "path": "/api/notes/:noteId/content",
           "rawPath": "/api/notes/${noteId}/content",
           "source": "frontend/src/services/api.ts",
-          "line": 418,
+          "line": 423,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9905,7 +9905,7 @@
           "path": "/api/notes/:noteId/title",
           "rawPath": "/api/notes/${noteId}/title",
           "source": "frontend/src/services/api.ts",
-          "line": 428,
+          "line": 433,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13856,7 +13856,7 @@
           "path": "/api/shared/vault/:shareToken",
           "rawPath": "/api/shared/vault/${shareToken}",
           "source": "frontend/src/services/api.ts",
-          "line": 771,
+          "line": 766,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16207,176 +16207,6 @@
       "risk": "medium"
     },
     {
-      "id": "POST /api/vaults/:vaultId/items",
-      "key": "POST /api/vaults/:*/items",
-      "method": "POST",
-      "path": "/api/vaults/:vaultId/items",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/vaults/items.routes.js",
-          "line": 59
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/vaults/:vaultId/items",
-          "rawPath": "/api/vaults/${vaultId}/items",
-          "source": "frontend/src/services/api.ts",
-          "line": 715,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/vaults/:vaultId/items/:itemId",
-      "key": "DELETE /api/vaults/:*/items/:*",
-      "method": "DELETE",
-      "path": "/api/vaults/:vaultId/items/:itemId",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/vaults/items.routes.js",
-          "line": 304
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/vaults/:vaultId/items/:itemId",
-          "rawPath": "/api/vaults/${vaultId}/items/${itemId}",
-          "source": "frontend/src/services/api.ts",
-          "line": 739,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/vaults/:vaultId/items/:itemId",
-      "key": "PUT /api/vaults/:*/items/:*",
-      "method": "PUT",
-      "path": "/api/vaults/:vaultId/items/:itemId",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/vaults/items.routes.js",
-          "line": 226
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/vaults/:vaultId/items/:itemId",
-          "rawPath": "/api/vaults/${vaultId}/items/${itemId}",
-          "source": "frontend/src/services/api.ts",
-          "line": 731,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/vaults/:vaultId/items/bulk",
-      "key": "POST /api/vaults/:*/items/bulk",
-      "method": "POST",
-      "path": "/api/vaults/:vaultId/items/bulk",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/vaults/items.routes.js",
-          "line": 129
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/vaults/:vaultId/items/bulk",
-          "rawPath": "/api/vaults/${vaultId}/items/bulk",
-          "source": "frontend/src/services/api.ts",
-          "line": 723,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/vaults/:vaultId/items/reorder",
-      "key": "PUT /api/vaults/:*/items/reorder",
-      "method": "PUT",
-      "path": "/api/vaults/:vaultId/items/reorder",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/vaults/items.routes.js",
-          "line": 13
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/vaults/:vaultId/items/reorder",
-          "rawPath": "/api/vaults/${vaultId}/items/reorder",
-          "source": "frontend/src/services/api.ts",
-          "line": 747,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "POST /api/vaults/:vaultId/lock",
       "key": "POST /api/vaults/:*/lock",
       "method": "POST",
@@ -16393,7 +16223,7 @@
           "path": "/api/vaults/:vaultId/lock",
           "rawPath": "/api/vaults/${vaultId}/lock",
           "source": "frontend/src/services/api.ts",
-          "line": 777,
+          "line": 772,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16460,7 +16290,7 @@
           "path": "/api/vaults/:vaultId/share",
           "rawPath": "/api/vaults/${vaultId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 763,
+          "line": 758,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16516,7 +16346,7 @@
           "path": "/api/vaults/:vaultId/share",
           "rawPath": "/api/vaults/${vaultId}/share",
           "source": "frontend/src/services/api.ts",
-          "line": 755,
+          "line": 750,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16575,7 +16405,7 @@
           "path": "/api/vaults/:vaultId/unlock",
           "rawPath": "/api/vaults/${vaultId}/unlock",
           "source": "frontend/src/services/api.ts",
-          "line": 788,
+          "line": 783,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16670,7 +16500,7 @@
           "path": "/api/whiteboards",
           "rawPath": "/api/whiteboards",
           "source": "frontend/src/services/api.ts",
-          "line": 464,
+          "line": 469,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16723,7 +16553,7 @@
           "path": "/api/whiteboards",
           "rawPath": "/api/whiteboards",
           "source": "frontend/src/services/api.ts",
-          "line": 484,
+          "line": 489,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16761,7 +16591,7 @@
           "path": "/api/whiteboards/:whiteboardId/position",
           "rawPath": "/api/whiteboards/${whiteboardId}/position",
           "source": "frontend/src/services/api.ts",
-          "line": 521,
+          "line": 526,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16795,7 +16625,7 @@
           "path": "/api/whiteboards/:whiteboardId",
           "rawPath": "/api/whiteboards/${whiteboardId}",
           "source": "frontend/src/services/api.ts",
-          "line": 513,
+          "line": 518,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16829,7 +16659,7 @@
           "path": "/api/whiteboards/:whiteboardId",
           "rawPath": "/api/whiteboards/${whiteboardId}",
           "source": "frontend/src/services/api.ts",
-          "line": 502,
+          "line": 507,
           "client": "api",
           "literalInterpolation": false
         }
@@ -18354,12 +18184,17 @@
   ],
   "orphanedOverrides": [
     "DELETE /api/vaults/:vaultId",
+    "DELETE /api/vaults/:vaultId/items/:itemId",
     "GET /api/forms/public/form/:slug",
     "GET /api/vaults",
     "GET /api/vaults/:vaultId",
     "POST /api/forms/public/form/:slug",
     "POST /api/vaults",
-    "PUT /api/vaults/:vaultId"
+    "POST /api/vaults/:vaultId/items",
+    "POST /api/vaults/:vaultId/items/bulk",
+    "PUT /api/vaults/:vaultId",
+    "PUT /api/vaults/:vaultId/items/:itemId",
+    "PUT /api/vaults/:vaultId/items/reorder"
   ],
   "orphanedRuntimeExpressionOverrides": []
 }

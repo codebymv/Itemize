@@ -1,5 +1,9 @@
-import type { Vault } from '@/types';
-import type { CreateVaultPayload, VaultPayload } from './api';
+import type { Vault, VaultItem } from '@/types';
+import type {
+  CreateVaultPayload,
+  VaultItemPayload,
+  VaultPayload,
+} from './api';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 
 type GraphqlVaultItem = {
@@ -54,6 +58,20 @@ const VAULT_FIELDS = `
   }
 `;
 
+const VAULT_ITEM_FIELDS =
+  'id vaultId itemType label value orderIndex createdAt updatedAt';
+
+const legacyVaultItem = (item: GraphqlVaultItem): VaultItem => ({
+  id: item.id,
+  vault_id: item.vaultId,
+  item_type: item.itemType,
+  label: item.label,
+  value: item.value,
+  order_index: item.orderIndex,
+  created_at: item.createdAt,
+  updated_at: item.updatedAt,
+});
+
 const legacyVault = (vault: GraphqlVault): Vault => ({
   id: vault.id,
   user_id: vault.userId,
@@ -68,16 +86,7 @@ const legacyVault = (vault: GraphqlVault): Vault => ({
   is_locked: vault.isLocked,
   ...(vault.encryptionSalt ? { encryption_salt: vault.encryptionSalt } : {}),
   item_count: vault.itemCount,
-  items: vault.items.map((item) => ({
-    id: item.id,
-    vault_id: item.vaultId,
-    item_type: item.itemType,
-    label: item.label,
-    value: item.value,
-    order_index: item.orderIndex,
-    created_at: item.createdAt,
-    updated_at: item.updatedAt,
-  })),
+  items: vault.items.map(legacyVaultItem),
   requires_unlock: vault.requiresUnlock,
   ...(vault.shareToken ? { share_token: vault.shareToken } : {}),
   is_public: vault.isPublic,
@@ -214,5 +223,140 @@ export const deleteVaultViaGraphql = async (
   return {
     message: 'Vault deleted successfully',
     deletedId: data.deleteWorkspaceVault.deletedId,
+  };
+};
+
+const itemInput = (item: VaultItemPayload) => ({
+  itemType: item.item_type,
+  label: item.label,
+  value: item.value,
+});
+
+export const addVaultItemViaGraphql = async (
+  vaultId: number,
+  item: VaultItemPayload,
+): Promise<VaultItem> => {
+  const data = await graphqlMutationRequest<
+    { addWorkspaceVaultItem: GraphqlVaultItem },
+    { vaultId: number; input: ReturnType<typeof itemInput> }
+  >(
+    `mutation AddWorkspaceVaultItem(
+      $vaultId: Int!
+      $input: CreateWorkspaceVaultItemInput!
+    ) {
+      addWorkspaceVaultItem(vaultId: $vaultId, input: $input) {
+        ${VAULT_ITEM_FIELDS}
+      }
+    }`,
+    { vaultId, input: itemInput(item) },
+  );
+  return legacyVaultItem(data.addWorkspaceVaultItem);
+};
+
+export const addVaultItemsViaGraphql = async (
+  vaultId: number,
+  items: VaultItemPayload[],
+): Promise<{ items: VaultItem[]; count: number }> => {
+  const data = await graphqlMutationRequest<
+    {
+      addWorkspaceVaultItems: {
+        items: GraphqlVaultItem[];
+        count: number;
+      };
+    },
+    { vaultId: number; items: Array<ReturnType<typeof itemInput>> }
+  >(
+    `mutation AddWorkspaceVaultItems(
+      $vaultId: Int!
+      $items: [CreateWorkspaceVaultItemInput!]!
+    ) {
+      addWorkspaceVaultItems(vaultId: $vaultId, items: $items) {
+        count
+        items { ${VAULT_ITEM_FIELDS} }
+      }
+    }`,
+    { vaultId, items: items.map(itemInput) },
+  );
+  return {
+    count: data.addWorkspaceVaultItems.count,
+    items: data.addWorkspaceVaultItems.items.map(legacyVaultItem),
+  };
+};
+
+export const updateVaultItemViaGraphql = async (
+  vaultId: number,
+  itemId: number,
+  input: { label?: string; value?: string },
+): Promise<VaultItem> => {
+  const data = await graphqlMutationRequest<
+    { updateWorkspaceVaultItem: GraphqlVaultItem },
+    {
+      vaultId: number;
+      itemId: number;
+      input: { label?: string; value?: string };
+    }
+  >(
+    `mutation UpdateWorkspaceVaultItem(
+      $vaultId: Int!
+      $itemId: Int!
+      $input: UpdateWorkspaceVaultItemInput!
+    ) {
+      updateWorkspaceVaultItem(
+        vaultId: $vaultId
+        itemId: $itemId
+        input: $input
+      ) { ${VAULT_ITEM_FIELDS} }
+    }`,
+    { vaultId, itemId, input },
+  );
+  return legacyVaultItem(data.updateWorkspaceVaultItem);
+};
+
+export const deleteVaultItemViaGraphql = async (
+  vaultId: number,
+  itemId: number,
+): Promise<{ message: string; deletedId: number }> => {
+  const data = await graphqlMutationRequest<
+    { deleteWorkspaceVaultItem: { deletedId: number } },
+    { vaultId: number; itemId: number }
+  >(
+    `mutation DeleteWorkspaceVaultItem($vaultId: Int!, $itemId: Int!) {
+      deleteWorkspaceVaultItem(vaultId: $vaultId, itemId: $itemId) {
+        deletedId
+      }
+    }`,
+    { vaultId, itemId },
+  );
+  return {
+    message: 'Item deleted successfully',
+    deletedId: data.deleteWorkspaceVaultItem.deletedId,
+  };
+};
+
+export const reorderVaultItemsViaGraphql = async (
+  vaultId: number,
+  itemIds: number[],
+): Promise<{ message: string; items: VaultItem[] }> => {
+  const data = await graphqlMutationRequest<
+    {
+      reorderWorkspaceVaultItems: {
+        items: GraphqlVaultItem[];
+      };
+    },
+    { vaultId: number; itemIds: number[] }
+  >(
+    `mutation ReorderWorkspaceVaultItems(
+      $vaultId: Int!
+      $itemIds: [Int!]!
+    ) {
+      reorderWorkspaceVaultItems(vaultId: $vaultId, itemIds: $itemIds) {
+        items { ${VAULT_ITEM_FIELDS} }
+      }
+    }`,
+    { vaultId, itemIds },
+  );
+  return {
+    message: 'Items reordered successfully',
+    items: data.reorderWorkspaceVaultItems.items.map(legacyVaultItem),
   };
 };

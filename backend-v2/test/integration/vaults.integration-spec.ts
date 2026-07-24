@@ -199,6 +199,121 @@ describe('Vault GraphQL PostgreSQL lifecycle', () => {
     });
   });
 
+  it('atomically adds, bulk imports, updates, exact-set reorders, and deletes items', async () => {
+    const added = await mutation(
+      memberToken,
+      `mutation Add($vaultId: Int!, $input: CreateWorkspaceVaultItemInput!) {
+        addWorkspaceVaultItem(vaultId: $vaultId, input: $input) {
+          id vaultId itemType label value orderIndex
+        }
+      }`,
+      {
+        vaultId,
+        input: { itemType: 'secure_note', label: ' Note ', value: '' },
+      },
+    ).expect(200);
+    expect(added.body.errors).toBeUndefined();
+    const addedId = Number(added.body.data.addWorkspaceVaultItem.id);
+    expect(added.body.data.addWorkspaceVaultItem).toMatchObject({
+      label: 'Note',
+      value: '',
+      orderIndex: 1,
+    });
+
+    const bulk = await mutation(
+      memberToken,
+      `mutation Bulk(
+        $vaultId: Int!
+        $items: [CreateWorkspaceVaultItemInput!]!
+      ) {
+        addWorkspaceVaultItems(vaultId: $vaultId, items: $items) {
+          count
+          items { id value orderIndex }
+        }
+      }`,
+      {
+        vaultId,
+        items: [
+          { itemType: 'key_value', label: 'A', value: 'one' },
+          { itemType: 'key_value', label: 'B', value: 'two' },
+        ],
+      },
+    ).expect(200);
+    expect(bulk.body.errors).toBeUndefined();
+    expect(bulk.body.data.addWorkspaceVaultItems).toMatchObject({
+      count: 2,
+      items: [
+        { value: 'one', orderIndex: 2 },
+        { value: 'two', orderIndex: 3 },
+      ],
+    });
+    const bulkIds = bulk.body.data.addWorkspaceVaultItems.items.map(
+      (item: { id: number }) => Number(item.id),
+    );
+    const original = await pool.query<{ id: number }>(
+      `SELECT id FROM vault_items
+       WHERE vault_id = $1 AND id <> ALL($2::int[])
+       ORDER BY order_index LIMIT 1`,
+      [vaultId, [addedId, ...bulkIds]],
+    );
+    const originalId = Number(original.rows[0].id);
+    const order = [bulkIds[1], originalId, addedId, bulkIds[0]];
+
+    const reordered = await mutation(
+      memberToken,
+      `mutation Reorder($vaultId: Int!, $itemIds: [Int!]!) {
+        reorderWorkspaceVaultItems(vaultId: $vaultId, itemIds: $itemIds) {
+          count
+          items { id orderIndex value }
+        }
+      }`,
+      { vaultId, itemIds: order },
+    ).expect(200);
+    expect(reordered.body.data.reorderWorkspaceVaultItems.items.map(
+      (item: { id: number }) => Number(item.id),
+    )).toEqual(order);
+
+    const mismatch = await mutation(
+      memberToken,
+      `mutation {
+        reorderWorkspaceVaultItems(vaultId: ${vaultId}, itemIds: [${originalId}]) {
+          count
+        }
+      }`,
+    ).expect(200);
+    expect(mismatch.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'ITEM_SET_MISMATCH',
+    });
+
+    const updated = await mutation(
+      memberToken,
+      `mutation Update($input: UpdateWorkspaceVaultItemInput!) {
+        updateWorkspaceVaultItem(
+          vaultId: ${vaultId}
+          itemId: ${addedId}
+          input: $input
+        ) { id label value }
+      }`,
+      { input: { label: 'Updated', value: 'new-secret' } },
+    ).expect(200);
+    expect(updated.body.data.updateWorkspaceVaultItem).toMatchObject({
+      id: addedId,
+      label: 'Updated',
+      value: 'new-secret',
+    });
+
+    const removed = await mutation(
+      memberToken,
+      `mutation {
+        deleteWorkspaceVaultItem(vaultId: ${vaultId}, itemId: ${addedId}) {
+          deletedId
+        }
+      }`,
+    ).expect(200);
+    expect(removed.body.data.deleteWorkspaceVaultItem.deletedId).toBe(addedId);
+  });
+
   it('creates, updates, and deletes with CSRF and exact ownership', async () => {
     const noCsrf = await query(
       memberToken,

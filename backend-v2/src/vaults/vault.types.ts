@@ -47,3 +47,14 @@ export class WorkspaceVaultPage {
 export class DeleteWorkspaceVaultResult {
   @Field(() => Int) deletedId: number;
 }
+
+@ObjectType()
+export class WorkspaceVaultItemsResult {
+  @Field(() => [WorkspaceVaultItem]) items: WorkspaceVaultItem[];
+  @Field(() => Int) count: number;
+}
+
+@ObjectType()
+export class DeleteWorkspaceVaultItemResult {
+  @Field(() => Int) deletedId: number;
+}

@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 413
-- API operations under `/api`: 406
+- Registered method/path operations: 408
+- API operations under `/api`: 401
 - Non-API registered operations: 7
-- Static frontend callsites: 344
-- Operations with frontend consumers: 330
+- Static frontend callsites: 339
+- Operations with frontend consumers: 325
 - Operations referenced by backend tests: 222
 - Recommended GraphQL queries: 121
-- Recommended GraphQL mutations: 239
+- Recommended GraphQL mutations: 234
 - Recommended retained HTTP endpoints: 45
-- High-risk operations: 333
+- High-risk operations: 328
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -394,11 +394,6 @@
 | DELETE | `/api/tags/:id` | 0 | 7 | graphql-mutation | high | crm / TagsModule / deleteTag |
 | PUT | `/api/tags/:id` | 0 | 5 | graphql-mutation | high | crm / TagsModule / updateTag |
 | GET | `/api/tags/suggestions` | 0 | 2 | graphql-query | medium | crm / TagsModule / contactTagSuggestions |
-| POST | `/api/vaults/:vaultId/items` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| DELETE | `/api/vaults/:vaultId/items/:itemId` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| PUT | `/api/vaults/:vaultId/items/:itemId` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| POST | `/api/vaults/:vaultId/items/bulk` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| PUT | `/api/vaults/:vaultId/items/reorder` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | POST | `/api/vaults/:vaultId/lock` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | PUT | `/api/vaults/:vaultId/position` | 0 | 0 | graphql-mutation | high | workspace-content / VaultModule / updateWorkspaceVault |
 | DELETE | `/api/vaults/:vaultId/share` | 2 | 2 | graphql-mutation | high | sharing / VaultSharingModule / disableVaultSharing |
@@ -450,7 +445,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 8
-- Orphaned manual overrides: 7
+- Orphaned manual overrides: 12
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

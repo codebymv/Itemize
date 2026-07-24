@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Pool } from 'pg';
+import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 
 export type VaultRow = {
@@ -58,6 +58,13 @@ export type UpdateVaultValue = Partial<
     'title' | 'category' | 'colorValue' | 'positionX' | 'positionY' | 'width' | 'height' | 'zIndex'
   >
 >;
+
+export type EncryptedVaultItemValue = {
+  itemType: string;
+  label: string;
+  encryptedValue: string;
+  iv: string;
+};
 
 const VAULT_COLUMNS = `
   v.id, v.user_id, v.title, v.category, v.color_value,
@@ -199,5 +206,231 @@ export class VaultRepository {
       [vaultId, userId],
     );
     return result.rowCount === 1;
+  }
+
+  async addItem(
+    userId: number,
+    vaultId: number,
+    value: EncryptedVaultItemValue,
+  ): Promise<VaultItemRow | null> {
+    return this.transaction(async (client) => {
+      if (!(await this.lockOwnedVault(client, userId, vaultId))) return null;
+      const inserted = await client.query<VaultItemRow>(
+        `INSERT INTO vault_items (
+           vault_id, item_type, label, encrypted_value, iv, order_index
+         )
+         SELECT $1, $2, $3, $4, $5, COALESCE(MAX(order_index), -1) + 1
+         FROM vault_items
+         WHERE vault_id = $1
+         RETURNING id, vault_id, item_type, label, encrypted_value, iv,
+                   order_index, created_at, updated_at`,
+        [
+          vaultId,
+          value.itemType,
+          value.label,
+          value.encryptedValue,
+          value.iv,
+        ],
+      );
+      await this.touch(client, vaultId);
+      return inserted.rows[0];
+    });
+  }
+
+  async addItems(
+    userId: number,
+    vaultId: number,
+    values: EncryptedVaultItemValue[],
+  ): Promise<VaultItemRow[] | null> {
+    return this.transaction(async (client) => {
+      if (!(await this.lockOwnedVault(client, userId, vaultId))) return null;
+      const order = await client.query<{ next_order: number }>(
+        `SELECT COALESCE(MAX(order_index), -1) + 1 AS next_order
+         FROM vault_items WHERE vault_id = $1`,
+        [vaultId],
+      );
+      const start = Number(order.rows[0].next_order);
+      const result = await client.query<VaultItemRow>(
+        `INSERT INTO vault_items (
+           vault_id, item_type, label, encrypted_value, iv, order_index
+         )
+         SELECT $1, item.item_type, item.label, item.encrypted_value, item.iv,
+                $6 + item.ordinality - 1
+         FROM UNNEST($2::text[], $3::text[], $4::text[], $5::text[])
+              WITH ORDINALITY AS item(
+                item_type, label, encrypted_value, iv, ordinality
+              )
+         RETURNING id, vault_id, item_type, label, encrypted_value, iv,
+                   order_index, created_at, updated_at`,
+        [
+          vaultId,
+          values.map((value) => value.itemType),
+          values.map((value) => value.label),
+          values.map((value) => value.encryptedValue),
+          values.map((value) => value.iv),
+          start,
+        ],
+      );
+      await this.touch(client, vaultId);
+      return result.rows.sort((a, b) => a.order_index - b.order_index);
+    });
+  }
+
+  async updateItem(
+    userId: number,
+    vaultId: number,
+    itemId: number,
+    value: {
+      label?: string;
+      encryptedValue?: string;
+      iv?: string;
+    },
+  ): Promise<'vault-not-found' | 'item-not-found' | VaultItemRow> {
+    return this.transaction(async (client) => {
+      if (!(await this.lockOwnedVault(client, userId, vaultId))) {
+        return 'vault-not-found';
+      }
+      const current = await client.query<VaultItemRow>(
+        `SELECT id, vault_id, item_type, label, encrypted_value, iv,
+                order_index, created_at, updated_at
+         FROM vault_items
+         WHERE id = $1 AND vault_id = $2
+         FOR UPDATE`,
+        [itemId, vaultId],
+      );
+      if (!current.rows[0]) return 'item-not-found';
+      const row = current.rows[0];
+      const result = await client.query<VaultItemRow>(
+        `UPDATE vault_items
+         SET label = $1, encrypted_value = $2, iv = $3,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $4 AND vault_id = $5
+         RETURNING id, vault_id, item_type, label, encrypted_value, iv,
+                   order_index, created_at, updated_at`,
+        [
+          value.label ?? row.label,
+          value.encryptedValue ?? row.encrypted_value,
+          value.iv ?? row.iv,
+          itemId,
+          vaultId,
+        ],
+      );
+      await this.touch(client, vaultId);
+      return result.rows[0];
+    });
+  }
+
+  async deleteItem(
+    userId: number,
+    vaultId: number,
+    itemId: number,
+  ): Promise<'vault-not-found' | 'item-not-found' | true> {
+    return this.transaction(async (client) => {
+      if (!(await this.lockOwnedVault(client, userId, vaultId))) {
+        return 'vault-not-found';
+      }
+      const removed = await client.query<{ order_index: number }>(
+        `DELETE FROM vault_items
+         WHERE id = $1 AND vault_id = $2
+         RETURNING order_index`,
+        [itemId, vaultId],
+      );
+      if (!removed.rows[0]) return 'item-not-found';
+      await client.query(
+        `UPDATE vault_items
+         SET order_index = order_index - 1, updated_at = CURRENT_TIMESTAMP
+         WHERE vault_id = $1 AND order_index > $2`,
+        [vaultId, removed.rows[0].order_index],
+      );
+      await this.touch(client, vaultId);
+      return true;
+    });
+  }
+
+  async reorderItems(
+    userId: number,
+    vaultId: number,
+    itemIds: number[],
+  ): Promise<
+    | 'vault-not-found'
+    | 'item-set-mismatch'
+    | VaultItemRow[]
+  > {
+    return this.transaction(async (client) => {
+      if (!(await this.lockOwnedVault(client, userId, vaultId))) {
+        return 'vault-not-found';
+      }
+      const current = await client.query<{ id: number }>(
+        `SELECT id FROM vault_items
+         WHERE vault_id = $1
+         ORDER BY order_index, id
+         FOR UPDATE`,
+        [vaultId],
+      );
+      const actual = current.rows.map((row) => row.id).sort((a, b) => a - b);
+      const requested = [...itemIds].sort((a, b) => a - b);
+      if (
+        actual.length !== requested.length ||
+        actual.some((id, index) => id !== requested[index])
+      ) {
+        return 'item-set-mismatch';
+      }
+      await client.query(
+        `UPDATE vault_items AS item
+         SET order_index = (ordered.position - 1)::int,
+             updated_at = CURRENT_TIMESTAMP
+         FROM UNNEST($1::int[]) WITH ORDINALITY AS ordered(id, position)
+         WHERE item.id = ordered.id AND item.vault_id = $2`,
+        [itemIds, vaultId],
+      );
+      await this.touch(client, vaultId);
+      const result = await client.query<VaultItemRow>(
+        `SELECT id, vault_id, item_type, label, encrypted_value, iv,
+                order_index, created_at, updated_at
+         FROM vault_items
+         WHERE vault_id = $1
+         ORDER BY order_index, id`,
+        [vaultId],
+      );
+      return result.rows;
+    });
+  }
+
+  private async lockOwnedVault(
+    client: PoolClient,
+    userId: number,
+    vaultId: number,
+  ): Promise<boolean> {
+    const result = await client.query(
+      `SELECT id FROM vaults
+       WHERE id = $1 AND user_id = $2
+       FOR UPDATE`,
+      [vaultId, userId],
+    );
+    return result.rowCount === 1;
+  }
+
+  private async touch(client: PoolClient, vaultId: number): Promise<void> {
+    await client.query(
+      `UPDATE vaults SET updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+      [vaultId],
+    );
+  }
+
+  private async transaction<T>(
+    work: (client: PoolClient) => Promise<T>,
+  ): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await work(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }

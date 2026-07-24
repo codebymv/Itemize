@@ -30,3 +30,16 @@ export class UpdateWorkspaceVaultInput {
   @Field(() => Int, { nullable: true }) height?: number | null;
   @Field(() => Int, { nullable: true }) zIndex?: number | null;
 }
+
+@InputType()
+export class CreateWorkspaceVaultItemInput {
+  @Field() itemType: string;
+  @Field() label: string;
+  @Field() value: string;
+}
+
+@InputType()
+export class UpdateWorkspaceVaultItemInput {
+  @Field(() => String, { nullable: true }) label?: string | null;
+  @Field(() => String, { nullable: true }) value?: string | null;
+}

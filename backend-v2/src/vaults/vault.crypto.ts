@@ -1,4 +1,9 @@
-import { createDecipheriv, createHash, randomBytes } from 'node:crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+} from 'node:crypto';
 
 const AUTH_TAG_LENGTH = 16;
 
@@ -23,7 +28,7 @@ export const decryptVaultValue = (
   ivBase64: string,
 ): string => {
   const combined = Buffer.from(encryptedBase64, 'base64');
-  if (combined.length <= AUTH_TAG_LENGTH) {
+  if (combined.length < AUTH_TAG_LENGTH) {
     throw new Error('Encrypted vault value is invalid');
   }
   const encrypted = combined.subarray(0, -AUTH_TAG_LENGTH);
@@ -36,6 +41,24 @@ export const decryptVaultValue = (
   );
   decipher.setAuthTag(authTag);
   return decipher.update(encrypted, undefined, 'utf8') + decipher.final('utf8');
+};
+
+export const encryptVaultValue = (
+  plaintext: string,
+): { encrypted: string; iv: string } => {
+  const iv = randomBytes(16);
+  const cipher = createCipheriv('aes-256-gcm', encryptionKey(), iv, {
+    authTagLength: AUTH_TAG_LENGTH,
+  });
+  const encrypted = Buffer.concat([
+    cipher.update(plaintext, 'utf8'),
+    cipher.final(),
+    cipher.getAuthTag(),
+  ]);
+  return {
+    encrypted: encrypted.toString('base64'),
+    iv: iv.toString('base64'),
+  };
 };
 
 export const generateVaultSalt = (): string =>

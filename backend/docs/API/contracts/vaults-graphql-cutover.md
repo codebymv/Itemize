@@ -1,6 +1,6 @@
 # Vaults GraphQL cutover contract
 
-**Status:** Shell lifecycle consumer cutover complete; item, lock-management, and sharing slices remain
+**Status:** Shell and item lifecycle consumer cutover complete; lock-management and sharing slices remain
 
 ## Shipped boundary
 
@@ -34,11 +34,20 @@ Numbered migration `050_vault_storage` transactionally establishes both vault
 tables, indexes, cascades, type constraint, and timestamp triggers. Production
 startup requires that marker before route registration.
 
+## Item lifecycle
+
+Single create, bounded bulk import, partial edit, deletion, and reorder use
+CSRF-protected GraphQL mutations with no REST fallback. Every write locks the
+owned parent vault, stores only AES-256-GCM authenticated ciphertext, updates
+the parent timestamp, and commits atomically. Bulk import validates the complete
+batch before writing instead of silently skipping malformed entries. Reorder
+requires the exact authoritative item-ID set, and deletion compacts later
+positions.
+
 ## Remaining slices
 
-1. Atomic single and bulk item create/update/delete/reorder.
-2. Lock, unlock, and password lifecycle mutations.
-3. The explicit-consent vault-sharing model documented in
+1. Lock, unlock, and password lifecycle mutations.
+2. The explicit-consent vault-sharing model documented in
    `sharing-graphql-cutover.md`; its anonymous bearer-link read remains an HTTP
    protocol.
 

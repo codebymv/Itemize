@@ -3,11 +3,11 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 434,
-    "resolvedDeclarationCount": 434,
+    "declarationCount": 429,
+    "resolvedDeclarationCount": 429,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 413,
-    "sourceFileCount": 80
+    "uniqueResolvedOperationCount": 408,
+    "sourceFileCount": 79
   },
   "caveats": [
     "This is static source analysis; it does not execute application modules.",
@@ -3844,56 +3844,6 @@
       "declaredPath": "/suggestions",
       "source": "backend/src/routes/tags.routes.js",
       "line": 195,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/vaults/:vaultId/items"
-      ],
-      "declaredPath": "/vaults/:vaultId/items",
-      "source": "backend/src/routes/vaults/items.routes.js",
-      "line": 59,
-      "dynamic": false
-    },
-    {
-      "method": "DELETE",
-      "publicPaths": [
-        "/api/vaults/:vaultId/items/:itemId"
-      ],
-      "declaredPath": "/vaults/:vaultId/items/:itemId",
-      "source": "backend/src/routes/vaults/items.routes.js",
-      "line": 304,
-      "dynamic": false
-    },
-    {
-      "method": "PUT",
-      "publicPaths": [
-        "/api/vaults/:vaultId/items/:itemId"
-      ],
-      "declaredPath": "/vaults/:vaultId/items/:itemId",
-      "source": "backend/src/routes/vaults/items.routes.js",
-      "line": 226,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/vaults/:vaultId/items/bulk"
-      ],
-      "declaredPath": "/vaults/:vaultId/items/bulk",
-      "source": "backend/src/routes/vaults/items.routes.js",
-      "line": 129,
-      "dynamic": false
-    },
-    {
-      "method": "PUT",
-      "publicPaths": [
-        "/api/vaults/:vaultId/items/reorder"
-      ],
-      "declaredPath": "/vaults/:vaultId/items/reorder",
-      "source": "backend/src/routes/vaults/items.routes.js",
-      "line": 13,
       "dynamic": false
     },
     {

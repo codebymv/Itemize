@@ -2008,6 +2008,26 @@
       "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "deleteWorkspaceVault", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "CSRF-protected exact user-owned deletion cascades stored items and conceals foreign identifiers as NOT_FOUND."
     },
+    "POST /api/vaults/:vaultId/items": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "addWorkspaceVaultItem", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "CSRF-protected vault-row-locked create validates type and bounded plaintext, encrypts with authenticated AES-256-GCM, and allocates a race-free contiguous order."
+    },
+    "POST /api/vaults/:vaultId/items/bulk": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "addWorkspaceVaultItems", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Atomic bulk import validates every item before mutation, caps the batch at 500, encrypts every value, and inserts one contiguous ordered set without silently dropping invalid entries."
+    },
+    "PUT /api/vaults/:vaultId/items/:itemId": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "updateWorkspaceVaultItem", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "User-, vault-, and item-qualified row-locked update preserves omitted fields and rotates authenticated ciphertext whenever plaintext changes."
+    },
+    "DELETE /api/vaults/:vaultId/items/:itemId": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "deleteWorkspaceVaultItem", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Exact owned-item delete atomically compacts later order indices and touches the parent vault."
+    },
+    "PUT /api/vaults/:vaultId/items/reorder": {
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "reorderWorkspaceVaultItems", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "Vault-row-locked exact-set reorder rejects missing, foreign, duplicate, or extra IDs and atomically installs contiguous zero-based order."
+    },
     "GET /api/onboarding/progress": {
       "disposition": "graphql-query", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "onboardingProgress", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Authenticated user-scoped progress, independent of selected organization, with deterministic typed feature projections."

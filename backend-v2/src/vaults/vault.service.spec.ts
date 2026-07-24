@@ -35,6 +35,11 @@ describe('VaultService', () => {
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
+      addItem: jest.fn(),
+      addItems: jest.fn(),
+      updateItem: jest.fn(),
+      deleteItem: jest.fn(),
+      reorderItems: jest.fn(),
     } as unknown as jest.Mocked<VaultRepository>;
     service = new VaultService(repository);
   });
@@ -148,6 +153,44 @@ describe('VaultService', () => {
     repository.delete.mockResolvedValue(false);
     await expect(service.delete(7, 12)).rejects.toMatchObject({
       extensions: { code: 'NOT_FOUND' },
+    });
+  });
+
+  it('encrypts item creates and returns only plaintext projection', async () => {
+    process.env.VAULT_ENCRYPTION_KEY = '34'.repeat(32);
+    repository.addItem.mockImplementation(async (_userId, vaultId, value) => ({
+      id: 2,
+      vault_id: vaultId,
+      item_type: value.itemType,
+      label: value.label,
+      encrypted_value: value.encryptedValue,
+      iv: value.iv,
+      order_index: 0,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    }));
+    await expect(
+      service.addItem(7, 12, {
+        itemType: 'key_value',
+        label: ' Token ',
+        value: 'secret',
+      }),
+    ).resolves.toMatchObject({
+      vaultId: 12,
+      label: 'Token',
+      value: 'secret',
+    });
+    const stored = repository.addItem.mock.calls[0][2];
+    expect(stored.encryptedValue).not.toContain('secret');
+  });
+
+  it('requires reorder to provide the exact item set', async () => {
+    repository.reorderItems.mockResolvedValue('item-set-mismatch');
+    await expect(service.reorderItems(7, 12, [2, 3])).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'ITEM_SET_MISMATCH',
+      },
     });
   });
 });

@@ -6,11 +6,11 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 434
-- Resolved declarations: 434
+- Route declarations: 429
+- Resolved declarations: 429
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 413
-- Files containing declarations: 80
+- Unique resolved method/path operations: 408
+- Files containing declarations: 79
 
 ## Interpretation limits
 
@@ -406,11 +406,6 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | DELETE | `/api/tags/:id` | `/:id` | `backend/src/routes/tags.routes.js:156` |
 | PUT | `/api/tags/:id` | `/:id` | `backend/src/routes/tags.routes.js:91` |
 | GET | `/api/tags/suggestions` | `/suggestions` | `backend/src/routes/tags.routes.js:195` |
-| POST | `/api/vaults/:vaultId/items` | `/vaults/:vaultId/items` | `backend/src/routes/vaults/items.routes.js:59` |
-| DELETE | `/api/vaults/:vaultId/items/:itemId` | `/vaults/:vaultId/items/:itemId` | `backend/src/routes/vaults/items.routes.js:304` |
-| PUT | `/api/vaults/:vaultId/items/:itemId` | `/vaults/:vaultId/items/:itemId` | `backend/src/routes/vaults/items.routes.js:226` |
-| POST | `/api/vaults/:vaultId/items/bulk` | `/vaults/:vaultId/items/bulk` | `backend/src/routes/vaults/items.routes.js:129` |
-| PUT | `/api/vaults/:vaultId/items/reorder` | `/vaults/:vaultId/items/reorder` | `backend/src/routes/vaults/items.routes.js:13` |
 | POST | `/api/vaults/:vaultId/lock` | `/vaults/:vaultId/lock` | `backend/src/routes/vaults/password.routes.js:14` |
 | PUT | `/api/vaults/:vaultId/position` | `/api/vaults/:vaultId/position` | `backend/src/bootstrap/register-api-routes.js:60` |
 | DELETE | `/api/vaults/:vaultId/share` | `/vaults/:vaultId/share` | `backend/src/routes/vaults/sharing.routes.js:58` |
