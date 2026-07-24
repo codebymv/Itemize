@@ -109,24 +109,20 @@ describe('Lists Integration Tests', () => {
             expect(res.body.lists.every(l => l.user_id === userB.user.id)).toBe(true);
         });
 
-        it('allows User A to update list position', async () => {
-            const res = await request(app)
-                .put(`/api/lists/${listIdA}/position`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .send({ x: 150, y: 250 });
+        it('retires dedicated position routes in favor of the GraphQL canvas batch', async () => {
+            const [listPosition, whiteboardPosition] = await Promise.all([
+                request(app)
+                    .put(`/api/lists/${listIdA}/position`)
+                    .set('Cookie', [`itemize_auth=${userA.token}`])
+                    .send({ x: 150, y: 250 }),
+                request(app)
+                    .put('/api/whiteboards/1/position')
+                    .set('Cookie', [`itemize_auth=${userA.token}`])
+                    .send({ x: 150, y: 250 }),
+            ]);
 
-            expect(res.status).toBe(200);
-            expect(Number(res.body.position_x)).toBe(150);
-            expect(Number(res.body.position_y)).toBe(250);
-        });
-
-        it('prevents User B from updating User A\'s list position', async () => {
-            const res = await request(app)
-                .put(`/api/lists/${listIdA}/position`)
-                .set('Cookie', [`itemize_auth=${userB.token}`])
-                .send({ x: 999, y: 999 });
-
-            expect(res.status).toBe(404);
+            expect(listPosition.status).toBe(404);
+            expect(whiteboardPosition.status).toBe(404);
         });
 
         it('allows User A to toggle an item', async () => {

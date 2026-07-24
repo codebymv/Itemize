@@ -92,7 +92,8 @@ adapter: `GET /api/canvas/lists` on REST or repeated bounded
 whiteboards and wireframes through the shared adapters. Canvas and Contents own
 the reachable whiteboard and wireframe CRUD calls. The active debounced drag path uses
 `batchCanvasPositions` for lists, notes, whiteboards, wireframes, and vaults;
-the dedicated per-kind position adapters are not shipped call paths.
+the unused dedicated list and whiteboard position adapters and their REST
+routes are removed.
 
 ## Query contract
 

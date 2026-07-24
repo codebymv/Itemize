@@ -228,41 +228,6 @@ module.exports = (pool, authenticateJWT, broadcast) => {
         }
     });
 
-    // Update list position for canvas view
-    router.put('/lists/:id/position', authenticateJWT, async (req, res) => {
-        try {
-            const { id } = req.params;
-            const { x, y } = req.body;
-
-            if (typeof x !== 'number' || typeof y !== 'number') {
-                return res.status(400).json({ error: 'Invalid position coordinates' });
-            }
-
-            const result = await withDbClient(pool, async (client) => client.query(
-                `UPDATE lists SET position_x = $1, position_y = $2 WHERE id = $3 AND user_id = $4 RETURNING ${listColumns()}`,
-                [x, y, id, req.user.id]
-            ));
-
-            if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'List not found' });
-            }
-
-            // Broadcast position update to shared viewers if list is public
-            if (result.rows[0].is_public && result.rows[0].share_token && broadcast.listUpdate) {
-                broadcast.listUpdate(result.rows[0].share_token, 'POSITION_UPDATE', {
-                    id: result.rows[0].id,
-                    position_x: result.rows[0].position_x,
-                    position_y: result.rows[0].position_y
-                });
-            }
-
-            res.json(result.rows[0]);
-        } catch (error) {
-            console.error('Error updating list position:', error);
-            return sendError(res, 'Internal server error');
-        }
-    });
-
     // Toggle item completion status
     router.put('/lists/:id/items/:itemId/toggle', authenticateJWT, async (req, res) => {
         try {

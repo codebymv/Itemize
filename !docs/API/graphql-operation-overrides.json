@@ -1677,8 +1677,8 @@
       "notes": "Blocked on atomic JSON item update semantics and durable realtime parity."
     },
     "PUT /api/lists/:id/position": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "moveWorkspaceList", "parityStatus": "blocked", "risk": "high",
-      "notes": "Blocked until high-frequency position writes and shared-viewer publication have a cross-service contract."
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "batchCanvasPositions", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "The unused dedicated frontend adapter and REST route were removed. Active list drag persistence is covered by the CSRF-protected GraphQL batch, which validates ownership and atomically enqueues shared-viewer projections."
     },
     "PUT /api/lists/:id/title": {
       "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "renameWorkspaceList", "parityStatus": "blocked", "risk": "high",
@@ -1753,8 +1753,8 @@
       "notes": "User-scoped CSRF-protected delete uses a stable mutation ID and atomically enqueues the active public-viewer terminal projection. PostgreSQL proves REST miss and worker delivery; staging remains required."
     },
     "PUT /api/whiteboards/:id/position": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "moveWorkspaceWhiteboard", "parityStatus": "blocked", "risk": "high",
-      "notes": "No shipped consumer uses this dedicated adapter; active drag writes use batchCanvasPositions through GraphQL. Remove this dead retained adapter when legacy application-data routes are retired."
+      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "batchCanvasPositions", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "notes": "The unused dedicated frontend adapter and REST route were removed. Active whiteboard drag persistence is covered by the CSRF-protected GraphQL batch, which validates ownership and atomically enqueues shared-viewer projections."
     },
     "POST /api/whiteboards/:whiteboardId/share": {
       "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceContentModule", "targetOperation": "enableWhiteboardSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",

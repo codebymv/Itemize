@@ -237,43 +237,6 @@ module.exports = (pool, authenticateJWT, broadcast) => {
         }
     });
 
-    // Update whiteboard position only
-    router.put('/whiteboards/:id/position', authenticateJWT, async (req, res) => {
-        try {
-            const { id } = req.params;
-            const { x, y } = req.body;
-
-            if (typeof x !== 'number' || typeof y !== 'number') {
-                return sendBadRequest(res, 'Invalid position coordinates');
-            }
-
-            const result = await withDbClient(pool, async (client) => {
-                return client.query(
-                    `UPDATE whiteboards SET position_x = $1, position_y = $2 WHERE id = $3 AND user_id = $4 RETURNING ${whiteboardColumns()}`,
-                    [x, y, id, req.user.id]
-                );
-            });
-
-            if (result.rows.length === 0) {
-                return sendNotFound(res, 'Whiteboard');
-            }
-
-            // Broadcast position update to shared viewers if whiteboard is public
-            if (result.rows[0].is_public && result.rows[0].share_token && broadcast.whiteboardUpdate) {
-                broadcast.whiteboardUpdate(result.rows[0].share_token, 'POSITION_UPDATE', {
-                    id: result.rows[0].id,
-                    position_x: result.rows[0].position_x,
-                    position_y: result.rows[0].position_y
-                });
-            }
-
-            sendSuccess(res, result.rows[0]);
-        } catch (error) {
-            console.error('Error updating whiteboard position:', error);
-            sendError(res, 'Internal server error');
-        }
-    });
-
     // Delete a whiteboard
     router.delete('/whiteboards/:whiteboardId', authenticateJWT, async (req, res) => {
         try {

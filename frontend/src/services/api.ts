@@ -377,13 +377,6 @@ export const deleteList = async (listId: string, token?: string) => {
   return response.data;
 };
 
-export const updateListPosition = async (listId: string, x: number, y: number, token?: string) => {
-  const response = await api.put(`/api/lists/${listId}/position`, { x, y }, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
-};
-
 export const updateCanvasPositions = async (updates: CanvasPositionUpdate[], token?: string) => {
   return updateCanvasPositionsViaGraphql(updates);
 };
@@ -523,13 +516,6 @@ export const deleteWhiteboard = async (whiteboardId: number, token?: string) => 
     headers: getAuthHeaders(token)
   });
   forgetWorkspaceWhiteboardRevision(whiteboardId);
-  return response.data;
-};
-
-export const updateWhiteboardPosition = async (whiteboardId: number, x: number, y: number, token?: string) => {
-  const response = await api.put(`/api/whiteboards/${whiteboardId}/position`, { x, y }, {
-    headers: getAuthHeaders(token)
-  });
   return response.data;
 };
 

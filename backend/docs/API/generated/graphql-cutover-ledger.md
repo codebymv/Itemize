@@ -7,9 +7,9 @@
 - Registered method/path operations: 370
 - API operations under `/api`: 363
 - Non-API registered operations: 7
-- Static frontend callsites: 299
-- Operations with frontend consumers: 287
-- Operations referenced by backend tests: 197
+- Static frontend callsites: 297
+- Operations with frontend consumers: 285
+- Operations referenced by backend tests: 198
 - Recommended GraphQL queries: 109
 - Recommended GraphQL mutations: 206
 - Recommended retained HTTP endpoints: 47
@@ -204,7 +204,7 @@
 | POST | `/api/lists/:id/items` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / addWorkspaceListItem |
 | DELETE | `/api/lists/:id/items/:itemId` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / removeWorkspaceListItem |
 | PUT | `/api/lists/:id/items/:itemId/toggle` | 0 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / toggleWorkspaceListItem |
-| PUT | `/api/lists/:id/position` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / moveWorkspaceList |
+| PUT | `/api/lists/:id/position` | 0 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / batchCanvasPositions |
 | PUT | `/api/lists/:id/title` | 0 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / renameWorkspaceList |
 | DELETE | `/api/lists/:listId/share` | 0 | 2 | graphql-mutation | high | sharing / WorkspaceContentModule / disableListSharing |
 | POST | `/api/lists/:listId/share` | 0 | 5 | graphql-mutation | high | sharing / WorkspaceContentModule / enableListSharing |
@@ -364,7 +364,7 @@
 | POST | `/api/webhooks/:workflowId` | 0 | 6 | retain-http | high | automation / WorkflowWebhooksModule / processWorkflowWebhook |
 | GET | `/api/whiteboards` | 1 | 3 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceWhiteboards |
 | POST | `/api/whiteboards` | 1 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / createWorkspaceWhiteboard |
-| PUT | `/api/whiteboards/:id/position` | 1 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / moveWorkspaceWhiteboard |
+| PUT | `/api/whiteboards/:id/position` | 0 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / batchCanvasPositions |
 | DELETE | `/api/whiteboards/:whiteboardId` | 1 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / deleteWorkspaceWhiteboard |
 | PUT | `/api/whiteboards/:whiteboardId` | 1 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceWhiteboard |
 | DELETE | `/api/whiteboards/:whiteboardId/share` | 0 | 1 | graphql-mutation | high | sharing / WorkspaceContentModule / disableWhiteboardSharing |

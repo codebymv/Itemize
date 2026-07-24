@@ -9,9 +9,9 @@
     "operationCount": 370,
     "apiOperationCount": 363,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 299,
-    "operationsWithFrontendConsumers": 287,
-    "operationsWithBackendTests": 197,
+    "frontendCallsiteCount": 297,
+    "operationsWithFrontendConsumers": 285,
+    "operationsWithBackendTests": 198,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
@@ -3549,7 +3549,7 @@
           "path": "/api/categories",
           "rawPath": "/api/categories",
           "source": "frontend/src/services/api.ts",
-          "line": 617,
+          "line": 603,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3590,7 +3590,7 @@
           "path": "/api/categories",
           "rawPath": "/api/categories",
           "source": "frontend/src/services/api.ts",
-          "line": 627,
+          "line": 613,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3631,7 +3631,7 @@
           "path": "/api/categories/:categoryId",
           "rawPath": "/api/categories/${categoryId}",
           "source": "frontend/src/services/api.ts",
-          "line": 647,
+          "line": 633,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3672,7 +3672,7 @@
           "path": "/api/categories/:categoryId",
           "rawPath": "/api/categories/${categoryId}",
           "source": "frontend/src/services/api.ts",
-          "line": 637,
+          "line": 623,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8028,13 +8028,13 @@
           "method": "DELETE",
           "path": "/api/lists/:listIdA",
           "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 153
+          "line": 149
         },
         {
           "method": "DELETE",
           "path": "/api/lists/:listIdA",
           "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 167
+          "line": 163
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -8090,7 +8090,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 334
+          "line": 299
         }
       ],
       "consumerCallsites": [],
@@ -8114,7 +8114,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 407
+          "line": 372
         }
       ],
       "consumerCallsites": [],
@@ -8138,7 +8138,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 267
+          "line": 232
         }
       ],
       "consumerCallsites": [],
@@ -8147,13 +8147,13 @@
           "method": "PUT",
           "path": "/api/lists/:listIdA/items/item1/toggle",
           "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 134
+          "line": 130
         },
         {
           "method": "PUT",
           "path": "/api/lists/:listIdA/items/item1/toggle",
           "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 145
+          "line": 141
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -8176,45 +8176,25 @@
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
           "line": 55
-        },
-        {
-          "source": "backend/src/routes/lists.routes.js",
-          "line": 232
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/lists/:listId/position",
-          "rawPath": "/api/lists/${listId}/position",
-          "source": "frontend/src/services/api.ts",
-          "line": 381,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [
         {
           "method": "PUT",
           "path": "/api/lists/:listIdA/position",
           "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 114
-        },
-        {
-          "method": "PUT",
-          "path": "/api/lists/:listIdA/position",
-          "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 125
+          "line": 115
         }
       ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
       "owner": "workspace-content",
-      "targetOperation": "moveWorkspaceList",
+      "targetOperation": "batchCanvasPositions",
       "targetModule": "WorkspaceContentModule",
-      "parityStatus": "blocked",
-      "notes": "Blocked until high-frequency position writes and shared-viewer publication have a cross-service contract.",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "The unused dedicated frontend adapter and REST route were removed. Active list drag persistence is covered by the CSRF-protected GraphQL batch, which validates ownership and atomically enqueues shared-viewer projections.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8226,7 +8206,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 467
+          "line": 432
         }
       ],
       "consumerCallsites": [],
@@ -8460,7 +8440,7 @@
           "path": "/api/notes",
           "rawPath": "/api/notes",
           "source": "frontend/src/services/api.ts",
-          "line": 396,
+          "line": 389,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8555,7 +8535,7 @@
           "path": "/api/notes",
           "rawPath": "/api/notes",
           "source": "frontend/src/services/api.ts",
-          "line": 406,
+          "line": 399,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8626,7 +8606,7 @@
           "path": "/api/notes/:noteId",
           "rawPath": "/api/notes/${noteId}",
           "source": "frontend/src/services/api.ts",
-          "line": 460,
+          "line": 453,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8685,7 +8665,7 @@
           "path": "/api/notes/:noteId",
           "rawPath": "/api/notes/${noteId}",
           "source": "frontend/src/services/api.ts",
-          "line": 416,
+          "line": 409,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8732,7 +8712,7 @@
           "path": "/api/notes/:noteId/category",
           "rawPath": "/api/notes/${noteId}/category",
           "source": "frontend/src/services/api.ts",
-          "line": 447,
+          "line": 440,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8779,7 +8759,7 @@
           "path": "/api/notes/:noteId/content",
           "rawPath": "/api/notes/${noteId}/content",
           "source": "frontend/src/services/api.ts",
-          "line": 427,
+          "line": 420,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8906,7 +8886,7 @@
           "path": "/api/notes/:noteId/title",
           "rawPath": "/api/notes/${noteId}/title",
           "source": "frontend/src/services/api.ts",
-          "line": 437,
+          "line": 430,
           "client": "api",
           "literalInterpolation": false
         }
@@ -12191,7 +12171,7 @@
           "path": "/api/shared/vault/:shareToken",
           "rawPath": "/api/shared/vault/${shareToken}",
           "source": "frontend/src/services/api.ts",
-          "line": 766,
+          "line": 752,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14643,7 +14623,7 @@
           "path": "/api/whiteboards",
           "rawPath": "/api/whiteboards",
           "source": "frontend/src/services/api.ts",
-          "line": 473,
+          "line": 466,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14696,7 +14676,7 @@
           "path": "/api/whiteboards",
           "rawPath": "/api/whiteboards",
           "source": "frontend/src/services/api.ts",
-          "line": 493,
+          "line": 486,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14722,32 +14702,25 @@
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
           "line": 56
-        },
-        {
-          "source": "backend/src/routes/whiteboards.routes.js",
-          "line": 241
         }
       ],
-      "consumerCallsites": [
+      "consumerCallsites": [],
+      "testCallsites": [
         {
           "method": "PUT",
-          "path": "/api/whiteboards/:whiteboardId/position",
-          "rawPath": "/api/whiteboards/${whiteboardId}/position",
-          "source": "frontend/src/services/api.ts",
-          "line": 530,
-          "client": "api",
-          "literalInterpolation": false
+          "path": "/api/whiteboards/1/position",
+          "source": "backend/src/__tests__/integration/lists.integration.test.js",
+          "line": 119
         }
       ],
-      "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
       "owner": "workspace-content",
-      "targetOperation": "moveWorkspaceWhiteboard",
+      "targetOperation": "batchCanvasPositions",
       "targetModule": "WorkspaceContentModule",
-      "parityStatus": "blocked",
-      "notes": "No shipped consumer uses this dedicated adapter; active drag writes use batchCanvasPositions through GraphQL. Remove this dead retained adapter when legacy application-data routes are retired.",
+      "parityStatus": "consumer-cutover-complete",
+      "notes": "The unused dedicated frontend adapter and REST route were removed. Active whiteboard drag persistence is covered by the CSRF-protected GraphQL batch, which validates ownership and atomically enqueues shared-viewer projections.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14759,7 +14732,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/whiteboards.routes.js",
-          "line": 278
+          "line": 241
         }
       ],
       "consumerCallsites": [
@@ -14768,7 +14741,7 @@
           "path": "/api/whiteboards/:whiteboardId",
           "rawPath": "/api/whiteboards/${whiteboardId}",
           "source": "frontend/src/services/api.ts",
-          "line": 522,
+          "line": 515,
           "client": "api",
           "literalInterpolation": false
         }
@@ -14802,7 +14775,7 @@
           "path": "/api/whiteboards/:whiteboardId",
           "rawPath": "/api/whiteboards/${whiteboardId}",
           "source": "frontend/src/services/api.ts",
-          "line": 511,
+          "line": 504,
           "client": "api",
           "literalInterpolation": false
         }

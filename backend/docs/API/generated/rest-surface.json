@@ -3,8 +3,8 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 391,
-    "resolvedDeclarationCount": 391,
+    "declarationCount": 389,
+    "resolvedDeclarationCount": 389,
     "unresolvedDeclarationCount": 0,
     "uniqueResolvedOperationCount": 370,
     "sourceFileCount": 76
@@ -1803,7 +1803,7 @@
       ],
       "declaredPath": "/lists/:id/items",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 334,
+      "line": 299,
       "dynamic": false
     },
     {
@@ -1813,7 +1813,7 @@
       ],
       "declaredPath": "/lists/:id/items/:itemId",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 407,
+      "line": 372,
       "dynamic": false
     },
     {
@@ -1823,7 +1823,7 @@
       ],
       "declaredPath": "/lists/:id/items/:itemId/toggle",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 267,
+      "line": 232,
       "dynamic": false
     },
     {
@@ -1839,21 +1839,11 @@
     {
       "method": "PUT",
       "publicPaths": [
-        "/api/lists/:id/position"
-      ],
-      "declaredPath": "/lists/:id/position",
-      "source": "backend/src/routes/lists.routes.js",
-      "line": 232,
-      "dynamic": false
-    },
-    {
-      "method": "PUT",
-      "publicPaths": [
         "/api/lists/:id/title"
       ],
       "declaredPath": "/lists/:id/title",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 467,
+      "line": 432,
       "dynamic": false
     },
     {
@@ -3557,23 +3547,13 @@
       "dynamic": false
     },
     {
-      "method": "PUT",
-      "publicPaths": [
-        "/api/whiteboards/:id/position"
-      ],
-      "declaredPath": "/whiteboards/:id/position",
-      "source": "backend/src/routes/whiteboards.routes.js",
-      "line": 241,
-      "dynamic": false
-    },
-    {
       "method": "DELETE",
       "publicPaths": [
         "/api/whiteboards/:whiteboardId"
       ],
       "declaredPath": "/whiteboards/:whiteboardId",
       "source": "backend/src/routes/whiteboards.routes.js",
-      "line": 278,
+      "line": 241,
       "dynamic": false
     },
     {

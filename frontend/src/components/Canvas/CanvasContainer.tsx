@@ -4,7 +4,6 @@ import { DraggableListCard } from './DraggableListCard';
 import { ContextMenu } from './ContextMenu';
 import { useSidebar } from '../ui/sidebar';
 import { List, Note, Whiteboard, Wireframe, Vault, Category } from '../../types';
-import { updateListPosition, updateList, deleteList } from '../../services/api';
 import { useAuthState } from '../../contexts/AuthContext';
 import { storage } from '../../lib/storage';
 

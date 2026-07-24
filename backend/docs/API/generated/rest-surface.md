@@ -6,8 +6,8 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 391
-- Resolved declarations: 391
+- Route declarations: 389
+- Resolved declarations: 389
 - Unresolved declarations: 0
 - Unique resolved method/path operations: 370
 - Files containing declarations: 76
@@ -201,12 +201,11 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/lists` | `/lists` | `backend/src/routes/lists.routes.js:90` |
 | DELETE | `/api/lists/:id` | `/lists/:id` | `backend/src/routes/lists.routes.js:177` |
 | PUT | `/api/lists/:id` | `/lists/:id` | `backend/src/routes/lists.routes.js:129` |
-| POST | `/api/lists/:id/items` | `/lists/:id/items` | `backend/src/routes/lists.routes.js:334` |
-| DELETE | `/api/lists/:id/items/:itemId` | `/lists/:id/items/:itemId` | `backend/src/routes/lists.routes.js:407` |
-| PUT | `/api/lists/:id/items/:itemId/toggle` | `/lists/:id/items/:itemId/toggle` | `backend/src/routes/lists.routes.js:267` |
+| POST | `/api/lists/:id/items` | `/lists/:id/items` | `backend/src/routes/lists.routes.js:299` |
+| DELETE | `/api/lists/:id/items/:itemId` | `/lists/:id/items/:itemId` | `backend/src/routes/lists.routes.js:372` |
+| PUT | `/api/lists/:id/items/:itemId/toggle` | `/lists/:id/items/:itemId/toggle` | `backend/src/routes/lists.routes.js:232` |
 | PUT | `/api/lists/:id/position` | `/api/lists/:id/position` | `backend/src/bootstrap/register-api-routes.js:55` |
-| PUT | `/api/lists/:id/position` | `/lists/:id/position` | `backend/src/routes/lists.routes.js:232` |
-| PUT | `/api/lists/:id/title` | `/lists/:id/title` | `backend/src/routes/lists.routes.js:467` |
+| PUT | `/api/lists/:id/title` | `/lists/:id/title` | `backend/src/routes/lists.routes.js:432` |
 | DELETE | `/api/lists/:listId/share` | `/lists/:listId/share` | `backend/src/routes/sharing.routes.js:126` |
 | POST | `/api/lists/:listId/share` | `/lists/:listId/share` | `backend/src/routes/sharing.routes.js:103` |
 | POST | `/api/marketing-chat/ask` | `/ask` | `backend/src/routes/marketing-chat.routes.js:84` |
@@ -377,8 +376,7 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/whiteboards` | `/whiteboards` | `backend/src/routes/whiteboards.routes.js:27` |
 | POST | `/api/whiteboards` | `/whiteboards` | `backend/src/routes/whiteboards.routes.js:93` |
 | PUT | `/api/whiteboards/:id/position` | `/api/whiteboards/:id/position` | `backend/src/bootstrap/register-api-routes.js:56` |
-| PUT | `/api/whiteboards/:id/position` | `/whiteboards/:id/position` | `backend/src/routes/whiteboards.routes.js:241` |
-| DELETE | `/api/whiteboards/:whiteboardId` | `/whiteboards/:whiteboardId` | `backend/src/routes/whiteboards.routes.js:278` |
+| DELETE | `/api/whiteboards/:whiteboardId` | `/whiteboards/:whiteboardId` | `backend/src/routes/whiteboards.routes.js:241` |
 | PUT | `/api/whiteboards/:whiteboardId` | `/whiteboards/:whiteboardId` | `backend/src/routes/whiteboards.routes.js:154` |
 | DELETE | `/api/whiteboards/:whiteboardId/share` | `/whiteboards/:whiteboardId/share` | `backend/src/routes/sharing.routes.js:212` |
 | POST | `/api/whiteboards/:whiteboardId/share` | `/whiteboards/:whiteboardId/share` | `backend/src/routes/sharing.routes.js:189` |
