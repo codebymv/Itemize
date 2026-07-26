@@ -15,6 +15,9 @@ import {
   isEmailTemplateGraphqlMutationsEnabled,
   isEmailTemplateGraphqlReadsEnabled,
 } from './graphqlClient';
+import {
+  sendEmailTemplateTestViaGraphql,
+} from './messageDeliveryGraphql';
 
 vi.mock('@/lib/api', () => ({ default: {
   get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn(),
@@ -31,6 +34,10 @@ vi.mock('./emailTemplatesGraphql', () => ({
 vi.mock('./graphqlClient', () => ({
   isEmailTemplateGraphqlReadsEnabled: vi.fn(),
   isEmailTemplateGraphqlMutationsEnabled: vi.fn(),
+}));
+vi.mock('./messageDeliveryGraphql', () => ({
+  enqueueContactEmailViaGraphql: vi.fn(),
+  sendEmailTemplateTestViaGraphql: vi.fn(),
 }));
 
 const template = {
@@ -73,13 +80,16 @@ describe('email-template transport selection', () => {
     expect(api.get).not.toHaveBeenCalled();
   });
 
-  it('routes management mutations while provider test sends remain REST', async () => {
+  it('routes management and durable delivery mutations through GraphQL', async () => {
     vi.mocked(isEmailTemplateGraphqlMutationsEnabled).mockReturnValue(true);
     vi.mocked(createEmailTemplateViaGraphql).mockResolvedValue(template);
     vi.mocked(updateEmailTemplateViaGraphql).mockResolvedValue(template);
     vi.mocked(duplicateEmailTemplateViaGraphql).mockResolvedValue(template);
     vi.mocked(deleteEmailTemplateViaGraphql).mockResolvedValue(undefined);
-    vi.mocked(api.post).mockResolvedValue({ data: { success: true, message: 'sent' } });
+    vi.mocked(sendEmailTemplateTestViaGraphql).mockResolvedValue({
+      success: true, message: 'Delivery queued', delivery_id: '12',
+      status: 'queued', replayed: false,
+    });
     const input = {
       organization_id: 4, name: 'Welcome', subject: 'Hello', body_html: '<p>Hello</p>',
     };
@@ -92,10 +102,9 @@ describe('email-template transport selection', () => {
     expect(updateEmailTemplateViaGraphql).toHaveBeenCalledWith(9, { organization_id: 4, name: 'Updated' }, 4);
     expect(duplicateEmailTemplateViaGraphql).toHaveBeenCalledWith(9, 4);
     expect(deleteEmailTemplateViaGraphql).toHaveBeenCalledWith(9, 4);
-    expect(api.post).toHaveBeenCalledWith(
-      '/api/email-templates/9/send-test',
-      { to_email: 'test@example.com', sample_data: undefined },
-      { headers: { 'x-organization-id': '4' } },
+    expect(sendEmailTemplateTestViaGraphql).toHaveBeenCalledWith(
+      9, 'test@example.com', undefined, 4,
     );
+    expect(api.post).not.toHaveBeenCalled();
   });
 });

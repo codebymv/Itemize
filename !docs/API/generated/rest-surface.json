@@ -3,10 +3,10 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 389,
-    "resolvedDeclarationCount": 389,
+    "declarationCount": 385,
+    "resolvedDeclarationCount": 385,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 370,
+    "uniqueResolvedOperationCount": 366,
     "sourceFileCount": 76
   },
   "caveats": [
@@ -1183,16 +1183,6 @@
       ],
       "declaredPath": "/:id/duplicate",
       "source": "backend/src/routes/email-templates.routes.js",
-      "line": 332,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/email-templates/:id/send-test"
-      ],
-      "declaredPath": "/:id/send-test",
-      "source": "backend/src/routes/email-templates.routes.js",
       "line": 277,
       "dynamic": false
     },
@@ -1204,16 +1194,6 @@
       "declaredPath": "/categories/list",
       "source": "backend/src/routes/email-templates.routes.js",
       "line": 80,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/email-templates/send-to-contact"
-      ],
-      "declaredPath": "/send-to-contact",
-      "source": "backend/src/routes/email-templates.routes.js",
-      "line": 387,
       "dynamic": false
     },
     {
@@ -3253,16 +3233,6 @@
       ],
       "declaredPath": "/:id/duplicate",
       "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 386,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/sms-templates/:id/send-test"
-      ],
-      "declaredPath": "/:id/send-test",
-      "source": "backend/src/routes/sms-templates.routes.js",
       "line": 330,
       "dynamic": false
     },
@@ -3283,17 +3253,7 @@
       ],
       "declaredPath": "/message-info",
       "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 606,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/sms-templates/send-to-contact"
-      ],
-      "declaredPath": "/send-to-contact",
-      "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 439,
+      "line": 383,
       "dynamic": false
     },
     {
@@ -3303,7 +3263,7 @@
       ],
       "declaredPath": "/webhook/inbound",
       "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 704,
+      "line": 481,
       "dynamic": false
     },
     {
@@ -3313,7 +3273,7 @@
       ],
       "declaredPath": "/webhook/status",
       "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 622,
+      "line": 399,
       "dynamic": false
     },
     {

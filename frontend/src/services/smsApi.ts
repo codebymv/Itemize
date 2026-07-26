@@ -15,6 +15,10 @@ import {
   updateSmsTemplateViaGraphql,
 } from './smsTemplatesGraphql';
 import { isSmsTemplateGraphqlMutationsEnabled, isSmsTemplateGraphqlReadsEnabled } from './graphqlClient';
+import {
+  enqueueContactSmsViaGraphql,
+  sendSmsTemplateTestViaGraphql,
+} from './messageDeliveryGraphql';
 
 const unwrapResponse = <T>(payload: unknown): T => {
   if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -172,17 +176,8 @@ export const sendTestSms = async (
 ) => {
   const toPhone = typeof toPhoneOrOrganizationId === 'string' ? toPhoneOrOrganizationId : '';
   const orgId = typeof toPhoneOrOrganizationId === 'number' ? toPhoneOrOrganizationId : organizationId;
-  const response = await api.post(
-    `/api/sms-templates/${templateId}/send-test`,
-    {
-      to_phone: toPhone,
-      sample_data: sampleData,
-    },
-    {
-      headers: getOrgHeader(orgId),
-    }
-  );
-  return unwrapResponse(response.data);
+  if (!toPhone) throw new Error('A destination phone number is required');
+  return sendSmsTemplateTestViaGraphql(templateId, toPhone, sampleData, orgId);
 };
 
 /**
@@ -204,10 +199,7 @@ export const duplicateSmsTemplate = async (id: number, organizationId?: number) 
  * Send SMS to a contact
  */
 export const sendSmsToContact = async (data: SendSmsToContactData) => {
-  const response = await api.post('/api/sms-templates/send-to-contact', data, {
-    headers: getOrgHeader(data.organization_id),
-  });
-  return unwrapResponse(response.data);
+  return enqueueContactSmsViaGraphql(data, data.organization_id);
 };
 
 /**

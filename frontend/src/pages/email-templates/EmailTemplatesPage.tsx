@@ -30,6 +30,7 @@ import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
+import { useAuthState } from '@/contexts/AuthContext';
 
 interface EmailTemplate {
     id: number;
@@ -44,6 +45,7 @@ interface EmailTemplate {
 
 export function EmailTemplatesPage() {
     const { toast } = useToast();
+    const { currentUser } = useAuthState();
     const { setHeaderContent } = useHeader();
     const { theme } = useTheme();
 
@@ -146,10 +148,10 @@ export function EmailTemplatesPage() {
     };
 
     const handleSendTest = async (id: number) => {
-        if (!organizationId) return;
+        if (!organizationId || !currentUser?.email) return;
         try {
-            await sendTestEmail(id, organizationId);
-            toast({ title: 'Test email sent', description: 'Check your inbox' });
+            await sendTestEmail(id, organizationId, currentUser.email);
+            toast({ title: 'Test email queued', description: `Sending to ${currentUser.email}` });
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to send test', variant: 'destructive' });
         }

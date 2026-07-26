@@ -6,10 +6,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 389
-- Resolved declarations: 389
+- Route declarations: 385
+- Resolved declarations: 385
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 370
+- Unique resolved method/path operations: 366
 - Files containing declarations: 76
 
 ## Interpretation limits
@@ -139,10 +139,8 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | DELETE | `/api/email-templates/:id` | `/:id` | `backend/src/routes/email-templates.routes.js:253` |
 | GET | `/api/email-templates/:id` | `/:id` | `backend/src/routes/email-templates.routes.js:104` |
 | PUT | `/api/email-templates/:id` | `/:id` | `backend/src/routes/email-templates.routes.js:182` |
-| POST | `/api/email-templates/:id/duplicate` | `/:id/duplicate` | `backend/src/routes/email-templates.routes.js:332` |
-| POST | `/api/email-templates/:id/send-test` | `/:id/send-test` | `backend/src/routes/email-templates.routes.js:277` |
+| POST | `/api/email-templates/:id/duplicate` | `/:id/duplicate` | `backend/src/routes/email-templates.routes.js:277` |
 | GET | `/api/email-templates/categories/list` | `/categories/list` | `backend/src/routes/email-templates.routes.js:80` |
-| POST | `/api/email-templates/send-to-contact` | `/send-to-contact` | `backend/src/routes/email-templates.routes.js:387` |
 | POST | `/api/email/webhook/resend` | `/webhook/resend` | `backend/src/routes/email-webhooks.routes.js:35` |
 | GET | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:88` |
 | POST | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:123` |
@@ -346,13 +344,11 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | DELETE | `/api/sms-templates/:id` | `/:id` | `backend/src/routes/sms-templates.routes.js:298` |
 | GET | `/api/sms-templates/:id` | `/:id` | `backend/src/routes/sms-templates.routes.js:152` |
 | PUT | `/api/sms-templates/:id` | `/:id` | `backend/src/routes/sms-templates.routes.js:230` |
-| POST | `/api/sms-templates/:id/duplicate` | `/:id/duplicate` | `backend/src/routes/sms-templates.routes.js:386` |
-| POST | `/api/sms-templates/:id/send-test` | `/:id/send-test` | `backend/src/routes/sms-templates.routes.js:330` |
+| POST | `/api/sms-templates/:id/duplicate` | `/:id/duplicate` | `backend/src/routes/sms-templates.routes.js:330` |
 | GET | `/api/sms-templates/categories/list` | `/categories/list` | `backend/src/routes/sms-templates.routes.js:128` |
-| POST | `/api/sms-templates/message-info` | `/message-info` | `backend/src/routes/sms-templates.routes.js:606` |
-| POST | `/api/sms-templates/send-to-contact` | `/send-to-contact` | `backend/src/routes/sms-templates.routes.js:439` |
-| POST | `/api/sms-templates/webhook/inbound` | `/webhook/inbound` | `backend/src/routes/sms-templates.routes.js:704` |
-| POST | `/api/sms-templates/webhook/status` | `/webhook/status` | `backend/src/routes/sms-templates.routes.js:622` |
+| POST | `/api/sms-templates/message-info` | `/message-info` | `backend/src/routes/sms-templates.routes.js:383` |
+| POST | `/api/sms-templates/webhook/inbound` | `/webhook/inbound` | `backend/src/routes/sms-templates.routes.js:481` |
+| POST | `/api/sms-templates/webhook/status` | `/webhook/status` | `backend/src/routes/sms-templates.routes.js:399` |
 | GET | `/api/social/analytics` | `/analytics` | `backend/src/routes/social/analytics.routes.js:11` |
 | GET | `/api/social/callback/facebook` | `/callback/facebook` | `backend/src/routes/social/oauth.routes.js:61` |
 | GET | `/api/social/channels` | `/channels` | `backend/src/routes/social/channels.routes.js:15` |

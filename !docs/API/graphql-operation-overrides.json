@@ -1113,9 +1113,9 @@
       "owner": "messaging",
       "targetModule": "MessagingDeliveryModule",
       "targetOperation": "sendEmailTemplateTest",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Organization-scope the template, label test content, validate the destination, and distinguish simulation from provider acceptance."
+      "notes": "Direct GraphQL delivery persists a tenant-scoped, replay-safe test-email job with an explicit validated destination, bounded sample data, visible test labeling, immutable rendered content, and no contact activity. The retired REST route returns 404."
     },
     "GET /api/email-templates/categories/list": {
       "disposition": "graphql-query",
@@ -1131,9 +1131,9 @@
       "owner": "messaging",
       "targetModule": "MessagingDeliveryModule",
       "targetOperation": "enqueueContactEmail",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Require same-organization contact/template, persist an idempotent delivery job, and write provider log plus contact activity from worker outcomes."
+      "notes": "Direct GraphQL delivery conceals foreign contacts/templates, rejects suppressed destinations, snapshots rendered content, atomically reserves usage, and persists tenant-scoped request idempotency before provider I/O. A leased worker uses Resend idempotency and writes the email log/contact activity only after provider acceptance. The retired REST route returns 404."
     },
     "POST /api/email/webhook/resend": {
       "disposition": "retain-http",
@@ -1203,9 +1203,9 @@
       "owner": "messaging",
       "targetModule": "MessagingDeliveryModule",
       "targetOperation": "sendSmsTemplateTest",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Validate and normalize the destination, label test content, and distinguish simulation from provider acceptance."
+      "notes": "Direct GraphQL delivery validates and normalizes an explicit E.164 destination, bounds sample data, snapshots visibly labeled test content, and creates no contact activity. The retired REST route returns 404."
     },
     "GET /api/sms-templates/categories/list": {
       "disposition": "graphql-query",
@@ -1230,9 +1230,9 @@
       "owner": "messaging",
       "targetModule": "MessagingDeliveryModule",
       "targetOperation": "enqueueContactSms",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Require same-organization contact/template, normalize E.164, enqueue idempotently, and write logs/activity from worker outcomes."
+      "notes": "Direct GraphQL delivery conceals foreign contacts/templates, normalizes E.164, snapshots the rendered SMS, atomically reserves usage, and persists tenant-scoped request idempotency. A leased worker logs provider acceptance; ambiguous Twilio outcomes become reconciliation_required and are never blindly retried. The retired REST route returns 404."
     },
     "POST /api/sms-templates/webhook/inbound": {
       "disposition": "retain-http",

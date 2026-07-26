@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 370
-- API operations under `/api`: 363
+- Registered method/path operations: 366
+- API operations under `/api`: 359
 - Non-API registered operations: 7
-- Static frontend callsites: 297
-- Operations with frontend consumers: 285
-- Operations referenced by backend tests: 198
+- Static frontend callsites: 292
+- Operations with frontend consumers: 281
+- Operations referenced by backend tests: 196
 - Recommended GraphQL queries: 109
-- Recommended GraphQL mutations: 206
+- Recommended GraphQL mutations: 202
 - Recommended retained HTTP endpoints: 47
-- High-risk operations: 305
+- High-risk operations: 301
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -144,9 +144,7 @@
 | GET | `/api/email-templates/:id` | 2 | 2 | graphql-query | medium | messaging / EmailTemplatesModule / emailTemplate |
 | PUT | `/api/email-templates/:id` | 1 | 2 | graphql-mutation | medium | messaging / EmailTemplatesModule / updateEmailTemplate |
 | POST | `/api/email-templates/:id/duplicate` | 2 | 2 | graphql-mutation | medium | messaging / EmailTemplatesModule / duplicateEmailTemplate |
-| POST | `/api/email-templates/:id/send-test` | 2 | 0 | graphql-mutation | high | messaging / MessagingDeliveryModule / sendEmailTemplateTest |
 | GET | `/api/email-templates/categories/list` | 1 | 1 | graphql-query | medium | messaging / EmailTemplatesModule / emailTemplateCategories |
-| POST | `/api/email-templates/send-to-contact` | 1 | 2 | graphql-mutation | high | messaging / MessagingDeliveryModule / enqueueContactEmail |
 | POST | `/api/email/webhook/resend` | 0 | 1 | retain-http | high | messaging / EmailWebhooksModule / processResendEmailEvent |
 | GET | `/api/forms/public/form/:identifier` | 1 | 3 | retain-http | high | crm / PublicFormsModule / getPublicForm |
 | POST | `/api/forms/public/form/:identifier` | 1 | 5 | retain-http | high | crm / PublicFormsModule / submitPublicForm |
@@ -336,10 +334,8 @@
 | GET | `/api/sms-templates/:id` | 1 | 2 | graphql-query | high | messaging / SmsTemplatesModule / smsTemplate |
 | PUT | `/api/sms-templates/:id` | 1 | 0 | graphql-mutation | high | messaging / SmsTemplatesModule / updateSmsTemplate |
 | POST | `/api/sms-templates/:id/duplicate` | 1 | 0 | graphql-mutation | high | messaging / SmsTemplatesModule / duplicateSmsTemplate |
-| POST | `/api/sms-templates/:id/send-test` | 1 | 0 | graphql-mutation | high | messaging / MessagingDeliveryModule / sendSmsTemplateTest |
 | GET | `/api/sms-templates/categories/list` | 1 | 0 | graphql-query | high | messaging / SmsTemplatesModule / smsTemplateCategories |
 | POST | `/api/sms-templates/message-info` | 1 | 0 | graphql-query | medium | messaging / SmsTemplatesModule / smsMessageInfo |
-| POST | `/api/sms-templates/send-to-contact` | 1 | 2 | graphql-mutation | high | messaging / MessagingDeliveryModule / enqueueContactSms |
 | POST | `/api/sms-templates/webhook/inbound` | 0 | 6 | retain-http | high | messaging / SmsWebhooksModule / processInboundSmsWebhook |
 | POST | `/api/sms-templates/webhook/status` | 0 | 4 | retain-http | high | messaging / SmsWebhooksModule / processSmsStatusWebhook |
 | GET | `/api/social/analytics` | 1 | 0 | graphql-query | high | _unassigned_ |
@@ -407,7 +403,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 12
-- Orphaned manual overrides: 41
+- Orphaned manual overrides: 45
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

@@ -83,6 +83,9 @@ const {
   runAdminEmailDeliveryMigration,
 } = require('./db_admin_email_delivery_migrations');
 const {
+  runMessageDeliveryMigration,
+} = require('./db_message_delivery_migrations');
+const {
   runSignatureDeliveryMigration,
 } = require('./db_signature_delivery_migrations');
 const {
@@ -680,6 +683,7 @@ const initializeDatabase = async (pool) => {
       return true;
     });
     await runMigrationOnce(pool, 'admin_email_deliveries', runAdminEmailDeliveryMigration);
+    await runMigrationOnce(pool, 'message_deliveries', runMessageDeliveryMigration);
 
     const elapsed = Date.now() - startTime;
     console.log(`✅ Database initialized successfully in ${elapsed}ms`);

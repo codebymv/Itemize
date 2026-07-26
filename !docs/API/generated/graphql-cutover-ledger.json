@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 370,
-    "apiOperationCount": 363,
+    "operationCount": 366,
+    "apiOperationCount": 359,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 297,
-    "operationsWithFrontendConsumers": 285,
-    "operationsWithBackendTests": 198,
+    "frontendCallsiteCount": 292,
+    "operationsWithFrontendConsumers": 281,
+    "operationsWithBackendTests": 196,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 12,
     "retainHttpCount": 47,
     "graphqlQueryCount": 109,
-    "graphqlMutationCount": 206,
-    "highRiskCount": 305,
+    "graphqlMutationCount": 202,
+    "highRiskCount": 301,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -4886,7 +4886,7 @@
           "path": "/api/email-templates",
           "rawPath": "/api/email-templates",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 329,
+          "line": 330,
           "client": "api",
           "literalInterpolation": false
         },
@@ -4895,7 +4895,7 @@
           "path": "/api/email-templates",
           "rawPath": "/api/email-templates",
           "source": "frontend/src/services/emailApi.ts",
-          "line": 80,
+          "line": 87,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4905,43 +4905,43 @@
           "method": "GET",
           "path": "/api/email-templates",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 124
+          "line": 123
         },
         {
           "method": "GET",
           "path": "/api/email-templates",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 135
+          "line": 134
         },
         {
           "method": "GET",
           "path": "/api/email-templates",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 245
+          "line": 244
         },
         {
           "method": "GET",
           "path": "/api/email-templates",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 256
+          "line": 255
         },
         {
           "method": "GET",
           "path": "/api/email-templates",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 266
+          "line": 265
         },
         {
           "method": "GET",
           "path": "/api/email-templates",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 276
+          "line": 275
         },
         {
           "method": "GET",
           "path": "/api/email-templates",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 462
+          "line": 415
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -4972,7 +4972,7 @@
           "path": "/api/email-templates",
           "rawPath": "/api/email-templates",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 357,
+          "line": 358,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4982,49 +4982,49 @@
           "method": "POST",
           "path": "/api/email-templates",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 75
+          "line": 74
         },
         {
           "method": "POST",
           "path": "/api/email-templates",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 94
+          "line": 93
         },
         {
           "method": "POST",
           "path": "/api/email-templates",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 104
+          "line": 103
         },
         {
           "method": "POST",
           "path": "/api/email-templates",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 114
+          "line": 113
         },
         {
           "method": "POST",
           "path": "/api/email-templates",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 222
+          "line": 221
         },
         {
           "method": "POST",
           "path": "/api/email-templates",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 227
+          "line": 226
         },
         {
           "method": "POST",
           "path": "/api/email-templates",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 330
+          "line": 329
         },
         {
           "method": "POST",
           "path": "/api/email-templates",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 373
+          "line": 372
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -5055,7 +5055,7 @@
           "path": "/api/email-templates/:id",
           "rawPath": "/api/email-templates/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 384,
+          "line": 385,
           "client": "api",
           "literalInterpolation": false
         },
@@ -5074,19 +5074,19 @@
           "method": "DELETE",
           "path": "/api/email-templates/:templateId",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 195
+          "line": 194
         },
         {
           "method": "DELETE",
           "path": "/api/email-templates/:templateId",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 206
+          "line": 205
         },
         {
           "method": "DELETE",
           "path": "/api/email-templates/:id",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 392
+          "line": 391
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -5117,7 +5117,7 @@
           "path": "/api/email-templates/:id",
           "rawPath": "/api/email-templates/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 339,
+          "line": 340,
           "client": "api",
           "literalInterpolation": false
         },
@@ -5126,7 +5126,7 @@
           "path": "/api/email-templates/:templateId",
           "rawPath": "/api/email-templates/${templateId}",
           "source": "frontend/src/services/emailApi.ts",
-          "line": 97,
+          "line": 104,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5136,13 +5136,13 @@
           "method": "GET",
           "path": "/api/email-templates/:templateId",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 146
+          "line": 145
         },
         {
           "method": "GET",
           "path": "/api/email-templates/:templateId",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 157
+          "line": 156
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -5173,7 +5173,7 @@
           "path": "/api/email-templates/:id",
           "rawPath": "/api/email-templates/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 376,
+          "line": 377,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5183,13 +5183,13 @@
           "method": "PUT",
           "path": "/api/email-templates/:templateId",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 166
+          "line": 165
         },
         {
           "method": "PUT",
           "path": "/api/email-templates/:templateId",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 185
+          "line": 184
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -5211,7 +5211,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/email-templates.routes.js",
-          "line": 332
+          "line": 277
         }
       ],
       "consumerCallsites": [
@@ -5220,7 +5220,7 @@
           "path": "/api/email-templates/:id/duplicate",
           "rawPath": "/api/email-templates/${id}/duplicate",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 407,
+          "line": 408,
           "client": "api",
           "literalInterpolation": false
         },
@@ -5239,13 +5239,13 @@
           "method": "POST",
           "path": "/api/email-templates/:sourceId/duplicate",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 346
+          "line": 345
         },
         {
           "method": "POST",
           "path": "/api/email-templates/:sourceId/duplicate",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 360
+          "line": 359
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -5258,49 +5258,6 @@
       "notes": "CSRF-protected GraphQL duplication copies only an organization-owned template, bounds the suffixed name, and always creates the copy inactive.",
       "literalInterpolationRisk": false,
       "risk": "medium"
-    },
-    {
-      "id": "POST /api/email-templates/:id/send-test",
-      "key": "POST /api/email-templates/:*/send-test",
-      "method": "POST",
-      "path": "/api/email-templates/:id/send-test",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/email-templates.routes.js",
-          "line": 277
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/email-templates/:templateId/send-test",
-          "rawPath": "/api/email-templates/${templateId}/send-test",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 395,
-          "client": "api",
-          "literalInterpolation": false
-        },
-        {
-          "method": "POST",
-          "path": "/api/email-templates/:templateId/send-test",
-          "rawPath": "/api/email-templates/${templateId}/send-test",
-          "source": "frontend/src/services/emailApi.ts",
-          "line": 125,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetOperation": "sendEmailTemplateTest",
-      "targetModule": "MessagingDeliveryModule",
-      "parityStatus": "characterizing",
-      "notes": "Organization-scope the template, label test content, validate the destination, and distinguish simulation from provider acceptance.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
     },
     {
       "id": "GET /api/email-templates/categories/list",
@@ -5319,7 +5276,7 @@
           "path": "/api/email-templates/categories/list",
           "rawPath": "/api/email-templates/categories/list",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 419,
+          "line": 420,
           "client": "api",
           "literalInterpolation": false
         }
@@ -5329,7 +5286,7 @@
           "method": "GET",
           "path": "/api/email-templates/categories/list",
           "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 305
+          "line": 304
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -5342,53 +5299,6 @@
       "notes": "Default-off GraphQL category aggregates are organization-scoped, deterministically ordered, case-preserving, and expose safe integer counts.",
       "literalInterpolationRisk": false,
       "risk": "medium"
-    },
-    {
-      "id": "POST /api/email-templates/send-to-contact",
-      "key": "POST /api/email-templates/send-to-contact",
-      "method": "POST",
-      "path": "/api/email-templates/send-to-contact",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/email-templates.routes.js",
-          "line": 387
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/email-templates/send-to-contact",
-          "rawPath": "/api/email-templates/send-to-contact",
-          "source": "frontend/src/services/emailApi.ts",
-          "line": 110,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/email-templates/send-to-contact",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 415
-        },
-        {
-          "method": "POST",
-          "path": "/api/email-templates/send-to-contact",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 447
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetOperation": "enqueueContactEmail",
-      "targetModule": "MessagingDeliveryModule",
-      "parityStatus": "characterizing",
-      "notes": "Require same-organization contact/template, persist an idempotent delivery job, and write provider log plus contact activity from worker outcomes.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
     },
     {
       "id": "POST /api/email/webhook/resend",
@@ -13336,7 +13246,7 @@
           "path": "/api/sms-templates",
           "rawPath": "/api/sms-templates?${params.toString()}",
           "source": "frontend/src/services/smsApi.ts",
-          "line": 114,
+          "line": 118,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13370,7 +13280,7 @@
           "path": "/api/sms-templates",
           "rawPath": "/api/sms-templates",
           "source": "frontend/src/services/smsApi.ts",
-          "line": 136,
+          "line": 140,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13380,7 +13290,7 @@
           "method": "POST",
           "path": "/api/sms-templates",
           "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 76
+          "line": 75
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -13411,7 +13321,7 @@
           "path": "/api/sms-templates/:id",
           "rawPath": "/api/sms-templates/${id}",
           "source": "frontend/src/services/smsApi.ts",
-          "line": 158,
+          "line": 162,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13445,7 +13355,7 @@
           "path": "/api/sms-templates/:id",
           "rawPath": "/api/sms-templates/${id}",
           "source": "frontend/src/services/smsApi.ts",
-          "line": 125,
+          "line": 129,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13461,7 +13371,7 @@
           "method": "GET",
           "path": "/api/sms-templates/:id",
           "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 85
+          "line": 84
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -13492,7 +13402,7 @@
           "path": "/api/sms-templates/:id",
           "rawPath": "/api/sms-templates/${id}",
           "source": "frontend/src/services/smsApi.ts",
-          "line": 147,
+          "line": 151,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13517,7 +13427,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/sms-templates.routes.js",
-          "line": 386
+          "line": 330
         }
       ],
       "consumerCallsites": [
@@ -13526,7 +13436,7 @@
           "path": "/api/sms-templates/:id/duplicate",
           "rawPath": "/api/sms-templates/${id}/duplicate",
           "source": "frontend/src/services/smsApi.ts",
-          "line": 193,
+          "line": 188,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13540,40 +13450,6 @@
       "targetModule": "SmsTemplatesModule",
       "parityStatus": "consumer-cutover-complete",
       "notes": "CSRF-protected GraphQL duplication bounds the copy suffix, conceals foreign rows, and creates the copy inactive.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/sms-templates/:id/send-test",
-      "key": "POST /api/sms-templates/:*/send-test",
-      "method": "POST",
-      "path": "/api/sms-templates/:id/send-test",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/sms-templates.routes.js",
-          "line": 330
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/sms-templates/:templateId/send-test",
-          "rawPath": "/api/sms-templates/${templateId}/send-test",
-          "source": "frontend/src/services/smsApi.ts",
-          "line": 175,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetOperation": "sendSmsTemplateTest",
-      "targetModule": "MessagingDeliveryModule",
-      "parityStatus": "characterizing",
-      "notes": "Validate and normalize the destination, label test content, and distinguish simulation from provider acceptance.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -13594,7 +13470,7 @@
           "path": "/api/sms-templates/categories/list",
           "rawPath": "/api/sms-templates/categories/list",
           "source": "frontend/src/services/smsApi.ts",
-          "line": 227,
+          "line": 219,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13619,7 +13495,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/sms-templates.routes.js",
-          "line": 606
+          "line": 383
         }
       ],
       "consumerCallsites": [
@@ -13628,7 +13504,7 @@
           "path": "/api/sms-templates/message-info",
           "rawPath": "/api/sms-templates/message-info",
           "source": "frontend/src/services/smsApi.ts",
-          "line": 218,
+          "line": 210,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13646,53 +13522,6 @@
       "risk": "medium"
     },
     {
-      "id": "POST /api/sms-templates/send-to-contact",
-      "key": "POST /api/sms-templates/send-to-contact",
-      "method": "POST",
-      "path": "/api/sms-templates/send-to-contact",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/sms-templates.routes.js",
-          "line": 439
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/sms-templates/send-to-contact",
-          "rawPath": "/api/sms-templates/send-to-contact",
-          "source": "frontend/src/services/smsApi.ts",
-          "line": 207,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/sms-templates/send-to-contact",
-          "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 112
-        },
-        {
-          "method": "POST",
-          "path": "/api/sms-templates/send-to-contact",
-          "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 140
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetOperation": "enqueueContactSms",
-      "targetModule": "MessagingDeliveryModule",
-      "parityStatus": "characterizing",
-      "notes": "Require same-organization contact/template, normalize E.164, enqueue idempotently, and write logs/activity from worker outcomes.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "POST /api/sms-templates/webhook/inbound",
       "key": "POST /api/sms-templates/webhook/inbound",
       "method": "POST",
@@ -13700,7 +13529,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/sms-templates.routes.js",
-          "line": 704
+          "line": 481
         }
       ],
       "consumerCallsites": [],
@@ -13709,7 +13538,13 @@
           "method": "POST",
           "path": "/api/sms-templates/webhook/inbound",
           "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 165
+          "line": 123
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/inbound",
+          "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
+          "line": 124
         },
         {
           "method": "POST",
@@ -13721,19 +13556,13 @@
           "method": "POST",
           "path": "/api/sms-templates/webhook/inbound",
           "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 208
+          "line": 183
         },
         {
           "method": "POST",
           "path": "/api/sms-templates/webhook/inbound",
           "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 225
-        },
-        {
-          "method": "POST",
-          "path": "/api/sms-templates/webhook/inbound",
-          "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 268
+          "line": 226
         },
         {
           "method": "POST",
@@ -13761,7 +13590,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/sms-templates.routes.js",
-          "line": 622
+          "line": 399
         }
       ],
       "consumerCallsites": [],
@@ -13770,19 +13599,19 @@
           "method": "POST",
           "path": "/api/sms-templates/webhook/status",
           "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 297
+          "line": 255
         },
         {
           "method": "POST",
           "path": "/api/sms-templates/webhook/status",
           "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 300
+          "line": 258
         },
         {
           "method": "POST",
           "path": "/api/sms-templates/webhook/status",
           "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 303
+          "line": 261
         },
         {
           "method": "POST",
@@ -15102,7 +14931,7 @@
           "path": "/api/workflows",
           "rawPath": "/api/workflows",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 146,
+          "line": 147,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15155,7 +14984,7 @@
           "path": "/api/workflows",
           "rawPath": "/api/workflows",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 173,
+          "line": 174,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15292,7 +15121,7 @@
           "path": "/api/workflows/:id",
           "rawPath": "/api/workflows/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 203,
+          "line": 204,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15357,7 +15186,7 @@
           "path": "/api/workflows/:id",
           "rawPath": "/api/workflows/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 156,
+          "line": 157,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15404,7 +15233,7 @@
           "path": "/api/workflows/:id",
           "rawPath": "/api/workflows/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 195,
+          "line": 196,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15469,7 +15298,7 @@
           "path": "/api/workflows/:id/activate",
           "rawPath": "/api/workflows/${id}/activate",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 212,
+          "line": 213,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15552,7 +15381,7 @@
           "path": "/api/workflows/:id/deactivate",
           "rawPath": "/api/workflows/${id}/deactivate",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 222,
+          "line": 223,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15599,7 +15428,7 @@
           "path": "/api/workflows/:id/duplicate",
           "rawPath": "/api/workflows/${id}/duplicate",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 311,
+          "line": 312,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15646,7 +15475,7 @@
           "path": "/api/workflows/:workflowId/enroll",
           "rawPath": "/api/workflows/${workflowId}/enroll",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 237,
+          "line": 238,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15711,7 +15540,7 @@
           "path": "/api/workflows/:workflowId/enrollments",
           "rawPath": "/api/workflows/${workflowId}/enrollments",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 260,
+          "line": 261,
           "client": "api",
           "literalInterpolation": false
         }
@@ -15752,7 +15581,7 @@
           "path": "/api/workflows/:workflowId/enrollments/:enrollmentId",
           "rawPath": "/api/workflows/${workflowId}/enrollments/${enrollmentId}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 277,
+          "line": 278,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16344,6 +16173,8 @@
     "POST /api/billing/acknowledge-trial-end",
     "POST /api/billing/checkout",
     "POST /api/billing/portal",
+    "POST /api/email-templates/:id/send-test",
+    "POST /api/email-templates/send-to-contact",
     "POST /api/forms",
     "POST /api/forms/:id/duplicate",
     "POST /api/organizations",
@@ -16351,6 +16182,8 @@
     "POST /api/organizations/:organizationId/members",
     "POST /api/organizations/:organizationId/select",
     "POST /api/organizations/ensure-default",
+    "POST /api/sms-templates/:id/send-test",
+    "POST /api/sms-templates/send-to-contact",
     "POST /api/vaults",
     "POST /api/vaults/:vaultId/items",
     "POST /api/vaults/:vaultId/items/bulk",

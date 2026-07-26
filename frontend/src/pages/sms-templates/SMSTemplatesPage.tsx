@@ -148,9 +148,11 @@ export function SMSTemplatesPage() {
 
     const handleSendTest = async (id: number) => {
         if (!organizationId) return;
+        const toPhone = window.prompt('Send test SMS to:');
+        if (!toPhone?.trim()) return;
         try {
-            await sendTestSMS(id, organizationId);
-            toast({ title: 'Test Sent', description: 'Test SMS sent successfully' });
+            await sendTestSMS(id, toPhone.trim(), organizationId);
+            toast({ title: 'Test queued', description: `Sending to ${toPhone.trim()}` });
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to send test', variant: 'destructive' });
         }

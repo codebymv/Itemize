@@ -4,6 +4,7 @@
  */
 
 import api from '@/lib/api';
+import { sendEmailTemplateTestViaGraphql } from './messageDeliveryGraphql';
 import {
   createEmailTemplateViaGraphql,
   deleteEmailTemplateViaGraphql,
@@ -392,12 +393,12 @@ export const sendTestEmail = async (
   organizationId: number,
   sampleData?: WorkflowConfig
 ): Promise<{ success: boolean; message: string; simulated?: boolean }> => {
-  const response = await api.post(`/api/email-templates/${templateId}/send-test`, {
-    organization_id: organizationId,
-    to_email: toEmail,
-    sample_data: sampleData,
-  });
-  return unwrapResponse<{ success: boolean; message: string; simulated?: boolean }>(response.data);
+  return sendEmailTemplateTestViaGraphql(
+    templateId,
+    toEmail,
+    sampleData,
+    organizationId,
+  );
 };
 
 export const duplicateEmailTemplate = async (id: number, organizationId: number): Promise<EmailTemplate> => {

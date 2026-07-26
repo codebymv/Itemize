@@ -89,7 +89,7 @@ export function ComposeEmailModal({
         onSuccess: (result) => {
             if (result.success) {
                 toast({
-                    title: result.simulated ? 'Email Simulated' : 'Email Sent',
+                    title: 'Email queued',
                     description: result.message,
                 });
                 onSent?.();

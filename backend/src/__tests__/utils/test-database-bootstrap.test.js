@@ -29,6 +29,7 @@ describe('test database schema contract', () => {
             'contacts',
             'deal_activities',
             'email_webhook_events',
+            'message_delivery_jobs',
             'invoices',
             'organization_members',
             'organizations',
@@ -81,8 +82,22 @@ describe('test database schema contract', () => {
             'module_estimates_recurring',
             'estimates_business_column',
             'module_subscriptions',
+            'message_deliveries',
         ]));
         expect(markers.length).toBeGreaterThan(20);
+    });
+
+    test('production migration stream creates durable message delivery jobs', async () => {
+        const migration = require('../../../scripts/migrations/051_message_deliveries');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS message_delivery_jobs');
+        expect(sql).toContain('idempotency_key');
+        expect(sql).toContain('lease_expires_at');
+        expect(sql).toContain('reconciliation_required');
+        expect(sql).toContain('message_delivery_job_idempotency');
     });
 
     test('fresh integration runs cannot inherit live provider credentials', () => {

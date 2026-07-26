@@ -5,7 +5,6 @@ const cookieParser = require('cookie-parser');
 const TestDbHelper = require('./test-db-helper');
 const registerApiRoutes = require('../../bootstrap/register-api-routes');
 const { authenticateJWT, requireAdmin } = require('../../auth');
-const smsService = require('../../services/smsService');
 
 function createApp(pool) {
     const app = express();
@@ -96,57 +95,16 @@ describe('SMS messaging integration', () => {
             .rejects.toMatchObject({ code: '23505' });
     });
 
-    test('successful contact send writes the provider log and activity contract', async () => {
-        const contact = (await dbHelper.pool.query(
-            `INSERT INTO contacts (organization_id, first_name, phone, created_by)
-             VALUES ($1, 'Ada', '+16025550101', $2) RETURNING id`,
-            [userA.org.id, userA.user.id]
-        )).rows[0];
-        jest.spyOn(smsService, 'sendSms').mockResolvedValue({
-            success: true,
-            id: `SM${Date.now()}`,
-            status: 'sent',
-        });
-
+    test.each([
+        '/api/sms-templates/send-to-contact',
+        '/api/sms-templates/1/send-test',
+    ])('retired delivery route %s returns 404', async (path) => {
         const response = await request(app)
-            .post('/api/sms-templates/send-to-contact')
+            .post(path)
             .set('Cookie', [`itemize_auth=${userA.token}`])
             .set('x-organization-id', String(userA.org.id))
-            .send({ contact_id: contact.id, message: 'Hello {{first_name}}' });
-
-        expect(response.status).toBe(200);
-        expect(response.body.success).toBe(true);
-        const [logs, activities] = await Promise.all([
-            dbHelper.pool.query('SELECT * FROM sms_logs WHERE contact_id = $1 AND direction = $2', [contact.id, 'outbound']),
-            dbHelper.pool.query('SELECT * FROM contact_activities WHERE contact_id = $1 AND type = $2', [contact.id, 'sms']),
-        ]);
-        expect(logs.rows).toHaveLength(1);
-        expect(activities.rows).toHaveLength(1);
-    });
-
-    test('an unavailable provider is not reported as a successful contact send', async () => {
-        const contact = (await dbHelper.pool.query(
-            `INSERT INTO contacts (organization_id, first_name, phone, created_by)
-             VALUES ($1, 'Grace', '+16025550102', $2) RETURNING id`,
-            [userA.org.id, userA.user.id]
-        )).rows[0];
-        jest.spyOn(smsService, 'sendSms').mockResolvedValue({
-            success: false,
-            simulated: true,
-            error: 'SMS service not configured',
-        });
-
-        const response = await request(app)
-            .post('/api/sms-templates/send-to-contact')
-            .set('Cookie', [`itemize_auth=${userA.token}`])
-            .set('x-organization-id', String(userA.org.id))
-            .send({ contact_id: contact.id, message: 'Hello' });
-
-        expect(response.status).toBe(503);
-        expect(response.body).toMatchObject({
-            success: false,
-            code: 'SMS_PROVIDER_NOT_CONFIGURED',
-        });
+            .send({});
+        expect(response.status).toBe(404);
     });
 
     test('duplicate inbound delivery creates one message and one SMS log', async () => {

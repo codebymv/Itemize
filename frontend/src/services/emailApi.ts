@@ -13,6 +13,10 @@ import {
     isEmailTemplateGraphqlMutationsEnabled,
     isEmailTemplateGraphqlReadsEnabled,
 } from './graphqlClient';
+import {
+    enqueueContactEmailViaGraphql,
+    sendEmailTemplateTestViaGraphql,
+} from './messageDeliveryGraphql';
 
 const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -55,6 +59,9 @@ export interface SendEmailResult {
     simulated?: boolean;
     message: string;
     email_id?: string;
+    delivery_id?: string;
+    status?: string;
+    replayed?: boolean;
     error?: string;
 }
 
@@ -107,10 +114,7 @@ export const sendEmailToContact = async (
     params: SendEmailToContactParams,
     organizationId?: number
 ): Promise<SendEmailResult> => {
-    const response = await api.post('/api/email-templates/send-to-contact', params, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<SendEmailResult>(response.data);
+    return enqueueContactEmailViaGraphql(params, organizationId);
 };
 
 /**
@@ -122,12 +126,8 @@ export const sendTestEmail = async (
     toEmail?: string,
     sampleData?: Record<string, string>
 ): Promise<SendEmailResult> => {
-    const response = await api.post(
-        `/api/email-templates/${templateId}/send-test`,
-        { to_email: toEmail, sample_data: sampleData },
-        { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
-    );
-    return unwrapResponse<SendEmailResult>(response.data);
+    if (!toEmail) throw new Error('A destination email address is required');
+    return sendEmailTemplateTestViaGraphql(templateId, toEmail, sampleData, organizationId);
 };
 
 /**
