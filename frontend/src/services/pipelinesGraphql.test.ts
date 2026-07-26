@@ -2,14 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCsrfToken } from '@/lib/api';
 import {
   createPipelineViaGraphql,
+  deletePipelineViaGraphql,
   getPipelineViaGraphql,
   getPipelinesViaGraphql,
   updatePipelineViaGraphql,
 } from './pipelinesGraphql';
-import {
-  isPipelineGraphqlMutationsEnabled,
-  isPipelineGraphqlReadsEnabled,
-} from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(),
@@ -67,6 +64,7 @@ const response = (payload: unknown): Response => ({
 
 describe('pipeline GraphQL consumer', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
     vi.mocked(fetchCsrfToken).mockResolvedValue('pipeline-csrf');
@@ -75,17 +73,6 @@ describe('pipeline GraphQL consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('keeps reads and mutations independently disabled by default', () => {
-    vi.stubEnv('VITE_PIPELINE_READS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_PIPELINE_MUTATIONS_GRAPHQL', 'false');
-    expect(isPipelineGraphqlReadsEnabled()).toBe(false);
-    expect(isPipelineGraphqlMutationsEnabled()).toBe(false);
-    vi.stubEnv('VITE_PIPELINE_READS_GRAPHQL', 'true');
-    vi.stubEnv('VITE_PIPELINE_MUTATIONS_GRAPHQL', 'true');
-    expect(isPipelineGraphqlReadsEnabled()).toBe(true);
-    expect(isPipelineGraphqlMutationsEnabled()).toBe(true);
   });
 
   it('maps pipeline lists into the retained consumer shape', async () => {
@@ -142,6 +129,9 @@ describe('pipeline GraphQL consumer', () => {
         data: {
           updatePipeline: { ...pipeline, description: null, isDefault: false },
         },
+      }))
+      .mockResolvedValueOnce(response({
+        data: { deletePipeline: { deletedId: pipeline.id } },
       }));
 
     await createPipelineViaGraphql({
@@ -156,8 +146,9 @@ describe('pipeline GraphQL consumer', () => {
       is_default: false,
       organization_id: 42,
     });
+    await deletePipelineViaGraphql(17, 42);
 
-    expect(fetchCsrfToken).toHaveBeenCalledTimes(2);
+    expect(fetchCsrfToken).toHaveBeenCalledTimes(3);
     const createRequest = JSON.parse(
       String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body),
     );
@@ -177,5 +168,9 @@ describe('pipeline GraphQL consumer', () => {
     expect(vi.mocked(fetch).mock.calls[0][1]).toMatchObject({
       headers: expect.objectContaining({ 'x-csrf-token': 'pipeline-csrf' }),
     });
+    const deleteRequest = JSON.parse(
+      String((vi.mocked(fetch).mock.calls[2][1] as RequestInit).body),
+    );
+    expect(deleteRequest.variables).toEqual({ id: 17 });
   });
 });

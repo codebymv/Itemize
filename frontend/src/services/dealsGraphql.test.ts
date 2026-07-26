@@ -2,15 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCsrfToken } from '@/lib/api';
 import {
   createDealViaGraphql,
+  deleteDealViaGraphql,
+  getDealViaGraphql,
   getDealsViaGraphql,
   markDealLostViaGraphql,
+  markDealWonViaGraphql,
   moveDealViaGraphql,
+  reopenDealViaGraphql,
   updateDealViaGraphql,
 } from './dealsGraphql';
-import {
-  isDealGraphqlMutationsEnabled,
-  isDealGraphqlReadsEnabled,
-} from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(),
@@ -35,6 +35,7 @@ const response = (payload: unknown): Response => ({
 
 describe('deal GraphQL consumer', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
     vi.mocked(fetchCsrfToken).mockResolvedValue('deal-csrf');
@@ -43,17 +44,6 @@ describe('deal GraphQL consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('keeps deal reads and mutations independently disabled by default', () => {
-    vi.stubEnv('VITE_DEAL_READS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_DEAL_MUTATIONS_GRAPHQL', 'false');
-    expect(isDealGraphqlReadsEnabled()).toBe(false);
-    expect(isDealGraphqlMutationsEnabled()).toBe(false);
-    vi.stubEnv('VITE_DEAL_READS_GRAPHQL', 'true');
-    vi.stubEnv('VITE_DEAL_MUTATIONS_GRAPHQL', 'true');
-    expect(isDealGraphqlReadsEnabled()).toBe(true);
-    expect(isDealGraphqlMutationsEnabled()).toBe(true);
   });
 
   it('maps filtering, stable paging, decimals, and joined fields', async () => {
@@ -148,5 +138,44 @@ describe('deal GraphQL consumer', () => {
     expect(vi.mocked(fetch).mock.calls[0][1]).toMatchObject({
       headers: expect.objectContaining({ 'x-csrf-token': 'deal-csrf' }),
     });
+  });
+
+  it('maps detail and completes won, reopen, and delete operations', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response({ data: { deal } }))
+      .mockResolvedValueOnce(response({
+        data: { markDealWon: { ...deal, wonAt: '2026-07-17T00:00:00Z' } },
+      }))
+      .mockResolvedValueOnce(response({ data: { reopenDeal: deal } }))
+      .mockResolvedValueOnce(response({
+        data: { deleteDeal: { deletedId: deal.id } },
+      }));
+
+    await expect(getDealViaGraphql(91, 42)).resolves.toEqual(
+      expect.objectContaining({
+        id: 91,
+        organization_id: 42,
+        pipeline_id: 17,
+        value: 1250.5,
+      }),
+    );
+    await expect(markDealWonViaGraphql(91, 42)).resolves.toEqual(
+      expect.objectContaining({ id: 91, won_at: '2026-07-17T00:00:00Z' }),
+    );
+    await expect(reopenDealViaGraphql(91, 42)).resolves.toEqual(
+      expect.objectContaining({ id: 91 }),
+    );
+    await expect(deleteDealViaGraphql(91, 42)).resolves.toBeUndefined();
+
+    expect(fetchCsrfToken).toHaveBeenCalledTimes(3);
+    const requestBodies = vi.mocked(fetch).mock.calls.map((call) =>
+      JSON.parse(String((call[1] as RequestInit).body)),
+    );
+    expect(requestBodies.map((body) => body.variables)).toEqual([
+      { id: 91 },
+      { id: 91 },
+      { id: 91 },
+      { id: 91 },
+    ]);
   });
 });

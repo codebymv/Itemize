@@ -143,12 +143,9 @@ describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
     configureApp(graphqlApp);
     await graphqlApp.init();
 
-    const createPipelinesRouter = require('../../../backend/src/routes/pipelines.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
     legacyApp = express();
     legacyApp.use(cookieParser());
     legacyApp.use(express.json());
-    legacyApp.use('/api/pipelines', createPipelinesRouter(pool, authenticateJWT));
   });
 
   afterAll(async () => {
@@ -390,11 +387,6 @@ describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
   });
 
   it('matches pipeline list/detail projections, aggregates, ordering, and privacy', async () => {
-    const legacyList = await request(legacyApp)
-      .get('/api/pipelines')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
     const targetList = await graphql(
       memberToken,
       organizationId,
@@ -409,13 +401,10 @@ describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
     const targetPipeline = targetList.body.data.pipelines.find(
       (row: { id: number }) => row.id === pipelineId,
     );
-    const legacyPipeline = legacyList.body.find(
-      (row: { id: number }) => row.id === pipelineId,
-    );
     expect(targetPipeline).toMatchObject({
-      id: legacyPipeline.id,
-      organizationId: legacyPipeline.organization_id,
-      name: legacyPipeline.name,
+      id: pipelineId,
+      organizationId,
+      name: 'Sales',
       isDefault: true,
       dealCount: 1,
       totalValue: 1250.5,
@@ -456,6 +445,30 @@ describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
       { id: pipelineId },
     ).expect(200);
     expect(foreign.body.errors[0].extensions.code).toBe('NOT_FOUND');
+  });
+
+  it('leaves no retained Pipeline or Deal HTTP operation mounted', async () => {
+    const responses = await Promise.all([
+      request(legacyApp).get('/api/pipelines'),
+      request(legacyApp).post('/api/pipelines').send({ name: 'Retired' }),
+      request(legacyApp).get('/api/pipelines/1'),
+      request(legacyApp).put('/api/pipelines/1').send({ name: 'Retired' }),
+      request(legacyApp).delete('/api/pipelines/1'),
+      request(legacyApp).get('/api/pipelines/deals/all'),
+      request(legacyApp).post('/api/pipelines/deals').send({ title: 'Retired' }),
+      request(legacyApp).get('/api/pipelines/deals/1'),
+      request(legacyApp).put('/api/pipelines/deals/1').send({ title: 'Retired' }),
+      request(legacyApp).delete('/api/pipelines/deals/1'),
+      request(legacyApp).patch('/api/pipelines/deals/1/stage').send({
+        stage_id: 'retired',
+      }),
+      request(legacyApp).post('/api/pipelines/deals/1/won'),
+      request(legacyApp).post('/api/pipelines/deals/1/lost'),
+      request(legacyApp).post('/api/pipelines/deals/1/reopen'),
+    ]);
+    expect(responses.map((response) => response.status)).toEqual(
+      Array(14).fill(404),
+    );
   });
 
   it('creates and updates normalized canonical stages with explicit null semantics', async () => {

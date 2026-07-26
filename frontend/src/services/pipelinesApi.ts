@@ -2,7 +2,6 @@
  * Pipelines API Service
  * Handles all pipeline and deal-related API calls
  */
-import api from '@/lib/api';
 import { Pipeline, Deal, PipelineStage, JsonRecord } from '@/types';
 import {
   createPipelineViaGraphql,
@@ -22,61 +21,17 @@ import {
   reopenDealViaGraphql,
   updateDealViaGraphql,
 } from './dealsGraphql';
-import {
-  isDealGraphqlMutationsEnabled,
-  isDealGraphqlReadsEnabled,
-  isPipelineGraphqlMutationsEnabled,
-  isPipelineGraphqlReadsEnabled,
-} from './graphqlClient';
-
-const unwrapResponse = <T>(payload: unknown): T => {
-  if (payload && typeof payload === 'object' && 'data' in payload) {
-    return payload.data as T;
-  }
-  return payload as T;
-};
-
-const normalizeRestDeal = (deal: Deal): Deal => ({
-  ...deal,
-  value: Number(deal.value),
-});
-
-const normalizeRestPipeline = (
-  pipeline: Pipeline & { deals?: Deal[] },
-): Pipeline & { deals?: Deal[] } => ({
-  ...pipeline,
-  ...(pipeline.total_value === undefined
-    ? {}
-    : { total_value: Number(pipeline.total_value) }),
-  ...(pipeline.deals === undefined
-    ? {}
-    : { deals: pipeline.deals.map(normalizeRestDeal) }),
-});
 
 // ======================
 // Pipelines API
 // ======================
 
 export const getPipelines = async (organizationId?: number): Promise<Pipeline[]> => {
-  if (isPipelineGraphqlReadsEnabled()) {
-    return getPipelinesViaGraphql(organizationId);
-  }
-  const response = await api.get('/api/pipelines', {
-    headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-  });
-  return unwrapResponse<Pipeline[]>(response.data).map(normalizeRestPipeline);
+  return getPipelinesViaGraphql(organizationId);
 };
 
 export const getPipeline = async (id: number, organizationId?: number): Promise<Pipeline & { deals: Deal[] }> => {
-  if (isPipelineGraphqlReadsEnabled()) {
-    return getPipelineViaGraphql(id, organizationId);
-  }
-  const response = await api.get(`/api/pipelines/${id}`, {
-    headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-  });
-  return normalizeRestPipeline(
-    unwrapResponse<Pipeline & { deals: Deal[] }>(response.data),
-  ) as Pipeline & { deals: Deal[] };
+  return getPipelineViaGraphql(id, organizationId);
 };
 
 export interface CreatePipelineData {
@@ -88,32 +43,15 @@ export interface CreatePipelineData {
 }
 
 export const createPipeline = async (data: CreatePipelineData): Promise<Pipeline> => {
-  if (isPipelineGraphqlMutationsEnabled()) {
-    return createPipelineViaGraphql(data);
-  }
-  const response = await api.post('/api/pipelines', data, {
-    headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
-  });
-  return unwrapResponse<Pipeline>(response.data);
+  return createPipelineViaGraphql(data);
 };
 
 export const updatePipeline = async (id: number, data: Partial<CreatePipelineData>): Promise<Pipeline> => {
-  if (isPipelineGraphqlMutationsEnabled()) {
-    return updatePipelineViaGraphql(id, data);
-  }
-  const response = await api.put(`/api/pipelines/${id}`, data, {
-    headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
-  });
-  return unwrapResponse<Pipeline>(response.data);
+  return updatePipelineViaGraphql(id, data);
 };
 
 export const deletePipeline = async (id: number, organizationId?: number): Promise<void> => {
-  if (isPipelineGraphqlMutationsEnabled()) {
-    return deletePipelineViaGraphql(id, organizationId);
-  }
-  await api.delete(`/api/pipelines/${id}`, {
-    headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-  });
+  return deletePipelineViaGraphql(id, organizationId);
 };
 
 // ======================
@@ -144,25 +82,11 @@ export interface DealsResponse {
 }
 
 export const getDeals = async (params: DealsQueryParams = {}): Promise<DealsResponse> => {
-  if (isDealGraphqlReadsEnabled()) {
-    return getDealsViaGraphql(params);
-  }
-  const response = await api.get('/api/pipelines/deals/all', {
-    params,
-    headers: params.organization_id ? { 'x-organization-id': params.organization_id.toString() } : {}
-  });
-  const result = unwrapResponse<DealsResponse>(response.data);
-  return { ...result, deals: result.deals.map(normalizeRestDeal) };
+  return getDealsViaGraphql(params);
 };
 
 export const getDeal = async (id: number, organizationId?: number): Promise<Deal> => {
-  if (isDealGraphqlReadsEnabled()) {
-    return getDealViaGraphql(id, organizationId);
-  }
-  const response = await api.get(`/api/pipelines/deals/${id}`, {
-    headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-  });
-  return normalizeRestDeal(unwrapResponse<Deal>(response.data));
+  return getDealViaGraphql(id, organizationId);
 };
 
 export interface CreateDealData {
@@ -181,73 +105,31 @@ export interface CreateDealData {
 }
 
 export const createDeal = async (data: CreateDealData): Promise<Deal> => {
-  if (isDealGraphqlMutationsEnabled()) {
-    return createDealViaGraphql(data);
-  }
-  const response = await api.post('/api/pipelines/deals', data, {
-    headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
-  });
-  return normalizeRestDeal(unwrapResponse<Deal>(response.data));
+  return createDealViaGraphql(data);
 };
 
 export const updateDeal = async (id: number, data: Partial<CreateDealData>): Promise<Deal> => {
-  if (isDealGraphqlMutationsEnabled()) {
-    return updateDealViaGraphql(id, data);
-  }
-  const response = await api.put(`/api/pipelines/deals/${id}`, data, {
-    headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
-  });
-  return normalizeRestDeal(unwrapResponse<Deal>(response.data));
+  return updateDealViaGraphql(id, data);
 };
 
 export const moveDealToStage = async (id: number, stageId: string, organizationId?: number): Promise<Deal> => {
-  if (isDealGraphqlMutationsEnabled()) {
-    return moveDealViaGraphql(id, stageId, organizationId);
-  }
-  const response = await api.patch(`/api/pipelines/deals/${id}/stage`, 
-    { stage_id: stageId },
-    { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
-  );
-  return normalizeRestDeal(unwrapResponse<Deal>(response.data));
+  return moveDealViaGraphql(id, stageId, organizationId);
 };
 
 export const markDealWon = async (id: number, organizationId?: number): Promise<Deal> => {
-  if (isDealGraphqlMutationsEnabled()) {
-    return markDealWonViaGraphql(id, organizationId);
-  }
-  const response = await api.post(`/api/pipelines/deals/${id}/won`, {}, {
-    headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-  });
-  return normalizeRestDeal(unwrapResponse<Deal>(response.data));
+  return markDealWonViaGraphql(id, organizationId);
 };
 
 export const markDealLost = async (id: number, reason?: string, organizationId?: number): Promise<Deal> => {
-  if (isDealGraphqlMutationsEnabled()) {
-    return markDealLostViaGraphql(id, reason, organizationId);
-  }
-  const response = await api.post(`/api/pipelines/deals/${id}/lost`, { reason }, {
-    headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-  });
-  return normalizeRestDeal(unwrapResponse<Deal>(response.data));
+  return markDealLostViaGraphql(id, reason, organizationId);
 };
 
 export const reopenDeal = async (id: number, organizationId?: number): Promise<Deal> => {
-  if (isDealGraphqlMutationsEnabled()) {
-    return reopenDealViaGraphql(id, organizationId);
-  }
-  const response = await api.post(`/api/pipelines/deals/${id}/reopen`, {}, {
-    headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-  });
-  return normalizeRestDeal(unwrapResponse<Deal>(response.data));
+  return reopenDealViaGraphql(id, organizationId);
 };
 
 export const deleteDeal = async (id: number, organizationId?: number): Promise<void> => {
-  if (isDealGraphqlMutationsEnabled()) {
-    return deleteDealViaGraphql(id, organizationId);
-  }
-  await api.delete(`/api/pipelines/deals/${id}`, {
-    headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-  });
+  return deleteDealViaGraphql(id, organizationId);
 };
 
 export default {

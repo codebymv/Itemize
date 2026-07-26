@@ -47,18 +47,6 @@ export const isContactGraphqlActivitiesEnabled = (): boolean =>
 export const isContactGraphqlContentEnabled = (): boolean =>
   import.meta.env.VITE_CONTACT_CONTENT_GRAPHQL === 'true';
 
-export const isPipelineGraphqlReadsEnabled = (): boolean =>
-  import.meta.env.VITE_PIPELINE_READS_GRAPHQL === 'true';
-
-export const isPipelineGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_PIPELINE_MUTATIONS_GRAPHQL === 'true';
-
-export const isDealGraphqlReadsEnabled = (): boolean =>
-  import.meta.env.VITE_DEAL_READS_GRAPHQL === 'true';
-
-export const isDealGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_DEAL_MUTATIONS_GRAPHQL === 'true';
-
 export const isOnboardingGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_ONBOARDING_READS_GRAPHQL === 'true';
 

@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 342
-- API operations under `/api`: 335
+- Registered method/path operations: 328
+- API operations under `/api`: 321
 - Non-API registered operations: 7
-- Static frontend callsites: 273
-- Operations with frontend consumers: 262
-- Operations referenced by backend tests: 189
-- Recommended GraphQL queries: 96
-- Recommended GraphQL mutations: 184
+- Static frontend callsites: 259
+- Operations with frontend consumers: 248
+- Operations referenced by backend tests: 175
+- Recommended GraphQL queries: 92
+- Recommended GraphQL mutations: 174
 - Recommended retained HTTP endpoints: 54
-- High-risk operations: 280
+- High-risk operations: 266
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -234,20 +234,6 @@
 | POST | `/api/pages/:id/versions/:versionId/restore` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / restoreLandingPageVersion |
 | GET | `/api/pages/public/page/:slug` | 1 | 2 | retain-http | high | growth / PublicLandingPagesModule / getPublicLandingPage |
 | POST | `/api/pages/public/page/:slug/analytics` | 1 | 0 | retain-http | high | growth / PublicLandingPagesModule / recordPublicLandingPageAnalytics |
-| GET | `/api/pipelines` | 1 | 4 | graphql-query | high | crm / PipelinesModule / pipelines |
-| POST | `/api/pipelines` | 1 | 10 | graphql-mutation | high | crm / PipelinesModule / createPipeline |
-| DELETE | `/api/pipelines/:id` | 1 | 3 | graphql-mutation | high | crm / PipelinesModule / deletePipeline |
-| GET | `/api/pipelines/:id` | 1 | 2 | graphql-query | high | crm / PipelinesModule / pipeline |
-| PUT | `/api/pipelines/:id` | 1 | 4 | graphql-mutation | high | crm / PipelinesModule / updatePipeline |
-| POST | `/api/pipelines/deals` | 1 | 9 | graphql-mutation | high | crm / DealsModule / createDeal |
-| DELETE | `/api/pipelines/deals/:id` | 1 | 1 | graphql-mutation | high | crm / DealsModule / deleteDeal |
-| GET | `/api/pipelines/deals/:id` | 1 | 2 | graphql-query | high | crm / DealsModule / deal |
-| PUT | `/api/pipelines/deals/:id` | 1 | 4 | graphql-mutation | high | crm / DealsModule / updateDeal |
-| POST | `/api/pipelines/deals/:id/lost` | 1 | 1 | graphql-mutation | high | crm / DealsModule / markDealLost |
-| POST | `/api/pipelines/deals/:id/reopen` | 1 | 3 | graphql-mutation | high | crm / DealsModule / reopenDeal |
-| PATCH | `/api/pipelines/deals/:id/stage` | 1 | 2 | graphql-mutation | high | crm / DealsModule / moveDeal |
-| POST | `/api/pipelines/deals/:id/won` | 1 | 2 | graphql-mutation | high | crm / DealsModule / markDealWon |
-| GET | `/api/pipelines/deals/all` | 1 | 2 | graphql-query | high | crm / DealsModule / deals |
 | GET | `/api/public/sign/:token` | 1 | 8 | retain-http | high | esignatures / PublicSigningModule / getSigningSession |
 | POST | `/api/public/sign/:token` | 1 | 5 | retain-http | high | esignatures / PublicSigningModule / submitSignature |
 | POST | `/api/public/sign/:token/decline` | 1 | 1 | retain-http | high | esignatures / PublicSigningModule / declineSignature |
@@ -378,7 +364,7 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 19
+- Unmatched backend test calls: 33
 - Orphaned manual overrides: 49
 - Orphaned runtime-expression overrides: 0
 
@@ -406,11 +392,25 @@
 | Method | Requested path | Source |
 | --- | --- | --- |
 | GET | `/api/campaigns:path` | `backend-v2/test/integration/campaigns.integration-spec.ts:126` |
-| GET | `/api/tags` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:381` |
-| GET | `/api/tags/suggestions` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:382` |
-| POST | `/api/tags` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:383` |
-| PUT | `/api/tags/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:384` |
-| DELETE | `/api/tags/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:385` |
+| GET | `/api/tags` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:378` |
+| GET | `/api/tags/suggestions` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:379` |
+| POST | `/api/tags` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:380` |
+| PUT | `/api/tags/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:381` |
+| DELETE | `/api/tags/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:382` |
+| GET | `/api/pipelines` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:452` |
+| POST | `/api/pipelines` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:453` |
+| GET | `/api/pipelines/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:454` |
+| PUT | `/api/pipelines/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:455` |
+| DELETE | `/api/pipelines/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:456` |
+| GET | `/api/pipelines/deals/all` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:457` |
+| POST | `/api/pipelines/deals` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:458` |
+| GET | `/api/pipelines/deals/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:459` |
+| PUT | `/api/pipelines/deals/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:460` |
+| DELETE | `/api/pipelines/deals/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:461` |
+| PATCH | `/api/pipelines/deals/1/stage` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:462` |
+| POST | `/api/pipelines/deals/1/won` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:465` |
+| POST | `/api/pipelines/deals/1/lost` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:466` |
+| POST | `/api/pipelines/deals/1/reopen` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:467` |
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1057` |
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1079` |
 | POST | `/api/campaigns/1/:action` | `backend/src/__tests__/integration/campaigns.integration.test.js:504` |

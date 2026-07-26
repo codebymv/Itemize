@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 342,
-    "apiOperationCount": 335,
+    "operationCount": 328,
+    "apiOperationCount": 321,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 273,
-    "operationsWithFrontendConsumers": 262,
-    "operationsWithBackendTests": 189,
+    "frontendCallsiteCount": 259,
+    "operationsWithFrontendConsumers": 248,
+    "operationsWithBackendTests": 175,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 19,
+    "unmatchedBackendTestCallCount": 33,
     "retainHttpCount": 54,
-    "graphqlQueryCount": 96,
-    "graphqlMutationCount": 184,
-    "highRiskCount": 280,
+    "graphqlQueryCount": 92,
+    "graphqlMutationCount": 174,
+    "highRiskCount": 266,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -3363,7 +3363,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 58
+          "line": 57
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -4299,7 +4299,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 218
+          "line": 217
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -4374,7 +4374,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 219
+          "line": 218
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -5478,7 +5478,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 262
+          "line": 259
         },
         {
           "source": "backend/src/routes/invoices/actions.routes.js",
@@ -5966,7 +5966,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 254
+          "line": 251
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -7246,7 +7246,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 258
+          "line": 255
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -7284,7 +7284,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 250
+          "line": 247
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -7657,7 +7657,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 54
+          "line": 53
         }
       ],
       "consumerCallsites": [],
@@ -9185,790 +9185,6 @@
       "risk": "high"
     },
     {
-      "id": "GET /api/pipelines",
-      "key": "GET /api/pipelines",
-      "method": "GET",
-      "path": "/api/pipelines",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/pipelines.routes.js",
-          "line": 232
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/pipelines",
-          "rawPath": "/api/pipelines",
-          "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 64,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/pipelines",
-          "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
-          "line": 394
-        },
-        {
-          "method": "GET",
-          "path": "/api/pipelines",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 118
-        },
-        {
-          "method": "GET",
-          "path": "/api/pipelines",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 129
-        },
-        {
-          "method": "GET",
-          "path": "/api/pipelines",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 915
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "crm",
-      "targetOperation": "pipelines",
-      "targetModule": "PipelinesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Organization-scoped pipelines with deal aggregates and deterministic default/name ordering.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/pipelines",
-      "key": "POST /api/pipelines",
-      "method": "POST",
-      "path": "/api/pipelines",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/pipelines.routes.js",
-          "line": 296
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/pipelines",
-          "rawPath": "/api/pipelines",
-          "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 94,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/pipelines",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 92
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 108
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 201
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 413
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 549
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 596
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 657
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 750
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 778
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 884
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "createPipeline",
-      "targetModule": "PipelinesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Validate non-empty unique stage IDs/names; concurrent default requests leave exactly one default.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/pipelines/:id",
-      "key": "DELETE /api/pipelines/:*",
-      "method": "DELETE",
-      "path": "/api/pipelines/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/pipelines.routes.js",
-          "line": 429
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/pipelines/:id",
-          "rawPath": "/api/pipelines/${id}",
-          "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 114,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/pipelines/:pipelineId",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 181
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/pipelines/:protectedPipelineId",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 562
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/pipelines/:protectedPipelineId",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 570
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "deletePipeline",
-      "targetModule": "PipelinesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Lock and verify organization ownership before checking dependent deals so outsiders receive not found without an existence leak.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/pipelines/:id",
-      "key": "GET /api/pipelines/:*",
-      "method": "GET",
-      "path": "/api/pipelines/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/pipelines.routes.js",
-          "line": 253
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/pipelines/:id",
-          "rawPath": "/api/pipelines/${id}",
-          "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 74,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/pipelines/:pipelineId",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 140
-        },
-        {
-          "method": "GET",
-          "path": "/api/pipelines/:pipelineId",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 151
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "crm",
-      "targetOperation": "pipeline",
-      "targetModule": "PipelinesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Organization-owned pipeline with paginated deals and safe related-contact/assignee projection.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/pipelines/:id",
-      "key": "PUT /api/pipelines/:*",
-      "method": "PUT",
-      "path": "/api/pipelines/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/pipelines.routes.js",
-          "line": 349
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/pipelines/:id",
-          "rawPath": "/api/pipelines/${id}",
-          "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 104,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/pipelines/:pipelineId",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 160
-        },
-        {
-          "method": "PUT",
-          "path": "/api/pipelines/:pipelineId",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 171
-        },
-        {
-          "method": "PUT",
-          "path": "/api/pipelines/:protectedPipelineId",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 581
-        },
-        {
-          "method": "PUT",
-          "path": "/api/pipelines/:canonicalPipelineId",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 713
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "updatePipeline",
-      "targetModule": "PipelinesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Default changes serialize and stage replacement cannot remove a stage referenced by a deal.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/pipelines/deals",
-      "key": "POST /api/pipelines/deals",
-      "method": "POST",
-      "path": "/api/pipelines/deals",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/pipelines.routes.js",
-          "line": 606
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/pipelines/deals",
-          "rawPath": "/api/pipelines/deals",
-          "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 187,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/pipelines/deals",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 211
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines/deals",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 230
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines/deals",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 240
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines/deals",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 251
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines/deals",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 268
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines/deals",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 420
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines/deals",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 556
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines/deals",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 702
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines/deals",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 792
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "createDeal",
-      "targetModule": "DealsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Pipeline, stage, contact, and assignee references must all belong to the active organization.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/pipelines/deals/:id",
-      "key": "DELETE /api/pipelines/deals/:*",
-      "method": "DELETE",
-      "path": "/api/pipelines/deals/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/pipelines.routes.js",
-          "line": 922
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/pipelines/deals/:id",
-          "rawPath": "/api/pipelines/deals/${id}",
-          "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 248,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/pipelines/deals/:dealId",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 535
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "deleteDeal",
-      "targetModule": "DealsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Organization-scoped deletion with explicit activity/event semantics.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/pipelines/deals/:id",
-      "key": "GET /api/pipelines/deals/:*",
-      "method": "GET",
-      "path": "/api/pipelines/deals/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/pipelines.routes.js",
-          "line": 576
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/pipelines/deals/:id",
-          "rawPath": "/api/pipelines/deals/${id}",
-          "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 162,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/pipelines/deals/:dealId",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 286
-        },
-        {
-          "method": "GET",
-          "path": "/api/pipelines/deals/:dealId",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 296
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "crm",
-      "targetOperation": "deal",
-      "targetModule": "DealsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Outside-organization IDs are not found and relation projections must preserve tenant scope.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/pipelines/deals/:id",
-      "key": "PUT /api/pipelines/deals/:*",
-      "method": "PUT",
-      "path": "/api/pipelines/deals/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/pipelines.routes.js",
-          "line": 681
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/pipelines/deals/:id",
-          "rawPath": "/api/pipelines/deals/${id}",
-          "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 197,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/pipelines/deals/:dealId",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 326
-        },
-        {
-          "method": "PUT",
-          "path": "/api/pipelines/deals/:dealId",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 345
-        },
-        {
-          "method": "PUT",
-          "path": "/api/pipelines/deals/:dealId",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 373
-        },
-        {
-          "method": "PUT",
-          "path": "/api/pipelines/deals/:dealId",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 390
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "updateDeal",
-      "targetModule": "DealsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Lock the deal and validate the effective pipeline/stage/contact/assignee tuple before update.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/pipelines/deals/:id/lost",
-      "key": "POST /api/pipelines/deals/:*/lost",
-      "method": "POST",
-      "path": "/api/pipelines/deals/:id/lost",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/pipelines.routes.js",
-          "line": 876
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/pipelines/deals/:id/lost",
-          "rawPath": "/api/pipelines/deals/${id}/lost",
-          "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 228,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/pipelines/deals/:dealId/lost",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 465
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "markDealLost",
-      "targetModule": "DealsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Atomically set lost state/reason, clear won state, and emit lifecycle activity/event.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/pipelines/deals/:id/reopen",
-      "key": "POST /api/pipelines/deals/:*/reopen",
-      "method": "POST",
-      "path": "/api/pipelines/deals/:id/reopen",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/pipelines.routes.js",
-          "line": 903
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/pipelines/deals/:id/reopen",
-          "rawPath": "/api/pipelines/deals/${id}/reopen",
-          "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 238,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/pipelines/deals/:dealId/reopen",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 450
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines/deals/:dealId/reopen",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 490
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines/deals/:dealId/reopen",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 514
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "reopenDeal",
-      "targetModule": "DealsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Clear terminal timestamps/reason atomically and emit lifecycle activity/event.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PATCH /api/pipelines/deals/:id/stage",
-      "key": "PATCH /api/pipelines/deals/:*/stage",
-      "method": "PATCH",
-      "path": "/api/pipelines/deals/:id/stage",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/pipelines.routes.js",
-          "line": 788
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PATCH",
-          "path": "/api/pipelines/deals/:id/stage",
-          "rawPath": "/api/pipelines/deals/${id}/stage",
-          "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 207,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PATCH",
-          "path": "/api/pipelines/deals/:dealId/stage",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 337
-        },
-        {
-          "method": "PATCH",
-          "path": "/api/pipelines/deals/:dealId/stage",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 397
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "moveDeal",
-      "targetModule": "DealsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Lock the deal, validate the destination against its pipeline, and publish the durable deal-stage-changed event only after commit.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/pipelines/deals/:id/won",
-      "key": "POST /api/pipelines/deals/:*/won",
-      "method": "POST",
-      "path": "/api/pipelines/deals/:id/won",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/pipelines.routes.js",
-          "line": 857
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/pipelines/deals/:id/won",
-          "rawPath": "/api/pipelines/deals/${id}/won",
-          "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 218,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/pipelines/deals/:dealId/won",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 429
-        },
-        {
-          "method": "POST",
-          "path": "/api/pipelines/deals/:dealId/won",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 526
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "markDealWon",
-      "targetModule": "DealsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Atomically set won state, clear lost state, and emit lifecycle activity/event.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/pipelines/deals/all",
-      "key": "GET /api/pipelines/deals/all",
-      "method": "GET",
-      "path": "/api/pipelines/deals/all",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/pipelines.routes.js",
-          "line": 481
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/pipelines/deals/all",
-          "rawPath": "/api/pipelines/deals/all",
-          "source": "frontend/src/services/pipelinesApi.ts",
-          "line": 150,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/pipelines/deals/all",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 305
-        },
-        {
-          "method": "GET",
-          "path": "/api/pipelines/deals/all",
-          "source": "backend/src/__tests__/integration/pipelines.integration.test.js",
-          "line": 316
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "crm",
-      "targetOperation": "deals",
-      "targetModule": "DealsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Organization-scoped filters, strict pagination, Decimal value transport, and stable tie-breaker ordering.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "GET /api/public/sign/:token",
       "key": "GET /api/public/sign/:*",
       "method": "GET",
@@ -9976,7 +9192,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 316
+          "line": 313
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10063,7 +9279,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 336
+          "line": 333
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10132,7 +9348,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 332
+          "line": 329
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10177,7 +9393,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 324
+          "line": 321
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10205,7 +9421,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 320
+          "line": 317
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10240,7 +9456,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 328
+          "line": 325
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12116,7 +11332,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 302
+          "line": 299
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12187,7 +11403,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 298
+          "line": 295
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12381,7 +11597,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 284
+          "line": 281
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12702,7 +11918,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 306
+          "line": 303
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12771,7 +11987,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 291
+          "line": 288
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -13337,7 +12553,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 122
+          "line": 121
         }
       ],
       "consumerCallsites": [
@@ -13371,7 +12587,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 66
+          "line": 65
         }
       ],
       "consumerCallsites": [
@@ -13405,7 +12621,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 57
+          "line": 56
         }
       ],
       "consumerCallsites": [],
@@ -13577,7 +12793,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 55
+          "line": 54
         }
       ],
       "consumerCallsites": [],
@@ -13806,7 +13022,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 56
+          "line": 55
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",
@@ -15135,31 +14351,115 @@
       "method": "GET",
       "path": "/api/tags",
       "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
-      "line": 381
+      "line": 378
     },
     {
       "method": "GET",
       "path": "/api/tags/suggestions",
       "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
-      "line": 382
+      "line": 379
     },
     {
       "method": "POST",
       "path": "/api/tags",
       "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
-      "line": 383
+      "line": 380
     },
     {
       "method": "PUT",
       "path": "/api/tags/1",
       "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
-      "line": 384
+      "line": 381
     },
     {
       "method": "DELETE",
       "path": "/api/tags/1",
       "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
-      "line": 385
+      "line": 382
+    },
+    {
+      "method": "GET",
+      "path": "/api/pipelines",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 452
+    },
+    {
+      "method": "POST",
+      "path": "/api/pipelines",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 453
+    },
+    {
+      "method": "GET",
+      "path": "/api/pipelines/1",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 454
+    },
+    {
+      "method": "PUT",
+      "path": "/api/pipelines/1",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 455
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/pipelines/1",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 456
+    },
+    {
+      "method": "GET",
+      "path": "/api/pipelines/deals/all",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 457
+    },
+    {
+      "method": "POST",
+      "path": "/api/pipelines/deals",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 458
+    },
+    {
+      "method": "GET",
+      "path": "/api/pipelines/deals/1",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 459
+    },
+    {
+      "method": "PUT",
+      "path": "/api/pipelines/deals/1",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 460
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/pipelines/deals/1",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 461
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/pipelines/deals/1/stage",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 462
+    },
+    {
+      "method": "POST",
+      "path": "/api/pipelines/deals/1/won",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 465
+    },
+    {
+      "method": "POST",
+      "path": "/api/pipelines/deals/1/lost",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 466
+    },
+    {
+      "method": "POST",
+      "path": "/api/pipelines/deals/1/reopen",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 467
     },
     {
       "method": "GET",
