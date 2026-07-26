@@ -185,6 +185,36 @@ describe('RealtimeOutboxService', () => {
     )).resolves.toMatchObject({ inserted: true });
   });
 
+  it('accepts a chat-session message projection with a bounded capability', async () => {
+    const chatEvent: EnqueueRealtimeEventInput = {
+      eventKey: 'chat-agent-message:19',
+      aggregateType: 'chat_session',
+      aggregateId: 31,
+      channel: 'chat_session',
+      recipientKey: `cs_${'a'.repeat(48)}`,
+      eventName: 'newChatMessage',
+      eventType: 'AGENT_MESSAGE_CREATED',
+      payload: { message: { id: 19, content: 'Hello' } },
+    };
+    const query = jest.fn().mockResolvedValue({
+      rows: [{
+        ...row,
+        event_key: chatEvent.eventKey,
+        aggregate_type: chatEvent.aggregateType,
+        aggregate_id: chatEvent.aggregateId,
+        channel: chatEvent.channel,
+        recipient_key: chatEvent.recipientKey,
+        event_name: chatEvent.eventName,
+        event_type: chatEvent.eventType,
+        payload: chatEvent.payload,
+      }],
+    });
+
+    await expect(
+      service.enqueue({ query } as unknown as PoolClient, chatEvent),
+    ).resolves.toMatchObject({ inserted: true });
+  });
+
   it('rejects unsupported channel/event combinations before querying', async () => {
     const query = jest.fn();
     await expect(

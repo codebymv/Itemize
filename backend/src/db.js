@@ -113,6 +113,9 @@ const {
 
 // Import Chat Widget migrations
 const { runAllChatWidgetMigrations } = require('./db_chat_widget_migrations');
+const {
+  runChatWidgetGraphqlMigration,
+} = require('./db_chat_widget_graphql_migrations');
 
 // Import Email Campaign migrations
 const { runAllCampaignMigrations } = require('./db_campaign_migrations');
@@ -533,6 +536,11 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'sms_webhook_idempotency', runSmsWebhookIdempotencyMigration);
     await runMigrationOnce(pool, 'sms_receiving_number_registry', runSmsReceivingNumberRegistryMigration);
     await runMigrationOnce(pool, 'module_chat_widget', runAllChatWidgetMigrations);
+    await runMigrationOnce(
+      pool,
+      'chat_widget_graphql',
+      runChatWidgetGraphqlMigration,
+    );
     await runMigrationOnce(pool, 'module_campaigns', runAllCampaignMigrations);
     await runMigrationOnce(pool, 'email_webhook_events', runEmailWebhookMigration);
     await runMigrationOnce(pool, 'email_webhook_reconciliation', runEmailWebhookReconciliationMigration);

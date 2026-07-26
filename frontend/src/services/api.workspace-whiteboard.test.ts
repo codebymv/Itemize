@@ -42,6 +42,9 @@ vi.mock('./workspaceContentGraphql', () => ({
   getWorkspaceListsViaGraphql: vi.fn(),
   getWorkspaceNotesViaGraphql: vi.fn(),
   getWorkspaceWhiteboardsViaGraphql: vi.fn(),
+  getWorkspaceWireframesViaGraphql: vi.fn(),
+  updateCanvasPositionsViaGraphql: vi.fn(),
+  wireframeFields: '',
 }));
 
 vi.mock('./workspaceWhiteboardMutationsGraphql', () => ({

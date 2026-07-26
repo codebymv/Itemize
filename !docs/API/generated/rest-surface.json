@@ -3,11 +3,11 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 374,
-    "resolvedDeclarationCount": 374,
+    "declarationCount": 366,
+    "resolvedDeclarationCount": 366,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 355,
-    "sourceFileCount": 73
+    "uniqueResolvedOperationCount": 347,
+    "sourceFileCount": 71
   },
   "caveats": [
     "This is static source analysis; it does not execute application modules.",
@@ -799,46 +799,6 @@
     {
       "method": "GET",
       "publicPaths": [
-        "/api/chat-widget"
-      ],
-      "declaredPath": "/",
-      "source": "backend/src/routes/chat-widget/management.routes.js",
-      "line": 15,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/chat-widget"
-      ],
-      "declaredPath": "/",
-      "source": "backend/src/routes/chat-widget/management.routes.js",
-      "line": 32,
-      "dynamic": false
-    },
-    {
-      "method": "PUT",
-      "publicPaths": [
-        "/api/chat-widget"
-      ],
-      "declaredPath": "/",
-      "source": "backend/src/routes/chat-widget/management.routes.js",
-      "line": 113,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/chat-widget/embed-code"
-      ],
-      "declaredPath": "/embed-code",
-      "source": "backend/src/routes/chat-widget/management.routes.js",
-      "line": 201,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
         "/api/chat-widget/public/config/:widgetKey"
       ],
       "declaredPath": "/public/config/:widgetKey",
@@ -894,46 +854,6 @@
       "declaredPath": "/public/typing",
       "source": "backend/src/routes/chat-widget/public.routes.js",
       "line": 381,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/chat-widget/sessions"
-      ],
-      "declaredPath": "/sessions",
-      "source": "backend/src/routes/chat-widget/sessions.routes.js",
-      "line": 12,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/chat-widget/sessions/:id"
-      ],
-      "declaredPath": "/sessions/:id",
-      "source": "backend/src/routes/chat-widget/sessions.routes.js",
-      "line": 64,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/chat-widget/sessions/:id/convert"
-      ],
-      "declaredPath": "/sessions/:id/convert",
-      "source": "backend/src/routes/chat-widget/sessions.routes.js",
-      "line": 178,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/chat-widget/sessions/:id/messages"
-      ],
-      "declaredPath": "/sessions/:id/messages",
-      "source": "backend/src/routes/chat-widget/sessions.routes.js",
-      "line": 103,
       "dynamic": false
     },
     {

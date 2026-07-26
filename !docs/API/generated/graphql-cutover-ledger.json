@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 355,
-    "apiOperationCount": 348,
+    "operationCount": 347,
+    "apiOperationCount": 340,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 281,
-    "operationsWithFrontendConsumers": 270,
-    "operationsWithBackendTests": 195,
+    "frontendCallsiteCount": 273,
+    "operationsWithFrontendConsumers": 262,
+    "operationsWithBackendTests": 194,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 13,
-    "retainHttpCount": 48,
-    "graphqlQueryCount": 104,
-    "graphqlMutationCount": 195,
-    "highRiskCount": 290,
+    "unmatchedBackendTestCallCount": 14,
+    "retainHttpCount": 54,
+    "graphqlQueryCount": 98,
+    "graphqlMutationCount": 187,
+    "highRiskCount": 284,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -3548,142 +3548,6 @@
       "risk": "high"
     },
     {
-      "id": "GET /api/chat-widget",
-      "key": "GET /api/chat-widget",
-      "method": "GET",
-      "path": "/api/chat-widget",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/chat-widget/management.routes.js",
-          "line": 15
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/chat-widget",
-          "rawPath": "/api/chat-widget",
-          "source": "frontend/src/services/chatWidgetApi.ts",
-          "line": 197,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/chat-widget",
-      "key": "POST /api/chat-widget",
-      "method": "POST",
-      "path": "/api/chat-widget",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/chat-widget/management.routes.js",
-          "line": 32
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/chat-widget",
-          "rawPath": "/api/chat-widget",
-          "source": "frontend/src/services/chatWidgetApi.ts",
-          "line": 210,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/chat-widget",
-      "key": "PUT /api/chat-widget",
-      "method": "PUT",
-      "path": "/api/chat-widget",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/chat-widget/management.routes.js",
-          "line": 113
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/chat-widget",
-          "rawPath": "/api/chat-widget",
-          "source": "frontend/src/services/chatWidgetApi.ts",
-          "line": 223,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/chat-widget/embed-code",
-      "key": "GET /api/chat-widget/embed-code",
-      "method": "GET",
-      "path": "/api/chat-widget/embed-code",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/chat-widget/management.routes.js",
-          "line": 201
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/chat-widget/embed-code",
-          "rawPath": "/api/chat-widget/embed-code",
-          "source": "frontend/src/services/chatWidgetApi.ts",
-          "line": 233,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "GET /api/chat-widget/public/config/:widgetKey",
       "key": "GET /api/chat-widget/public/config/:*",
       "method": "GET",
@@ -3700,7 +3564,7 @@
           "path": "/api/chat-widget/public/config/:widgetKey",
           "rawPath": "/api/chat-widget/public/config/${widgetKey}",
           "source": "frontend/src/services/chatWidgetApi.ts",
-          "line": 243,
+          "line": 245,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3708,12 +3572,12 @@
       "testCallsites": [],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "disposition": "retain-http",
+      "owner": "chat-widget",
+      "targetOperation": "getPublicChatWidgetConfig",
+      "targetModule": "PublicChatWidgetHttpModule",
+      "parityStatus": "characterized",
+      "notes": "Retain the rate-limited public embed bootstrap over HTTP. The widget key selects an allowlisted active configuration projection; authenticated management and provider capabilities are absent.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -3734,7 +3598,7 @@
           "path": "/api/chat-widget/public/end-session",
           "rawPath": "/api/chat-widget/public/end-session",
           "source": "frontend/src/services/chatWidgetApi.ts",
-          "line": 279,
+          "line": 281,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3744,17 +3608,17 @@
           "method": "POST",
           "path": "/api/chat-widget/public/end-session",
           "source": "backend/src/__tests__/integration/realtime.integration.test.js",
-          "line": 256
+          "line": 238
         }
       ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "disposition": "retain-http",
+      "owner": "chat-widget",
+      "targetOperation": "endPublicChatSession",
+      "targetModule": "PublicChatWidgetHttpModule",
+      "parityStatus": "characterized",
+      "notes": "Retain the public terminal session action over the visitor capability. It is part of the externally embedded widget protocol rather than the authenticated operator API.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -3775,7 +3639,7 @@
           "path": "/api/chat-widget/public/messages",
           "rawPath": "/api/chat-widget/public/messages",
           "source": "frontend/src/services/chatWidgetApi.ts",
-          "line": 271,
+          "line": 273,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3783,12 +3647,12 @@
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "disposition": "retain-http",
+      "owner": "chat-widget",
+      "targetOperation": "sendPublicChatMessage",
+      "targetModule": "PublicChatWidgetHttpModule",
+      "parityStatus": "characterized",
+      "notes": "Retain rate-limited public visitor message submission over the session capability. Agent replies originate in CSRF-protected GraphQL and reach this visitor protocol through the durable realtime outbox.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -3809,7 +3673,7 @@
           "path": "/api/chat-widget/public/messages/:sessionToken",
           "rawPath": "/api/chat-widget/public/messages/${sessionToken}",
           "source": "frontend/src/services/chatWidgetApi.ts",
-          "line": 261,
+          "line": 263,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3819,19 +3683,19 @@
           "method": "GET",
           "path": "/api/chat-widget/public/messages/:CHAT_TOKEN",
           "source": "backend/src/__tests__/integration/realtime.integration.test.js",
-          "line": 288
+          "line": 270
         }
       ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "disposition": "retain-http",
+      "owner": "chat-widget",
+      "targetOperation": "getPublicChatMessages",
+      "targetModule": "PublicChatWidgetHttpModule",
+      "parityStatus": "characterized",
+      "notes": "Retain rate-limited visitor polling over the opaque session capability. The authenticated GraphQL schema never exposes that bearer token; live delivery remains on the established Socket.IO protocol.",
       "literalInterpolationRisk": false,
-      "risk": "medium"
+      "risk": "high"
     },
     {
       "id": "POST /api/chat-widget/public/session",
@@ -3850,7 +3714,7 @@
           "path": "/api/chat-widget/public/session",
           "rawPath": "/api/chat-widget/public/session",
           "source": "frontend/src/services/chatWidgetApi.ts",
-          "line": 253,
+          "line": 255,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3858,12 +3722,12 @@
       "testCallsites": [],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "disposition": "retain-http",
+      "owner": "chat-widget",
+      "targetOperation": "createPublicChatSession",
+      "targetModule": "PublicChatWidgetHttpModule",
+      "parityStatus": "characterized",
+      "notes": "Retain public visitor session creation over HTTP. It validates the widget capability and allowed-domain policy, then issues the opaque session capability used by the browser embed.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -3884,160 +3748,17 @@
           "method": "POST",
           "path": "/api/chat-widget/public/typing",
           "source": "backend/src/__tests__/integration/realtime.integration.test.js",
-          "line": 278
+          "line": 260
         }
       ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "GET /api/chat-widget/sessions",
-      "key": "GET /api/chat-widget/sessions",
-      "method": "GET",
-      "path": "/api/chat-widget/sessions",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/chat-widget/sessions.routes.js",
-          "line": 12
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/chat-widget/sessions",
-          "rawPath": "/api/chat-widget/sessions",
-          "source": "frontend/src/services/chatWidgetApi.ts",
-          "line": 294,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/chat-widget/sessions/:id",
-      "key": "GET /api/chat-widget/sessions/:*",
-      "method": "GET",
-      "path": "/api/chat-widget/sessions/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/chat-widget/sessions.routes.js",
-          "line": 64
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/chat-widget/sessions/:sessionId",
-          "rawPath": "/api/chat-widget/sessions/${sessionId}",
-          "source": "frontend/src/services/chatWidgetApi.ts",
-          "line": 308,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/chat-widget/sessions/:id/convert",
-      "key": "POST /api/chat-widget/sessions/:*/convert",
-      "method": "POST",
-      "path": "/api/chat-widget/sessions/:id/convert",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/chat-widget/sessions.routes.js",
-          "line": 178
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/chat-widget/sessions/:sessionId/convert",
-          "rawPath": "/api/chat-widget/sessions/${sessionId}/convert",
-          "source": "frontend/src/services/chatWidgetApi.ts",
-          "line": 336,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/chat-widget/sessions/:id/messages",
-      "key": "POST /api/chat-widget/sessions/:*/messages",
-      "method": "POST",
-      "path": "/api/chat-widget/sessions/:id/messages",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/chat-widget/sessions.routes.js",
-          "line": 103
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/chat-widget/sessions/:sessionId/messages",
-          "rawPath": "/api/chat-widget/sessions/${sessionId}/messages",
-          "source": "frontend/src/services/chatWidgetApi.ts",
-          "line": 322,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/chat-widget/sessions/:id/messages",
-          "source": "backend/src/__tests__/integration/realtime.integration.test.js",
-          "line": 283
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "disposition": "retain-http",
+      "owner": "chat-widget",
+      "targetOperation": "sendPublicChatTyping",
+      "targetModule": "PublicChatWidgetHttpModule",
+      "parityStatus": "characterized",
+      "notes": "Retain ephemeral public typing signals over the visitor capability and Socket.IO. This realtime transport boundary is intentionally not modeled as a GraphQL mutation.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -15714,6 +15435,12 @@
       "path": "/api/campaigns/1/:action",
       "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
       "line": 504
+    },
+    {
+      "method": "POST",
+      "path": "/api/chat-widget/sessions/:id/messages",
+      "source": "backend/src/__tests__/integration/realtime.integration.test.js",
+      "line": 265
     },
     {
       "method": "POST",

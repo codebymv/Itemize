@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 355
-- API operations under `/api`: 348
+- Registered method/path operations: 347
+- API operations under `/api`: 340
 - Non-API registered operations: 7
-- Static frontend callsites: 281
-- Operations with frontend consumers: 270
-- Operations referenced by backend tests: 195
-- Recommended GraphQL queries: 104
-- Recommended GraphQL mutations: 195
-- Recommended retained HTTP endpoints: 48
-- High-risk operations: 290
+- Static frontend callsites: 273
+- Operations with frontend consumers: 262
+- Operations referenced by backend tests: 194
+- Recommended GraphQL queries: 98
+- Recommended GraphQL mutations: 187
+- Recommended retained HTTP endpoints: 54
+- High-risk operations: 284
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -107,20 +107,12 @@
 | POST | `/api/categories` | 1 | 1 | graphql-mutation | high | workspace-content / CategoriesModule / createCategory |
 | DELETE | `/api/categories/:id` | 1 | 1 | graphql-mutation | high | workspace-content / CategoriesModule / deleteCategory |
 | PUT | `/api/categories/:id` | 1 | 1 | graphql-mutation | high | workspace-content / CategoriesModule / updateCategory |
-| GET | `/api/chat-widget` | 1 | 0 | graphql-query | high | _unassigned_ |
-| POST | `/api/chat-widget` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| PUT | `/api/chat-widget` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/chat-widget/embed-code` | 1 | 0 | graphql-query | high | _unassigned_ |
-| GET | `/api/chat-widget/public/config/:widgetKey` | 1 | 0 | graphql-query | high | _unassigned_ |
-| POST | `/api/chat-widget/public/end-session` | 1 | 1 | graphql-mutation | medium | _unassigned_ |
-| POST | `/api/chat-widget/public/messages` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/chat-widget/public/messages/:sessionToken` | 1 | 1 | graphql-query | medium | _unassigned_ |
-| POST | `/api/chat-widget/public/session` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| POST | `/api/chat-widget/public/typing` | 0 | 1 | graphql-mutation | medium | _unassigned_ |
-| GET | `/api/chat-widget/sessions` | 1 | 0 | graphql-query | high | _unassigned_ |
-| GET | `/api/chat-widget/sessions/:id` | 1 | 0 | graphql-query | high | _unassigned_ |
-| POST | `/api/chat-widget/sessions/:id/convert` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| POST | `/api/chat-widget/sessions/:id/messages` | 1 | 1 | graphql-mutation | medium | _unassigned_ |
+| GET | `/api/chat-widget/public/config/:widgetKey` | 1 | 0 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / getPublicChatWidgetConfig |
+| POST | `/api/chat-widget/public/end-session` | 1 | 1 | retain-http | medium | chat-widget / PublicChatWidgetHttpModule / endPublicChatSession |
+| POST | `/api/chat-widget/public/messages` | 1 | 0 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / sendPublicChatMessage |
+| GET | `/api/chat-widget/public/messages/:sessionToken` | 1 | 1 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / getPublicChatMessages |
+| POST | `/api/chat-widget/public/session` | 1 | 0 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / createPublicChatSession |
+| POST | `/api/chat-widget/public/typing` | 0 | 1 | retain-http | medium | chat-widget / PublicChatWidgetHttpModule / sendPublicChatTyping |
 | GET | `/api/contacts` | 1 | 3 | graphql-query | high | crm / ContactsModule / contacts |
 | POST | `/api/contacts` | 1 | 6 | graphql-mutation | high | crm / ContactsModule / createContact |
 | DELETE | `/api/contacts/:id` | 1 | 2 | graphql-mutation | high | crm / ContactsModule / deleteContact |
@@ -391,7 +383,7 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 13
+- Unmatched backend test calls: 14
 - Orphaned manual overrides: 49
 - Orphaned runtime-expression overrides: 0
 
@@ -422,6 +414,7 @@
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1057` |
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1079` |
 | POST | `/api/campaigns/1/:action` | `backend/src/__tests__/integration/campaigns.integration.test.js:504` |
+| POST | `/api/chat-widget/sessions/:id/messages` | `backend/src/__tests__/integration/realtime.integration.test.js:265` |
 | POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:168` |
 | DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:169` |
 | POST | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:188` |

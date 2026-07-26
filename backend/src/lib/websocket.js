@@ -157,6 +157,15 @@ function createBroadcast(
         return true;
     };
 
+    const chatMessage = async (sessionToken, message, occurredAt) => {
+        if (!io || !isChatSessionToken(sessionToken) || !message) return false;
+        io.to(`chat-session-${sessionToken}`).emit('newChatMessage', {
+            message,
+            timestamp: occurredAt || new Date().toISOString(),
+        });
+        return true;
+    };
+
     return {
         listUpdate: (token, type, data, occurredAt) => sharedBroadcast('list', token, type, data, occurredAt),
         noteUpdate: (token, type, data, occurredAt) => sharedBroadcast('note', token, type, data, occurredAt),
@@ -167,6 +176,7 @@ function createBroadcast(
         userListDeleted: (userId, data, occurredAt) => userBroadcast(userId, 'userListDeleted', 'LIST_DELETED', data, occurredAt),
         revokeShared,
         endChatSession,
+        chatMessage,
     };
 }
 

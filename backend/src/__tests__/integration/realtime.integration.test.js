@@ -9,7 +9,6 @@ const initializeWebSocket = require('../../lib/websocket');
 const { runRealtimeOutboxJobs } = require('../../jobs/realtime-outbox-jobs');
 const { enqueueRealtimeEvent } = require('../../services/realtimeOutbox');
 const publicChatRoutes = require('../../routes/chat-widget/public.routes');
-const agentChatRoutes = require('../../routes/chat-widget/sessions.routes');
 
 const SHARE_TOKEN = '123e4567-e89b-42d3-a456-426614174111';
 const CHAT_TOKEN = `cs_${'b'.repeat(48)}`;
@@ -81,23 +80,6 @@ describe('Socket.IO PostgreSQL authorization contract', () => {
         app.use(
             '/api/chat-widget',
             publicChatRoutes(dbHelper.pool, noopRateLimit, io, realtime.broadcast)
-        );
-        const authenticateOwner = (req, _res, next) => {
-            req.user = owner.user;
-            next();
-        };
-        const selectOwnerOrganization = (req, _res, next) => {
-            req.organizationId = owner.org.id;
-            next();
-        };
-        app.use(
-            '/api/chat-widget',
-            agentChatRoutes(
-                dbHelper.pool,
-                authenticateOwner,
-                selectOwnerOrganization,
-                io
-            )
         );
         await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
         url = `http://127.0.0.1:${server.address().port}`;

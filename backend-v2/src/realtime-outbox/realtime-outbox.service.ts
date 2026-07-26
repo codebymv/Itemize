@@ -15,10 +15,12 @@ const CHANNEL_EVENTS: Record<string, ReadonlySet<RealtimeEventName>> = {
   shared_wireframe: new Set(['wireframeUpdated']),
   user_wireframe: new Set(['userWireframeUpdated']),
   shared_revocation: new Set(['sharedContentRevoked']),
+  chat_session: new Set(['newChatMessage']),
 };
 const SHARE_TOKEN_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const USER_ID_PATTERN = /^[1-9]\d*$/;
+const CHAT_SESSION_TOKEN_PATTERN = /^cs_[0-9a-f]{48}$/;
 
 function canonicalJson(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalJson);
@@ -105,7 +107,7 @@ export class RealtimeOutboxService {
         'Realtime event key must be between 1 and 255 characters',
       );
     }
-    if (!['list', 'note', 'whiteboard', 'wireframe'].includes(input.aggregateType)) {
+    if (!['list', 'note', 'whiteboard', 'wireframe', 'chat_session'].includes(input.aggregateType)) {
       throw new Error('Unsupported realtime aggregate type');
     }
     if (!Number.isSafeInteger(input.aggregateId) || input.aggregateId < 1) {
@@ -130,7 +132,13 @@ export class RealtimeOutboxService {
       throw new Error('Realtime user recipient must be a positive integer');
     }
     if (
-      !['user_canvas', 'user_wireframe'].includes(input.channel) &&
+      input.channel === 'chat_session' &&
+      !CHAT_SESSION_TOKEN_PATTERN.test(input.recipientKey)
+    ) {
+      throw new Error('Realtime chat recipient must be a session capability');
+    }
+    if (
+      !['user_canvas', 'user_wireframe', 'chat_session'].includes(input.channel) &&
       !SHARE_TOKEN_PATTERN.test(input.recipientKey)
     ) {
       throw new Error('Realtime shared recipient must be a UUID capability');
@@ -146,12 +154,17 @@ export class RealtimeOutboxService {
         input.aggregateType !== 'wireframe'
       ) ||
       (
+        input.channel === 'chat_session' &&
+        input.aggregateType !== 'chat_session'
+      ) ||
+      (
         ![
           'shared_note',
           'shared_whiteboard',
           'shared_wireframe',
           'shared_revocation',
           'user_wireframe',
+          'chat_session',
         ].includes(input.channel) &&
         input.aggregateType !== 'list'
       )

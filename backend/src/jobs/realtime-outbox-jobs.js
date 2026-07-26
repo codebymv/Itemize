@@ -167,6 +167,16 @@ async function dispatchRealtimeEvent(claim, broadcast) {
       claim.recipient_key
     );
   }
+  if (claim.channel === 'chat_session' && claim.event_name === 'newChatMessage') {
+    if (typeof broadcast.chatMessage !== 'function') {
+      throw new Error('chatMessage broadcast adapter is unavailable');
+    }
+    return broadcast.chatMessage(
+      claim.recipient_key,
+      claim.payload?.message,
+      occurredAt
+    );
+  }
 
   const error = new Error('Unsupported realtime outbox channel/event combination');
   error.retryable = false;

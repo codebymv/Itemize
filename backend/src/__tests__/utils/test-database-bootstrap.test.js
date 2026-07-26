@@ -618,6 +618,20 @@ describe('test database schema contract', () => {
         expect(sql).toContain('idx_social_webhook_events_reconciliation_queue');
     });
 
+    test('production migration stream secures the Chat Widget GraphQL cutover', async () => {
+        const migration = require('../../../scripts/migrations/053_chat_widget_graphql');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('idx_chat_widgets_one_per_organization');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS chat_agent_message_requests');
+        expect(sql).toContain('chat_agent_message_request_idempotency');
+        expect(sql).toContain("'chat_session'");
+        expect(sql).toContain("'newChatMessage'");
+        expect(sql).toContain("^cs_[0-9a-f]{48}$");
+    });
+
     test('production migration stream creates durable Stripe subscription claims', async () => {
         const migration = require('../../../scripts/migrations/012_subscription_webhook_idempotency');
         const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };

@@ -6,11 +6,11 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 374
-- Resolved declarations: 374
+- Route declarations: 366
+- Resolved declarations: 366
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 355
-- Files containing declarations: 73
+- Unique resolved method/path operations: 347
+- Files containing declarations: 71
 
 ## Interpretation limits
 
@@ -101,20 +101,12 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/categories` | `/categories` | `backend/src/routes/categories.routes.js:56` |
 | DELETE | `/api/categories/:id` | `/categories/:id` | `backend/src/routes/categories.routes.js:109` |
 | PUT | `/api/categories/:id` | `/categories/:id` | `backend/src/routes/categories.routes.js:80` |
-| GET | `/api/chat-widget` | `/` | `backend/src/routes/chat-widget/management.routes.js:15` |
-| POST | `/api/chat-widget` | `/` | `backend/src/routes/chat-widget/management.routes.js:32` |
-| PUT | `/api/chat-widget` | `/` | `backend/src/routes/chat-widget/management.routes.js:113` |
-| GET | `/api/chat-widget/embed-code` | `/embed-code` | `backend/src/routes/chat-widget/management.routes.js:201` |
 | GET | `/api/chat-widget/public/config/:widgetKey` | `/public/config/:widgetKey` | `backend/src/routes/chat-widget/public.routes.js:14` |
 | POST | `/api/chat-widget/public/end-session` | `/public/end-session` | `backend/src/routes/chat-widget/public.routes.js:338` |
 | POST | `/api/chat-widget/public/messages` | `/public/messages` | `backend/src/routes/chat-widget/public.routes.js:265` |
 | GET | `/api/chat-widget/public/messages/:sessionToken` | `/public/messages/:sessionToken` | `backend/src/routes/chat-widget/public.routes.js:208` |
 | POST | `/api/chat-widget/public/session` | `/public/session` | `backend/src/routes/chat-widget/public.routes.js:78` |
 | POST | `/api/chat-widget/public/typing` | `/public/typing` | `backend/src/routes/chat-widget/public.routes.js:381` |
-| GET | `/api/chat-widget/sessions` | `/sessions` | `backend/src/routes/chat-widget/sessions.routes.js:12` |
-| GET | `/api/chat-widget/sessions/:id` | `/sessions/:id` | `backend/src/routes/chat-widget/sessions.routes.js:64` |
-| POST | `/api/chat-widget/sessions/:id/convert` | `/sessions/:id/convert` | `backend/src/routes/chat-widget/sessions.routes.js:178` |
-| POST | `/api/chat-widget/sessions/:id/messages` | `/sessions/:id/messages` | `backend/src/routes/chat-widget/sessions.routes.js:103` |
 | GET | `/api/contacts` | `/` | `backend/src/routes/contacts.routes.js:107` |
 | POST | `/api/contacts` | `/` | `backend/src/routes/contacts.routes.js:225` |
 | DELETE | `/api/contacts/:id` | `/:id` | `backend/src/routes/contacts.routes.js:439` |

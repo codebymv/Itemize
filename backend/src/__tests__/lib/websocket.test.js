@@ -294,6 +294,30 @@ describe('Socket.IO authorization boundary', () => {
         }
     });
 
+    test('broadcasts a durable agent message projection to the visitor room', async () => {
+        const query = jest.fn().mockResolvedValue({
+            rows: [{ id: 31, organization_id: 14 }],
+        });
+        const { connect, result } = createHarness(query);
+        const visitor = new FakeSocket();
+        connect(visitor);
+        await visitor.trigger('joinChatSession', CHAT_TOKEN);
+
+        const message = { id: 44, sender_type: 'agent', content: 'Hello' };
+        await expect(
+            result.broadcast.chatMessage(
+                CHAT_TOKEN,
+                message,
+                '2026-07-26T00:00:00.000Z',
+            ),
+        ).resolves.toBe(true);
+
+        expect(emitted(visitor, 'newChatMessage').at(-1).payload).toEqual({
+            message,
+            timestamp: '2026-07-26T00:00:00.000Z',
+        });
+    });
+
     test('broadcast helpers reject malformed room keys', () => {
         const { result, roomEvents } = createHarness();
 
@@ -309,6 +333,7 @@ describe('Socket.IO authorization boundary', () => {
         await expect(result.broadcast.revokeShared('note', '../secret')).resolves.toBe(false);
         await expect(result.broadcast.revokeShared('unknown', SHARE_TOKEN)).resolves.toBe(false);
         await expect(result.broadcast.endChatSession('cs_short')).resolves.toBe(false);
+        await expect(result.broadcast.chatMessage('cs_short', { id: 1 })).resolves.toBe(false);
 
         expect(io.in).not.toHaveBeenCalled();
     });

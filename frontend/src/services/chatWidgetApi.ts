@@ -3,6 +3,16 @@
  * Handles chat widget configuration and session management
  */
 import api from '@/lib/api';
+import {
+    convertChatSessionViaGraphql,
+    createChatWidgetViaGraphql,
+    getChatSessionViaGraphql,
+    getChatSessionsViaGraphql,
+    getChatWidgetEmbedCodeViaGraphql,
+    getChatWidgetViaGraphql,
+    sendAgentChatMessageViaGraphql,
+    updateChatWidgetViaGraphql,
+} from './chatWidgetGraphql';
 
 // ======================
 // Types
@@ -174,7 +184,7 @@ export interface CreatePublicChatSessionPayload {
 }
 
 export interface PublicChatSessionResponse {
-    session_token: string;
+    session_token?: string;
     session_id: number;
     resumed: boolean;
 }
@@ -182,7 +192,11 @@ export interface PublicChatSessionResponse {
 export type PublicChatMessage = ChatMessage;
 
 export interface SendPublicChatMessagePayload {
-    session_token: string;
+    /**
+     * Public visitor capability. Authenticated operator GraphQL projections
+     * intentionally omit it.
+     */
+    session_token?: string;
     content: string;
 }
 
@@ -194,10 +208,7 @@ export interface SendPublicChatMessagePayload {
  * Get organization's chat widget config
  */
 export const getChatWidget = async (organizationId?: number): Promise<ChatWidgetConfig | null> => {
-    const response = await api.get('/api/chat-widget', {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return getChatWidgetViaGraphql(organizationId);
 };
 
 /**
@@ -207,10 +218,7 @@ export const createChatWidget = async (
     config: Partial<ChatWidgetConfig>,
     organizationId?: number
 ): Promise<ChatWidgetConfig> => {
-    const response = await api.post('/api/chat-widget', config, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return createChatWidgetViaGraphql(config, organizationId);
 };
 
 /**
@@ -220,20 +228,14 @@ export const updateChatWidget = async (
     config: Partial<ChatWidgetConfig>,
     organizationId?: number
 ): Promise<ChatWidgetConfig> => {
-    const response = await api.put('/api/chat-widget', config, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return updateChatWidgetViaGraphql(config, organizationId);
 };
 
 /**
  * Get embed code for website
  */
 export const getEmbedCode = async (organizationId?: number): Promise<EmbedCode> => {
-    const response = await api.get('/api/chat-widget/embed-code', {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return getChatWidgetEmbedCodeViaGraphql(organizationId);
 };
 
 /**
@@ -291,11 +293,7 @@ export const getChatSessions = async (
     } = {},
     organizationId?: number
 ): Promise<{ sessions: ChatSession[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
-    const response = await api.get('/api/chat-widget/sessions', {
-        params,
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return getChatSessionsViaGraphql(params, organizationId);
 };
 
 /**
@@ -305,10 +303,7 @@ export const getChatSession = async (
     sessionId: number,
     organizationId?: number
 ): Promise<ChatSession & { messages: ChatMessage[] }> => {
-    const response = await api.get(`/api/chat-widget/sessions/${sessionId}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return getChatSessionViaGraphql(sessionId, organizationId);
 };
 
 /**
@@ -319,11 +314,7 @@ export const sendAgentMessage = async (
     content: string,
     organizationId?: number
 ): Promise<ChatMessage> => {
-    const response = await api.post(`/api/chat-widget/sessions/${sessionId}/messages`, 
-        { content },
-        { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
-    );
-    return response.data;
+    return sendAgentChatMessageViaGraphql(sessionId, content, organizationId);
 };
 
 /**
@@ -333,11 +324,7 @@ export const convertSessionToContact = async (
     sessionId: number,
     organizationId?: number
 ): Promise<{ success: boolean; contact_id: number; conversation_id: number }> => {
-    const response = await api.post(`/api/chat-widget/sessions/${sessionId}/convert`, 
-        {},
-        { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
-    );
-    return response.data;
+    return convertChatSessionViaGraphql(sessionId, organizationId);
 };
 
 export default {

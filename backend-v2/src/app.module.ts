@@ -13,6 +13,7 @@ import { GraphqlAuthGuard } from './auth/graphql-auth.guard';
 import { GraphqlCsrfGuard } from './auth/graphql-csrf.guard';
 import { BookingsModule } from './bookings/bookings.module';
 import { CalendarIntegrationsModule } from './calendar-integrations/calendar-integrations.module';
+import { ChatWidgetModule } from './chat-widget/chat-widget.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { CampaignDeliveryModule } from './campaign-delivery/campaign-delivery.module';
 import { CategoriesModule } from './categories/categories.module';
@@ -83,6 +84,7 @@ const observabilityPlugins = [
     OrganizationsModule,
     CalendarsModule,
     CalendarIntegrationsModule,
+    ChatWidgetModule,
     CampaignsModule,
     SegmentsModule,
     CampaignDeliveryModule,
