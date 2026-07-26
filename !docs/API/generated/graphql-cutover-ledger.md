@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 362
-- API operations under `/api`: 355
+- Registered method/path operations: 355
+- API operations under `/api`: 348
 - Non-API registered operations: 7
-- Static frontend callsites: 288
-- Operations with frontend consumers: 277
+- Static frontend callsites: 281
+- Operations with frontend consumers: 270
 - Operations referenced by backend tests: 195
-- Recommended GraphQL queries: 109
-- Recommended GraphQL mutations: 198
-- Recommended retained HTTP endpoints: 47
-- High-risk operations: 297
+- Recommended GraphQL queries: 104
+- Recommended GraphQL mutations: 195
+- Recommended retained HTTP endpoints: 48
+- High-risk operations: 290
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -334,15 +334,8 @@
 | POST | `/api/sms-templates/message-info` | 1 | 0 | graphql-query | medium | messaging / SmsTemplatesModule / smsMessageInfo |
 | POST | `/api/sms-templates/webhook/inbound` | 0 | 6 | retain-http | high | messaging / SmsWebhooksModule / processInboundSmsWebhook |
 | POST | `/api/sms-templates/webhook/status` | 0 | 4 | retain-http | high | messaging / SmsWebhooksModule / processSmsStatusWebhook |
-| GET | `/api/social/analytics` | 1 | 0 | graphql-query | high | _unassigned_ |
-| GET | `/api/social/callback/facebook` | 0 | 0 | retain-http | high | _unassigned_ |
-| GET | `/api/social/channels` | 1 | 0 | graphql-query | high | _unassigned_ |
-| DELETE | `/api/social/channels/:id` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/social/connect/facebook` | 1 | 0 | graphql-query | high | _unassigned_ |
-| GET | `/api/social/conversations` | 1 | 0 | graphql-query | high | _unassigned_ |
-| GET | `/api/social/conversations/:id` | 1 | 0 | graphql-query | high | _unassigned_ |
-| PUT | `/api/social/conversations/:id` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| POST | `/api/social/conversations/:id/messages` | 1 | 0 | graphql-mutation | high | _unassigned_ |
+| GET | `/api/social/callback/facebook` | 0 | 0 | retain-http | high | social-integrations / SocialOAuthModule / completeFacebookConnection |
+| GET | `/api/social/connect/facebook` | 1 | 0 | retain-http | high | social-integrations / SocialOAuthModule / beginFacebookConnection |
 | GET | `/api/social/webhook` | 0 | 2 | retain-http | high | social-integrations / SocialWebhooksModule / verifyMetaWebhook |
 | POST | `/api/social/webhook` | 0 | 1 | retain-http | high | social-integrations / SocialWebhooksModule / processMetaMessagingWebhook |
 | GET | `/api/status` | 1 | 0 | retain-http | high | _unassigned_ |

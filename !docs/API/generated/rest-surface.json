@@ -3,11 +3,11 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 381,
-    "resolvedDeclarationCount": 381,
+    "declarationCount": 374,
+    "resolvedDeclarationCount": 374,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 362,
-    "sourceFileCount": 76
+    "uniqueResolvedOperationCount": 355,
+    "sourceFileCount": 73
   },
   "caveats": [
     "This is static source analysis; it does not execute application modules.",
@@ -3239,16 +3239,6 @@
     {
       "method": "GET",
       "publicPaths": [
-        "/api/social/analytics"
-      ],
-      "declaredPath": "/analytics",
-      "source": "backend/src/routes/social/analytics.routes.js",
-      "line": 11,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
         "/api/social/callback/facebook"
       ],
       "declaredPath": "/callback/facebook",
@@ -3259,71 +3249,11 @@
     {
       "method": "GET",
       "publicPaths": [
-        "/api/social/channels"
-      ],
-      "declaredPath": "/channels",
-      "source": "backend/src/routes/social/channels.routes.js",
-      "line": 15,
-      "dynamic": false
-    },
-    {
-      "method": "DELETE",
-      "publicPaths": [
-        "/api/social/channels/:id"
-      ],
-      "declaredPath": "/channels/:id",
-      "source": "backend/src/routes/social/channels.routes.js",
-      "line": 45,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
         "/api/social/connect/facebook"
       ],
       "declaredPath": "/connect/facebook",
       "source": "backend/src/routes/social/oauth.routes.js",
       "line": 17,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/social/conversations"
-      ],
-      "declaredPath": "/conversations",
-      "source": "backend/src/routes/social/conversations.routes.js",
-      "line": 17,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/social/conversations/:id"
-      ],
-      "declaredPath": "/conversations/:id",
-      "source": "backend/src/routes/social/conversations.routes.js",
-      "line": 92,
-      "dynamic": false
-    },
-    {
-      "method": "PUT",
-      "publicPaths": [
-        "/api/social/conversations/:id"
-      ],
-      "declaredPath": "/conversations/:id",
-      "source": "backend/src/routes/social/conversations.routes.js",
-      "line": 148,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/social/conversations/:id/messages"
-      ],
-      "declaredPath": "/conversations/:id/messages",
-      "source": "backend/src/routes/social/conversations.routes.js",
-      "line": 204,
       "dynamic": false
     },
     {

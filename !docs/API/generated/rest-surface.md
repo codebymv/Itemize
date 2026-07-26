@@ -6,11 +6,11 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 381
-- Resolved declarations: 381
+- Route declarations: 374
+- Resolved declarations: 374
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 362
-- Files containing declarations: 76
+- Unique resolved method/path operations: 355
+- Files containing declarations: 73
 
 ## Interpretation limits
 
@@ -345,15 +345,8 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/sms-templates/message-info` | `/message-info` | `backend/src/routes/sms-templates.routes.js:383` |
 | POST | `/api/sms-templates/webhook/inbound` | `/webhook/inbound` | `backend/src/routes/sms-templates.routes.js:481` |
 | POST | `/api/sms-templates/webhook/status` | `/webhook/status` | `backend/src/routes/sms-templates.routes.js:399` |
-| GET | `/api/social/analytics` | `/analytics` | `backend/src/routes/social/analytics.routes.js:11` |
 | GET | `/api/social/callback/facebook` | `/callback/facebook` | `backend/src/routes/social/oauth.routes.js:61` |
-| GET | `/api/social/channels` | `/channels` | `backend/src/routes/social/channels.routes.js:15` |
-| DELETE | `/api/social/channels/:id` | `/channels/:id` | `backend/src/routes/social/channels.routes.js:45` |
 | GET | `/api/social/connect/facebook` | `/connect/facebook` | `backend/src/routes/social/oauth.routes.js:17` |
-| GET | `/api/social/conversations` | `/conversations` | `backend/src/routes/social/conversations.routes.js:17` |
-| GET | `/api/social/conversations/:id` | `/conversations/:id` | `backend/src/routes/social/conversations.routes.js:92` |
-| PUT | `/api/social/conversations/:id` | `/conversations/:id` | `backend/src/routes/social/conversations.routes.js:148` |
-| POST | `/api/social/conversations/:id/messages` | `/conversations/:id/messages` | `backend/src/routes/social/conversations.routes.js:204` |
 | GET | `/api/social/webhook` | `/webhook` | `backend/src/routes/social/webhook.routes.js:43` |
 | POST | `/api/social/webhook` | `/webhook` | `backend/src/routes/social/webhook.routes.js:66` |
 | GET | `/api/status` | `/api/status` | `backend/src/bootstrap/register-api-routes.js:123` |

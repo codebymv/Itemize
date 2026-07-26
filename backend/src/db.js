@@ -141,9 +141,12 @@ const {
 // Import Social migrations
 const { runAllSocialMigrations } = require('./db_social_migrations');
 const {
-    runSocialWebhookMigration,
-    runSocialWebhookReconciliationMigration,
+  runSocialWebhookMigration,
+  runSocialWebhookReconciliationMigration,
 } = require('./db_social_webhook_migrations');
+const {
+  runSocialMessageDeliveryMigration,
+} = require('./db_social_delivery_migrations');
 
 // Import Pages migrations
 const { runAllPagesMigrations } = require('./db_pages_migrations');
@@ -604,6 +607,7 @@ const initializeDatabase = async (pool) => {
     });
     await runMigrationOnce(pool, 'social_webhook_idempotency', runSocialWebhookMigration);
     await runMigrationOnce(pool, 'social_webhook_reconciliation', runSocialWebhookReconciliationMigration);
+    await runMigrationOnce(pool, 'social_message_deliveries', runSocialMessageDeliveryMigration);
     
     await runMigrationOnce(pool, 'module_pages', runAllPagesMigrations);
     

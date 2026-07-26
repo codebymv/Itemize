@@ -796,6 +796,20 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
       [organizationId, `delete-race-${Date.now()}-${process.pid}`, userId],
     );
     const raceCalendarId = Number(calendar.rows[0].id);
+    const raceDate = await pool.query<{ date: string }>(
+      `INSERT INTO calendar_date_overrides (
+         calendar_id, override_date, is_available, start_time, end_time
+       ) VALUES (
+         $1,
+         (CURRENT_TIMESTAMP AT TIME ZONE 'America/Phoenix')::date + 2,
+         TRUE,
+         '00:00',
+         '23:59'
+       )
+       RETURNING TO_CHAR(override_date, 'YYYY-MM-DD') AS date`,
+      [raceCalendarId],
+    );
+    const bookingDate = raceDate.rows[0].date;
 
     const [booking, deletion] = await Promise.all([
       request(legacyApp)
@@ -805,8 +819,8 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
         .send({
           calendar_id: raceCalendarId,
           title: 'Concurrent booking',
-          start_time: '2099-04-01T17:00:00Z',
-          end_time: '2099-04-01T17:30:00Z',
+          start_time: `${bookingDate}T17:00:00Z`,
+          end_time: `${bookingDate}T17:30:00Z`,
           timezone: 'America/Phoenix',
         }),
       mutation(

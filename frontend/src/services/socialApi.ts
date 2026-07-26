@@ -3,6 +3,15 @@
  * Handles Facebook/Instagram messaging and connections
  */
 import api from '@/lib/api';
+import {
+    disconnectSocialChannelViaGraphql,
+    getSocialAnalyticsViaGraphql,
+    getSocialChannelsViaGraphql,
+    getSocialConversationsViaGraphql,
+    openSocialConversationViaGraphql,
+    sendSocialMessageViaGraphql,
+    updateSocialConversationViaGraphql,
+} from './socialGraphql';
 
 // ======================
 // Types
@@ -123,21 +132,14 @@ export const getChannels = async (
     params: { channel_type?: SocialChannel['channel_type'] } = {},
     organizationId?: number
 ): Promise<SocialChannel[]> => {
-    const response = await api.get('/api/social/channels', {
-        params,
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return getSocialChannelsViaGraphql(params.channel_type, organizationId);
 };
 
 export const disconnectChannel = async (
     channelId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
-    const response = await api.delete(`/api/social/channels/${channelId}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return disconnectSocialChannelViaGraphql(channelId, organizationId);
 };
 
 // ======================
@@ -155,21 +157,14 @@ export const getConversations = async (
     } = {},
     organizationId?: number
 ): Promise<{ conversations: SocialConversation[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
-    const response = await api.get('/api/social/conversations', {
-        params,
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return getSocialConversationsViaGraphql(params, organizationId);
 };
 
 export const getConversation = async (
     conversationId: number,
     organizationId?: number
 ): Promise<SocialConversation> => {
-    const response = await api.get(`/api/social/conversations/${conversationId}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return openSocialConversationViaGraphql(conversationId, organizationId);
 };
 
 export const updateConversation = async (
@@ -177,10 +172,7 @@ export const updateConversation = async (
     update: Partial<Pick<SocialConversation, 'status' | 'assigned_to' | 'contact_id' | 'tags'>>,
     organizationId?: number
 ): Promise<SocialConversation> => {
-    const response = await api.put(`/api/social/conversations/${conversationId}`, update, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return updateSocialConversationViaGraphql(conversationId, update, organizationId);
 };
 
 // ======================
@@ -192,10 +184,7 @@ export const sendMessage = async (
     text: string,
     organizationId?: number
 ): Promise<SocialMessage> => {
-    const response = await api.post(`/api/social/conversations/${conversationId}/messages`, { text }, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return sendSocialMessageViaGraphql(conversationId, text, organizationId);
 };
 
 // ======================
@@ -206,11 +195,7 @@ export const getSocialAnalytics = async (
     period: number = 30,
     organizationId?: number
 ): Promise<SocialAnalytics> => {
-    const response = await api.get('/api/social/analytics', {
-        params: { period },
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return getSocialAnalyticsViaGraphql(period, organizationId);
 };
 
 export default {

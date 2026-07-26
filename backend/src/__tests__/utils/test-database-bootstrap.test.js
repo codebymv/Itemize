@@ -36,6 +36,7 @@ describe('test database schema contract', () => {
             'payments',
             'realtime_event_outbox',
             'sms_receiving_numbers',
+            'social_message_delivery_jobs',
             'social_webhook_events',
             'stripe_subscription_webhook_events',
             'users',
@@ -71,6 +72,7 @@ describe('test database schema contract', () => {
             'sms_receiving_number_registry',
             'social_webhook_idempotency',
             'social_webhook_reconciliation',
+            'social_message_deliveries',
             'subscription_webhook_idempotency',
             'subscription_webhook_notification_outbox',
             'subscription_webhook_reconciliation',
@@ -98,6 +100,18 @@ describe('test database schema contract', () => {
         expect(sql).toContain('lease_expires_at');
         expect(sql).toContain('reconciliation_required');
         expect(sql).toContain('message_delivery_job_idempotency');
+    });
+
+    test('production migration stream creates durable social message delivery jobs', async () => {
+        const migration = require('../../../scripts/migrations/052_social_message_deliveries');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS social_message_delivery_jobs');
+        expect(sql).toContain('idempotency_key');
+        expect(sql).toContain('social_message_id');
+        expect(sql).toContain('reconciliation_required');
     });
 
     test('fresh integration runs cannot inherit live provider credentials', () => {

@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 362,
-    "apiOperationCount": 355,
+    "operationCount": 355,
+    "apiOperationCount": 348,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 288,
-    "operationsWithFrontendConsumers": 277,
+    "frontendCallsiteCount": 281,
+    "operationsWithFrontendConsumers": 270,
     "operationsWithBackendTests": 195,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 13,
-    "retainHttpCount": 47,
-    "graphqlQueryCount": 109,
-    "graphqlMutationCount": 198,
-    "highRiskCount": 297,
+    "retainHttpCount": 48,
+    "graphqlQueryCount": 104,
+    "graphqlMutationCount": 195,
+    "highRiskCount": 290,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -1477,7 +1477,7 @@
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend-v2/test/integration/calendars.integration-spec.ts",
-          "line": 802
+          "line": 816
         },
         {
           "method": "POST",
@@ -13483,40 +13483,6 @@
       "risk": "high"
     },
     {
-      "id": "GET /api/social/analytics",
-      "key": "GET /api/social/analytics",
-      "method": "GET",
-      "path": "/api/social/analytics",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/social/analytics.routes.js",
-          "line": 11
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/social/analytics",
-          "rawPath": "/api/social/analytics",
-          "source": "frontend/src/services/socialApi.ts",
-          "line": 209,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "GET /api/social/callback/facebook",
       "key": "GET /api/social/callback/facebook",
       "method": "GET",
@@ -13532,79 +13498,11 @@
       "recommendedDisposition": "retain-http",
       "dispositionReason": "Browser/provider callback endpoint.",
       "disposition": "retain-http",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/social/channels",
-      "key": "GET /api/social/channels",
-      "method": "GET",
-      "path": "/api/social/channels",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/social/channels.routes.js",
-          "line": 15
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/social/channels",
-          "rawPath": "/api/social/channels",
-          "source": "frontend/src/services/socialApi.ts",
-          "line": 126,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/social/channels/:id",
-      "key": "DELETE /api/social/channels/:*",
-      "method": "DELETE",
-      "path": "/api/social/channels/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/social/channels.routes.js",
-          "line": 45
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/social/channels/:channelId",
-          "rawPath": "/api/social/channels/${channelId}",
-          "source": "frontend/src/services/socialApi.ts",
-          "line": 137,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "owner": "social-integrations",
+      "targetOperation": "completeFacebookConnection",
+      "targetModule": "SocialOAuthModule",
+      "parityStatus": "characterized",
+      "notes": "Retain the provider callback and browser redirect over HTTP. Single-use state selects the organization and actor before token exchange and channel persistence; GraphQL never receives provider authorization codes or access tokens.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -13625,7 +13523,7 @@
           "path": "/api/social/connect/facebook",
           "rawPath": "/api/social/connect/facebook",
           "source": "frontend/src/services/socialApi.ts",
-          "line": 112,
+          "line": 121,
           "client": "api",
           "literalInterpolation": false
         }
@@ -13633,148 +13531,12 @@
       "testCallsites": [],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/social/conversations",
-      "key": "GET /api/social/conversations",
-      "method": "GET",
-      "path": "/api/social/conversations",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/social/conversations.routes.js",
-          "line": 17
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/social/conversations",
-          "rawPath": "/api/social/conversations",
-          "source": "frontend/src/services/socialApi.ts",
-          "line": 158,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/social/conversations/:id",
-      "key": "GET /api/social/conversations/:*",
-      "method": "GET",
-      "path": "/api/social/conversations/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/social/conversations.routes.js",
-          "line": 92
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/social/conversations/:conversationId",
-          "rawPath": "/api/social/conversations/${conversationId}",
-          "source": "frontend/src/services/socialApi.ts",
-          "line": 169,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/social/conversations/:id",
-      "key": "PUT /api/social/conversations/:*",
-      "method": "PUT",
-      "path": "/api/social/conversations/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/social/conversations.routes.js",
-          "line": 148
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/social/conversations/:conversationId",
-          "rawPath": "/api/social/conversations/${conversationId}",
-          "source": "frontend/src/services/socialApi.ts",
-          "line": 180,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/social/conversations/:id/messages",
-      "key": "POST /api/social/conversations/:*/messages",
-      "method": "POST",
-      "path": "/api/social/conversations/:id/messages",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/social/conversations.routes.js",
-          "line": 204
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/social/conversations/:conversationId/messages",
-          "rawPath": "/api/social/conversations/${conversationId}/messages",
-          "source": "frontend/src/services/socialApi.ts",
-          "line": 195,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "disposition": "retain-http",
+      "owner": "social-integrations",
+      "targetOperation": "beginFacebookConnection",
+      "targetModule": "SocialOAuthModule",
+      "parityStatus": "characterized",
+      "notes": "Retain browser OAuth initiation over HTTP. The authenticated organization context is bound to a short-lived server-side state record before redirecting to Meta; the frontend uses this endpoint only for top-level navigation.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
