@@ -1404,26 +1404,6 @@
       "disposition": "graphql-mutation", "owner": "crm", "targetModule": "DealsModule", "targetOperation": "reopenDeal", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Clear terminal timestamps/reason atomically and emit lifecycle activity/event."
     },
-    "GET /api/tags": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "TagsModule", "targetOperation": "tags", "parityStatus": "characterized", "risk": "high",
-      "notes": "Organization-scoped canonical tags with usage counts and stable case-insensitive ordering."
-    },
-    "POST /api/tags": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "TagsModule", "targetOperation": "createTag", "parityStatus": "characterized", "risk": "high",
-      "notes": "Case-insensitive uniqueness is serialized per organization."
-    },
-    "PUT /api/tags/:id": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "TagsModule", "targetOperation": "updateTag", "parityStatus": "characterized", "risk": "high",
-      "notes": "Rename and denormalized contact-tag propagation commit atomically and reject case-insensitive duplicates."
-    },
-    "DELETE /api/tags/:id": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "TagsModule", "targetOperation": "deleteTag", "parityStatus": "characterized", "risk": "high",
-      "notes": "Delete and optional removal from contact arrays commit atomically; target schema should eliminate dual canonical/freeform ambiguity."
-    },
-    "GET /api/tags/suggestions": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "TagsModule", "targetOperation": "contactTagSuggestions", "parityStatus": "characterized", "risk": "medium",
-      "notes": "Organization-scoped distinct freeform contact tag strings; decide whether this survives canonical tag normalization."
-    },
     "GET /api/calendars": {
       "disposition": "graphql-query", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "calendars", "parityStatus": "consumer-cutover-complete", "risk": "medium",
       "notes": "Default-off GraphQL list with verified organization context, deterministic newest-first ordering, current-member assignee projection, confirmed-booking aggregates, and retained response mapping. Fresh PostgreSQL and the real browser prove a nonempty GraphQL reload, retained REST write interoperability, and flag-off REST rollback without data repair."

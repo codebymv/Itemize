@@ -7,7 +7,6 @@ const vaultsRoutes = require('../routes/vaults.routes');
 const categoriesRoutes = require('../routes/categories.routes');
 const contactsRoutes = require('../routes/contacts.routes');
 const { createContactTransferProxy } = require('../contact-transfer-proxy');
-const tagsRoutes = require('../routes/tags.routes');
 const pipelinesRoutes = require('../routes/pipelines.routes');
 const emailTemplatesRoutes = require('../routes/email-templates.routes');
 const emailWebhooksRoutes = require('../routes/email-webhooks.routes');
@@ -220,8 +219,6 @@ function registerApiRoutes({
     app.post('/api/contacts/import/csv', contactTransferProxy);
     app.use('/api/contacts', contactsRoutes(pool, authenticateJWT));
     logger.info('Contacts routes initialized');
-    app.use('/api/tags', tagsRoutes(pool, authenticateJWT));
-    logger.info('Tags routes initialized');
     app.use('/api/pipelines', pipelinesRoutes(pool, authenticateJWT));
     logger.info('Pipelines routes initialized');
     app.use('/api/email-templates', emailTemplatesRoutes(pool, authenticateJWT));

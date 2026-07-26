@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 347,
-    "apiOperationCount": 340,
+    "operationCount": 342,
+    "apiOperationCount": 335,
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 273,
     "operationsWithFrontendConsumers": 262,
-    "operationsWithBackendTests": 194,
+    "operationsWithBackendTests": 189,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 14,
+    "unmatchedBackendTestCallCount": 19,
     "retainHttpCount": 54,
-    "graphqlQueryCount": 98,
-    "graphqlMutationCount": 187,
-    "highRiskCount": 284,
+    "graphqlQueryCount": 96,
+    "graphqlMutationCount": 184,
+    "highRiskCount": 280,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -3363,7 +3363,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 59
+          "line": 58
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -4299,7 +4299,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 219
+          "line": 218
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -4374,7 +4374,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 220
+          "line": 219
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -5478,7 +5478,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 265
+          "line": 262
         },
         {
           "source": "backend/src/routes/invoices/actions.routes.js",
@@ -5966,7 +5966,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 257
+          "line": 254
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -7246,7 +7246,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 261
+          "line": 258
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -7284,7 +7284,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 253
+          "line": 250
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -7657,7 +7657,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 55
+          "line": 54
         }
       ],
       "consumerCallsites": [],
@@ -9211,7 +9211,7 @@
           "method": "GET",
           "path": "/api/pipelines",
           "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
-          "line": 336
+          "line": 394
         },
         {
           "method": "GET",
@@ -9976,7 +9976,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 319
+          "line": 316
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10063,7 +10063,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 339
+          "line": 336
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10132,7 +10132,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 335
+          "line": 332
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10177,7 +10177,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 327
+          "line": 324
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10205,7 +10205,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 323
+          "line": 320
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10240,7 +10240,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 331
+          "line": 328
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12116,7 +12116,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 305
+          "line": 302
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12187,7 +12187,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 301
+          "line": 298
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12381,7 +12381,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 287
+          "line": 284
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12702,7 +12702,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 309
+          "line": 306
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12771,7 +12771,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 294
+          "line": 291
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -13337,7 +13337,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 123
+          "line": 122
         }
       ],
       "consumerCallsites": [
@@ -13371,7 +13371,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 67
+          "line": 66
         }
       ],
       "consumerCallsites": [
@@ -13398,293 +13398,6 @@
       "risk": "high"
     },
     {
-      "id": "GET /api/tags",
-      "key": "GET /api/tags",
-      "method": "GET",
-      "path": "/api/tags",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/tags.routes.js",
-          "line": 22
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/tags",
-          "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
-          "line": 201
-        },
-        {
-          "method": "GET",
-          "path": "/api/tags",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 102
-        },
-        {
-          "method": "GET",
-          "path": "/api/tags",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 114
-        },
-        {
-          "method": "GET",
-          "path": "/api/tags",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 125
-        },
-        {
-          "method": "GET",
-          "path": "/api/tags",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 710
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "crm",
-      "targetOperation": "tags",
-      "targetModule": "TagsModule",
-      "parityStatus": "characterized",
-      "notes": "Organization-scoped canonical tags with usage counts and stable case-insensitive ordering.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/tags",
-      "key": "POST /api/tags",
-      "method": "POST",
-      "path": "/api/tags",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/tags.routes.js",
-          "line": 47
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/tags",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 65
-        },
-        {
-          "method": "POST",
-          "path": "/api/tags",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 81
-        },
-        {
-          "method": "POST",
-          "path": "/api/tags",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 91
-        },
-        {
-          "method": "POST",
-          "path": "/api/tags",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 148
-        },
-        {
-          "method": "POST",
-          "path": "/api/tags",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 197
-        },
-        {
-          "method": "POST",
-          "path": "/api/tags",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 221
-        },
-        {
-          "method": "POST",
-          "path": "/api/tags",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 579
-        },
-        {
-          "method": "POST",
-          "path": "/api/tags",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 633
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "createTag",
-      "targetModule": "TagsModule",
-      "parityStatus": "characterized",
-      "notes": "Case-insensitive uniqueness is serialized per organization.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/tags/:id",
-      "key": "DELETE /api/tags/:*",
-      "method": "DELETE",
-      "path": "/api/tags/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/tags.routes.js",
-          "line": 156
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/tags/:id",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 162
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/tags/:tagId",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 179
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/tags/:tagId",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 188
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/tags/:freshId",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 204
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/tags/:freshId",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 211
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/tags/:sharedTagId",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 453
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/tags/:tagId",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 654
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "deleteTag",
-      "targetModule": "TagsModule",
-      "parityStatus": "characterized",
-      "notes": "Delete and optional removal from contact arrays commit atomically; target schema should eliminate dual canonical/freeform ambiguity.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/tags/:id",
-      "key": "PUT /api/tags/:*",
-      "method": "PUT",
-      "path": "/api/tags/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/tags.routes.js",
-          "line": 91
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/tags/:tagId",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 136
-        },
-        {
-          "method": "PUT",
-          "path": "/api/tags/:tagId",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 154
-        },
-        {
-          "method": "PUT",
-          "path": "/api/tags/:tagId",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 169
-        },
-        {
-          "method": "PUT",
-          "path": "/api/tags/:sharedTagId",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 426
-        },
-        {
-          "method": "PUT",
-          "path": "/api/tags/:tagId",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 608
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "updateTag",
-      "targetModule": "TagsModule",
-      "parityStatus": "characterized",
-      "notes": "Rename and denormalized contact-tag propagation commit atomically and reject case-insensitive duplicates.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/tags/suggestions",
-      "key": "GET /api/tags/suggestions",
-      "method": "GET",
-      "path": "/api/tags/suggestions",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/tags.routes.js",
-          "line": 195
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/tags/suggestions",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 683
-        },
-        {
-          "method": "GET",
-          "path": "/api/tags/suggestions",
-          "source": "backend/src/__tests__/integration/tags.integration.test.js",
-          "line": 696
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "crm",
-      "targetOperation": "contactTagSuggestions",
-      "targetModule": "TagsModule",
-      "parityStatus": "characterized",
-      "notes": "Organization-scoped distinct freeform contact tag strings; decide whether this survives canonical tag normalization.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
       "id": "PUT /api/vaults/:vaultId/position",
       "key": "PUT /api/vaults/:*/position",
       "method": "PUT",
@@ -13692,7 +13405,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 58
+          "line": 57
         }
       ],
       "consumerCallsites": [],
@@ -13864,7 +13577,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 56
+          "line": 55
         }
       ],
       "consumerCallsites": [],
@@ -14093,7 +13806,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 57
+          "line": 56
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",
@@ -15417,6 +15130,36 @@
       "path": "/api/campaigns:path",
       "source": "backend-v2/test/integration/campaigns.integration-spec.ts",
       "line": 126
+    },
+    {
+      "method": "GET",
+      "path": "/api/tags",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 381
+    },
+    {
+      "method": "GET",
+      "path": "/api/tags/suggestions",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 382
+    },
+    {
+      "method": "POST",
+      "path": "/api/tags",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 383
+    },
+    {
+      "method": "PUT",
+      "path": "/api/tags/1",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 384
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/tags/1",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 385
     },
     {
       "method": "GET",

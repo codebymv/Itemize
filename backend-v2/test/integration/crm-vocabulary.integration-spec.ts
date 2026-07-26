@@ -9,7 +9,7 @@ import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
 
-describe('Tag and pipeline REST/GraphQL PostgreSQL parity', () => {
+describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
   let graphqlApp: NestExpressApplication;
   let legacyApp: Express;
   let pool: Pool;
@@ -143,13 +143,11 @@ describe('Tag and pipeline REST/GraphQL PostgreSQL parity', () => {
     configureApp(graphqlApp);
     await graphqlApp.init();
 
-    const createTagsRouter = require('../../../backend/src/routes/tags.routes');
     const createPipelinesRouter = require('../../../backend/src/routes/pipelines.routes');
     const { authenticateJWT } = require('../../../backend/src/auth/middleware');
     legacyApp = express();
     legacyApp.use(cookieParser());
     legacyApp.use(express.json());
-    legacyApp.use('/api/tags', createTagsRouter(pool, authenticateJWT));
     legacyApp.use('/api/pipelines', createPipelinesRouter(pool, authenticateJWT));
   });
 
@@ -197,11 +195,6 @@ describe('Tag and pipeline REST/GraphQL PostgreSQL parity', () => {
   };
 
   it('matches the canonical tag list, counts, suggestions, and tenant isolation', async () => {
-    const legacy = await request(legacyApp)
-      .get('/api/tags')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
     const target = await graphql(
       memberToken,
       organizationId,
@@ -217,18 +210,15 @@ describe('Tag and pipeline REST/GraphQL PostgreSQL parity', () => {
     const targetTag = target.body.data.tags.find(
       (row: { id: number }) => row.id === tagId,
     );
-    const legacyTag = legacy.body.data.find(
-      (row: { id: number }) => row.id === tagId,
-    );
     expect(targetTag).toMatchObject({
-      id: legacyTag.id,
-      organizationId: legacyTag.organization_id,
-      name: legacyTag.name,
-      color: legacyTag.color,
-      contactCount: legacyTag.contact_count,
+      id: tagId,
+      organizationId,
+      name: 'VIP',
+      color: '#F59E0B',
+      contactCount: 1,
       dealCount: 1,
     });
-    expect(target.body.data.contactTagSuggestions).toContain('VIP');
+    expect(target.body.data.contactTagSuggestions).toEqual(['VIP']);
 
     const outsider = await graphql(
       outsiderToken,
@@ -290,6 +280,14 @@ describe('Tag and pipeline REST/GraphQL PostgreSQL parity', () => {
       [contactId],
     );
     expect(afterDelete.rows[0].tags).not.toContain('Dispatch');
+
+    const repeated = await mutation(
+      memberToken,
+      organizationId,
+      `mutation DeleteTag($id: Int!) { deleteTag(id: $id) { deletedId } }`,
+      { id: createdId },
+    ).expect(200);
+    expect(repeated.body.errors[0].extensions.code).toBe('NOT_FOUND');
   });
 
   it('rejects duplicate tags, invalid colors, missing CSRF, and foreign mutations', async () => {
@@ -329,6 +327,66 @@ describe('Tag and pipeline REST/GraphQL PostgreSQL parity', () => {
       { id: tagId },
     ).expect(200);
     expect(foreign.body.errors[0].extensions.code).toBe('NOT_FOUND');
+  });
+
+  it('serializes concurrent case-insensitive creation and requires authentication', async () => {
+    const name = `RaceTag-${Date.now()}`;
+    const document = `mutation CreateTag($input: CreateTagInput!) {
+      createTag(input: $input) { id name }
+    }`;
+    const [first, second] = await Promise.all([
+      mutation(memberToken, organizationId, document, {
+        input: { name },
+      }),
+      mutation(memberToken, organizationId, document, {
+        input: { name: name.toLowerCase() },
+      }),
+    ]);
+    const responses = [first, second];
+    const created = responses.find((response) => response.body.data?.createTag);
+    const duplicate = responses.find((response) => response.body.errors);
+    expect(created?.body.data.createTag.name).toMatch(
+      new RegExp(`^${name}$`, 'i'),
+    );
+    expect(duplicate?.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'DUPLICATE_TAG_NAME',
+    });
+    const createdId = created?.body.data.createTag.id;
+    expect(createdId).toEqual(expect.any(Number));
+    const persisted = await pool.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count
+       FROM tags
+       WHERE organization_id=$1 AND lower(name)=lower($2)`,
+      [organizationId, name],
+    );
+    expect(persisted.rows[0].count).toBe(1);
+
+    const anonymous = await request(graphqlApp.getHttpServer())
+      .post('/graphql')
+      .send({ query: '{ tags { id } contactTagSuggestions }' })
+      .expect(200);
+    expect(anonymous.body.errors[0].extensions.code).toBe('UNAUTHENTICATED');
+
+    await mutation(
+      memberToken,
+      organizationId,
+      `mutation DeleteTag($id: Int!) { deleteTag(id: $id) { deletedId } }`,
+      { id: createdId },
+    ).expect(200);
+  });
+
+  it('leaves no retained Tags HTTP operation mounted', async () => {
+    const responses = await Promise.all([
+      request(legacyApp).get('/api/tags'),
+      request(legacyApp).get('/api/tags/suggestions'),
+      request(legacyApp).post('/api/tags').send({ name: 'Retired' }),
+      request(legacyApp).put('/api/tags/1').send({ name: 'Retired' }),
+      request(legacyApp).delete('/api/tags/1'),
+    ]);
+    expect(responses.map((response) => response.status)).toEqual([
+      404, 404, 404, 404, 404,
+    ]);
   });
 
   it('matches pipeline list/detail projections, aggregates, ordering, and privacy', async () => {

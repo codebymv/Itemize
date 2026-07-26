@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 347
-- API operations under `/api`: 340
+- Registered method/path operations: 342
+- API operations under `/api`: 335
 - Non-API registered operations: 7
 - Static frontend callsites: 273
 - Operations with frontend consumers: 262
-- Operations referenced by backend tests: 194
-- Recommended GraphQL queries: 98
-- Recommended GraphQL mutations: 187
+- Operations referenced by backend tests: 189
+- Recommended GraphQL queries: 96
+- Recommended GraphQL mutations: 184
 - Recommended retained HTTP endpoints: 54
-- High-risk operations: 284
+- High-risk operations: 280
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -332,11 +332,6 @@
 | POST | `/api/social/webhook` | 0 | 1 | retain-http | high | social-integrations / SocialWebhooksModule / processMetaMessagingWebhook |
 | GET | `/api/status` | 1 | 0 | retain-http | high | _unassigned_ |
 | POST | `/api/suggestions` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/tags` | 0 | 5 | graphql-query | high | crm / TagsModule / tags |
-| POST | `/api/tags` | 0 | 8 | graphql-mutation | high | crm / TagsModule / createTag |
-| DELETE | `/api/tags/:id` | 0 | 7 | graphql-mutation | high | crm / TagsModule / deleteTag |
-| PUT | `/api/tags/:id` | 0 | 5 | graphql-mutation | high | crm / TagsModule / updateTag |
-| GET | `/api/tags/suggestions` | 0 | 2 | graphql-query | medium | crm / TagsModule / contactTagSuggestions |
 | PUT | `/api/vaults/:vaultId/position` | 0 | 0 | graphql-mutation | high | workspace-content / VaultModule / updateWorkspaceVault |
 | POST | `/api/webhooks/:workflowId` | 0 | 6 | retain-http | high | automation / WorkflowWebhooksModule / processWorkflowWebhook |
 | GET | `/api/whiteboards` | 1 | 3 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceWhiteboards |
@@ -383,7 +378,7 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 14
+- Unmatched backend test calls: 19
 - Orphaned manual overrides: 49
 - Orphaned runtime-expression overrides: 0
 
@@ -411,6 +406,11 @@
 | Method | Requested path | Source |
 | --- | --- | --- |
 | GET | `/api/campaigns:path` | `backend-v2/test/integration/campaigns.integration-spec.ts:126` |
+| GET | `/api/tags` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:381` |
+| GET | `/api/tags/suggestions` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:382` |
+| POST | `/api/tags` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:383` |
+| PUT | `/api/tags/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:384` |
+| DELETE | `/api/tags/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:385` |
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1057` |
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1079` |
 | POST | `/api/campaigns/1/:action` | `backend/src/__tests__/integration/campaigns.integration.test.js:504` |
