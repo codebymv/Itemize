@@ -227,15 +227,6 @@ export const isCampaignAudiencePreviewGraphqlEnabled = (): boolean =>
 export const isCampaignRecipientReadsGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL === 'true';
 
-export const isCampaignTestSendGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_CAMPAIGN_TEST_SEND_GRAPHQL === 'true';
-
-export const isCampaignSendGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_CAMPAIGN_SEND_GRAPHQL === 'true';
-
-export const isCampaignPauseResumeGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_CAMPAIGN_PAUSE_RESUME_GRAPHQL === 'true';
-
 export const isSegmentsGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_SEGMENTS_GRAPHQL === 'true';
 

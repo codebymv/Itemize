@@ -446,10 +446,10 @@ describe('Campaigns Integration Tests', () => {
     });
 
     describe('Canonical email audience identity', () => {
-        it('previews and snapshots one recipient per canonical email', async () => {
+        it('previews one recipient per canonical email', async () => {
             const suffix = `${Date.now()}-${process.pid}`;
             const email = `campaign-duplicate-${suffix}@example.test`;
-            const contacts = await dbHelper.pool.query(
+            await dbHelper.pool.query(
                 `INSERT INTO contacts (
                     organization_id, first_name, email, source, created_by
                  ) VALUES
@@ -493,26 +493,22 @@ describe('Campaigns Integration Tests', () => {
             );
             expect(rawEligible.rows[0].count).toBeGreaterThan(rawEligible.rows[0].distinct_count);
             expect(preview.body.data.recipientCount).toBe(rawEligible.rows[0].distinct_count);
-
-            const sent = await request(app)
-                .post(`/api/campaigns/${campaign.body.data.id}/send`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id))
-                .send({});
-            expect(sent.status).toBe(200);
-            expect(sent.body.data.recipientCount).toBe(rawEligible.rows[0].distinct_count);
-
-            const snapshot = await dbHelper.pool.query(
-                `SELECT contact_id, email
-                 FROM campaign_recipients
-                 WHERE campaign_id = $1 AND email = $2`,
-                [campaign.body.data.id, email]
-            );
-            expect(snapshot.rows).toEqual([{
-                contact_id: Math.min(...contacts.rows.map(row => row.id)),
-                email,
-            }]);
         });
+    });
+
+    describe('Retired campaign execution routes', () => {
+        it.each(['send', 'pause', 'resume', 'send-test'])(
+            'returns 404 for POST /api/campaigns/:id/%s',
+            async (action) => {
+                const res = await request(app)
+                    .post(`/api/campaigns/1/${action}`)
+                    .set('Cookie', [`itemize_auth=${userA.token}`])
+                    .set('x-organization-id', String(userA.org.id))
+                    .send({});
+
+                expect(res.status).toBe(404);
+            }
+        );
     });
 
     // ── Auth guard ────────────────────────────────────────────────────────────

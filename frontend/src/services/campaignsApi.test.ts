@@ -4,9 +4,18 @@ import {
     createCampaign,
     getCampaignRecipients,
     getCampaigns,
+    pauseCampaign,
     previewCampaign,
+    resumeCampaign,
+    sendCampaign,
     sendTestEmail,
 } from './campaignsApi';
+import {
+    pauseCampaignViaGraphql,
+    resumeCampaignViaGraphql,
+    sendCampaignTestViaGraphql,
+    sendCampaignViaGraphql,
+} from './campaignsGraphql';
 
 vi.mock('@/lib/api', () => ({
     default: {
@@ -15,14 +24,28 @@ vi.mock('@/lib/api', () => ({
     },
 }));
 
+vi.mock('./campaignsGraphql', () => ({
+    createCampaignViaGraphql: vi.fn(),
+    deleteCampaignViaGraphql: vi.fn(),
+    duplicateCampaignViaGraphql: vi.fn(),
+    getCampaignViaGraphql: vi.fn(),
+    getCampaignsViaGraphql: vi.fn(),
+    getCampaignRecipientsViaGraphql: vi.fn(),
+    pauseCampaignViaGraphql: vi.fn(),
+    previewCampaignViaGraphql: vi.fn(),
+    resumeCampaignViaGraphql: vi.fn(),
+    scheduleCampaignViaGraphql: vi.fn(),
+    sendCampaignTestViaGraphql: vi.fn(),
+    sendCampaignViaGraphql: vi.fn(),
+    unscheduleCampaignViaGraphql: vi.fn(),
+    updateCampaignViaGraphql: vi.fn(),
+}));
+
 describe('campaigns API', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         vi.stubEnv('VITE_CAMPAIGN_AUDIENCE_PREVIEW_GRAPHQL', 'false');
         vi.stubEnv('VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL', 'false');
-        vi.stubEnv('VITE_CAMPAIGN_TEST_SEND_GRAPHQL', 'false');
-        vi.stubEnv('VITE_CAMPAIGN_SEND_GRAPHQL', 'false');
-        vi.stubEnv('VITE_CAMPAIGN_PAUSE_RESUME_GRAPHQL', 'false');
     });
 
     it('maps the shared REST pagination envelope to the campaign consumer contract', async () => {
@@ -89,17 +112,40 @@ describe('campaigns API', () => {
         });
     });
 
-    it('keeps campaign test delivery on REST by default', async () => {
-        vi.mocked(api.post).mockResolvedValue({
-            data: { success: true, data: {
-                success: true, message: 'Test email sent', emailId: 'legacy-1',
-            } },
+    it('routes campaign execution directly through GraphQL without REST fallbacks', async () => {
+        vi.mocked(sendCampaignViaGraphql).mockResolvedValue({
+            campaign: { id: 43, status: 'sending' } as never,
+            recipientCount: 2,
+            message: 'Campaign is now sending',
         });
+        vi.mocked(pauseCampaignViaGraphql).mockResolvedValue({
+            id: 43,
+            status: 'paused',
+        } as never);
+        vi.mocked(resumeCampaignViaGraphql).mockResolvedValue({
+            message: 'Campaign resumed',
+            pendingRecipients: 2,
+        });
+        vi.mocked(sendCampaignTestViaGraphql).mockResolvedValue({
+            success: true,
+            message: 'Test email queued',
+            emailId: 'delivery-1',
+        });
+
+        await expect(sendCampaign(43, 7)).resolves.toMatchObject({ recipientCount: 2 });
+        await expect(pauseCampaign(43, 7)).resolves.toMatchObject({ status: 'paused' });
+        await expect(resumeCampaign(43, 7)).resolves.toMatchObject({ pendingRecipients: 2 });
         await expect(sendTestEmail(43, 'recipient@test.itemize', 7)).resolves.toMatchObject({
-            success: true, emailId: 'legacy-1',
+            success: true, emailId: 'delivery-1',
         });
-        expect(api.post).toHaveBeenCalledWith('/api/campaigns/43/send-test', {
-            test_email: 'recipient@test.itemize',
-        }, { headers: { 'x-organization-id': '7' } });
+        expect(sendCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
+        expect(pauseCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
+        expect(resumeCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
+        expect(sendCampaignTestViaGraphql).toHaveBeenCalledWith(
+            43,
+            'recipient@test.itemize',
+            7
+        );
+        expect(api.post).not.toHaveBeenCalled();
     });
 });

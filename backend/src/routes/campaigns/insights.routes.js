@@ -1,5 +1,4 @@
 const express = require('express');
-const emailService = require('../../services/emailService');
 const { asyncHandler } = require('../../middleware/errorHandler');
 const { withDbClient } = require('../../utils/db');
 const { sendSuccess, sendBadRequest, sendNotFound, sendError } = require('../../utils/response');
@@ -141,73 +140,6 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
             }
             console.error('Error previewing campaign:', error);
             return sendError(res, 'Failed to preview campaign');
-        }
-    }));
-
-    /**
-     * POST /api/campaigns/:id/send-test - Send test email
-     */
-    router.post('/:id/send-test', authenticateJWT, requireOrganization, asyncHandler(async (req, res) => {
-        try {
-            const { id } = req.params;
-            const { test_email } = req.body;
-
-            if (!test_email) {
-                return sendBadRequest(res, 'test_email is required');
-            }
-
-            const campaignResult = await withDbClient(pool, async (client) => {
-                return client.query(`
-                    SELECT ${campaignColumns('c')}, et.body_html as template_html, et.body_text as template_text
-                    FROM email_campaigns c
-                    LEFT JOIN email_templates et ON c.template_id = et.id
-                    WHERE c.id = $1 AND c.organization_id = $2
-                `, [id, req.organizationId]);
-            });
-
-            if (campaignResult.rows.length === 0) {
-                return sendNotFound(res, 'Campaign');
-            }
-
-            const campaign = campaignResult.rows[0];
-            const htmlContent = campaign.content_html || campaign.template_html || '';
-            const textContent = campaign.content_text || campaign.template_text || '';
-
-            // Replace variables with test data
-            const testData = {
-                first_name: 'Test',
-                last_name: 'User',
-                email: test_email,
-                company: 'Test Company'
-            };
-
-            let processedHtml = htmlContent;
-            let processedText = textContent;
-            Object.entries(testData).forEach(([key, value]) => {
-                const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'gi');
-                processedHtml = processedHtml.replace(regex, value);
-                processedText = processedText.replace(regex, value);
-            });
-
-            // Send test email
-            const result = await emailService.sendEmail({
-                to: test_email,
-                subject: `[TEST] ${campaign.subject}`,
-                html: processedHtml,
-                text: processedText,
-                fromName: campaign.from_name,
-                fromEmail: campaign.from_email,
-                replyTo: campaign.reply_to
-            });
-
-            sendSuccess(res, {
-                success: true,
-                message: `Test email sent to ${test_email}`,
-                emailId: result?.id
-            });
-        } catch (error) {
-            console.error('Error sending test email:', error);
-            return sendError(res, 'Failed to send test email');
         }
     }));
 

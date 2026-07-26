@@ -21,9 +21,6 @@ import {
   isCampaignRecipientReadsGraphqlEnabled,
   isCampaignGraphqlMutationsEnabled,
   isCampaignGraphqlReadsEnabled,
-  isCampaignTestSendGraphqlEnabled,
-  isCampaignSendGraphqlEnabled,
-  isCampaignPauseResumeGraphqlEnabled,
 } from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
@@ -70,24 +67,15 @@ describe('campaign GraphQL consumer', () => {
     vi.stubEnv('VITE_CAMPAIGN_MUTATIONS_GRAPHQL', 'false');
     vi.stubEnv('VITE_CAMPAIGN_AUDIENCE_PREVIEW_GRAPHQL', 'false');
     vi.stubEnv('VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_CAMPAIGN_TEST_SEND_GRAPHQL', 'false');
-    vi.stubEnv('VITE_CAMPAIGN_SEND_GRAPHQL', 'false');
-    vi.stubEnv('VITE_CAMPAIGN_PAUSE_RESUME_GRAPHQL', 'false');
     expect(isCampaignGraphqlReadsEnabled()).toBe(false);
     expect(isCampaignGraphqlMutationsEnabled()).toBe(false);
     expect(isCampaignAudiencePreviewGraphqlEnabled()).toBe(false);
     expect(isCampaignRecipientReadsGraphqlEnabled()).toBe(false);
-    expect(isCampaignTestSendGraphqlEnabled()).toBe(false);
-    expect(isCampaignSendGraphqlEnabled()).toBe(false);
-    expect(isCampaignPauseResumeGraphqlEnabled()).toBe(false);
     vi.stubEnv('VITE_CAMPAIGN_READS_GRAPHQL', 'true');
     expect(isCampaignGraphqlReadsEnabled()).toBe(true);
     expect(isCampaignGraphqlMutationsEnabled()).toBe(false);
     expect(isCampaignAudiencePreviewGraphqlEnabled()).toBe(false);
     expect(isCampaignRecipientReadsGraphqlEnabled()).toBe(false);
-    expect(isCampaignTestSendGraphqlEnabled()).toBe(false);
-    expect(isCampaignSendGraphqlEnabled()).toBe(false);
-    expect(isCampaignPauseResumeGraphqlEnabled()).toBe(false);
   });
 
   it('accepts a bulk campaign into the durable delivery queue', async () => {
@@ -106,7 +94,7 @@ describe('campaign GraphQL consumer', () => {
     expect(fetchCsrfToken).toHaveBeenCalledTimes(1);
   });
 
-  it('maps pause and resume through their independent protected lifecycle flag', async () => {
+  it('maps pause and resume through protected lifecycle mutations', async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(response({ data: { pauseCampaign: {
         campaign: { ...campaign, status: 'paused', totalRecipients: 2 },

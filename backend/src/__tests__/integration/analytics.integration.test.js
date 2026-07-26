@@ -6,10 +6,6 @@ jest.mock('../../services/usageTrackingService', () => class UsageTrackingServic
     async incrementUsage() {}
 });
 
-jest.mock('../../routes/campaigns/delivery', () => ({
-    sendCampaignEmails: jest.fn().mockResolvedValue(undefined),
-}));
-
 const request = require('supertest');
 const express = require('express');
 const cookieParser = require('cookie-parser');

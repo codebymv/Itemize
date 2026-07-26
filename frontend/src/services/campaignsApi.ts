@@ -24,9 +24,6 @@ import {
     isCampaignGraphqlReadsEnabled,
     isCampaignAudiencePreviewGraphqlEnabled,
     isCampaignRecipientReadsGraphqlEnabled,
-    isCampaignTestSendGraphqlEnabled,
-    isCampaignSendGraphqlEnabled,
-    isCampaignPauseResumeGraphqlEnabled,
 } from './graphqlClient';
 
 type CampaignJson = Record<string, unknown>;
@@ -328,13 +325,7 @@ export const sendCampaign = async (
     campaignId: number,
     organizationId?: number
 ): Promise<{ campaign: EmailCampaign; recipientCount: number; message: string }> => {
-    if (isCampaignSendGraphqlEnabled()) {
-        return sendCampaignViaGraphql(campaignId, organizationId);
-    }
-    const response = await api.post(`/api/campaigns/${campaignId}/send`, {}, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<{ campaign: EmailCampaign; recipientCount: number; message: string }>(response.data);
+    return sendCampaignViaGraphql(campaignId, organizationId);
 };
 
 /**
@@ -344,13 +335,7 @@ export const pauseCampaign = async (
     campaignId: number,
     organizationId?: number
 ): Promise<EmailCampaign> => {
-    if (isCampaignPauseResumeGraphqlEnabled()) {
-        return pauseCampaignViaGraphql(campaignId, organizationId);
-    }
-    const response = await api.post(`/api/campaigns/${campaignId}/pause`, {}, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<EmailCampaign>(response.data);
+    return pauseCampaignViaGraphql(campaignId, organizationId);
 };
 
 /**
@@ -360,13 +345,7 @@ export const resumeCampaign = async (
     campaignId: number,
     organizationId?: number
 ): Promise<{ message: string; pendingRecipients?: number }> => {
-    if (isCampaignPauseResumeGraphqlEnabled()) {
-        return resumeCampaignViaGraphql(campaignId, organizationId);
-    }
-    const response = await api.post(`/api/campaigns/${campaignId}/resume`, {}, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<{ message: string; pendingRecipients?: number }>(response.data);
+    return resumeCampaignViaGraphql(campaignId, organizationId);
 };
 
 /**
@@ -415,15 +394,7 @@ export const sendTestEmail = async (
     testEmail: string,
     organizationId?: number
 ): Promise<{ success: boolean; message: string; emailId?: string }> => {
-    if (isCampaignTestSendGraphqlEnabled()) {
-        return sendCampaignTestViaGraphql(campaignId, testEmail, organizationId);
-    }
-    const response = await api.post(`/api/campaigns/${campaignId}/send-test`, {
-        test_email: testEmail
-    }, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<{ success: boolean; message: string; emailId?: string }>(response.data);
+    return sendCampaignTestViaGraphql(campaignId, testEmail, organizationId);
 };
 
 export default {

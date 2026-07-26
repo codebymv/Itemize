@@ -6,10 +6,6 @@ jest.mock('../../services/usageTrackingService', () => class UsageTrackingServic
     async incrementUsage() {}
 });
 
-jest.mock('../../routes/campaigns/delivery', () => ({
-    sendCampaignEmails: jest.fn().mockResolvedValue(undefined),
-}));
-
 const request = require('supertest');
 const express = require('express');
 const cookieParser = require('cookie-parser');
@@ -221,7 +217,7 @@ describe('Segments integration', () => {
         expect(history.rows.every(row => Number(row.contacts_removed) === 0)).toBe(true);
     });
 
-    test('campaign preview, send snapshot, and duplicate preserve saved-segment targeting', async () => {
+    test('campaign preview and duplicate preserve saved-segment targeting', async () => {
         const created = await send('post', '/api/campaigns').send({
             name: 'Saved audience campaign', subject: 'Audience contract',
             from_name: 'Itemize', from_email: 'hello@itemize.test', content_html: '<p>Hello</p>',
@@ -234,15 +230,6 @@ describe('Segments integration', () => {
         const preview = await send('get', `/api/campaigns/${campaignId}/preview`);
         expect(preview.status).toBe(200);
         expect(preview.body.data).toMatchObject({ recipientCount: 1, segmentType: 'segment', segmentId: dynamicSegment.id });
-
-        const sent = await send('post', `/api/campaigns/${campaignId}/send`);
-        expect(sent.status).toBe(200);
-        expect(sent.body.data.recipientCount).toBe(1);
-        const recipients = await dbHelper.pool.query(
-            'SELECT contact_id FROM campaign_recipients WHERE campaign_id = $1',
-            [campaignId]
-        );
-        expect(recipients.rows.map(row => row.contact_id)).toEqual([activeContact.id]);
 
         const duplicate = await send('post', `/api/campaigns/${campaignId}/duplicate`);
         expect(duplicate.status).toBe(201);

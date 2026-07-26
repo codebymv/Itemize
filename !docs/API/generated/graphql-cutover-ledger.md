@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 366
-- API operations under `/api`: 359
+- Registered method/path operations: 362
+- API operations under `/api`: 355
 - Non-API registered operations: 7
-- Static frontend callsites: 292
-- Operations with frontend consumers: 281
-- Operations referenced by backend tests: 196
+- Static frontend callsites: 288
+- Operations with frontend consumers: 277
+- Operations referenced by backend tests: 195
 - Recommended GraphQL queries: 109
-- Recommended GraphQL mutations: 202
+- Recommended GraphQL mutations: 198
 - Recommended retained HTTP endpoints: 47
-- High-risk operations: 301
+- High-risk operations: 297
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -97,13 +97,9 @@
 | GET | `/api/campaigns/:id` | 1 | 2 | graphql-query | medium | growth / CampaignsModule / campaign |
 | PUT | `/api/campaigns/:id` | 1 | 3 | graphql-mutation | medium | growth / CampaignsModule / updateCampaign |
 | POST | `/api/campaigns/:id/duplicate` | 1 | 2 | graphql-mutation | medium | growth / CampaignsModule / duplicateCampaign |
-| POST | `/api/campaigns/:id/pause` | 1 | 0 | graphql-mutation | high | growth / CampaignDeliveryModule / pauseCampaign |
 | GET | `/api/campaigns/:id/preview` | 1 | 1 | graphql-query | high | growth / CampaignsModule / campaignAudiencePreview |
 | GET | `/api/campaigns/:id/recipients` | 1 | 0 | graphql-query | high | growth / CampaignDeliveryModule / campaignRecipients |
-| POST | `/api/campaigns/:id/resume` | 1 | 0 | graphql-mutation | high | growth / CampaignDeliveryModule / resumeCampaign |
 | POST | `/api/campaigns/:id/schedule` | 1 | 3 | graphql-mutation | medium | growth / CampaignsModule / scheduleCampaign |
-| POST | `/api/campaigns/:id/send` | 1 | 2 | graphql-mutation | high | growth / CampaignDeliveryModule / sendCampaign |
-| POST | `/api/campaigns/:id/send-test` | 1 | 0 | graphql-mutation | high | growth / CampaignDeliveryModule / sendCampaignTest |
 | POST | `/api/campaigns/:id/unschedule` | 1 | 1 | graphql-mutation | medium | growth / CampaignsModule / unscheduleCampaign |
 | GET | `/api/canvas/lists` | 1 | 3 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceLists |
 | PUT | `/api/canvas/positions` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / batchCanvasPositions |
@@ -402,8 +398,8 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 12
-- Orphaned manual overrides: 45
+- Unmatched backend test calls: 13
+- Orphaned manual overrides: 49
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls
@@ -432,6 +428,7 @@
 | GET | `/api/campaigns:path` | `backend-v2/test/integration/campaigns.integration-spec.ts:126` |
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1057` |
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1079` |
+| POST | `/api/campaigns/1/:action` | `backend/src/__tests__/integration/campaigns.integration.test.js:504` |
 | POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:168` |
 | DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:169` |
 | POST | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:188` |

@@ -3,10 +3,10 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 385,
-    "resolvedDeclarationCount": 385,
+    "declarationCount": 381,
+    "resolvedDeclarationCount": 381,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 366,
+    "uniqueResolvedOperationCount": 362,
     "sourceFileCount": 76
   },
   "caveats": [
@@ -687,23 +687,13 @@
       "dynamic": false
     },
     {
-      "method": "POST",
-      "publicPaths": [
-        "/api/campaigns/:id/pause"
-      ],
-      "declaredPath": "/:id/pause",
-      "source": "backend/src/routes/campaigns/actions.routes.js",
-      "line": 269,
-      "dynamic": false
-    },
-    {
       "method": "GET",
       "publicPaths": [
         "/api/campaigns/:id/preview"
       ],
       "declaredPath": "/:id/preview",
       "source": "backend/src/routes/campaigns/insights.routes.js",
-      "line": 87,
+      "line": 86,
       "dynamic": false
     },
     {
@@ -713,17 +703,7 @@
       ],
       "declaredPath": "/:id/recipients",
       "source": "backend/src/routes/campaigns/insights.routes.js",
-      "line": 16,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/campaigns/:id/resume"
-      ],
-      "declaredPath": "/:id/resume",
-      "source": "backend/src/routes/campaigns/actions.routes.js",
-      "line": 296,
+      "line": 15,
       "dynamic": false
     },
     {
@@ -733,27 +713,7 @@
       ],
       "declaredPath": "/:id/schedule",
       "source": "backend/src/routes/campaigns/actions.routes.js",
-      "line": 20,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/campaigns/:id/send"
-      ],
-      "declaredPath": "/:id/send",
-      "source": "backend/src/routes/campaigns/actions.routes.js",
-      "line": 107,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/campaigns/:id/send-test"
-      ],
-      "declaredPath": "/:id/send-test",
-      "source": "backend/src/routes/campaigns/insights.routes.js",
-      "line": 150,
+      "line": 13,
       "dynamic": false
     },
     {
@@ -763,7 +723,7 @@
       ],
       "declaredPath": "/:id/unschedule",
       "source": "backend/src/routes/campaigns/actions.routes.js",
-      "line": 79,
+      "line": 72,
       "dynamic": false
     },
     {

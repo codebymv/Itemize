@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 366,
-    "apiOperationCount": 359,
+    "operationCount": 362,
+    "apiOperationCount": 355,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 292,
-    "operationsWithFrontendConsumers": 281,
-    "operationsWithBackendTests": 196,
+    "frontendCallsiteCount": 288,
+    "operationsWithFrontendConsumers": 277,
+    "operationsWithBackendTests": 195,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 12,
+    "unmatchedBackendTestCallCount": 13,
     "retainHttpCount": 47,
     "graphqlQueryCount": 109,
-    "graphqlMutationCount": 202,
-    "highRiskCount": 301,
+    "graphqlMutationCount": 198,
+    "highRiskCount": 297,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -2778,7 +2778,7 @@
           "path": "/api/campaigns",
           "rawPath": "/api/campaigns",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 192,
+          "line": 189,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2818,7 +2818,7 @@
           "method": "GET",
           "path": "/api/campaigns",
           "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 522
+          "line": 518
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -2849,7 +2849,7 @@
           "path": "/api/campaigns",
           "rawPath": "/api/campaigns",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 232,
+          "line": 229,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2944,7 +2944,7 @@
           "path": "/api/campaigns/:campaignId",
           "rawPath": "/api/campaigns/${campaignId}",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 265,
+          "line": 262,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3003,7 +3003,7 @@
           "path": "/api/campaigns/:campaignId",
           "rawPath": "/api/campaigns/${campaignId}",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 216,
+          "line": 213,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3050,7 +3050,7 @@
           "path": "/api/campaigns/:campaignId",
           "rawPath": "/api/campaigns/${campaignId}",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 249,
+          "line": 246,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3103,7 +3103,7 @@
           "path": "/api/campaigns/:campaignId/duplicate",
           "rawPath": "/api/campaigns/${campaignId}/duplicate",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 281,
+          "line": 278,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3134,40 +3134,6 @@
       "risk": "medium"
     },
     {
-      "id": "POST /api/campaigns/:id/pause",
-      "key": "POST /api/campaigns/:*/pause",
-      "method": "POST",
-      "path": "/api/campaigns/:id/pause",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/campaigns/actions.routes.js",
-          "line": 269
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/campaigns/:campaignId/pause",
-          "rawPath": "/api/campaigns/${campaignId}/pause",
-          "source": "frontend/src/services/campaignsApi.ts",
-          "line": 350,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetOperation": "pauseCampaign",
-      "targetModule": "CampaignDeliveryModule",
-      "parityStatus": "characterizing",
-      "notes": "Allow only sending to paused and ensure an in-flight worker cannot overwrite paused as sent.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "GET /api/campaigns/:id/preview",
       "key": "GET /api/campaigns/:*/preview",
       "method": "GET",
@@ -3175,7 +3141,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/campaigns/insights.routes.js",
-          "line": 87
+          "line": 86
         }
       ],
       "consumerCallsites": [
@@ -3184,7 +3150,7 @@
           "path": "/api/campaigns/:campaignId/preview",
           "rawPath": "/api/campaigns/${campaignId}/preview",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 404,
+          "line": 383,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3216,7 +3182,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/campaigns/insights.routes.js",
-          "line": 16
+          "line": 15
         }
       ],
       "consumerCallsites": [
@@ -3225,7 +3191,7 @@
           "path": "/api/campaigns/:campaignId/recipients",
           "rawPath": "/api/campaigns/${campaignId}/recipients",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 387,
+          "line": 366,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3243,40 +3209,6 @@
       "risk": "high"
     },
     {
-      "id": "POST /api/campaigns/:id/resume",
-      "key": "POST /api/campaigns/:*/resume",
-      "method": "POST",
-      "path": "/api/campaigns/:id/resume",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/campaigns/actions.routes.js",
-          "line": 296
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/campaigns/:campaignId/resume",
-          "rawPath": "/api/campaigns/${campaignId}/resume",
-          "source": "frontend/src/services/campaignsApi.ts",
-          "line": 366,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetOperation": "resumeCampaign",
-      "targetModule": "CampaignDeliveryModule",
-      "parityStatus": "characterizing",
-      "notes": "Resume only pending recipients from a paused campaign; completion and retry semantics require durable worker parity.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "POST /api/campaigns/:id/schedule",
       "key": "POST /api/campaigns/:*/schedule",
       "method": "POST",
@@ -3284,7 +3216,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/campaigns/actions.routes.js",
-          "line": 20
+          "line": 13
         }
       ],
       "consumerCallsites": [
@@ -3293,7 +3225,7 @@
           "path": "/api/campaigns/:campaignId/schedule",
           "rawPath": "/api/campaigns/${campaignId}/schedule",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 299,
+          "line": 296,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3330,87 +3262,6 @@
       "risk": "medium"
     },
     {
-      "id": "POST /api/campaigns/:id/send",
-      "key": "POST /api/campaigns/:*/send",
-      "method": "POST",
-      "path": "/api/campaigns/:id/send",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/campaigns/actions.routes.js",
-          "line": 107
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/campaigns/:campaignId/send",
-          "rawPath": "/api/campaigns/${campaignId}/send",
-          "source": "frontend/src/services/campaignsApi.ts",
-          "line": 334,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/campaigns/:id/send",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 498
-        },
-        {
-          "method": "POST",
-          "path": "/api/campaigns/12/send",
-          "source": "backend/src/__tests__/routes/campaign-actions.routes.test.js",
-          "line": 56
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetOperation": "sendCampaign",
-      "targetModule": "CampaignDeliveryModule",
-      "parityStatus": "characterizing",
-      "notes": "Lock the campaign, snapshot recipients, reserve usage, and enqueue one durable idempotent delivery job; do not send email inside a resolver.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/campaigns/:id/send-test",
-      "key": "POST /api/campaigns/:*/send-test",
-      "method": "POST",
-      "path": "/api/campaigns/:id/send-test",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/campaigns/insights.routes.js",
-          "line": 150
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/campaigns/:campaignId/send-test",
-          "rawPath": "/api/campaigns/${campaignId}/send-test",
-          "source": "frontend/src/services/campaignsApi.ts",
-          "line": 421,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetOperation": "sendCampaignTest",
-      "targetModule": "CampaignDeliveryModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The CSRF-protected mutation locks and conceals the organization-owned campaign, validates the destination and bounded idempotency key, snapshots rendered test content with a prefixed subject, and commits a tenant-enforced durable intent before provider I/O. Leased attempts use a stable Resend idempotency key; definite failures retry, ambiguous outcomes require reconciliation, conflicting key reuse fails, and exact replay returns stored evidence. Fresh PostgreSQL proves provider-confirmed delivery, replay, tenant isolation, CSRF, snapshot substitution, and zero campaign/recipient state mutation behind an independent default-off frontend flag.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "POST /api/campaigns/:id/unschedule",
       "key": "POST /api/campaigns/:*/unschedule",
       "method": "POST",
@@ -3418,7 +3269,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/campaigns/actions.routes.js",
-          "line": 79
+          "line": 72
         }
       ],
       "consumerCallsites": [
@@ -3427,7 +3278,7 @@
           "path": "/api/campaigns/:campaignId/unschedule",
           "rawPath": "/api/campaigns/${campaignId}/unschedule",
           "source": "frontend/src/services/campaignsApi.ts",
-          "line": 318,
+          "line": 315,
           "client": "api",
           "literalInterpolation": false
         }
@@ -16098,6 +15949,12 @@
     },
     {
       "method": "POST",
+      "path": "/api/campaigns/1/:action",
+      "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
+      "line": 504
+    },
+    {
+      "method": "POST",
       "path": "/api/vaults/:vaultId/share",
       "source": "backend/src/__tests__/integration/sharing.integration.test.js",
       "line": 168
@@ -16173,6 +16030,10 @@
     "POST /api/billing/acknowledge-trial-end",
     "POST /api/billing/checkout",
     "POST /api/billing/portal",
+    "POST /api/campaigns/:id/pause",
+    "POST /api/campaigns/:id/resume",
+    "POST /api/campaigns/:id/send",
+    "POST /api/campaigns/:id/send-test",
     "POST /api/email-templates/:id/send-test",
     "POST /api/email-templates/send-to-contact",
     "POST /api/forms",

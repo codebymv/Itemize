@@ -6,10 +6,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 385
-- Resolved declarations: 385
+- Route declarations: 381
+- Resolved declarations: 381
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 366
+- Unique resolved method/path operations: 362
 - Files containing declarations: 76
 
 ## Interpretation limits
@@ -90,14 +90,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/campaigns/:id` | `/:id` | `backend/src/routes/campaigns/crud.routes.js:70` |
 | PUT | `/api/campaigns/:id` | `/:id` | `backend/src/routes/campaigns/crud.routes.js:179` |
 | POST | `/api/campaigns/:id/duplicate` | `/:id/duplicate` | `backend/src/routes/campaigns/crud.routes.js:321` |
-| POST | `/api/campaigns/:id/pause` | `/:id/pause` | `backend/src/routes/campaigns/actions.routes.js:269` |
-| GET | `/api/campaigns/:id/preview` | `/:id/preview` | `backend/src/routes/campaigns/insights.routes.js:87` |
-| GET | `/api/campaigns/:id/recipients` | `/:id/recipients` | `backend/src/routes/campaigns/insights.routes.js:16` |
-| POST | `/api/campaigns/:id/resume` | `/:id/resume` | `backend/src/routes/campaigns/actions.routes.js:296` |
-| POST | `/api/campaigns/:id/schedule` | `/:id/schedule` | `backend/src/routes/campaigns/actions.routes.js:20` |
-| POST | `/api/campaigns/:id/send` | `/:id/send` | `backend/src/routes/campaigns/actions.routes.js:107` |
-| POST | `/api/campaigns/:id/send-test` | `/:id/send-test` | `backend/src/routes/campaigns/insights.routes.js:150` |
-| POST | `/api/campaigns/:id/unschedule` | `/:id/unschedule` | `backend/src/routes/campaigns/actions.routes.js:79` |
+| GET | `/api/campaigns/:id/preview` | `/:id/preview` | `backend/src/routes/campaigns/insights.routes.js:86` |
+| GET | `/api/campaigns/:id/recipients` | `/:id/recipients` | `backend/src/routes/campaigns/insights.routes.js:15` |
+| POST | `/api/campaigns/:id/schedule` | `/:id/schedule` | `backend/src/routes/campaigns/actions.routes.js:13` |
+| POST | `/api/campaigns/:id/unschedule` | `/:id/unschedule` | `backend/src/routes/campaigns/actions.routes.js:72` |
 | GET | `/api/canvas/lists` | `/canvas/lists` | `backend/src/routes/lists.routes.js:210` |
 | PUT | `/api/canvas/positions` | `/api/canvas/positions` | `backend/src/bootstrap/register-api-routes.js:59` |
 | PUT | `/api/canvas/positions` | `/canvas/positions` | `backend/src/routes/canvas.routes.js:14` |

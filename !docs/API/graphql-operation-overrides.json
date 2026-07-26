@@ -771,9 +771,9 @@
       "owner": "growth",
       "targetModule": "CampaignDeliveryModule",
       "targetOperation": "pauseCampaign",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Allow only sending to paused and ensure an in-flight worker cannot overwrite paused as sent."
+      "notes": "The frontend now calls the CSRF-protected GraphQL mutation directly and the Express route is removed. The mutation locks the campaign and durable delivery job, changes only sending to paused, and worker discovery and claim predicates exclude paused work so an in-flight worker cannot overwrite the authoritative state."
     },
     "GET /api/campaigns/:id/preview": {
       "disposition": "graphql-query",
@@ -798,9 +798,9 @@
       "owner": "growth",
       "targetModule": "CampaignDeliveryModule",
       "targetOperation": "resumeCampaign",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Resume only pending recipients from a paused campaign; completion and retry semantics require durable worker parity."
+      "notes": "The frontend now calls the CSRF-protected GraphQL mutation directly and the Express route is removed. Resume locks the paused campaign and its durable job, processes only queued, retrying, or leased recipient intents without rebuilding the audience, preserves cumulative counts, and derives terminal state when no active intents remain."
     },
     "POST /api/campaigns/:id/schedule": {
       "disposition": "graphql-mutation",
@@ -816,9 +816,9 @@
       "owner": "growth",
       "targetModule": "CampaignDeliveryModule",
       "targetOperation": "sendCampaign",
-      "parityStatus": "characterizing",
+      "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Lock the campaign, snapshot recipients, reserve usage, and enqueue one durable idempotent delivery job; do not send email inside a resolver."
+      "notes": "The frontend now calls the CSRF-protected GraphQL mutation directly and the Express route is removed. The mutation locks the campaign, validates and snapshots a canonical distinct-email audience, atomically reserves usage, and enqueues one tenant-scoped idempotent durable delivery job before provider I/O."
     },
     "POST /api/campaigns/:id/send-test": {
       "disposition": "graphql-mutation",
@@ -827,7 +827,7 @@
       "targetOperation": "sendCampaignTest",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "The CSRF-protected mutation locks and conceals the organization-owned campaign, validates the destination and bounded idempotency key, snapshots rendered test content with a prefixed subject, and commits a tenant-enforced durable intent before provider I/O. Leased attempts use a stable Resend idempotency key; definite failures retry, ambiguous outcomes require reconciliation, conflicting key reuse fails, and exact replay returns stored evidence. Fresh PostgreSQL proves provider-confirmed delivery, replay, tenant isolation, CSRF, snapshot substitution, and zero campaign/recipient state mutation behind an independent default-off frontend flag."
+      "notes": "The frontend now calls the CSRF-protected GraphQL mutation directly and the Express route is removed. The mutation locks and conceals the organization-owned campaign, validates the destination and bounded idempotency key, snapshots rendered test content with a prefixed subject, and commits a tenant-enforced durable intent before provider I/O. Leased attempts use a stable Resend idempotency key; definite failures retry, ambiguous outcomes require reconciliation, conflicting key reuse fails, and exact replay returns stored evidence without campaign, recipient, or usage mutation."
     },
     "POST /api/campaigns/:id/unschedule": {
       "disposition": "graphql-mutation",
