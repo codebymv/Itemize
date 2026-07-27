@@ -6,11 +6,11 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 347
-- Resolved declarations: 347
+- Route declarations: 341
+- Resolved declarations: 341
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 328
-- Files containing declarations: 69
+- Unique resolved method/path operations: 322
+- Files containing declarations: 65
 
 ## Interpretation limits
 
@@ -35,15 +35,9 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/admin/users/count` | `/users/count` | `backend/src/routes/admin.routes.js:98` |
 | GET | `/api/admin/users/ids` | `/users/ids` | `backend/src/routes/admin.routes.js:188` |
 | GET | `/api/admin/users/search` | `/users/search` | `backend/src/routes/admin.routes.js:109` |
-| GET | `/api/analytics/bookings/summary` | `/bookings/summary` | `backend/src/routes/analytics/business.routes.js:67` |
-| GET | `/api/analytics/communication-stats` | `/communication-stats` | `backend/src/routes/analytics/operations.routes.js:18` |
-| GET | `/api/analytics/contacts/trends` | `/contacts/trends` | `backend/src/routes/analytics/contacts.routes.js:13` |
 | GET | `/api/analytics/conversion-rates` | `/conversion-rates` | `backend/src/routes/analytics/advanced.routes.js:20` |
-| GET | `/api/analytics/dashboard` | `/dashboard` | `backend/src/routes/analytics/dashboard.routes.js:13` |
-| GET | `/api/analytics/deals/performance` | `/deals/performance` | `backend/src/routes/analytics/business.routes.js:13` |
 | GET | `/api/analytics/pipeline-velocity` | `/pipeline-velocity` | `backend/src/routes/analytics/advanced.routes.js:281` |
 | GET | `/api/analytics/revenue-trends` | `/revenue-trends` | `backend/src/routes/analytics/advanced.routes.js:156` |
-| GET | `/api/analytics/workflow-performance` | `/workflow-performance` | `backend/src/routes/analytics/operations.routes.js:117` |
 | POST | `/api/auth/change-password` | `/change-password` | `backend/src/auth/credentials.routes.js:462` |
 | GET | `/api/auth/csrf` | `/api/auth/csrf` | `backend/src/index.js:166` |
 | POST | `/api/auth/forgot-password` | `/forgot-password` | `backend/src/auth/credentials.routes.js:338` |

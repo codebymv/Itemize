@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 328
-- API operations under `/api`: 321
+- Registered method/path operations: 322
+- API operations under `/api`: 315
 - Non-API registered operations: 7
-- Static frontend callsites: 259
-- Operations with frontend consumers: 248
-- Operations referenced by backend tests: 175
-- Recommended GraphQL queries: 92
+- Static frontend callsites: 253
+- Operations with frontend consumers: 242
+- Operations referenced by backend tests: 174
+- Recommended GraphQL queries: 86
 - Recommended GraphQL mutations: 174
 - Recommended retained HTTP endpoints: 54
-- High-risk operations: 266
+- High-risk operations: 260
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -42,15 +42,9 @@
 | GET | `/api/admin/users/count` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminUserCount |
 | GET | `/api/admin/users/ids` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminUserIds |
 | GET | `/api/admin/users/search` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminUsers |
-| GET | `/api/analytics/bookings/summary` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / bookingAnalytics |
-| GET | `/api/analytics/communication-stats` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / communicationStats |
-| GET | `/api/analytics/contacts/trends` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / contactTrends |
 | GET | `/api/analytics/conversion-rates` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / conversionRates |
-| GET | `/api/analytics/dashboard` | 1 | 1 | graphql-query | high | analytics / AnalyticsModule / dashboardAnalytics |
-| GET | `/api/analytics/deals/performance` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / dealPerformance |
 | GET | `/api/analytics/pipeline-velocity` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / pipelineVelocity |
 | GET | `/api/analytics/revenue-trends` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / revenueTrends |
-| GET | `/api/analytics/workflow-performance` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / workflowPerformance |
 | POST | `/api/auth/change-password` | 0 | 0 | graphql-mutation | high | identity / AuthModule / changePassword |
 | GET | `/api/auth/csrf` | 0 | 5 | retain-http | medium | platform-security / AuthModule / issueCsrfToken |
 | POST | `/api/auth/forgot-password` | 1 | 0 | graphql-mutation | high | identity / AuthModule / requestPasswordReset |
@@ -364,7 +358,7 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 33
+- Unmatched backend test calls: 39
 - Orphaned manual overrides: 49
 - Orphaned runtime-expression overrides: 0
 
@@ -391,6 +385,12 @@
 
 | Method | Requested path | Source |
 | --- | --- | --- |
+| GET | `/api/analytics/dashboard` | `backend-v2/test/integration/analytics.integration-spec.ts:288` |
+| GET | `/api/analytics/contacts/trends` | `backend-v2/test/integration/analytics.integration-spec.ts:289` |
+| GET | `/api/analytics/deals/performance` | `backend-v2/test/integration/analytics.integration-spec.ts:290` |
+| GET | `/api/analytics/bookings/summary` | `backend-v2/test/integration/analytics.integration-spec.ts:291` |
+| GET | `/api/analytics/communication-stats` | `backend-v2/test/integration/analytics.integration-spec.ts:292` |
+| GET | `/api/analytics/workflow-performance` | `backend-v2/test/integration/analytics.integration-spec.ts:293` |
 | GET | `/api/campaigns:path` | `backend-v2/test/integration/campaigns.integration-spec.ts:126` |
 | GET | `/api/tags` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:378` |
 | GET | `/api/tags/suggestions` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:379` |

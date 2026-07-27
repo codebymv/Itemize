@@ -45,12 +45,6 @@ describe('Environment Validation', () => {
     expect(env.VITE_WORKSPACE_NOTE_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_WORKSPACE_WHITEBOARD_READS_GRAPHQL).toBe('false');
     expect(env.VITE_WORKSPACE_WHITEBOARD_MUTATIONS_GRAPHQL).toBe('false');
-    expect(env.VITE_DASHBOARD_ANALYTICS_GRAPHQL).toBe('false');
-    expect(env.VITE_CONTACT_TRENDS_GRAPHQL).toBe('false');
-    expect(env.VITE_DEAL_PERFORMANCE_GRAPHQL).toBe('false');
-    expect(env.VITE_BOOKING_ANALYTICS_GRAPHQL).toBe('false');
-    expect(env.VITE_COMMUNICATION_STATS_GRAPHQL).toBe('false');
-    expect(env.VITE_WORKFLOW_PERFORMANCE_GRAPHQL).toBe('false');
     expect(env.VITE_WORKFLOW_READS_GRAPHQL).toBe('false');
     expect(env.VITE_WORKFLOW_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_WORKFLOW_ENROLLMENTS_GRAPHQL).toBe('false');

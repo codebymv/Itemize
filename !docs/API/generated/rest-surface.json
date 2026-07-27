@@ -3,11 +3,11 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 347,
-    "resolvedDeclarationCount": 347,
+    "declarationCount": 341,
+    "resolvedDeclarationCount": 341,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 328,
-    "sourceFileCount": 69
+    "uniqueResolvedOperationCount": 322,
+    "sourceFileCount": 65
   },
   "caveats": [
     "This is static source analysis; it does not execute application modules.",
@@ -139,61 +139,11 @@
     {
       "method": "GET",
       "publicPaths": [
-        "/api/analytics/bookings/summary"
-      ],
-      "declaredPath": "/bookings/summary",
-      "source": "backend/src/routes/analytics/business.routes.js",
-      "line": 67,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/analytics/communication-stats"
-      ],
-      "declaredPath": "/communication-stats",
-      "source": "backend/src/routes/analytics/operations.routes.js",
-      "line": 18,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/analytics/contacts/trends"
-      ],
-      "declaredPath": "/contacts/trends",
-      "source": "backend/src/routes/analytics/contacts.routes.js",
-      "line": 13,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
         "/api/analytics/conversion-rates"
       ],
       "declaredPath": "/conversion-rates",
       "source": "backend/src/routes/analytics/advanced.routes.js",
       "line": 20,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/analytics/dashboard"
-      ],
-      "declaredPath": "/dashboard",
-      "source": "backend/src/routes/analytics/dashboard.routes.js",
-      "line": 13,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/analytics/deals/performance"
-      ],
-      "declaredPath": "/deals/performance",
-      "source": "backend/src/routes/analytics/business.routes.js",
-      "line": 13,
       "dynamic": false
     },
     {
@@ -214,16 +164,6 @@
       "declaredPath": "/revenue-trends",
       "source": "backend/src/routes/analytics/advanced.routes.js",
       "line": 156,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/analytics/workflow-performance"
-      ],
-      "declaredPath": "/workflow-performance",
-      "source": "backend/src/routes/analytics/operations.routes.js",
-      "line": 117,
       "dynamic": false
     },
     {

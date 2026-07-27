@@ -11,14 +11,6 @@ import {
     getDealPerformanceViaGraphql,
     getWorkflowPerformanceViaGraphql,
 } from './analyticsGraphql';
-import {
-    isBookingAnalyticsGraphqlEnabled,
-    isCommunicationStatsGraphqlEnabled,
-    isContactTrendsGraphqlEnabled,
-    isDashboardAnalyticsGraphqlEnabled,
-    isDealPerformanceGraphqlEnabled,
-    isWorkflowPerformanceGraphqlEnabled,
-} from './graphqlClient';
 
 const unwrapResponse = <T>(payload: unknown): T => {
     if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -330,13 +322,7 @@ export interface WorkflowPerformance {
  * Get dashboard analytics summary
  */
 export const getDashboardAnalytics = async (organizationId?: number): Promise<DashboardAnalytics> => {
-    if (isDashboardAnalyticsGraphqlEnabled()) {
-        return getDashboardAnalyticsViaGraphql(organizationId);
-    }
-    const response = await api.get('/api/analytics/dashboard', {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<DashboardAnalytics>(response.data);
+    return getDashboardAnalyticsViaGraphql(organizationId);
 };
 
 /**
@@ -346,14 +332,7 @@ export const getContactTrends = async (
     period: '7days' | '30days' | '6months' | '12months' = '6months',
     organizationId?: number
 ): Promise<ContactTrends> => {
-    if (isContactTrendsGraphqlEnabled()) {
-        return getContactTrendsViaGraphql(period, organizationId);
-    }
-    const response = await api.get('/api/analytics/contacts/trends', {
-        params: { period },
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<ContactTrends>(response.data);
+    return getContactTrendsViaGraphql(period, organizationId);
 };
 
 /**
@@ -363,27 +342,14 @@ export const getDealPerformance = async (
     period: '30days' | '6months' | '12months' = '6months',
     organizationId?: number
 ): Promise<DealPerformance> => {
-    if (isDealPerformanceGraphqlEnabled()) {
-        return getDealPerformanceViaGraphql(period, organizationId);
-    }
-    const response = await api.get('/api/analytics/deals/performance', {
-        params: { period },
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<DealPerformance>(response.data);
+    return getDealPerformanceViaGraphql(period, organizationId);
 };
 
 /**
  * Get booking summary
  */
 export const getBookingSummary = async (organizationId?: number): Promise<BookingSummary> => {
-    if (isBookingAnalyticsGraphqlEnabled()) {
-        return getBookingAnalyticsViaGraphql(organizationId);
-    }
-    const response = await api.get('/api/analytics/bookings/summary', {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<BookingSummary>(response.data);
+    return getBookingAnalyticsViaGraphql(organizationId);
 };
 
 /**
@@ -435,27 +401,14 @@ export const getCommunicationStats = async (
     period: '7days' | '30days' | '90days' = '30days',
     organizationId?: number
 ): Promise<CommunicationStats> => {
-    if (isCommunicationStatsGraphqlEnabled()) {
-        return getCommunicationStatsViaGraphql(period, organizationId);
-    }
-    const response = await api.get('/api/analytics/communication-stats', {
-        params: { period },
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<CommunicationStats>(response.data);
+    return getCommunicationStatsViaGraphql(period, organizationId);
 };
 
 /**
  * Get workflow performance metrics
  */
 export const getWorkflowPerformance = async (organizationId?: number): Promise<WorkflowPerformance> => {
-    if (isWorkflowPerformanceGraphqlEnabled()) {
-        return getWorkflowPerformanceViaGraphql(organizationId);
-    }
-    const response = await api.get('/api/analytics/workflow-performance', {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<WorkflowPerformance>(response.data);
+    return getWorkflowPerformanceViaGraphql(organizationId);
 };
 
 export default {

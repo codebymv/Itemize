@@ -283,17 +283,18 @@ describe('Analytics GraphQL PostgreSQL contract', () => {
     expect(result.invoiceMetrics).toMatchObject({ pending: 1, countThisMonth: 1 });
   });
 
-  it('matches the retained REST dashboard fields used by the frontend', async () => {
-    const legacy = await request(legacyApp)
-      .get('/api/analytics/dashboard')
-      .set('Cookie', `itemize_auth=${token}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
-    const graphqlResult = (await graphql(organizationId).expect(200)).body.data.dashboardAnalytics;
-    expect(graphqlResult.contacts).toMatchObject(legacy.body.data.contacts);
-    expect(graphqlResult.deals).toMatchObject(legacy.body.data.deals);
-    expect(graphqlResult.bookings).toEqual(legacy.body.data.bookings);
-    expect(graphqlResult.invoiceMetrics).toEqual(legacy.body.data.invoiceMetrics);
+  it('leaves no retained HTTP route for the six approved Analytics reads', async () => {
+    const responses = await Promise.all([
+      request(legacyApp).get('/api/analytics/dashboard'),
+      request(legacyApp).get('/api/analytics/contacts/trends'),
+      request(legacyApp).get('/api/analytics/deals/performance'),
+      request(legacyApp).get('/api/analytics/bookings/summary'),
+      request(legacyApp).get('/api/analytics/communication-stats'),
+      request(legacyApp).get('/api/analytics/workflow-performance'),
+    ]);
+    expect(responses.map((response) => response.status)).toEqual(
+      Array(6).fill(404),
+    );
   });
 
   it('uses the authenticated default organization and rejects anonymous reads', async () => {
@@ -378,31 +379,6 @@ describe('Analytics GraphQL PostgreSQL contract', () => {
         overallCompletionRate: 100,
       },
     });
-  });
-
-  it('matches retained REST semantics where the source contract is unchanged', async () => {
-    const graphqlResponse = await graphqlQuery(
-      organizationId,
-      `query {
-        contactTrends(period: DAYS_30) { period data { period newContacts withSource } }
-        dealPerformance(period: DAYS_30) { period metrics { closedTotal wonCount lostCount winRate avgDealValue totalRevenue avgDaysToClose } }
-        bookingAnalytics { total confirmed completed cancelled noShow createdThisMonth upcoming completionRate }
-      }`,
-    ).expect(200);
-    expect(graphqlResponse.body.errors).toBeUndefined();
-    const pairs = [
-      ['contactTrends', '/api/analytics/contacts/trends?period=30days'],
-      ['dealPerformance', '/api/analytics/deals/performance?period=30days'],
-      ['bookingAnalytics', '/api/analytics/bookings/summary'],
-    ] as const;
-    for (const [field, path] of pairs) {
-      const legacy = await request(legacyApp)
-        .get(path)
-        .set('Cookie', `itemize_auth=${token}`)
-        .set('x-organization-id', String(organizationId))
-        .expect(200);
-      expect(graphqlResponse.body.data[field]).toEqual(legacy.body.data);
-    }
   });
 
   it('rejects unsupported enum values before executing analytics SQL', async () => {

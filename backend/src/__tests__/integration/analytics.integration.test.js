@@ -154,22 +154,23 @@ describe('Analytics integration', () => {
     afterAll(async () => { await dbHelper?.teardown(); }, 30000);
 
     test.each([
-        '/api/analytics/contacts/trends?period=forever',
-        '/api/analytics/deals/performance?period=forever',
         '/api/analytics/conversion-rates?period=forever',
         '/api/analytics/revenue-trends?period=forever',
-        '/api/analytics/communication-stats?period=forever',
     ])('rejects unsupported periods instead of silently running another range: %s', async path => {
         const response = await get(path);
         expect(response.status).toBe(400);
         expect(response.body.error.field).toBe('period');
     });
 
-    test('contact trends apply the requested window and organization scope', async () => {
-        const response = await get('/api/analytics/contacts/trends?period=30days');
+    test('conversion rates remain tenant-scoped while their lifecycle definition is retained', async () => {
+        const response = await get('/api/analytics/conversion-rates?period=30days');
         expect(response.status).toBe(200);
         expect(response.body.data.period).toBe('30days');
-        expect(response.body.data.data.reduce((sum, bucket) => sum + bucket.newContacts, 0)).toBe(1);
+        expect(response.body.data.conversions.dealWinRate).toMatchObject({
+            won: 1,
+            totalClosed: 1,
+            wonValue: 100,
+        });
     });
 
     test('revenue trends merge deal and payment revenue into one bucket without foreign data', async () => {
@@ -185,35 +186,6 @@ describe('Analytics integration', () => {
         });
     });
 
-    test('dashboard emits numeric metrics and funnels only the selected default pipeline', async () => {
-        const response = await get('/api/analytics/dashboard');
-        expect(response.status).toBe(200);
-        expect(response.body.data.contacts).toMatchObject({ total: 2, active: 1 });
-        expect(response.body.data.deals).toMatchObject({ total: 3, open: 2, won: 1, wonValue: 150 });
-        expect(response.body.data.deals.funnel).toEqual([
-            expect.objectContaining({ stageId: 'qualified', dealCount: 0, totalValue: 0 }),
-            expect.objectContaining({ stageId: 'proposal', dealCount: 1, totalValue: 25 }),
-        ]);
-        expect(response.body.data.bookings).toMatchObject({ total: 2, cancelled: 1, upcomingToday: 1 });
-        expect(response.body.data.invoiceMetrics).toMatchObject({ pending: 1, countThisMonth: 1 });
-        expect(typeof response.body.data.invoiceMetrics.pending).toBe('number');
-        expect(typeof response.body.data.invoiceMetrics.recentInvoices[0].amount).toBe('number');
-    });
-
-    test('communication lifecycle states count cumulative milestones and preserve zero rates', async () => {
-        const response = await get('/api/analytics/communication-stats?period=30days');
-        expect(response.status).toBe(200);
-        expect(response.body.data.email).toMatchObject({
-            total: 2,
-            sent: 2,
-            delivered: 2,
-            opened: 1,
-            clicked: 1,
-            rates: { delivery: 100, open: 50, click: 100 },
-        });
-        expect(response.body.data.sms.rates.delivery).toBe(0);
-    });
-
     test('pipeline velocity validates IDs and does not enumerate another organization pipeline', async () => {
         const invalid = await get('/api/analytics/pipeline-velocity?pipeline_id=not-a-number');
         expect(invalid.status).toBe(400);
@@ -225,21 +197,4 @@ describe('Analytics integration', () => {
         expect(hidden.body.data).toEqual({ pipeline: null, velocity: [], summary: {} });
     });
 
-    test('deal performance returns numeric zero-safe metrics for an empty range', async () => {
-        await dbHelper.pool.query(
-            "UPDATE deals SET won_at = NOW() - INTERVAL '2 years' WHERE organization_id = $1 AND won_at IS NOT NULL",
-            [userA.org.id]
-        );
-        const response = await get('/api/analytics/deals/performance?period=30days');
-        expect(response.status).toBe(200);
-        expect(response.body.data.metrics).toEqual({
-            closedTotal: 0,
-            wonCount: 0,
-            lostCount: 0,
-            winRate: 0,
-            avgDealValue: 0,
-            totalRevenue: 0,
-            avgDaysToClose: 0,
-        });
-    });
 });
