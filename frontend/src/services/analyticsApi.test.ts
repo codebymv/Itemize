@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import api from '@/lib/api';
 import {
   getBookingSummary,
   getCommunicationStats,
@@ -7,7 +6,7 @@ import {
   getConversionRates,
   getDashboardAnalytics,
   getDealPerformance,
-  getPipelineVelocity,
+  getPipelineDealAge,
   getRevenueTrends,
   getWorkflowPerformance,
 } from './analyticsApi';
@@ -17,16 +16,21 @@ import {
   getContactTrendsViaGraphql,
   getDashboardAnalyticsViaGraphql,
   getDealPerformanceViaGraphql,
+  getConversionRatesViaGraphql,
+  getPipelineDealAgeViaGraphql,
+  getRevenueTrendsViaGraphql,
   getWorkflowPerformanceViaGraphql,
 } from './analyticsGraphql';
 
-vi.mock('@/lib/api', () => ({ default: { get: vi.fn() } }));
 vi.mock('./analyticsGraphql', () => ({
   getDashboardAnalyticsViaGraphql: vi.fn(),
   getContactTrendsViaGraphql: vi.fn(),
   getDealPerformanceViaGraphql: vi.fn(),
   getBookingAnalyticsViaGraphql: vi.fn(),
   getCommunicationStatsViaGraphql: vi.fn(),
+  getConversionRatesViaGraphql: vi.fn(),
+  getRevenueTrendsViaGraphql: vi.fn(),
+  getPipelineDealAgeViaGraphql: vi.fn(),
   getWorkflowPerformanceViaGraphql: vi.fn(),
 }));
 
@@ -34,8 +38,6 @@ const dashboard = {
   contacts: {
     total: 0,
     active: 0,
-    leads: 0,
-    customers: 0,
     newThisMonth: 0,
     newThisWeek: 0,
     growth: [],
@@ -45,9 +47,6 @@ const dashboard = {
     open: 0,
     won: 0,
     lost: 0,
-    openValue: 0,
-    wonValue: 0,
-    wonThisMonth: 0,
     funnel: [],
   },
   bookings: {
@@ -73,7 +72,6 @@ describe('analytics transport boundaries', () => {
 
     await expect(getDashboardAnalytics(4)).resolves.toBe(dashboard);
     expect(getDashboardAnalyticsViaGraphql).toHaveBeenCalledWith(4);
-    expect(api.get).not.toHaveBeenCalled();
   });
 
   it('always delegates the five approved dedicated reads to GraphQL', async () => {
@@ -150,33 +148,37 @@ describe('analytics transport boundaries', () => {
     expect(getBookingAnalyticsViaGraphql).toHaveBeenCalledWith(4);
     expect(getCommunicationStatsViaGraphql).toHaveBeenCalledWith('90days', 4);
     expect(getWorkflowPerformanceViaGraphql).toHaveBeenCalledWith(4);
-    expect(api.get).not.toHaveBeenCalled();
   });
 
-  it('retains only the three blocked business-definition reads on HTTP', async () => {
-    const conversion = { period: '30days', conversions: {} };
-    const revenue = { period: '6months', data: [], summary: {} };
-    const velocity = { pipeline: null, velocity: [], summary: {} };
-    vi.mocked(api.get)
-      .mockResolvedValueOnce({ data: { data: conversion } })
-      .mockResolvedValueOnce({ data: { data: revenue } })
-      .mockResolvedValueOnce({ data: { data: velocity } });
+  it('delegates the corrected conversion, revenue, and deal-age reads to GraphQL', async () => {
+    const conversion = {
+      period: '30days',
+      dealWinRate: { rate: 0, won: 0, lost: 0, totalClosed: 0, valuesByCurrency: [] },
+      formToContact: { rate: 0, submissions: 0, converted: 0 },
+    };
+    const revenue = { period: '6months', currencies: [] };
+    const dealAge = {
+      pipeline: null,
+      stages: [],
+      summary: {
+        averageDaysToWin: 0,
+        averageDaysToLose: 0,
+        openDeals: 0,
+        wonDeals: 0,
+        lostDeals: 0,
+        winRate: 0,
+      },
+    };
+    vi.mocked(getConversionRatesViaGraphql).mockResolvedValue(conversion);
+    vi.mocked(getRevenueTrendsViaGraphql).mockResolvedValue(revenue);
+    vi.mocked(getPipelineDealAgeViaGraphql).mockResolvedValue(dealAge);
 
     await expect(getConversionRates('30days', 4)).resolves.toBe(conversion);
     await expect(getRevenueTrends('6months', 4)).resolves.toBe(revenue);
-    await expect(getPipelineVelocity(17, 4)).resolves.toBe(velocity);
+    await expect(getPipelineDealAge(17, 4)).resolves.toBe(dealAge);
 
-    expect(api.get).toHaveBeenNthCalledWith(1, '/api/analytics/conversion-rates', {
-      params: { period: '30days' },
-      headers: { 'x-organization-id': '4' },
-    });
-    expect(api.get).toHaveBeenNthCalledWith(2, '/api/analytics/revenue-trends', {
-      params: { period: '6months' },
-      headers: { 'x-organization-id': '4' },
-    });
-    expect(api.get).toHaveBeenNthCalledWith(3, '/api/analytics/pipeline-velocity', {
-      params: { pipeline_id: 17 },
-      headers: { 'x-organization-id': '4' },
-    });
+    expect(getConversionRatesViaGraphql).toHaveBeenCalledWith('30days', 4);
+    expect(getRevenueTrendsViaGraphql).toHaveBeenCalledWith('6months', 4);
+    expect(getPipelineDealAgeViaGraphql).toHaveBeenCalledWith(17, 4);
   });
 });

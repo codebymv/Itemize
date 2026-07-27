@@ -1,7 +1,6 @@
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
 import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
@@ -16,6 +15,8 @@ describe('Analytics GraphQL PostgreSQL contract', () => {
   let userId: number;
   let organizationId: number;
   let otherOrganizationId: number;
+  let pipelineId: number;
+  let foreignPipelineId: number;
   let token: string;
   const jwt = new JwtService();
 
@@ -86,7 +87,7 @@ describe('Analytics GraphQL PostgreSQL contract', () => {
        RETURNING id`,
       [organizationId, otherOrganizationId, stages, userId],
     );
-    const [pipelineId, foreignPipelineId] = pipelines.rows.map((row) => Number(row.id));
+    [pipelineId, foreignPipelineId] = pipelines.rows.map((row) => Number(row.id));
     await pool.query(
       `INSERT INTO deals (
          organization_id, pipeline_id, contact_id, stage_id, title, value, created_by, won_at
@@ -110,6 +111,16 @@ describe('Analytics GraphQL PostgreSQL contract', () => {
          ($1, 50, 'cash', 'succeeded', NOW()),
          ($2, 700, 'cash', 'succeeded', NOW())`,
       [organizationId, otherOrganizationId],
+    );
+    const form = await pool.query<{ id: number }>(
+      `INSERT INTO forms (organization_id, name, slug, status, created_by)
+       VALUES ($1, 'Analytics form', $2, 'published', $3) RETURNING id`,
+      [organizationId, `analytics-form-${suffix}`, userId],
+    );
+    await pool.query(
+      `INSERT INTO form_submissions (form_id, organization_id, contact_id, data)
+       VALUES ($1, $2, $3, '{"email":"converted@test.itemize"}'::jsonb)`,
+      [Number(form.rows[0].id), organizationId, contactId],
     );
 
     const calendar = await pool.query<{ id: number }>(
@@ -194,19 +205,8 @@ describe('Analytics GraphQL PostgreSQL contract', () => {
     configureApp(app);
     await app.init();
 
-    const analyticsRoutes = require('../../../backend/src/routes/analytics.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
     legacyApp = express();
-    legacyApp.use(cookieParser());
     legacyApp.use(express.json());
-    legacyApp.use(
-      '/api/analytics',
-      analyticsRoutes(
-        pool,
-        authenticateJWT,
-        (_request: unknown, _response: unknown, next: () => void) => next(),
-      ),
-    );
   });
 
   afterAll(async () => {
@@ -227,11 +227,10 @@ describe('Analytics GraphQL PostgreSQL contract', () => {
       query: `query {
         dashboardAnalytics {
           asOf reportingTimezone
-          contacts { total active leads customers newThisMonth newThisWeek growth { month count } }
+          contacts { total active newThisMonth newThisWeek growth { month count } }
           deals {
-            total open won lost openValue wonValue wonThisMonth
-            bookedValue bookedThisMonth collectedValue collectedThisMonth
-            funnel { stageId stageName stageColor dealCount totalValue }
+            total open won lost
+            funnel { stageId stageName stageColor dealCount }
           }
           bookings { total confirmed pending cancelled upcomingThisWeek upcomingToday }
           tasks { total pending inProgress completed overdue }
@@ -257,7 +256,7 @@ describe('Analytics GraphQL PostgreSQL contract', () => {
     .set('x-organization-id', String(organization))
     .send({ query, variables });
 
-  it('returns a typed, tenant-isolated snapshot with explicit revenue components', async () => {
+  it('returns a typed, tenant-isolated snapshot without misleading money aggregates', async () => {
     const response = await graphql(organizationId).expect(200);
     expect(response.body.errors).toBeUndefined();
     const result = response.body.data.dashboardAnalytics;
@@ -268,13 +267,10 @@ describe('Analytics GraphQL PostgreSQL contract', () => {
       total: 2,
       open: 1,
       won: 1,
-      wonValue: 150,
-      bookedValue: 100,
-      collectedValue: 50,
     });
     expect(result.deals.funnel).toEqual([
-      expect.objectContaining({ stageId: 'qualified', dealCount: 0, totalValue: 0 }),
-      expect.objectContaining({ stageId: 'proposal', dealCount: 1, totalValue: 25 }),
+      expect.objectContaining({ stageId: 'qualified', dealCount: 0 }),
+      expect.objectContaining({ stageId: 'proposal', dealCount: 1 }),
     ]);
     expect(result.bookings).toMatchObject({ total: 4, cancelled: 1, upcomingToday: 1 });
     expect(result.recentActivity).toEqual([
@@ -283,7 +279,7 @@ describe('Analytics GraphQL PostgreSQL contract', () => {
     expect(result.invoiceMetrics).toMatchObject({ pending: 1, countThisMonth: 1 });
   });
 
-  it('leaves no retained HTTP route for the six approved Analytics reads', async () => {
+  it('leaves no retained HTTP Analytics surface', async () => {
     const responses = await Promise.all([
       request(legacyApp).get('/api/analytics/dashboard'),
       request(legacyApp).get('/api/analytics/contacts/trends'),
@@ -291,9 +287,12 @@ describe('Analytics GraphQL PostgreSQL contract', () => {
       request(legacyApp).get('/api/analytics/bookings/summary'),
       request(legacyApp).get('/api/analytics/communication-stats'),
       request(legacyApp).get('/api/analytics/workflow-performance'),
+      request(legacyApp).get('/api/analytics/conversion-rates'),
+      request(legacyApp).get('/api/analytics/revenue-trends'),
+      request(legacyApp).get('/api/analytics/pipeline-velocity'),
     ]);
     expect(responses.map((response) => response.status)).toEqual(
-      Array(6).fill(404),
+      Array(9).fill(404),
     );
   });
 
@@ -379,6 +378,95 @@ describe('Analytics GraphQL PostgreSQL contract', () => {
         overallCompletionRate: 100,
       },
     });
+  });
+
+  it('reports corrected conversion, currency-separated revenue, and honest open-deal age', async () => {
+    const response = await graphqlQuery(
+      organizationId,
+      `query CorrectedAnalytics(
+        $conversion: ConversionAnalyticsPeriod,
+        $revenue: RevenueAnalyticsPeriod,
+        $pipelineId: Int
+      ) {
+        conversionRates(period: $conversion) {
+          period
+          dealWinRate {
+            rate won lost totalClosed
+            valuesByCurrency { currency wonValue lostValue }
+          }
+          formToContact { rate submissions converted }
+        }
+        revenueTrends(period: $revenue) {
+          period
+          currencies {
+            currency
+            data {
+              dealsWon paymentsCount bookedRevenue collectedRevenue
+              cumulativeBookedRevenue cumulativeCollectedRevenue
+            }
+            summary {
+              totalBookedRevenue totalCollectedRevenue totalDeals totalPayments
+              averageBookedDealValue averageCollectedPayment
+            }
+          }
+        }
+        pipelineDealAge(pipelineId: $pipelineId) {
+          pipeline { id name }
+          stages {
+            stageId openDealCount averageOpenDealAgeDays
+            openValueByCurrency { currency amount }
+          }
+          summary { averageDaysToWin openDeals wonDeals lostDeals winRate }
+        }
+      }`,
+      { conversion: 'DAYS_30', revenue: 'MONTHS_6', pipelineId },
+    ).expect(200);
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data.conversionRates).toMatchObject({
+      period: '30days',
+      dealWinRate: {
+        rate: 100, won: 1, lost: 0, totalClosed: 1,
+        valuesByCurrency: [{ currency: 'USD', wonValue: 100, lostValue: 0 }],
+      },
+      formToContact: { rate: 100, submissions: 1, converted: 1 },
+    });
+    expect(response.body.data.revenueTrends).toMatchObject({
+      period: '6months',
+      currencies: [{
+        currency: 'USD',
+        summary: {
+          totalBookedRevenue: 100,
+          totalCollectedRevenue: 50,
+          totalDeals: 1,
+          totalPayments: 1,
+          averageBookedDealValue: 100,
+          averageCollectedPayment: 50,
+        },
+      }],
+    });
+    const stage = response.body.data.pipelineDealAge.stages.find(
+      (candidate: { stageId: string }) => candidate.stageId === 'proposal',
+    );
+    expect(response.body.data.pipelineDealAge.pipeline).toMatchObject({
+      id: pipelineId,
+      name: 'Primary pipeline',
+    });
+    expect(stage).toMatchObject({
+      openDealCount: 1,
+      openValueByCurrency: [{ currency: 'USD', amount: 25 }],
+    });
+    expect(stage.averageOpenDealAgeDays).toBeGreaterThanOrEqual(0);
+    expect(response.body.data.pipelineDealAge.summary).toMatchObject({
+      openDeals: 1, wonDeals: 1, lostDeals: 0, winRate: 100,
+    });
+
+    const foreign = await graphqlQuery(
+      organizationId,
+      'query ($pipelineId: Int) { pipelineDealAge(pipelineId: $pipelineId) { pipeline { id } stages { stageId } } }',
+      { pipelineId: foreignPipelineId },
+    ).expect(200);
+    expect(foreign.body.errors).toBeUndefined();
+    expect(foreign.body.data.pipelineDealAge).toEqual({ pipeline: null, stages: [] });
   });
 
   it('rejects unsupported enum values before executing analytics SQL', async () => {

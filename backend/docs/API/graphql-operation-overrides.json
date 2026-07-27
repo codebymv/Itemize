@@ -1846,18 +1846,6 @@
       "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "bookingAnalytics", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Implemented behind default-off VITE_BOOKING_ANALYTICS_GRAPHQL. One captured tenant snapshot returns safe status totals; upcoming includes only actionable pending/confirmed future bookings and completion excludes cancellation from its denominator."
     },
-    "GET /api/analytics/conversion-rates": {
-      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "conversionRates", "parityStatus": "blocked", "risk": "high",
-      "notes": "Deal and form conversions are characterized; lead-to-customer is blocked because persisted contact statuses do not contain lead/customer."
-    },
-    "GET /api/analytics/revenue-trends": {
-      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "revenueTrends", "parityStatus": "blocked", "risk": "high",
-      "notes": "Bucket merging and tenant scope are fixed; business definition is blocked because won deals plus payments can double-count one sale and avgDealValue divides mixed event types."
-    },
-    "GET /api/analytics/pipeline-velocity": {
-      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "pipelineVelocity", "parityStatus": "blocked", "risk": "high",
-      "notes": "Tenant-scoped pipeline lookup and current deal ages are characterized; true time-in-stage is blocked until stage-transition history exists."
-    },
     "GET /api/analytics/communication-stats": {
       "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "communicationStats", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Implemented behind default-off VITE_COMMUNICATION_STATS_GRAPHQL. Typed rolling periods share one captured boundary; email states are cumulative, while SMS sent/delivered/failed/segments and its delivery denominator are outbound-only. Queries are serialized and tenant-scoped."

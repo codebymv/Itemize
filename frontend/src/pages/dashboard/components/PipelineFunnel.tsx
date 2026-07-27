@@ -49,9 +49,6 @@ export function PipelineFunnel({ funnel, isLoading }: { funnel: DashboardAnalyti
                             style={{ '--progress-color': stage.stageColor } as React.CSSProperties}
                         />
                     </div>
-                    <div className="text-sm font-medium w-20 text-right">
-                        ${stage.totalValue.toLocaleString()}
-                    </div>
                 </div>
             ))}
         </div>

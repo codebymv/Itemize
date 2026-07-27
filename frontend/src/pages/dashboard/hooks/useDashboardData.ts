@@ -8,12 +8,12 @@ import {
   getDashboardAnalytics,
   getConversionRates,
   getCommunicationStats,
-  getPipelineVelocity,
+  getPipelineDealAge,
   getRevenueTrends,
   type DashboardAnalytics,
   type ConversionRates,
   type CommunicationStats,
-  type PipelineVelocity,
+  type PipelineDealAge,
   type RevenueTrends,
 } from '@/services/analyticsApi';
 
@@ -27,21 +27,21 @@ interface UseDashboardDataReturn {
   analytics: DashboardAnalytics | undefined;
   conversions: ConversionRates | undefined;
   communications: CommunicationStats | undefined;
-  velocity: PipelineVelocity | undefined;
+  pipelineDealAge: PipelineDealAge | undefined;
   revenue: RevenueTrends | undefined;
   
   // Loading states
   isLoadingAnalytics: boolean;
   isLoadingConversions: boolean;
   isLoadingCommunications: boolean;
-  isLoadingVelocity: boolean;
+  isLoadingPipelineDealAge: boolean;
   isLoadingRevenue: boolean;
   
   // Error states
   analyticsError: Error | null;
   conversionsError: Error | null;
   communicationsError: Error | null;
-  velocityError: Error | null;
+  pipelineDealAgeError: Error | null;
   revenueError: Error | null;
   
   // Refetch functions
@@ -98,16 +98,16 @@ export function useDashboardData({
     staleTime: 5 * 60 * 1000,
   });
 
-  // Pipeline velocity query
+  // Current open-deal age query
   const {
-    data: velocity,
-    isLoading: isLoadingVelocity,
-    error: velocityError,
-    refetch: refetchVelocity,
+    data: pipelineDealAge,
+    isLoading: isLoadingPipelineDealAge,
+    error: pipelineDealAgeError,
+    refetch: refetchPipelineDealAge,
   } = useQuery({
-    queryKey: ['pipeline-velocity', organizationId],
+    queryKey: ['pipeline-deal-age', organizationId],
     queryFn: () =>
-      getPipelineVelocity(undefined, organizationId),
+      getPipelineDealAge(undefined, organizationId),
     enabled: !!organizationId,
     staleTime: 5 * 60 * 1000,
   });
@@ -131,7 +131,7 @@ export function useDashboardData({
     refetchAnalytics();
     refetchConversions();
     refetchCommunications();
-    refetchVelocity();
+    refetchPipelineDealAge();
     refetchRevenue();
   };
 
@@ -140,21 +140,21 @@ export function useDashboardData({
     analytics: analytics || undefined,
     conversions: conversions || undefined,
     communications: communications || undefined,
-    velocity: velocity || undefined,
+    pipelineDealAge: pipelineDealAge || undefined,
     revenue: revenue || undefined,
     
     // Loading states
     isLoadingAnalytics,
     isLoadingConversions,
     isLoadingCommunications,
-    isLoadingVelocity,
+    isLoadingPipelineDealAge,
     isLoadingRevenue,
     
     // Error states
     analyticsError: analyticsError as Error | null,
     conversionsError: conversionsError as Error | null,
     communicationsError: communicationsError as Error | null,
-    velocityError: velocityError as Error | null,
+    pipelineDealAgeError: pipelineDealAgeError as Error | null,
     revenueError: revenueError as Error | null,
     
     // Refetch

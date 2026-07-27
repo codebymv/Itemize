@@ -5,15 +5,20 @@ import { AnalyticsService } from './analytics.service';
 import {
   CommunicationAnalyticsPeriod,
   ContactAnalyticsPeriod,
+  ConversionAnalyticsPeriod,
   DealAnalyticsPeriod,
+  RevenueAnalyticsPeriod,
 } from './analytics.enums';
 import {
   BookingAnalytics,
   CommunicationStatsAnalytics,
   ContactTrendsAnalytics,
+  ConversionAnalytics,
   DashboardAnalytics,
   DealPerformanceAnalytics,
+  PipelineDealAgeAnalytics,
   ReputationAnalytics,
+  RevenueTrendsAnalytics,
   WorkflowPerformanceAnalytics,
 } from './analytics.types';
 
@@ -46,6 +51,32 @@ export class AnalyticsResolver {
     period?: DealAnalyticsPeriod,
   ): Promise<DealPerformanceAnalytics> {
     return this.analytics.dealPerformance(this.organizationId(), period);
+  }
+
+  @OrganizationScoped()
+  @Query(() => ConversionAnalytics)
+  conversionRates(
+    @Args('period', { type: () => ConversionAnalyticsPeriod, nullable: true })
+    period?: ConversionAnalyticsPeriod,
+  ): Promise<ConversionAnalytics> {
+    return this.analytics.conversionRates(this.organizationId(), period);
+  }
+
+  @OrganizationScoped()
+  @Query(() => RevenueTrendsAnalytics)
+  revenueTrends(
+    @Args('period', { type: () => RevenueAnalyticsPeriod, nullable: true })
+    period?: RevenueAnalyticsPeriod,
+  ): Promise<RevenueTrendsAnalytics> {
+    return this.analytics.revenueTrends(this.organizationId(), period);
+  }
+
+  @OrganizationScoped()
+  @Query(() => PipelineDealAgeAnalytics)
+  pipelineDealAge(
+    @Args('pipelineId', { type: () => Int, nullable: true }) pipelineId?: number,
+  ): Promise<PipelineDealAgeAnalytics> {
+    return this.analytics.pipelineDealAge(this.organizationId(), pipelineId);
   }
 
   @OrganizationScoped()

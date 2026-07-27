@@ -2,30 +2,17 @@
  * Analytics API Service
  * Handles all analytics and reporting API calls
  */
-import api from '@/lib/api';
 import {
     getBookingAnalyticsViaGraphql,
     getCommunicationStatsViaGraphql,
     getContactTrendsViaGraphql,
+    getConversionRatesViaGraphql,
     getDashboardAnalyticsViaGraphql,
     getDealPerformanceViaGraphql,
+    getPipelineDealAgeViaGraphql,
+    getRevenueTrendsViaGraphql,
     getWorkflowPerformanceViaGraphql,
 } from './analyticsGraphql';
-
-const unwrapResponse = <T>(payload: unknown): T => {
-    if (payload && typeof payload === 'object' && 'data' in payload) {
-        return payload.data as T;
-    }
-    return payload as T;
-};
-
-export interface ConversionPipelineStage {
-    stageId?: string;
-    stageName?: string;
-    count?: number;
-    value?: number;
-    [key: string]: unknown;
-}
 
 export interface WorkflowStats {
     [key: string]: unknown;
@@ -45,7 +32,6 @@ export interface FunnelStage {
     stageName: string;
     stageColor: string;
     dealCount: number;
-    totalValue: number;
 }
 
 export interface RecentActivity {
@@ -63,8 +49,6 @@ export interface DashboardAnalytics {
     contacts: {
         total: number;
         active: number;
-        leads: number;
-        customers: number;
         newThisMonth: number;
         newThisWeek: number;
         growth: ContactGrowth[];
@@ -79,13 +63,6 @@ export interface DashboardAnalytics {
         open: number;
         won: number;
         lost: number;
-        openValue: number;
-        wonValue: number;
-        wonThisMonth: number;
-        bookedValue?: number;
-        bookedThisMonth?: number;
-        collectedValue?: number;
-        collectedThisMonth?: number;
         funnel: FunnelStage[];
     };
     bookings: {
@@ -180,75 +157,82 @@ export interface BookingSummary {
 }
 
 export interface ConversionRates {
+    asOf?: string;
+    reportingTimezone?: string;
     period: string;
-    conversions: {
-        leadToCustomer: {
-            rate: number;
-            leads: number;
-            customers: number;
-            total: number;
-        };
-        dealWinRate: {
-            rate: number;
-            won: number;
-            lost: number;
-            totalClosed: number;
+    dealWinRate: {
+        rate: number;
+        won: number;
+        lost: number;
+        totalClosed: number;
+        valuesByCurrency: Array<{
+            currency: string;
             wonValue: number;
             lostValue: number;
-        };
-        formToContact: {
-            rate: number;
-            submissions: number;
-            converted: number;
-        };
-        pipelines: Array<{
-            pipelineName: string;
-            stages: ConversionPipelineStage[];
-            stageCounts: Record<string, number>;
         }>;
+    };
+    formToContact: {
+        rate: number;
+        submissions: number;
+        converted: number;
     };
 }
 
 export interface RevenueTrend {
     period: string;
     dealsWon: number;
-    revenue: number;
-    cumulativeRevenue: number;
+    paymentsCount: number;
+    bookedRevenue: number;
+    collectedRevenue: number;
+    cumulativeBookedRevenue: number;
+    cumulativeCollectedRevenue: number;
 }
 
-export interface RevenueTrends {
-    period: string;
+export interface RevenueCurrencyTrend {
+    currency: string;
     data: RevenueTrend[];
     summary: {
-        totalRevenue: number;
+        totalBookedRevenue: number;
+        totalCollectedRevenue: number;
         totalDeals: number;
         totalPayments: number;
-        avgDealValue: number;
-        growthRate: number;
+        averageBookedDealValue: number;
+        averageCollectedPayment: number;
+        bookedGrowthRate: number;
+        collectedGrowthRate: number;
     };
 }
 
-export interface PipelineVelocityStage {
+export interface RevenueTrends {
+    asOf?: string;
+    reportingTimezone?: string;
+    period: string;
+    currencies: RevenueCurrencyTrend[];
+}
+
+export interface PipelineDealAgeStage {
     stageId: string;
     stageName: string;
     stageColor: string;
     stageOrder: number;
-    dealCount: number;
-    totalValue: number;
-    avgAgeDays: number;
-    isBottleneck: boolean;
+    openDealCount: number;
+    averageOpenDealAgeDays: number;
+    openValueByCurrency: Array<{
+        currency: string;
+        amount: number;
+    }>;
 }
 
-export interface PipelineVelocity {
+export interface PipelineDealAge {
+    asOf?: string;
     pipeline: {
         id: number;
         name: string;
     } | null;
-    velocity: PipelineVelocityStage[];
+    stages: PipelineDealAgeStage[];
     summary: {
-        avgDaysToWin: number;
-        avgDaysToLose: number;
-        avgWonValue: number;
+        averageDaysToWin: number;
+        averageDaysToLose: number;
         openDeals: number;
         wonDeals: number;
         lostDeals: number;
@@ -359,11 +343,7 @@ export const getConversionRates = async (
     period: '7days' | '30days' | '90days' | '12months' = '30days',
     organizationId?: number
 ): Promise<ConversionRates> => {
-    const response = await api.get('/api/analytics/conversion-rates', {
-        params: { period },
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<ConversionRates>(response.data);
+    return getConversionRatesViaGraphql(period, organizationId);
 };
 
 /**
@@ -373,25 +353,17 @@ export const getRevenueTrends = async (
     period: '30days' | '6months' | '12months' = '6months',
     organizationId?: number
 ): Promise<RevenueTrends> => {
-    const response = await api.get('/api/analytics/revenue-trends', {
-        params: { period },
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<RevenueTrends>(response.data);
+    return getRevenueTrendsViaGraphql(period, organizationId);
 };
 
 /**
- * Get pipeline velocity metrics
+ * Get current open-deal age and outcome-cycle metrics for a pipeline
  */
-export const getPipelineVelocity = async (
+export const getPipelineDealAge = async (
     pipelineId?: number,
     organizationId?: number
-): Promise<PipelineVelocity> => {
-    const response = await api.get('/api/analytics/pipeline-velocity', {
-        params: pipelineId ? { pipeline_id: pipelineId } : {},
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<PipelineVelocity>(response.data);
+): Promise<PipelineDealAge> => {
+    return getPipelineDealAgeViaGraphql(pipelineId, organizationId);
 };
 
 /**
@@ -418,7 +390,7 @@ export default {
     getBookingSummary,
     getConversionRates,
     getRevenueTrends,
-    getPipelineVelocity,
+    getPipelineDealAge,
     getCommunicationStats,
     getWorkflowPerformance,
 };

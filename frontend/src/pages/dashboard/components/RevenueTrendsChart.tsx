@@ -1,163 +1,129 @@
-import React from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
     ChartContainer,
     ChartTooltip,
 } from '@/components/ui/chart';
-import { Area, AreaChart, XAxis, YAxis, CartesianGrid } from 'recharts';
-import type { RevenueTrends } from '@/services/analyticsApi';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import type { RevenueCurrencyTrend, RevenueTrends } from '@/services/analyticsApi';
+
+const formatPeriod = (value: string, period: string) => new Date(value).toLocaleDateString(
+    'en-US',
+    period === '30days'
+        ? { month: 'short', day: 'numeric' }
+        : { month: 'short', year: 'numeric' },
+);
+
+const formatCurrency = (value: number, currency: string) => new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 0,
+}).format(value);
+
+function CurrencyTrendChart({ trend, period }: { trend: RevenueCurrencyTrend; period: string }) {
+    const chartData = trend.data.map((item) => ({
+        ...item,
+        formattedPeriod: formatPeriod(item.period, period),
+    }));
+    const chartConfig = {
+        bookedRevenue: { label: 'Booked', color: 'hsl(217, 91%, 60%)' },
+        collectedRevenue: { label: 'Collected', color: 'hsl(142, 76%, 36%)' },
+    };
+    const bookedGradientId = `booked-${trend.currency}`;
+    const collectedGradientId = `collected-${trend.currency}`;
+
+    return (
+        <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span className="font-semibold">{trend.currency}</span>
+                <span className="text-muted-foreground">
+                    Booked {formatCurrency(trend.summary.totalBookedRevenue, trend.currency)}
+                    {' · '}
+                    Collected {formatCurrency(trend.summary.totalCollectedRevenue, trend.currency)}
+                </span>
+            </div>
+            <ChartContainer config={chartConfig} className="h-[200px] w-full">
+                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <defs>
+                        <linearGradient id={bookedGradientId} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id={collectedGradientId} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0} />
+                        </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis
+                        dataKey="formattedPeriod"
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fontSize: 12 }}
+                        height={period === '30days' ? 50 : 30}
+                        angle={period === '30days' ? -35 : 0}
+                        textAnchor={period === '30days' ? 'end' : 'middle'}
+                    />
+                    <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fontSize: 12 }}
+                        tickFormatter={(value) => formatCurrency(Number(value), trend.currency)}
+                    />
+                    <ChartTooltip
+                        content={({ active, payload }) => {
+                            if (!active || !payload?.length) return null;
+                            const point = payload[0].payload as typeof chartData[number];
+                            return (
+                                <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                    <p className="text-xs text-muted-foreground">
+                                        {formatPeriod(point.period, period)}
+                                    </p>
+                                    <p className="font-medium text-blue-600">
+                                        Booked: {formatCurrency(point.bookedRevenue, trend.currency)}
+                                    </p>
+                                    <p className="font-medium text-green-600">
+                                        Collected: {formatCurrency(point.collectedRevenue, trend.currency)}
+                                    </p>
+                                </div>
+                            );
+                        }}
+                    />
+                    <Area
+                        type="monotone"
+                        dataKey="bookedRevenue"
+                        stroke="hsl(217, 91%, 60%)"
+                        strokeWidth={2}
+                        fill={`url(#${bookedGradientId})`}
+                    />
+                    <Area
+                        type="monotone"
+                        dataKey="collectedRevenue"
+                        stroke="hsl(142, 76%, 36%)"
+                        strokeWidth={2}
+                        fill={`url(#${collectedGradientId})`}
+                    />
+                </AreaChart>
+            </ChartContainer>
+        </div>
+    );
+}
 
 export function RevenueTrendsChart({ data, isLoading }: { data?: RevenueTrends; isLoading?: boolean }) {
     if (isLoading) {
+        return <Skeleton className="h-[200px] w-full" />;
+    }
+    if (!data?.currencies.length) {
         return (
-            <div className="h-[200px] flex items-center justify-center">
-                <Skeleton className="h-full w-full" />
+            <div className="py-8 text-center text-muted-foreground">
+                No booked or collected revenue in this period
             </div>
         );
     }
-
-    // Create empty data with zero values if no data exists
-    const hasData = data?.data && data.data.length > 0;
-    const period = data?.period || '30days';
-    
-    // Generate placeholder data points if no data exists
-    const generateEmptyData = () => {
-        const now = new Date();
-        const dataPoints = [];
-        
-        if (period === '30days') {
-            // Last 30 days - show weekly points
-            for (let i = 3; i >= 0; i--) {
-                const date = new Date(now);
-                date.setDate(date.getDate() - (i * 7));
-                dataPoints.push({
-                    period: date.toISOString(),
-                    revenue: 0
-                });
-            }
-        } else {
-            // Last 6 or 12 months - show monthly points
-            const months = period === '6months' ? 6 : 12;
-            for (let i = months - 1; i >= 0; i--) {
-                const date = new Date(now);
-                date.setMonth(date.getMonth() - i);
-                dataPoints.push({
-                    period: date.toISOString(),
-                    revenue: 0
-                });
-            }
-        }
-        
-        return dataPoints;
-    };
-
-    const rawData = hasData ? data.data : generateEmptyData();
-
-    // Determine if we're showing days or months based on period
-    const isDayView = period === '30days';
-    const isMonthView = period === '6months' || period === '12months';
-
-    // Format date for display
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        if (isDayView) {
-            // For day view: "Jan 26"
-            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        } else if (isMonthView) {
-            // For month view: "Jan 2026"
-            return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        }
-        // Fallback: "Jan 26, 2026"
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    };
-
-    // Format date for tooltip (more detailed)
-    const formatTooltipDate = (dateString: string) => {
-        const date = new Date(dateString);
-        if (isDayView) {
-            return date.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric', 
-                year: 'numeric' 
-            });
-        } else {
-            return date.toLocaleDateString('en-US', { 
-                month: 'long', 
-                year: 'numeric' 
-            });
-        }
-    };
-
-    // Prepare chart data with formatted labels
-    const chartData = rawData.map(item => ({
-        ...item,
-        formattedPeriod: formatDate(item.period)
-    }));
-
-    const chartConfig = {
-        revenue: {
-            label: 'Revenue',
-            color: 'hsl(142, 76%, 36%)',
-        },
-    };
-
     return (
-        <ChartContainer config={chartConfig} className="h-[200px] w-full">
-            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <defs>
-                    <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="hsl(142, 76%, 36%)" stopOpacity={0} />
-                    </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis 
-                    dataKey="formattedPeriod" 
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fontSize: 12 }}
-                    className="text-muted-foreground"
-                    angle={isDayView ? -45 : 0}
-                    textAnchor={isDayView ? 'end' : 'middle'}
-                    height={isDayView ? 60 : 30}
-                />
-                <YAxis 
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fontSize: 12 }}
-                    className="text-muted-foreground"
-                    tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
-                />
-                <ChartTooltip 
-                    content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                            const dataPoint = payload[0].payload as typeof chartData[0];
-                            return (
-                                <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                    <div className="grid gap-2">
-                                        <div className="flex flex-col">
-                                            <span className="text-[0.70rem] text-muted-foreground">
-                                                {formatTooltipDate(dataPoint.period)}
-                                            </span>
-                                            <span className="font-bold text-foreground">
-                                                ${Number(payload[0].value).toLocaleString()}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        }
-                        return null;
-                    }}
-                />
-                <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="hsl(142, 76%, 36%)"
-                    strokeWidth={2}
-                    fill="url(#revenueGradient)"
-                />
-            </AreaChart>
-        </ChartContainer>
+        <div className="space-y-6">
+            {data.currencies.map((trend) => (
+                <CurrencyTrendChart key={trend.currency} trend={trend} period={data.period} />
+            ))}
+        </div>
     );
 }

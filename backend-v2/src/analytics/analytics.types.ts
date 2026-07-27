@@ -18,16 +18,6 @@ export class DashboardContactMetrics {
   @Field(() => Float)
   active: number;
 
-  @Field(() => Float, {
-    deprecationReason: 'Contact status does not define a lead lifecycle. Retained for REST parity only.',
-  })
-  leads: number;
-
-  @Field(() => Float, {
-    deprecationReason: 'Contact status does not define a customer lifecycle. Retained for REST parity only.',
-  })
-  customers: number;
-
   @Field(() => Float)
   newThisMonth: number;
 
@@ -52,8 +42,6 @@ export class DashboardFunnelStage {
   @Field(() => Float)
   dealCount: number;
 
-  @Field(() => Float)
-  totalValue: number;
 }
 
 @ObjectType()
@@ -69,31 +57,6 @@ export class DashboardDealMetrics {
 
   @Field(() => Float)
   lost: number;
-
-  @Field(() => Float)
-  openValue: number;
-
-  @Field(() => Float, {
-    deprecationReason: 'Mixes booked deals and collected payments. Use bookedValue and collectedValue.',
-  })
-  wonValue: number;
-
-  @Field(() => Float, {
-    deprecationReason: 'Mixes booked deals and collected payments. Use bookedThisMonth and collectedThisMonth.',
-  })
-  wonThisMonth: number;
-
-  @Field(() => Float)
-  bookedValue: number;
-
-  @Field(() => Float)
-  bookedThisMonth: number;
-
-  @Field(() => Float)
-  collectedValue: number;
-
-  @Field(() => Float)
-  collectedThisMonth: number;
 
   @Field(() => [DashboardFunnelStage])
   funnel: DashboardFunnelStage[];
@@ -538,6 +501,222 @@ export class WorkflowPerformanceAnalytics {
 
   @Field(() => WorkflowAnalyticsSummary)
   summary: WorkflowAnalyticsSummary;
+}
+
+@ObjectType()
+export class AnalyticsCurrencyAmount {
+  @Field(() => String)
+  currency: string;
+
+  @Field(() => Float)
+  amount: number;
+}
+
+@ObjectType()
+export class ConversionOutcomeValue {
+  @Field(() => String)
+  currency: string;
+
+  @Field(() => Float)
+  wonValue: number;
+
+  @Field(() => Float)
+  lostValue: number;
+}
+
+@ObjectType()
+export class DealWinConversion {
+  @Field(() => Float)
+  rate: number;
+
+  @Field(() => Float)
+  won: number;
+
+  @Field(() => Float)
+  lost: number;
+
+  @Field(() => Float)
+  totalClosed: number;
+
+  @Field(() => [ConversionOutcomeValue])
+  valuesByCurrency: ConversionOutcomeValue[];
+}
+
+@ObjectType()
+export class FormToContactConversion {
+  @Field(() => Float)
+  rate: number;
+
+  @Field(() => Float)
+  submissions: number;
+
+  @Field(() => Float)
+  converted: number;
+}
+
+@ObjectType()
+export class ConversionAnalytics {
+  @Field(() => GraphQLISODateTime)
+  asOf: Date;
+
+  @Field(() => String)
+  reportingTimezone: string;
+
+  @Field(() => String)
+  period: string;
+
+  @Field(() => DealWinConversion)
+  dealWinRate: DealWinConversion;
+
+  @Field(() => FormToContactConversion)
+  formToContact: FormToContactConversion;
+}
+
+@ObjectType()
+export class RevenueTrendBucket {
+  @Field(() => GraphQLISODateTime)
+  period: Date;
+
+  @Field(() => Float)
+  dealsWon: number;
+
+  @Field(() => Float)
+  paymentsCount: number;
+
+  @Field(() => Float)
+  bookedRevenue: number;
+
+  @Field(() => Float)
+  collectedRevenue: number;
+
+  @Field(() => Float)
+  cumulativeBookedRevenue: number;
+
+  @Field(() => Float)
+  cumulativeCollectedRevenue: number;
+}
+
+@ObjectType()
+export class RevenueTrendSummary {
+  @Field(() => Float)
+  totalBookedRevenue: number;
+
+  @Field(() => Float)
+  totalCollectedRevenue: number;
+
+  @Field(() => Float)
+  totalDeals: number;
+
+  @Field(() => Float)
+  totalPayments: number;
+
+  @Field(() => Float)
+  averageBookedDealValue: number;
+
+  @Field(() => Float)
+  averageCollectedPayment: number;
+
+  @Field(() => Float)
+  bookedGrowthRate: number;
+
+  @Field(() => Float)
+  collectedGrowthRate: number;
+}
+
+@ObjectType()
+export class RevenueCurrencyTrend {
+  @Field(() => String)
+  currency: string;
+
+  @Field(() => [RevenueTrendBucket])
+  data: RevenueTrendBucket[];
+
+  @Field(() => RevenueTrendSummary)
+  summary: RevenueTrendSummary;
+}
+
+@ObjectType()
+export class RevenueTrendsAnalytics {
+  @Field(() => GraphQLISODateTime)
+  asOf: Date;
+
+  @Field(() => String)
+  reportingTimezone: string;
+
+  @Field(() => String)
+  period: string;
+
+  @Field(() => [RevenueCurrencyTrend])
+  currencies: RevenueCurrencyTrend[];
+}
+
+@ObjectType()
+export class PipelineDealAgePipeline {
+  @Field(() => Int)
+  id: number;
+
+  @Field(() => String)
+  name: string;
+}
+
+@ObjectType()
+export class PipelineStageDealAge {
+  @Field(() => String)
+  stageId: string;
+
+  @Field(() => String)
+  stageName: string;
+
+  @Field(() => String)
+  stageColor: string;
+
+  @Field(() => Int)
+  stageOrder: number;
+
+  @Field(() => Float)
+  openDealCount: number;
+
+  @Field(() => Float)
+  averageOpenDealAgeDays: number;
+
+  @Field(() => [AnalyticsCurrencyAmount])
+  openValueByCurrency: AnalyticsCurrencyAmount[];
+}
+
+@ObjectType()
+export class PipelineDealAgeSummary {
+  @Field(() => Float)
+  averageDaysToWin: number;
+
+  @Field(() => Float)
+  averageDaysToLose: number;
+
+  @Field(() => Float)
+  openDeals: number;
+
+  @Field(() => Float)
+  wonDeals: number;
+
+  @Field(() => Float)
+  lostDeals: number;
+
+  @Field(() => Float)
+  winRate: number;
+}
+
+@ObjectType()
+export class PipelineDealAgeAnalytics {
+  @Field(() => GraphQLISODateTime)
+  asOf: Date;
+
+  @Field(() => PipelineDealAgePipeline, { nullable: true })
+  pipeline: PipelineDealAgePipeline | null;
+
+  @Field(() => [PipelineStageDealAge])
+  stages: PipelineStageDealAge[];
+
+  @Field(() => PipelineDealAgeSummary)
+  summary: PipelineDealAgeSummary;
 }
 
 @ObjectType()

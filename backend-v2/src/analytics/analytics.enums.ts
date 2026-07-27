@@ -19,6 +19,21 @@ export enum CommunicationAnalyticsPeriod {
   DAYS_90 = 'DAYS_90',
 }
 
+export enum ConversionAnalyticsPeriod {
+  DAYS_7 = 'DAYS_7',
+  DAYS_30 = 'DAYS_30',
+  DAYS_90 = 'DAYS_90',
+  MONTHS_12 = 'MONTHS_12',
+}
+
+export enum RevenueAnalyticsPeriod {
+  DAYS_30 = 'DAYS_30',
+  MONTHS_6 = 'MONTHS_6',
+  MONTHS_12 = 'MONTHS_12',
+}
+
 registerEnumType(ContactAnalyticsPeriod, { name: 'ContactAnalyticsPeriod' });
 registerEnumType(DealAnalyticsPeriod, { name: 'DealAnalyticsPeriod' });
 registerEnumType(CommunicationAnalyticsPeriod, { name: 'CommunicationAnalyticsPeriod' });
+registerEnumType(ConversionAnalyticsPeriod, { name: 'ConversionAnalyticsPeriod' });
+registerEnumType(RevenueAnalyticsPeriod, { name: 'RevenueAnalyticsPeriod' });

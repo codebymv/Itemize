@@ -1826,18 +1826,6 @@
       "risk": "high",
       "notes": "Retain exact-body X-Hub-Signature-256 verification and fail closed without the app secret. One normalized durable batch claim precedes bounded inline processing; leased workers drain overflow and reconcile unmatched or ambiguous page/account mappings only when exactly one active organization remains. Durable message IDs prevent replay, Facebook and Instagram identities route separately, and socket delivery occurs only after commit."
     },
-    "GET /api/analytics/conversion-rates": {
-      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "conversionRates", "parityStatus": "blocked", "risk": "high",
-      "notes": "Deal and form conversions are characterized; lead-to-customer is blocked because persisted contact statuses do not contain lead/customer."
-    },
-    "GET /api/analytics/revenue-trends": {
-      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "revenueTrends", "parityStatus": "blocked", "risk": "high",
-      "notes": "Bucket merging and tenant scope are fixed; business definition is blocked because won deals plus payments can double-count one sale and avgDealValue divides mixed event types."
-    },
-    "GET /api/analytics/pipeline-velocity": {
-      "disposition": "graphql-query", "owner": "analytics", "targetModule": "AnalyticsModule", "targetOperation": "pipelineVelocity", "parityStatus": "blocked", "risk": "high",
-      "notes": "Tenant-scoped pipeline lookup and current deal ages are characterized; true time-in-stage is blocked until stage-transition history exists."
-    },
     "GET /api/segments": {
       "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segments", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Implemented as a bounded organization-scoped connection with active/search filters and deterministic name/ID ordering; retained REST remains the default-off rollback path."

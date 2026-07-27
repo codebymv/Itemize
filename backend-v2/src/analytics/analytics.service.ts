@@ -4,16 +4,21 @@ import { itemizeGraphqlError } from '../common/graphql-error';
 import {
   CommunicationAnalyticsPeriod,
   ContactAnalyticsPeriod,
+  ConversionAnalyticsPeriod,
   DealAnalyticsPeriod,
+  RevenueAnalyticsPeriod,
 } from './analytics.enums';
 import {
   BookingAnalytics,
   CommunicationStatsAnalytics,
   ContactTrendsAnalytics,
+  ConversionAnalytics,
   DashboardAnalytics,
   DashboardFunnelStage,
   DealPerformanceAnalytics,
+  PipelineDealAgeAnalytics,
   ReputationAnalytics,
+  RevenueTrendsAnalytics,
   WorkflowPerformanceAnalytics,
 } from './analytics.types';
 
@@ -25,19 +30,6 @@ export class AnalyticsService {
 
   async dashboard(organizationId: number): Promise<DashboardAnalytics> {
     const snapshot = await this.analytics.dashboardSnapshot(organizationId);
-    const bookedValue = this.number(snapshot.deals.booked_value, 'deals.bookedValue');
-    const bookedThisMonth = this.number(
-      snapshot.deals.booked_this_month,
-      'deals.bookedThisMonth',
-    );
-    const collectedValue = this.number(
-      snapshot.payments.collected_value,
-      'deals.collectedValue',
-    );
-    const collectedThisMonth = this.number(
-      snapshot.payments.collected_this_month,
-      'deals.collectedThisMonth',
-    );
 
     return {
       asOf: snapshot.asOf,
@@ -45,8 +37,6 @@ export class AnalyticsService {
       contacts: {
         total: this.count(snapshot.contacts.total, 'contacts.total'),
         active: this.count(snapshot.contacts.active, 'contacts.active'),
-        leads: this.count(snapshot.contacts.leads, 'contacts.leads'),
-        customers: this.count(snapshot.contacts.customers, 'contacts.customers'),
         newThisMonth: this.count(
           snapshot.contacts.new_this_month,
           'contacts.newThisMonth',
@@ -65,13 +55,6 @@ export class AnalyticsService {
         open: this.count(snapshot.deals.open, 'deals.open'),
         won: this.count(snapshot.deals.won, 'deals.won'),
         lost: this.count(snapshot.deals.lost, 'deals.lost'),
-        openValue: this.number(snapshot.deals.open_value, 'deals.openValue'),
-        wonValue: bookedValue + collectedValue,
-        wonThisMonth: bookedThisMonth + collectedThisMonth,
-        bookedValue,
-        bookedThisMonth,
-        collectedValue,
-        collectedThisMonth,
         funnel: this.funnel(snapshot),
       },
       bookings: {
@@ -217,6 +200,262 @@ export class AnalyticsService {
         avgDaysToClose: Math.round(
           this.number(snapshot.data.avg_days_to_close, 'dealPerformance.avgDaysToClose'),
         ),
+      },
+    };
+  }
+
+  async conversionRates(
+    organizationId: number,
+    period: ConversionAnalyticsPeriod = ConversionAnalyticsPeriod.DAYS_30,
+  ): Promise<ConversionAnalytics> {
+    const config = {
+      [ConversionAnalyticsPeriod.DAYS_7]: { label: '7days', interval: '7 days' },
+      [ConversionAnalyticsPeriod.DAYS_30]: { label: '30days', interval: '30 days' },
+      [ConversionAnalyticsPeriod.DAYS_90]: { label: '90days', interval: '90 days' },
+      [ConversionAnalyticsPeriod.MONTHS_12]: { label: '12months', interval: '12 months' },
+    }[period];
+    const snapshot = await this.analytics.conversionRates(organizationId, config.interval);
+    const totalClosed = this.count(
+      snapshot.data.dealOutcomes.total_closed,
+      'conversionRates.dealWinRate.totalClosed',
+    );
+    const won = this.count(snapshot.data.dealOutcomes.won, 'conversionRates.dealWinRate.won');
+    const lost = this.count(snapshot.data.dealOutcomes.lost, 'conversionRates.dealWinRate.lost');
+    const submissions = this.count(
+      snapshot.data.formSubmissions.submissions,
+      'conversionRates.formToContact.submissions',
+    );
+    const converted = this.count(
+      snapshot.data.formSubmissions.converted,
+      'conversionRates.formToContact.converted',
+    );
+    return {
+      asOf: snapshot.asOf,
+      reportingTimezone: 'UTC',
+      period: config.label,
+      dealWinRate: {
+        rate: this.percentage(won, totalClosed),
+        won,
+        lost,
+        totalClosed,
+        valuesByCurrency: snapshot.data.dealValues.map((row) => ({
+          currency: this.currency(row.currency, 'conversionRates.dealWinRate.currency'),
+          wonValue: this.number(row.won_value, 'conversionRates.dealWinRate.wonValue'),
+          lostValue: this.number(row.lost_value, 'conversionRates.dealWinRate.lostValue'),
+        })),
+      },
+      formToContact: {
+        rate: this.percentage(converted, submissions),
+        submissions,
+        converted,
+      },
+    };
+  }
+
+  async revenueTrends(
+    organizationId: number,
+    period: RevenueAnalyticsPeriod = RevenueAnalyticsPeriod.MONTHS_6,
+  ): Promise<RevenueTrendsAnalytics> {
+    const config = {
+      [RevenueAnalyticsPeriod.DAYS_30]: {
+        label: '30days',
+        interval: '30 days',
+        groupBy: 'day',
+      },
+      [RevenueAnalyticsPeriod.MONTHS_6]: {
+        label: '6months',
+        interval: '6 months',
+        groupBy: 'month',
+      },
+      [RevenueAnalyticsPeriod.MONTHS_12]: {
+        label: '12months',
+        interval: '12 months',
+        groupBy: 'month',
+      },
+    }[period];
+    const snapshot = await this.analytics.revenueTrends(
+      organizationId,
+      config.interval,
+      config.groupBy,
+    );
+    type Bucket = {
+      period: Date;
+      dealsWon: number;
+      paymentsCount: number;
+      bookedRevenue: number;
+      collectedRevenue: number;
+    };
+    const currencies = new Map<string, Map<string, Bucket>>();
+    const bucket = (currency: string, periodValue: unknown): Bucket => {
+      const periodDate = this.date(periodValue, 'revenueTrends.period');
+      const periodKey = periodDate.toISOString();
+      let currencyBuckets = currencies.get(currency);
+      if (!currencyBuckets) {
+        currencyBuckets = new Map();
+        currencies.set(currency, currencyBuckets);
+      }
+      let value = currencyBuckets.get(periodKey);
+      if (!value) {
+        value = {
+          period: periodDate,
+          dealsWon: 0,
+          paymentsCount: 0,
+          bookedRevenue: 0,
+          collectedRevenue: 0,
+        };
+        currencyBuckets.set(periodKey, value);
+      }
+      return value;
+    };
+    for (const row of snapshot.data.booked) {
+      const currency = this.currency(row.currency, 'revenueTrends.booked.currency');
+      const value = bucket(currency, row.period);
+      value.dealsWon = this.count(row.deals_won, 'revenueTrends.booked.dealsWon');
+      value.bookedRevenue = this.number(
+        row.booked_revenue,
+        'revenueTrends.booked.bookedRevenue',
+      );
+    }
+    for (const row of snapshot.data.collected) {
+      const currency = this.currency(row.currency, 'revenueTrends.collected.currency');
+      const value = bucket(currency, row.period);
+      value.paymentsCount = this.count(
+        row.payments_count,
+        'revenueTrends.collected.paymentsCount',
+      );
+      value.collectedRevenue = this.number(
+        row.collected_revenue,
+        'revenueTrends.collected.collectedRevenue',
+      );
+    }
+    return {
+      asOf: snapshot.asOf,
+      reportingTimezone: 'UTC',
+      period: config.label,
+      currencies: [...currencies.entries()]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([currency, grouped]) => {
+          let cumulativeBookedRevenue = 0;
+          let cumulativeCollectedRevenue = 0;
+          const data = [...grouped.values()]
+            .sort((left, right) => left.period.getTime() - right.period.getTime())
+            .map((value) => {
+              cumulativeBookedRevenue += value.bookedRevenue;
+              cumulativeCollectedRevenue += value.collectedRevenue;
+              return {
+                ...value,
+                cumulativeBookedRevenue,
+                cumulativeCollectedRevenue,
+              };
+            });
+          const totalDeals = data.reduce((sum, value) => sum + value.dealsWon, 0);
+          const totalPayments = data.reduce((sum, value) => sum + value.paymentsCount, 0);
+          return {
+            currency,
+            data,
+            summary: {
+              totalBookedRevenue: cumulativeBookedRevenue,
+              totalCollectedRevenue: cumulativeCollectedRevenue,
+              totalDeals,
+              totalPayments,
+              averageBookedDealValue: totalDeals > 0
+                ? cumulativeBookedRevenue / totalDeals
+                : 0,
+              averageCollectedPayment: totalPayments > 0
+                ? cumulativeCollectedRevenue / totalPayments
+                : 0,
+              bookedGrowthRate: this.growthRate(data.map((value) => value.bookedRevenue)),
+              collectedGrowthRate: this.growthRate(
+                data.map((value) => value.collectedRevenue),
+              ),
+            },
+          };
+        }),
+    };
+  }
+
+  async pipelineDealAge(
+    organizationId: number,
+    pipelineId?: number,
+  ): Promise<PipelineDealAgeAnalytics> {
+    if (
+      pipelineId !== undefined
+      && (!Number.isSafeInteger(pipelineId) || pipelineId < 1 || pipelineId > 2_147_483_647)
+    ) {
+      throw itemizeGraphqlError(
+        'pipelineId must be a positive integer',
+        'BAD_USER_INPUT',
+        { field: 'pipelineId', reason: 'INVALID_PIPELINE_ID' },
+      );
+    }
+    const snapshot = await this.analytics.pipelineDealAge(organizationId, pipelineId);
+    if (!snapshot.data.pipeline) {
+      return {
+        asOf: snapshot.asOf,
+        pipeline: null,
+        stages: [],
+        summary: {
+          averageDaysToWin: 0,
+          averageDaysToLose: 0,
+          openDeals: 0,
+          wonDeals: 0,
+          lostDeals: 0,
+          winRate: 0,
+        },
+      };
+    }
+    const ages = new Map<string, { count: number; days: number }>();
+    for (const row of snapshot.data.stageAges) {
+      const stageId = this.string(row.stage_id, 'pipelineDealAge.stageId');
+      ages.set(stageId, {
+        count: this.count(row.open_deal_count, `pipelineDealAge.${stageId}.openDealCount`),
+        days: Math.round(this.number(
+          row.average_open_deal_age_days,
+          `pipelineDealAge.${stageId}.averageOpenDealAgeDays`,
+        )),
+      });
+    }
+    const values = new Map<string, Array<{ currency: string; amount: number }>>();
+    for (const row of snapshot.data.stageValues) {
+      const stageId = this.string(row.stage_id, 'pipelineDealAge.value.stageId');
+      const stageValues = values.get(stageId) ?? [];
+      stageValues.push({
+        currency: this.currency(row.currency, `pipelineDealAge.${stageId}.currency`),
+        amount: this.number(row.amount, `pipelineDealAge.${stageId}.amount`),
+      });
+      values.set(stageId, stageValues);
+    }
+    const metrics = snapshot.data.metrics;
+    const wonDeals = this.count(metrics.won_count, 'pipelineDealAge.summary.wonDeals');
+    const lostDeals = this.count(metrics.lost_count, 'pipelineDealAge.summary.lostDeals');
+    return {
+      asOf: snapshot.asOf,
+      pipeline: {
+        id: this.id(snapshot.data.pipeline.id, 'pipelineDealAge.pipeline.id'),
+        name: this.string(snapshot.data.pipeline.name, 'pipelineDealAge.pipeline.name'),
+      },
+      stages: this.stages(snapshot.data.pipeline.stages).map((stage, stageOrder) => ({
+        stageId: stage.id,
+        stageName: stage.name,
+        stageColor: stage.color,
+        stageOrder,
+        openDealCount: ages.get(stage.id)?.count ?? 0,
+        averageOpenDealAgeDays: ages.get(stage.id)?.days ?? 0,
+        openValueByCurrency: values.get(stage.id) ?? [],
+      })),
+      summary: {
+        averageDaysToWin: Math.round(this.number(
+          metrics.average_days_to_win,
+          'pipelineDealAge.summary.averageDaysToWin',
+        )),
+        averageDaysToLose: Math.round(this.number(
+          metrics.average_days_to_lose,
+          'pipelineDealAge.summary.averageDaysToLose',
+        )),
+        openDeals: this.count(metrics.open_count, 'pipelineDealAge.summary.openDeals'),
+        wonDeals,
+        lostDeals,
+        winRate: this.percentage(wonDeals, wonDeals + lostDeals),
       },
     };
   }
@@ -401,20 +640,19 @@ export class AnalyticsService {
 
   private funnel(snapshot: DashboardSnapshotRows): DashboardFunnelStage[] {
     const stages = this.stages(snapshot.dealsByStage[0]?.stages);
-    const values = new Map<string, { count: number; value: number }>();
+    const values = new Map<string, number>();
     for (const row of snapshot.dealsByStage) {
       if (typeof row.stage_id !== 'string') continue;
-      values.set(row.stage_id, {
-        count: this.count(row.count, `deals.funnel.${row.stage_id}.dealCount`),
-        value: this.number(row.total_value, `deals.funnel.${row.stage_id}.totalValue`),
-      });
+      values.set(
+        row.stage_id,
+        this.count(row.count, `deals.funnel.${row.stage_id}.dealCount`),
+      );
     }
     return stages.map((stage) => ({
       stageId: stage.id,
       stageName: stage.name,
       stageColor: stage.color,
-      dealCount: values.get(stage.id)?.count ?? 0,
-      totalValue: values.get(stage.id)?.value ?? 0,
+      dealCount: values.get(stage.id) ?? 0,
     }));
   }
 
@@ -471,6 +709,19 @@ export class AnalyticsService {
 
   private optionalString(value: unknown): string | null {
     return typeof value === 'string' && value.length > 0 ? value : null;
+  }
+
+  private currency(value: unknown, field: string): string {
+    const currency = this.string(value, field).trim().toUpperCase();
+    if (!/^[A-Z]{3}$/.test(currency)) throw new Error(`Invalid analytics currency at ${field}`);
+    return currency;
+  }
+
+  private growthRate(values: number[]): number {
+    if (values.length < 2) return 0;
+    const previous = values[values.length - 2];
+    const current = values[values.length - 1];
+    return previous > 0 ? Math.round(((current - previous) / previous) * 100) : 0;
   }
 
   private percentage(numerator: number, denominator: number): number {

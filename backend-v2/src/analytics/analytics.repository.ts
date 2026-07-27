@@ -14,7 +14,6 @@ export interface DashboardSnapshotRows {
   tasks: Row;
   pipelines: Row;
   recentActivity: Row[];
-  payments: Row;
   invoiceMetrics: Row;
   recentInvoices: Row[];
   signatureMetrics: Row;
@@ -26,6 +25,24 @@ export interface DashboardSnapshotRows {
 export interface AnalyticsQuerySnapshot<T> {
   asOf: Date;
   data: T;
+}
+
+export interface ConversionAnalyticsRows {
+  dealOutcomes: Row;
+  dealValues: Row[];
+  formSubmissions: Row;
+}
+
+export interface RevenueAnalyticsRows {
+  booked: Row[];
+  collected: Row[];
+}
+
+export interface PipelineDealAgeRows {
+  pipeline: Row | null;
+  metrics: Row;
+  stageAges: Row[];
+  stageValues: Row[];
 }
 
 export interface ReputationAnalyticsRows {
@@ -55,8 +72,6 @@ export class AnalyticsRepository {
       const contacts = await this.one(client, `
         SELECT COUNT(*) AS total,
           COUNT(*) FILTER (WHERE status = 'active') AS active,
-          COUNT(*) FILTER (WHERE status = 'lead') AS leads,
-          COUNT(*) FILTER (WHERE status = 'customer') AS customers,
           COUNT(*) FILTER (WHERE created_at >= $2::timestamptz - INTERVAL '30 days') AS new_this_month,
           COUNT(*) FILTER (WHERE created_at >= $2::timestamptz - INTERVAL '7 days') AS new_this_week
         FROM contacts WHERE organization_id = $1`, parameters);
@@ -72,21 +87,15 @@ export class AnalyticsRepository {
         SELECT COUNT(*) AS total,
           COUNT(*) FILTER (WHERE won_at IS NULL AND lost_at IS NULL) AS open,
           COUNT(*) FILTER (WHERE won_at IS NOT NULL) AS won,
-          COUNT(*) FILTER (WHERE lost_at IS NOT NULL) AS lost,
-          COALESCE(SUM(value) FILTER (WHERE won_at IS NULL AND lost_at IS NULL), 0) AS open_value,
-          COALESCE(SUM(value) FILTER (WHERE won_at IS NOT NULL), 0) AS booked_value,
-          COALESCE(SUM(value) FILTER (
-            WHERE won_at IS NOT NULL AND won_at >= $2::timestamptz - INTERVAL '30 days'
-          ), 0) AS booked_this_month
-        FROM deals WHERE organization_id = $1`, parameters);
+          COUNT(*) FILTER (WHERE lost_at IS NOT NULL) AS lost
+        FROM deals WHERE organization_id = $1`, [organizationId]);
       const dealsByStage = await this.many(client, `
         WITH selected_pipeline AS (
           SELECT id, stages FROM pipelines
           WHERE organization_id = $1
           ORDER BY is_default DESC, created_at ASC, id ASC LIMIT 1
         )
-        SELECT d.stage_id, p.stages, COUNT(d.id) AS count,
-          COALESCE(SUM(d.value), 0) AS total_value
+        SELECT d.stage_id, p.stages, COUNT(d.id) AS count
         FROM selected_pipeline p
         LEFT JOIN deals d ON d.pipeline_id = p.id
           AND d.organization_id = $1
@@ -119,12 +128,6 @@ export class AnalyticsRepository {
         FROM contact_activities ca
         JOIN contacts c ON c.id = ca.contact_id AND c.organization_id = $1
         ORDER BY ca.created_at DESC, ca.id DESC LIMIT 10`, [organizationId]);
-      const payments = await this.one(client, `
-        SELECT COALESCE(SUM(amount), 0) AS collected_value,
-          COALESCE(SUM(amount) FILTER (
-            WHERE paid_at >= $2::timestamptz - INTERVAL '30 days'
-          ), 0) AS collected_this_month
-        FROM payments WHERE organization_id = $1 AND status = 'succeeded'`, parameters);
       const invoiceMetrics = await this.one(client, `
         SELECT COUNT(*) FILTER (WHERE status IN ('sent', 'viewed', 'partial')) AS pending,
           COUNT(*) FILTER (WHERE status = 'overdue') AS overdue,
@@ -163,7 +166,7 @@ export class AnalyticsRepository {
       await client.query('COMMIT');
       return {
         asOf, contacts, contactGrowth, deals, dealsByStage, bookings, tasks,
-        pipelines, recentActivity, payments, invoiceMetrics, recentInvoices,
+        pipelines, recentActivity, invoiceMetrics, recentInvoices,
         signatureMetrics, recentSignatures, workspaceMetrics, recentWorkspace,
       };
     } catch (error) {
@@ -210,6 +213,139 @@ export class AnalyticsRepository {
         AND ((won_at >= $2::timestamptz - $3::interval AND won_at < $2::timestamptz)
           OR (lost_at >= $2::timestamptz - $3::interval AND lost_at < $2::timestamptz))`,
     [organizationId, asOf, interval]));
+  }
+
+  conversionRates(
+    organizationId: number,
+    interval: string,
+  ): Promise<AnalyticsQuerySnapshot<ConversionAnalyticsRows>> {
+    return this.withSnapshot(async (client, asOf) => {
+      const values = [organizationId, asOf, interval];
+      const dealOutcomes = await this.one(client, `
+        SELECT COUNT(*) AS total_closed,
+          COUNT(*) FILTER (WHERE won_at IS NOT NULL) AS won,
+          COUNT(*) FILTER (WHERE lost_at IS NOT NULL) AS lost
+        FROM deals
+        WHERE organization_id = $1
+          AND ((won_at >= $2::timestamptz - $3::interval
+              AND won_at < $2::timestamptz)
+            OR (lost_at >= $2::timestamptz - $3::interval
+              AND lost_at < $2::timestamptz))`, values);
+      const dealValues = await this.many(client, `
+        SELECT COALESCE(NULLIF(UPPER(TRIM(currency)), ''), 'USD') AS currency,
+          COALESCE(SUM(value) FILTER (WHERE won_at IS NOT NULL), 0) AS won_value,
+          COALESCE(SUM(value) FILTER (WHERE lost_at IS NOT NULL), 0) AS lost_value
+        FROM deals
+        WHERE organization_id = $1
+          AND ((won_at >= $2::timestamptz - $3::interval
+              AND won_at < $2::timestamptz)
+            OR (lost_at >= $2::timestamptz - $3::interval
+              AND lost_at < $2::timestamptz))
+        GROUP BY COALESCE(NULLIF(UPPER(TRIM(currency)), ''), 'USD')
+        ORDER BY currency ASC`, values);
+      const formSubmissions = await this.one(client, `
+        SELECT COUNT(*) AS submissions,
+          COUNT(*) FILTER (WHERE contact_id IS NOT NULL) AS converted
+        FROM form_submissions
+        WHERE organization_id = $1
+          AND created_at >= $2::timestamptz - $3::interval
+          AND created_at < $2::timestamptz`, values);
+      return { dealOutcomes, dealValues, formSubmissions };
+    });
+  }
+
+  revenueTrends(
+    organizationId: number,
+    interval: string,
+    groupBy: string,
+  ): Promise<AnalyticsQuerySnapshot<RevenueAnalyticsRows>> {
+    return this.withSnapshot(async (client, asOf) => {
+      const values = [groupBy, organizationId, asOf, interval];
+      const booked = await this.many(client, `
+        SELECT
+          DATE_TRUNC($1, won_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' AS period,
+          COALESCE(NULLIF(UPPER(TRIM(currency)), ''), 'USD') AS currency,
+          COUNT(*) AS deals_won,
+          COALESCE(SUM(value), 0) AS booked_revenue
+        FROM deals
+        WHERE organization_id = $2
+          AND won_at >= $3::timestamptz - $4::interval
+          AND won_at < $3::timestamptz
+        GROUP BY
+          DATE_TRUNC($1, won_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC',
+          COALESCE(NULLIF(UPPER(TRIM(currency)), ''), 'USD')
+        ORDER BY currency ASC, period ASC`, values);
+      const collected = await this.many(client, `
+        SELECT
+          DATE_TRUNC($1, paid_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' AS period,
+          COALESCE(NULLIF(UPPER(TRIM(currency)), ''), 'USD') AS currency,
+          COUNT(*) AS payments_count,
+          COALESCE(SUM(amount), 0) AS collected_revenue
+        FROM payments
+        WHERE organization_id = $2
+          AND status = 'succeeded'
+          AND paid_at >= $3::timestamptz - $4::interval
+          AND paid_at < $3::timestamptz
+        GROUP BY
+          DATE_TRUNC($1, paid_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC',
+          COALESCE(NULLIF(UPPER(TRIM(currency)), ''), 'USD')
+        ORDER BY currency ASC, period ASC`, values);
+      return { booked, collected };
+    });
+  }
+
+  pipelineDealAge(
+    organizationId: number,
+    pipelineId?: number,
+  ): Promise<AnalyticsQuerySnapshot<PipelineDealAgeRows>> {
+    return this.withSnapshot(async (client, asOf) => {
+      const pipeline = await this.one(client, `
+        SELECT id, name, stages
+        FROM pipelines
+        WHERE organization_id = $1
+          AND ($2::int IS NULL OR id = $2)
+        ORDER BY is_default DESC, created_at ASC, id ASC
+        LIMIT 1`, [organizationId, pipelineId ?? null]);
+      if (pipeline.id === undefined) {
+        return { pipeline: null, metrics: {}, stageAges: [], stageValues: [] };
+      }
+      const selectedPipelineId = Number(pipeline.id);
+      const metrics = await this.one(client, `
+        SELECT
+          COUNT(*) FILTER (WHERE won_at IS NOT NULL) AS won_count,
+          COUNT(*) FILTER (WHERE lost_at IS NOT NULL) AS lost_count,
+          COUNT(*) FILTER (WHERE won_at IS NULL AND lost_at IS NULL) AS open_count,
+          COALESCE(AVG(EXTRACT(EPOCH FROM (won_at - created_at)) / 86400)
+            FILTER (WHERE won_at IS NOT NULL), 0) AS average_days_to_win,
+          COALESCE(AVG(EXTRACT(EPOCH FROM (lost_at - created_at)) / 86400)
+            FILTER (WHERE lost_at IS NOT NULL), 0) AS average_days_to_lose
+        FROM deals
+        WHERE organization_id = $1 AND pipeline_id = $2`,
+      [organizationId, selectedPipelineId]);
+      const stageAges = await this.many(client, `
+        SELECT stage_id, COUNT(*) AS open_deal_count,
+          COALESCE(AVG(EXTRACT(EPOCH FROM ($3::timestamptz - created_at)) / 86400), 0)
+            AS average_open_deal_age_days
+        FROM deals
+        WHERE organization_id = $1
+          AND pipeline_id = $2
+          AND won_at IS NULL
+          AND lost_at IS NULL
+        GROUP BY stage_id
+        ORDER BY stage_id ASC`, [organizationId, selectedPipelineId, asOf]);
+      const stageValues = await this.many(client, `
+        SELECT stage_id,
+          COALESCE(NULLIF(UPPER(TRIM(currency)), ''), 'USD') AS currency,
+          COALESCE(SUM(value), 0) AS amount
+        FROM deals
+        WHERE organization_id = $1
+          AND pipeline_id = $2
+          AND won_at IS NULL
+          AND lost_at IS NULL
+        GROUP BY stage_id, COALESCE(NULLIF(UPPER(TRIM(currency)), ''), 'USD')
+        ORDER BY stage_id ASC, currency ASC`, [organizationId, selectedPipelineId]);
+      return { pipeline, metrics, stageAges, stageValues };
+    });
   }
 
   bookingAnalytics(organizationId: number): Promise<AnalyticsQuerySnapshot<Row>> {

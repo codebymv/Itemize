@@ -3,19 +3,20 @@ import { AnalyticsService } from './analytics.service';
 import {
   CommunicationAnalyticsPeriod,
   ContactAnalyticsPeriod,
+  ConversionAnalyticsPeriod,
   DealAnalyticsPeriod,
+  RevenueAnalyticsPeriod,
 } from './analytics.enums';
 
 const snapshot = (extra: Partial<DashboardSnapshotRows> = {}): DashboardSnapshotRows => ({
   asOf: new Date('2026-07-20T18:00:00.000Z'),
   contacts: {
-    total: '2', active: '1', leads: '0', customers: '0',
+    total: '2', active: '1',
     new_this_month: '1', new_this_week: '1',
   },
   contactGrowth: [{ month: new Date('2026-07-01T00:00:00.000Z'), count: '1' }],
   deals: {
-    total: '3', open: '2', won: '1', lost: '0', open_value: '1024.50',
-    booked_value: '100.25', booked_this_month: '100.25',
+    total: '3', open: '2', won: '1', lost: '0',
   },
   dealsByStage: [
     {
@@ -24,7 +25,7 @@ const snapshot = (extra: Partial<DashboardSnapshotRows> = {}): DashboardSnapshot
         { id: 'qualified', name: 'Qualified', color: '#112233' },
         { id: 'proposal', name: 'Proposal', color: '#445566' },
       ],
-      count: '2', total_value: '1024.50',
+      count: '2',
     },
   ],
   bookings: {
@@ -37,7 +38,6 @@ const snapshot = (extra: Partial<DashboardSnapshotRows> = {}): DashboardSnapshot
     id: 8, type: 'system', title: 'Created', content: { action: 'created' },
     created_at: new Date('2026-07-20T17:00:00.000Z'), contact_id: 3,
   }],
-  payments: { collected_value: '50.75', collected_this_month: '50.75' },
   invoiceMetrics: {
     pending: '1', overdue: '0', paid_this_month: '0', invoice_count_this_month: '1',
   },
@@ -60,24 +60,22 @@ describe('AnalyticsService', () => {
       dealPerformance: jest.fn(),
       bookingAnalytics: jest.fn(),
       communicationStats: jest.fn(),
+      conversionRates: jest.fn(),
+      revenueTrends: jest.fn(),
+      pipelineDealAge: jest.fn(),
       workflowPerformance: jest.fn(),
       reputationAnalytics: jest.fn(),
     } as unknown as jest.Mocked<AnalyticsRepository>;
     service = new AnalyticsService(repository);
   });
 
-  it('normalizes PostgreSQL numerics and keeps booked and collected values separate', async () => {
+  it('normalizes PostgreSQL counts without exposing misleading dashboard money totals', async () => {
     repository.dashboardSnapshot.mockResolvedValue(snapshot());
     await expect(service.dashboard(4)).resolves.toMatchObject({
       asOf: new Date('2026-07-20T18:00:00.000Z'),
       reportingTimezone: 'UTC',
       contacts: { total: 2, active: 1 },
-      deals: {
-        openValue: 1024.5,
-        wonValue: 151,
-        bookedValue: 100.25,
-        collectedValue: 50.75,
-      },
+      deals: { total: 3, open: 2, won: 1, lost: 0 },
       invoiceMetrics: {
         recentInvoices: [{ id: 12, number: 'INV-12', amount: 20.5 }],
       },
@@ -91,11 +89,11 @@ describe('AnalyticsService', () => {
     expect(result.deals.funnel).toEqual([
       {
         stageId: 'qualified', stageName: 'Qualified', stageColor: '#112233',
-        dealCount: 0, totalValue: 0,
+        dealCount: 0,
       },
       {
         stageId: 'proposal', stageName: 'Proposal', stageColor: '#445566',
-        dealCount: 2, totalValue: 1024.5,
+        dealCount: 2,
       },
     ]);
   });
@@ -148,6 +146,160 @@ describe('AnalyticsService', () => {
     });
     await expect(service.bookingAnalytics(4)).resolves.toMatchObject({
       total: 10, completed: 3, cancelled: 4, noShow: 1, completionRate: 75,
+    });
+  });
+
+  it('reports only real deal and form conversions with currency-separated values', async () => {
+    repository.conversionRates.mockResolvedValue({
+      asOf: new Date('2026-07-20T18:00:00.000Z'),
+      data: {
+        dealOutcomes: { total_closed: '3', won: '2', lost: '1' },
+        dealValues: [
+          { currency: 'EUR', won_value: '80', lost_value: '20' },
+          { currency: 'USD', won_value: '125.50', lost_value: '40' },
+        ],
+        formSubmissions: { submissions: '4', converted: '3' },
+      },
+    });
+    await expect(
+      service.conversionRates(4, ConversionAnalyticsPeriod.DAYS_90),
+    ).resolves.toEqual({
+      asOf: new Date('2026-07-20T18:00:00.000Z'),
+      reportingTimezone: 'UTC',
+      period: '90days',
+      dealWinRate: {
+        rate: 67,
+        won: 2,
+        lost: 1,
+        totalClosed: 3,
+        valuesByCurrency: [
+          { currency: 'EUR', wonValue: 80, lostValue: 20 },
+          { currency: 'USD', wonValue: 125.5, lostValue: 40 },
+        ],
+      },
+      formToContact: { rate: 75, submissions: 4, converted: 3 },
+    });
+    expect(repository.conversionRates).toHaveBeenCalledWith(4, '90 days');
+  });
+
+  it('keeps booked and collected revenue separate for every currency and bucket', async () => {
+    repository.revenueTrends.mockResolvedValue({
+      asOf: new Date('2026-07-20T18:00:00.000Z'),
+      data: {
+        booked: [
+          {
+            period: new Date('2026-06-01T00:00:00.000Z'),
+            currency: 'USD',
+            deals_won: '1',
+            booked_revenue: '100',
+          },
+          {
+            period: new Date('2026-07-01T00:00:00.000Z'),
+            currency: 'USD',
+            deals_won: '2',
+            booked_revenue: '150',
+          },
+        ],
+        collected: [
+          {
+            period: new Date('2026-07-01T00:00:00.000Z'),
+            currency: 'EUR',
+            payments_count: '1',
+            collected_revenue: '40',
+          },
+          {
+            period: new Date('2026-07-01T00:00:00.000Z'),
+            currency: 'USD',
+            payments_count: '1',
+            collected_revenue: '75',
+          },
+        ],
+      },
+    });
+    const result = await service.revenueTrends(4, RevenueAnalyticsPeriod.MONTHS_6);
+    expect(result).toMatchObject({
+      period: '6months',
+      reportingTimezone: 'UTC',
+      currencies: [
+        {
+          currency: 'EUR',
+          summary: {
+            totalBookedRevenue: 0,
+            totalCollectedRevenue: 40,
+            totalDeals: 0,
+            totalPayments: 1,
+          },
+        },
+        {
+          currency: 'USD',
+          summary: {
+            totalBookedRevenue: 250,
+            totalCollectedRevenue: 75,
+            totalDeals: 3,
+            totalPayments: 1,
+            bookedGrowthRate: 50,
+          },
+        },
+      ],
+    });
+    expect(result.currencies[1].data[1]).toMatchObject({
+      bookedRevenue: 150,
+      collectedRevenue: 75,
+      cumulativeBookedRevenue: 250,
+      cumulativeCollectedRevenue: 75,
+    });
+    expect(repository.revenueTrends).toHaveBeenCalledWith(4, '6 months', 'month');
+  });
+
+  it('names open-deal age honestly and separates stage value by currency', async () => {
+    repository.pipelineDealAge.mockResolvedValue({
+      asOf: new Date('2026-07-20T18:00:00.000Z'),
+      data: {
+        pipeline: {
+          id: 8,
+          name: 'Sales',
+          stages: [{ id: 'lead', name: 'Lead', color: '#123456' }],
+        },
+        metrics: {
+          won_count: '2',
+          lost_count: '1',
+          open_count: '3',
+          average_days_to_win: '4.6',
+          average_days_to_lose: '8.2',
+        },
+        stageAges: [{
+          stage_id: 'lead',
+          open_deal_count: '3',
+          average_open_deal_age_days: '12.6',
+        }],
+        stageValues: [
+          { stage_id: 'lead', currency: 'EUR', amount: '20' },
+          { stage_id: 'lead', currency: 'USD', amount: '100' },
+        ],
+      },
+    });
+    await expect(service.pipelineDealAge(4, 8)).resolves.toMatchObject({
+      pipeline: { id: 8, name: 'Sales' },
+      stages: [{
+        stageId: 'lead',
+        openDealCount: 3,
+        averageOpenDealAgeDays: 13,
+        openValueByCurrency: [
+          { currency: 'EUR', amount: 20 },
+          { currency: 'USD', amount: 100 },
+        ],
+      }],
+      summary: {
+        averageDaysToWin: 5,
+        averageDaysToLose: 8,
+        openDeals: 3,
+        wonDeals: 2,
+        lostDeals: 1,
+        winRate: 67,
+      },
+    });
+    await expect(service.pipelineDealAge(4, 0)).rejects.toMatchObject({
+      extensions: { code: 'BAD_USER_INPUT', reason: 'INVALID_PIPELINE_ID' },
     });
   });
 

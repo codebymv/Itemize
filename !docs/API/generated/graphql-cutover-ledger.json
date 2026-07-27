@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 322,
-    "apiOperationCount": 315,
+    "operationCount": 319,
+    "apiOperationCount": 312,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 253,
-    "operationsWithFrontendConsumers": 242,
+    "frontendCallsiteCount": 250,
+    "operationsWithFrontendConsumers": 239,
     "operationsWithBackendTests": 174,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 39,
+    "unmatchedBackendTestCallCount": 42,
     "retainHttpCount": 54,
-    "graphqlQueryCount": 86,
+    "graphqlQueryCount": 83,
     "graphqlMutationCount": 174,
-    "highRiskCount": 260,
+    "highRiskCount": 257,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -424,108 +424,6 @@
       "targetModule": "AdminOperationsModule",
       "parityStatus": "consumer-cutover-complete",
       "notes": "Database-authorized administrator-only global directory with bounded search, validated plan filter, stable ordering, pagination, and repeatable-read total parity.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/analytics/conversion-rates",
-      "key": "GET /api/analytics/conversion-rates",
-      "method": "GET",
-      "path": "/api/analytics/conversion-rates",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/analytics/advanced.routes.js",
-          "line": 20
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/analytics/conversion-rates",
-          "rawPath": "/api/analytics/conversion-rates",
-          "source": "frontend/src/services/analyticsApi.ts",
-          "line": 362,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "analytics",
-      "targetOperation": "conversionRates",
-      "targetModule": "AnalyticsModule",
-      "parityStatus": "blocked",
-      "notes": "Deal and form conversions are characterized; lead-to-customer is blocked because persisted contact statuses do not contain lead/customer.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/analytics/pipeline-velocity",
-      "key": "GET /api/analytics/pipeline-velocity",
-      "method": "GET",
-      "path": "/api/analytics/pipeline-velocity",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/analytics/advanced.routes.js",
-          "line": 281
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/analytics/pipeline-velocity",
-          "rawPath": "/api/analytics/pipeline-velocity",
-          "source": "frontend/src/services/analyticsApi.ts",
-          "line": 390,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "analytics",
-      "targetOperation": "pipelineVelocity",
-      "targetModule": "AnalyticsModule",
-      "parityStatus": "blocked",
-      "notes": "Tenant-scoped pipeline lookup and current deal ages are characterized; true time-in-stage is blocked until stage-transition history exists.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/analytics/revenue-trends",
-      "key": "GET /api/analytics/revenue-trends",
-      "method": "GET",
-      "path": "/api/analytics/revenue-trends",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/analytics/advanced.routes.js",
-          "line": 156
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/analytics/revenue-trends",
-          "rawPath": "/api/analytics/revenue-trends",
-          "source": "frontend/src/services/analyticsApi.ts",
-          "line": 376,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "analytics",
-      "targetOperation": "revenueTrends",
-      "targetModule": "AnalyticsModule",
-      "parityStatus": "blocked",
-      "notes": "Bucket merging and tenant scope are fixed; business definition is blocked because won deals plus payments can double-count one sale and avgDealValue divides mixed event types.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -3152,7 +3050,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 57
+          "line": 56
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -4088,7 +3986,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 217
+          "line": 216
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -4163,7 +4061,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 218
+          "line": 217
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -5267,7 +5165,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 259
+          "line": 258
         },
         {
           "source": "backend/src/routes/invoices/actions.routes.js",
@@ -5755,7 +5653,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 251
+          "line": 250
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -7035,7 +6933,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 255
+          "line": 254
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -7073,7 +6971,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 247
+          "line": 246
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -7446,7 +7344,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 53
+          "line": 52
         }
       ],
       "consumerCallsites": [],
@@ -8981,7 +8879,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 313
+          "line": 312
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -9068,7 +8966,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 333
+          "line": 332
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -9137,7 +9035,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 329
+          "line": 328
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -9182,7 +9080,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 321
+          "line": 320
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -9210,7 +9108,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 317
+          "line": 316
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -9245,7 +9143,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 325
+          "line": 324
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -11121,7 +11019,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 299
+          "line": 298
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -11192,7 +11090,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 295
+          "line": 294
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -11386,7 +11284,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 281
+          "line": 280
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -11707,7 +11605,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 303
+          "line": 302
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -11776,7 +11674,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 288
+          "line": 287
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12342,7 +12240,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 121
+          "line": 120
         }
       ],
       "consumerCallsites": [
@@ -12376,7 +12274,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 65
+          "line": 64
         }
       ],
       "consumerCallsites": [
@@ -12410,7 +12308,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 56
+          "line": 55
         }
       ],
       "consumerCallsites": [],
@@ -12582,7 +12480,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 54
+          "line": 53
         }
       ],
       "consumerCallsites": [],
@@ -12811,7 +12709,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 55
+          "line": 54
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",
@@ -14134,37 +14032,55 @@
       "method": "GET",
       "path": "/api/analytics/dashboard",
       "source": "backend-v2/test/integration/analytics.integration-spec.ts",
-      "line": 288
+      "line": 284
     },
     {
       "method": "GET",
       "path": "/api/analytics/contacts/trends",
       "source": "backend-v2/test/integration/analytics.integration-spec.ts",
-      "line": 289
+      "line": 285
     },
     {
       "method": "GET",
       "path": "/api/analytics/deals/performance",
       "source": "backend-v2/test/integration/analytics.integration-spec.ts",
-      "line": 290
+      "line": 286
     },
     {
       "method": "GET",
       "path": "/api/analytics/bookings/summary",
       "source": "backend-v2/test/integration/analytics.integration-spec.ts",
-      "line": 291
+      "line": 287
     },
     {
       "method": "GET",
       "path": "/api/analytics/communication-stats",
       "source": "backend-v2/test/integration/analytics.integration-spec.ts",
-      "line": 292
+      "line": 288
     },
     {
       "method": "GET",
       "path": "/api/analytics/workflow-performance",
       "source": "backend-v2/test/integration/analytics.integration-spec.ts",
-      "line": 293
+      "line": 289
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/conversion-rates",
+      "source": "backend-v2/test/integration/analytics.integration-spec.ts",
+      "line": 290
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/revenue-trends",
+      "source": "backend-v2/test/integration/analytics.integration-spec.ts",
+      "line": 291
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/pipeline-velocity",
+      "source": "backend-v2/test/integration/analytics.integration-spec.ts",
+      "line": 292
     },
     {
       "method": "GET",

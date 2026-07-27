@@ -2,8 +2,11 @@ import type {
   BookingSummary,
   CommunicationStats,
   ContactTrends,
+  ConversionRates,
   DashboardAnalytics,
   DealPerformance,
+  PipelineDealAge,
+  RevenueTrends,
   WorkflowPerformance,
 } from './analyticsApi';
 import { graphqlRequest } from './graphqlClient';
@@ -38,13 +41,12 @@ const dashboardAnalyticsQuery = `
       asOf
       reportingTimezone
       contacts {
-        total active leads customers newThisMonth newThisWeek
+        total active newThisMonth newThisWeek
         growth { month count }
       }
       deals {
-        total open won lost openValue wonValue wonThisMonth
-        bookedValue bookedThisMonth collectedValue collectedThisMonth
-        funnel { stageId stageName stageColor dealCount totalValue }
+        total open won lost
+        funnel { stageId stageName stageColor dealCount }
       }
       bookings {
         total confirmed pending cancelled upcomingThisWeek upcomingToday
@@ -156,6 +158,56 @@ const workflowPerformanceQuery = `
   }
 `;
 
+const conversionRatesQuery = `
+  query ConversionRates($period: ConversionAnalyticsPeriod) {
+    conversionRates(period: $period) {
+      asOf reportingTimezone period
+      dealWinRate {
+        rate won lost totalClosed
+        valuesByCurrency { currency wonValue lostValue }
+      }
+      formToContact { rate submissions converted }
+    }
+  }
+`;
+
+const revenueTrendsQuery = `
+  query RevenueTrends($period: RevenueAnalyticsPeriod) {
+    revenueTrends(period: $period) {
+      asOf reportingTimezone period
+      currencies {
+        currency
+        data {
+          period dealsWon paymentsCount bookedRevenue collectedRevenue
+          cumulativeBookedRevenue cumulativeCollectedRevenue
+        }
+        summary {
+          totalBookedRevenue totalCollectedRevenue totalDeals totalPayments
+          averageBookedDealValue averageCollectedPayment
+          bookedGrowthRate collectedGrowthRate
+        }
+      }
+    }
+  }
+`;
+
+const pipelineDealAgeQuery = `
+  query PipelineDealAge($pipelineId: Int) {
+    pipelineDealAge(pipelineId: $pipelineId) {
+      asOf
+      pipeline { id name }
+      stages {
+        stageId stageName stageColor stageOrder
+        openDealCount averageOpenDealAgeDays
+        openValueByCurrency { currency amount }
+      }
+      summary {
+        averageDaysToWin averageDaysToLose openDeals wonDeals lostDeals winRate
+      }
+    }
+  }
+`;
+
 const contactPeriods = {
   '7days': 'DAYS_7',
   '30days': 'DAYS_30',
@@ -173,6 +225,19 @@ const communicationPeriods = {
   '7days': 'DAYS_7',
   '30days': 'DAYS_30',
   '90days': 'DAYS_90',
+} as const;
+
+const conversionPeriods = {
+  '7days': 'DAYS_7',
+  '30days': 'DAYS_30',
+  '90days': 'DAYS_90',
+  '12months': 'MONTHS_12',
+} as const;
+
+const revenuePeriods = {
+  '30days': 'DAYS_30',
+  '6months': 'MONTHS_6',
+  '12months': 'MONTHS_12',
 } as const;
 
 export const getContactTrendsViaGraphql = async (
@@ -226,4 +291,41 @@ export const getWorkflowPerformanceViaGraphql = async (
     Record<string, never>
   >(workflowPerformanceQuery, {}, organizationId);
   return data.workflowPerformance;
+};
+
+export const getConversionRatesViaGraphql = async (
+  period: keyof typeof conversionPeriods,
+  organizationId?: number,
+): Promise<ConversionRates> => {
+  const data = await graphqlRequest<
+    { conversionRates: ConversionRates },
+    { period: typeof conversionPeriods[typeof period] }
+  >(conversionRatesQuery, { period: conversionPeriods[period] }, organizationId);
+  return data.conversionRates;
+};
+
+export const getRevenueTrendsViaGraphql = async (
+  period: keyof typeof revenuePeriods,
+  organizationId?: number,
+): Promise<RevenueTrends> => {
+  const data = await graphqlRequest<
+    { revenueTrends: RevenueTrends },
+    { period: typeof revenuePeriods[typeof period] }
+  >(revenueTrendsQuery, { period: revenuePeriods[period] }, organizationId);
+  return data.revenueTrends;
+};
+
+export const getPipelineDealAgeViaGraphql = async (
+  pipelineId?: number,
+  organizationId?: number,
+): Promise<PipelineDealAge> => {
+  const data = await graphqlRequest<
+    { pipelineDealAge: PipelineDealAge },
+    { pipelineId?: number }
+  >(
+    pipelineDealAgeQuery,
+    pipelineId === undefined ? {} : { pipelineId },
+    organizationId,
+  );
+  return data.pipelineDealAge;
 };
