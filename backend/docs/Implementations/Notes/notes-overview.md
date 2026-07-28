@@ -116,15 +116,14 @@ Notes support rich text editing capabilities, allowing users to format their con
 
 Private note reads are available through the user-scoped
 `workspaceNotes(filter, page)` query in `WorkspaceContentModule`. The frontend
-adapter is default-off and preserves the existing `{ notes, pagination }`
-shape. See
+adapter always uses GraphQL and preserves the existing
+`{ notes, pagination }` shape. See
 [Workspace lists and notes GraphQL cutover contract](../../API/contracts/workspace-content-graphql-cutover.md).
 
 `createWorkspaceNote`, `updateWorkspaceNote`, and `deleteWorkspaceNote` now
 cover the existing create, full update, granular content/title/category update,
-and delete service methods. The default-off
-`VITE_WORKSPACE_NOTE_MUTATIONS_GRAPHQL` flag selects the transport without
-changing the consumer response shapes.
+and delete service methods. The workspace note adapter always selects the
+GraphQL transport without changing the consumer response shapes.
 
 Updates lock the user-owned note and preserve omitted fields. Category names
 are resolved to the authenticated user's canonical category and its name/ID

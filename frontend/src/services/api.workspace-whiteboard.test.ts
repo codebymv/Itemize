@@ -7,10 +7,6 @@ import {
   updateWhiteboard,
 } from './api';
 import {
-  isWorkspaceWhiteboardGraphqlMutationsEnabled,
-  isWorkspaceWhiteboardGraphqlReadsEnabled,
-} from './graphqlClient';
-import {
   createWorkspaceWhiteboardViaGraphql,
   deleteWorkspaceWhiteboardViaGraphql,
   updateWorkspaceWhiteboardViaGraphql,
@@ -24,17 +20,6 @@ vi.mock('@/lib/api', () => ({
     post: vi.fn(),
     put: vi.fn(),
   },
-}));
-
-vi.mock('./graphqlClient', () => ({
-  isCategoryGraphqlMutationsEnabled: vi.fn(() => false),
-  isCategoryGraphqlReadsEnabled: vi.fn(() => false),
-  isWorkspaceListGraphqlMutationsEnabled: vi.fn(() => false),
-  isWorkspaceListGraphqlReadsEnabled: vi.fn(() => false),
-  isWorkspaceNoteGraphqlMutationsEnabled: vi.fn(() => false),
-  isWorkspaceNoteGraphqlReadsEnabled: vi.fn(() => false),
-  isWorkspaceWhiteboardGraphqlMutationsEnabled: vi.fn(),
-  isWorkspaceWhiteboardGraphqlReadsEnabled: vi.fn(),
 }));
 
 vi.mock('./workspaceContentGraphql', () => ({
@@ -74,51 +59,12 @@ const whiteboard = {
   updated_at: '2026-07-18T12:01:00.000Z',
 };
 
-describe('workspace whiteboard API transport selection', () => {
+describe('workspace whiteboard API GraphQL transport', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(isWorkspaceWhiteboardGraphqlReadsEnabled)
-      .mockReturnValue(false);
-    vi.mocked(isWorkspaceWhiteboardGraphqlMutationsEnabled)
-      .mockReturnValue(false);
   });
 
-  it('keeps reads and CRUD on REST by default', async () => {
-    vi.mocked(api.get).mockResolvedValue({
-      data: { whiteboards: [whiteboard], pagination: {} },
-    });
-    vi.mocked(api.post).mockResolvedValue({ data: whiteboard });
-    vi.mocked(api.put).mockResolvedValue({ data: whiteboard });
-    vi.mocked(api.delete).mockResolvedValue({
-      data: { message: 'Whiteboard deleted successfully' },
-    });
-
-    await getWhiteboards('token');
-    await createWhiteboard({ title: 'Sketch' }, 'token');
-    await updateWhiteboard(9, { title: 'Changed' }, 'token');
-    await deleteWhiteboard(9, 'token');
-
-    expect(api.get).toHaveBeenCalledWith('/api/whiteboards', { headers: {} });
-    expect(api.post).toHaveBeenCalledWith(
-      '/api/whiteboards',
-      { title: 'Sketch' },
-      { headers: {} },
-    );
-    expect(api.put).toHaveBeenCalledWith(
-      '/api/whiteboards/9',
-      { title: 'Changed' },
-      { headers: {} },
-    );
-    expect(api.delete).toHaveBeenCalledWith('/api/whiteboards/9', {
-      headers: {},
-    });
-  });
-
-  it('routes reads and CRUD through independent GraphQL flags', async () => {
-    vi.mocked(isWorkspaceWhiteboardGraphqlReadsEnabled)
-      .mockReturnValue(true);
-    vi.mocked(isWorkspaceWhiteboardGraphqlMutationsEnabled)
-      .mockReturnValue(true);
+  it('routes reads and CRUD through GraphQL', async () => {
     vi.mocked(getWorkspaceWhiteboardsViaGraphql).mockResolvedValue({
       whiteboards: [whiteboard],
       pagination: {
@@ -137,10 +83,10 @@ describe('workspace whiteboard API transport selection', () => {
     vi.mocked(deleteWorkspaceWhiteboardViaGraphql)
       .mockResolvedValue({ message: 'Whiteboard deleted successfully' });
 
-    await getWhiteboards();
-    await createWhiteboard({ title: 'Sketch' });
-    await updateWhiteboard(9, { title: 'Changed' });
-    await deleteWhiteboard(9);
+    await getWhiteboards('ignored-token');
+    await createWhiteboard({ title: 'Sketch' }, 'ignored-token');
+    await updateWhiteboard(9, { title: 'Changed' }, 'ignored-token');
+    await deleteWhiteboard(9, 'ignored-token');
 
     expect(getWorkspaceWhiteboardsViaGraphql).toHaveBeenCalled();
     expect(createWorkspaceWhiteboardViaGraphql).toHaveBeenCalledWith({

@@ -39,12 +39,6 @@ describe('Environment Validation', () => {
     expect(env.VITE_RECURRING_INVOICE_GENERATION_GRAPHQL).toBe('false');
     expect(env.VITE_PAYMENT_READS_GRAPHQL).toBe('false');
     expect(env.VITE_PAYMENT_MUTATIONS_GRAPHQL).toBe('false');
-    expect(env.VITE_WORKSPACE_LIST_READS_GRAPHQL).toBe('false');
-    expect(env.VITE_WORKSPACE_LIST_MUTATIONS_GRAPHQL).toBe('false');
-    expect(env.VITE_WORKSPACE_NOTE_READS_GRAPHQL).toBe('false');
-    expect(env.VITE_WORKSPACE_NOTE_MUTATIONS_GRAPHQL).toBe('false');
-    expect(env.VITE_WORKSPACE_WHITEBOARD_READS_GRAPHQL).toBe('false');
-    expect(env.VITE_WORKSPACE_WHITEBOARD_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_WORKFLOW_READS_GRAPHQL).toBe('false');
     expect(env.VITE_WORKFLOW_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_WORKFLOW_ENROLLMENTS_GRAPHQL).toBe('false');

@@ -6,10 +6,6 @@ import {
   getCategoriesViaGraphql,
   updateCategoryViaGraphql,
 } from './categoriesGraphql';
-import {
-  isCategoryGraphqlMutationsEnabled,
-  isCategoryGraphqlReadsEnabled,
-} from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(),
@@ -42,20 +38,6 @@ describe('category GraphQL consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('keeps read and mutation rollback flags independent and default-off', () => {
-    vi.stubEnv('VITE_CATEGORY_READS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_CATEGORY_MUTATIONS_GRAPHQL', 'false');
-    expect(isCategoryGraphqlReadsEnabled()).toBe(false);
-    expect(isCategoryGraphqlMutationsEnabled()).toBe(false);
-
-    vi.stubEnv('VITE_CATEGORY_READS_GRAPHQL', 'true');
-    expect(isCategoryGraphqlReadsEnabled()).toBe(true);
-    expect(isCategoryGraphqlMutationsEnabled()).toBe(false);
-
-    vi.stubEnv('VITE_CATEGORY_MUTATIONS_GRAPHQL', 'true');
-    expect(isCategoryGraphqlMutationsEnabled()).toBe(true);
   });
 
   it('maps GraphQL casing into the existing category contract', async () => {

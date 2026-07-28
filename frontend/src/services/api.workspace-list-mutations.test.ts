@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '@/lib/api';
 import { createList, deleteList, updateList } from './api';
-import { isWorkspaceListGraphqlMutationsEnabled } from './graphqlClient';
 import {
   createWorkspaceListViaGraphql,
   deleteWorkspaceListViaGraphql,
@@ -15,15 +14,6 @@ vi.mock('@/lib/api', () => ({
     post: vi.fn(),
     put: vi.fn(),
   },
-}));
-
-vi.mock('./graphqlClient', () => ({
-  isCategoryGraphqlMutationsEnabled: vi.fn(() => false),
-  isCategoryGraphqlReadsEnabled: vi.fn(() => false),
-  isWorkspaceListGraphqlMutationsEnabled: vi.fn(),
-  isWorkspaceListGraphqlReadsEnabled: vi.fn(() => false),
-  isWorkspaceNoteGraphqlMutationsEnabled: vi.fn(() => false),
-  isWorkspaceNoteGraphqlReadsEnabled: vi.fn(() => false),
 }));
 
 vi.mock('./workspaceListMutationsGraphql', () => ({
@@ -53,46 +43,12 @@ const list = {
   updated_at: '2026-07-18T12:01:00.000Z',
 };
 
-describe('workspace list API mutation transport selection', () => {
+describe('workspace list API GraphQL mutations', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(isWorkspaceListGraphqlMutationsEnabled).mockReturnValue(false);
   });
 
-  it('keeps create, update, and delete on REST by default', async () => {
-    vi.mocked(api.post).mockResolvedValue({ data: list });
-    vi.mocked(api.put).mockResolvedValue({ data: list });
-    vi.mocked(api.delete).mockResolvedValue({
-      data: { message: 'List deleted successfully' },
-    });
-
-    await createList({ title: 'Tasks', items: [] }, 'token');
-    await updateList({
-      id: 9,
-      title: 'Tasks',
-      items: list.items,
-      updated_at: list.updated_at,
-    }, 'token');
-    await deleteList('9', 'token');
-
-    expect(api.post).toHaveBeenCalledWith(
-      '/api/lists',
-      expect.objectContaining({ title: 'Tasks', category: 'General' }),
-      { headers: {} },
-    );
-    expect(api.put).toHaveBeenCalledWith(
-      '/api/lists/9',
-      expect.objectContaining({ title: 'Tasks' }),
-      { headers: {} },
-    );
-    expect(api.delete).toHaveBeenCalledWith('/api/lists/9', {
-      headers: {},
-    });
-    expect(createWorkspaceListViaGraphql).not.toHaveBeenCalled();
-  });
-
-  it('routes only list mutations through GraphQL when enabled', async () => {
-    vi.mocked(isWorkspaceListGraphqlMutationsEnabled).mockReturnValue(true);
+  it('routes create, update, and delete through GraphQL', async () => {
     vi.mocked(createWorkspaceListViaGraphql).mockResolvedValue(list);
     vi.mocked(updateWorkspaceListViaGraphql).mockResolvedValue(list);
     vi.mocked(deleteWorkspaceListViaGraphql).mockResolvedValue({
@@ -105,9 +61,9 @@ describe('workspace list API mutation transport selection', () => {
       updated_at: list.updated_at,
     };
 
-    await createList({ title: 'Tasks', items: [] });
-    await updateList(update);
-    await deleteList('9');
+    await createList({ title: 'Tasks', items: [] }, 'ignored-token');
+    await updateList(update, 'ignored-token');
+    await deleteList('9', 'ignored-token');
 
     expect(createWorkspaceListViaGraphql).toHaveBeenCalledWith({
       title: 'Tasks',

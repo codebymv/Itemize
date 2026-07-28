@@ -47,12 +47,6 @@ export const isContactGraphqlActivitiesEnabled = (): boolean =>
 export const isContactGraphqlContentEnabled = (): boolean =>
   import.meta.env.VITE_CONTACT_CONTENT_GRAPHQL === 'true';
 
-export const isCategoryGraphqlReadsEnabled = (): boolean =>
-  import.meta.env.VITE_CATEGORY_READS_GRAPHQL === 'true';
-
-export const isCategoryGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_CATEGORY_MUTATIONS_GRAPHQL === 'true';
-
 export const isCalendarGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_CALENDAR_READS_GRAPHQL === 'true';
 
@@ -139,24 +133,6 @@ export const isPaymentGraphqlReadsEnabled = (): boolean =>
 
 export const isPaymentGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_PAYMENT_MUTATIONS_GRAPHQL === 'true';
-
-export const isWorkspaceListGraphqlReadsEnabled = (): boolean =>
-  import.meta.env.VITE_WORKSPACE_LIST_READS_GRAPHQL === 'true';
-
-export const isWorkspaceListGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_WORKSPACE_LIST_MUTATIONS_GRAPHQL === 'true';
-
-export const isWorkspaceNoteGraphqlReadsEnabled = (): boolean =>
-  import.meta.env.VITE_WORKSPACE_NOTE_READS_GRAPHQL === 'true';
-
-export const isWorkspaceNoteGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_WORKSPACE_NOTE_MUTATIONS_GRAPHQL === 'true';
-
-export const isWorkspaceWhiteboardGraphqlReadsEnabled = (): boolean =>
-  import.meta.env.VITE_WORKSPACE_WHITEBOARD_READS_GRAPHQL === 'true';
-
-export const isWorkspaceWhiteboardGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_WORKSPACE_WHITEBOARD_MUTATIONS_GRAPHQL === 'true';
 
 export const isWorkflowGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_WORKFLOW_READS_GRAPHQL === 'true';

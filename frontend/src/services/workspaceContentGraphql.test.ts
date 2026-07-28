@@ -1,10 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  isWorkspaceListGraphqlReadsEnabled,
-  isWorkspaceNoteGraphqlReadsEnabled,
-  isWorkspaceWhiteboardGraphqlReadsEnabled,
-} from './graphqlClient';
-import {
   getCanvasListsViaGraphql,
   getWorkspaceListsViaGraphql,
   getWorkspaceNotesViaGraphql,
@@ -116,21 +111,6 @@ describe('workspace content GraphQL consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('keeps list and note reads independently default-off', () => {
-    expect(isWorkspaceListGraphqlReadsEnabled()).toBe(false);
-    expect(isWorkspaceNoteGraphqlReadsEnabled()).toBe(false);
-    expect(isWorkspaceWhiteboardGraphqlReadsEnabled()).toBe(false);
-
-    vi.stubEnv('VITE_WORKSPACE_LIST_READS_GRAPHQL', 'true');
-    expect(isWorkspaceListGraphqlReadsEnabled()).toBe(true);
-    expect(isWorkspaceNoteGraphqlReadsEnabled()).toBe(false);
-
-    vi.stubEnv('VITE_WORKSPACE_NOTE_READS_GRAPHQL', 'true');
-    expect(isWorkspaceNoteGraphqlReadsEnabled()).toBe(true);
-    vi.stubEnv('VITE_WORKSPACE_WHITEBOARD_READS_GRAPHQL', 'true');
-    expect(isWorkspaceWhiteboardGraphqlReadsEnabled()).toBe(true);
   });
 
   it('maps whiteboard JSON and casing into the REST envelope', async () => {

@@ -7,10 +7,11 @@ GraphQL service. They are owned by the authenticated user, not the selected
 organization. A workspace switch must neither change the category list nor
 grant access to another user's category identifiers.
 
-The legacy routes remain available as the immediate rollback path until both
-browser flags pass staging rehearsal.
+Category reads and writes are GraphQL-only. The browser rollout flags and the
+four authenticated Express handlers were retired on 2026-07-28 after the
+production GraphQL path and PostgreSQL contract had passed.
 
-| Legacy operation | GraphQL operation |
+| Retired REST operation | Authoritative GraphQL operation |
 | --- | --- |
 | `GET /api/categories` | `categories` |
 | `POST /api/categories` | `createCategory(input)` |
@@ -22,10 +23,10 @@ browser flags pass staging rehearsal.
 - Every operation requires the verified `itemize_auth` cookie.
 - Mutations require the shared double-submit CSRF cookie/header contract.
 - Resolvers derive `userId` only from verified request context.
-- `VITE_CATEGORY_READS_GRAPHQL` controls the list query.
-- `VITE_CATEGORY_MUTATIONS_GRAPHQL` independently controls all three writes.
-- Both flags default to false. A selected GraphQL request never silently
-  retries through REST after an error.
+- The frontend category adapter always uses GraphQL and never retries through
+  REST after an error.
+- The former read and mutation rollout flags are no longer part of the runtime
+  configuration contract.
 
 ## Schema and validation
 
@@ -81,8 +82,8 @@ An error in any content update rolls back the complete mutation.
 - Fresh PostgreSQL tests for new-user General seeding, user isolation, CSRF,
   duplicate behavior, five-store rename/delete propagation, and General
   protection.
-- Frontend tests for independent default-off flags, casing/input mapping,
-  mutation CSRF, and REST-default transport selection.
+- Frontend tests for permanent GraphQL delegation, casing/input mapping, and
+  mutation CSRF.
 - An authenticated staging browser rehearsal that creates, recolors, renames,
   and deletes a category while list, note, whiteboard, wireframe, and vault
-  cards are present. Disable the two flags to prove rollback before rollout.
+  cards are present.

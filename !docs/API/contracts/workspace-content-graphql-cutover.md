@@ -9,18 +9,17 @@ mutations because they operate on the same personal aggregates and
 transactional realtime outbox. Public capability reads remain owned by
 `PublicSharingModule`.
 
-Each content type has independent default-off read and mutation flags.
 Shared-content updates/deletes and private list-canvas events write the domain
 change and required Socket.IO projections to the transactional cross-service
 outbox atomically. The legacy socket host delivers those rows after commit.
 
-| Legacy read | GraphQL query |
+| Retired or retained HTTP read | Authoritative GraphQL query |
 | --- | --- |
-| `GET /api/lists` (retained adapter; no active routed page) | `workspaceLists(filter, page)` |
-| `GET /api/canvas/lists` | repeated bounded `workspaceLists` pages |
-| `GET /api/notes` | `workspaceNotes(filter, page)` |
-| `GET /api/whiteboards` | `workspaceWhiteboards(filter, page)` |
-| `GET /api/wireframes` | `workspaceWireframes(filter, page)` |
+| `GET /api/lists` (retired) | `workspaceLists(filter, page)` |
+| `GET /api/canvas/lists` (retired) | repeated bounded `workspaceLists` pages |
+| `GET /api/notes` (retired) | `workspaceNotes(filter, page)` |
+| `GET /api/whiteboards` (retired) | `workspaceWhiteboards(filter, page)` |
+| `GET /api/wireframes` (retained protocol) | `workspaceWireframes(filter, page)` |
 
 | Legacy note write | GraphQL mutation |
 | --- | --- |
@@ -71,30 +70,22 @@ owner and shared-viewer realtime projections with the update.
 - Resolvers derive `userId` only from verified request context.
 - The active organization never changes the result.
 - All content mutations require the verified cookie and CSRF header/token pair.
-- `VITE_WORKSPACE_LIST_READS_GRAPHQL` controls both list surfaces.
-- `VITE_WORKSPACE_LIST_MUTATIONS_GRAPHQL` independently controls the three
-  reachable list-write service methods.
-- `VITE_WORKSPACE_NOTE_READS_GRAPHQL` independently controls note reads.
-- `VITE_WORKSPACE_NOTE_MUTATIONS_GRAPHQL` independently controls all six
-  existing note-write service methods.
-- `VITE_WORKSPACE_WHITEBOARD_READS_GRAPHQL` controls whiteboard reads.
-- `VITE_WORKSPACE_WHITEBOARD_MUTATIONS_GRAPHQL` independently controls
-  whiteboard create/update/delete.
+- List, note, and whiteboard reads and reachable CRUD service methods always
+  use GraphQL. Their six former rollout flags were retired on 2026-07-28.
 - Mixed Canvas position persistence always uses GraphQL and has no REST
   fallback.
 - List, note, and whiteboard share/unshare always use GraphQL and have no REST
   fallback.
 - Wireframe read/create/update/delete, share/unshare, and the exported position
   compatibility adapter always use GraphQL and have no REST fallback.
-- All six flags default to false. Selected GraphQL requests never retry through
-  REST after a GraphQL failure.
+- These adapters never retry through REST after a GraphQL failure.
 
 The retained `UserHome` source uses the shared service adapter and correctly
-handles the `{ lists, pagination }` REST envelope. The active `App` router no
+handles its `{ lists, pagination }` compatibility envelope. The active `App` router no
 longer mounts its legacy `/lists` route, so it is not a shipped browser
 consumer. The current Canvas and Contents pages both use the canvas-list
-adapter: `GET /api/canvas/lists` on REST or repeated bounded
-`workspaceLists` pages on GraphQL. Canvas, Contents, and Global Search load
+adapter, which reads repeated bounded `workspaceLists` pages. Canvas,
+Contents, and Global Search load
 whiteboards and wireframes through the shared adapters. Canvas and Contents own
 the reachable whiteboard and wireframe CRUD calls. The active debounced drag path uses
 `batchCanvasPositions` for lists, notes, whiteboards, wireframes, and vaults;
@@ -213,7 +204,14 @@ enqueues `sharedContentRevoked`. The retained public HTTP projection and
 read-only frontend viewer are link-oriented protocol boundaries; they are not
 session application-data REST fallbacks.
 
-## Workspace-sharing code-level gate
+## Historical rollout evidence
+
+The following gate records preserve the state and rollback observations from
+the staged rollout. References to default-off flags and live REST rollback
+paths describe those rehearsals at the time they ran; they are not current
+runtime options after the 2026-07-28 retirement.
+
+### Workspace-sharing code-level gate
 
 The workspace CRUD and sharing slice passed locally on 2026-07-23. A database
 built from zero verified 111 tables and 88 migration markers, then all 18 workspace
@@ -257,7 +255,7 @@ refetch projection, worker delivery, and REST rollback gates pass. The
 staging rehearsal passed on 2026-07-18; production enablement still requires a
 monitored change window and the flags remain default-off.
 
-## Whiteboard code-level gate
+### Whiteboard code-level gate
 
 The whiteboard slice passed locally on 2026-07-18. A database built from zero
 verified migration `029`, then proved deterministic user-scoped reads,
@@ -268,7 +266,7 @@ The frontend full suite proves independent default-off selection, JSON/casing
 mapping, revision preservation, serialized updates, and REST-default behavior.
 No deployed environment or production resource was changed.
 
-## Staging read and rollback gate
+### Staging read and rollback gate
 
 The independent workspace-read gate passed on 2026-07-18 against GraphQL
 deployment `1bb70077-4237-406f-ad33-1e115a79a5ea` through legacy backend
@@ -298,7 +296,7 @@ removed from both services. Clean post-gate deployments
 configuration. All workspace GraphQL flags remain default-off and production
 was untouched.
 
-## Staging mutation and rollback gate
+### Staging mutation and rollback gate
 
 The note-mutation gate passed on 2026-07-18 against GraphQL deployment
 `d94ce176-cb73-43aa-ac46-58a430f59a30` through legacy backend deployment
@@ -336,7 +334,7 @@ variables were removed, clean staging deployments
 GraphQL readiness returned `ready`. The outbox worker and all workspace
 GraphQL frontend flags remain default-off. Production was untouched.
 
-## Staging list mutation and rollback gate
+### Staging list mutation and rollback gate
 
 The list-mutation gate passed on 2026-07-18 against GraphQL deployment
 `67a436eb-5175-48bc-b1ad-9c5eab74a5ac`. The GraphQL UI phase used legacy
@@ -379,7 +377,7 @@ returned `ready`, and `EXTRA_CORS_ORIGINS`,
 `VITE_WORKSPACE_LIST_MUTATIONS_GRAPHQL` are unset in staging. All workspace
 GraphQL flags remain default-off. Production was untouched.
 
-## Staging whiteboard and rollback gate
+### Staging whiteboard and rollback gate
 
 The whiteboard gate passed on 2026-07-18 against GraphQL deployment
 `7eba9f77-e9e8-4f4a-bac0-3127267efc4f` through legacy backend deployment
@@ -423,18 +421,15 @@ remain default-off, and production was untouched.
 - Service tests for strict pagination/filter validation, mapping, malformed
   item handling, and safe dependency errors.
 - Fresh PostgreSQL tests for user isolation, deterministic paging, category
-  identity repair, title/content search, all four REST rollback reads, note
+  identity repair, title/content search, note
   create/update/delete, fractional geometry, default-category self-healing,
   CSRF, concurrent partial updates, list create/update/delete, stale list
   revision rejection, whiteboard create/update/delete, stale whiteboard
   revision rejection, bounded shared refetch projection, owner/shared list
   projections, and outbox delivery.
-- Frontend tests for independent default-off flags, casing/envelope mapping,
+- Frontend tests for permanent GraphQL delegation, casing/envelope mapping,
   canvas multi-page reads, list/note/whiteboard mutation mapping,
-  granular-update reuse, revision preservation/serialization, and REST-default
-  selection.
-- A staging browser rehearsal for the shipped Canvas and Contents pages with
-  each read flag independently enabled and disabled, plus list and note writes
-  with their mutation flags enabled and rolled back. **All reachable workspace
-  list, note, and whiteboard reads and writes, including shared-whiteboard
-  bounded refetch and REST rollback, passed on 2026-07-18.**
+  granular-update reuse, and revision preservation/serialization.
+- A production canary proving the GraphQL operations remain healthy while all
+  16 retired list, note, and whiteboard REST handlers return `404`. The earlier
+  staged rollback rehearsals passed on 2026-07-18.

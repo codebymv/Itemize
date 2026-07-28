@@ -1,10 +1,6 @@
-const listsRoutes = require('../routes/lists.routes');
 const canvasRoutes = require('../routes/canvas.routes');
-const notesRoutes = require('../routes/notes.routes');
-const whiteboardsRoutes = require('../routes/whiteboards.routes');
 const wireframesRoutes = require('../routes/wireframes.routes');
 const vaultsRoutes = require('../routes/vaults.routes');
-const categoriesRoutes = require('../routes/categories.routes');
 const contactsRoutes = require('../routes/contacts.routes');
 const { createContactTransferProxy } = require('../contact-transfer-proxy');
 const emailTemplatesRoutes = require('../routes/email-templates.routes');
@@ -43,8 +39,6 @@ const calendarIntegrationsRoutes = require('../routes/calendar-integrations.rout
 const sharingRoutes = require('../routes/sharing.routes');
 
 function registerPositionLimiters(app, positionLimiter) {
-    app.put('/api/lists/:id/position', positionLimiter);
-    app.put('/api/whiteboards/:id/position', positionLimiter);
     app.put('/api/wireframes/:id/position', positionLimiter);
     app.put('/api/vaults/:vaultId/position', positionLimiter);
     app.put('/api/canvas/positions', positionLimiter);
@@ -154,20 +148,12 @@ function registerApiRoutes({
 
     registerPositionLimiters(app, positionLimiter);
 
-    app.use('/api', listsRoutes(pool, authenticateJWT, broadcast));
-    logger.info('Lists routes initialized');
     app.use('/api', canvasRoutes(pool, authenticateJWT, broadcast));
     logger.info('Canvas routes initialized');
-    app.use('/api', notesRoutes(pool, authenticateJWT, broadcast));
-    logger.info('Notes routes initialized');
-    app.use('/api', whiteboardsRoutes(pool, authenticateJWT, broadcast));
-    logger.info('Whiteboards routes initialized');
     app.use('/api', wireframesRoutes(pool, authenticateJWT, broadcast));
     logger.info('Wireframes routes initialized');
     app.use('/api', vaultsRoutes(pool, authenticateJWT, broadcast, publicRateLimit));
     logger.info('Vaults routes initialized');
-    app.use('/api', categoriesRoutes(pool, authenticateJWT));
-    logger.info('Categories routes initialized');
     const contactTransferProxy = createContactTransferProxy({ logger });
     app.get('/api/contacts/export/csv', contactTransferProxy);
     app.post('/api/contacts/import/csv', contactTransferProxy);

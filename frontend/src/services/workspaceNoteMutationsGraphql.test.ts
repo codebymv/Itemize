@@ -1,10 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCsrfToken } from '@/lib/api';
 import {
-  isWorkspaceNoteGraphqlMutationsEnabled,
-  isWorkspaceNoteGraphqlReadsEnabled,
-} from './graphqlClient';
-import {
   createWorkspaceNoteViaGraphql,
   deleteWorkspaceNoteViaGraphql,
   updateWorkspaceNoteViaGraphql,
@@ -55,20 +51,6 @@ describe('workspace note GraphQL mutation consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('keeps read and mutation rollback flags independent and default-off', () => {
-    vi.stubEnv('VITE_WORKSPACE_NOTE_READS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_WORKSPACE_NOTE_MUTATIONS_GRAPHQL', 'false');
-    expect(isWorkspaceNoteGraphqlReadsEnabled()).toBe(false);
-    expect(isWorkspaceNoteGraphqlMutationsEnabled()).toBe(false);
-
-    vi.stubEnv('VITE_WORKSPACE_NOTE_READS_GRAPHQL', 'true');
-    expect(isWorkspaceNoteGraphqlReadsEnabled()).toBe(true);
-    expect(isWorkspaceNoteGraphqlMutationsEnabled()).toBe(false);
-
-    vi.stubEnv('VITE_WORKSPACE_NOTE_MUTATIONS_GRAPHQL', 'true');
-    expect(isWorkspaceNoteGraphqlMutationsEnabled()).toBe(true);
   });
 
   it('maps mutation casing, stable IDs, CSRF, and legacy responses', async () => {

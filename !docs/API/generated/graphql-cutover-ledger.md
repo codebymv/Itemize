@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 284
-- API operations under `/api`: 277
+- Registered method/path operations: 262
+- API operations under `/api`: 255
 - Non-API registered operations: 7
-- Static frontend callsites: 228
-- Operations with frontend consumers: 217
-- Operations referenced by backend tests: 164
-- Recommended GraphQL queries: 68
-- Recommended GraphQL mutations: 154
+- Static frontend callsites: 208
+- Operations with frontend consumers: 197
+- Operations referenced by backend tests: 145
+- Recommended GraphQL queries: 63
+- Recommended GraphQL mutations: 137
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 224
+- High-risk operations: 202
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -78,12 +78,7 @@
 | GET | `/api/campaigns/:id/recipients` | 1 | 0 | graphql-query | high | growth / CampaignDeliveryModule / campaignRecipients |
 | POST | `/api/campaigns/:id/schedule` | 1 | 3 | graphql-mutation | medium | growth / CampaignsModule / scheduleCampaign |
 | POST | `/api/campaigns/:id/unschedule` | 1 | 1 | graphql-mutation | medium | growth / CampaignsModule / unscheduleCampaign |
-| GET | `/api/canvas/lists` | 1 | 3 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceLists |
 | PUT | `/api/canvas/positions` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / batchCanvasPositions |
-| GET | `/api/categories` | 1 | 1 | graphql-query | high | workspace-content / CategoriesModule / categories |
-| POST | `/api/categories` | 1 | 1 | graphql-mutation | high | workspace-content / CategoriesModule / createCategory |
-| DELETE | `/api/categories/:id` | 1 | 1 | graphql-mutation | high | workspace-content / CategoriesModule / deleteCategory |
-| PUT | `/api/categories/:id` | 1 | 1 | graphql-mutation | high | workspace-content / CategoriesModule / updateCategory |
 | GET | `/api/chat-widget/public/config/:widgetKey` | 1 | 0 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / getPublicChatWidgetConfig |
 | POST | `/api/chat-widget/public/end-session` | 1 | 1 | retain-http | medium | chat-widget / PublicChatWidgetHttpModule / endPublicChatSession |
 | POST | `/api/chat-widget/public/messages` | 1 | 0 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / sendPublicChatMessage |
@@ -159,22 +154,10 @@
 | DELETE | `/api/invoices/settings/logo` | 1 | 0 | graphql-mutation | high | billing / InvoiceSettingsModule / removeInvoiceSettingsLogo |
 | POST | `/api/invoices/settings/logo` | 1 | 0 | retain-http | high | billing / InvoiceSettingsModule / uploadInvoiceSettingsLogo |
 | POST | `/api/invoices/webhook/stripe` | 0 | 13 | retain-http | medium | billing / InvoiceWebhooksModule / stripeInvoiceWebhook |
-| GET | `/api/lists` | 1 | 4 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceLists |
-| POST | `/api/lists` | 1 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / createWorkspaceList |
-| DELETE | `/api/lists/:id` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / deleteWorkspaceList |
-| PUT | `/api/lists/:id` | 1 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceList |
-| PUT | `/api/lists/:id/position` | 0 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / batchCanvasPositions |
 | DELETE | `/api/lists/:listId/share` | 0 | 2 | graphql-mutation | high | sharing / WorkspaceContentModule / disableListSharing |
 | POST | `/api/lists/:listId/share` | 0 | 5 | graphql-mutation | high | sharing / WorkspaceContentModule / enableListSharing |
-| GET | `/api/notes` | 1 | 10 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceNotes |
-| POST | `/api/notes` | 1 | 6 | graphql-mutation | high | workspace-content / WorkspaceContentModule / createWorkspaceNote |
-| DELETE | `/api/notes/:noteId` | 1 | 4 | graphql-mutation | high | workspace-content / WorkspaceContentModule / deleteWorkspaceNote |
-| PUT | `/api/notes/:noteId` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceNote |
-| PUT | `/api/notes/:noteId/category` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceNote |
-| PUT | `/api/notes/:noteId/content` | 1 | 4 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceNote |
 | DELETE | `/api/notes/:noteId/share` | 0 | 1 | graphql-mutation | high | sharing / WorkspaceContentModule / disableNoteSharing |
 | POST | `/api/notes/:noteId/share` | 0 | 2 | graphql-mutation | high | sharing / WorkspaceContentModule / enableNoteSharing |
-| PUT | `/api/notes/:noteId/title` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceNote |
 | GET | `/api/pages` | 0 | 1 | graphql-query | high | growth / LandingPagesModule / landingPages |
 | POST | `/api/pages` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / createLandingPage |
 | DELETE | `/api/pages/:id` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / deleteLandingPage |
@@ -280,11 +263,6 @@
 | GET | `/api/status` | 1 | 0 | retain-http | high | _unassigned_ |
 | PUT | `/api/vaults/:vaultId/position` | 0 | 0 | graphql-mutation | high | workspace-content / VaultModule / updateWorkspaceVault |
 | POST | `/api/webhooks/:workflowId` | 0 | 6 | retain-http | high | automation / WorkflowWebhooksModule / processWorkflowWebhook |
-| GET | `/api/whiteboards` | 1 | 3 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceWhiteboards |
-| POST | `/api/whiteboards` | 1 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / createWorkspaceWhiteboard |
-| PUT | `/api/whiteboards/:id/position` | 0 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / batchCanvasPositions |
-| DELETE | `/api/whiteboards/:whiteboardId` | 1 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / deleteWorkspaceWhiteboard |
-| PUT | `/api/whiteboards/:whiteboardId` | 1 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceWhiteboard |
 | DELETE | `/api/whiteboards/:whiteboardId/share` | 0 | 1 | graphql-mutation | high | sharing / WorkspaceContentModule / disableWhiteboardSharing |
 | POST | `/api/whiteboards/:whiteboardId/share` | 0 | 2 | graphql-mutation | high | sharing / WorkspaceContentModule / enableWhiteboardSharing |
 | GET | `/api/wireframes` | 0 | 1 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceWireframes |
@@ -320,8 +298,8 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 55
-- Orphaned manual overrides: 66
+- Unmatched backend test calls: 51
+- Orphaned manual overrides: 88
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls
@@ -376,14 +354,10 @@
 | POST | `/api/pipelines/deals/1/won` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:465` |
 | POST | `/api/pipelines/deals/1/lost` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:466` |
 | POST | `/api/pipelines/deals/1/reopen` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:467` |
-| GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1051` |
-| GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1073` |
+| GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:990` |
+| GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1012` |
 | POST | `/api/campaigns/1/:action` | `backend/src/__tests__/integration/campaigns.integration.test.js:504` |
 | GET | `/api/contacts/:contactIdA/profile` | `backend/src/__tests__/integration/contacts.integration.test.js:160` |
-| PUT | `/api/lists/:listIdA/items/item1/toggle` | `backend/src/__tests__/integration/lists.integration.test.js:131` |
-| POST | `/api/lists/:listIdA/items` | `backend/src/__tests__/integration/lists.integration.test.js:134` |
-| DELETE | `/api/lists/:listIdA/items/item1` | `backend/src/__tests__/integration/lists.integration.test.js:138` |
-| PUT | `/api/lists/:listIdA/title` | `backend/src/__tests__/integration/lists.integration.test.js:152` |
 | POST | `/api/chat-widget/sessions/:id/messages` | `backend/src/__tests__/integration/realtime.integration.test.js:265` |
 | POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:168` |
 | DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:169` |

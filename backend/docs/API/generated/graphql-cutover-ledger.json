@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 284,
-    "apiOperationCount": 277,
+    "operationCount": 262,
+    "apiOperationCount": 255,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 228,
-    "operationsWithFrontendConsumers": 217,
-    "operationsWithBackendTests": 164,
+    "frontendCallsiteCount": 208,
+    "operationsWithFrontendConsumers": 197,
+    "operationsWithBackendTests": 145,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 55,
+    "unmatchedBackendTestCallCount": 51,
     "retainHttpCount": 55,
-    "graphqlQueryCount": 68,
-    "graphqlMutationCount": 154,
-    "highRiskCount": 224,
+    "graphqlQueryCount": 63,
+    "graphqlMutationCount": 137,
+    "highRiskCount": 202,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -2537,59 +2537,6 @@
       "risk": "medium"
     },
     {
-      "id": "GET /api/canvas/lists",
-      "key": "GET /api/canvas/lists",
-      "method": "GET",
-      "path": "/api/canvas/lists",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/lists.routes.js",
-          "line": 209
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/canvas/lists",
-          "rawPath": "/api/canvas/lists",
-          "source": "frontend/src/services/api.ts",
-          "line": 205,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/canvas/lists",
-          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 420
-        },
-        {
-          "method": "GET",
-          "path": "/api/canvas/lists",
-          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1705
-        },
-        {
-          "method": "GET",
-          "path": "/api/canvas/lists",
-          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1732
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "workspace-content",
-      "targetOperation": "workspaceLists",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "User-scoped canvas list read implemented as repeated strict bounded pages with deterministic ordering; Canvas and Contents passed independent GraphQL read selection plus GraphQL-list-write and REST-write rollback in staging. The personalized rollback response is private/no-store and returns a complete HTTP 200 even when a retained ETag is replayed.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "PUT /api/canvas/positions",
       "key": "PUT /api/canvas/positions",
       "method": "PUT",
@@ -2597,7 +2544,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 50
+          "line": 44
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -2614,170 +2561,6 @@
       "targetModule": "WorkspaceContentModule",
       "parityStatus": "consumer-cutover-complete",
       "notes": "The active debounced Canvas drag path now uses one bounded mixed-aggregate GraphQL mutation for list, note, whiteboard, wireframe, and vault positions. It enforces per-kind user ownership, deterministic duplicate handling, last-write-wins coordinates, wireframe rounding, optional supported dimensions, partial not-found results, CSRF, and transaction-bound shared/owner realtime publication. The frontend has no REST fallback for this path.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/categories",
-      "key": "GET /api/categories",
-      "method": "GET",
-      "path": "/api/categories",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/categories.routes.js",
-          "line": 19
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/categories",
-          "rawPath": "/api/categories",
-          "source": "frontend/src/services/api.ts",
-          "line": 603,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/categories",
-          "source": "backend-v2/test/integration/categories.integration-spec.ts",
-          "line": 129
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "workspace-content",
-      "targetOperation": "categories",
-      "targetModule": "CategoriesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Authenticated user-scoped categories with deterministic ordering and no synthetic fallback data.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/categories",
-      "key": "POST /api/categories",
-      "method": "POST",
-      "path": "/api/categories",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/categories.routes.js",
-          "line": 56
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/categories",
-          "rawPath": "/api/categories",
-          "source": "frontend/src/services/api.ts",
-          "line": 613,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/categories",
-          "source": "backend-v2/test/integration/categories.integration-spec.ts",
-          "line": 150
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "createCategory",
-      "targetModule": "CategoriesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected normalized create; the General invariant is seeded for every existing and newly inserted user.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/categories/:id",
-      "key": "DELETE /api/categories/:*",
-      "method": "DELETE",
-      "path": "/api/categories/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/categories.routes.js",
-          "line": 109
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/categories/:categoryId",
-          "rawPath": "/api/categories/${categoryId}",
-          "source": "frontend/src/services/api.ts",
-          "line": 633,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/categories/:categoryId",
-          "source": "backend-v2/test/integration/categories.integration-spec.ts",
-          "line": 172
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "deleteCategory",
-      "targetModule": "CategoriesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "User-owned transactional delete; all personal content is reassigned to General and the invariant category cannot be removed.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/categories/:id",
-      "key": "PUT /api/categories/:*",
-      "method": "PUT",
-      "path": "/api/categories/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/categories.routes.js",
-          "line": 80
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/categories/:categoryId",
-          "rawPath": "/api/categories/${categoryId}",
-          "source": "frontend/src/services/api.ts",
-          "line": 623,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/categories/:categoryId",
-          "source": "backend-v2/test/integration/categories.integration-spec.ts",
-          "line": 161
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "updateCategory",
-      "targetModule": "CategoriesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "User-owned partial update; General cannot be renamed and name changes propagate transactionally across all personal content stores.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -3484,7 +3267,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 172
+          "line": 158
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -3559,7 +3342,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 173
+          "line": 159
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -4663,7 +4446,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 212
+          "line": 198
         },
         {
           "source": "backend/src/routes/invoices/actions.routes.js",
@@ -5151,7 +4934,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 204
+          "line": 190
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -6431,7 +6214,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 208
+          "line": 194
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -6469,7 +6252,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 200
+          "line": 186
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -6569,218 +6352,6 @@
       "risk": "medium"
     },
     {
-      "id": "GET /api/lists",
-      "key": "GET /api/lists",
-      "method": "GET",
-      "path": "/api/lists",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/lists.routes.js",
-          "line": 20
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/lists",
-          "rawPath": "/api/lists",
-          "source": "frontend/src/services/api.ts",
-          "line": 235,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/lists",
-          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1701
-        },
-        {
-          "method": "GET",
-          "path": "/api/lists",
-          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1727
-        },
-        {
-          "method": "GET",
-          "path": "/api/lists",
-          "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 94
-        },
-        {
-          "method": "GET",
-          "path": "/api/lists",
-          "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 104
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "workspace-content",
-      "targetOperation": "workspaceLists",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "User-scoped paginated list read with typed items, canonical category resolution, search, and deterministic ordering. Its personalized rollback response is private/no-store and ignores conditional validators. The static callsite belongs to the retained UserHome adapter, but the active App router does not mount the legacy /lists page; shipped Canvas and Contents use GET /api/canvas/lists instead.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/lists",
-      "key": "POST /api/lists",
-      "method": "POST",
-      "path": "/api/lists",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/lists.routes.js",
-          "line": 89
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/lists",
-          "rawPath": "/api/lists",
-          "source": "frontend/src/services/api.ts",
-          "line": 279,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/lists",
-          "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 74
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "createWorkspaceList",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Implemented with bounded typed items, canonical category ID/name dual-write, CSRF, user scope, and REST-readable persistence behind an independent default-off mutation flag. Canvas/Contents creation and REST rollback passed the staging browser gate.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/lists/:id",
-      "key": "DELETE /api/lists/:*",
-      "method": "DELETE",
-      "path": "/api/lists/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/lists.routes.js",
-          "line": 176
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/lists/:listId",
-          "rawPath": "/api/lists/${listId}",
-          "source": "frontend/src/services/api.ts",
-          "line": 374,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/lists/:listIdA",
-          "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 166
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/lists/:listIdA",
-          "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 180
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "deleteWorkspaceList",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Implemented with user concealment, CSRF, stable mutation IDs, and atomic owner-canvas plus active public-viewer deletion projections through the cross-service outbox. The staging browser gate proved GraphQL deletion and flag-off REST deletion reach the shipped owner and anonymous-viewer surfaces.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/lists/:id",
-      "key": "PUT /api/lists/:*",
-      "method": "PUT",
-      "path": "/api/lists/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/lists.routes.js",
-          "line": 128
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/lists/:id",
-          "rawPath": "/api/lists/${listData.id}",
-          "source": "frontend/src/services/api.ts",
-          "line": 345,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "updateWorkspaceList",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Implemented for the reachable whole-list UI adapter with row locking, required updatedAt optimistic concurrency, stable CONFLICT details, canonical category dual-write, and atomic owner/public realtime outbox rows. Staging proved stale-write rejection, sent owner/shared projections, an open anonymous viewer update, and REST rollback without later GraphQL traffic.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/lists/:id/position",
-      "key": "PUT /api/lists/:*/position",
-      "method": "PUT",
-      "path": "/api/lists/:id/position",
-      "routeSources": [
-        {
-          "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 46
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/lists/:listIdA/position",
-          "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 115
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "batchCanvasPositions",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The unused dedicated frontend adapter and REST route were removed. Active list drag persistence is covered by the CSRF-protected GraphQL batch, which validates ownership and atomically enqueues shared-viewer projections.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "DELETE /api/lists/:listId/share",
       "key": "DELETE /api/lists/:*/share",
       "method": "DELETE",
@@ -6873,384 +6444,6 @@
       "risk": "high"
     },
     {
-      "id": "GET /api/notes",
-      "key": "GET /api/notes",
-      "method": "GET",
-      "path": "/api/notes",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/notes.routes.js",
-          "line": 20
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/notes",
-          "rawPath": "/api/notes",
-          "source": "frontend/src/services/api.ts",
-          "line": 389,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/notes",
-          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 618
-        },
-        {
-          "method": "GET",
-          "path": "/api/notes",
-          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1709
-        },
-        {
-          "method": "GET",
-          "path": "/api/notes",
-          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1737
-        },
-        {
-          "method": "GET",
-          "path": "/api/notes",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 87
-        },
-        {
-          "method": "GET",
-          "path": "/api/notes",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 99
-        },
-        {
-          "method": "GET",
-          "path": "/api/notes",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 279
-        },
-        {
-          "method": "GET",
-          "path": "/api/notes",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 289
-        },
-        {
-          "method": "GET",
-          "path": "/api/notes",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 298
-        },
-        {
-          "method": "GET",
-          "path": "/api/notes",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 307
-        },
-        {
-          "method": "GET",
-          "path": "/api/notes",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 323
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "workspace-content",
-      "targetOperation": "workspaceNotes",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "User-scoped paginated note read with title/content search, canonical category resolution, and deterministic ordering; the shipped Canvas and Contents surfaces passed independent GraphQL selection and REST rollback in staging. The personalized rollback response is private/no-store and returns a complete HTTP 200 when a retained ETag is replayed.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/notes",
-      "key": "POST /api/notes",
-      "method": "POST",
-      "path": "/api/notes",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/notes.routes.js",
-          "line": 89
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/notes",
-          "rawPath": "/api/notes",
-          "source": "frontend/src/services/api.ts",
-          "line": 399,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/notes",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 62
-        },
-        {
-          "method": "POST",
-          "path": "/api/notes",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 148
-        },
-        {
-          "method": "POST",
-          "path": "/api/notes",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 172
-        },
-        {
-          "method": "POST",
-          "path": "/api/notes",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 258
-        },
-        {
-          "method": "POST",
-          "path": "/api/notes",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 262
-        },
-        {
-          "method": "POST",
-          "path": "/api/notes",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 329
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "createWorkspaceNote",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "User-scoped create validates bounded fields, resolves a canonical category, and writes its ID/name projection atomically.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/notes/:noteId",
-      "key": "DELETE /api/notes/:*",
-      "method": "DELETE",
-      "path": "/api/notes/:noteId",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/notes.routes.js",
-          "line": 190
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/notes/:noteId",
-          "rawPath": "/api/notes/${noteId}",
-          "source": "frontend/src/services/api.ts",
-          "line": 453,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/notes/:noteId",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 130
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/notes/:noteId",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 139
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/notes/:freshId",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 154
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/notes/:freshId",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 160
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "deleteWorkspaceNote",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "User-scoped delete atomically enqueues the shared-viewer deletion event with a stable mutation key.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/notes/:noteId",
-      "key": "PUT /api/notes/:*",
-      "method": "PUT",
-      "path": "/api/notes/:noteId",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/notes.routes.js",
-          "line": 130
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/notes/:noteId",
-          "rawPath": "/api/notes/${noteId}",
-          "source": "frontend/src/services/api.ts",
-          "line": 409,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/notes/:noteId",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 109
-        },
-        {
-          "method": "PUT",
-          "path": "/api/notes/:noteId",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 121
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "updateWorkspaceNote",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Row-locked user-scoped update preserves omitted fields and atomically enqueues shared-viewer realtime projection.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/notes/:noteId/category",
-      "key": "PUT /api/notes/:*/category",
-      "method": "PUT",
-      "path": "/api/notes/:noteId/category",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/notes.routes.js",
-          "line": 312
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/notes/:noteId/category",
-          "rawPath": "/api/notes/${noteId}/category",
-          "source": "frontend/src/services/api.ts",
-          "line": 440,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/notes/:noteId/category",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 223
-        },
-        {
-          "method": "PUT",
-          "path": "/api/notes/:noteId/category",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 233
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "updateWorkspaceNote",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The shared partial-update mutation verifies the user-owned category and atomically writes ID/name plus realtime projection.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/notes/:noteId/content",
-      "key": "PUT /api/notes/:*/content",
-      "method": "PUT",
-      "path": "/api/notes/:noteId/content",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/notes.routes.js",
-          "line": 240
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/notes/:noteId/content",
-          "rawPath": "/api/notes/${noteId}/content",
-          "source": "frontend/src/services/api.ts",
-          "line": 420,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/notes/:mutationNoteId/content",
-          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 803
-        },
-        {
-          "method": "PUT",
-          "path": "/api/notes/:noteId/content",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 184
-        },
-        {
-          "method": "PUT",
-          "path": "/api/notes/:noteId/content",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 195
-        },
-        {
-          "method": "PUT",
-          "path": "/api/notes/:noteId/content",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 242
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "updateWorkspaceNote",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The shared row-locked partial-update mutation validates bounded content and preserves granular realtime event semantics.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "DELETE /api/notes/:noteId/share",
       "key": "DELETE /api/notes/:*/share",
       "method": "DELETE",
@@ -7315,53 +6508,6 @@
       "targetModule": "WorkspaceContentModule",
       "parityStatus": "consumer-cutover-complete",
       "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Atomic issuance reuses one active token, and re-enable after revoke rotates it.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/notes/:noteId/title",
-      "key": "PUT /api/notes/:*/title",
-      "method": "PUT",
-      "path": "/api/notes/:noteId/title",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/notes.routes.js",
-          "line": 276
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/notes/:noteId/title",
-          "rawPath": "/api/notes/${noteId}/title",
-          "source": "frontend/src/services/api.ts",
-          "line": 430,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/notes/:noteId/title",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 204
-        },
-        {
-          "method": "PUT",
-          "path": "/api/notes/:noteId/title",
-          "source": "backend/src/__tests__/integration/notes.integration.test.js",
-          "line": 214
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "updateWorkspaceNote",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The shared row-locked partial-update mutation validates title and preserves granular realtime event semantics.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -7948,7 +7094,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 266
+          "line": 252
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8035,7 +7181,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 286
+          "line": 272
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8104,7 +7250,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 282
+          "line": 268
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8149,7 +7295,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 274
+          "line": 260
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8177,7 +7323,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 270
+          "line": 256
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8212,7 +7358,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 278
+          "line": 264
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -9591,7 +8737,7 @@
           "path": "/api/shared/vault/:shareToken",
           "rawPath": "/api/shared/vault/${shareToken}",
           "source": "frontend/src/services/api.ts",
-          "line": 752,
+          "line": 569,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9728,13 +8874,13 @@
           "method": "GET",
           "path": "/api/shared/wireframe/:sharedWireframeToken",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1222
+          "line": 1161
         },
         {
           "method": "GET",
           "path": "/api/shared/wireframe/:sharedWireframeToken",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1378
+          "line": 1317
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -10054,7 +9200,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 252
+          "line": 238
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10125,7 +9271,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 248
+          "line": 234
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10282,7 +9428,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 234
+          "line": 220
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10603,7 +9749,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 256
+          "line": 242
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10672,7 +9818,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 241
+          "line": 227
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -11238,7 +10384,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 77
+          "line": 71
         }
       ],
       "consumerCallsites": [
@@ -11272,7 +10418,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 49
+          "line": 43
         }
       ],
       "consumerCallsites": [],
@@ -11346,199 +10492,6 @@
       "targetModule": "WorkflowWebhooksModule",
       "parityStatus": "characterizing",
       "notes": "Retain raw-body HMAC HTTP delivery with timestamp tolerance, canonical trigger matching, and durable replay claims. The adapter returns execution=durably_queued and feeds the same leased trigger matcher as first-party producers.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/whiteboards",
-      "key": "GET /api/whiteboards",
-      "method": "GET",
-      "path": "/api/whiteboards",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/whiteboards.routes.js",
-          "line": 27
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/whiteboards",
-          "rawPath": "/api/whiteboards",
-          "source": "frontend/src/services/api.ts",
-          "line": 466,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/whiteboards",
-          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 846
-        },
-        {
-          "method": "GET",
-          "path": "/api/whiteboards",
-          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1713
-        },
-        {
-          "method": "GET",
-          "path": "/api/whiteboards",
-          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1742
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "workspace-content",
-      "targetOperation": "workspaceWhiteboards",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "User-scoped paginated whiteboard read with title search, canonical category resolution, deterministic ordering, and JSON/casing adaptation for Canvas, Contents, and Global Search. The personalized REST rollback response is private/no-store and returns a complete HTTP 200 when a retained ETag is replayed. Staging browser rehearsal remains required.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/whiteboards",
-      "key": "POST /api/whiteboards",
-      "method": "POST",
-      "path": "/api/whiteboards",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/whiteboards.routes.js",
-          "line": 93
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/whiteboards",
-          "rawPath": "/api/whiteboards",
-          "source": "frontend/src/services/api.ts",
-          "line": 486,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "createWorkspaceWhiteboard",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "User-scoped CSRF-protected create validates bounded canvas JSON, geometry, colors, and canonical category identity; REST can read the committed row. The independent mutation flag remains default-off pending staging.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/whiteboards/:id/position",
-      "key": "PUT /api/whiteboards/:*/position",
-      "method": "PUT",
-      "path": "/api/whiteboards/:id/position",
-      "routeSources": [
-        {
-          "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 47
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/whiteboards/1/position",
-          "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 119
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "batchCanvasPositions",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The unused dedicated frontend adapter and REST route were removed. Active whiteboard drag persistence is covered by the CSRF-protected GraphQL batch, which validates ownership and atomically enqueues shared-viewer projections.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/whiteboards/:whiteboardId",
-      "key": "DELETE /api/whiteboards/:*",
-      "method": "DELETE",
-      "path": "/api/whiteboards/:whiteboardId",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/whiteboards.routes.js",
-          "line": 241
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/whiteboards/:whiteboardId",
-          "rawPath": "/api/whiteboards/${whiteboardId}",
-          "source": "frontend/src/services/api.ts",
-          "line": 515,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "deleteWorkspaceWhiteboard",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "User-scoped CSRF-protected delete uses a stable mutation ID and atomically enqueues the active public-viewer terminal projection. PostgreSQL proves REST miss and worker delivery; staging remains required.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/whiteboards/:whiteboardId",
-      "key": "PUT /api/whiteboards/:*",
-      "method": "PUT",
-      "path": "/api/whiteboards/:whiteboardId",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/whiteboards.routes.js",
-          "line": 154
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/whiteboards/:whiteboardId",
-          "rawPath": "/api/whiteboards/${whiteboardId}",
-          "source": "frontend/src/services/api.ts",
-          "line": 504,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/whiteboards/:mutationWhiteboardId",
-          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 987
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "updateWorkspaceWhiteboard",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Row-locked update requires the preceding updatedAt revision, rejects stale snapshots with stable conflict details, serializes rapid frontend saves, and atomically enqueues a bounded shared-viewer refetch projection rather than oversized canvas JSON.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -11627,7 +10580,7 @@
           "method": "GET",
           "path": "/api/wireframes",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1183
+          "line": 1122
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -11673,7 +10626,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 48
+          "line": 42
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",
@@ -11734,7 +10687,7 @@
           "method": "PUT",
           "path": "/api/wireframes/:mutationWireframeId",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1452
+          "line": 1391
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -12998,13 +11951,13 @@
       "method": "GET",
       "path": "/api/shared/:kind/:shareToken",
       "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-      "line": 1051
+      "line": 990
     },
     {
       "method": "GET",
       "path": "/api/shared/:kind/:shareToken",
       "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-      "line": 1073
+      "line": 1012
     },
     {
       "method": "POST",
@@ -13017,30 +11970,6 @@
       "path": "/api/contacts/:contactIdA/profile",
       "source": "backend/src/__tests__/integration/contacts.integration.test.js",
       "line": 160
-    },
-    {
-      "method": "PUT",
-      "path": "/api/lists/:listIdA/items/item1/toggle",
-      "source": "backend/src/__tests__/integration/lists.integration.test.js",
-      "line": 131
-    },
-    {
-      "method": "POST",
-      "path": "/api/lists/:listIdA/items",
-      "source": "backend/src/__tests__/integration/lists.integration.test.js",
-      "line": 134
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/lists/:listIdA/items/item1",
-      "source": "backend/src/__tests__/integration/lists.integration.test.js",
-      "line": 138
-    },
-    {
-      "method": "PUT",
-      "path": "/api/lists/:listIdA/title",
-      "source": "backend/src/__tests__/integration/lists.integration.test.js",
-      "line": 152
     },
     {
       "method": "POST",
@@ -13152,14 +12081,18 @@
     }
   ],
   "orphanedOverrides": [
+    "DELETE /api/categories/:id",
     "DELETE /api/forms/:id",
     "DELETE /api/forms/:id/submissions/:subId",
+    "DELETE /api/lists/:id",
+    "DELETE /api/notes/:noteId",
     "DELETE /api/onboarding/reset",
     "DELETE /api/organizations/:organizationId",
     "DELETE /api/organizations/:organizationId/members/:memberId",
     "DELETE /api/vaults/:vaultId",
     "DELETE /api/vaults/:vaultId/items/:itemId",
     "DELETE /api/vaults/:vaultId/share",
+    "DELETE /api/whiteboards/:whiteboardId",
     "GET /api/admin/email/logs",
     "GET /api/admin/email/logs/:id",
     "GET /api/admin/email/templates",
@@ -13171,9 +12104,13 @@
     "GET /api/billing",
     "GET /api/billing/plans",
     "GET /api/billing/usage",
+    "GET /api/canvas/lists",
+    "GET /api/categories",
     "GET /api/forms",
     "GET /api/forms/:id",
     "GET /api/forms/:id/submissions",
+    "GET /api/lists",
+    "GET /api/notes",
     "GET /api/onboarding/progress",
     "GET /api/onboarding/progress/:featureKey",
     "GET /api/organizations",
@@ -13181,6 +12118,7 @@
     "GET /api/organizations/:organizationId/members",
     "GET /api/vaults",
     "GET /api/vaults/:vaultId",
+    "GET /api/whiteboards",
     "PATCH /api/admin/me/plan",
     "POST /api/admin/email/preview",
     "POST /api/admin/email/send",
@@ -13191,10 +12129,13 @@
     "POST /api/campaigns/:id/resume",
     "POST /api/campaigns/:id/send",
     "POST /api/campaigns/:id/send-test",
+    "POST /api/categories",
     "POST /api/email-templates/:id/send-test",
     "POST /api/email-templates/send-to-contact",
     "POST /api/forms",
     "POST /api/forms/:id/duplicate",
+    "POST /api/lists",
+    "POST /api/notes",
     "POST /api/onboarding/complete-step",
     "POST /api/onboarding/dismiss",
     "POST /api/onboarding/mark-seen",
@@ -13211,13 +12152,23 @@
     "POST /api/vaults/:vaultId/lock",
     "POST /api/vaults/:vaultId/share",
     "POST /api/vaults/:vaultId/unlock",
+    "POST /api/whiteboards",
+    "PUT /api/categories/:id",
     "PUT /api/forms/:id",
     "PUT /api/forms/:id/fields",
+    "PUT /api/lists/:id",
+    "PUT /api/lists/:id/position",
+    "PUT /api/notes/:noteId",
+    "PUT /api/notes/:noteId/category",
+    "PUT /api/notes/:noteId/content",
+    "PUT /api/notes/:noteId/title",
     "PUT /api/organizations/:organizationId",
     "PUT /api/organizations/:organizationId/members/:memberId",
     "PUT /api/vaults/:vaultId",
     "PUT /api/vaults/:vaultId/items/:itemId",
-    "PUT /api/vaults/:vaultId/items/reorder"
+    "PUT /api/vaults/:vaultId/items/reorder",
+    "PUT /api/whiteboards/:id/position",
+    "PUT /api/whiteboards/:whiteboardId"
   ],
   "orphanedRuntimeExpressionOverrides": []
 }

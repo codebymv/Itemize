@@ -1,10 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCsrfToken } from '@/lib/api';
 import {
-  isWorkspaceWhiteboardGraphqlMutationsEnabled,
-  isWorkspaceWhiteboardGraphqlReadsEnabled,
-} from './graphqlClient';
-import {
   createWorkspaceWhiteboardViaGraphql,
   deleteWorkspaceWhiteboardViaGraphql,
   updateWorkspaceWhiteboardViaGraphql,
@@ -57,16 +53,6 @@ describe('workspace whiteboard GraphQL mutation consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('keeps whiteboard read and mutation flags independently default-off', () => {
-    expect(isWorkspaceWhiteboardGraphqlReadsEnabled()).toBe(false);
-    expect(isWorkspaceWhiteboardGraphqlMutationsEnabled()).toBe(false);
-    vi.stubEnv('VITE_WORKSPACE_WHITEBOARD_READS_GRAPHQL', 'true');
-    expect(isWorkspaceWhiteboardGraphqlReadsEnabled()).toBe(true);
-    expect(isWorkspaceWhiteboardGraphqlMutationsEnabled()).toBe(false);
-    vi.stubEnv('VITE_WORKSPACE_WHITEBOARD_MUTATIONS_GRAPHQL', 'true');
-    expect(isWorkspaceWhiteboardGraphqlMutationsEnabled()).toBe(true);
   });
 
   it('maps JSON and serializes same-whiteboard revisions', async () => {

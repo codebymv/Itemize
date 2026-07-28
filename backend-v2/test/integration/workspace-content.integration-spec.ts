@@ -136,11 +136,6 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     configureApp(app);
     await app.init();
 
-    const createListsRouter = require('../../../backend/src/routes/lists.routes');
-    const createNotesRouter = require('../../../backend/src/routes/notes.routes');
-    const createWhiteboardsRouter = require(
-      '../../../backend/src/routes/whiteboards.routes',
-    );
     const createWireframesRouter = require(
       '../../../backend/src/routes/wireframes.routes',
     );
@@ -152,12 +147,6 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     legacyApp = express();
     legacyApp.use(cookieParser());
     legacyApp.use(express.json());
-    legacyApp.use('/api', createListsRouter(pool, authenticateJWT, broadcast));
-    legacyApp.use('/api', createNotesRouter(pool, authenticateJWT, broadcast));
-    legacyApp.use(
-      '/api',
-      createWhiteboardsRouter(pool, authenticateJWT, broadcast),
-    );
     legacyApp.use(
       '/api',
       createWireframesRouter(pool, authenticateJWT, broadcast),
@@ -416,19 +405,6 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     });
     mutationListId = result.body.data.createWorkspaceList.id;
 
-    const rest = await request(legacyApp)
-      .get('/api/canvas/lists')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .expect(200);
-    expect(rest.body).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: mutationListId,
-          category: 'Work',
-          category_id: workCategoryId,
-        }),
-      ]),
-    );
   });
 
   it('commits list owner/shared projections and rejects a stale snapshot', async () => {
@@ -614,19 +590,6 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     });
     mutationNoteId = result.body.data.createWorkspaceNote.id;
 
-    const rest = await request(legacyApp)
-      .get('/api/notes')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .expect(200);
-    expect(rest.body.notes).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: mutationNoteId,
-          category: 'Work',
-        }),
-      ]),
-    );
-
     const storedCategory = await pool.query<{
       category: string;
       category_id: number;
@@ -799,12 +762,6 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       },
     });
 
-    const rest = await request(legacyApp)
-      .put(`/api/notes/${mutationNoteId}/content`)
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .send({ content: 'Gone' })
-      .expect(404);
-    expect(rest.body.error).toBe('Note not found');
   });
 
   it('creates and updates a revision-guarded shared whiteboard', async () => {
@@ -841,19 +798,6 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     });
     mutationWhiteboardId =
       created.body.data.createWorkspaceWhiteboard.id;
-
-    const rest = await request(legacyApp)
-      .get('/api/whiteboards')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .expect(200);
-    expect(rest.body.data.whiteboards).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: mutationWhiteboardId,
-          category: 'Work',
-        }),
-      ]),
-    );
 
     await pool.query(
       `UPDATE whiteboards
@@ -983,11 +927,6 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
         message: 'This whiteboard has been deleted by the owner.',
       },
     });
-    await request(legacyApp)
-      .put(`/api/whiteboards/${mutationWhiteboardId}`)
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .send({ title: 'Gone' })
-      .expect(404);
   });
 
   it('covers list, note, and whiteboard GraphQL sharing with durable revocation', async () => {
@@ -1694,64 +1633,6 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
         pool.query('DELETE FROM vaults WHERE id = $1', [ids.vault]),
       ]);
     }
-  });
-
-  it('keeps all four characterized REST read paths available for rollback', async () => {
-    const lists = await request(legacyApp)
-      .get('/api/lists')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .expect(200);
-    const canvasLists = await request(legacyApp)
-      .get('/api/canvas/lists')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .expect(200);
-    const notes = await request(legacyApp)
-      .get('/api/notes')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .expect(200);
-    const whiteboards = await request(legacyApp)
-      .get('/api/whiteboards')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .expect(200);
-
-    expect(lists.headers['cache-control']).toBe('private, no-store');
-    expect(canvasLists.headers['cache-control']).toBe('private, no-store');
-    expect(notes.headers['cache-control']).toBe('private, no-store');
-    expect(whiteboards.headers['cache-control']).toBe('private, no-store');
-    expect(lists.headers.etag).toEqual(expect.any(String));
-    expect(canvasLists.headers.etag).toEqual(expect.any(String));
-    expect(notes.headers.etag).toEqual(expect.any(String));
-    expect(whiteboards.headers.etag).toEqual(expect.any(String));
-
-    const conditionalLists = await request(legacyApp)
-      .get('/api/lists')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('If-None-Match', lists.headers.etag)
-      .expect(200);
-    const conditionalCanvasLists = await request(legacyApp)
-      .get('/api/canvas/lists')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('If-None-Match', canvasLists.headers.etag)
-      .expect(200);
-    const conditionalNotes = await request(legacyApp)
-      .get('/api/notes')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('If-None-Match', notes.headers.etag)
-      .expect(200);
-    const conditionalWhiteboards = await request(legacyApp)
-      .get('/api/whiteboards')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('If-None-Match', whiteboards.headers.etag)
-      .expect(200);
-
-    expect(lists.body.lists).toHaveLength(2);
-    expect(canvasLists.body).toHaveLength(2);
-    expect(notes.body.notes).toHaveLength(2);
-    expect(whiteboards.body.data.whiteboards).toHaveLength(1);
-    expect(conditionalLists.body.lists).toHaveLength(2);
-    expect(conditionalCanvasLists.body).toHaveLength(2);
-    expect(conditionalNotes.body.notes).toHaveLength(2);
-    expect(conditionalWhiteboards.body.data.whiteboards).toHaveLength(1);
   });
 
   it('rejects invalid filters and pagination without querying another user', async () => {

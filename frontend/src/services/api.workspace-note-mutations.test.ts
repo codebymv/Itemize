@@ -8,7 +8,6 @@ import {
   updateNoteContent,
   updateNoteTitle,
 } from './api';
-import { isWorkspaceNoteGraphqlMutationsEnabled } from './graphqlClient';
 import {
   createWorkspaceNoteViaGraphql,
   deleteWorkspaceNoteViaGraphql,
@@ -22,14 +21,6 @@ vi.mock('@/lib/api', () => ({
     post: vi.fn(),
     put: vi.fn(),
   },
-}));
-
-vi.mock('./graphqlClient', () => ({
-  isCategoryGraphqlMutationsEnabled: vi.fn(() => false),
-  isCategoryGraphqlReadsEnabled: vi.fn(() => false),
-  isWorkspaceListGraphqlReadsEnabled: vi.fn(() => false),
-  isWorkspaceNoteGraphqlMutationsEnabled: vi.fn(),
-  isWorkspaceNoteGraphqlReadsEnabled: vi.fn(() => false),
 }));
 
 vi.mock('./workspaceNoteMutationsGraphql', () => ({
@@ -58,57 +49,24 @@ const note = {
   updated_at: '2026-07-18T12:01:00.000Z',
 };
 
-describe('workspace note API mutation transport selection', () => {
+describe('workspace note API GraphQL mutations', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(isWorkspaceNoteGraphqlMutationsEnabled).mockReturnValue(false);
   });
 
-  it('keeps all six write functions on REST by default', async () => {
-    vi.mocked(api.post).mockResolvedValue({ data: note });
-    vi.mocked(api.put).mockResolvedValue({ data: note });
-    vi.mocked(api.delete).mockResolvedValue({
-      data: { message: 'Note deleted successfully' },
-    });
-
-    await createNote({ title: 'Plan', color_value: '#3B82F6' }, 'token');
-    await updateNote(9, { color_value: '#ABCDEF' }, 'token');
-    await updateNoteContent(9, 'Changed', 'token');
-    await updateNoteTitle(9, 'Changed title', 'token');
-    await updateNoteCategory(9, 'Work', 'token');
-    await deleteNote(9, 'token');
-
-    expect(api.post).toHaveBeenCalledWith(
-      '/api/notes',
-      { title: 'Plan', color_value: '#3B82F6' },
-      { headers: {} },
-    );
-    expect(api.put).toHaveBeenCalledTimes(4);
-    expect(api.put).toHaveBeenCalledWith(
-      '/api/notes/9/content',
-      { content: 'Changed' },
-      { headers: {} },
-    );
-    expect(api.delete).toHaveBeenCalledWith('/api/notes/9', {
-      headers: {},
-    });
-    expect(createWorkspaceNoteViaGraphql).not.toHaveBeenCalled();
-  });
-
-  it('routes all writes through GraphQL when independently enabled', async () => {
-    vi.mocked(isWorkspaceNoteGraphqlMutationsEnabled).mockReturnValue(true);
+  it('routes all six write functions through GraphQL', async () => {
     vi.mocked(createWorkspaceNoteViaGraphql).mockResolvedValue(note);
     vi.mocked(updateWorkspaceNoteViaGraphql).mockResolvedValue(note);
     vi.mocked(deleteWorkspaceNoteViaGraphql).mockResolvedValue({
       message: 'Note deleted successfully',
     });
 
-    await createNote({ title: 'Plan', color_value: '#3B82F6' });
-    await updateNote(9, { color_value: '#ABCDEF' });
-    await updateNoteContent(9, 'Changed');
-    await updateNoteTitle(9, 'Changed title');
-    await updateNoteCategory(9, 'Work');
-    await deleteNote(9);
+    await createNote({ title: 'Plan', color_value: '#3B82F6' }, 'ignored-token');
+    await updateNote(9, { color_value: '#ABCDEF' }, 'ignored-token');
+    await updateNoteContent(9, 'Changed', 'ignored-token');
+    await updateNoteTitle(9, 'Changed title', 'ignored-token');
+    await updateNoteCategory(9, 'Work', 'ignored-token');
+    await deleteNote(9, 'ignored-token');
 
     expect(createWorkspaceNoteViaGraphql).toHaveBeenCalledWith({
       title: 'Plan',

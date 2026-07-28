@@ -1,10 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCsrfToken } from '@/lib/api';
 import {
-  isWorkspaceListGraphqlMutationsEnabled,
-  isWorkspaceListGraphqlReadsEnabled,
-} from './graphqlClient';
-import {
   createWorkspaceListViaGraphql,
   deleteWorkspaceListViaGraphql,
   updateWorkspaceListViaGraphql,
@@ -56,20 +52,6 @@ describe('workspace list GraphQL mutation consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('keeps list read and mutation rollback flags independent', () => {
-    vi.stubEnv('VITE_WORKSPACE_LIST_READS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_WORKSPACE_LIST_MUTATIONS_GRAPHQL', 'false');
-    expect(isWorkspaceListGraphqlReadsEnabled()).toBe(false);
-    expect(isWorkspaceListGraphqlMutationsEnabled()).toBe(false);
-
-    vi.stubEnv('VITE_WORKSPACE_LIST_READS_GRAPHQL', 'true');
-    expect(isWorkspaceListGraphqlReadsEnabled()).toBe(true);
-    expect(isWorkspaceListGraphqlMutationsEnabled()).toBe(false);
-
-    vi.stubEnv('VITE_WORKSPACE_LIST_MUTATIONS_GRAPHQL', 'true');
-    expect(isWorkspaceListGraphqlMutationsEnabled()).toBe(true);
   });
 
   it('maps revisions, casing, stable IDs, CSRF, and legacy responses', async () => {

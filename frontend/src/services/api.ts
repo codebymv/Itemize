@@ -9,16 +9,6 @@ import {
   updateCategoryViaGraphql,
 } from './categoriesGraphql';
 import {
-  isCategoryGraphqlMutationsEnabled,
-  isCategoryGraphqlReadsEnabled,
-  isWorkspaceListGraphqlReadsEnabled,
-  isWorkspaceListGraphqlMutationsEnabled,
-  isWorkspaceNoteGraphqlMutationsEnabled,
-  isWorkspaceNoteGraphqlReadsEnabled,
-  isWorkspaceWhiteboardGraphqlMutationsEnabled,
-  isWorkspaceWhiteboardGraphqlReadsEnabled,
-} from './graphqlClient';
-import {
   getCanvasListsViaGraphql,
   getWorkspaceListsViaGraphql,
   getWorkspaceNotesViaGraphql,
@@ -55,7 +45,6 @@ import {
   enableWhiteboardSharingViaGraphql,
 } from './workspaceSharingMutationsGraphql';
 import {
-  forgetWorkspaceWhiteboardRevision,
   rememberWorkspaceWhiteboardRevision,
 } from './workspaceWhiteboardRevision';
 import {
@@ -199,13 +188,8 @@ const getAuthHeaders = (_token?: string) => ({});
 
 // List API functions
 export const fetchCanvasLists = async (token?: string) => {
-  const responseData = isWorkspaceListGraphqlReadsEnabled()
-    ? await getCanvasListsViaGraphql()
-    : (
-        await api.get('/api/canvas/lists', {
-          headers: getAuthHeaders(token)
-        })
-      ).data;
+  void token;
+  const responseData = await getCanvasListsViaGraphql();
   
   // Transform backend response to match frontend List interface
   const transformedLists = responseData.map((listFromBackend: BackendListResponse) => ({
@@ -229,89 +213,17 @@ export const fetchCanvasLists = async (token?: string) => {
 };
 
 export const getLists = async (token?: string) => {
-  if (isWorkspaceListGraphqlReadsEnabled()) {
-    return getWorkspaceListsViaGraphql();
-  }
-  const response = await api.get('/api/lists', {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return getWorkspaceListsViaGraphql();
 };
 
 export const createList = async (listData: ListPayload, token?: string) => {
   try {
-    if (isWorkspaceListGraphqlMutationsEnabled()) {
-      const response = await createWorkspaceListViaGraphql({
-        ...listData,
-        width: MIN_LIST_WIDTH,
-      });
-      return {
-        id: response.id,
-        title: response.title,
-        type: response.category,
-        items: response.items,
-        createdAt: response.created_at
-          ? new Date(response.created_at)
-          : undefined,
-        updated_at: response.updated_at,
-        color_value: response.color_value,
-        position_x: response.position_x,
-        position_y: response.position_y,
-        width: MIN_LIST_WIDTH,
-        height: response.height,
-        share_token: response.share_token,
-        is_public: response.is_public,
-        shared_at: response.shared_at
-          ? new Date(response.shared_at)
-          : undefined,
-      };
-    }
-    // Transform frontend 'type' field to backend 'category' field
-    const backendData = {
+    void token;
+    const response = await createWorkspaceListViaGraphql({
       ...listData,
-      category: listData.type || listData.category || 'General', // Map type to category for backend
-      width: MIN_LIST_WIDTH, // Always set width to MIN_LIST_WIDTH for new lists
-    };
-    
-    // Remove 'type' field to avoid confusion on backend
-    delete backendData.type;
-    
-    const response = await api.post('/api/lists', backendData, {
-      headers: getAuthHeaders(token)
+      width: MIN_LIST_WIDTH,
     });
-    
-    if (!response.data || !response.data.id) {
-      throw new Error('Invalid response from server');
-    }
-    
-    // Transform backend response to match frontend List interface
-    const transformedList = {
-      id: response.data.id,
-      title: response.data.title,
-      type: response.data.category || response.data.type || 'General',
-      items: response.data.items || [],
-      createdAt: response.data.created_at ? new Date(response.data.created_at) : undefined,
-      updated_at: response.data.updated_at,
-      color_value: response.data.color_value,
-      position_x: response.data.position_x,
-      position_y: response.data.position_y,
-      width: MIN_LIST_WIDTH, // Ensure width is MIN_LIST_WIDTH even if backend returns something else
-      height: response.data.height,
-      share_token: response.data.share_token,
-      is_public: response.data.is_public,
-      shared_at: response.data.shared_at ? new Date(response.data.shared_at) : undefined
-    };
-    
-    return transformedList;
-  } catch (error) {
-    console.error('Failed to create list:', error);
-    throw error;
-  }
-};
-
-export const updateList = async (listData: ListPayload & { id: string | number }, token?: string) => {
-  if (isWorkspaceListGraphqlMutationsEnabled()) {
-    const response = await updateWorkspaceListViaGraphql(listData);
     return {
       id: response.id,
       title: response.title,
@@ -324,7 +236,7 @@ export const updateList = async (listData: ListPayload & { id: string | number }
       color_value: response.color_value,
       position_x: response.position_x,
       position_y: response.position_y,
-      width: response.width,
+      width: MIN_LIST_WIDTH,
       height: response.height,
       share_token: response.share_token,
       is_public: response.is_public,
@@ -332,49 +244,40 @@ export const updateList = async (listData: ListPayload & { id: string | number }
         ? new Date(response.shared_at)
         : undefined,
     };
+  } catch (error) {
+    console.error('Failed to create list:', error);
+    throw error;
   }
-  // Transform frontend 'type' field to backend 'category' field
-  const backendData = {
-    ...listData,
-    category: listData.type || listData.category, // Map type to category for backend
+};
+
+export const updateList = async (listData: ListPayload & { id: string | number }, token?: string) => {
+  void token;
+  const response = await updateWorkspaceListViaGraphql(listData);
+  return {
+    id: response.id,
+    title: response.title,
+    type: response.category,
+    items: response.items,
+    createdAt: response.created_at
+      ? new Date(response.created_at)
+      : undefined,
+    updated_at: response.updated_at,
+    color_value: response.color_value,
+    position_x: response.position_x,
+    position_y: response.position_y,
+    width: response.width,
+    height: response.height,
+    share_token: response.share_token,
+    is_public: response.is_public,
+    shared_at: response.shared_at
+      ? new Date(response.shared_at)
+      : undefined,
   };
-  
-  // Remove 'type' field to avoid confusion on backend
-  delete backendData.type;
-  
-  const response = await api.put(`/api/lists/${listData.id}`, backendData, {
-    headers: getAuthHeaders(token)
-  });
-  
-  // Transform backend response to match frontend List interface
-  const transformedList = {
-    id: response.data.id,
-    title: response.data.title,
-    type: response.data.category || response.data.type || 'General',
-    items: response.data.items || [],
-    createdAt: response.data.created_at ? new Date(response.data.created_at) : undefined,
-    updated_at: response.data.updated_at,
-    color_value: response.data.color_value,
-    position_x: response.data.position_x,
-    position_y: response.data.position_y,
-    width: response.data.width,
-    height: response.data.height,
-    share_token: response.data.share_token,
-    is_public: response.data.is_public,
-    shared_at: response.data.shared_at ? new Date(response.data.shared_at) : undefined
-  };
-  
-  return transformedList;
 };
 
 export const deleteList = async (listId: string, token?: string) => {
-  if (isWorkspaceListGraphqlMutationsEnabled()) {
-    return deleteWorkspaceListViaGraphql(listId);
-  }
-  const response = await api.delete(`/api/lists/${listId}`, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return deleteWorkspaceListViaGraphql(listId);
 };
 
 export const updateCanvasPositions = async (updates: CanvasPositionUpdate[], token?: string) => {
@@ -383,90 +286,45 @@ export const updateCanvasPositions = async (updates: CanvasPositionUpdate[], tok
 
 // Note API functions
 export const getNotes = async (token?: string) => {
-  if (isWorkspaceNoteGraphqlReadsEnabled()) {
-    return getWorkspaceNotesViaGraphql();
-  }
-  const response = await api.get('/api/notes', {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return getWorkspaceNotesViaGraphql();
 };
 
 export const createNote = async (noteData: CreateNotePayload, token?: string) => {
-  if (isWorkspaceNoteGraphqlMutationsEnabled()) {
-    return createWorkspaceNoteViaGraphql(noteData);
-  }
-  const response = await api.post('/api/notes', noteData, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return createWorkspaceNoteViaGraphql(noteData);
 };
 
 export const updateNote = async (noteId: number, noteData: NotePayload, token?: string) => {
-  if (isWorkspaceNoteGraphqlMutationsEnabled()) {
-    return updateWorkspaceNoteViaGraphql(noteId, noteData);
-  }
-  const response = await api.put(`/api/notes/${noteId}`, noteData, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return updateWorkspaceNoteViaGraphql(noteId, noteData);
 };
 
 // Granular note update functions for real-time updates
 export const updateNoteContent = async (noteId: number, content: string, token?: string) => {
-  if (isWorkspaceNoteGraphqlMutationsEnabled()) {
-    return updateWorkspaceNoteViaGraphql(noteId, { content });
-  }
-  const response = await api.put(`/api/notes/${noteId}/content`, { content }, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return updateWorkspaceNoteViaGraphql(noteId, { content });
 };
 
 export const updateNoteTitle = async (noteId: number, title: string, token?: string) => {
-  if (isWorkspaceNoteGraphqlMutationsEnabled()) {
-    return updateWorkspaceNoteViaGraphql(noteId, { title });
-  }
-  const response = await api.put(`/api/notes/${noteId}/title`, { title }, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return updateWorkspaceNoteViaGraphql(noteId, { title });
 };
 
 export const updateNoteCategory = async (noteId: number, category: string, token?: string) => {
-  if (isWorkspaceNoteGraphqlMutationsEnabled()) {
-    return updateWorkspaceNoteViaGraphql(noteId, { category });
-  }
-  const response = await api.put(`/api/notes/${noteId}/category`, { category }, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return updateWorkspaceNoteViaGraphql(noteId, { category });
 };
 
 export const deleteNote = async (noteId: number, token?: string) => {
-  if (isWorkspaceNoteGraphqlMutationsEnabled()) {
-    return deleteWorkspaceNoteViaGraphql(noteId);
-  }
-  logger.log(`🌐 API: Making DELETE request to /api/notes/${noteId}`);
-  logger.log(`🔑 API: Auth headers:`, getAuthHeaders(token));
-
-  const response = await api.delete(`/api/notes/${noteId}`, {
-    headers: getAuthHeaders(token)
-  });
-
-  console.log(`✅ API: Delete response:`, response.data);
-  return response.data;
+  void token;
+  return deleteWorkspaceNoteViaGraphql(noteId);
 };
 
 // Whiteboard API functions
 export const getWhiteboards = async (token?: string) => {
-  const data = isWorkspaceWhiteboardGraphqlReadsEnabled()
-    ? await getWorkspaceWhiteboardsViaGraphql()
-    : (
-        await api.get('/api/whiteboards', {
-          headers: getAuthHeaders(token)
-        })
-      ).data;
+  void token;
+  const data = await getWorkspaceWhiteboardsViaGraphql();
   const rows = Array.isArray(data) ? data : data?.whiteboards;
   if (Array.isArray(rows)) {
     rows.forEach((whiteboard) => {
@@ -480,43 +338,22 @@ export const getWhiteboards = async (token?: string) => {
 };
 
 export const createWhiteboard = async (whiteboardData: CreateWhiteboardPayload, token?: string) => {
-  if (isWorkspaceWhiteboardGraphqlMutationsEnabled()) {
-    return createWorkspaceWhiteboardViaGraphql(whiteboardData);
-  }
-  const response = await api.post('/api/whiteboards', whiteboardData, {
-    headers: getAuthHeaders(token)
-  });
-  rememberWorkspaceWhiteboardRevision(
-    Number(response.data.id),
-    response.data.updated_at,
-  );
-  return response.data;
+  void token;
+  return createWorkspaceWhiteboardViaGraphql(whiteboardData);
 };
 
 export const updateWhiteboard = async (whiteboardId: number, whiteboardData: WhiteboardPayload, token?: string) => {
   logger.log('Sending whiteboard update to backend:', { whiteboardId, whiteboardData });
-  if (isWorkspaceWhiteboardGraphqlMutationsEnabled()) {
-    return updateWorkspaceWhiteboardViaGraphql(
-      whiteboardId,
-      whiteboardData,
-    );
-  }
-  const response = await api.put(`/api/whiteboards/${whiteboardId}`, whiteboardData, {
-    headers: getAuthHeaders(token)
-  });
-  rememberWorkspaceWhiteboardRevision(whiteboardId, response.data.updated_at);
-  return response.data;
+  void token;
+  return updateWorkspaceWhiteboardViaGraphql(
+    whiteboardId,
+    whiteboardData,
+  );
 };
 
 export const deleteWhiteboard = async (whiteboardId: number, token?: string) => {
-  if (isWorkspaceWhiteboardGraphqlMutationsEnabled()) {
-    return deleteWorkspaceWhiteboardViaGraphql(whiteboardId);
-  }
-  const response = await api.delete(`/api/whiteboards/${whiteboardId}`, {
-    headers: getAuthHeaders(token)
-  });
-  forgetWorkspaceWhiteboardRevision(whiteboardId);
-  return response.data;
+  void token;
+  return deleteWorkspaceWhiteboardViaGraphql(whiteboardId);
 };
 
 // Wireframe types and API functions
@@ -597,43 +434,23 @@ export const updateWireframePosition = async (wireframeId: number, x: number, y:
 
 // Category API functions
 export const getCategories = async (token?: string): Promise<Category[]> => {
-  if (isCategoryGraphqlReadsEnabled()) {
-    return getCategoriesViaGraphql();
-  }
-  const response = await api.get('/api/categories', {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return getCategoriesViaGraphql();
 };
 
 export const createCategory = async (categoryData: CreateCategoryPayload, token?: string): Promise<Category> => {
-  if (isCategoryGraphqlMutationsEnabled()) {
-    return createCategoryViaGraphql(categoryData);
-  }
-  const response = await api.post('/api/categories', categoryData, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return createCategoryViaGraphql(categoryData);
 };
 
 export const updateCategory = async (categoryId: number, categoryData: CreateCategoryPayload, token?: string): Promise<Category> => {
-  if (isCategoryGraphqlMutationsEnabled()) {
-    return updateCategoryViaGraphql(categoryId, categoryData);
-  }
-  const response = await api.put(`/api/categories/${categoryId}`, categoryData, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return updateCategoryViaGraphql(categoryId, categoryData);
 };
 
 export const deleteCategory = async (categoryId: number, token?: string) => {
-  if (isCategoryGraphqlMutationsEnabled()) {
-    return deleteCategoryViaGraphql(categoryId);
-  }
-  const response = await api.delete(`/api/categories/${categoryId}`, {
-    headers: getAuthHeaders(token)
-  });
-  return response.data;
+  void token;
+  return deleteCategoryViaGraphql(categoryId);
 };
 
 // ======================

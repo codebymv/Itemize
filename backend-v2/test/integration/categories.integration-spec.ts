@@ -1,8 +1,6 @@
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
-import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -11,7 +9,6 @@ import { PG_POOL } from '../../src/database/database.module';
 
 describe('Category GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   let memberId: number;
   let outsiderId: number;
@@ -72,12 +69,6 @@ describe('Category GraphQL PostgreSQL contract', () => {
     configureApp(app);
     await app.init();
 
-    const createCategoriesRouter = require('../../../backend/src/routes/categories.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use('/api', createCategoriesRouter(pool, authenticateJWT));
   });
 
   afterAll(async () => {
@@ -125,11 +116,6 @@ describe('Category GraphQL PostgreSQL contract', () => {
       outsiderToken,
       `{ categories { ${fields} } }`,
     ).expect(200);
-    const legacy = await request(legacyApp)
-      .get('/api/categories')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .expect(200);
-
     expect(member.body.errors).toBeUndefined();
     expect(member.body.data.categories).toHaveLength(1);
     expect(member.body.data.categories[0]).toMatchObject({
@@ -137,44 +123,8 @@ describe('Category GraphQL PostgreSQL contract', () => {
       name: 'General',
       colorValue: '#6B7280',
     });
-    expect(legacy.body.data.map((category: { name: string }) => category.name))
-      .toEqual(member.body.data.categories.map(
-        (category: { name: string }) => category.name,
-      ));
     expect(outsider.body.data.categories).toHaveLength(1);
     expect(outsider.body.data.categories[0].id).not.toBe(generalId);
-  });
-
-  it('keeps the characterized REST CRUD path available for rollback', async () => {
-    const created = await request(legacyApp)
-      .post('/api/categories')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .send({ name: 'Legacy rollback', color_value: '#123' })
-      .expect(201);
-    expect(created.body.data).toMatchObject({
-      name: 'Legacy rollback',
-      color_value: '#123',
-    });
-
-    const categoryId = Number(created.body.data.id);
-    const updated = await request(legacyApp)
-      .put(`/api/categories/${categoryId}`)
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .send({ name: 'Legacy renamed', color_value: '#456' })
-      .expect(200);
-    expect(updated.body.data).toMatchObject({
-      id: categoryId,
-      name: 'Legacy renamed',
-      color_value: '#456',
-    });
-
-    const deleted = await request(legacyApp)
-      .delete(`/api/categories/${categoryId}`)
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .expect(200);
-    expect(deleted.body.data).toEqual({
-      message: 'Category deleted successfully',
-    });
   });
 
   it('validates creates, normalizes colors, and requires CSRF', async () => {
