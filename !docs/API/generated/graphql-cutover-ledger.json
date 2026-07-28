@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 252,
-    "apiOperationCount": 245,
+    "operationCount": 243,
+    "apiOperationCount": 236,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 198,
-    "operationsWithFrontendConsumers": 187,
-    "operationsWithBackendTests": 137,
+    "frontendCallsiteCount": 189,
+    "operationsWithFrontendConsumers": 178,
+    "operationsWithBackendTests": 136,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 50,
     "retainHttpCount": 55,
-    "graphqlQueryCount": 59,
-    "graphqlMutationCount": 131,
-    "highRiskCount": 192,
+    "graphqlQueryCount": 54,
+    "graphqlMutationCount": 127,
+    "highRiskCount": 183,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -2544,7 +2544,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 43
+          "line": 42
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -2787,7 +2787,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 157
+          "line": 156
         }
       ],
       "consumerCallsites": [
@@ -2846,7 +2846,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 158
+          "line": 157
         }
       ],
       "consumerCallsites": [
@@ -3934,7 +3934,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 195
+          "line": 192
         },
         {
           "source": "backend/src/routes/invoices/actions.routes.js",
@@ -4422,7 +4422,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 187
+          "line": 184
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -5702,7 +5702,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 191
+          "line": 188
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -5740,7 +5740,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 183
+          "line": 180
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -6582,7 +6582,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 249
+          "line": 246
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -6669,7 +6669,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 269
+          "line": 266
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -6738,7 +6738,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 265
+          "line": 262
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -6783,7 +6783,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 257
+          "line": 254
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -6811,7 +6811,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 253
+          "line": 250
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -6846,7 +6846,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 261
+          "line": 258
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -7772,319 +7772,6 @@
       "risk": "high"
     },
     {
-      "id": "GET /api/segments",
-      "key": "GET /api/segments",
-      "method": "GET",
-      "path": "/api/segments",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/segments.routes.js",
-          "line": 180
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/segments",
-          "rawPath": "/api/segments",
-          "source": "frontend/src/services/segmentsApi.ts",
-          "line": 114,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/segments",
-          "source": "backend-v2/test/integration/segments.integration-spec.ts",
-          "line": 181
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "audiences",
-      "targetOperation": "segments",
-      "targetModule": "SegmentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Implemented as a bounded organization-scoped connection with active/search filters and deterministic name/ID ordering; retained REST remains the default-off rollback path.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/segments",
-      "key": "POST /api/segments",
-      "method": "POST",
-      "path": "/api/segments",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/segments.routes.js",
-          "line": 210
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/segments",
-          "rawPath": "/api/segments",
-          "source": "frontend/src/services/segmentsApi.ts",
-          "line": 143,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "audiences",
-      "targetOperation": "createSegment",
-      "targetModule": "SegmentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Atomically validates the exact dynamic/static definition and tenant references, creates it, calculates membership, and records initial history.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/segments/:id",
-      "key": "DELETE /api/segments/:*",
-      "method": "DELETE",
-      "path": "/api/segments/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/segments.routes.js",
-          "line": 315
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/segments/:segmentId",
-          "rawPath": "/api/segments/${segmentId}",
-          "source": "frontend/src/services/segmentsApi.ts",
-          "line": 172,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "audiences",
-      "targetOperation": "deleteSegment",
-      "targetModule": "SegmentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Organization-owned delete; conflicts while any campaign references the saved audience so historical targeting is not orphaned.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/segments/:id",
-      "key": "GET /api/segments/:*",
-      "method": "GET",
-      "path": "/api/segments/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/segments.routes.js",
-          "line": 240
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/segments/:segmentId",
-          "rawPath": "/api/segments/${segmentId}",
-          "source": "frontend/src/services/segmentsApi.ts",
-          "line": 129,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "audiences",
-      "targetOperation": "segment",
-      "targetModule": "SegmentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Organization-owned definition with a bounded, newest-first calculation history projection.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/segments/:id",
-      "key": "PUT /api/segments/:*",
-      "method": "PUT",
-      "path": "/api/segments/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/segments.routes.js",
-          "line": 267
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/segments/:segmentId",
-          "rawPath": "/api/segments/${segmentId}",
-          "source": "frontend/src/services/segmentsApi.ts",
-          "line": 158,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "audiences",
-      "targetOperation": "updateSegment",
-      "targetModule": "SegmentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Locked atomic partial update; omitted metadata is preserved and targeting changes recalculate membership in the same transaction.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/segments/:id/calculate",
-      "key": "POST /api/segments/:*/calculate",
-      "method": "POST",
-      "path": "/api/segments/:id/calculate",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/segments.routes.js",
-          "line": 342
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/segments/:segmentId/calculate",
-          "rawPath": "/api/segments/${segmentId}/calculate",
-          "source": "frontend/src/services/segmentsApi.ts",
-          "line": 186,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "audiences",
-      "targetOperation": "recalculateSegment",
-      "targetModule": "SegmentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Serializes concurrent recalculation, fails closed on invalid definitions, updates the cached count, and appends one accurate history delta.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/segments/:id/contacts",
-      "key": "GET /api/segments/:*/contacts",
-      "method": "GET",
-      "path": "/api/segments/:id/contacts",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/segments.routes.js",
-          "line": 368
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/segments/:segmentId/contacts",
-          "rawPath": "/api/segments/${segmentId}/contacts",
-          "source": "frontend/src/services/segmentsApi.ts",
-          "line": 201,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "audiences",
-      "targetOperation": "segmentContacts",
-      "targetModule": "SegmentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Evaluates the saved definition inside its organization with strict bounded pagination and deterministic ordering.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/segments/filter-options",
-      "key": "GET /api/segments/filter-options",
-      "method": "GET",
-      "path": "/api/segments/filter-options",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/segments.routes.js",
-          "line": 99
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/segments/filter-options",
-          "rawPath": "/api/segments/filter-options",
-          "source": "frontend/src/services/segmentsApi.ts",
-          "line": 231,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "audiences",
-      "targetOperation": "segmentFilterOptions",
-      "targetModule": "SegmentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Tenant-scoped tags, members, and pipeline stages plus the authoritative filter/operator/status vocabulary.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/segments/preview",
-      "key": "POST /api/segments/preview",
-      "method": "POST",
-      "path": "/api/segments/preview",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/segments.routes.js",
-          "line": 149
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/segments/preview",
-          "rawPath": "/api/segments/preview",
-          "source": "frontend/src/services/segmentsApi.ts",
-          "line": 217,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "audiences",
-      "targetOperation": "previewSegment",
-      "targetModule": "SegmentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Pure query despite the legacy POST; count and sample share one validated parameterized evaluator and never persist a definition.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "GET /api/shared/list/:token",
       "key": "GET /api/shared/list/:*",
       "method": "GET",
@@ -8688,7 +8375,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 235
+          "line": 232
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8759,7 +8446,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 231
+          "line": 228
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8916,7 +8603,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 217
+          "line": 214
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -9237,7 +8924,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 239
+          "line": 236
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -9306,7 +8993,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 224
+          "line": 221
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -9872,7 +9559,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 70
+          "line": 69
         }
       ],
       "consumerCallsites": [
@@ -9906,7 +9593,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 42
+          "line": 41
         }
       ],
       "consumerCallsites": [],
@@ -10114,7 +9801,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 41
+          "line": 40
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",
@@ -11572,6 +11259,7 @@
     "DELETE /api/onboarding/reset",
     "DELETE /api/organizations/:organizationId",
     "DELETE /api/organizations/:organizationId/members/:memberId",
+    "DELETE /api/segments/:id",
     "DELETE /api/vaults/:vaultId",
     "DELETE /api/vaults/:vaultId/items/:itemId",
     "DELETE /api/vaults/:vaultId/share",
@@ -11603,6 +11291,10 @@
     "GET /api/organizations",
     "GET /api/organizations/:organizationId",
     "GET /api/organizations/:organizationId/members",
+    "GET /api/segments",
+    "GET /api/segments/:id",
+    "GET /api/segments/:id/contacts",
+    "GET /api/segments/filter-options",
     "GET /api/vaults",
     "GET /api/vaults/:vaultId",
     "GET /api/whiteboards",
@@ -11635,6 +11327,9 @@
     "POST /api/organizations/:organizationId/members",
     "POST /api/organizations/:organizationId/select",
     "POST /api/organizations/ensure-default",
+    "POST /api/segments",
+    "POST /api/segments/:id/calculate",
+    "POST /api/segments/preview",
     "POST /api/sms-templates/:id/send-test",
     "POST /api/sms-templates/send-to-contact",
     "POST /api/vaults",
@@ -11656,6 +11351,7 @@
     "PUT /api/notes/:noteId/title",
     "PUT /api/organizations/:organizationId",
     "PUT /api/organizations/:organizationId/members/:memberId",
+    "PUT /api/segments/:id",
     "PUT /api/vaults/:vaultId",
     "PUT /api/vaults/:vaultId/items/:itemId",
     "PUT /api/vaults/:vaultId/items/reorder",

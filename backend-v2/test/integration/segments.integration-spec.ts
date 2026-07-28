@@ -1,8 +1,6 @@
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
-import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -11,7 +9,6 @@ import { PG_POOL } from '../../src/database/database.module';
 
 describe('Segments GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   let memberId: number;
   let outsiderId: number;
@@ -72,12 +69,6 @@ describe('Segments GraphQL PostgreSQL contract', () => {
     configureApp(app);
     await app.init();
 
-    const createSegmentsRouter = require('../../../backend/src/routes/segments.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use('/api/segments', createSegmentsRouter(pool, authenticateJWT));
   });
 
   afterAll(async () => {
@@ -158,7 +149,7 @@ describe('Segments GraphQL PostgreSQL contract', () => {
     ]);
   });
 
-  it('keeps bounded list/membership parity and the retained REST rollback path', async () => {
+  it('keeps bounded list and membership behavior deterministic', async () => {
     const list = await graphql(
       `query List($filter: SegmentListFilterInput, $page: PageInput) {
         segments(filter: $filter, page: $page) { nodes { id name } pageInfo { total pageSize } }
@@ -178,10 +169,6 @@ describe('Segments GraphQL PostgreSQL contract', () => {
       nodes: [{ id: activeContactId, firstName: 'Active', customFields: { tier: 'gold' } }],
       pageInfo: { total: 1, page: 1, pageSize: 1 },
     });
-    const legacy = await request(legacyApp).get('/api/segments')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId)).expect(200);
-    expect(legacy.body.map((segment: { id: number }) => Number(segment.id))).toContain(id);
   });
 
   it('preserves partial updates and serializes recalculation history', async () => {

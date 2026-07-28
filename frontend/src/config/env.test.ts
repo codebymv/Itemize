@@ -45,7 +45,6 @@ describe('Environment Validation', () => {
     expect(env.VITE_CAMPAIGN_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_CAMPAIGN_AUDIENCE_PREVIEW_GRAPHQL).toBe('false');
     expect(env.VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL).toBe('false');
-    expect(env.VITE_SEGMENTS_GRAPHQL).toBe('false');
     expect(env.VITE_REPUTATION_REVIEWS_GRAPHQL).toBe('false');
     expect(env.VITE_REPUTATION_ANALYTICS_GRAPHQL).toBe('false');
     expect(env.VITE_REPUTATION_REQUEST_MANAGEMENT_GRAPHQL).toBe('false');

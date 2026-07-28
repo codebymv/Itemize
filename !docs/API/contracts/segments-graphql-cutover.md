@@ -1,8 +1,8 @@
 # Audience segments GraphQL cutover contract
 
-**Status:** Production consumer cutover complete behind `VITE_SEGMENTS_GRAPHQL`
+**Status:** Permanent GraphQL consumer; authenticated segment REST surface retired
 
-**Evidence date:** 2026-07-21
+**Evidence date:** 2026-07-28
 
 ## Decision
 
@@ -94,8 +94,12 @@ The segment page historically read `type` while the API returns `segment_type`; 
 
 Fresh PostgreSQL coverage proves route reachability, exact status metadata, bound preview parameters, tenant isolation, hostile custom-field keys, fail-closed rule validation, dynamic and static membership, bounded pagination, partial-update rollback, serialized history deltas, saved campaign persistence, preview/send recipient agreement, duplicate preservation, delete conflict, and cross-tenant campaign rejection. Nest campaign preview additionally proves all/tag/status/dynamic/static evaluation, deliverability exclusions, retained-REST parity, foreign-campaign concealment, and corrupt saved-definition denial against a clean 102-table/77-marker schema.
 
-All nine authenticated segment operations are implemented in `SegmentsModule` and the existing `segmentsApi` service selects the complete GraphQL adapter behind one default-off rollback flag. Segment and campaign audience evaluation reuse the same fail-closed compiler. The frontend's currently reachable dynamic-builder journey is covered; static definitions, update/detail, and membership remain available through the complete adapter even though the current UI does not expose them.
+All nine authenticated segment operations are implemented in `SegmentsModule`, and `segmentsApi` calls the complete GraphQL adapter directly with no REST fallback or rollout flag. Segment and campaign audience evaluation reuse the same fail-closed compiler. The frontend's currently reachable dynamic-builder journey is covered; static definitions, update/detail, and membership remain available through the complete adapter even though the current UI does not expose them.
 
-Fresh PostgreSQL now additionally proves GraphQL filter vocabulary, forged-context denial, custom-field preview, create/count/initial history, bounded list and membership reads, retained REST interoperability, partial-update preservation, metadata-only history stability, concurrent recalculation serialization, foreign-reference denial, CSRF, campaign-reference delete conflict, and final deletion. Focused frontend tests prove flag selection, organization headers, CSRF, casing, custom-field input mapping, preview, vocabulary, and delete identity.
+Fresh PostgreSQL proves GraphQL filter vocabulary, forged-context denial, custom-field preview, create/count/initial history, bounded list and membership reads, partial-update preservation, metadata-only history stability, concurrent recalculation serialization, foreign-reference denial, CSRF, campaign-reference delete conflict, and final deletion. Focused frontend tests prove permanent adapter delegation, organization headers, CSRF, casing, custom-field input mapping, preview, vocabulary, and delete identity.
+
+## Historical rollout evidence
 
 Production cutover completed from commit `b0c618da` with backend deployment `f59a065e-51c7-43ee-8e17-943104d5f850`, GraphQL deployment `acb51cd1-f3e2-45c1-a011-18e6eeec611e`, and flag-enabled frontend deployment `81b86fd7-270d-414d-8162-9133df0e737a`. Read-only schema probes validated all five queries and four mutations before authentication, the selected production variable is `true`, and an authenticated browser load rendered the live Segments empty state and counts through the GraphQL adapter. Scheduled-campaign deactivation remains a product rule for a future UI that permits segment deactivation.
+
+On 2026-07-28 the rollout switch and every frontend REST branch were removed. The nine Express handlers and their route-only projection helper were deleted, all removed method/path combinations gained explicit `404` canaries, and the Nest PostgreSQL suite stopped loading the deleted parity router. Campaign targeting retains its shared fail-closed segment evaluator; only the duplicate authenticated segment transport was retired.

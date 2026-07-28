@@ -152,9 +152,6 @@ export const isCampaignAudiencePreviewGraphqlEnabled = (): boolean =>
 export const isCampaignRecipientReadsGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL === 'true';
 
-export const isSegmentsGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_SEGMENTS_GRAPHQL === 'true';
-
 export const isReputationReviewsGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_REPUTATION_REVIEWS_GRAPHQL === 'true';
 

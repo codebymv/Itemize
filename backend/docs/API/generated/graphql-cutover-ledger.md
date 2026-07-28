@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 252
-- API operations under `/api`: 245
+- Registered method/path operations: 243
+- API operations under `/api`: 236
 - Non-API registered operations: 7
-- Static frontend callsites: 198
-- Operations with frontend consumers: 187
-- Operations referenced by backend tests: 137
-- Recommended GraphQL queries: 59
-- Recommended GraphQL mutations: 131
+- Static frontend callsites: 189
+- Operations with frontend consumers: 178
+- Operations referenced by backend tests: 136
+- Recommended GraphQL queries: 54
+- Recommended GraphQL mutations: 127
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 192
+- High-risk operations: 183
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -200,15 +200,6 @@
 | DELETE | `/api/reputation/widgets/:id` | 1 | 0 | graphql-mutation | high | reputation / ReputationConfigurationModule / deleteReputationWidget |
 | PUT | `/api/reputation/widgets/:id` | 1 | 0 | graphql-mutation | high | reputation / ReputationConfigurationModule / updateReputationWidget |
 | GET | `/api/reputation/widgets/:id/embed-code` | 1 | 0 | graphql-query | high | reputation / ReputationConfigurationModule / reputationWidgetEmbedCode |
-| GET | `/api/segments` | 1 | 1 | graphql-query | high | audiences / SegmentsModule / segments |
-| POST | `/api/segments` | 1 | 0 | graphql-mutation | high | audiences / SegmentsModule / createSegment |
-| DELETE | `/api/segments/:id` | 1 | 0 | graphql-mutation | high | audiences / SegmentsModule / deleteSegment |
-| GET | `/api/segments/:id` | 1 | 0 | graphql-query | high | audiences / SegmentsModule / segment |
-| PUT | `/api/segments/:id` | 1 | 0 | graphql-mutation | high | audiences / SegmentsModule / updateSegment |
-| POST | `/api/segments/:id/calculate` | 1 | 0 | graphql-mutation | high | audiences / SegmentsModule / recalculateSegment |
-| GET | `/api/segments/:id/contacts` | 1 | 0 | graphql-query | high | audiences / SegmentsModule / segmentContacts |
-| GET | `/api/segments/filter-options` | 1 | 0 | graphql-query | high | audiences / SegmentsModule / segmentFilterOptions |
-| POST | `/api/segments/preview` | 1 | 0 | graphql-query | high | audiences / SegmentsModule / previewSegment |
 | GET | `/api/shared/list/:token` | 2 | 4 | retain-http | high | sharing / PublicSharingModule / getSharedList |
 | GET | `/api/shared/note/:token` | 2 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedNote |
 | GET | `/api/shared/vault/:token` | 1 | 3 | retain-http | high | sharing / VaultModule / getSharedVault |
@@ -289,7 +280,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 50
-- Orphaned manual overrides: 98
+- Orphaned manual overrides: 107
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

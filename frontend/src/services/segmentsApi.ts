@@ -2,9 +2,7 @@
  * Segments API Service
  * Handles segment CRUD and dynamic filtering
  */
-import api from '@/lib/api';
 import type { Contact } from '@/types';
-import { isSegmentsGraphqlEnabled } from './graphqlClient';
 import {
     createSegmentViaGraphql,
     deleteSegmentViaGraphql,
@@ -16,13 +14,6 @@ import {
     recalculateSegmentViaGraphql,
     updateSegmentViaGraphql,
 } from './segmentsGraphql';
-
-const unwrapResponse = <T>(payload: unknown): T => {
-    if (payload && typeof payload === 'object' && 'data' in payload) {
-        return payload.data as T;
-    }
-    return payload as T;
-};
 
 // ======================
 // Types
@@ -110,12 +101,7 @@ export const getSegments = async (
     params: { is_active?: boolean; search?: string } = {},
     organizationId?: number
 ): Promise<Segment[]> => {
-    if (isSegmentsGraphqlEnabled()) return getSegmentsViaGraphql(params, organizationId);
-    const response = await api.get('/api/segments', {
-        params,
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<Segment[]>(response.data);
+    return getSegmentsViaGraphql(params, organizationId);
 };
 
 /**
@@ -125,11 +111,7 @@ export const getSegment = async (
     segmentId: number,
     organizationId?: number
 ): Promise<Segment> => {
-    if (isSegmentsGraphqlEnabled()) return getSegmentViaGraphql(segmentId, organizationId);
-    const response = await api.get(`/api/segments/${segmentId}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<Segment>(response.data);
+    return getSegmentViaGraphql(segmentId, organizationId);
 };
 
 /**
@@ -139,11 +121,7 @@ export const createSegment = async (
     segment: Partial<Segment>,
     organizationId?: number
 ): Promise<Segment> => {
-    if (isSegmentsGraphqlEnabled()) return createSegmentViaGraphql(segment, organizationId);
-    const response = await api.post('/api/segments', segment, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<Segment>(response.data);
+    return createSegmentViaGraphql(segment, organizationId);
 };
 
 /**
@@ -154,11 +132,7 @@ export const updateSegment = async (
     segment: Partial<Segment>,
     organizationId?: number
 ): Promise<Segment> => {
-    if (isSegmentsGraphqlEnabled()) return updateSegmentViaGraphql(segmentId, segment, organizationId);
-    const response = await api.put(`/api/segments/${segmentId}`, segment, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<Segment>(response.data);
+    return updateSegmentViaGraphql(segmentId, segment, organizationId);
 };
 
 /**
@@ -168,11 +142,7 @@ export const deleteSegment = async (
     segmentId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
-    if (isSegmentsGraphqlEnabled()) return deleteSegmentViaGraphql(segmentId, organizationId);
-    const response = await api.delete(`/api/segments/${segmentId}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<{ success: boolean }>(response.data);
+    return deleteSegmentViaGraphql(segmentId, organizationId);
 };
 
 /**
@@ -182,11 +152,7 @@ export const calculateSegment = async (
     segmentId: number,
     organizationId?: number
 ): Promise<Segment> => {
-    if (isSegmentsGraphqlEnabled()) return recalculateSegmentViaGraphql(segmentId, organizationId);
-    const response = await api.post(`/api/segments/${segmentId}/calculate`, {}, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<Segment>(response.data);
+    return recalculateSegmentViaGraphql(segmentId, organizationId);
 };
 
 /**
@@ -197,12 +163,7 @@ export const getSegmentContacts = async (
     params: { page?: number; limit?: number } = {},
     organizationId?: number
 ): Promise<{ contacts: Contact[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
-    if (isSegmentsGraphqlEnabled()) return getSegmentContactsViaGraphql(segmentId, params, organizationId);
-    const response = await api.get(`/api/segments/${segmentId}/contacts`, {
-        params,
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<{ contacts: Contact[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(response.data);
+    return getSegmentContactsViaGraphql(segmentId, params, organizationId);
 };
 
 /**
@@ -213,25 +174,14 @@ export const previewSegment = async (
     filterType: 'and' | 'or' = 'and',
     organizationId?: number
 ): Promise<SegmentPreview> => {
-    if (isSegmentsGraphqlEnabled()) return previewSegmentViaGraphql(filters, filterType, organizationId);
-    const response = await api.post('/api/segments/preview', {
-        filters,
-        filter_type: filterType
-    }, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<SegmentPreview>(response.data);
+    return previewSegmentViaGraphql(filters, filterType, organizationId);
 };
 
 /**
  * Get available filter options
  */
 export const getFilterOptions = async (organizationId?: number): Promise<FilterOptions> => {
-    if (isSegmentsGraphqlEnabled()) return getSegmentFilterOptionsViaGraphql(organizationId);
-    const response = await api.get('/api/segments/filter-options', {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<FilterOptions>(response.data);
+    return getSegmentFilterOptionsViaGraphql(organizationId);
 };
 
 export default {

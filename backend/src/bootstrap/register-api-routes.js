@@ -8,7 +8,6 @@ const workflowsRoutes = require('../routes/workflows.routes');
 const smsTemplatesRoutes = require('../routes/sms-templates.routes');
 const chatWidgetRoutes = require('../routes/chat-widget.routes');
 const campaignsRoutes = require('../routes/campaigns.routes');
-const segmentsRoutes = require('../routes/segments.routes');
 const estimatesRoutes = require('../routes/estimates.routes');
 const recurringRoutes = require('../routes/recurring.routes');
 const invoicesRoutes = require('../routes/invoices.routes');
@@ -174,8 +173,6 @@ function registerApiRoutes({
     logger.info('Chat Widget routes initialized');
     app.use('/api/campaigns', campaignsRoutes(pool, authenticateJWT));
     logger.info('Email Campaigns routes initialized');
-    app.use('/api/segments', segmentsRoutes(pool, authenticateJWT));
-    logger.info('Segments routes initialized');
     app.use('/api/invoices/estimates', estimatesRoutes(pool, authenticateJWT));
     logger.info('Estimates routes initialized');
     app.use('/api/invoices/recurring', recurringRoutes(pool, authenticateJWT));

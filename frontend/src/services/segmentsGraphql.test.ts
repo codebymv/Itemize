@@ -7,7 +7,6 @@ import {
   getSegmentsViaGraphql,
   previewSegmentViaGraphql,
 } from './segmentsGraphql';
-import { isSegmentsGraphqlEnabled } from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(),
@@ -40,13 +39,6 @@ describe('segments GraphQL consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('is default-off and can be enabled as one rollback boundary', () => {
-    vi.stubEnv('VITE_SEGMENTS_GRAPHQL', 'false');
-    expect(isSegmentsGraphqlEnabled()).toBe(false);
-    vi.stubEnv('VITE_SEGMENTS_GRAPHQL', 'true');
-    expect(isSegmentsGraphqlEnabled()).toBe(true);
   });
 
   it('maps bounded list and dynamic filter casing to the REST contract', async () => {
