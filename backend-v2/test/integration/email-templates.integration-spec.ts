@@ -1,8 +1,6 @@
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
-import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -11,7 +9,6 @@ import { PG_POOL } from '../../src/database/database.module';
 
 describe('Email templates GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   let memberId: number;
   let outsiderId: number;
@@ -70,12 +67,6 @@ describe('Email templates GraphQL PostgreSQL contract', () => {
     configureApp(app);
     await app.init();
 
-    const createEmailTemplateRouter = require('../../../backend/src/routes/email-templates.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use('/api/email-templates', createEmailTemplateRouter(pool, authenticateJWT));
   });
 
   afterAll(async () => {
@@ -109,18 +100,12 @@ describe('Email templates GraphQL PostgreSQL contract', () => {
     return call.send({ query: document, variables });
   };
 
-  const legacy = (path: string, token = memberToken, orgId = organizationId) =>
-    request(legacyApp)
-      .get(path)
-      .set('Cookie', `itemize_auth=${token}`)
-      .set('x-organization-id', String(orgId));
-
   const fields = `
     id organizationId name subject bodyHtml bodyText variables category isActive
     createdById createdByName createdAt updatedAt
   `;
 
-  it('creates, filters, pages, and exposes numeric category counts with REST interoperability', async () => {
+  it('creates, filters, pages, and exposes numeric category counts', async () => {
     const created = await graphql(
       memberToken,
       organizationId,
@@ -145,9 +130,16 @@ describe('Email templates GraphQL PostgreSQL contract', () => {
     });
     const id = Number(created.body.data.createEmailTemplate.id);
 
-    const retained = await legacy(`/api/email-templates/${id}`).expect(200);
-    expect(retained.body).toMatchObject({
-      id, organization_id: organizationId, body_html: '<p>{{company}} {{first_name}} {{link}}</p>',
+    const detail = await graphql(
+      memberToken,
+      organizationId,
+      `query Detail($id: Int!) { emailTemplate(id: $id) { ${fields} } }`,
+      { id },
+      false,
+    ).expect(200);
+    expect(detail.body.errors).toBeUndefined();
+    expect(detail.body.data.emailTemplate).toMatchObject({
+      id, organizationId, bodyHtml: '<p>{{company}} {{first_name}} {{link}}</p>',
     });
 
     const listed = await graphql(

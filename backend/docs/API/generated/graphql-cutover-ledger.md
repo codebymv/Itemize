@@ -4,14 +4,14 @@
 
 ## Summary
 
-- Registered method/path operations: 235
-- API operations under `/api`: 228
+- Registered method/path operations: 228
+- API operations under `/api`: 221
 - Non-API registered operations: 7
-- Static frontend callsites: 181
-- Operations with frontend consumers: 170
-- Operations referenced by backend tests: 134
-- Recommended GraphQL queries: 50
-- Recommended GraphQL mutations: 123
+- Static frontend callsites: 170
+- Operations with frontend consumers: 163
+- Operations referenced by backend tests: 127
+- Recommended GraphQL queries: 47
+- Recommended GraphQL mutations: 119
 - Recommended retained HTTP endpoints: 55
 - High-risk operations: 176
 - Unmatched frontend calls: 0
@@ -87,13 +87,6 @@
 | POST | `/api/chat-widget/public/typing` | 0 | 1 | retain-http | medium | chat-widget / PublicChatWidgetHttpModule / sendPublicChatTyping |
 | GET | `/api/contacts/export/csv` | 1 | 4 | retain-http | high | crm / ContactTransfersModule / exportContactsCsv |
 | POST | `/api/contacts/import/csv` | 1 | 4 | retain-http | high | crm / ContactTransfersModule / importContactsCsv |
-| GET | `/api/email-templates` | 2 | 7 | graphql-query | medium | messaging / EmailTemplatesModule / emailTemplates |
-| POST | `/api/email-templates` | 1 | 8 | graphql-mutation | medium | messaging / EmailTemplatesModule / createEmailTemplate |
-| DELETE | `/api/email-templates/:id` | 2 | 3 | graphql-mutation | medium | messaging / EmailTemplatesModule / deleteEmailTemplate |
-| GET | `/api/email-templates/:id` | 2 | 2 | graphql-query | medium | messaging / EmailTemplatesModule / emailTemplate |
-| PUT | `/api/email-templates/:id` | 1 | 2 | graphql-mutation | medium | messaging / EmailTemplatesModule / updateEmailTemplate |
-| POST | `/api/email-templates/:id/duplicate` | 2 | 2 | graphql-mutation | medium | messaging / EmailTemplatesModule / duplicateEmailTemplate |
-| GET | `/api/email-templates/categories/list` | 1 | 1 | graphql-query | medium | messaging / EmailTemplatesModule / emailTemplateCategories |
 | POST | `/api/email/webhook/resend` | 0 | 1 | retain-http | high | messaging / EmailWebhooksModule / processResendEmailEvent |
 | GET | `/api/forms/public/form/:identifier` | 1 | 3 | retain-http | high | crm / PublicFormsModule / getPublicForm |
 | POST | `/api/forms/public/form/:identifier` | 1 | 5 | retain-http | high | crm / PublicFormsModule / submitPublicForm |
@@ -272,7 +265,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 50
-- Orphaned manual overrides: 115
+- Orphaned manual overrides: 122
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

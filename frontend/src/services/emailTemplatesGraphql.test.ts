@@ -9,10 +9,6 @@ import {
   getEmailTemplatesViaGraphql,
   updateEmailTemplateViaGraphql,
 } from './emailTemplatesGraphql';
-import {
-  isEmailTemplateGraphqlMutationsEnabled,
-  isEmailTemplateGraphqlReadsEnabled,
-} from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(),
@@ -52,16 +48,6 @@ describe('email-template GraphQL consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('keeps read and mutation rollout independent and default-off', () => {
-    vi.stubEnv('VITE_EMAIL_TEMPLATE_READS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_EMAIL_TEMPLATE_MUTATIONS_GRAPHQL', 'false');
-    expect(isEmailTemplateGraphqlReadsEnabled()).toBe(false);
-    expect(isEmailTemplateGraphqlMutationsEnabled()).toBe(false);
-    vi.stubEnv('VITE_EMAIL_TEMPLATE_READS_GRAPHQL', 'true');
-    expect(isEmailTemplateGraphqlReadsEnabled()).toBe(true);
-    expect(isEmailTemplateGraphqlMutationsEnabled()).toBe(false);
   });
 
   it('walks every page and maps filters and legacy field casing', async () => {

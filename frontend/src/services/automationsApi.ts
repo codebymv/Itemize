@@ -15,8 +15,6 @@ import {
   updateEmailTemplateViaGraphql,
 } from './emailTemplatesGraphql';
 import {
-  isEmailTemplateGraphqlMutationsEnabled,
-  isEmailTemplateGraphqlReadsEnabled,
   isWorkflowGraphqlMutationsEnabled,
   isWorkflowGraphqlReadsEnabled,
   isWorkflowEnrollmentsGraphqlEnabled,
@@ -324,23 +322,11 @@ export const getEmailTemplates = async (organizationId: number, params?: {
   is_active?: boolean;
   search?: string;
 }): Promise<{ templates: EmailTemplate[]; total: number }> => {
-  if (isEmailTemplateGraphqlReadsEnabled()) {
-    return getEmailTemplatesViaGraphql(params, organizationId);
-  }
-  const response = await api.get('/api/email-templates', {
-    params: { organization_id: organizationId, ...params },
-  });
-  return unwrapResponse<{ templates: EmailTemplate[]; total: number }>(response.data);
+  return getEmailTemplatesViaGraphql(params, organizationId);
 };
 
 export const getEmailTemplate = async (id: number, organizationId: number): Promise<EmailTemplate> => {
-  if (isEmailTemplateGraphqlReadsEnabled()) {
-    return getEmailTemplateViaGraphql(id, organizationId);
-  }
-  const response = await api.get(`/api/email-templates/${id}`, {
-    params: { organization_id: organizationId },
-  });
-  return unwrapResponse<EmailTemplate>(response.data);
+  return getEmailTemplateViaGraphql(id, organizationId);
 };
 
 export const createEmailTemplate = async (data: {
@@ -352,11 +338,7 @@ export const createEmailTemplate = async (data: {
   category?: string;
   is_active?: boolean;
 }): Promise<EmailTemplate> => {
-  if (isEmailTemplateGraphqlMutationsEnabled()) {
-    return createEmailTemplateViaGraphql(data, data.organization_id);
-  }
-  const response = await api.post('/api/email-templates', data);
-  return unwrapResponse<EmailTemplate>(response.data);
+  return createEmailTemplateViaGraphql(data, data.organization_id);
 };
 
 export const updateEmailTemplate = async (
@@ -371,20 +353,11 @@ export const updateEmailTemplate = async (
     is_active: boolean;
   }>
 ): Promise<EmailTemplate> => {
-  if (isEmailTemplateGraphqlMutationsEnabled()) {
-    return updateEmailTemplateViaGraphql(id, data, data.organization_id);
-  }
-  const response = await api.put(`/api/email-templates/${id}`, data);
-  return unwrapResponse<EmailTemplate>(response.data);
+  return updateEmailTemplateViaGraphql(id, data, data.organization_id);
 };
 
 export const deleteEmailTemplate = async (id: number, organizationId: number): Promise<void> => {
-  if (isEmailTemplateGraphqlMutationsEnabled()) {
-    return deleteEmailTemplateViaGraphql(id, organizationId);
-  }
-  await api.delete(`/api/email-templates/${id}`, {
-    params: { organization_id: organizationId },
-  });
+  return deleteEmailTemplateViaGraphql(id, organizationId);
 };
 
 export const sendTestEmail = async (
@@ -402,23 +375,11 @@ export const sendTestEmail = async (
 };
 
 export const duplicateEmailTemplate = async (id: number, organizationId: number): Promise<EmailTemplate> => {
-  if (isEmailTemplateGraphqlMutationsEnabled()) {
-    return duplicateEmailTemplateViaGraphql(id, organizationId);
-  }
-  const response = await api.post(`/api/email-templates/${id}/duplicate`, {
-    organization_id: organizationId,
-  });
-  return unwrapResponse<EmailTemplate>(response.data);
+  return duplicateEmailTemplateViaGraphql(id, organizationId);
 };
 
 export const getTemplateCategories = async (organizationId: number): Promise<{
   categories: { category: string; count: number }[];
 }> => {
-  if (isEmailTemplateGraphqlReadsEnabled()) {
-    return getEmailTemplateCategoriesViaGraphql(organizationId);
-  }
-  const response = await api.get('/api/email-templates/categories/list', {
-    params: { organization_id: organizationId },
-  });
-  return unwrapResponse<{ categories: { category: string; count: number }[] }>(response.data);
+  return getEmailTemplateCategoriesViaGraphql(organizationId);
 };

@@ -23,8 +23,6 @@ import {
 
 vi.mock('@/lib/api', () => ({ default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() } }));
 vi.mock('./graphqlClient', () => ({
-  isEmailTemplateGraphqlMutationsEnabled: vi.fn(() => false),
-  isEmailTemplateGraphqlReadsEnabled: vi.fn(() => false),
   isWorkflowEnrollmentsGraphqlEnabled: vi.fn(),
   isWorkflowGraphqlMutationsEnabled: vi.fn(),
   isWorkflowGraphqlReadsEnabled: vi.fn(),

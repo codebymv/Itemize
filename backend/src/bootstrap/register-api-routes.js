@@ -2,7 +2,6 @@ const canvasRoutes = require('../routes/canvas.routes');
 const wireframesRoutes = require('../routes/wireframes.routes');
 const vaultsRoutes = require('../routes/vaults.routes');
 const { createContactTransferProxy } = require('../contact-transfer-proxy');
-const emailTemplatesRoutes = require('../routes/email-templates.routes');
 const emailWebhooksRoutes = require('../routes/email-webhooks.routes');
 const workflowsRoutes = require('../routes/workflows.routes');
 const smsWebhooksRoutes = require('../routes/sms-webhooks.routes');
@@ -155,8 +154,6 @@ function registerApiRoutes({
     const contactTransferProxy = createContactTransferProxy({ logger });
     app.get('/api/contacts/export/csv', contactTransferProxy);
     app.post('/api/contacts/import/csv', contactTransferProxy);
-    app.use('/api/email-templates', emailTemplatesRoutes(pool, authenticateJWT));
-    logger.info('Email Templates routes initialized');
     app.use('/api/email', emailWebhooksRoutes(pool, publicRateLimit));
     logger.info('Email Webhook routes initialized');
     app.use('/api/workflows', workflowsRoutes(pool, authenticateJWT));

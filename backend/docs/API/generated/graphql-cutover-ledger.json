@@ -6,19 +6,19 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 235,
-    "apiOperationCount": 228,
+    "operationCount": 228,
+    "apiOperationCount": 221,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 181,
-    "operationsWithFrontendConsumers": 170,
-    "operationsWithBackendTests": 134,
+    "frontendCallsiteCount": 170,
+    "operationsWithFrontendConsumers": 163,
+    "operationsWithBackendTests": 127,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 50,
     "retainHttpCount": 55,
-    "graphqlQueryCount": 50,
-    "graphqlMutationCount": 123,
+    "graphqlQueryCount": 47,
+    "graphqlMutationCount": 119,
     "highRiskCount": 176,
     "literalInterpolationRiskCount": 0
   },
@@ -2544,7 +2544,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 42
+          "line": 41
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -2787,7 +2787,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 156
+          "line": 155
         }
       ],
       "consumerCallsites": [
@@ -2846,7 +2846,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 157
+          "line": 156
         }
       ],
       "consumerCallsites": [
@@ -2896,437 +2896,6 @@
       "notes": "Despite the legacy path, this accepts JSON contact rows rather than multipart CSV. Retain HTTP during cutover with an exact object envelope, strict boolean duplicate policy, a 10,000-row limit, bounded 500-row inserts, and serialized plan-limit enforcement.",
       "literalInterpolationRisk": false,
       "risk": "high"
-    },
-    {
-      "id": "GET /api/email-templates",
-      "key": "GET /api/email-templates",
-      "method": "GET",
-      "path": "/api/email-templates",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/email-templates.routes.js",
-          "line": 27
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/email-templates",
-          "rawPath": "/api/email-templates",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 330,
-          "client": "api",
-          "literalInterpolation": false
-        },
-        {
-          "method": "GET",
-          "path": "/api/email-templates",
-          "rawPath": "/api/email-templates",
-          "source": "frontend/src/services/emailApi.ts",
-          "line": 87,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/email-templates",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 123
-        },
-        {
-          "method": "GET",
-          "path": "/api/email-templates",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 134
-        },
-        {
-          "method": "GET",
-          "path": "/api/email-templates",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 244
-        },
-        {
-          "method": "GET",
-          "path": "/api/email-templates",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 255
-        },
-        {
-          "method": "GET",
-          "path": "/api/email-templates",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 265
-        },
-        {
-          "method": "GET",
-          "path": "/api/email-templates",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 275
-        },
-        {
-          "method": "GET",
-          "path": "/api/email-templates",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 415
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "messaging",
-      "targetOperation": "emailTemplates",
-      "targetModule": "EmailTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Default-off GraphQL reads page organization-scoped templates with deterministic updated-at/id ordering, escaped search, category and active filters, safe numeric counts, and retained response mapping.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/email-templates",
-      "key": "POST /api/email-templates",
-      "method": "POST",
-      "path": "/api/email-templates",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/email-templates.routes.js",
-          "line": 133
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/email-templates",
-          "rawPath": "/api/email-templates",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 358,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/email-templates",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 74
-        },
-        {
-          "method": "POST",
-          "path": "/api/email-templates",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 93
-        },
-        {
-          "method": "POST",
-          "path": "/api/email-templates",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 103
-        },
-        {
-          "method": "POST",
-          "path": "/api/email-templates",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 113
-        },
-        {
-          "method": "POST",
-          "path": "/api/email-templates",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 221
-        },
-        {
-          "method": "POST",
-          "path": "/api/email-templates",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 226
-        },
-        {
-          "method": "POST",
-          "path": "/api/email-templates",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 329
-        },
-        {
-          "method": "POST",
-          "path": "/api/email-templates",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 372
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetOperation": "createEmailTemplate",
-      "targetModule": "EmailTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected GraphQL creation validates required content and derives a deterministic unique variable set from the complete email body.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "DELETE /api/email-templates/:id",
-      "key": "DELETE /api/email-templates/:*",
-      "method": "DELETE",
-      "path": "/api/email-templates/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/email-templates.routes.js",
-          "line": 253
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/email-templates/:id",
-          "rawPath": "/api/email-templates/${id}",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 385,
-          "client": "api",
-          "literalInterpolation": false
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/email-templates/:templateId",
-          "rawPath": "/api/email-templates/${templateId}",
-          "source": "frontend/src/services/emailApi.ts",
-          "line": 143,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/email-templates/:templateId",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 194
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/email-templates/:templateId",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 205
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/email-templates/:id",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 391
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetOperation": "deleteEmailTemplate",
-      "targetModule": "EmailTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected GraphQL deletion conceals foreign templates and preserves nullable historical log references through the existing database contract.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "GET /api/email-templates/:id",
-      "key": "GET /api/email-templates/:*",
-      "method": "GET",
-      "path": "/api/email-templates/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/email-templates.routes.js",
-          "line": 104
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/email-templates/:id",
-          "rawPath": "/api/email-templates/${id}",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 340,
-          "client": "api",
-          "literalInterpolation": false
-        },
-        {
-          "method": "GET",
-          "path": "/api/email-templates/:templateId",
-          "rawPath": "/api/email-templates/${templateId}",
-          "source": "frontend/src/services/emailApi.ts",
-          "line": 104,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/email-templates/:templateId",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 145
-        },
-        {
-          "method": "GET",
-          "path": "/api/email-templates/:templateId",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 156
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "messaging",
-      "targetOperation": "emailTemplate",
-      "targetModule": "EmailTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Default-off GraphQL detail reads return an organization-owned template with retained-shape mapping and tenant-private misses.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "PUT /api/email-templates/:id",
-      "key": "PUT /api/email-templates/:*",
-      "method": "PUT",
-      "path": "/api/email-templates/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/email-templates.routes.js",
-          "line": 182
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/email-templates/:id",
-          "rawPath": "/api/email-templates/${id}",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 377,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/email-templates/:templateId",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 165
-        },
-        {
-          "method": "PUT",
-          "path": "/api/email-templates/:templateId",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 184
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetOperation": "updateEmailTemplate",
-      "targetModule": "EmailTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected GraphQL partial updates lock the organization-owned row, preserve omitted fields, and re-extract variables from the complete resulting content without lost concurrent writes.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/email-templates/:id/duplicate",
-      "key": "POST /api/email-templates/:*/duplicate",
-      "method": "POST",
-      "path": "/api/email-templates/:id/duplicate",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/email-templates.routes.js",
-          "line": 277
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/email-templates/:id/duplicate",
-          "rawPath": "/api/email-templates/${id}/duplicate",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 408,
-          "client": "api",
-          "literalInterpolation": false
-        },
-        {
-          "method": "POST",
-          "path": "/api/email-templates/:templateId/duplicate",
-          "rawPath": "/api/email-templates/${templateId}/duplicate",
-          "source": "frontend/src/services/emailApi.ts",
-          "line": 158,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/email-templates/:sourceId/duplicate",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 345
-        },
-        {
-          "method": "POST",
-          "path": "/api/email-templates/:sourceId/duplicate",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 359
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetOperation": "duplicateEmailTemplate",
-      "targetModule": "EmailTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected GraphQL duplication copies only an organization-owned template, bounds the suffixed name, and always creates the copy inactive.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "GET /api/email-templates/categories/list",
-      "key": "GET /api/email-templates/categories/list",
-      "method": "GET",
-      "path": "/api/email-templates/categories/list",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/email-templates.routes.js",
-          "line": 80
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/email-templates/categories/list",
-          "rawPath": "/api/email-templates/categories/list",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 420,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/email-templates/categories/list",
-          "source": "backend/src/__tests__/integration/email-templates.integration.test.js",
-          "line": 304
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "messaging",
-      "targetOperation": "emailTemplateCategories",
-      "targetModule": "EmailTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Default-off GraphQL category aggregates are organization-scoped, deterministically ordered, case-preserving, and expose safe integer counts.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
     },
     {
       "id": "POST /api/email/webhook/resend",
@@ -3934,7 +3503,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 192
+          "line": 189
         },
         {
           "source": "backend/src/routes/invoices/actions.routes.js",
@@ -4422,7 +3991,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 184
+          "line": 181
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -5702,7 +5271,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 188
+          "line": 185
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -5740,7 +5309,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 180
+          "line": 177
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -6582,7 +6151,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 246
+          "line": 243
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -6669,7 +6238,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 266
+          "line": 263
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -6738,7 +6307,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 262
+          "line": 259
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -6783,7 +6352,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 254
+          "line": 251
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -6811,7 +6380,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 250
+          "line": 247
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -6846,7 +6415,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 258
+          "line": 255
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8375,7 +7944,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 232
+          "line": 229
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8446,7 +8015,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 228
+          "line": 225
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8603,7 +8172,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 214
+          "line": 211
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8924,7 +8493,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 236
+          "line": 233
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8993,7 +8562,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 221
+          "line": 218
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -9267,7 +8836,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 69
+          "line": 68
         }
       ],
       "consumerCallsites": [
@@ -9301,7 +8870,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 41
+          "line": 40
         }
       ],
       "consumerCallsites": [],
@@ -9509,7 +9078,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 40
+          "line": 39
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",
@@ -9681,7 +9250,7 @@
           "path": "/api/workflows",
           "rawPath": "/api/workflows",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 147,
+          "line": 145,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9734,7 +9303,7 @@
           "path": "/api/workflows",
           "rawPath": "/api/workflows",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 174,
+          "line": 172,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9871,7 +9440,7 @@
           "path": "/api/workflows/:id",
           "rawPath": "/api/workflows/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 204,
+          "line": 202,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9936,7 +9505,7 @@
           "path": "/api/workflows/:id",
           "rawPath": "/api/workflows/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 157,
+          "line": 155,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9983,7 +9552,7 @@
           "path": "/api/workflows/:id",
           "rawPath": "/api/workflows/${id}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 196,
+          "line": 194,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10048,7 +9617,7 @@
           "path": "/api/workflows/:id/activate",
           "rawPath": "/api/workflows/${id}/activate",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 213,
+          "line": 211,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10131,7 +9700,7 @@
           "path": "/api/workflows/:id/deactivate",
           "rawPath": "/api/workflows/${id}/deactivate",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 223,
+          "line": 221,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10178,7 +9747,7 @@
           "path": "/api/workflows/:id/duplicate",
           "rawPath": "/api/workflows/${id}/duplicate",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 312,
+          "line": 310,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10225,7 +9794,7 @@
           "path": "/api/workflows/:workflowId/enroll",
           "rawPath": "/api/workflows/${workflowId}/enroll",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 238,
+          "line": 236,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10290,7 +9859,7 @@
           "path": "/api/workflows/:workflowId/enrollments",
           "rawPath": "/api/workflows/${workflowId}/enrollments",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 261,
+          "line": 259,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10331,7 +9900,7 @@
           "path": "/api/workflows/:workflowId/enrollments/:enrollmentId",
           "rawPath": "/api/workflows/${workflowId}/enrollments/${enrollmentId}",
           "source": "frontend/src/services/automationsApi.ts",
-          "line": 278,
+          "line": 276,
           "client": "api",
           "literalInterpolation": false
         }
@@ -10960,6 +10529,7 @@
   "orphanedOverrides": [
     "DELETE /api/categories/:id",
     "DELETE /api/contacts/:id",
+    "DELETE /api/email-templates/:id",
     "DELETE /api/forms/:id",
     "DELETE /api/forms/:id/submissions/:subId",
     "DELETE /api/lists/:id",
@@ -10990,6 +10560,9 @@
     "GET /api/contacts/:id",
     "GET /api/contacts/:id/activities",
     "GET /api/contacts/:id/content",
+    "GET /api/email-templates",
+    "GET /api/email-templates/:id",
+    "GET /api/email-templates/categories/list",
     "GET /api/forms",
     "GET /api/forms/:id",
     "GET /api/forms/:id/submissions",
@@ -11025,6 +10598,8 @@
     "POST /api/contacts/:id/activities",
     "POST /api/contacts/bulk-delete",
     "POST /api/contacts/bulk-update",
+    "POST /api/email-templates",
+    "POST /api/email-templates/:id/duplicate",
     "POST /api/email-templates/:id/send-test",
     "POST /api/email-templates/send-to-contact",
     "POST /api/forms",
@@ -11056,6 +10631,7 @@
     "POST /api/whiteboards",
     "PUT /api/categories/:id",
     "PUT /api/contacts/:id",
+    "PUT /api/email-templates/:id",
     "PUT /api/forms/:id",
     "PUT /api/forms/:id/fields",
     "PUT /api/lists/:id",

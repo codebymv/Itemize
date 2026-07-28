@@ -1,6 +1,6 @@
 # Messaging GraphQL cutover contract
 
-**Status:** SMS-template management and contact/test delivery cut over; provider callbacks remain HTTP
+**Status:** Email/SMS-template management and contact/test delivery cut over; provider callbacks remain HTTP
 
 **Evidence date:** 2026-07-28
 
@@ -14,9 +14,9 @@ The authoritative per-operation assignments are in `graphql-operation-overrides.
 
 ## Email-template management implementation checkpoint
 
-`EmailTemplatesModule` implements the seven organization email-template management operations. `MessagingDeliveryModule` now owns email contact/test delivery through direct GraphQL consumers and a durable leased queue. The two legacy email-delivery routes are retired and return 404.
+`EmailTemplatesModule` implements the seven organization email-template management operations. Both browser service layers now call these operations unconditionally, and the seven Express management routes have been removed. `MessagingDeliveryModule` owns email contact/test delivery through direct GraphQL consumers and a durable leased queue. The two legacy email-delivery routes are retired and return 404. The signed Resend callback remains explicitly on its separate HTTP router.
 
-Fresh PostgreSQL coverage proves GraphQL/REST interoperability, deterministic filtering and paging, tenant-private misses, CSRF denial, complete-content variable extraction, locked concurrent partial updates, inactive duplication, and deletion. Focused frontend tests prove GraphQL mapping and flag-off REST rollback. No deployed traffic is enabled by this checkpoint.
+Fresh PostgreSQL coverage proves deterministic filtering and paging, tenant-private misses, CSRF denial, complete-content variable extraction, locked concurrent partial updates, inactive duplication, and deletion. Focused frontend tests prove permanent GraphQL mapping across both service layers.
 
 `SmsTemplatesModule` implements the corresponding seven organization SMS-template management operations plus authenticated `smsMessageInfo`. The browser now calls these operations unconditionally, and the eight Express management/helper routes have been removed. Message information counts GSM-7 extension-table characters as two septets, applies 160/153 septet boundaries, and applies 70/67 UTF-16-unit Unicode boundaries. `MessagingDeliveryModule` owns direct GraphQL SMS contact/test delivery; ambiguous provider outcomes are quarantined for reconciliation instead of retried. The two legacy SMS-delivery routes are retired. The former mixed Express router has been replaced by a webhook-only router so both Twilio callbacks remain explicitly on HTTP.
 
