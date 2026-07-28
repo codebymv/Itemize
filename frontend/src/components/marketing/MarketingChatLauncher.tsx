@@ -1,11 +1,13 @@
 import React, { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { Send, Sparkles, X } from 'lucide-react';
-import api from '@/lib/api';
+import {
+  askMarketingChat,
+  fetchMarketingChatToken,
+  type MarketingChatMessage,
+} from '@/services/aiGraphql';
+import { GraphqlRequestError } from '@/services/graphqlClient';
 
-type ChatMessage = {
-  role: 'user' | 'assistant';
-  content: string;
-};
+type ChatMessage = MarketingChatMessage;
 
 type MarketingChatEvent = CustomEvent<{ prompt?: string }>;
 
@@ -57,22 +59,10 @@ const getEnabled = () => {
 
 const fetchSessionToken = async (): Promise<string | null> => {
   try {
-    const response = await api.get('/api/marketing-chat/token');
-    return response.data?.token ?? null;
+    return await fetchMarketingChatToken();
   } catch {
     return null;
   }
-};
-
-const askMarketingChat = async (messages: ChatMessage[], token: string | null): Promise<string> => {
-  const response = await api.post(
-    '/api/marketing-chat/ask',
-    { messages },
-    {
-      headers: token ? { 'X-Ask-Token': token } : undefined,
-    },
-  );
-  return response.data?.reply ?? '';
 };
 
 export function MarketingChatLauncher() {
@@ -100,17 +90,17 @@ export function MarketingChatLauncher() {
 
       const askWithRetry = async () => {
         try {
+          if (!sessionToken.current) throw new Error('Marketing chat token unavailable');
           const reply = await askMarketingChat(nextMessages, sessionToken.current);
           void fetchSessionToken().then((token) => {
             sessionToken.current = token;
           });
           return reply;
         } catch (error: unknown) {
-          const status = typeof error === 'object' && error !== null
-            ? (error as { response?: { status?: number } }).response?.status
-            : undefined;
+          const isExpiredCapability = error instanceof GraphqlRequestError
+            && (error.status === 401 || error.code === 'UNAUTHENTICATED');
 
-          if (status === 401) {
+          if (isExpiredCapability) {
             sessionToken.current = await fetchSessionToken();
             if (sessionToken.current) {
               return askMarketingChat(nextMessages, sessionToken.current);

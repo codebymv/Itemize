@@ -12,7 +12,6 @@ const emailWebhooksRoutes = require('../routes/email-webhooks.routes');
 const workflowsRoutes = require('../routes/workflows.routes');
 const smsTemplatesRoutes = require('../routes/sms-templates.routes');
 const chatWidgetRoutes = require('../routes/chat-widget.routes');
-const marketingChatRoutes = require('../routes/marketing-chat.routes');
 const campaignsRoutes = require('../routes/campaigns.routes');
 const segmentsRoutes = require('../routes/segments.routes');
 const estimatesRoutes = require('../routes/estimates.routes');
@@ -52,43 +51,6 @@ function registerPositionLimiters(app, positionLimiter) {
     app.put('/api/wireframes/:id/position', positionLimiter);
     app.put('/api/vaults/:vaultId/position', positionLimiter);
     app.put('/api/canvas/positions', positionLimiter);
-}
-
-function registerAiSuggestionRoutes({ app, authenticateJWT, logger }) {
-    try {
-        logger.info('Initializing AI suggestion service...');
-        const aiSuggestionService = require('../services/aiSuggestionService');
-
-        app.post('/api/suggestions', authenticateJWT, async (req, res) => {
-            try {
-                const { listTitle, existingItems } = req.body;
-
-                if (!listTitle || !Array.isArray(existingItems)) {
-                    return res.status(400).json({ error: 'Invalid request parameters' });
-                }
-
-                const result = await aiSuggestionService.suggestListItems(listTitle, existingItems);
-                res.json(result);
-            } catch (error) {
-                logger.error('Error generating suggestions', { error: error.message });
-                res.status(500).json({ error: 'Failed to generate suggestions' });
-            }
-        });
-
-        logger.info('AI suggestion service initialized');
-    } catch (aiError) {
-        logger.warn('Failed to initialize AI suggestion service', { error: aiError.message });
-    }
-}
-
-function registerNoteSuggestionRoutes({ app, logger }) {
-    try {
-        const noteSuggestionsRoutes = require('../routes/noteSuggestions');
-        app.use('/api/note-suggestions', noteSuggestionsRoutes);
-        logger.info('Note AI suggestion service initialized');
-    } catch (noteAiError) {
-        logger.warn('Failed to initialize Note AI suggestion service', { error: noteAiError.message });
-    }
 }
 
 function collectRoutes(stack, basePath = '') {
@@ -231,8 +193,6 @@ function registerApiRoutes({
         broadcast
     ));
     logger.info('Chat Widget routes initialized');
-    app.use('/api/marketing-chat', marketingChatRoutes(publicRateLimit));
-    logger.info('Marketing Chat routes initialized');
     app.use('/api/campaigns', campaignsRoutes(pool, authenticateJWT));
     logger.info('Email Campaigns routes initialized');
     app.use('/api/segments', segmentsRoutes(pool, authenticateJWT));
@@ -346,8 +306,6 @@ function registerApiRoutes({
     app.use('/api/onboarding', onboardingRoutes(pool, authenticateJWT));
     logger.info('Onboarding routes initialized');
 
-    registerAiSuggestionRoutes({ app, authenticateJWT, logger });
-    registerNoteSuggestionRoutes({ app, logger });
     registerStatusRoute({ app, pool, port, logger });
 
     logger.info('All API routes registered');

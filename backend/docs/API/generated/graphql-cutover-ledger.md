@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 305
-- API operations under `/api`: 298
+- Registered method/path operations: 301
+- API operations under `/api`: 294
 - Non-API registered operations: 7
-- Static frontend callsites: 249
-- Operations with frontend consumers: 238
+- Static frontend callsites: 245
+- Operations with frontend consumers: 234
 - Operations referenced by backend tests: 165
-- Recommended GraphQL queries: 79
-- Recommended GraphQL mutations: 164
+- Recommended GraphQL queries: 78
+- Recommended GraphQL mutations: 161
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 244
+- High-risk operations: 240
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -177,9 +177,6 @@
 | PUT | `/api/lists/:id/position` | 0 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / batchCanvasPositions |
 | DELETE | `/api/lists/:listId/share` | 0 | 2 | graphql-mutation | high | sharing / WorkspaceContentModule / disableListSharing |
 | POST | `/api/lists/:listId/share` | 0 | 5 | graphql-mutation | high | sharing / WorkspaceContentModule / enableListSharing |
-| POST | `/api/marketing-chat/ask` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/marketing-chat/token` | 1 | 0 | graphql-query | high | _unassigned_ |
-| POST | `/api/note-suggestions` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/notes` | 1 | 10 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceNotes |
 | POST | `/api/notes` | 1 | 6 | graphql-mutation | high | workspace-content / WorkspaceContentModule / createWorkspaceNote |
 | DELETE | `/api/notes/:noteId` | 1 | 4 | graphql-mutation | high | workspace-content / WorkspaceContentModule / deleteWorkspaceNote |
@@ -298,7 +295,6 @@
 | GET | `/api/social/webhook` | 0 | 2 | retain-http | high | social-integrations / SocialWebhooksModule / verifyMetaWebhook |
 | POST | `/api/social/webhook` | 0 | 1 | retain-http | high | social-integrations / SocialWebhooksModule / processMetaMessagingWebhook |
 | GET | `/api/status` | 1 | 0 | retain-http | high | _unassigned_ |
-| POST | `/api/suggestions` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | PUT | `/api/vaults/:vaultId/position` | 0 | 0 | graphql-mutation | high | workspace-content / VaultModule / updateWorkspaceVault |
 | POST | `/api/webhooks/:workflowId` | 0 | 6 | retain-http | high | automation / WorkflowWebhooksModule / processWorkflowWebhook |
 | GET | `/api/whiteboards` | 1 | 3 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceWhiteboards |

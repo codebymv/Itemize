@@ -9,6 +9,7 @@ import { AdminOperationsModule } from './admin-operations/admin-operations.modul
 import { AdminMessagingModule } from './admin-messaging/admin-messaging.module';
 import { MessagingDeliveryModule } from './admin-messaging/messaging-delivery.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { AiModule } from './ai/ai.module';
 import { GraphqlAuthGuard } from './auth/graphql-auth.guard';
 import { GraphqlCsrfGuard } from './auth/graphql-csrf.guard';
 import { BookingsModule } from './bookings/bookings.module';
@@ -81,6 +82,7 @@ const observabilityPlugins = [
     AdminMessagingModule,
     MessagingDeliveryModule,
     AnalyticsModule,
+    AiModule,
     OrganizationsModule,
     CalendarsModule,
     CalendarIntegrationsModule,

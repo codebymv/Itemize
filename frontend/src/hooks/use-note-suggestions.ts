@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import api from '@/lib/api';
 import { storage } from '@/lib/storage';
 import logger from '@/lib/logger';
+import { fetchNoteSuggestions } from '@/services/aiGraphql';
+import { GraphqlRequestError } from '@/services/graphqlClient';
 
 // Shorter debounce for better responsiveness (was 3000ms)
 const NOTES_DEBOUNCE_DELAY = 1000;
@@ -25,14 +26,10 @@ interface UseNoteSuggestionsOptions {
   noteCategory?: string;
 }
 
-interface NoteSuggestionResponse {
-  suggestions: string[];
-  continuations: string[];
-  cached?: boolean;
-  error?: string;
-}
-
 const getApiStatus = (error: unknown): number | undefined => {
+  if (error instanceof GraphqlRequestError) {
+    return error.code === 'UNAUTHENTICATED' ? 401 : error.status;
+  }
   if (error && typeof error === 'object' && 'response' in error) {
     const response = (error as { response?: { status?: unknown } }).response;
     if (typeof response?.status === 'number') {
@@ -249,22 +246,16 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       lastApiCall.current = Date.now();
       setLastTriggerContext(context);
       
-      const response = await api.post<NoteSuggestionResponse>('/api/note-suggestions', {
-        content: context,
-        category: noteCategory,
-        // Request both sentence completions and paragraph continuations
-        requestTypes: ['completion', 'continuation']
-      }, {
-        timeout: 10000 // 10 second timeout
-      });
+      const response = await fetchNoteSuggestions(context);
 
-      if (response.data) {
-        const { suggestions = [], continuations = [] } = response.data;
+      if (response) {
+        const { suggestions = [] } = response;
+        const continuations: string[] = [];
         logger.debug('note-suggestions', 'AI suggestions received:', { 
           suggestions: suggestions.length, 
           continuations: continuations.length,
           firstSuggestion: suggestions[0] || continuations[0] || 'none',
-          apiResponse: response.data
+          apiResponse: response
         });
         
         setSuggestions(suggestions);
@@ -290,7 +281,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated, enabled, noteContent, noteCategory, getContextWindow, shouldTriggerAI, getCachedSuggestions, cacheSuggestions, getLocalSuggestions]);
+  }, [isAuthenticated, enabled, noteContent, getContextWindow, shouldTriggerAI, getCachedSuggestions, cacheSuggestions, getLocalSuggestions]);
 
   // Debounced fetch with smart triggering
   const debouncedFetch = useCallback(() => {

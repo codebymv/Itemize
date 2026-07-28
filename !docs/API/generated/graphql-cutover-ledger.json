@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 305,
-    "apiOperationCount": 298,
+    "operationCount": 301,
+    "apiOperationCount": 294,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 249,
-    "operationsWithFrontendConsumers": 238,
+    "frontendCallsiteCount": 245,
+    "operationsWithFrontendConsumers": 234,
     "operationsWithBackendTests": 165,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 55,
     "retainHttpCount": 55,
-    "graphqlQueryCount": 79,
-    "graphqlMutationCount": 164,
-    "highRiskCount": 244,
+    "graphqlQueryCount": 78,
+    "graphqlMutationCount": 161,
+    "highRiskCount": 240,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -2971,7 +2971,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 54
+          "line": 53
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -3858,7 +3858,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 214
+          "line": 176
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -3933,7 +3933,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 215
+          "line": 177
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -5037,7 +5037,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 256
+          "line": 216
         },
         {
           "source": "backend/src/routes/invoices/actions.routes.js",
@@ -5525,7 +5525,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 248
+          "line": 208
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -6805,7 +6805,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 252
+          "line": 212
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -6843,7 +6843,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 244
+          "line": 204
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -7131,7 +7131,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 50
+          "line": 49
         }
       ],
       "consumerCallsites": [],
@@ -7243,108 +7243,6 @@
       "targetModule": "WorkspaceContentModule",
       "parityStatus": "consumer-cutover-complete",
       "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Atomic issuance reuses one active token, and re-enable after revoke rotates it.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/marketing-chat/ask",
-      "key": "POST /api/marketing-chat/ask",
-      "method": "POST",
-      "path": "/api/marketing-chat/ask",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/marketing-chat.routes.js",
-          "line": 84
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/marketing-chat/ask",
-          "rawPath": "/api/marketing-chat/ask",
-          "source": "frontend/src/components/marketing/MarketingChatLauncher.tsx",
-          "line": 68,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/marketing-chat/token",
-      "key": "GET /api/marketing-chat/token",
-      "method": "GET",
-      "path": "/api/marketing-chat/token",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/marketing-chat.routes.js",
-          "line": 80
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/marketing-chat/token",
-          "rawPath": "/api/marketing-chat/token",
-          "source": "frontend/src/components/marketing/MarketingChatLauncher.tsx",
-          "line": 60,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/note-suggestions",
-      "key": "POST /api/note-suggestions",
-      "method": "POST",
-      "path": "/api/note-suggestions",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/noteSuggestions.js",
-          "line": 14
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/note-suggestions",
-          "rawPath": "/api/note-suggestions",
-          "source": "frontend/src/hooks/use-note-suggestions.ts",
-          "line": 252,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -8635,7 +8533,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 310
+          "line": 270
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8722,7 +8620,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 330
+          "line": 290
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8791,7 +8689,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 326
+          "line": 286
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8836,7 +8734,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 318
+          "line": 278
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8864,7 +8762,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 314
+          "line": 274
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8899,7 +8797,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 322
+          "line": 282
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10741,7 +10639,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 296
+          "line": 256
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10812,7 +10710,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 292
+          "line": 252
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10969,7 +10867,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 278
+          "line": 238
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -11290,7 +11188,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 300
+          "line": 260
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -11359,7 +11257,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 285
+          "line": 245
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -11925,7 +11823,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 118
+          "line": 80
         }
       ],
       "consumerCallsites": [
@@ -11952,40 +11850,6 @@
       "risk": "high"
     },
     {
-      "id": "POST /api/suggestions",
-      "key": "POST /api/suggestions",
-      "method": "POST",
-      "path": "/api/suggestions",
-      "routeSources": [
-        {
-          "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 62
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/suggestions",
-          "rawPath": "/api/suggestions",
-          "source": "frontend/src/hooks/use-ai-suggestions.ts",
-          "line": 175,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "PUT /api/vaults/:vaultId/position",
       "key": "PUT /api/vaults/:*/position",
       "method": "PUT",
@@ -11993,7 +11857,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 53
+          "line": 52
         }
       ],
       "consumerCallsites": [],
@@ -12165,7 +12029,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 51
+          "line": 50
         }
       ],
       "consumerCallsites": [],
@@ -12394,7 +12258,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 52
+          "line": 51
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",

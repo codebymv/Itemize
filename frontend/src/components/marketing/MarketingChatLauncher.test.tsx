@@ -4,13 +4,14 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import MarketingChatLauncher from './MarketingChatLauncher';
 
-const apiMock = vi.hoisted(() => ({
-  get: vi.fn(),
-  post: vi.fn(),
+const aiGraphqlMock = vi.hoisted(() => ({
+  fetchMarketingChatToken: vi.fn(),
+  askMarketingChat: vi.fn(),
 }));
 
-vi.mock('@/lib/api', () => ({
-  default: apiMock,
+vi.mock('@/services/aiGraphql', () => ({
+  fetchMarketingChatToken: aiGraphqlMock.fetchMarketingChatToken,
+  askMarketingChat: aiGraphqlMock.askMarketingChat,
 }));
 
 describe('MarketingChatLauncher', () => {
@@ -18,8 +19,8 @@ describe('MarketingChatLauncher', () => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
     vi.stubEnv('VITE_MARKETING_CHAT_ENABLED', 'true');
-    apiMock.get.mockResolvedValue({ data: { token: 'ask-token' } });
-    apiMock.post.mockResolvedValue({ data: { reply: 'Itemize helps organize CRM, workflows, bookings, and workspace notes.' } });
+    aiGraphqlMock.fetchMarketingChatToken.mockResolvedValue('ask-token');
+    aiGraphqlMock.askMarketingChat.mockResolvedValue('Itemize helps organize CRM, workflows, bookings, and workspace notes.');
   });
 
   it('does not render when VITE_MARKETING_CHAT_ENABLED is false', () => {
@@ -56,7 +57,7 @@ describe('MarketingChatLauncher', () => {
     await user.click(screen.getByRole('button', { name: /ask about itemize/i }));
 
     await waitFor(() => {
-      expect(apiMock.get).toHaveBeenCalledWith('/api/marketing-chat/token');
+      expect(aiGraphqlMock.fetchMarketingChatToken).toHaveBeenCalled();
     });
   });
 
@@ -69,10 +70,9 @@ describe('MarketingChatLauncher', () => {
     await user.click(screen.getByRole('button', { name: /send/i }));
 
     await waitFor(() => {
-      expect(apiMock.post).toHaveBeenCalledWith(
-        '/api/marketing-chat/ask',
-        { messages: [{ role: 'user', content: 'Can I book a demo?' }] },
-        { headers: { 'X-Ask-Token': 'ask-token' } },
+      expect(aiGraphqlMock.askMarketingChat).toHaveBeenCalledWith(
+        [{ role: 'user', content: 'Can I book a demo?' }],
+        'ask-token',
       );
     });
     expect(await screen.findByText(/itemize helps organize crm/i)).toBeInTheDocument();
@@ -86,17 +86,16 @@ describe('MarketingChatLauncher', () => {
     await user.click(screen.getByRole('button', { name: /what does itemize cost/i }));
 
     await waitFor(() => {
-      expect(apiMock.post).toHaveBeenCalledWith(
-        '/api/marketing-chat/ask',
-        { messages: [{ role: 'user', content: 'What does Itemize cost?' }] },
-        { headers: { 'X-Ask-Token': 'ask-token' } },
+      expect(aiGraphqlMock.askMarketingChat).toHaveBeenCalledWith(
+        [{ role: 'user', content: 'What does Itemize cost?' }],
+        'ask-token',
       );
     });
   });
 
   it('shows a fallback reply when the API fails', async () => {
     const user = userEvent.setup();
-    apiMock.post.mockRejectedValue(new Error('offline'));
+    aiGraphqlMock.askMarketingChat.mockRejectedValue(new Error('offline'));
     render(<MarketingChatLauncher />);
 
     await user.click(screen.getByRole('button', { name: /ask about itemize/i }));

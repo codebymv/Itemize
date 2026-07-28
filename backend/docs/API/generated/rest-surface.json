@@ -3,11 +3,11 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 324,
-    "resolvedDeclarationCount": 324,
+    "declarationCount": 320,
+    "resolvedDeclarationCount": 320,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 305,
-    "sourceFileCount": 62
+    "uniqueResolvedOperationCount": 301,
+    "sourceFileCount": 60
   },
   "caveats": [
     "This is static source analysis; it does not execute application modules.",
@@ -623,7 +623,7 @@
       ],
       "declaredPath": "/api/canvas/positions",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 54,
+      "line": 53,
       "dynamic": false
     },
     {
@@ -843,7 +843,7 @@
       ],
       "declaredPath": "/api/contacts/export/csv",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 214,
+      "line": 176,
       "dynamic": false
     },
     {
@@ -863,7 +863,7 @@
       ],
       "declaredPath": "/api/contacts/import/csv",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 215,
+      "line": 177,
       "dynamic": false
     },
     {
@@ -1053,7 +1053,7 @@
       ],
       "declaredPath": "/api/invoices/:id/pdf",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 256,
+      "line": 216,
       "dynamic": false
     },
     {
@@ -1153,7 +1153,7 @@
       ],
       "declaredPath": "/api/invoices/businesses/:id/logo",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 248,
+      "line": 208,
       "dynamic": false
     },
     {
@@ -1453,7 +1453,7 @@
       ],
       "declaredPath": "/api/invoices/settings/logo",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 252,
+      "line": 212,
       "dynamic": false
     },
     {
@@ -1473,7 +1473,7 @@
       ],
       "declaredPath": "/api/invoices/webhook/stripe",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 244,
+      "line": 204,
       "dynamic": false
     },
     {
@@ -1533,7 +1533,7 @@
       ],
       "declaredPath": "/api/lists/:id/position",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 50,
+      "line": 49,
       "dynamic": false
     },
     {
@@ -1554,36 +1554,6 @@
       "declaredPath": "/lists/:listId/share",
       "source": "backend/src/routes/sharing.routes.js",
       "line": 103,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/marketing-chat/ask"
-      ],
-      "declaredPath": "/ask",
-      "source": "backend/src/routes/marketing-chat.routes.js",
-      "line": 84,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/marketing-chat/token"
-      ],
-      "declaredPath": "/token",
-      "source": "backend/src/routes/marketing-chat.routes.js",
-      "line": 80,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/note-suggestions"
-      ],
-      "declaredPath": "/",
-      "source": "backend/src/routes/noteSuggestions.js",
-      "line": 14,
       "dynamic": false
     },
     {
@@ -1963,7 +1933,7 @@
       ],
       "declaredPath": "/api/public/sign/:token",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 310,
+      "line": 270,
       "dynamic": false
     },
     {
@@ -1983,7 +1953,7 @@
       ],
       "declaredPath": "/api/public/sign/:token",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 330,
+      "line": 290,
       "dynamic": false
     },
     {
@@ -2003,7 +1973,7 @@
       ],
       "declaredPath": "/api/public/sign/:token/decline",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 326,
+      "line": 286,
       "dynamic": false
     },
     {
@@ -2023,7 +1993,7 @@
       ],
       "declaredPath": "/api/public/sign/:token/download",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 318,
+      "line": 278,
       "dynamic": false
     },
     {
@@ -2043,7 +2013,7 @@
       ],
       "declaredPath": "/api/public/sign/:token/file",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 314,
+      "line": 274,
       "dynamic": false
     },
     {
@@ -2063,7 +2033,7 @@
       ],
       "declaredPath": "/api/public/sign/:token/verify",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 322,
+      "line": 282,
       "dynamic": false
     },
     {
@@ -2533,7 +2503,7 @@
       ],
       "declaredPath": "/api/signatures/documents/:id/download",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 296,
+      "line": 256,
       "dynamic": false
     },
     {
@@ -2563,7 +2533,7 @@
       ],
       "declaredPath": "/api/signatures/documents/:id/file",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 292,
+      "line": 252,
       "dynamic": false
     },
     {
@@ -2603,7 +2573,7 @@
       ],
       "declaredPath": "/api/signatures/documents/upload",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 278,
+      "line": 238,
       "dynamic": false
     },
     {
@@ -2683,7 +2653,7 @@
       ],
       "declaredPath": "/api/signatures/templates/:id/file",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 300,
+      "line": 260,
       "dynamic": false
     },
     {
@@ -2713,7 +2683,7 @@
       ],
       "declaredPath": "/api/signatures/templates/upload",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 285,
+      "line": 245,
       "dynamic": false
     },
     {
@@ -2873,17 +2843,7 @@
       ],
       "declaredPath": "/api/status",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 118,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/suggestions"
-      ],
-      "declaredPath": "/api/suggestions",
-      "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 62,
+      "line": 80,
       "dynamic": false
     },
     {
@@ -2893,7 +2853,7 @@
       ],
       "declaredPath": "/api/vaults/:vaultId/position",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 53,
+      "line": 52,
       "dynamic": false
     },
     {
@@ -2933,7 +2893,7 @@
       ],
       "declaredPath": "/api/whiteboards/:id/position",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 51,
+      "line": 50,
       "dynamic": false
     },
     {
@@ -3003,7 +2963,7 @@
       ],
       "declaredPath": "/api/wireframes/:id/position",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 52,
+      "line": 51,
       "dynamic": false
     },
     {

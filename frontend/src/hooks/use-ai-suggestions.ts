@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import api from '@/lib/api';
 import { storage } from '@/lib/storage';
 import logger from '@/lib/logger';
+import { fetchListSuggestions } from '@/services/aiGraphql';
+import { GraphqlRequestError } from '@/services/graphqlClient';
 
 // Cache duration in milliseconds (30 minutes)
 const CACHE_DURATION = 30 * 60 * 1000;
@@ -19,13 +20,10 @@ interface UseSuggestionsOptions {
   existingItems: string[];
 }
 
-interface SuggestionResponse {
-  suggestions: string[];
-  cached?: boolean;
-  error?: string;
-}
-
 const getApiStatus = (error: unknown): number | undefined => {
+  if (error instanceof GraphqlRequestError) {
+    return error.code === 'UNAUTHENTICATED' ? 401 : error.status;
+  }
   if (error && typeof error === 'object' && 'response' in error) {
     const response = (error as { response?: { status?: unknown } }).response;
     if (typeof response?.status === 'number') {
@@ -172,13 +170,13 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       setError(null);
       lastRequestTime.current = Date.now();
       
-      const response = await api.post<SuggestionResponse>('/api/suggestions', {
+      const response = await fetchListSuggestions(
         listTitle,
-        existingItems: existingItems.filter(item => item.trim() !== '')
-      });
+        existingItems.filter(item => item.trim() !== ''),
+      );
 
-      if (response.data && response.data.suggestions && response.data.suggestions.length > 0) {
-        const newSuggestions = response.data.suggestions;
+      if (response.suggestions.length > 0) {
+        const newSuggestions = response.suggestions;
         setSuggestions(newSuggestions);
         setCurrentSuggestion(newSuggestions[0]);
         setCurrentIndex(0);

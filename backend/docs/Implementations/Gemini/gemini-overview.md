@@ -1,150 +1,53 @@
-# Itemize.cloud Gemini Implementation Overview
+# Itemize Gemini implementation
 
-## Introduction
+Itemize uses Google's Gemini API for three user-facing capabilities:
 
-Itemize.cloud integrates with Google Generative AI (Gemini) to provide intelligent suggestions for list items. This feature enhances user experience by offering relevant and context-aware suggestions, making list creation faster and more intuitive.
+- complementary workspace-list items
+- note continuations
+- the public “Ask about Itemize” assistant
 
-## Core Gemini Suggestion Functionality
+The provider boundary lives in
+`backend-v2/src/ai/ai-provider.service.ts`. The browser reaches it only through
+the NestJS GraphQL API; the Express backend no longer loads the Gemini SDK or
+registers AI routes.
 
-### Backend Integration
+## Operations
 
-The backend service (`backend/src/services/aiSuggestionService.js` - conceptual, logic is in `index.js`) interacts with the Google Generative AI API. It receives a list title and existing items, then generates new suggestions.
+Authenticated list and note suggestions use the `listSuggestions` and
+`noteSuggestions` GraphQL mutations. Both require the normal Itemize session
+and CSRF proof. The frontend adapters are
+`fetchListSuggestions` and `fetchNoteSuggestions` in
+`frontend/src/services/aiGraphql.ts`.
 
-```javascript
-// backend/src/index.js (relevant snippet)
+The public marketing assistant uses the `marketingChatToken` query followed by
+the `marketingChatAsk` mutation. The token is a signed, expiring, one-time
+capability and is consumed before provider work. Both public operations are
+rate-limited independently by IP.
 
-// Try to initialize AI suggestion service
-try {
-  console.log('Initializing AI suggestion service...');
-  const aiSuggestionService = require('./services/aiSuggestionService');
-  
-  // AI suggestions endpoint
-  app.post('/api/suggestions', global.authenticateJWT, async (req, res) => {
-    try {
-      const { listTitle, existingItems } = req.body;
-      
-      if (!listTitle || !Array.isArray(existingItems)) {
-        return res.status(400).json({ error: 'Invalid request parameters' });
-      }
+## Provider configuration
 
-      const result = await aiSuggestionService.suggestListItems(listTitle, existingItems);
-      res.json(result);
-    } catch (error) {
-      console.error('Error generating suggestions:', error);
-      res.status(500).json({ error: 'Failed to generate suggestions' });
-    }
-  });
-  
-  console.log('✅ AI suggestion service initialized with API key:', process.env.GEMINI_API_KEY ? '[REDACTED]' : 'not set');
-} catch (aiError) {
-  console.error('Failed to initialize AI suggestion service:', aiError.message);
-  // Continue running even if AI service fails
-}
-```
+- `GEMINI_API_KEY`: server-only Gemini credential
+- `MARKETING_CHAT_AI_MODEL`: optional model override; defaults to
+  `gemini-2.5-flash`
+- `MARKETING_CHAT_AI_ENABLED=false`: disables provider-backed public answers
+  while keeping a safe support fallback
 
-### Gemini Suggestion Service (Conceptual `aiSuggestionService.js`)
+The same configured model currently serves all three capabilities. Provider
+responses are length-bounded and normalized before reaching the browser.
 
-```javascript
-// backend/src/services/aiSuggestionService.js (Conceptual)
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+## Cost and failure controls
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-pro"});
+Nonempty list and note results are cached for one hour in a 100-entry bounded
+cache. The frontend additionally debounces, throttles, and caches suggestion
+requests. List input is bounded to 100 items and note input to 20,000
+characters; the shipped note hook sends only its last 200 characters of
+context.
 
-async function suggestListItems(listTitle, existingItems) {
-  const prompt = `Given the list title "${listTitle}" and existing items: ${existingItems.join(", ")}. Suggest 5 new, relevant, and distinct items for this list. Provide only the items as a comma-separated list, without any additional text or numbering.`;
+Missing credentials and provider errors fail soft for suggestions. Public chat
+returns a support fallback when disabled or unavailable and filters suspicious
+instruction-revealing output. Provider keys and raw configuration are never
+returned to clients or logged.
 
-  try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    // Parse the comma-separated string into an array
-    const suggestions = text.split(',').map(item => item.trim()).filter(item => item.length > 0);
-    return { suggestions };
-  } catch (error) {
-    console.error("Error calling Gemini API:", error);
-    throw new Error("Failed to get AI suggestions");
-  }
-}
-
-module.exports = { suggestListItems };
-```
-
-### Frontend Integration
-
-The frontend triggers the AI suggestion endpoint when the user requests suggestions for a list. The suggestions are then displayed to the user, who can choose to add them to their list.
-
-```typescript
-// src/features/lists/components/ListDetail.tsx (Conceptual)
-import React, { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import axios from 'axios';
-
-interface ListDetailProps {
-  list: {
-    id: string;
-    title: string;
-    items: string[];
-  };
-}
-
-const ListDetail: React.FC<ListDetailProps> = ({ list }) => {
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-
-  const getSuggestionsMutation = useMutation({
-    mutationFn: (payload: { listTitle: string; existingItems: string[] }) =>
-      axios.post('/api/suggestions', payload).then(res => res.data.suggestions),
-    onSuccess: (data) => {
-      setSuggestions(data);
-    },
-  });
-
-  const handleGetSuggestions = () => {
-    getSuggestionsMutation.mutate({
-      listTitle: list.title,
-      existingItems: list.items,
-    });
-  };
-
-  return (
-    <div>
-      <h2>{list.title}</h2>
-      {/* Display existing items */}
-      <button onClick={handleGetSuggestions} disabled={getSuggestionsMutation.isPending}>
-        {getSuggestionsMutation.isPending ? 'Getting Suggestions...' : 'Get AI Suggestions'}
-      </button>
-      {suggestions.length > 0 && (
-        <div>
-          <h3>Suggestions:</h3>
-          <ul>
-            {suggestions.map((s, index) => (
-              <li key={index}>{s} <button onClick={() => {/* Add to list logic */}}>Add</button></li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default ListDetail;
-```
-
-### Caching
-
-Currently, AI suggestions are **not cached**. Each request to `/api/suggestions` directly calls the Google Generative AI API. This means that repeated requests for the same or similar suggestions will result in new API calls.
-
-## Security Considerations
-
-- **API Key Security**: The `GEMINI_API_KEY` is stored as an environment variable and is not exposed to the frontend.
-- **Input Sanitization**: Although AI models are robust, inputs to the AI service should be sanitized to prevent any potential prompt injection or misuse.
-- **Rate Limiting**: (Future) Implement rate limiting on the `/api/suggestions` endpoint to prevent abuse of the AI service.
-
-## Future Enhancements
-- **Caching**: Implement a caching mechanism for AI suggestions to reduce API costs and improve response times for frequently requested or similar prompts.
-
-
-- **Contextual Suggestions**: Provide more nuanced suggestions based on user behavior and historical data.
-- **Multi-turn Conversations**: Allow users to refine suggestions through a conversational interface.
-- **Different AI Models**: Explore integrating with other AI models for diverse suggestion capabilities.
+See
+[`!docs/API/contracts/ai-graphql-cutover.md`](../../API/contracts/ai-graphql-cutover.md)
+for the complete auth, capability, error, and verification contract.
