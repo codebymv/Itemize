@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 313
-- API operations under `/api`: 306
+- Registered method/path operations: 311
+- API operations under `/api`: 304
 - Non-API registered operations: 7
 - Static frontend callsites: 250
 - Operations with frontend consumers: 239
-- Operations referenced by backend tests: 168
+- Operations referenced by backend tests: 167
 - Recommended GraphQL queries: 80
-- Recommended GraphQL mutations: 171
+- Recommended GraphQL mutations: 169
 - Recommended retained HTTP endpoints: 54
-- High-risk operations: 251
+- High-risk operations: 250
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -42,7 +42,6 @@
 | GET | `/api/admin/users/count` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminUserCount |
 | GET | `/api/admin/users/ids` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminUserIds |
 | GET | `/api/admin/users/search` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminUsers |
-| POST | `/api/auth/change-password` | 0 | 0 | graphql-mutation | high | identity / AuthModule / changePassword |
 | GET | `/api/auth/csrf` | 0 | 5 | retain-http | medium | platform-security / AuthModule / issueCsrfToken |
 | POST | `/api/auth/forgot-password` | 1 | 0 | graphql-mutation | high | identity / AuthModule / requestPasswordReset |
 | POST | `/api/auth/google-credential` | 0 | 0 | merge-into-graphql-operation | high | identity / AuthModule / loginWithGoogle |
@@ -50,7 +49,6 @@
 | POST | `/api/auth/login` | 1 | 6 | graphql-mutation | medium | identity / AuthModule / login |
 | POST | `/api/auth/logout` | 1 | 1 | graphql-mutation | medium | identity / AuthModule / logout |
 | GET | `/api/auth/me` | 1 | 2 | graphql-query | medium | identity / AuthModule / viewer |
-| PUT | `/api/auth/me` | 0 | 1 | graphql-mutation | medium | identity / AuthModule / updateViewerProfile |
 | POST | `/api/auth/refresh` | 1 | 2 | retain-http | medium | platform-security / AuthModule / refreshSession |
 | POST | `/api/auth/register` | 1 | 0 | graphql-mutation | high | identity / AuthModule / register |
 | POST | `/api/auth/resend-verification` | 1 | 0 | graphql-mutation | high | identity / AuthModule / resendVerificationEmail |
@@ -349,7 +347,7 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 48
+- Unmatched backend test calls: 50
 - Orphaned manual overrides: 49
 - Orphaned runtime-expression overrides: 0
 
@@ -424,3 +422,5 @@
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:32` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:128` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:133` |
+| PUT | `/api/auth/me` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:265` |
+| POST | `/api/auth/change-password` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:270` |

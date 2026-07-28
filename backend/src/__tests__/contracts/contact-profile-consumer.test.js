@@ -28,14 +28,13 @@ function frontendSourceFiles(directory) {
 }
 
 describe('aggregate contact-profile consumer boundary', () => {
-  test('remains server-only until a real frontend consumer receives a cutover gate', () => {
+  test('remains retired while no frontend consumer exists', () => {
     const ledger = JSON.parse(fs.readFileSync(ledgerPath, 'utf8'));
     const operation = ledger.operations.find(
       (entry) => entry.id === 'GET /api/contacts/:id/profile'
     );
 
-    expect(operation).toBeDefined();
-    expect(operation.consumerCallsites).toEqual([]);
+    expect(operation).toBeUndefined();
 
     const frontendSource = frontendSourceFiles(frontendRoot)
       .map((file) => fs.readFileSync(file, 'utf8'))

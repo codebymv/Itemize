@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 313,
-    "apiOperationCount": 306,
+    "operationCount": 311,
+    "apiOperationCount": 304,
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 250,
     "operationsWithFrontendConsumers": 239,
-    "operationsWithBackendTests": 168,
+    "operationsWithBackendTests": 167,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 48,
+    "unmatchedBackendTestCallCount": 50,
     "retainHttpCount": 54,
     "graphqlQueryCount": 80,
-    "graphqlMutationCount": 171,
-    "highRiskCount": 251,
+    "graphqlMutationCount": 169,
+    "highRiskCount": 250,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -428,30 +428,6 @@
       "risk": "high"
     },
     {
-      "id": "POST /api/auth/change-password",
-      "key": "POST /api/auth/change-password",
-      "method": "POST",
-      "path": "/api/auth/change-password",
-      "routeSources": [
-        {
-          "source": "backend/src/auth/credentials.routes.js",
-          "line": 462
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetOperation": "changePassword",
-      "targetModule": "AuthModule",
-      "parityStatus": "dual-parity",
-      "notes": "NestJS verifies the current bcrypt hash, enforces password policy and a changed value, conditionally updates the still-current hash, clears reset state, requires CSRF, and attempts notification after commit.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "GET /api/auth/csrf",
       "key": "GET /api/auth/csrf",
       "method": "GET",
@@ -492,7 +468,7 @@
           "method": "GET",
           "path": "/api/auth/csrf",
           "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-          "line": 266
+          "line": 263
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -514,7 +490,7 @@
       "routeSources": [
         {
           "source": "backend/src/auth/credentials.routes.js",
-          "line": 338
+          "line": 336
         }
       ],
       "consumerCallsites": [
@@ -640,7 +616,7 @@
       "routeSources": [
         {
           "source": "backend/src/auth/credentials.routes.js",
-          "line": 119
+          "line": 117
         }
       ],
       "consumerCallsites": [
@@ -689,7 +665,7 @@
           "method": "POST",
           "path": "/api/auth/login",
           "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-          "line": 263
+          "line": 260
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -792,37 +768,6 @@
       "risk": "medium"
     },
     {
-      "id": "PUT /api/auth/me",
-      "key": "PUT /api/auth/me",
-      "method": "PUT",
-      "path": "/api/auth/me",
-      "routeSources": [
-        {
-          "source": "backend/src/auth/profile.routes.js",
-          "line": 73
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/auth/me",
-          "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-          "line": 268
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetOperation": "updateViewerProfile",
-      "targetModule": "AuthModule",
-      "parityStatus": "dual-parity",
-      "notes": "NestJS requires authentication and CSRF, trims the name, enforces a 1-100 character contract, and returns the normalized viewer.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
       "id": "POST /api/auth/refresh",
       "key": "POST /api/auth/refresh",
       "method": "POST",
@@ -877,7 +822,7 @@
       "routeSources": [
         {
           "source": "backend/src/auth/credentials.routes.js",
-          "line": 36
+          "line": 34
         }
       ],
       "consumerCallsites": [
@@ -911,7 +856,7 @@
       "routeSources": [
         {
           "source": "backend/src/auth/credentials.routes.js",
-          "line": 272
+          "line": 270
         }
       ],
       "consumerCallsites": [
@@ -945,7 +890,7 @@
       "routeSources": [
         {
           "source": "backend/src/auth/credentials.routes.js",
-          "line": 403
+          "line": 401
         }
       ],
       "consumerCallsites": [
@@ -979,7 +924,7 @@
       "routeSources": [
         {
           "source": "backend/src/auth/credentials.routes.js",
-          "line": 194
+          "line": 192
         }
       ],
       "consumerCallsites": [
@@ -14057,6 +14002,18 @@
       "path": "/api/protected-write",
       "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
       "line": 133
+    },
+    {
+      "method": "PUT",
+      "path": "/api/auth/me",
+      "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
+      "line": 265
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/change-password",
+      "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
+      "line": 270
     }
   ],
   "orphanedOverrides": [

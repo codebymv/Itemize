@@ -236,7 +236,7 @@ describe('auth cookies and csrf integration', () => {
         expect(pool.connect).not.toHaveBeenCalled();
     });
 
-    it('updates the authenticated profile with a trimmed name', async () => {
+    it('keeps retired REST profile mutations unavailable', async () => {
         const passwordHash = await bcrypt.hash('correct-password', 4);
         const pool = createPool(async sql => {
             if (String(sql).includes('password_hash')) {
@@ -252,9 +252,6 @@ describe('auth cookies and csrf integration', () => {
                     }],
                 };
             }
-            if (String(sql).includes('UPDATE users SET name')) {
-                return { rows: [{ id: 7, email: 'user@example.com', name: 'Updated User' }] };
-            }
             return { rows: [] };
         });
         const agent = request.agent(createApp(pool));
@@ -264,14 +261,19 @@ describe('auth cookies and csrf integration', () => {
             .send({ email: 'user@example.com', password: 'correct-password' })
             .expect(200);
         const csrf = await agent.get('/api/auth/csrf').expect(200);
-        const res = await agent
+        await agent
             .put('/api/auth/me')
             .set('x-csrf-token', csrf.body.csrfToken)
-            .send({ name: '  Updated User  ' });
+            .send({ name: 'Updated User' })
+            .expect(404);
+        await agent
+            .post('/api/auth/change-password')
+            .set('x-csrf-token', csrf.body.csrfToken)
+            .send({ currentPassword: 'correct-password', newPassword: 'DifferentPassword2!' })
+            .expect(404);
 
-        expect(res.status).toBe(200);
-        expect(res.body.data.name).toBe('Updated User');
-        const update = pool.client.query.mock.calls.find(([sql]) => String(sql).includes('UPDATE users SET name'));
-        expect(update[1]).toEqual(['Updated User', 7]);
+        expect(
+            pool.client.query.mock.calls.some(([sql]) => String(sql).includes('UPDATE users SET')),
+        ).toBe(false);
     });
 });

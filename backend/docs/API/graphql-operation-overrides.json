@@ -1,15 +1,6 @@
 {
   "schemaVersion": 1,
   "operations": {
-    "POST /api/auth/change-password": {
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetModule": "AuthModule",
-      "targetOperation": "changePassword",
-      "parityStatus": "dual-parity",
-      "risk": "high",
-      "notes": "NestJS verifies the current bcrypt hash, enforces password policy and a changed value, conditionally updates the still-current hash, clears reset state, requires CSRF, and attempts notification after commit."
-    },
     "GET /api/auth/csrf": {
       "disposition": "retain-http",
       "owner": "platform-security",
@@ -72,15 +63,6 @@
       "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
       "notes": "Resolve identity from the signed httpOnly access cookie; preserve no-store behavior and normalized user fields."
-    },
-    "PUT /api/auth/me": {
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetModule": "AuthModule",
-      "targetOperation": "updateViewerProfile",
-      "parityStatus": "dual-parity",
-      "risk": "medium",
-      "notes": "NestJS requires authentication and CSRF, trims the name, enforces a 1-100 character contract, and returns the normalized viewer."
     },
     "POST /api/auth/refresh": {
       "disposition": "retain-http",

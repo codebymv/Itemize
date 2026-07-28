@@ -1,6 +1,6 @@
 # Authentication GraphQL cutover contract
 
-**Status:** Session, registration/verification, and password recovery enabled; password change and viewer profile implemented with no retained frontend consumer
+**Status:** Session, registration/verification, and password recovery enabled; GraphQL exclusively owns password change and viewer profile updates
 **Owner:** Identity, with Platform Security owning cookie and CSRF transport  
 **NestJS boundary:** `AuthModule`
 
@@ -8,7 +8,7 @@
 
 Authentication remains cookie based. GraphQL must not return bearer or refresh tokens to browser JavaScript. The access token stays in `itemize_auth`; the refresh token stays in `itemize_refresh`; both remain `httpOnly` and scoped to `/`.
 
-The browser session protocol moves as one unit behind `VITE_AUTH_SESSION_GRAPHQL`: login, active Google access-token login, current-user hydration, CSRF issuance, access refresh, and logout. Registration, email verification, and verification resend move together behind `VITE_AUTH_IDENTITY_GRAPHQL`. Forgot/reset password use the independent `VITE_AUTH_RECOVERY_GRAPHQL` switch. Authenticated `changePassword` and `updateViewerProfile` are implemented and tested in the schema; there is no current frontend REST consumer to switch. Every active consumer retains an executable HTTP rollback path.
+The browser session protocol moves as one unit behind `VITE_AUTH_SESSION_GRAPHQL`: login, active Google access-token login, current-user hydration, CSRF issuance, access refresh, and logout. Registration, email verification, and verification resend move together behind `VITE_AUTH_IDENTITY_GRAPHQL`. Forgot/reset password use the independent `VITE_AUTH_RECOVERY_GRAPHQL` switch. Authenticated `changePassword` and `updateViewerProfile` are implemented and tested in the schema; because neither has a shipped frontend caller, their duplicate Express mutations were retired on 2026-07-27 and GraphQL is their sole transport owner. Every active consumer retains an executable HTTP rollback path.
 
 The coordinated switch was enabled in production on 2026-07-21. Backend deployment `5d155af6-e84b-4a8a-a385-2867a01f8fc2`, GraphQL deployment `62755717-ecb6-4249-8ee7-748f229d620b`, and frontend deployment `75a3b29a-3870-492a-b99e-d6f0c5cd9475` serve commit `9f3a4c86`. Same-origin probes verified the CSRF/cookie allowlist and stable anonymous errors, and a real browser login attempt was observed as GraphQL `Login` with no retained REST auth request.
 
@@ -27,9 +27,9 @@ The active Google flow now sends an access token to the backend. The backend val
 | `POST /api/auth/google-login` | `loginWithGoogleAccessToken(input)` | Verify provider token and audience server-side; require verified provider email; set cookie-only session |
 | `POST /api/auth/google-credential` | future merge into the Google login service | Use the same provider-verification and account-linking service |
 | `GET /api/auth/me` | `currentUser` | Read the signed access cookie; return normalized user identity; never cache |
-| `PUT /api/auth/me` | `updateViewerProfile(input)` | Authenticated and CSRF-protected; trim name; enforce 1-100 characters |
+| retired `PUT /api/auth/me` | `updateViewerProfile(input)` | Authenticated and CSRF-protected; trim name; enforce 1-100 characters |
 | `POST /api/auth/logout` | `logout` | CSRF-protected; expire both session cookies; remain idempotent |
-| `POST /api/auth/change-password` | `changePassword(input)` | Verify current password; enforce password policy; replace password hash; notify user |
+| retired `POST /api/auth/change-password` | `changePassword(input)` | Verify current password; enforce password policy; replace password hash; notify user |
 | `POST /api/auth/forgot-password` | `requestPasswordReset(input)` | Non-enumerating response; strict rate limit; hashed one-hour token; email side effect |
 | `POST /api/auth/reset-password` | `resetPassword(input)` | Validate and consume reset token; clear token state; enforce password policy; notify user |
 | `POST /api/auth/verify-email` | `verifyEmail(input)` | Validate and consume verification token; mark verified; establish session; welcome email |

@@ -6,10 +6,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 332
-- Resolved declarations: 332
+- Route declarations: 330
+- Resolved declarations: 330
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 313
+- Unique resolved method/path operations: 311
 - Files containing declarations: 63
 
 ## Interpretation limits
@@ -35,20 +35,18 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/admin/users/count` | `/users/count` | `backend/src/routes/admin.routes.js:98` |
 | GET | `/api/admin/users/ids` | `/users/ids` | `backend/src/routes/admin.routes.js:188` |
 | GET | `/api/admin/users/search` | `/users/search` | `backend/src/routes/admin.routes.js:109` |
-| POST | `/api/auth/change-password` | `/change-password` | `backend/src/auth/credentials.routes.js:462` |
 | GET | `/api/auth/csrf` | `/api/auth/csrf` | `backend/src/index.js:166` |
-| POST | `/api/auth/forgot-password` | `/forgot-password` | `backend/src/auth/credentials.routes.js:338` |
+| POST | `/api/auth/forgot-password` | `/forgot-password` | `backend/src/auth/credentials.routes.js:336` |
 | POST | `/api/auth/google-credential` | `/google-credential` | `backend/src/auth/google.routes.js:133` |
 | POST | `/api/auth/google-login` | `/google-login` | `backend/src/auth/google.routes.js:18` |
-| POST | `/api/auth/login` | `/login` | `backend/src/auth/credentials.routes.js:119` |
+| POST | `/api/auth/login` | `/login` | `backend/src/auth/credentials.routes.js:117` |
 | POST | `/api/auth/logout` | `/logout` | `backend/src/auth/session.routes.js:17` |
 | GET | `/api/auth/me` | `/me` | `backend/src/auth/profile.routes.js:16` |
-| PUT | `/api/auth/me` | `/me` | `backend/src/auth/profile.routes.js:73` |
 | POST | `/api/auth/refresh` | `/refresh` | `backend/src/auth/session.routes.js:33` |
-| POST | `/api/auth/register` | `/register` | `backend/src/auth/credentials.routes.js:36` |
-| POST | `/api/auth/resend-verification` | `/resend-verification` | `backend/src/auth/credentials.routes.js:272` |
-| POST | `/api/auth/reset-password` | `/reset-password` | `backend/src/auth/credentials.routes.js:403` |
-| POST | `/api/auth/verify-email` | `/verify-email` | `backend/src/auth/credentials.routes.js:194` |
+| POST | `/api/auth/register` | `/register` | `backend/src/auth/credentials.routes.js:34` |
+| POST | `/api/auth/resend-verification` | `/resend-verification` | `backend/src/auth/credentials.routes.js:270` |
+| POST | `/api/auth/reset-password` | `/reset-password` | `backend/src/auth/credentials.routes.js:401` |
+| POST | `/api/auth/verify-email` | `/verify-email` | `backend/src/auth/credentials.routes.js:192` |
 | POST | `/api/billing/webhook` | `/webhook` | `backend/src/routes/billing.routes.js:28` |
 | GET | `/api/bookings` | `/` | `backend/src/routes/bookings.routes.js:109` |
 | POST | `/api/bookings` | `/` | `backend/src/routes/bookings.routes.js:238` |

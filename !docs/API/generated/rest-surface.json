@@ -3,10 +3,10 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 332,
-    "resolvedDeclarationCount": 332,
+    "declarationCount": 330,
+    "resolvedDeclarationCount": 330,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 313,
+    "uniqueResolvedOperationCount": 311,
     "sourceFileCount": 63
   },
   "caveats": [
@@ -137,16 +137,6 @@
       "dynamic": false
     },
     {
-      "method": "POST",
-      "publicPaths": [
-        "/api/auth/change-password"
-      ],
-      "declaredPath": "/change-password",
-      "source": "backend/src/auth/credentials.routes.js",
-      "line": 462,
-      "dynamic": false
-    },
-    {
       "method": "GET",
       "publicPaths": [
         "/api/auth/csrf"
@@ -163,7 +153,7 @@
       ],
       "declaredPath": "/forgot-password",
       "source": "backend/src/auth/credentials.routes.js",
-      "line": 338,
+      "line": 336,
       "dynamic": false
     },
     {
@@ -193,7 +183,7 @@
       ],
       "declaredPath": "/login",
       "source": "backend/src/auth/credentials.routes.js",
-      "line": 119,
+      "line": 117,
       "dynamic": false
     },
     {
@@ -217,16 +207,6 @@
       "dynamic": false
     },
     {
-      "method": "PUT",
-      "publicPaths": [
-        "/api/auth/me"
-      ],
-      "declaredPath": "/me",
-      "source": "backend/src/auth/profile.routes.js",
-      "line": 73,
-      "dynamic": false
-    },
-    {
       "method": "POST",
       "publicPaths": [
         "/api/auth/refresh"
@@ -243,7 +223,7 @@
       ],
       "declaredPath": "/register",
       "source": "backend/src/auth/credentials.routes.js",
-      "line": 36,
+      "line": 34,
       "dynamic": false
     },
     {
@@ -253,7 +233,7 @@
       ],
       "declaredPath": "/resend-verification",
       "source": "backend/src/auth/credentials.routes.js",
-      "line": 272,
+      "line": 270,
       "dynamic": false
     },
     {
@@ -263,7 +243,7 @@
       ],
       "declaredPath": "/reset-password",
       "source": "backend/src/auth/credentials.routes.js",
-      "line": 403,
+      "line": 401,
       "dynamic": false
     },
     {
@@ -273,7 +253,7 @@
       ],
       "declaredPath": "/verify-email",
       "source": "backend/src/auth/credentials.routes.js",
-      "line": 194,
+      "line": 192,
       "dynamic": false
     },
     {

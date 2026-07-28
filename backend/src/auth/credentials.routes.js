@@ -1,5 +1,4 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { logger } = require('../utils/logger');
 const { generateVerificationToken, hashToken } = require('../utils/crypto');
@@ -15,12 +14,11 @@ const {
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
-  changePasswordSchema,
   verifyEmailSchema,
   resendVerificationSchema,
   validate,
 } = require('../lib/validators');
-const { JWT_SECRET, authRateLimit, strictRateLimit, ACCESS_COOKIE_OPTIONS, REFRESH_COOKIE_OPTIONS } = require('./config');
+const { authRateLimit, strictRateLimit, ACCESS_COOKIE_OPTIONS, REFRESH_COOKIE_OPTIONS } = require('./config');
 const { asyncHandler, generateTokens, createPersonalOrganization } = require('./helpers');
 
 module.exports = () => {
@@ -449,95 +447,6 @@ router.post('/reset-password', authRateLimit, validate(resetPasswordSchema), asy
     res.json({
       success: true,
       message: 'Password has been reset successfully. You can now log in.',
-    });
-  } finally {
-    client.release();
-  }
-}));
-
-/**
- * POST /api/auth/change-password
- * Change password (authenticated)
- */
-router.post('/change-password', asyncHandler(async (req, res) => {
-  // Authenticate first
-  const token = req.cookies?.itemize_auth;
-  if (!token) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-
-  let decoded;
-  try {
-    decoded = jwt.verify(token, JWT_SECRET);
-  } catch {
-    return res.status(401).json({ error: 'Invalid or expired token' });
-  }
-
-  // Validate input
-  let validatedBody;
-  try {
-    validatedBody = changePasswordSchema.parse(req.body);
-  } catch (error) {
-    return res.status(400).json({ error: error.errors?.[0]?.message || 'Validation failed' });
-  }
-
-  const { currentPassword, newPassword } = validatedBody;
-  const pool = req.dbPool;
-
-  if (!pool) {
-    return res.status(503).json({ error: 'Database connection unavailable' });
-  }
-
-  const client = await pool.connect();
-  try {
-    // Get user with password
-    const result = await client.query(
-      'SELECT id, email, name, password_hash FROM users WHERE id = $1',
-      [decoded.id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    const user = result.rows[0];
-
-    if (!user.password_hash) {
-      return res.status(400).json({ 
-        error: 'This account uses Google sign-in and does not have a password.',
-        code: 'NO_PASSWORD'
-      });
-    }
-
-    // Verify current password
-    const isValid = await bcrypt.compare(currentPassword, user.password_hash);
-    if (!isValid) {
-      return res.status(401).json({ 
-        error: 'Current password is incorrect.',
-        code: 'INVALID_PASSWORD'
-      });
-    }
-
-    // Hash new password
-    const passwordHash = await bcrypt.hash(newPassword, 12);
-
-    // Update password
-    await client.query(
-      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
-      [passwordHash, user.id]
-    );
-
-    // Send confirmation email (non-blocking)
-    if (isEmailServiceConfigured()) {
-      sendPasswordChangedEmail({ email: user.email, name: user.name })
-        .catch(err => logger.error('Failed to send password changed email', { error: err.message }));
-    }
-
-    logger.info('Password changed', { email: user.email });
-
-    res.json({
-      success: true,
-      message: 'Password changed successfully.',
     });
   } finally {
     client.release();
