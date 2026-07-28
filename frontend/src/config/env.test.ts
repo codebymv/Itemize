@@ -5,14 +5,9 @@ describe('Environment Validation', () => {
   it('accepts the Vitest runtime mode during application initialization', () => {
     expect(env).toBeDefined();
     expect(env.MODE).toBe('test');
-    expect(env.VITE_CONTACT_READS_GRAPHQL).toBe('false');
     expect(env.VITE_AUTH_SESSION_GRAPHQL).toBe('false');
     expect(env.VITE_AUTH_IDENTITY_GRAPHQL).toBe('false');
     expect(env.VITE_AUTH_RECOVERY_GRAPHQL).toBe('false');
-    expect(env.VITE_CONTACT_MUTATIONS_GRAPHQL).toBe('false');
-    expect(env.VITE_CONTACT_BULK_MUTATIONS_GRAPHQL).toBe('false');
-    expect(env.VITE_CONTACT_ACTIVITIES_GRAPHQL).toBe('false');
-    expect(env.VITE_CONTACT_CONTENT_GRAPHQL).toBe('false');
     expect(env.VITE_CALENDAR_READS_GRAPHQL).toBe('false');
     expect(env.VITE_CALENDAR_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_CALENDAR_AVAILABILITY_MUTATIONS_GRAPHQL).toBe('false');

@@ -1,8 +1,10 @@
 # CRM GraphQL cutover contract
 
-**Status:** Pipeline, deal, tag, and authenticated form consumers are cut over to GraphQL; canonical CRM persistence and retained CSV/public-form protocol boundaries are implemented; broader CRM characterization continues
+**Status:** Authenticated contact, activity, related-content, pipeline, deal,
+tag, and form consumers are cut over to GraphQL. Contact CSV transfer and
+public-form protocols remain HTTP under their NestJS owners.
 
-**Evidence date:** 2026-07-26
+**Evidence date:** 2026-07-28
 
 ## Decision
 
@@ -49,7 +51,11 @@ Email is canonicalized to trimmed lowercase storage; blank values become `NULL`.
 
 Email-to-contact resolution is organization-scoped and deterministic. Public forms and bookings serialize concurrent resolution and reuse the lowest eligible contact ID for the canonical email. CSV import skips existing and same-batch canonical duplicates only when `skipDuplicates` is true; false preserves duplicate rows. Campaign preview and recipient snapshots count one eligible recipient per canonical email and select the lowest contact ID. Provider-specific rewrites such as Gmail dot or plus removal are forbidden because they would merge distinct user-supplied identities.
 
-GraphQL update inputs distinguish omitted from explicit null. The implemented and tested target rule is: omission preserves; explicit null or an empty string clears nullable scalar fields; explicit null resets JSON objects to `{}` and tags to `[]`; source and status cannot be null. The legacy partial `PUT` behavior remains inconsistent, so the frontend mutation flag is independent from the read flag. REST remains the default rollback path until the staging observation gate passes.
+GraphQL update inputs distinguish omitted from explicit null. The implemented
+and tested rule is: omission preserves; explicit null or an empty string clears
+nullable scalar fields; explicit null resets JSON objects to `{}` and tags to
+`[]`; source and status cannot be null. The frontend always uses this GraphQL
+contract and never retries an error through REST.
 
 ### Lists and aggregate profile
 
@@ -163,9 +169,30 @@ Contact reuse/creation and submission share one transaction. Concurrent submissi
 
 Fresh PostgreSQL suites now cover contact CRUD/tenancy, profile authentication and forged-header denial, assignee denial, idempotent bulk tag changes, concurrent contact limits, canonical email migration repair and direct/API/GraphQL normalization, legal duplicate and email-less contacts, both CSV duplicate modes, deterministic public-form and booking resolution, deduplicated campaign preview/snapshots, canonical tag drift repair/projection/tenancy and case-insensitive races, pipeline/deal CRUD and lifecycle, cross-tenant deal references, invalid stages, stage-in-use protection, default concurrency, form CRUD/fields/duplication/submissions, same-email public submission concurrency, and concurrent form limits. The retained NestJS CSV cases additionally prove authentication, membership and CSRF denial; tenant/status/tag export filtering; deterministic quoting and formula neutralization; strict row validation; both duplicate modes including concurrent imports; atomic plan-limit enforcement; bounded body/row/column/error behavior; and transactional contact, workflow-trigger, and activity writes. Public-form cases additionally prove global identity and ambiguous-slug denial, typed normalization and invalid/unknown/oversized rejection without writes, safe redirects, tenant/object database constraints, durable trigger and notification fan-out, worker delivery with the stable idempotency key, and replay-safe historical repair.
 
-The NestJS `ContactsModule` implements the contact/profile operations, `ContactTransfersModule` implements the two retained CSV HTTP operations, `TagsModule` implements all five tag operations, `PipelinesModule` implements all five pipeline-definition operations, `DealsModule` implements all nine deal operations, and `FormsModule` implements seven authenticated form-definition operations plus two submission-management operations. Fresh-PostgreSQL tests prove dual REST/GraphQL contact parity; retained CSV authorization, validation, concurrency, limits, and side effects; canonical tag and pipeline behavior; deal validation, isolation, concurrency, and transition side effects; and form list/detail projections, default-field creation, serialized plan enforcement, omitted-versus-null settings, CSRF and tenant privacy, atomic field replacement with conditional-ID remapping, publish validation, duplication with fresh field IDs, deterministic submission paging, and tenant-private deletion. Anonymous public form retrieval/submission remains outside GraphQL.
+The NestJS `ContactsModule` implements the authoritative contact/profile
+operations, `ContactTransfersModule` implements the two retained CSV HTTP
+operations, `TagsModule` implements all five tag operations, `PipelinesModule`
+implements all five pipeline-definition operations, `DealsModule` implements
+all nine deal operations, and `FormsModule` implements seven authenticated
+form-definition operations plus two submission-management operations.
+Fresh-PostgreSQL tests prove contact behavior; retained CSV authorization,
+validation, concurrency, limits, and side effects; canonical tag and pipeline
+behavior; deal validation, isolation, concurrency, and transition side effects;
+and form behavior. Anonymous public form retrieval/submission remains outside
+GraphQL.
 
-The shared frontend adapters preserve their existing snake-case consumer shapes, selected-organization headers, session recovery, and CSRF acquisition. Pipelines, deals, and authenticated forms now use GraphQL directly with their rollout flags and REST branches removed. `getPublicForm` and `submitPublicForm` remain anonymous HTTP by protocol. There is no standalone tag API consumer to switch. Frontend coverage includes every pipeline/deal query and mutation, decimal/list/lifecycle mapping, CSV parsing and bounds, form mapping, conditional-field transport, nullable clearing, submission paging/deletion, authenticated editor settings and ordered field replacement, and public-form transport isolation.
+The shared frontend adapters preserve their existing snake-case consumer
+shapes, selected-organization context, session recovery, and CSRF acquisition.
+Contacts, activities, related content, pipelines, deals, and authenticated
+forms use GraphQL directly with their rollout flags and REST branches removed.
+CSV transfer, `getPublicForm`, and `submitPublicForm` remain HTTP by protocol.
+There is no standalone tag API consumer to switch.
+
+## Historical rollout evidence
+
+The following records preserve the staged rollout and rollback observations.
+References to feature flags or Express rollback paths describe the state at the
+time of each rehearsal and are not current runtime options.
 
 The 2026-07-17 mutation rehearsal used a disposable staging account and real credential login against GraphQL deployment `239de591-6f1a-4be7-b10a-08a59070cc15` through backend deployment `095eb5e5-a5c4-4da4-94e8-686fb1e842f6`. Browser create, edit, activity display, and delete passed with GraphQL writes and double-submit CSRF. PostgreSQL showed the expected create/update workflow triggers. Disabling only the mutation flag repeated create/edit/delete through REST while contact reads remained on GraphQL, proving rollback without data repair. Cleanup left zero temporary users, organizations, contacts, or triggers. Privacy-safe proxy and NestJS operation events now distinguish transport/layer and record one correlated request ID, operation name/type, numeric latency, operation/error counters, and stable error codes without source, variables, response data, or identity fields.
 
@@ -188,3 +215,10 @@ Focused follow-up coverage on 2026-07-17 closed the aggregate-profile failure an
 The retained CSV transport and rollback gate passed on 2026-07-17 against GraphQL deployment `0e3e01c8-fec1-4d7e-a3c5-6ab94c9e6712` through the public legacy origin. Backend deployment `3d2ade6e-d88d-4a1e-9a2c-6e8f52e46dbf` enabled the narrow two-route proxy. A disposable verified account imported one valid row, skipped one canonical duplicate, and returned one bounded validation error through NestJS; export returned HTTP `200`, `private, no-store`, tenant-filtered quoted CSV with spreadsheet-formula protection. The database recorded the contact plus one `contact_added` trigger and one `Contact Created` activity. Removing only `CONTACT_TRANSFERS_NESTJS_ENABLED` and deploying current backend source as `193ab513-f74e-4565-8b9c-a7e3a8dab863` retained the same session and data: legacy export read the Nest-created contact and formula-safe value, legacy import returned its distinct retained response shape and added a second contact, and legacy export immediately read both without repair. Transactional cleanup removed the disposable user and organization and left zero contacts or triggers. The proxy flag remains absent, staging is on legacy routing, production was untouched, and the service-local `backend-v2/railway.json` prevents the GraphQL service from inheriting the frontend Railway manifest.
 
 The authenticated forms slice has completed consumer cutover: every browser operation is GraphQL-only and the duplicate authenticated Express handlers are retired. Public form rendering and submission deliberately remain on their hardened HTTP protocol. The remaining CRM work is tracked outside this forms boundary.
+
+On 2026-07-28, contact list/detail/CRUD, bulk changes, activities, and related
+content became GraphQL-only. Their five browser flags and ten Express handlers
+were removed. The legacy contacts router and its orphan policy/projection
+helpers were deleted. CSV import/export remain at their existing HTTP URLs but
+the narrow origin proxy now always forwards them to `ContactTransfersModule`;
+the former transfer switch and duplicate Express implementation are retired.

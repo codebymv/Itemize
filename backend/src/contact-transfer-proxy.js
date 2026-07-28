@@ -1,9 +1,6 @@
 const DEFAULT_TIMEOUT_MS = 30000;
 const ACCEPTED_REQUEST_ID = /^[A-Za-z0-9._:-]{1,128}$/;
 
-const enabled = (environment = process.env) =>
-    environment.CONTACT_TRANSFERS_NESTJS_ENABLED === 'true';
-
 const resolveBaseUrl = (environment = process.env) => {
     const configured = environment.GRAPHQL_UPSTREAM_URL?.trim();
     if (!configured) return null;
@@ -88,12 +85,10 @@ const createContactTransferProxy = ({
     fetchImpl = global.fetch,
     logger = console,
 } = {}) => {
-    const proxyEnabled = enabled(environment);
-    const baseUrl = proxyEnabled ? resolveBaseUrl(environment) : null;
+    const baseUrl = resolveBaseUrl(environment);
     const requestTimeoutMs = timeoutMs(environment);
 
-    return async (req, res, next) => {
-        if (!proxyEnabled) return next();
+    return async (req, res) => {
         const action = req.method === 'GET' ? 'export' : 'import';
         const startedAt = process.hrtime.bigint();
         const requestId = requestIdFor(req);
@@ -193,6 +188,5 @@ const createContactTransferProxy = ({
 
 module.exports = {
     createContactTransferProxy,
-    enabled,
     resolveBaseUrl,
 };

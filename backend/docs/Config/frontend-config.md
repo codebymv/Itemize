@@ -184,22 +184,17 @@ VITE_GRAPHQL_URL=http://localhost:3100/graphql
 
 # Contact list/detail reads default to REST. Enable only in a tested environment;
 # setting this back to false is the consumer rollback.
-VITE_CONTACT_READS_GRAPHQL=false
 
 # Contact create/update/delete independently default to REST. Enable only after
 # the write-side CSRF and semantic-parity gates pass in the target environment.
-VITE_CONTACT_MUTATIONS_GRAPHQL=false
 
 # Contact bulk update/delete have a separate rollback boundary from single-row
 # mutations. Keep disabled until the bulk staging browser gate passes.
-VITE_CONTACT_BULK_MUTATIONS_GRAPHQL=false
 
 # Contact timeline reads/writes have their own rollback boundary. Keep disabled
 # until the activity staging browser gate passes.
-VITE_CONTACT_ACTIVITIES_GRAPHQL=false
 
 # Contact related-content reads have their own rollback boundary.
-VITE_CONTACT_CONTENT_GRAPHQL=false
 
 # Pipeline definition/list/detail reads and definition mutations are independent
 # rollback boundaries.

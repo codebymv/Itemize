@@ -50,13 +50,6 @@ import {
   updateOrganizationMemberRoleViaGraphql,
   updateOrganizationViaGraphql,
 } from './organizationsGraphql';
-import {
-  isContactGraphqlActivitiesEnabled,
-  isContactGraphqlBulkMutationsEnabled,
-  isContactGraphqlContentEnabled,
-  isContactGraphqlMutationsEnabled,
-  isContactGraphqlReadsEnabled,
-} from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   default: {
@@ -95,22 +88,9 @@ vi.mock('./organizationsGraphql', () => ({
   updateOrganizationViaGraphql: vi.fn(),
 }));
 
-vi.mock('./graphqlClient', () => ({
-  isContactGraphqlActivitiesEnabled: vi.fn(),
-  isContactGraphqlBulkMutationsEnabled: vi.fn(),
-  isContactGraphqlContentEnabled: vi.fn(),
-  isContactGraphqlReadsEnabled: vi.fn(),
-  isContactGraphqlMutationsEnabled: vi.fn(),
-}));
-
-describe('contacts API read transport', () => {
+describe('contacts API GraphQL transport', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(isContactGraphqlReadsEnabled).mockReturnValue(false);
-    vi.mocked(isContactGraphqlMutationsEnabled).mockReturnValue(false);
-    vi.mocked(isContactGraphqlBulkMutationsEnabled).mockReturnValue(false);
-    vi.mocked(isContactGraphqlActivitiesEnabled).mockReturnValue(false);
-    vi.mocked(isContactGraphqlContentEnabled).mockReturnValue(false);
   });
 
   it('routes the complete organization administration surface directly through GraphQL', async () => {
@@ -177,26 +157,7 @@ describe('contacts API read transport', () => {
     expect(api.delete).not.toHaveBeenCalled();
   });
 
-  it('uses REST by default and retains the organization header contract', async () => {
-    vi.mocked(api.get).mockResolvedValue({
-      data: {
-        contacts: [{ id: 11, first_name: 'Ada' }],
-        pagination: { page: 1, limit: 50, total: 1, totalPages: 1 },
-      },
-    });
-
-    const result = await getContacts({ search: 'Ada', organization_id: 42 });
-
-    expect(result.contacts[0]).toMatchObject({ id: 11, first_name: 'Ada' });
-    expect(api.get).toHaveBeenCalledWith('/api/contacts', {
-      params: { search: 'Ada', organization_id: 42 },
-      headers: { 'x-organization-id': '42' },
-    });
-    expect(getContactsViaGraphql).not.toHaveBeenCalled();
-  });
-
-  it('routes list and detail reads through GraphQL only when enabled', async () => {
-    vi.mocked(isContactGraphqlReadsEnabled).mockReturnValue(true);
+  it('routes list and detail reads through GraphQL', async () => {
     vi.mocked(getContactsViaGraphql).mockResolvedValue({
       contacts: [],
       pagination: { page: 1, limit: 50, total: 0, totalPages: 0 },
@@ -211,29 +172,7 @@ describe('contacts API read transport', () => {
     expect(api.get).not.toHaveBeenCalled();
   });
 
-  it('keeps contact writes on REST by default with organization headers', async () => {
-    vi.mocked(api.post).mockResolvedValue({ data: { id: 12, first_name: 'Grace' } });
-    vi.mocked(api.put).mockResolvedValue({ data: { id: 12, first_name: 'Grace Updated' } });
-    vi.mocked(api.delete).mockResolvedValue({ data: { success: true } });
-
-    await createContact({ first_name: 'Grace', organization_id: 42 });
-    await updateContact(12, { first_name: 'Grace Updated', organization_id: 42 });
-    await deleteContact(12, 42);
-
-    expect(api.post).toHaveBeenCalledWith('/api/contacts', {
-      first_name: 'Grace', organization_id: 42,
-    }, { headers: { 'x-organization-id': '42' } });
-    expect(api.put).toHaveBeenCalledWith('/api/contacts/12', {
-      first_name: 'Grace Updated', organization_id: 42,
-    }, { headers: { 'x-organization-id': '42' } });
-    expect(api.delete).toHaveBeenCalledWith('/api/contacts/12', {
-      headers: { 'x-organization-id': '42' },
-    });
-    expect(createContactViaGraphql).not.toHaveBeenCalled();
-  });
-
-  it('routes writes through GraphQL only when the mutation flag is enabled', async () => {
-    vi.mocked(isContactGraphqlMutationsEnabled).mockReturnValue(true);
+  it('routes writes through GraphQL', async () => {
     vi.mocked(createContactViaGraphql).mockResolvedValue({ id: 12 } as never);
     vi.mocked(updateContactViaGraphql).mockResolvedValue({ id: 12 } as never);
     vi.mocked(deleteContactViaGraphql).mockResolvedValue();
@@ -251,27 +190,13 @@ describe('contacts API read transport', () => {
     expect(api.delete).not.toHaveBeenCalled();
   });
 
-  it('keeps bulk writes on REST unless their independent flag is enabled', async () => {
-    vi.mocked(api.post)
-      .mockResolvedValueOnce({ data: { updated_ids: [11], message: '1 contacts updated' } })
-      .mockResolvedValueOnce({ data: { deleted_ids: [11], message: '1 contacts deleted' } });
+  it('routes bulk writes through GraphQL', async () => {
     const update = {
       contact_ids: [11],
       updates: { tags: ['vip'], tags_mode: 'add' as const },
       organization_id: 42,
     };
 
-    await bulkUpdateContacts(update);
-    await bulkDeleteContacts([11], 42);
-    expect(api.post).toHaveBeenNthCalledWith(1, '/api/contacts/bulk-update', update, {
-      headers: { 'x-organization-id': '42' },
-    });
-    expect(api.post).toHaveBeenNthCalledWith(2, '/api/contacts/bulk-delete', {
-      contact_ids: [11],
-    }, { headers: { 'x-organization-id': '42' } });
-
-    vi.clearAllMocks();
-    vi.mocked(isContactGraphqlBulkMutationsEnabled).mockReturnValue(true);
     vi.mocked(bulkUpdateContactsViaGraphql).mockResolvedValue({
       updated_ids: [11], message: '1 contacts updated',
     });
@@ -285,35 +210,7 @@ describe('contacts API read transport', () => {
     expect(api.post).not.toHaveBeenCalled();
   });
 
-  it('keeps activity reads and writes on REST by default', async () => {
-    const activity = {
-      id: 91,
-      contact_id: 11,
-      type: 'note',
-      content: { body: 'Call next week' },
-      created_at: '2026-01-03T00:00:00.000Z',
-    };
-    vi.mocked(api.get).mockResolvedValue({ data: [activity] });
-    vi.mocked(api.post).mockResolvedValue({ data: activity });
-    const params = { type: 'note', limit: 25, offset: 25 };
-    const input = { type: 'note', content: { body: 'Call next week' } };
-
-    await expect(getContactActivities(11, params, 42)).resolves.toEqual([activity]);
-    await expect(addContactActivity(11, input, 42)).resolves.toEqual(activity);
-
-    expect(api.get).toHaveBeenCalledWith('/api/contacts/11/activities', {
-      params,
-      headers: { 'x-organization-id': '42' },
-    });
-    expect(api.post).toHaveBeenCalledWith('/api/contacts/11/activities', input, {
-      headers: { 'x-organization-id': '42' },
-    });
-    expect(getContactActivitiesViaGraphql).not.toHaveBeenCalled();
-    expect(addContactActivityViaGraphql).not.toHaveBeenCalled();
-  });
-
-  it('routes both activity operations through GraphQL only when their flag is enabled', async () => {
-    vi.mocked(isContactGraphqlActivitiesEnabled).mockReturnValue(true);
+  it('routes both activity operations through GraphQL', async () => {
     vi.mocked(getContactActivitiesViaGraphql).mockResolvedValue([]);
     vi.mocked(addContactActivityViaGraphql).mockResolvedValue({ id: 91 } as never);
     const params = { limit: 50 };
@@ -328,18 +225,8 @@ describe('contacts API read transport', () => {
     expect(api.post).not.toHaveBeenCalled();
   });
 
-  it('keeps contact content on REST unless its independent flag is enabled', async () => {
+  it('routes contact content through GraphQL', async () => {
     const content = { lists: [], notes: [], whiteboards: [] };
-    vi.mocked(api.get).mockResolvedValue({ data: content });
-
-    await expect(getContactContent(11, 42)).resolves.toEqual(content);
-    expect(api.get).toHaveBeenCalledWith('/api/contacts/11/content', {
-      headers: { 'x-organization-id': '42' },
-    });
-    expect(getContactContentViaGraphql).not.toHaveBeenCalled();
-
-    vi.clearAllMocks();
-    vi.mocked(isContactGraphqlContentEnabled).mockReturnValue(true);
     vi.mocked(getContactContentViaGraphql).mockResolvedValue(content);
     await expect(getContactContent(11, 42)).resolves.toEqual(content);
     expect(getContactContentViaGraphql).toHaveBeenCalledWith(11, 42);

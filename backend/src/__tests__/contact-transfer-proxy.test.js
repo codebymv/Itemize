@@ -2,7 +2,6 @@ const express = require('express');
 const request = require('supertest');
 const {
     createContactTransferProxy,
-    enabled,
     resolveBaseUrl,
 } = require('../contact-transfer-proxy');
 
@@ -22,27 +21,12 @@ const testApp = ({
         next();
     });
     const proxy = createContactTransferProxy({ environment, fetchImpl, logger });
-    app.get('/api/contacts/export/csv', proxy, (_req, res) => {
-        res.status(299).send('legacy-export');
-    });
-    app.post('/api/contacts/import/csv', proxy, (_req, res) => {
-        res.status(299).json({ source: 'legacy-import' });
-    });
+    app.get('/api/contacts/export/csv', proxy);
+    app.post('/api/contacts/import/csv', proxy);
     return { app, logger };
 };
 
 describe('contact transfer NestJS proxy', () => {
-    it('passes through to legacy routes unless explicitly enabled', async () => {
-        const fetchImpl = jest.fn();
-        const { app } = testApp({ fetchImpl });
-
-        await request(app)
-            .get('/api/contacts/export/csv')
-            .expect(299, 'legacy-export');
-        expect(fetchImpl).not.toHaveBeenCalled();
-        expect(enabled({ CONTACT_TRANSFERS_NESTJS_ENABLED: 'false' })).toBe(false);
-    });
-
     it('proxies safe export context and preserves download headers', async () => {
         const fetchImpl = jest.fn().mockResolvedValue(new Response(
             'First Name,Email\n"Safe","safe@example.test"',
@@ -60,7 +44,6 @@ describe('contact transfer NestJS proxy', () => {
         ));
         const { app, logger } = testApp({
             environment: {
-                CONTACT_TRANSFERS_NESTJS_ENABLED: 'true',
                 GRAPHQL_UPSTREAM_URL: 'https://graphql.internal/graphql',
             },
             fetchImpl,
@@ -113,7 +96,6 @@ describe('contact transfer NestJS proxy', () => {
         ));
         const { app, logger } = testApp({
             environment: {
-                CONTACT_TRANSFERS_NESTJS_ENABLED: 'true',
                 GRAPHQL_UPSTREAM_URL: 'http://graphql.internal:3100/graphql',
             },
             fetchImpl,
@@ -145,7 +127,7 @@ describe('contact transfer NestJS proxy', () => {
 
     it('fails closed on missing configuration and upstream failures', async () => {
         const missing = testApp({
-            environment: { CONTACT_TRANSFERS_NESTJS_ENABLED: 'true' },
+            environment: {},
             fetchImpl: jest.fn(),
         });
         const unavailable = await request(missing.app)
@@ -155,7 +137,6 @@ describe('contact transfer NestJS proxy', () => {
 
         const failed = testApp({
             environment: {
-                CONTACT_TRANSFERS_NESTJS_ENABLED: 'true',
                 GRAPHQL_UPSTREAM_URL: 'https://graphql.internal/graphql',
             },
             fetchImpl: jest.fn().mockRejectedValue(new Error('private DNS failure')),

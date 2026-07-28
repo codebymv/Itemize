@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 262
-- API operations under `/api`: 255
+- Registered method/path operations: 252
+- API operations under `/api`: 245
 - Non-API registered operations: 7
-- Static frontend callsites: 208
-- Operations with frontend consumers: 197
-- Operations referenced by backend tests: 145
-- Recommended GraphQL queries: 63
-- Recommended GraphQL mutations: 137
+- Static frontend callsites: 198
+- Operations with frontend consumers: 187
+- Operations referenced by backend tests: 137
+- Recommended GraphQL queries: 59
+- Recommended GraphQL mutations: 131
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 202
+- High-risk operations: 192
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -85,18 +85,8 @@
 | GET | `/api/chat-widget/public/messages/:sessionToken` | 1 | 1 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / getPublicChatMessages |
 | POST | `/api/chat-widget/public/session` | 1 | 0 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / createPublicChatSession |
 | POST | `/api/chat-widget/public/typing` | 0 | 1 | retain-http | medium | chat-widget / PublicChatWidgetHttpModule / sendPublicChatTyping |
-| GET | `/api/contacts` | 1 | 3 | graphql-query | high | crm / ContactsModule / contacts |
-| POST | `/api/contacts` | 1 | 6 | graphql-mutation | high | crm / ContactsModule / createContact |
-| DELETE | `/api/contacts/:id` | 1 | 2 | graphql-mutation | high | crm / ContactsModule / deleteContact |
-| GET | `/api/contacts/:id` | 1 | 3 | graphql-query | high | crm / ContactsModule / contact |
-| PUT | `/api/contacts/:id` | 1 | 4 | graphql-mutation | high | crm / ContactsModule / updateContact |
-| GET | `/api/contacts/:id/activities` | 1 | 1 | graphql-query | high | crm / ContactsModule / contactActivities |
-| POST | `/api/contacts/:id/activities` | 1 | 0 | graphql-mutation | high | crm / ContactsModule / addContactActivity |
-| GET | `/api/contacts/:id/content` | 1 | 1 | graphql-query | high | crm / ContactProfilesModule / contactContent |
-| POST | `/api/contacts/bulk-delete` | 1 | 0 | graphql-mutation | high | crm / ContactsModule / bulkDeleteContacts |
-| POST | `/api/contacts/bulk-update` | 1 | 2 | graphql-mutation | high | crm / ContactsModule / bulkUpdateContacts |
-| GET | `/api/contacts/export/csv` | 1 | 6 | retain-http | high | crm / ContactTransfersModule / exportContactsCsv |
-| POST | `/api/contacts/import/csv` | 1 | 6 | retain-http | high | crm / ContactTransfersModule / importContactsCsv |
+| GET | `/api/contacts/export/csv` | 1 | 4 | retain-http | high | crm / ContactTransfersModule / exportContactsCsv |
+| POST | `/api/contacts/import/csv` | 1 | 4 | retain-http | high | crm / ContactTransfersModule / importContactsCsv |
 | GET | `/api/email-templates` | 2 | 7 | graphql-query | medium | messaging / EmailTemplatesModule / emailTemplates |
 | POST | `/api/email-templates` | 1 | 8 | graphql-mutation | medium | messaging / EmailTemplatesModule / createEmailTemplate |
 | DELETE | `/api/email-templates/:id` | 2 | 3 | graphql-mutation | medium | messaging / EmailTemplatesModule / deleteEmailTemplate |
@@ -298,8 +288,8 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 51
-- Orphaned manual overrides: 88
+- Unmatched backend test calls: 50
+- Orphaned manual overrides: 98
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls
@@ -357,7 +347,6 @@
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:990` |
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1012` |
 | POST | `/api/campaigns/1/:action` | `backend/src/__tests__/integration/campaigns.integration.test.js:504` |
-| GET | `/api/contacts/:contactIdA/profile` | `backend/src/__tests__/integration/contacts.integration.test.js:160` |
 | POST | `/api/chat-widget/sessions/:id/messages` | `backend/src/__tests__/integration/realtime.integration.test.js:265` |
 | POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:168` |
 | DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:169` |

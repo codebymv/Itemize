@@ -1,8 +1,6 @@
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
-import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -16,9 +14,8 @@ type Fixture = {
   tags: string[];
 };
 
-describe('Contacts REST/GraphQL PostgreSQL parity', () => {
+describe('Contacts GraphQL PostgreSQL contract', () => {
   let graphqlApp: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   let organizationId: number;
   let outsiderOrganizationId: number;
@@ -142,14 +139,6 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
     configureApp(graphqlApp);
     await graphqlApp.init();
 
-    const createContactsRouter = require('../../../backend/src/routes/contacts.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    const { errorHandler } = require('../../../backend/src/middleware/errorHandler');
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use('/api/contacts', createContactsRouter(pool, authenticateJWT));
-    legacyApp.use(errorHandler);
   });
 
   afterAll(async () => {
@@ -195,12 +184,7 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
       .send({ query, variables });
   };
 
-  it('matches legacy list membership, order, and page counts', async () => {
-    const legacy = await request(legacyApp)
-      .get('/api/contacts?page=1&limit=2&sort_by=created_at&sort_order=desc')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
+  it('returns deterministic list membership, order, and page counts', async () => {
     const target = await graphql(
       memberToken,
       organizationId,
@@ -217,13 +201,11 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
     ).expect(200);
 
     expect(target.body.errors).toBeUndefined();
-    expect(target.body.data.contacts.nodes.map((contact: { id: number }) => contact.id))
-      .toEqual(legacy.body.contacts.map((contact: { id: number }) => contact.id));
     expect(target.body.data.contacts.pageInfo).toMatchObject({
-      page: legacy.body.pagination.page,
-      pageSize: legacy.body.pagination.limit,
-      total: legacy.body.pagination.total,
-      totalPages: legacy.body.pagination.totalPages,
+      page: 1,
+      pageSize: 2,
+      total: 4,
+      totalPages: 2,
       hasNextPage: true,
       hasPreviousPage: false,
     });
@@ -233,18 +215,7 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
     ]);
   });
 
-  it('matches legacy search, status, tag, and assignee filtering', async () => {
-    const legacy = await request(legacyApp)
-      .get('/api/contacts')
-      .query({
-        search: 'alpha',
-        status: 'active',
-        tags: 'vip',
-        assigned_to: memberId,
-      })
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
+  it('applies search, status, tag, and assignee filtering', async () => {
     const target = await graphql(
       memberToken,
       organizationId,
@@ -264,22 +235,17 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
     expect(target.body.errors).toBeUndefined();
     expect(target.body.data.contacts.nodes).toEqual([
       {
-        id: legacy.body.contacts[0].id,
-        firstName: legacy.body.contacts[0].first_name,
-        status: legacy.body.contacts[0].status.toUpperCase(),
-        tags: legacy.body.contacts[0].tags,
-        assignedToId: legacy.body.contacts[0].assigned_to,
+        id: fixtures[0].id,
+        firstName: 'Alpha',
+        status: 'ACTIVE',
+        tags: ['vip'],
+        assignedToId: memberId,
       },
     ]);
   });
 
-  it('matches legacy detail data for an organization-owned contact', async () => {
+  it('returns detail data for an organization-owned contact', async () => {
     const contactId = fixtures[0].id;
-    const legacy = await request(legacyApp)
-      .get(`/api/contacts/${contactId}`)
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
     const target = await graphql(
       memberToken,
       organizationId,
@@ -295,28 +261,22 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
 
     expect(target.body.errors).toBeUndefined();
     expect(target.body.data.contact).toMatchObject({
-      id: legacy.body.id,
-      organizationId: legacy.body.organization_id,
-      firstName: legacy.body.first_name,
-      lastName: legacy.body.last_name,
-      email: legacy.body.email,
-      status: legacy.body.status.toUpperCase(),
-      tags: legacy.body.tags,
-      assignedToId: legacy.body.assigned_to,
-      assignedToName: legacy.body.assigned_to_name,
-      assignedToEmail: legacy.body.assigned_to_email,
-      createdById: legacy.body.created_by,
-      createdByName: legacy.body.created_by_name,
+      id: contactId,
+      organizationId,
+      firstName: 'Alpha',
+      lastName: 'Able',
+      email: 'alpha@test.itemize',
+      status: 'ACTIVE',
+      tags: ['vip'],
+      assignedToId: memberId,
+      assignedToName: 'Contact Member',
+      createdById: memberId,
+      createdByName: 'Contact Member',
     });
   });
 
   it('preserves cross-tenant resource privacy as NOT_FOUND', async () => {
     const contactId = fixtures[0].id;
-    const legacy = await request(legacyApp)
-      .get(`/api/contacts/${contactId}`)
-      .set('Cookie', `itemize_auth=${outsiderToken}`)
-      .set('x-organization-id', String(outsiderOrganizationId))
-      .expect(404);
     const target = await graphql(
       outsiderToken,
       outsiderOrganizationId,
@@ -324,7 +284,6 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
       { id: contactId },
     ).expect(200);
 
-    expect(legacy.body.error).toBe('Contact not found');
     expect(target.body.data.contact).toBeNull();
     expect(target.body.errors[0].extensions.code).toBe('NOT_FOUND');
   });
@@ -787,14 +746,8 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
     });
   });
 
-  it('matches legacy activity filtering and keeps foreign contacts private', async () => {
+  it('filters activities and keeps foreign contacts private', async () => {
     const contactId = fixtures[2].id;
-    const legacy = await request(legacyApp)
-      .get(`/api/contacts/${contactId}/activities`)
-      .query({ type: 'note', limit: 1, offset: 0 })
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
     const target = await graphql(
       memberToken,
       organizationId,
@@ -818,12 +771,12 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
     expect(target.body.errors).toBeUndefined();
     expect(target.body.data.contactActivities.nodes).toEqual([
       expect.objectContaining({
-        id: legacy.body[0].id,
+        id: expect.any(Number),
         contactId,
         userId: memberId,
         type: 'NOTE',
-        title: legacy.body[0].title,
-        content: legacy.body[0].content,
+        title: 'GraphQL activity',
+        content: { body: 'Call tomorrow' },
       }),
     ]);
     expect(target.body.data.contactActivities.pageInfo).toMatchObject({
@@ -843,7 +796,7 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
     expect(privateResult.body.errors[0].extensions.code).toBe('NOT_FOUND');
   });
 
-  it('matches bounded related content and keeps foreign contacts private', async () => {
+  it('returns bounded related content and keeps foreign contacts private', async () => {
     const contactId = fixtures[1].id;
     await Promise.all([
       pool.query(
@@ -863,11 +816,6 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
       ),
     ]);
 
-    const legacy = await request(legacyApp)
-      .get(`/api/contacts/${contactId}/content`)
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
     const target = await graphql(
       memberToken,
       organizationId,
@@ -884,23 +832,20 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
     expect(target.body.errors).toBeUndefined();
     for (const collection of ['lists', 'notes', 'whiteboards'] as const) {
       expect(target.body.data.contactContent[collection]).toMatchObject({
-        total: legacy.body[collection].length,
+        total: 1,
         hasMore: false,
       });
-      expect(target.body.data.contactContent[collection].nodes).toEqual(
-        legacy.body[collection].map((item: {
-          id: number;
-          title: string;
-          category: string;
-          created_at: string;
-        }) => ({
-          id: item.id,
-          title: item.title,
-          category: item.category,
-          createdAt: new Date(item.created_at).toISOString(),
-        })),
-      );
+      expect(target.body.data.contactContent[collection].nodes).toEqual([
+        expect.objectContaining({
+          id: expect.any(Number),
+          category: 'General',
+          createdAt: expect.any(String),
+        }),
+      ]);
     }
+    expect(target.body.data.contactContent.lists.nodes[0].title).toBe('Linked list');
+    expect(target.body.data.contactContent.notes.nodes[0].title).toBe('Linked note');
+    expect(target.body.data.contactContent.whiteboards.nodes[0].title).toBe('Linked board');
 
     const privateResult = await graphql(
       outsiderToken,

@@ -32,21 +32,6 @@ export class GraphqlRequestError extends Error {
   }
 }
 
-export const isContactGraphqlReadsEnabled = (): boolean =>
-  import.meta.env.VITE_CONTACT_READS_GRAPHQL === 'true';
-
-export const isContactGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_CONTACT_MUTATIONS_GRAPHQL === 'true';
-
-export const isContactGraphqlBulkMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_CONTACT_BULK_MUTATIONS_GRAPHQL === 'true';
-
-export const isContactGraphqlActivitiesEnabled = (): boolean =>
-  import.meta.env.VITE_CONTACT_ACTIVITIES_GRAPHQL === 'true';
-
-export const isContactGraphqlContentEnabled = (): boolean =>
-  import.meta.env.VITE_CONTACT_CONTENT_GRAPHQL === 'true';
-
 export const isCalendarGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_CALENDAR_READS_GRAPHQL === 'true';
 

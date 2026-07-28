@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 262,
-    "apiOperationCount": 255,
+    "operationCount": 252,
+    "apiOperationCount": 245,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 208,
-    "operationsWithFrontendConsumers": 197,
-    "operationsWithBackendTests": 145,
+    "frontendCallsiteCount": 198,
+    "operationsWithFrontendConsumers": 187,
+    "operationsWithBackendTests": 137,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 51,
+    "unmatchedBackendTestCallCount": 50,
     "retainHttpCount": 55,
-    "graphqlQueryCount": 63,
-    "graphqlMutationCount": 137,
-    "highRiskCount": 202,
+    "graphqlQueryCount": 59,
+    "graphqlMutationCount": 131,
+    "highRiskCount": 192,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -2544,7 +2544,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 44
+          "line": 43
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -2780,486 +2780,6 @@
       "risk": "medium"
     },
     {
-      "id": "GET /api/contacts",
-      "key": "GET /api/contacts",
-      "method": "GET",
-      "path": "/api/contacts",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/contacts.routes.js",
-          "line": 107
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/contacts",
-          "rawPath": "/api/contacts",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 122,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/contacts",
-          "source": "backend-v2/test/integration/contacts.integration-spec.ts",
-          "line": 200
-        },
-        {
-          "method": "GET",
-          "path": "/api/contacts",
-          "source": "backend-v2/test/integration/contacts.integration-spec.ts",
-          "line": 238
-        },
-        {
-          "method": "GET",
-          "path": "/api/contacts",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 91
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "crm",
-      "targetOperation": "contacts",
-      "targetModule": "ContactsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Preserve organization scope, search/filter semantics, deterministic ordering, strict pagination, and safe assignee projection.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/contacts",
-      "key": "POST /api/contacts",
-      "method": "POST",
-      "path": "/api/contacts",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/contacts.routes.js",
-          "line": 225
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/contacts",
-          "rawPath": "/api/contacts",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 165,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/contacts",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 78
-        },
-        {
-          "method": "POST",
-          "path": "/api/contacts",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 274
-        },
-        {
-          "method": "POST",
-          "path": "/api/contacts",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 453
-        },
-        {
-          "method": "POST",
-          "path": "/api/contacts",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 590
-        },
-        {
-          "method": "POST",
-          "path": "/api/contacts",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 597
-        },
-        {
-          "method": "POST",
-          "path": "/api/contacts",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 616
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "createContact",
-      "targetModule": "ContactsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Plan limit is serialized per organization; assignee must be an active-organization member and automation intent must use the durable event boundary.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/contacts/:id",
-      "key": "DELETE /api/contacts/:*",
-      "method": "DELETE",
-      "path": "/api/contacts/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/contacts.routes.js",
-          "line": 439
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/contacts/:id",
-          "rawPath": "/api/contacts/${id}",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 185,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/contacts/:contactIdA",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 125
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/contacts/:contactIdA",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 236
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "deleteContact",
-      "targetModule": "ContactsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Organization-scoped deletion with an explicit policy for dependent deals, submissions, activities, and content.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/contacts/:id",
-      "key": "GET /api/contacts/:*",
-      "method": "GET",
-      "path": "/api/contacts/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/contacts.routes.js",
-          "line": 201
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/contacts/:id",
-          "rawPath": "/api/contacts/${id}",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 133,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/contacts/:contactId",
-          "source": "backend-v2/test/integration/contacts.integration-spec.ts",
-          "line": 279
-        },
-        {
-          "method": "GET",
-          "path": "/api/contacts/:contactId",
-          "source": "backend-v2/test/integration/contacts.integration-spec.ts",
-          "line": 316
-        },
-        {
-          "method": "GET",
-          "path": "/api/contacts/:contactIdA",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 106
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "crm",
-      "targetOperation": "contact",
-      "targetModule": "ContactsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Outside-organization IDs are not found and related user projections must not expose invalid legacy references.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/contacts/:id",
-      "key": "PUT /api/contacts/:*",
-      "method": "PUT",
-      "path": "/api/contacts/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/contacts.routes.js",
-          "line": 322
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/contacts/:id",
-          "rawPath": "/api/contacts/${id}",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 175,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/contacts/:contactIdA",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 115
-        },
-        {
-          "method": "PUT",
-          "path": "/api/contacts/:contactIdA",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 134
-        },
-        {
-          "method": "PUT",
-          "path": "/api/contacts/:contactIdA",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 141
-        },
-        {
-          "method": "PUT",
-          "path": "/api/contacts/:contactIdA",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 169
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "updateContact",
-      "targetModule": "ContactsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Preserve omitted-versus-null behavior explicitly, validate assignee membership, and emit status changes transactionally through the event boundary.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/contacts/:id/activities",
-      "key": "GET /api/contacts/:*/activities",
-      "method": "GET",
-      "path": "/api/contacts/:id/activities",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/contacts.routes.js",
-          "line": 612
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/contacts/:contactId/activities",
-          "rawPath": "/api/contacts/${contactId}/activities",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 232,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/contacts/:contactId/activities",
-          "source": "backend-v2/test/integration/contacts.integration-spec.ts",
-          "line": 793
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "crm",
-      "targetOperation": "contactActivities",
-      "targetModule": "ContactsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "GraphQL returns a bounded page ordered by created time and ID descending, supports the full database activity enum as a filter, and scopes every row through an organization-owned parent contact.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/contacts/:id/activities",
-      "key": "POST /api/contacts/:*/activities",
-      "method": "POST",
-      "path": "/api/contacts/:id/activities",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/contacts.routes.js",
-          "line": 657
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/contacts/:contactId/activities",
-          "rawPath": "/api/contacts/${contactId}/activities",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 252,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "addContactActivity",
-      "targetModule": "ContactsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "GraphQL validates the full database activity enum, bounded title, and object-shaped content/metadata; CSRF is required and the organization-owned contact lock plus insert share one transaction.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/contacts/:id/content",
-      "key": "GET /api/contacts/:*/content",
-      "method": "GET",
-      "path": "/api/contacts/:id/content",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/contacts.routes.js",
-          "line": 705
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/contacts/:contactId/content",
-          "rawPath": "/api/contacts/${contactId}/content",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 272,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/contacts/:contactId/content",
-          "source": "backend-v2/test/integration/contacts.integration-spec.ts",
-          "line": 867
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "crm",
-      "targetOperation": "contactContent",
-      "targetModule": "ContactProfilesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Related lists, notes, and whiteboards use a tenant-private parent lookup, stable newest-first ordering, a 100-row collection bound, and explicit total/truncation metadata; GraphQL and REST rollback passed staging.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/contacts/bulk-delete",
-      "key": "POST /api/contacts/bulk-delete",
-      "method": "POST",
-      "path": "/api/contacts/bulk-delete",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/contacts.routes.js",
-          "line": 590
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/contacts/bulk-delete",
-          "rawPath": "/api/contacts/bulk-delete",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 216,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "bulkDeleteContacts",
-      "targetModule": "ContactsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "GraphQL caps requests at 100 IDs, deduplicates in request order, deletes only active-organization rows, returns requested/matched/changed/rejected IDs, and relies on the verified database cascade policy for dependent activities.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/contacts/bulk-update",
-      "key": "POST /api/contacts/bulk-update",
-      "method": "POST",
-      "path": "/api/contacts/bulk-update",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/contacts.routes.js",
-          "line": 457
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/contacts/bulk-update",
-          "rawPath": "/api/contacts/bulk-update",
-          "source": "frontend/src/services/contactsApi.ts",
-          "line": 206,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/contacts/bulk-update",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 177
-        },
-        {
-          "method": "POST",
-          "path": "/api/contacts/bulk-update",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 196
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "crm",
-      "targetOperation": "bulkUpdateContacts",
-      "targetModule": "ContactsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "GraphQL caps requests at 100 IDs, deduplicates in request order, validates status/tag mode/assignee membership, applies set-like tags, commits workflow triggers and status activities atomically, and returns requested/matched/changed/rejected IDs without distinguishing foreign from absent rows.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "GET /api/contacts/export/csv",
       "key": "GET /api/contacts/export/csv",
       "method": "GET",
@@ -3267,11 +2787,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 158
-        },
-        {
-          "source": "backend/src/routes/contacts.routes.js",
-          "line": 749
+          "line": 157
         }
       ],
       "consumerCallsites": [
@@ -3280,7 +2796,7 @@
           "path": "/api/contacts/export/csv",
           "rawPath": "/api/contacts/export/csv",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 313,
+          "line": 244,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3290,37 +2806,25 @@
           "method": "GET",
           "path": "/api/contacts/export/csv",
           "source": "backend-v2/test/integration/contacts.integration-spec.ts",
-          "line": 1193
+          "line": 1138
         },
         {
           "method": "GET",
           "path": "/api/contacts/export/csv",
           "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
-          "line": 25
+          "line": 24
         },
         {
           "method": "GET",
           "path": "/api/contacts/export/csv",
           "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
-          "line": 40
+          "line": 53
         },
         {
           "method": "GET",
           "path": "/api/contacts/export/csv",
           "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
-          "line": 70
-        },
-        {
-          "method": "GET",
-          "path": "/api/contacts/export/csv",
-          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
-          "line": 152
-        },
-        {
-          "method": "GET",
-          "path": "/api/contacts/export/csv",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 424
+          "line": 134
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -3342,11 +2846,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 159
-        },
-        {
-          "source": "backend/src/routes/contacts.routes.js",
-          "line": 832
+          "line": 158
         }
       ],
       "consumerCallsites": [
@@ -3355,7 +2855,7 @@
           "path": "/api/contacts/import/csv",
           "rawPath": "/api/contacts/import/csv",
           "source": "frontend/src/services/contactsApi.ts",
-          "line": 336,
+          "line": 267,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3365,37 +2865,25 @@
           "method": "POST",
           "path": "/api/contacts/import/csv",
           "source": "backend-v2/test/integration/contacts.integration-spec.ts",
-          "line": 1206
+          "line": 1151
         },
         {
           "method": "POST",
           "path": "/api/contacts/import/csv",
           "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
-          "line": 28
+          "line": 25
         },
         {
           "method": "POST",
           "path": "/api/contacts/import/csv",
           "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
-          "line": 123
+          "line": 105
         },
         {
           "method": "POST",
           "path": "/api/contacts/import/csv",
           "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
-          "line": 164
-        },
-        {
-          "method": "POST",
-          "path": "/api/contacts/import/csv",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 440
-        },
-        {
-          "method": "POST",
-          "path": "/api/contacts/import/csv",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 500
+          "line": 145
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -4446,7 +3934,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 198
+          "line": 195
         },
         {
           "source": "backend/src/routes/invoices/actions.routes.js",
@@ -4934,7 +4422,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 190
+          "line": 187
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -6214,7 +5702,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 194
+          "line": 191
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -6252,7 +5740,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 186
+          "line": 183
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -7094,7 +6582,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 252
+          "line": 249
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -7181,7 +6669,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 272
+          "line": 269
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -7250,7 +6738,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 268
+          "line": 265
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -7295,7 +6783,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 260
+          "line": 257
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -7323,7 +6811,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 256
+          "line": 253
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -7358,7 +6846,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 264
+          "line": 261
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -9200,7 +8688,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 238
+          "line": 235
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -9271,7 +8759,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 234
+          "line": 231
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -9428,7 +8916,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 220
+          "line": 217
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -9749,7 +9237,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 242
+          "line": 239
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -9818,7 +9306,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 227
+          "line": 224
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10384,7 +9872,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 71
+          "line": 70
         }
       ],
       "consumerCallsites": [
@@ -10418,7 +9906,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 43
+          "line": 42
         }
       ],
       "consumerCallsites": [],
@@ -10626,7 +10114,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 42
+          "line": 41
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",
@@ -11966,12 +11454,6 @@
       "line": 504
     },
     {
-      "method": "GET",
-      "path": "/api/contacts/:contactIdA/profile",
-      "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-      "line": 160
-    },
-    {
       "method": "POST",
       "path": "/api/chat-widget/sessions/:id/messages",
       "source": "backend/src/__tests__/integration/realtime.integration.test.js",
@@ -12082,6 +11564,7 @@
   ],
   "orphanedOverrides": [
     "DELETE /api/categories/:id",
+    "DELETE /api/contacts/:id",
     "DELETE /api/forms/:id",
     "DELETE /api/forms/:id/submissions/:subId",
     "DELETE /api/lists/:id",
@@ -12106,6 +11589,10 @@
     "GET /api/billing/usage",
     "GET /api/canvas/lists",
     "GET /api/categories",
+    "GET /api/contacts",
+    "GET /api/contacts/:id",
+    "GET /api/contacts/:id/activities",
+    "GET /api/contacts/:id/content",
     "GET /api/forms",
     "GET /api/forms/:id",
     "GET /api/forms/:id/submissions",
@@ -12130,6 +11617,10 @@
     "POST /api/campaigns/:id/send",
     "POST /api/campaigns/:id/send-test",
     "POST /api/categories",
+    "POST /api/contacts",
+    "POST /api/contacts/:id/activities",
+    "POST /api/contacts/bulk-delete",
+    "POST /api/contacts/bulk-update",
     "POST /api/email-templates/:id/send-test",
     "POST /api/email-templates/send-to-contact",
     "POST /api/forms",
@@ -12154,6 +11645,7 @@
     "POST /api/vaults/:vaultId/unlock",
     "POST /api/whiteboards",
     "PUT /api/categories/:id",
+    "PUT /api/contacts/:id",
     "PUT /api/forms/:id",
     "PUT /api/forms/:id/fields",
     "PUT /api/lists/:id",

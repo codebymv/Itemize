@@ -14,11 +14,6 @@ import {
 } from './contactsGraphql';
 import {
   GraphqlRequestError,
-  isContactGraphqlActivitiesEnabled,
-  isContactGraphqlBulkMutationsEnabled,
-  isContactGraphqlContentEnabled,
-  isContactGraphqlMutationsEnabled,
-  isContactGraphqlReadsEnabled,
 } from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
@@ -78,41 +73,6 @@ describe('contact GraphQL consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('keeps the GraphQL contact-read feature disabled by default', () => {
-    vi.stubEnv('VITE_CONTACT_READS_GRAPHQL', 'false');
-    expect(isContactGraphqlReadsEnabled()).toBe(false);
-    vi.stubEnv('VITE_CONTACT_READS_GRAPHQL', 'true');
-    expect(isContactGraphqlReadsEnabled()).toBe(true);
-  });
-
-  it('keeps GraphQL contact mutations independently disabled by default', () => {
-    vi.stubEnv('VITE_CONTACT_MUTATIONS_GRAPHQL', 'false');
-    expect(isContactGraphqlMutationsEnabled()).toBe(false);
-    vi.stubEnv('VITE_CONTACT_MUTATIONS_GRAPHQL', 'true');
-    expect(isContactGraphqlMutationsEnabled()).toBe(true);
-  });
-
-  it('keeps GraphQL bulk contact mutations independently disabled by default', () => {
-    vi.stubEnv('VITE_CONTACT_BULK_MUTATIONS_GRAPHQL', 'false');
-    expect(isContactGraphqlBulkMutationsEnabled()).toBe(false);
-    vi.stubEnv('VITE_CONTACT_BULK_MUTATIONS_GRAPHQL', 'true');
-    expect(isContactGraphqlBulkMutationsEnabled()).toBe(true);
-  });
-
-  it('keeps GraphQL contact activities independently disabled by default', () => {
-    vi.stubEnv('VITE_CONTACT_ACTIVITIES_GRAPHQL', 'false');
-    expect(isContactGraphqlActivitiesEnabled()).toBe(false);
-    vi.stubEnv('VITE_CONTACT_ACTIVITIES_GRAPHQL', 'true');
-    expect(isContactGraphqlActivitiesEnabled()).toBe(true);
-  });
-
-  it('keeps GraphQL contact content independently disabled by default', () => {
-    vi.stubEnv('VITE_CONTACT_CONTENT_GRAPHQL', 'false');
-    expect(isContactGraphqlContentEnabled()).toBe(false);
-    vi.stubEnv('VITE_CONTACT_CONTENT_GRAPHQL', 'true');
-    expect(isContactGraphqlContentEnabled()).toBe(true);
   });
 
   it('maps list inputs and the GraphQL page into the existing REST-shaped contract', async () => {

@@ -17,13 +17,6 @@ import {
   updateContactViaGraphql,
 } from './contactsGraphql';
 import {
-  isContactGraphqlActivitiesEnabled,
-  isContactGraphqlBulkMutationsEnabled,
-  isContactGraphqlContentEnabled,
-  isContactGraphqlMutationsEnabled,
-  isContactGraphqlReadsEnabled,
-} from './graphqlClient';
-import {
   addOrganizationMemberViaGraphql,
   createOrganizationViaGraphql,
   deleteOrganizationViaGraphql,
@@ -116,24 +109,11 @@ export interface ContactsQueryParams {
 
 export const getContacts = async (params: ContactsQueryParams = {}, organizationId?: number): Promise<ContactsResponse> => {
   const orgId = organizationId ?? params.organization_id;
-  if (isContactGraphqlReadsEnabled()) {
-    return getContactsViaGraphql(params, orgId);
-  }
-  const response = await api.get('/api/contacts', {
-    params,
-    headers: orgId ? { 'x-organization-id': orgId.toString() } : {}
-  });
-  return unwrapResponse<ContactsResponse>(response.data);
+  return getContactsViaGraphql(params, orgId);
 };
 
 export const getContact = async (id: number, organizationId?: number): Promise<Contact> => {
-  if (isContactGraphqlReadsEnabled()) {
-    return getContactViaGraphql(id, organizationId);
-  }
-  const response = await api.get(`/api/contacts/${id}`, {
-    headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-  });
-  return unwrapResponse<Contact>(response.data);
+  return getContactViaGraphql(id, organizationId);
 };
 
 export interface CreateContactData {
@@ -159,32 +139,15 @@ export interface CreateContactData {
 }
 
 export const createContact = async (data: CreateContactData): Promise<Contact> => {
-  if (isContactGraphqlMutationsEnabled()) {
-    return createContactViaGraphql(data);
-  }
-  const response = await api.post('/api/contacts', data, {
-    headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
-  });
-  return unwrapResponse<Contact>(response.data);
+  return createContactViaGraphql(data);
 };
 
 export const updateContact = async (id: number, data: Partial<CreateContactData>): Promise<Contact> => {
-  if (isContactGraphqlMutationsEnabled()) {
-    return updateContactViaGraphql(id, data);
-  }
-  const response = await api.put(`/api/contacts/${id}`, data, {
-    headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
-  });
-  return unwrapResponse<Contact>(response.data);
+  return updateContactViaGraphql(id, data);
 };
 
 export const deleteContact = async (id: number, organizationId?: number): Promise<void> => {
-  if (isContactGraphqlMutationsEnabled()) {
-    return deleteContactViaGraphql(id, organizationId);
-  }
-  await api.delete(`/api/contacts/${id}`, {
-    headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-  });
+  return deleteContactViaGraphql(id, organizationId);
 };
 
 // Bulk operations
@@ -200,24 +163,11 @@ export interface BulkUpdateData {
 }
 
 export const bulkUpdateContacts = async (data: BulkUpdateData): Promise<{ message: string; updated_ids: number[] }> => {
-  if (isContactGraphqlBulkMutationsEnabled()) {
-    return bulkUpdateContactsViaGraphql(data);
-  }
-  const response = await api.post('/api/contacts/bulk-update', data, {
-    headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {}
-  });
-  return unwrapResponse<{ message: string; updated_ids: number[] }>(response.data);
+  return bulkUpdateContactsViaGraphql(data);
 };
 
 export const bulkDeleteContacts = async (contactIds: number[], organizationId?: number): Promise<{ message: string; deleted_ids: number[] }> => {
-  if (isContactGraphqlBulkMutationsEnabled()) {
-    return bulkDeleteContactsViaGraphql(contactIds, organizationId);
-  }
-  const response = await api.post('/api/contacts/bulk-delete',
-    { contact_ids: contactIds },
-    { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
-  );
-  return unwrapResponse<{ message: string; deleted_ids: number[] }>(response.data);
+  return bulkDeleteContactsViaGraphql(contactIds, organizationId);
 };
 
 // Activities
@@ -226,14 +176,7 @@ export const getContactActivities = async (
   params: { type?: string; limit?: number; offset?: number } = {},
   organizationId?: number
 ): Promise<ContactActivity[]> => {
-  if (isContactGraphqlActivitiesEnabled()) {
-    return getContactActivitiesViaGraphql(contactId, params, organizationId);
-  }
-  const response = await api.get(`/api/contacts/${contactId}/activities`, {
-    params,
-    headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-  });
-  return unwrapResponse<ContactActivity[]>(response.data);
+  return getContactActivitiesViaGraphql(contactId, params, organizationId);
 };
 
 export const addContactActivity = async (
@@ -246,13 +189,7 @@ export const addContactActivity = async (
   },
   organizationId?: number
 ): Promise<ContactActivity> => {
-  if (isContactGraphqlActivitiesEnabled()) {
-    return addContactActivityViaGraphql(contactId, data, organizationId);
-  }
-  const response = await api.post(`/api/contacts/${contactId}/activities`, data, {
-    headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-  });
-  return unwrapResponse<ContactActivity>(response.data);
+  return addContactActivityViaGraphql(contactId, data, organizationId);
 };
 
 // Related content
@@ -266,13 +203,7 @@ export const getContactContent = async (
   contactId: number,
   organizationId?: number,
 ): Promise<ContactContentResponse> => {
-  if (isContactGraphqlContentEnabled()) {
-    return getContactContentViaGraphql(contactId, organizationId);
-  }
-  const response = await api.get(`/api/contacts/${contactId}/content`, {
-    headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-  });
-  return unwrapResponse<ContactContentResponse>(response.data);
+  return getContactContentViaGraphql(contactId, organizationId);
 };
 
 // CSV Import/Export
