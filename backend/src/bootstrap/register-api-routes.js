@@ -41,9 +41,6 @@ const {
 const webhooksRoutes = require('../routes/webhooks.routes');
 const calendarIntegrationsRoutes = require('../routes/calendar-integrations.routes');
 const sharingRoutes = require('../routes/sharing.routes');
-const adminRoutes = require('../routes/admin.routes');
-const adminEmailRoutes = require('../routes/admin-email.routes');
-const onboardingRoutes = require('../routes/onboarding.routes');
 
 function registerPositionLimiters(app, positionLimiter) {
     app.put('/api/lists/:id/position', positionLimiter);
@@ -146,7 +143,6 @@ function registerApiRoutes({
     app,
     pool,
     authenticateJWT,
-    requireAdmin,
     publicRateLimit,
     positionLimiter,
     broadcast,
@@ -299,13 +295,6 @@ function registerApiRoutes({
     logger.info('Calendar Integrations routes initialized');
     app.use('/api', sharingRoutes(pool, authenticateJWT, publicRateLimit, broadcast));
     logger.info('Sharing routes initialized');
-    app.use('/api/admin', adminRoutes(pool, authenticateJWT, requireAdmin));
-    logger.info('Admin routes initialized');
-    app.use('/api/admin/email', adminEmailRoutes(pool, authenticateJWT, requireAdmin));
-    logger.info('Admin Email routes initialized');
-    app.use('/api/onboarding', onboardingRoutes(pool, authenticateJWT));
-    logger.info('Onboarding routes initialized');
-
     registerStatusRoute({ app, pool, port, logger });
 
     logger.info('All API routes registered');

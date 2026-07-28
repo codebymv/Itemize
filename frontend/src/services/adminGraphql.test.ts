@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { graphqlMutationRequest, graphqlRequest, isAdminDirectoryGraphqlEnabled, isAdminPlanGraphqlEnabled } from './graphqlClient';
+import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 import { getAdminUserIdsViaGraphql, searchAdminUsersViaGraphql, updateAdminOwnPlanViaGraphql } from './adminGraphql';
 
 vi.mock('./graphqlClient', async (importOriginal) => ({
@@ -8,17 +8,6 @@ vi.mock('./graphqlClient', async (importOriginal) => ({
 
 describe('admin GraphQL adapters', () => {
   afterEach(() => { vi.clearAllMocks(); vi.unstubAllEnvs(); });
-
-  it('uses independent default-off rollout boundaries', () => {
-    vi.stubEnv('VITE_ADMIN_DIRECTORY_GRAPHQL', 'false');
-    vi.stubEnv('VITE_ADMIN_PLAN_GRAPHQL', 'false');
-    expect(isAdminDirectoryGraphqlEnabled()).toBe(false);
-    expect(isAdminPlanGraphqlEnabled()).toBe(false);
-    vi.stubEnv('VITE_ADMIN_DIRECTORY_GRAPHQL', 'true');
-    vi.stubEnv('VITE_ADMIN_PLAN_GRAPHQL', 'true');
-    expect(isAdminDirectoryGraphqlEnabled()).toBe(true);
-    expect(isAdminPlanGraphqlEnabled()).toBe(true);
-  });
 
   it('carries the plan filter through search and all-IDs queries', async () => {
     vi.mocked(graphqlRequest)

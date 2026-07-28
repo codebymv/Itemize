@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 301,
-    "apiOperationCount": 294,
+    "operationCount": 284,
+    "apiOperationCount": 277,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 245,
-    "operationsWithFrontendConsumers": 234,
-    "operationsWithBackendTests": 165,
+    "frontendCallsiteCount": 228,
+    "operationsWithFrontendConsumers": 217,
+    "operationsWithBackendTests": 164,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 55,
     "retainHttpCount": 55,
-    "graphqlQueryCount": 78,
-    "graphqlMutationCount": 161,
-    "highRiskCount": 240,
+    "graphqlQueryCount": 68,
+    "graphqlMutationCount": 154,
+    "highRiskCount": 224,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -37,7 +37,7 @@
       "routeSources": [
         {
           "source": "backend/src/index.js",
-          "line": 568
+          "line": 567
         }
       ],
       "consumerCallsites": [],
@@ -52,380 +52,6 @@
       "notes": null,
       "literalInterpolationRisk": false,
       "risk": "low"
-    },
-    {
-      "id": "GET /api/admin/email/logs",
-      "key": "GET /api/admin/email/logs",
-      "method": "GET",
-      "path": "/api/admin/email/logs",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/admin-email.routes.js",
-          "line": 233
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/admin/email/logs",
-          "rawPath": "/api/admin/email/logs",
-          "source": "frontend/src/services/adminEmailApi.ts",
-          "line": 131,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "platform-operations",
-      "targetOperation": "adminEmailLogs",
-      "targetModule": "AdminMessagingModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Administrator-only global audit page with validated status filters and bounded cursor pagination.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/admin/email/logs/:id",
-      "key": "GET /api/admin/email/logs/:*",
-      "method": "GET",
-      "path": "/api/admin/email/logs/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/admin-email.routes.js",
-          "line": 312
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/admin/email/logs/:id",
-          "rawPath": "/api/admin/email/logs/${id}",
-          "source": "frontend/src/services/adminEmailApi.ts",
-          "line": 142,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "platform-operations",
-      "targetOperation": "adminEmailLog",
-      "targetModule": "AdminMessagingModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Administrator-only global log detail; preserve stored rendered content while applying audit-data retention rules.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/admin/email/preview",
-      "key": "POST /api/admin/email/preview",
-      "method": "POST",
-      "path": "/api/admin/email/preview",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/admin-email.routes.js",
-          "line": 168
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/admin/email/preview",
-          "rawPath": "/api/admin/email/preview",
-          "source": "frontend/src/services/adminEmailApi.ts",
-          "line": 117,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "platform-operations",
-      "targetOperation": "previewAdminEmail",
-      "targetModule": "AdminMessagingModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Pure rendering operation with bounded input; never fetch arbitrary URLs or perform provider delivery.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/admin/email/send",
-      "key": "POST /api/admin/email/send",
-      "method": "POST",
-      "path": "/api/admin/email/send",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/admin-email.routes.js",
-          "line": 28
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/admin/email/send",
-          "rawPath": "/api/admin/email/send",
-          "source": "frontend/src/services/adminEmailApi.ts",
-          "line": 107,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "platform-operations",
-      "targetOperation": "enqueueAdminEmailBatch",
-      "targetModule": "MessagingDeliveryModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Validate and cap recipients, persist one durable batch plus recipient jobs, and never perform a synchronous provider loop in the resolver.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/admin/email/templates",
-      "key": "GET /api/admin/email/templates",
-      "method": "GET",
-      "path": "/api/admin/email/templates",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/admin-email.routes.js",
-          "line": 378
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/admin/email/templates",
-          "rawPath": "/api/admin/email/templates",
-          "source": "frontend/src/services/adminEmailApi.ts",
-          "line": 154,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "platform-operations",
-      "targetOperation": "adminEmailTemplates",
-      "targetModule": "AdminMessagingModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Administrator-only cross-organization template search with cursor pagination and explicit system-template handling.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PATCH /api/admin/me/plan",
-      "key": "PATCH /api/admin/me/plan",
-      "method": "PATCH",
-      "path": "/api/admin/me/plan",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/admin.routes.js",
-          "line": 26
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PATCH",
-          "path": "/api/admin/me/plan",
-          "rawPath": "/api/admin/me/plan",
-          "source": "frontend/src/services/adminApi.ts",
-          "line": 112,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "platform-operations",
-      "targetOperation": "updateAdminOwnPlan",
-      "targetModule": "AdminOperationsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Database-authorized administrator-only, CSRF-protected plan change atomically updates the subscription and organization plan authorities.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/admin/stats",
-      "key": "GET /api/admin/stats",
-      "method": "GET",
-      "path": "/api/admin/stats",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/admin.routes.js",
-          "line": 255
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/admin/stats",
-          "rawPath": "/api/admin/stats",
-          "source": "frontend/src/services/adminApi.ts",
-          "line": 103,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "platform-operations",
-      "targetOperation": "adminSystemStats",
-      "targetModule": "AdminOperationsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Database-authorized administrator-only global user, contact, and invoice counts from one statement snapshot.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/admin/users/by-ids",
-      "key": "GET /api/admin/users/by-ids",
-      "method": "GET",
-      "path": "/api/admin/users/by-ids",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/admin.routes.js",
-          "line": 223
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/admin/users/by-ids",
-          "rawPath": "/api/admin/users/by-ids",
-          "source": "frontend/src/services/adminApi.ts",
-          "line": 92,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "platform-operations",
-      "targetOperation": "adminUsersByIds",
-      "targetModule": "AdminOperationsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Database-authorized administrator-only bounded batch lookup; positive IDs are deduplicated and output preserves requested order.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/admin/users/count",
-      "key": "GET /api/admin/users/count",
-      "method": "GET",
-      "path": "/api/admin/users/count",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/admin.routes.js",
-          "line": 98
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/admin/users/count",
-          "rawPath": "/api/admin/users/count",
-          "source": "frontend/src/services/adminApi.ts",
-          "line": 55,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "platform-operations",
-      "targetOperation": "adminUserCount",
-      "targetModule": "AdminOperationsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Database-authorized administrator-only global user count independent of selected organization.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/admin/users/ids",
-      "key": "GET /api/admin/users/ids",
-      "method": "GET",
-      "path": "/api/admin/users/ids",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/admin.routes.js",
-          "line": 188
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/admin/users/ids",
-          "rawPath": "/api/admin/users/ids",
-          "source": "frontend/src/services/adminApi.ts",
-          "line": 81,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "platform-operations",
-      "targetOperation": "adminUserIds",
-      "targetModule": "AdminOperationsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Database-authorized administrator-only matching ID query shares search and plan filters with the paged directory; REST rollback received the same plan-filter repair.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/admin/users/search",
-      "key": "GET /api/admin/users/search",
-      "method": "GET",
-      "path": "/api/admin/users/search",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/admin.routes.js",
-          "line": 109
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/admin/users/search",
-          "rawPath": "/api/admin/users/search",
-          "source": "frontend/src/services/adminApi.ts",
-          "line": 70,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "platform-operations",
-      "targetOperation": "adminUsers",
-      "targetModule": "AdminOperationsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Database-authorized administrator-only global directory with bounded search, validated plan filter, stable ordering, pagination, and repeatable-read total parity.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
     },
     {
       "id": "GET /api/auth/csrf",
@@ -1002,43 +628,43 @@
           "method": "GET",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 203
+          "line": 207
         },
         {
           "method": "GET",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 214
+          "line": 218
         },
         {
           "method": "GET",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 378
+          "line": 382
         },
         {
           "method": "GET",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 388
+          "line": 392
         },
         {
           "method": "GET",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 399
+          "line": 403
         },
         {
           "method": "GET",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 410
+          "line": 414
         },
         {
           "method": "GET",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 998
+          "line": 1002
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -1091,61 +717,61 @@
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 130
+          "line": 134
         },
         {
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 167
+          "line": 171
         },
         {
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 177
+          "line": 181
         },
         {
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 188
+          "line": 192
         },
         {
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 255
+          "line": 259
         },
         {
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 325
+          "line": 329
         },
         {
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 352
+          "line": 356
         },
         {
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 357
+          "line": 361
         },
         {
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 578
+          "line": 582
         },
         {
           "method": "POST",
           "path": "/api/bookings",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 599
+          "line": 603
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -1192,13 +818,13 @@
           "method": "GET",
           "path": "/api/bookings/:bookingId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 225
+          "line": 229
         },
         {
           "method": "GET",
           "path": "/api/bookings/:bookingId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 236
+          "line": 240
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -1239,19 +865,19 @@
           "method": "PATCH",
           "path": "/api/bookings/:bookingId/cancel",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 311
+          "line": 315
         },
         {
           "method": "PATCH",
           "path": "/api/bookings/:freshId/cancel",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 332
+          "line": 336
         },
         {
           "method": "PATCH",
           "path": "/api/bookings/:id/cancel",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 695
+          "line": 699
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -1292,25 +918,25 @@
           "method": "PATCH",
           "path": "/api/bookings/:bookingId/reschedule",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 276
+          "line": 280
         },
         {
           "method": "PATCH",
           "path": "/api/bookings/:bookingId/reschedule",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 291
+          "line": 295
         },
         {
           "method": "PATCH",
           "path": "/api/bookings/:bookingId/reschedule",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 301
+          "line": 305
         },
         {
           "method": "PATCH",
           "path": "/api/bookings/:id/reschedule",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 676
+          "line": 680
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -1351,31 +977,31 @@
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 456
+          "line": 460
         },
         {
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 466
+          "line": 470
         },
         {
           "method": "GET",
           "path": "/api/bookings/public/book/no-such-calendar-slug-xyz",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 474
+          "line": 478
         },
         {
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 985
+          "line": 989
         },
         {
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 988
+          "line": 992
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -1416,49 +1042,49 @@
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 482
+          "line": 486
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 523
+          "line": 527
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 543
+          "line": 547
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 608
+          "line": 612
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 654
+          "line": 658
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 672
+          "line": 676
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 838
+          "line": 842
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 849
+          "line": 853
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -1499,25 +1125,25 @@
           "method": "POST",
           "path": "/api/bookings/public/book/not-:calendarSlug/cancel/:token",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 626
+          "line": 630
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId/cancel/:token",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 631
+          "line": 635
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId/cancel/:token",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 647
+          "line": 651
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId/cancel/:token",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 665
+          "line": 669
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -1558,13 +1184,13 @@
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarSlug/slots",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 805
+          "line": 809
         },
         {
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarSlug/slots",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 824
+          "line": 828
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -1965,19 +1591,19 @@
           "method": "POST",
           "path": "/api/calendars",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 430
+          "line": 434
         },
         {
           "method": "POST",
           "path": "/api/calendars",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 559
+          "line": 563
         },
         {
           "method": "POST",
           "path": "/api/calendars",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 762
+          "line": 766
         },
         {
           "method": "POST",
@@ -2971,7 +2597,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 53
+          "line": 50
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -3858,7 +3484,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 176
+          "line": 172
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -3933,7 +3559,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 177
+          "line": 173
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -5037,7 +4663,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 216
+          "line": 212
         },
         {
           "source": "backend/src/routes/invoices/actions.routes.js",
@@ -5525,7 +5151,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 208
+          "line": 204
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -6805,7 +6431,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 212
+          "line": 208
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -6843,7 +6469,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 204
+          "line": 200
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -7131,7 +6757,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 49
+          "line": 46
         }
       ],
       "consumerCallsites": [],
@@ -7740,217 +7366,6 @@
       "risk": "high"
     },
     {
-      "id": "POST /api/onboarding/complete-step",
-      "key": "POST /api/onboarding/complete-step",
-      "method": "POST",
-      "path": "/api/onboarding/complete-step",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/onboarding.routes.js",
-          "line": 170
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/onboarding/complete-step",
-          "rawPath": "/api/onboarding/complete-step",
-          "source": "frontend/src/services/onboardingService.ts",
-          "line": 82,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "onboarding",
-      "targetOperation": "completeOnboardingStep",
-      "targetModule": "OnboardingModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected non-negative integer step update with an atomic durable analytics event.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/onboarding/dismiss",
-      "key": "POST /api/onboarding/dismiss",
-      "method": "POST",
-      "path": "/api/onboarding/dismiss",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/onboarding.routes.js",
-          "line": 123
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/onboarding/dismiss",
-          "rawPath": "/api/onboarding/dismiss",
-          "source": "frontend/src/services/onboardingService.ts",
-          "line": 71,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "onboarding",
-      "targetOperation": "dismissOnboarding",
-      "targetModule": "OnboardingModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected user-scoped dismissal that preserves existing feature fields and commits its event atomically.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/onboarding/mark-seen",
-      "key": "POST /api/onboarding/mark-seen",
-      "method": "POST",
-      "path": "/api/onboarding/mark-seen",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/onboarding.routes.js",
-          "line": 71
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/onboarding/mark-seen",
-          "rawPath": "/api/onboarding/mark-seen",
-          "source": "frontend/src/services/onboardingService.ts",
-          "line": 60,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "onboarding",
-      "targetOperation": "markOnboardingSeen",
-      "targetModule": "OnboardingModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected row-locked user update with the viewed event committed in the same transaction.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/onboarding/progress",
-      "key": "GET /api/onboarding/progress",
-      "method": "GET",
-      "path": "/api/onboarding/progress",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/onboarding.routes.js",
-          "line": 23
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/onboarding/progress",
-          "rawPath": "/api/onboarding/progress",
-          "source": "frontend/src/services/onboardingService.ts",
-          "line": 38,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/onboarding/progress",
-          "source": "backend-v2/test/integration/onboarding.integration-spec.ts",
-          "line": 114
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "onboarding",
-      "targetOperation": "onboardingProgress",
-      "targetModule": "OnboardingModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Authenticated user-scoped progress, independent of selected organization, with deterministic typed feature projections.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/onboarding/progress/:featureKey",
-      "key": "GET /api/onboarding/progress/:*",
-      "method": "GET",
-      "path": "/api/onboarding/progress/:featureKey",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/onboarding.routes.js",
-          "line": 45
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/onboarding/progress/:feature",
-          "rawPath": "/api/onboarding/progress/${feature}",
-          "source": "frontend/src/services/onboardingService.ts",
-          "line": 49,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "onboarding",
-      "targetOperation": "onboardingFeatureProgress",
-      "targetModule": "OnboardingModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Validated feature key with an explicit unseen projection when no entry is stored.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/onboarding/reset",
-      "key": "DELETE /api/onboarding/reset",
-      "method": "DELETE",
-      "path": "/api/onboarding/reset",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/onboarding.routes.js",
-          "line": 221
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/onboarding/reset",
-          "rawPath": "/api/onboarding/reset",
-          "source": "frontend/src/services/onboardingService.ts",
-          "line": 93,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "onboarding",
-      "targetOperation": "resetOnboarding",
-      "targetModule": "OnboardingModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected feature or full user reset; historical onboarding events are retained.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "GET /api/pages",
       "key": "GET /api/pages",
       "method": "GET",
@@ -8533,7 +7948,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 270
+          "line": 266
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8620,7 +8035,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 290
+          "line": 286
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8689,7 +8104,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 286
+          "line": 282
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8734,7 +8149,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 278
+          "line": 274
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8762,7 +8177,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 274
+          "line": 270
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8797,7 +8212,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 282
+          "line": 278
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10639,7 +10054,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 256
+          "line": 252
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10710,7 +10125,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 252
+          "line": 248
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10867,7 +10282,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 238
+          "line": 234
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -11188,7 +10603,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 260
+          "line": 256
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -11257,7 +10672,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 245
+          "line": 241
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -11823,7 +11238,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 80
+          "line": 77
         }
       ],
       "consumerCallsites": [
@@ -11857,7 +11272,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 52
+          "line": 49
         }
       ],
       "consumerCallsites": [],
@@ -12029,7 +11444,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 50
+          "line": 47
         }
       ],
       "consumerCallsites": [],
@@ -12258,7 +11673,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 51
+          "line": 48
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",
@@ -13739,22 +13154,36 @@
   "orphanedOverrides": [
     "DELETE /api/forms/:id",
     "DELETE /api/forms/:id/submissions/:subId",
+    "DELETE /api/onboarding/reset",
     "DELETE /api/organizations/:organizationId",
     "DELETE /api/organizations/:organizationId/members/:memberId",
     "DELETE /api/vaults/:vaultId",
     "DELETE /api/vaults/:vaultId/items/:itemId",
     "DELETE /api/vaults/:vaultId/share",
+    "GET /api/admin/email/logs",
+    "GET /api/admin/email/logs/:id",
+    "GET /api/admin/email/templates",
+    "GET /api/admin/stats",
+    "GET /api/admin/users/by-ids",
+    "GET /api/admin/users/count",
+    "GET /api/admin/users/ids",
+    "GET /api/admin/users/search",
     "GET /api/billing",
     "GET /api/billing/plans",
     "GET /api/billing/usage",
     "GET /api/forms",
     "GET /api/forms/:id",
     "GET /api/forms/:id/submissions",
+    "GET /api/onboarding/progress",
+    "GET /api/onboarding/progress/:featureKey",
     "GET /api/organizations",
     "GET /api/organizations/:organizationId",
     "GET /api/organizations/:organizationId/members",
     "GET /api/vaults",
     "GET /api/vaults/:vaultId",
+    "PATCH /api/admin/me/plan",
+    "POST /api/admin/email/preview",
+    "POST /api/admin/email/send",
     "POST /api/billing/acknowledge-trial-end",
     "POST /api/billing/checkout",
     "POST /api/billing/portal",
@@ -13766,6 +13195,9 @@
     "POST /api/email-templates/send-to-contact",
     "POST /api/forms",
     "POST /api/forms/:id/duplicate",
+    "POST /api/onboarding/complete-step",
+    "POST /api/onboarding/dismiss",
+    "POST /api/onboarding/mark-seen",
     "POST /api/organizations",
     "POST /api/organizations/:organizationId/leave",
     "POST /api/organizations/:organizationId/members",

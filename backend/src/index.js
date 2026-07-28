@@ -503,7 +503,7 @@ app.use(dbMonitor(pool));
 
         // Initialize auth routes
         logger.info('Initializing auth routes...');
-        const { router: authRouter, authenticateJWT, requireAdmin } = require('./auth');
+        const { router: authRouter, authenticateJWT } = require('./auth');
 
         // Make dbPool available to auth routes
         app.use((req, res, next) => {
@@ -523,7 +523,6 @@ app.use(dbMonitor(pool));
             app,
             pool,
             authenticateJWT,
-            requireAdmin,
             publicRateLimit,
             positionLimiter,
             broadcast,

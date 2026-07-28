@@ -7,10 +7,6 @@ import {
   markOnboardingSeenViaGraphql,
   resetOnboardingViaGraphql,
 } from './onboardingGraphql';
-import {
-  isOnboardingGraphqlMutationsEnabled,
-  isOnboardingGraphqlReadsEnabled,
-} from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(),
@@ -44,20 +40,6 @@ describe('onboarding GraphQL consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('keeps read and mutation rollback flags independent and default-off', () => {
-    vi.stubEnv('VITE_ONBOARDING_READS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_ONBOARDING_MUTATIONS_GRAPHQL', 'false');
-    expect(isOnboardingGraphqlReadsEnabled()).toBe(false);
-    expect(isOnboardingGraphqlMutationsEnabled()).toBe(false);
-
-    vi.stubEnv('VITE_ONBOARDING_READS_GRAPHQL', 'true');
-    expect(isOnboardingGraphqlReadsEnabled()).toBe(true);
-    expect(isOnboardingGraphqlMutationsEnabled()).toBe(false);
-
-    vi.stubEnv('VITE_ONBOARDING_MUTATIONS_GRAPHQL', 'true');
-    expect(isOnboardingGraphqlMutationsEnabled()).toBe(true);
   });
 
   it('maps typed progress entries into the existing keyed consumer contract', async () => {

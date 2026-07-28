@@ -217,11 +217,6 @@ VITE_FORM_READS_GRAPHQL=false
 VITE_FORM_MUTATIONS_GRAPHQL=false
 VITE_FORM_SUBMISSIONS_GRAPHQL=false
 
-# Authenticated user-scoped onboarding reads and writes have independent
-# rollback boundaries. Both remain disabled until the browser gate passes.
-VITE_ONBOARDING_READS_GRAPHQL=false
-VITE_ONBOARDING_MUTATIONS_GRAPHQL=false
-
 # Workspace selector membership reads and selection/default-repair writes have
 # independent rollback boundaries. Organization management remains on REST.
 VITE_ORGANIZATION_READS_GRAPHQL=false

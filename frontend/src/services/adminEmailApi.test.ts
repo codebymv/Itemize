@@ -1,54 +1,47 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import api from '../lib/api';
-import { getEmailLogs, getPreview, sendEmail } from './adminEmailApi';
-import { isAdminEmailDeliveryGraphqlEnabled, isAdminMessagingGraphqlEnabled } from './graphqlClient';
-import { enqueueAdminEmailViaGraphql, getAdminEmailLogsViaGraphql, previewAdminEmailViaGraphql } from './adminEmailGraphql';
+import { getEmailLog, getEmailLogs, getEmailTemplates, getPreview, sendEmail } from './adminEmailApi';
+import {
+  enqueueAdminEmailViaGraphql,
+  getAdminEmailLogViaGraphql,
+  getAdminEmailLogsViaGraphql,
+  getAdminEmailTemplatesViaGraphql,
+  previewAdminEmailViaGraphql,
+} from './adminEmailGraphql';
 
-vi.mock('../lib/api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
-vi.mock('./graphqlClient', () => ({
-  isAdminMessagingGraphqlEnabled: vi.fn(), isAdminEmailDeliveryGraphqlEnabled: vi.fn(),
-}));
 vi.mock('./adminEmailGraphql', () => ({
   enqueueAdminEmailViaGraphql: vi.fn(), getAdminEmailLogViaGraphql: vi.fn(),
   getAdminEmailLogsViaGraphql: vi.fn(), getAdminEmailTemplatesViaGraphql: vi.fn(),
   previewAdminEmailViaGraphql: vi.fn(),
 }));
 
-describe('admin email transport selection', () => {
+describe('admin email GraphQL service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(isAdminMessagingGraphqlEnabled).mockReturnValue(false);
-    vi.mocked(isAdminEmailDeliveryGraphqlEnabled).mockReturnValue(false);
   });
 
-  it('retains HTTP by default for read, preview, and delivery paths', async () => {
-    vi.stubGlobal('window', { location: { origin: 'https://app.example.test' } });
-    vi.mocked(api.get).mockResolvedValue({ data: { data: { logs: [], total: 0, hasMore: false } } });
-    vi.mocked(api.post)
-      .mockResolvedValueOnce({ data: { data: { html: 'rest', subject: 'x' } } })
-      .mockResolvedValueOnce({ data: { data: { sent: 1, failed: 0, errors: [] } } });
-    await getEmailLogs({ page: 0, limit: 25 });
-    await getPreview({ subject: 'x', bodyHtml: 'y' });
-    await sendEmail({ recipients: [{ email: 'a@example.test' }], subject: 'x', bodyHtml: 'y' });
-    expect(api.get).toHaveBeenCalledWith('/api/admin/email/logs', { params: { page: 0, limit: 25, status: undefined } });
-    expect(api.post).toHaveBeenNthCalledWith(1, '/api/admin/email/preview', { subject: 'x', bodyHtml: 'y', baseUrl: 'https://app.example.test' });
-    expect(api.post).toHaveBeenNthCalledWith(2, '/api/admin/email/send', expect.any(Object));
-    vi.unstubAllGlobals();
-  });
-
-  it('switches read/preview and delivery independently', async () => {
-    vi.mocked(isAdminMessagingGraphqlEnabled).mockReturnValue(true);
-    vi.mocked(isAdminEmailDeliveryGraphqlEnabled).mockReturnValue(true);
+  it('delegates reads, preview, and delivery to GraphQL', async () => {
     vi.mocked(getAdminEmailLogsViaGraphql).mockResolvedValue({ logs: [], total: 0, hasMore: false });
+    vi.mocked(getAdminEmailLogViaGraphql).mockResolvedValue({ id: 4 } as never);
+    vi.mocked(getAdminEmailTemplatesViaGraphql).mockResolvedValue({ templates: [], total: 0 } as never);
     vi.mocked(previewAdminEmailViaGraphql).mockResolvedValue({ html: 'graphql', subject: 'x' });
     vi.mocked(enqueueAdminEmailViaGraphql).mockResolvedValue({ sent: 0, failed: 0, errors: [], queued: 1 });
     await getEmailLogs({ page: 0, limit: 25 });
+    await getEmailLog(4);
+    await getEmailTemplates({ search: 'welcome' });
     await getPreview({ subject: 'x', bodyHtml: 'y' });
     await sendEmail({ recipients: [{ email: 'a@example.test' }], subject: 'x', bodyHtml: 'y' });
-    expect(getAdminEmailLogsViaGraphql).toHaveBeenCalled();
-    expect(previewAdminEmailViaGraphql).toHaveBeenCalled();
-    expect(enqueueAdminEmailViaGraphql).toHaveBeenCalled();
-    expect(api.get).not.toHaveBeenCalled();
-    expect(api.post).not.toHaveBeenCalled();
+    expect(getAdminEmailLogsViaGraphql).toHaveBeenCalledWith({ page: 0, limit: 25 });
+    expect(getAdminEmailLogViaGraphql).toHaveBeenCalledWith(4);
+    expect(getAdminEmailTemplatesViaGraphql).toHaveBeenCalledWith({ search: 'welcome' });
+    expect(previewAdminEmailViaGraphql).toHaveBeenCalledWith({
+      subject: 'x',
+      bodyHtml: 'y',
+      baseUrl: 'http://localhost:3000',
+    });
+    expect(enqueueAdminEmailViaGraphql).toHaveBeenCalledWith({
+      recipients: [{ email: 'a@example.test' }],
+      subject: 'x',
+      bodyHtml: 'y',
+    });
   });
 });

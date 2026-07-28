@@ -47,12 +47,6 @@ export const isContactGraphqlActivitiesEnabled = (): boolean =>
 export const isContactGraphqlContentEnabled = (): boolean =>
   import.meta.env.VITE_CONTACT_CONTENT_GRAPHQL === 'true';
 
-export const isOnboardingGraphqlReadsEnabled = (): boolean =>
-  import.meta.env.VITE_ONBOARDING_READS_GRAPHQL === 'true';
-
-export const isOnboardingGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_ONBOARDING_MUTATIONS_GRAPHQL === 'true';
-
 export const isCategoryGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_CATEGORY_READS_GRAPHQL === 'true';
 
@@ -220,18 +214,6 @@ export const isReputationSettingsGraphqlEnabled = (): boolean =>
 
 export const isReputationWidgetsGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_REPUTATION_WIDGETS_GRAPHQL === 'true';
-
-export const isAdminDirectoryGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_ADMIN_DIRECTORY_GRAPHQL === 'true';
-
-export const isAdminPlanGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_ADMIN_PLAN_GRAPHQL === 'true';
-
-export const isAdminMessagingGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_ADMIN_MESSAGING_GRAPHQL === 'true';
-
-export const isAdminEmailDeliveryGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_ADMIN_EMAIL_DELIVERY_GRAPHQL === 'true';
 
 export const isSignatureDocumentGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_SIGNATURE_DOCUMENT_READS_GRAPHQL === 'true';

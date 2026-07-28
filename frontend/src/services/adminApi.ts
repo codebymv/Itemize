@@ -3,7 +3,6 @@
  * API methods for admin dashboard functionality
  */
 
-import api from '../lib/api';
 import {
     getAdminStatsViaGraphql,
     getAdminUserCountViaGraphql,
@@ -12,7 +11,6 @@ import {
     searchAdminUsersViaGraphql,
     updateAdminOwnPlanViaGraphql,
 } from './adminGraphql';
-import { isAdminDirectoryGraphqlEnabled, isAdminPlanGraphqlEnabled } from './graphqlClient';
 
 // ============================================
 // Types
@@ -51,9 +49,7 @@ export interface UserCountResponse {
  * Get user count
  */
 export async function getUserCount(): Promise<UserCountResponse> {
-    if (isAdminDirectoryGraphqlEnabled()) return getAdminUserCountViaGraphql();
-    const response = await api.get('/api/admin/users/count');
-    return response.data?.data ?? response.data;
+    return getAdminUserCountViaGraphql();
 }
 
 /**
@@ -66,49 +62,33 @@ export async function searchUsers(params: {
     plan?: string;
 }): Promise<SearchUsersResponse> {
     const { query = '', page = 0, limit = 50, plan } = params;
-    if (isAdminDirectoryGraphqlEnabled()) return searchAdminUsersViaGraphql({ query, page, limit, plan });
-    const response = await api.get('/api/admin/users/search', {
-        params: { query, page, limit, plan }
-    });
-    return response.data?.data ?? response.data;
+    return searchAdminUsersViaGraphql({ query, page, limit, plan });
 }
 
 /**
  * Get user IDs matching query
  */
 export async function getUserIds(query?: string, plan?: string): Promise<{ ids: number[] }> {
-    if (isAdminDirectoryGraphqlEnabled()) return getAdminUserIdsViaGraphql(query, plan);
-    const response = await api.get('/api/admin/users/ids', {
-        params: { query, plan }
-    });
-    return response.data?.data ?? response.data;
+    return getAdminUserIdsViaGraphql(query, plan);
 }
 
 /**
  * Get users by IDs
  */
 export async function getUsersByIds(ids: number[]): Promise<{ users: AdminUser[] }> {
-    if (isAdminDirectoryGraphqlEnabled()) return getAdminUsersByIdsViaGraphql(ids);
-    const response = await api.get('/api/admin/users/by-ids', {
-        params: { ids: ids.join(',') }
-    });
-    return response.data?.data ?? response.data;
+    return getAdminUsersByIdsViaGraphql(ids);
 }
 
 /**
  * Get system statistics
  */
 export async function getStats(): Promise<SystemStats> {
-    if (isAdminDirectoryGraphqlEnabled()) return getAdminStatsViaGraphql();
-    const response = await api.get('/api/admin/stats');
-    return response.data?.data ?? response.data;
+    return getAdminStatsViaGraphql();
 }
 
 /**
  * Update admin's own plan (for testing)
  */
 export async function updateMyPlan(plan: string): Promise<{ message: string; plan: string }> {
-    if (isAdminPlanGraphqlEnabled()) return updateAdminOwnPlanViaGraphql(plan);
-    const response = await api.patch('/api/admin/me/plan', { plan });
-    return response.data?.data ?? response.data;
+    return updateAdminOwnPlanViaGraphql(plan);
 }

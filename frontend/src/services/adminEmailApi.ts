@@ -3,11 +3,6 @@
  * API methods for admin communications functionality
  */
 
-import api from '../lib/api';
-import {
-    isAdminEmailDeliveryGraphqlEnabled,
-    isAdminMessagingGraphqlEnabled,
-} from './graphqlClient';
 import {
     enqueueAdminEmailViaGraphql,
     getAdminEmailLogViaGraphql,
@@ -103,9 +98,7 @@ export interface EmailTemplatesResponse {
  * Send emails to recipients
  */
 export async function sendEmail(data: SendEmailRequest): Promise<SendEmailResponse> {
-    if (isAdminEmailDeliveryGraphqlEnabled()) return enqueueAdminEmailViaGraphql(data);
-    const response = await api.post('/api/admin/email/send', data);
-    return response.data.data;
+    return enqueueAdminEmailViaGraphql(data);
 }
 
 /**
@@ -113,9 +106,7 @@ export async function sendEmail(data: SendEmailRequest): Promise<SendEmailRespon
  */
 export async function getPreview(data: PreviewEmailRequest): Promise<PreviewEmailResponse> {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
-    if (isAdminMessagingGraphqlEnabled()) return previewAdminEmailViaGraphql({ ...data, baseUrl });
-    const response = await api.post('/api/admin/email/preview', { ...data, baseUrl });
-    return response.data.data;
+    return previewAdminEmailViaGraphql({ ...data, baseUrl });
 }
 
 /**
@@ -127,20 +118,14 @@ export async function getEmailLogs(params: {
     status?: string;
 }): Promise<EmailLogsResponse> {
     const { page = 0, limit = 50, status } = params;
-    if (isAdminMessagingGraphqlEnabled()) return getAdminEmailLogsViaGraphql({ page, limit, status });
-    const response = await api.get('/api/admin/email/logs', {
-        params: { page, limit, status }
-    });
-    return response.data.data;
+    return getAdminEmailLogsViaGraphql({ page, limit, status });
 }
 
 /**
  * Get a single email log with full content
  */
 export async function getEmailLog(id: number): Promise<EmailLog> {
-    if (isAdminMessagingGraphqlEnabled()) return getAdminEmailLogViaGraphql(id);
-    const response = await api.get(`/api/admin/email/logs/${id}`);
-    return response.data.data;
+    return getAdminEmailLogViaGraphql(id);
 }
 
 /**
@@ -150,9 +135,7 @@ export async function getEmailTemplates(params?: {
     category?: string;
     search?: string;
 }): Promise<EmailTemplatesResponse> {
-    if (isAdminMessagingGraphqlEnabled()) return getAdminEmailTemplatesViaGraphql(params);
-    const response = await api.get('/api/admin/email/templates', { params });
-    return response.data.data;
+    return getAdminEmailTemplatesViaGraphql(params);
 }
 
 // ============================================

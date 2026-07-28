@@ -1,6 +1,6 @@
 # Onboarding GraphQL cutover contract
 
-**Status:** Production consumer cutover complete
+**Status:** GraphQL-only; legacy REST retired
 
 **Evidence date:** 2026-07-22
 
@@ -11,8 +11,8 @@ GraphQL service. It is user-scoped, not organization-scoped: switching the
 selected workspace must not create a second onboarding record or expose another
 user's progress.
 
-The legacy Express routes remain available for data-neutral rollback until the
-final traffic-observation and retirement phase.
+The legacy Express routes and frontend rollout flags were removed after the
+production cutover. The frontend now calls this GraphQL module directly.
 
 | Legacy operation | GraphQL operation |
 | --- | --- |
@@ -46,10 +46,8 @@ and maps `stepCompleted` to `step_completed`. Missing optional values remain
 absent in the consumer object. Reading a feature with no stored entry returns
 an explicit unseen projection instead of `null`.
 
-`VITE_ONBOARDING_READS_GRAPHQL` controls both reads.
-`VITE_ONBOARDING_MUTATIONS_GRAPHQL` independently controls all four writes.
-Both flags are false by default and neither path silently falls back after a
-GraphQL error.
+Reads and mutations are permanently GraphQL-backed. Errors remain visible to
+the consumer; no operation silently falls back to Express.
 
 ## Validation and state transitions
 
@@ -81,8 +79,7 @@ back the progress mutation. Reset does not create or delete analytics events.
 - NestJS service validation and legacy-JSON normalization tests.
 - Fresh PostgreSQL proof for empty/default reads, lifecycle mutations, durable
   events, concurrent feature writes, user isolation, validation, and CSRF.
-- Frontend tests proving both flags are default-off and independent, GraphQL
-  casing maps into the retained consumer contract, mutations obtain CSRF, and
-  REST remains the immediate rollback path.
-- A production-like authenticated browser rehearsal on at least one direct
-  onboarding route and one grouped route before enabling either flag.
+- Frontend tests proving direct GraphQL delegation, retained consumer casing,
+  and CSRF acquisition for mutations.
+- Fresh PostgreSQL coverage for the authoritative GraphQL contract without a
+  deleted REST-router dependency.

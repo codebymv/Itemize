@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 301
-- API operations under `/api`: 294
+- Registered method/path operations: 284
+- API operations under `/api`: 277
 - Non-API registered operations: 7
-- Static frontend callsites: 245
-- Operations with frontend consumers: 234
-- Operations referenced by backend tests: 165
-- Recommended GraphQL queries: 78
-- Recommended GraphQL mutations: 161
+- Static frontend callsites: 228
+- Operations with frontend consumers: 217
+- Operations referenced by backend tests: 164
+- Recommended GraphQL queries: 68
+- Recommended GraphQL mutations: 154
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 240
+- High-risk operations: 224
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -31,17 +31,6 @@
 | Method | REST path | Consumers | Tests | Disposition | Risk | Owner / target |
 | --- | --- | ---: | ---: | --- | --- | --- |
 | GET | `/*` | 0 | 0 | non-api | low | _unassigned_ |
-| GET | `/api/admin/email/logs` | 1 | 0 | graphql-query | high | platform-operations / AdminMessagingModule / adminEmailLogs |
-| GET | `/api/admin/email/logs/:id` | 1 | 0 | graphql-query | high | platform-operations / AdminMessagingModule / adminEmailLog |
-| POST | `/api/admin/email/preview` | 1 | 0 | graphql-mutation | medium | platform-operations / AdminMessagingModule / previewAdminEmail |
-| POST | `/api/admin/email/send` | 1 | 0 | graphql-mutation | high | platform-operations / MessagingDeliveryModule / enqueueAdminEmailBatch |
-| GET | `/api/admin/email/templates` | 1 | 0 | graphql-query | high | platform-operations / AdminMessagingModule / adminEmailTemplates |
-| PATCH | `/api/admin/me/plan` | 1 | 0 | graphql-mutation | high | platform-operations / AdminOperationsModule / updateAdminOwnPlan |
-| GET | `/api/admin/stats` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminSystemStats |
-| GET | `/api/admin/users/by-ids` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminUsersByIds |
-| GET | `/api/admin/users/count` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminUserCount |
-| GET | `/api/admin/users/ids` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminUserIds |
-| GET | `/api/admin/users/search` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminUsers |
 | GET | `/api/auth/csrf` | 0 | 5 | retain-http | medium | platform-security / AuthModule / issueCsrfToken |
 | POST | `/api/auth/forgot-password` | 1 | 0 | graphql-mutation | high | identity / AuthModule / requestPasswordReset |
 | POST | `/api/auth/google-login` | 2 | 4 | graphql-mutation | high | identity / AuthModule / loginWithGoogle |
@@ -186,12 +175,6 @@
 | DELETE | `/api/notes/:noteId/share` | 0 | 1 | graphql-mutation | high | sharing / WorkspaceContentModule / disableNoteSharing |
 | POST | `/api/notes/:noteId/share` | 0 | 2 | graphql-mutation | high | sharing / WorkspaceContentModule / enableNoteSharing |
 | PUT | `/api/notes/:noteId/title` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceNote |
-| POST | `/api/onboarding/complete-step` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / completeOnboardingStep |
-| POST | `/api/onboarding/dismiss` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / dismissOnboarding |
-| POST | `/api/onboarding/mark-seen` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / markOnboardingSeen |
-| GET | `/api/onboarding/progress` | 1 | 1 | graphql-query | high | onboarding / OnboardingModule / onboardingProgress |
-| GET | `/api/onboarding/progress/:featureKey` | 1 | 0 | graphql-query | high | onboarding / OnboardingModule / onboardingFeatureProgress |
-| DELETE | `/api/onboarding/reset` | 1 | 0 | graphql-mutation | high | onboarding / OnboardingModule / resetOnboarding |
 | GET | `/api/pages` | 0 | 1 | graphql-query | high | growth / LandingPagesModule / landingPages |
 | POST | `/api/pages` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / createLandingPage |
 | DELETE | `/api/pages/:id` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / deleteLandingPage |
@@ -338,7 +321,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 55
-- Orphaned manual overrides: 49
+- Orphaned manual overrides: 66
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

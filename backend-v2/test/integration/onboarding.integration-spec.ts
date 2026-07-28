@@ -1,17 +1,14 @@
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
-import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
 
-describe('Onboarding REST/GraphQL PostgreSQL parity', () => {
+describe('Onboarding GraphQL PostgreSQL contract', () => {
   let graphqlApp: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   let memberId: number;
   let outsiderId: number;
@@ -63,15 +60,6 @@ describe('Onboarding REST/GraphQL PostgreSQL parity', () => {
     configureApp(graphqlApp);
     await graphqlApp.init();
 
-    const createOnboardingRouter = require('../../../backend/src/routes/onboarding.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use(
-      '/api/onboarding',
-      createOnboardingRouter(pool, authenticateJWT),
-    );
   });
 
   afterAll(async () => {
@@ -109,11 +97,7 @@ describe('Onboarding REST/GraphQL PostgreSQL parity', () => {
   const progressFields =
     'featureKey seen timestamp version dismissed stepCompleted';
 
-  it('matches empty progress and explicit unseen feature semantics', async () => {
-    const legacy = await request(legacyApp)
-      .get('/api/onboarding/progress')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .expect(200);
+  it('returns empty progress and explicit unseen feature semantics', async () => {
     const target = await query(
       memberToken,
       `{ onboardingProgress { ${progressFields} }
@@ -122,7 +106,6 @@ describe('Onboarding REST/GraphQL PostgreSQL parity', () => {
          } }`,
     ).expect(200);
 
-    expect(legacy.body.data).toEqual({});
     expect(target.body.errors).toBeUndefined();
     expect(target.body.data.onboardingProgress).toEqual([]);
     expect(target.body.data.onboardingFeatureProgress).toEqual({

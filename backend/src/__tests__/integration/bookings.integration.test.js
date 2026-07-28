@@ -81,10 +81,14 @@ async function configureCalendarPolicy(pool, calendarId, settings = {}) {
     );
 }
 
-/** Future timestamps 1 and 2 hours from now */
+/** Future one-hour slot that never crosses the seeded UTC availability day. */
 function futureSlot(offsetHours = 48) {
     const start = new Date(Date.now() + offsetHours * 3600 * 1000);
-    const end = new Date(start.getTime() + 3600 * 1000);
+    let end = new Date(start.getTime() + 3600 * 1000);
+    if (start.getUTCDate() !== end.getUTCDate()) {
+        start.setUTCHours(22, 0, 0, 0);
+        end = new Date(start.getTime() + 3600 * 1000);
+    }
     return { start_time: start.toISOString(), end_time: end.toISOString() };
 }
 

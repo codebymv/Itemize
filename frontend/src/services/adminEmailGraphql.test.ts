@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { graphqlMutationRequest, graphqlRequest, isAdminEmailDeliveryGraphqlEnabled, isAdminMessagingGraphqlEnabled } from './graphqlClient';
+import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 import {
   enqueueAdminEmailViaGraphql, getAdminEmailLogViaGraphql, getAdminEmailLogsViaGraphql,
   getAdminEmailTemplatesViaGraphql, previewAdminEmailViaGraphql,
@@ -11,17 +11,6 @@ vi.mock('./graphqlClient', async (importOriginal) => ({
 
 describe('admin email GraphQL adapters', () => {
   afterEach(() => { vi.clearAllMocks(); vi.unstubAllEnvs(); });
-
-  it('keeps reads and provider delivery behind independent default-off flags', () => {
-    vi.stubEnv('VITE_ADMIN_MESSAGING_GRAPHQL', 'false');
-    vi.stubEnv('VITE_ADMIN_EMAIL_DELIVERY_GRAPHQL', 'false');
-    expect(isAdminMessagingGraphqlEnabled()).toBe(false);
-    expect(isAdminEmailDeliveryGraphqlEnabled()).toBe(false);
-    vi.stubEnv('VITE_ADMIN_MESSAGING_GRAPHQL', 'true');
-    vi.stubEnv('VITE_ADMIN_EMAIL_DELIVERY_GRAPHQL', 'true');
-    expect(isAdminMessagingGraphqlEnabled()).toBe(true);
-    expect(isAdminEmailDeliveryGraphqlEnabled()).toBe(true);
-  });
 
   it('uses query transport for audit data and CSRF transport for preview', async () => {
     vi.mocked(graphqlRequest)
