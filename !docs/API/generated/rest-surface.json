@@ -3,10 +3,10 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 330,
-    "resolvedDeclarationCount": 330,
+    "declarationCount": 326,
+    "resolvedDeclarationCount": 326,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 311,
+    "uniqueResolvedOperationCount": 307,
     "sourceFileCount": 63
   },
   "caveats": [
@@ -623,7 +623,7 @@
       ],
       "declaredPath": "/canvas/lists",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 210,
+      "line": 209,
       "dynamic": false
     },
     {
@@ -1503,7 +1503,7 @@
       ],
       "declaredPath": "/lists",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 21,
+      "line": 20,
       "dynamic": false
     },
     {
@@ -1513,7 +1513,7 @@
       ],
       "declaredPath": "/lists",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 90,
+      "line": 89,
       "dynamic": false
     },
     {
@@ -1523,7 +1523,7 @@
       ],
       "declaredPath": "/lists/:id",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 177,
+      "line": 176,
       "dynamic": false
     },
     {
@@ -1533,37 +1533,7 @@
       ],
       "declaredPath": "/lists/:id",
       "source": "backend/src/routes/lists.routes.js",
-      "line": 129,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/lists/:id/items"
-      ],
-      "declaredPath": "/lists/:id/items",
-      "source": "backend/src/routes/lists.routes.js",
-      "line": 299,
-      "dynamic": false
-    },
-    {
-      "method": "DELETE",
-      "publicPaths": [
-        "/api/lists/:id/items/:itemId"
-      ],
-      "declaredPath": "/lists/:id/items/:itemId",
-      "source": "backend/src/routes/lists.routes.js",
-      "line": 372,
-      "dynamic": false
-    },
-    {
-      "method": "PUT",
-      "publicPaths": [
-        "/api/lists/:id/items/:itemId/toggle"
-      ],
-      "declaredPath": "/lists/:id/items/:itemId/toggle",
-      "source": "backend/src/routes/lists.routes.js",
-      "line": 232,
+      "line": 128,
       "dynamic": false
     },
     {
@@ -1574,16 +1544,6 @@
       "declaredPath": "/api/lists/:id/position",
       "source": "backend/src/bootstrap/register-api-routes.js",
       "line": 51,
-      "dynamic": false
-    },
-    {
-      "method": "PUT",
-      "publicPaths": [
-        "/api/lists/:id/title"
-      ],
-      "declaredPath": "/lists/:id/title",
-      "source": "backend/src/routes/lists.routes.js",
-      "line": 432,
       "dynamic": false
     },
     {

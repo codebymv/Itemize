@@ -125,23 +125,40 @@ describe('Lists Integration Tests', () => {
             expect(whiteboardPosition.status).toBe(404);
         });
 
-        it('allows User A to toggle an item', async () => {
-            const res = await request(app)
-                .put(`/api/lists/${listIdA}/items/item1/toggle`)
-                .set('Cookie', [`itemize_auth=${userA.token}`]);
+        it('retires granular item routes in favor of the GraphQL aggregate update', async () => {
+            const responses = await Promise.all([
+                request(app)
+                    .put(`/api/lists/${listIdA}/items/item1/toggle`)
+                    .set('Cookie', [`itemize_auth=${userA.token}`]),
+                request(app)
+                    .post(`/api/lists/${listIdA}/items`)
+                    .set('Cookie', [`itemize_auth=${userA.token}`])
+                    .send({ text: 'Unreachable item' }),
+                request(app)
+                    .delete(`/api/lists/${listIdA}/items/item1`)
+                    .set('Cookie', [`itemize_auth=${userA.token}`]),
+            ]);
 
-            expect(res.status).toBe(200);
-            // item1 started as completed:false → should now be true
-            const toggled = res.body.items.find(i => i.id === 'item1');
-            expect(toggled.completed).toBe(true);
+            expect(responses.map(response => response.status)).toEqual([404, 404, 404]);
+            const persisted = await dbHelper.pool.query(
+                'SELECT items FROM lists WHERE id = $1',
+                [listIdA]
+            );
+            expect(persisted.rows[0].items).toEqual(testItems);
         });
 
-        it('prevents User B from toggling User A\'s list items', async () => {
+        it('retires the dedicated title route in favor of the GraphQL aggregate update', async () => {
             const res = await request(app)
-                .put(`/api/lists/${listIdA}/items/item1/toggle`)
-                .set('Cookie', [`itemize_auth=${userB.token}`]);
+                .put(`/api/lists/${listIdA}/title`)
+                .set('Cookie', [`itemize_auth=${userA.token}`])
+                .send({ title: 'Unreachable title' });
 
             expect(res.status).toBe(404);
+            const persisted = await dbHelper.pool.query(
+                'SELECT title FROM lists WHERE id = $1',
+                [listIdA]
+            );
+            expect(persisted.rows[0].title).toBe('Tasks');
         });
 
         it('prevents User B from deleting User A\'s list', async () => {

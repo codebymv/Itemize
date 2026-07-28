@@ -1526,25 +1526,9 @@
       "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "deleteWorkspaceList", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Implemented with user concealment, CSRF, stable mutation IDs, and atomic owner-canvas plus active public-viewer deletion projections through the cross-service outbox. The staging browser gate proved GraphQL deletion and flag-off REST deletion reach the shipped owner and anonymous-viewer surfaces."
     },
-    "POST /api/lists/:id/items": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "addWorkspaceListItem", "parityStatus": "blocked", "risk": "high",
-      "notes": "Blocked on bounded item schema, serialized item mutation, and durable realtime parity."
-    },
-    "DELETE /api/lists/:id/items/:itemId": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "removeWorkspaceListItem", "parityStatus": "blocked", "risk": "high",
-      "notes": "Blocked on serialized item mutation and durable realtime parity."
-    },
-    "PUT /api/lists/:id/items/:itemId/toggle": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "toggleWorkspaceListItem", "parityStatus": "blocked", "risk": "high",
-      "notes": "Blocked on atomic JSON item update semantics and durable realtime parity."
-    },
     "PUT /api/lists/:id/position": {
       "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "batchCanvasPositions", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "The unused dedicated frontend adapter and REST route were removed. Active list drag persistence is covered by the CSRF-protected GraphQL batch, which validates ownership and atomically enqueues shared-viewer projections."
-    },
-    "PUT /api/lists/:id/title": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "renameWorkspaceList", "parityStatus": "blocked", "risk": "high",
-      "notes": "Blocked on post-commit public-share realtime parity."
     },
     "POST /api/lists/:listId/share": {
       "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceContentModule", "targetOperation": "enableListSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",

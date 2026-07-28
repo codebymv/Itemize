@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 311,
-    "apiOperationCount": 304,
+    "operationCount": 307,
+    "apiOperationCount": 300,
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 250,
     "operationsWithFrontendConsumers": 239,
-    "operationsWithBackendTests": 167,
+    "operationsWithBackendTests": 165,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 50,
+    "unmatchedBackendTestCallCount": 54,
     "retainHttpCount": 54,
     "graphqlQueryCount": 80,
-    "graphqlMutationCount": 169,
-    "highRiskCount": 250,
+    "graphqlMutationCount": 165,
+    "highRiskCount": 246,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -2942,7 +2942,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 210
+          "line": 209
         }
       ],
       "consumerCallsites": [
@@ -2967,13 +2967,13 @@
           "method": "GET",
           "path": "/api/canvas/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1711
+          "line": 1705
         },
         {
           "method": "GET",
           "path": "/api/canvas/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1738
+          "line": 1732
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -6974,7 +6974,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 21
+          "line": 20
         }
       ],
       "consumerCallsites": [
@@ -6993,13 +6993,13 @@
           "method": "GET",
           "path": "/api/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1707
+          "line": 1701
         },
         {
           "method": "GET",
           "path": "/api/lists",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1733
+          "line": 1727
         },
         {
           "method": "GET",
@@ -7033,7 +7033,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 90
+          "line": 89
         }
       ],
       "consumerCallsites": [
@@ -7074,7 +7074,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 177
+          "line": 176
         }
       ],
       "consumerCallsites": [
@@ -7093,13 +7093,13 @@
           "method": "DELETE",
           "path": "/api/lists/:listIdA",
           "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 149
+          "line": 166
         },
         {
           "method": "DELETE",
           "path": "/api/lists/:listIdA",
           "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 163
+          "line": 180
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -7121,7 +7121,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/lists.routes.js",
-          "line": 129
+          "line": 128
         }
       ],
       "consumerCallsites": [
@@ -7144,91 +7144,6 @@
       "targetModule": "WorkspaceContentModule",
       "parityStatus": "consumer-cutover-complete",
       "notes": "Implemented for the reachable whole-list UI adapter with row locking, required updatedAt optimistic concurrency, stable CONFLICT details, canonical category dual-write, and atomic owner/public realtime outbox rows. Staging proved stale-write rejection, sent owner/shared projections, an open anonymous viewer update, and REST rollback without later GraphQL traffic.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/lists/:id/items",
-      "key": "POST /api/lists/:*/items",
-      "method": "POST",
-      "path": "/api/lists/:id/items",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/lists.routes.js",
-          "line": 299
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "addWorkspaceListItem",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "blocked",
-      "notes": "Blocked on bounded item schema, serialized item mutation, and durable realtime parity.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/lists/:id/items/:itemId",
-      "key": "DELETE /api/lists/:*/items/:*",
-      "method": "DELETE",
-      "path": "/api/lists/:id/items/:itemId",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/lists.routes.js",
-          "line": 372
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "removeWorkspaceListItem",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "blocked",
-      "notes": "Blocked on serialized item mutation and durable realtime parity.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/lists/:id/items/:itemId/toggle",
-      "key": "PUT /api/lists/:*/items/:*/toggle",
-      "method": "PUT",
-      "path": "/api/lists/:id/items/:itemId/toggle",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/lists.routes.js",
-          "line": 232
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/lists/:listIdA/items/item1/toggle",
-          "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 130
-        },
-        {
-          "method": "PUT",
-          "path": "/api/lists/:listIdA/items/item1/toggle",
-          "source": "backend/src/__tests__/integration/lists.integration.test.js",
-          "line": 141
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "toggleWorkspaceListItem",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "blocked",
-      "notes": "Blocked on atomic JSON item update semantics and durable realtime parity.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -7260,37 +7175,6 @@
       "targetModule": "WorkspaceContentModule",
       "parityStatus": "consumer-cutover-complete",
       "notes": "The unused dedicated frontend adapter and REST route were removed. Active list drag persistence is covered by the CSRF-protected GraphQL batch, which validates ownership and atomically enqueues shared-viewer projections.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/lists/:id/title",
-      "key": "PUT /api/lists/:*/title",
-      "method": "PUT",
-      "path": "/api/lists/:id/title",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/lists.routes.js",
-          "line": 432
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/lists/:mutationListId/title",
-          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 543
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "workspace-content",
-      "targetOperation": "renameWorkspaceList",
-      "targetModule": "WorkspaceContentModule",
-      "parityStatus": "blocked",
-      "notes": "Blocked on post-commit public-share realtime parity.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -7515,19 +7399,19 @@
           "method": "GET",
           "path": "/api/notes",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 624
+          "line": 618
         },
         {
           "method": "GET",
           "path": "/api/notes",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1715
+          "line": 1709
         },
         {
           "method": "GET",
           "path": "/api/notes",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1743
+          "line": 1737
         },
         {
           "method": "GET",
@@ -7834,7 +7718,7 @@
           "method": "PUT",
           "path": "/api/notes/:mutationNoteId/content",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 809
+          "line": 803
         },
         {
           "method": "PUT",
@@ -10589,13 +10473,13 @@
           "method": "GET",
           "path": "/api/shared/wireframe/:sharedWireframeToken",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1228
+          "line": 1222
         },
         {
           "method": "GET",
           "path": "/api/shared/wireframe/:sharedWireframeToken",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1384
+          "line": 1378
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -12271,19 +12155,19 @@
           "method": "GET",
           "path": "/api/whiteboards",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 852
+          "line": 846
         },
         {
           "method": "GET",
           "path": "/api/whiteboards",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1719
+          "line": 1713
         },
         {
           "method": "GET",
           "path": "/api/whiteboards",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1748
+          "line": 1742
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -12423,7 +12307,7 @@
           "method": "PUT",
           "path": "/api/whiteboards/:mutationWhiteboardId",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 993
+          "line": 987
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -12522,7 +12406,7 @@
           "method": "GET",
           "path": "/api/wireframes",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1189
+          "line": 1183
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -12629,7 +12513,7 @@
           "method": "PUT",
           "path": "/api/wireframes/:mutationWireframeId",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1458
+          "line": 1452
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -13893,13 +13777,13 @@
       "method": "GET",
       "path": "/api/shared/:kind/:shareToken",
       "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-      "line": 1057
+      "line": 1051
     },
     {
       "method": "GET",
       "path": "/api/shared/:kind/:shareToken",
       "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-      "line": 1079
+      "line": 1073
     },
     {
       "method": "POST",
@@ -13912,6 +13796,30 @@
       "path": "/api/contacts/:contactIdA/profile",
       "source": "backend/src/__tests__/integration/contacts.integration.test.js",
       "line": 160
+    },
+    {
+      "method": "PUT",
+      "path": "/api/lists/:listIdA/items/item1/toggle",
+      "source": "backend/src/__tests__/integration/lists.integration.test.js",
+      "line": 131
+    },
+    {
+      "method": "POST",
+      "path": "/api/lists/:listIdA/items",
+      "source": "backend/src/__tests__/integration/lists.integration.test.js",
+      "line": 134
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/lists/:listIdA/items/item1",
+      "source": "backend/src/__tests__/integration/lists.integration.test.js",
+      "line": 138
+    },
+    {
+      "method": "PUT",
+      "path": "/api/lists/:listIdA/title",
+      "source": "backend/src/__tests__/integration/lists.integration.test.js",
+      "line": 152
     },
     {
       "method": "POST",

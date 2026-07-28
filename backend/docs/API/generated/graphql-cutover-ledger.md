@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 311
-- API operations under `/api`: 304
+- Registered method/path operations: 307
+- API operations under `/api`: 300
 - Non-API registered operations: 7
 - Static frontend callsites: 250
 - Operations with frontend consumers: 239
-- Operations referenced by backend tests: 167
+- Operations referenced by backend tests: 165
 - Recommended GraphQL queries: 80
-- Recommended GraphQL mutations: 169
+- Recommended GraphQL mutations: 165
 - Recommended retained HTTP endpoints: 54
-- High-risk operations: 250
+- High-risk operations: 246
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -175,11 +175,7 @@
 | POST | `/api/lists` | 1 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / createWorkspaceList |
 | DELETE | `/api/lists/:id` | 1 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / deleteWorkspaceList |
 | PUT | `/api/lists/:id` | 1 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceList |
-| POST | `/api/lists/:id/items` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / addWorkspaceListItem |
-| DELETE | `/api/lists/:id/items/:itemId` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / removeWorkspaceListItem |
-| PUT | `/api/lists/:id/items/:itemId/toggle` | 0 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / toggleWorkspaceListItem |
 | PUT | `/api/lists/:id/position` | 0 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / batchCanvasPositions |
-| PUT | `/api/lists/:id/title` | 0 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / renameWorkspaceList |
 | DELETE | `/api/lists/:listId/share` | 0 | 2 | graphql-mutation | high | sharing / WorkspaceContentModule / disableListSharing |
 | POST | `/api/lists/:listId/share` | 0 | 5 | graphql-mutation | high | sharing / WorkspaceContentModule / enableListSharing |
 | POST | `/api/marketing-chat/ask` | 1 | 0 | graphql-mutation | high | _unassigned_ |
@@ -347,7 +343,7 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 50
+- Unmatched backend test calls: 54
 - Orphaned manual overrides: 49
 - Orphaned runtime-expression overrides: 0
 
@@ -403,10 +399,14 @@
 | POST | `/api/pipelines/deals/1/won` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:465` |
 | POST | `/api/pipelines/deals/1/lost` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:466` |
 | POST | `/api/pipelines/deals/1/reopen` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:467` |
-| GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1057` |
-| GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1079` |
+| GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1051` |
+| GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1073` |
 | POST | `/api/campaigns/1/:action` | `backend/src/__tests__/integration/campaigns.integration.test.js:504` |
 | GET | `/api/contacts/:contactIdA/profile` | `backend/src/__tests__/integration/contacts.integration.test.js:160` |
+| PUT | `/api/lists/:listIdA/items/item1/toggle` | `backend/src/__tests__/integration/lists.integration.test.js:131` |
+| POST | `/api/lists/:listIdA/items` | `backend/src/__tests__/integration/lists.integration.test.js:134` |
+| DELETE | `/api/lists/:listIdA/items/item1` | `backend/src/__tests__/integration/lists.integration.test.js:138` |
+| PUT | `/api/lists/:listIdA/title` | `backend/src/__tests__/integration/lists.integration.test.js:152` |
 | POST | `/api/chat-widget/sessions/:id/messages` | `backend/src/__tests__/integration/realtime.integration.test.js:265` |
 | POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:168` |
 | DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:169` |

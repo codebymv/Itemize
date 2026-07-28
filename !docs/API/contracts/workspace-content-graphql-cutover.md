@@ -55,6 +55,12 @@ outbox atomically. The legacy socket host delivers those rows after commit.
 | `POST /api/lists/:listId/share` | `enableListSharing(id)` |
 | `DELETE /api/lists/:listId/share` | `disableListSharing(id, mutationId)` |
 
+The unused granular REST variants for adding, removing, and toggling items and
+renaming a list were retired on 2026-07-27. They had no frontend consumer and
+duplicated `updateWorkspaceList`, which atomically replaces the bounded item
+snapshot or title under row lock, rejects stale revisions, and commits durable
+owner and shared-viewer realtime projections with the update.
+
 | Legacy canvas write | GraphQL mutation |
 | --- | --- |
 | `PUT /api/canvas/positions` | `batchCanvasPositions(input)` |

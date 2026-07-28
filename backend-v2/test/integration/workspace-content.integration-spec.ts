@@ -539,12 +539,6 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       { channel: 'shared_list', event_type: 'listDeleted' },
       { channel: 'user_canvas', event_type: 'listDeleted' },
     ]);
-    const rest = await request(legacyApp)
-      .put(`/api/lists/${mutationListId}/title`)
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .send({ title: 'Gone' })
-      .expect(404);
-    expect(rest.body.error).toBe('List not found');
   });
 
   it('self-heals a missing General category for default note creation', async () => {

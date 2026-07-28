@@ -6,10 +6,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 330
-- Resolved declarations: 330
+- Route declarations: 326
+- Resolved declarations: 326
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 311
+- Unique resolved method/path operations: 307
 - Files containing declarations: 63
 
 ## Interpretation limits
@@ -83,7 +83,7 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/campaigns/:id/recipients` | `/:id/recipients` | `backend/src/routes/campaigns/insights.routes.js:15` |
 | POST | `/api/campaigns/:id/schedule` | `/:id/schedule` | `backend/src/routes/campaigns/actions.routes.js:13` |
 | POST | `/api/campaigns/:id/unschedule` | `/:id/unschedule` | `backend/src/routes/campaigns/actions.routes.js:72` |
-| GET | `/api/canvas/lists` | `/canvas/lists` | `backend/src/routes/lists.routes.js:210` |
+| GET | `/api/canvas/lists` | `/canvas/lists` | `backend/src/routes/lists.routes.js:209` |
 | PUT | `/api/canvas/positions` | `/api/canvas/positions` | `backend/src/bootstrap/register-api-routes.js:55` |
 | PUT | `/api/canvas/positions` | `/canvas/positions` | `backend/src/routes/canvas.routes.js:14` |
 | GET | `/api/categories` | `/categories` | `backend/src/routes/categories.routes.js:19` |
@@ -171,15 +171,11 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/invoices/settings/logo` | `/settings/logo` | `backend/src/routes/invoices/settings.routes.js:114` |
 | POST | `/api/invoices/webhook/stripe` | `/api/invoices/webhook/stripe` | `backend/src/bootstrap/register-api-routes.js:245` |
 | POST | `/api/invoices/webhook/stripe` | `/webhook/stripe` | `backend/src/routes/invoices/stripe-webhook.routes.js:18` |
-| GET | `/api/lists` | `/lists` | `backend/src/routes/lists.routes.js:21` |
-| POST | `/api/lists` | `/lists` | `backend/src/routes/lists.routes.js:90` |
-| DELETE | `/api/lists/:id` | `/lists/:id` | `backend/src/routes/lists.routes.js:177` |
-| PUT | `/api/lists/:id` | `/lists/:id` | `backend/src/routes/lists.routes.js:129` |
-| POST | `/api/lists/:id/items` | `/lists/:id/items` | `backend/src/routes/lists.routes.js:299` |
-| DELETE | `/api/lists/:id/items/:itemId` | `/lists/:id/items/:itemId` | `backend/src/routes/lists.routes.js:372` |
-| PUT | `/api/lists/:id/items/:itemId/toggle` | `/lists/:id/items/:itemId/toggle` | `backend/src/routes/lists.routes.js:232` |
+| GET | `/api/lists` | `/lists` | `backend/src/routes/lists.routes.js:20` |
+| POST | `/api/lists` | `/lists` | `backend/src/routes/lists.routes.js:89` |
+| DELETE | `/api/lists/:id` | `/lists/:id` | `backend/src/routes/lists.routes.js:176` |
+| PUT | `/api/lists/:id` | `/lists/:id` | `backend/src/routes/lists.routes.js:128` |
 | PUT | `/api/lists/:id/position` | `/api/lists/:id/position` | `backend/src/bootstrap/register-api-routes.js:51` |
-| PUT | `/api/lists/:id/title` | `/lists/:id/title` | `backend/src/routes/lists.routes.js:432` |
 | DELETE | `/api/lists/:listId/share` | `/lists/:listId/share` | `backend/src/routes/sharing.routes.js:126` |
 | POST | `/api/lists/:listId/share` | `/lists/:listId/share` | `backend/src/routes/sharing.routes.js:103` |
 | POST | `/api/marketing-chat/ask` | `/ask` | `backend/src/routes/marketing-chat.routes.js:84` |
