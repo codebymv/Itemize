@@ -134,12 +134,6 @@ export const isEmailTemplateGraphqlReadsEnabled = (): boolean =>
 export const isEmailTemplateGraphqlMutationsEnabled = (): boolean =>
   import.meta.env.VITE_EMAIL_TEMPLATE_MUTATIONS_GRAPHQL === 'true';
 
-export const isSmsTemplateGraphqlReadsEnabled = (): boolean =>
-  import.meta.env.VITE_SMS_TEMPLATE_READS_GRAPHQL === 'true';
-
-export const isSmsTemplateGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_SMS_TEMPLATE_MUTATIONS_GRAPHQL === 'true';
-
 export const isCampaignGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_CAMPAIGN_READS_GRAPHQL === 'true';
 

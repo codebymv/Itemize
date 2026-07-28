@@ -70,21 +70,21 @@ describe('SMS messaging integration', () => {
         )).rows[0];
     }
 
-    test('CRUD remains organization scoped', async () => {
-        const created = await request(app)
-            .post('/api/sms-templates')
+    test.each([
+        ['get', '/api/sms-templates'],
+        ['post', '/api/sms-templates'],
+        ['get', '/api/sms-templates/1'],
+        ['put', '/api/sms-templates/1'],
+        ['delete', '/api/sms-templates/1'],
+        ['post', '/api/sms-templates/1/duplicate'],
+        ['get', '/api/sms-templates/categories/list'],
+        ['post', '/api/sms-templates/message-info'],
+    ])('retired template route %s %s returns 404', async (method, path) => {
+        const response = await request(app)[method](path)
             .set('Cookie', [`itemize_auth=${userA.token}`])
             .set('x-organization-id', String(userA.org.id))
-            .send({ name: 'Appointment', message: 'Hi {{first_name}}' });
-
-        expect(created.status).toBe(201);
-        expect(created.body.variables).toContain('first_name');
-
-        const outsider = await request(app)
-            .get(`/api/sms-templates/${created.body.id}`)
-            .set('Cookie', [`itemize_auth=${userB.token}`])
-            .set('x-organization-id', String(userB.org.id));
-        expect(outsider.status).toBe(404);
+            .send({});
+        expect(response.status).toBe(404);
     });
 
     test('a receiving number has exactly one owning organization', async () => {

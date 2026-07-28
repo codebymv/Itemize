@@ -5,7 +5,7 @@ const { createContactTransferProxy } = require('../contact-transfer-proxy');
 const emailTemplatesRoutes = require('../routes/email-templates.routes');
 const emailWebhooksRoutes = require('../routes/email-webhooks.routes');
 const workflowsRoutes = require('../routes/workflows.routes');
-const smsTemplatesRoutes = require('../routes/sms-templates.routes');
+const smsWebhooksRoutes = require('../routes/sms-webhooks.routes');
 const chatWidgetRoutes = require('../routes/chat-widget.routes');
 const campaignsRoutes = require('../routes/campaigns.routes');
 const estimatesRoutes = require('../routes/estimates.routes');
@@ -161,8 +161,8 @@ function registerApiRoutes({
     logger.info('Email Webhook routes initialized');
     app.use('/api/workflows', workflowsRoutes(pool, authenticateJWT));
     logger.info('Workflows routes initialized');
-    app.use('/api/sms-templates', smsTemplatesRoutes(pool, authenticateJWT, publicRateLimit));
-    logger.info('SMS Templates routes initialized');
+    app.use('/api/sms-templates', smsWebhooksRoutes(pool, publicRateLimit));
+    logger.info('SMS webhook routes initialized');
     app.use('/api/chat-widget', chatWidgetRoutes(
         pool,
         authenticateJWT,

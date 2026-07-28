@@ -6,10 +6,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 260
-- Resolved declarations: 260
+- Route declarations: 252
+- Resolved declarations: 252
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 243
+- Unique resolved method/path operations: 235
 - Files containing declarations: 51
 
 ## Interpretation limits
@@ -236,16 +236,8 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/signatures/templates/:id/instantiate` | `/signatures/templates/:id/instantiate` | `backend/src/routes/signatures.routes.js:274` |
 | POST | `/api/signatures/templates/upload` | `/api/signatures/templates/upload` | `backend/src/bootstrap/register-api-routes.js:221` |
 | POST | `/api/signatures/templates/upload` | `/signatures/templates/upload` | `backend/src/routes/signatures.routes.js:205` |
-| GET | `/api/sms-templates` | `/` | `backend/src/routes/sms-templates.routes.js:75` |
-| POST | `/api/sms-templates` | `/` | `backend/src/routes/sms-templates.routes.js:181` |
-| DELETE | `/api/sms-templates/:id` | `/:id` | `backend/src/routes/sms-templates.routes.js:298` |
-| GET | `/api/sms-templates/:id` | `/:id` | `backend/src/routes/sms-templates.routes.js:152` |
-| PUT | `/api/sms-templates/:id` | `/:id` | `backend/src/routes/sms-templates.routes.js:230` |
-| POST | `/api/sms-templates/:id/duplicate` | `/:id/duplicate` | `backend/src/routes/sms-templates.routes.js:330` |
-| GET | `/api/sms-templates/categories/list` | `/categories/list` | `backend/src/routes/sms-templates.routes.js:128` |
-| POST | `/api/sms-templates/message-info` | `/message-info` | `backend/src/routes/sms-templates.routes.js:383` |
-| POST | `/api/sms-templates/webhook/inbound` | `/webhook/inbound` | `backend/src/routes/sms-templates.routes.js:481` |
-| POST | `/api/sms-templates/webhook/status` | `/webhook/status` | `backend/src/routes/sms-templates.routes.js:399` |
+| POST | `/api/sms-templates/webhook/inbound` | `/webhook/inbound` | `backend/src/routes/sms-webhooks.routes.js:121` |
+| POST | `/api/sms-templates/webhook/status` | `/webhook/status` | `backend/src/routes/sms-webhooks.routes.js:51` |
 | GET | `/api/social/callback/facebook` | `/callback/facebook` | `backend/src/routes/social/oauth.routes.js:61` |
 | GET | `/api/social/connect/facebook` | `/connect/facebook` | `backend/src/routes/social/oauth.routes.js:17` |
 | GET | `/api/social/webhook` | `/webhook` | `backend/src/routes/social/webhook.routes.js:43` |

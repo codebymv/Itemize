@@ -39,8 +39,6 @@ describe('Environment Validation', () => {
     expect(env.VITE_WORKFLOW_ENROLLMENTS_GRAPHQL).toBe('false');
     expect(env.VITE_EMAIL_TEMPLATE_READS_GRAPHQL).toBe('false');
     expect(env.VITE_EMAIL_TEMPLATE_MUTATIONS_GRAPHQL).toBe('false');
-    expect(env.VITE_SMS_TEMPLATE_READS_GRAPHQL).toBe('false');
-    expect(env.VITE_SMS_TEMPLATE_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_CAMPAIGN_READS_GRAPHQL).toBe('false');
     expect(env.VITE_CAMPAIGN_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_CAMPAIGN_AUDIENCE_PREVIEW_GRAPHQL).toBe('false');

@@ -1,7 +1,7 @@
 const express = require('express');
 const request = require('supertest');
 
-const createSmsRoutes = require('../../routes/sms-templates.routes');
+const createSmsRoutes = require('../../routes/sms-webhooks.routes');
 
 function createApp() {
     const app = express();
@@ -13,7 +13,7 @@ function createApp() {
             throw new Error('database must not be reached when verification fails');
         }),
     };
-    app.use('/api/sms-templates', createSmsRoutes(pool, noop, noop));
+    app.use('/api/sms-templates', createSmsRoutes(pool, noop));
     return { app, pool };
 }
 

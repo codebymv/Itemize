@@ -3,10 +3,10 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 260,
-    "resolvedDeclarationCount": 260,
+    "declarationCount": 252,
+    "resolvedDeclarationCount": 252,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 243,
+    "uniqueResolvedOperationCount": 235,
     "sourceFileCount": 51
   },
   "caveats": [
@@ -2147,93 +2147,13 @@
       "dynamic": false
     },
     {
-      "method": "GET",
-      "publicPaths": [
-        "/api/sms-templates"
-      ],
-      "declaredPath": "/",
-      "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 75,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/sms-templates"
-      ],
-      "declaredPath": "/",
-      "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 181,
-      "dynamic": false
-    },
-    {
-      "method": "DELETE",
-      "publicPaths": [
-        "/api/sms-templates/:id"
-      ],
-      "declaredPath": "/:id",
-      "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 298,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/sms-templates/:id"
-      ],
-      "declaredPath": "/:id",
-      "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 152,
-      "dynamic": false
-    },
-    {
-      "method": "PUT",
-      "publicPaths": [
-        "/api/sms-templates/:id"
-      ],
-      "declaredPath": "/:id",
-      "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 230,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/sms-templates/:id/duplicate"
-      ],
-      "declaredPath": "/:id/duplicate",
-      "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 330,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/sms-templates/categories/list"
-      ],
-      "declaredPath": "/categories/list",
-      "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 128,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/sms-templates/message-info"
-      ],
-      "declaredPath": "/message-info",
-      "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 383,
-      "dynamic": false
-    },
-    {
       "method": "POST",
       "publicPaths": [
         "/api/sms-templates/webhook/inbound"
       ],
       "declaredPath": "/webhook/inbound",
-      "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 481,
+      "source": "backend/src/routes/sms-webhooks.routes.js",
+      "line": 121,
       "dynamic": false
     },
     {
@@ -2242,8 +2162,8 @@
         "/api/sms-templates/webhook/status"
       ],
       "declaredPath": "/webhook/status",
-      "source": "backend/src/routes/sms-templates.routes.js",
-      "line": 399,
+      "source": "backend/src/routes/sms-webhooks.routes.js",
+      "line": 51,
       "dynamic": false
     },
     {

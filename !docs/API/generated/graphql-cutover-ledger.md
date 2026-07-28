@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 243
-- API operations under `/api`: 236
+- Registered method/path operations: 235
+- API operations under `/api`: 228
 - Non-API registered operations: 7
-- Static frontend callsites: 189
-- Operations with frontend consumers: 178
-- Operations referenced by backend tests: 136
-- Recommended GraphQL queries: 54
-- Recommended GraphQL mutations: 127
+- Static frontend callsites: 181
+- Operations with frontend consumers: 170
+- Operations referenced by backend tests: 134
+- Recommended GraphQL queries: 50
+- Recommended GraphQL mutations: 123
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 183
+- High-risk operations: 176
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -227,14 +227,6 @@
 | GET | `/api/signatures/templates/:id/file` | 0 | 1 | retain-http | high | esignatures / SignatureFilesModule / streamSignatureTemplatePdf |
 | POST | `/api/signatures/templates/:id/instantiate` | 1 | 0 | graphql-mutation | high | esignatures / SignatureTemplatesModule / instantiateSignatureTemplate |
 | POST | `/api/signatures/templates/upload` | 1 | 0 | retain-http | high | esignatures / SignatureFilesModule / uploadSignatureTemplatePdf |
-| GET | `/api/sms-templates` | 1 | 0 | graphql-query | high | messaging / SmsTemplatesModule / smsTemplates |
-| POST | `/api/sms-templates` | 1 | 1 | graphql-mutation | high | messaging / SmsTemplatesModule / createSmsTemplate |
-| DELETE | `/api/sms-templates/:id` | 1 | 0 | graphql-mutation | high | messaging / SmsTemplatesModule / deleteSmsTemplate |
-| GET | `/api/sms-templates/:id` | 1 | 2 | graphql-query | high | messaging / SmsTemplatesModule / smsTemplate |
-| PUT | `/api/sms-templates/:id` | 1 | 0 | graphql-mutation | high | messaging / SmsTemplatesModule / updateSmsTemplate |
-| POST | `/api/sms-templates/:id/duplicate` | 1 | 0 | graphql-mutation | high | messaging / SmsTemplatesModule / duplicateSmsTemplate |
-| GET | `/api/sms-templates/categories/list` | 1 | 0 | graphql-query | high | messaging / SmsTemplatesModule / smsTemplateCategories |
-| POST | `/api/sms-templates/message-info` | 1 | 0 | graphql-query | medium | messaging / SmsTemplatesModule / smsMessageInfo |
 | POST | `/api/sms-templates/webhook/inbound` | 0 | 6 | retain-http | high | messaging / SmsWebhooksModule / processInboundSmsWebhook |
 | POST | `/api/sms-templates/webhook/status` | 0 | 4 | retain-http | high | messaging / SmsWebhooksModule / processSmsStatusWebhook |
 | GET | `/api/social/callback/facebook` | 0 | 0 | retain-http | high | social-integrations / SocialOAuthModule / completeFacebookConnection |
@@ -280,7 +272,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 50
-- Orphaned manual overrides: 107
+- Orphaned manual overrides: 115
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

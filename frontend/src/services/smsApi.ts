@@ -3,7 +3,6 @@
  * Handles SMS templates, sending, and related operations
  */
 
-import api from '@/lib/api';
 import {
   createSmsTemplateViaGraphql,
   deleteSmsTemplateViaGraphql,
@@ -14,18 +13,10 @@ import {
   getSmsTemplatesViaGraphql,
   updateSmsTemplateViaGraphql,
 } from './smsTemplatesGraphql';
-import { isSmsTemplateGraphqlMutationsEnabled, isSmsTemplateGraphqlReadsEnabled } from './graphqlClient';
 import {
   enqueueContactSmsViaGraphql,
   sendSmsTemplateTestViaGraphql,
 } from './messageDeliveryGraphql';
-
-const unwrapResponse = <T>(payload: unknown): T => {
-  if (payload && typeof payload === 'object' && 'data' in payload) {
-    return (payload as { data: unknown }).data as T;
-  }
-  return payload as T;
-};
 
 // Types
 export interface SmsTemplate {
@@ -93,14 +84,6 @@ export interface SendSmsToContactData {
   organization_id?: number;
 }
 
-// Helper to get organization header
-const getOrgHeader = (organizationId?: number) => {
-  if (organizationId) {
-    return { 'x-organization-id': String(organizationId) };
-  }
-  return {};
-};
-
 /**
  * Get all SMS templates for an organization
  */
@@ -108,61 +91,35 @@ export const getSmsTemplates = async (
   organizationId?: number,
   filters?: { category?: string; is_active?: string; search?: string }
 ): Promise<{ templates: SmsTemplate[]; total?: number }> => {
-  if (isSmsTemplateGraphqlReadsEnabled()) return getSmsTemplatesViaGraphql(filters, organizationId);
-  const params = new URLSearchParams();
-  if (organizationId) params.append('organization_id', String(organizationId));
-  if (filters?.category) params.append('category', filters.category);
-  if (filters?.is_active) params.append('is_active', filters.is_active);
-  if (filters?.search) params.append('search', filters.search);
-
-  const response = await api.get(`/api/sms-templates?${params.toString()}`, {
-    headers: getOrgHeader(organizationId),
-  });
-  return unwrapResponse<{ templates: SmsTemplate[]; total?: number }>(response.data);
+  return getSmsTemplatesViaGraphql(filters, organizationId);
 };
 
 /**
  * Get a single SMS template
  */
 export const getSmsTemplate = async (id: number, organizationId?: number) => {
-  if (isSmsTemplateGraphqlReadsEnabled()) return getSmsTemplateViaGraphql(id, organizationId);
-  const response = await api.get(`/api/sms-templates/${id}`, {
-    headers: getOrgHeader(organizationId),
-  });
-  return unwrapResponse<SmsTemplate>(response.data);
+  return getSmsTemplateViaGraphql(id, organizationId);
 };
 
 /**
  * Create a new SMS template
  */
 export const createSmsTemplate = async (data: CreateSmsTemplateData) => {
-  if (isSmsTemplateGraphqlMutationsEnabled()) return createSmsTemplateViaGraphql(data);
-  const response = await api.post('/api/sms-templates', data, {
-    headers: getOrgHeader(data.organization_id),
-  });
-  return unwrapResponse<SmsTemplate>(response.data);
+  return createSmsTemplateViaGraphql(data);
 };
 
 /**
  * Update an SMS template
  */
 export const updateSmsTemplate = async (id: number, data: UpdateSmsTemplateData) => {
-  if (isSmsTemplateGraphqlMutationsEnabled()) return updateSmsTemplateViaGraphql(id, data);
-  const response = await api.put(`/api/sms-templates/${id}`, data, {
-    headers: getOrgHeader(data.organization_id),
-  });
-  return unwrapResponse<SmsTemplate>(response.data);
+  return updateSmsTemplateViaGraphql(id, data);
 };
 
 /**
  * Delete an SMS template
  */
 export const deleteSmsTemplate = async (id: number, organizationId?: number) => {
-  if (isSmsTemplateGraphqlMutationsEnabled()) return deleteSmsTemplateViaGraphql(id, organizationId);
-  const response = await api.delete(`/api/sms-templates/${id}`, {
-    headers: getOrgHeader(organizationId),
-  });
-  return unwrapResponse(response.data);
+  return deleteSmsTemplateViaGraphql(id, organizationId);
 };
 
 /**
@@ -184,15 +141,7 @@ export const sendTestSms = async (
  * Duplicate an SMS template
  */
 export const duplicateSmsTemplate = async (id: number, organizationId?: number) => {
-  if (isSmsTemplateGraphqlMutationsEnabled()) return duplicateSmsTemplateViaGraphql(id, organizationId);
-  const response = await api.post(
-    `/api/sms-templates/${id}/duplicate`,
-    {},
-    {
-      headers: getOrgHeader(organizationId),
-    }
-  );
-  return unwrapResponse<SmsTemplate>(response.data);
+  return duplicateSmsTemplateViaGraphql(id, organizationId);
 };
 
 /**
@@ -206,20 +155,14 @@ export const sendSmsToContact = async (data: SendSmsToContactData) => {
  * Get message info (character count, segments, encoding)
  */
 export const getMessageInfo = async (message: string): Promise<MessageInfo> => {
-  if (isSmsTemplateGraphqlReadsEnabled()) return getSmsMessageInfoViaGraphql(message);
-  const response = await api.post('/api/sms-templates/message-info', { message });
-  return unwrapResponse<MessageInfo>(response.data);
+  return getSmsMessageInfoViaGraphql(message);
 };
 
 /**
  * Get template categories
  */
 export const getSmsTemplateCategories = async (organizationId?: number) => {
-  if (isSmsTemplateGraphqlReadsEnabled()) return getSmsTemplateCategoriesViaGraphql(organizationId);
-  const response = await api.get('/api/sms-templates/categories/list', {
-    headers: getOrgHeader(organizationId),
-  });
-  return unwrapResponse(response.data);
+  return getSmsTemplateCategoriesViaGraphql(organizationId);
 };
 
 export default {

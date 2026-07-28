@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 243,
-    "apiOperationCount": 236,
+    "operationCount": 235,
+    "apiOperationCount": 228,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 189,
-    "operationsWithFrontendConsumers": 178,
-    "operationsWithBackendTests": 136,
+    "frontendCallsiteCount": 181,
+    "operationsWithFrontendConsumers": 170,
+    "operationsWithBackendTests": 134,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 50,
     "retainHttpCount": 55,
-    "graphqlQueryCount": 54,
-    "graphqlMutationCount": 127,
-    "highRiskCount": 183,
+    "graphqlQueryCount": 50,
+    "graphqlMutationCount": 123,
+    "highRiskCount": 176,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -9024,306 +9024,14 @@
       "risk": "high"
     },
     {
-      "id": "GET /api/sms-templates",
-      "key": "GET /api/sms-templates",
-      "method": "GET",
-      "path": "/api/sms-templates",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/sms-templates.routes.js",
-          "line": 75
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/sms-templates",
-          "rawPath": "/api/sms-templates?${params.toString()}",
-          "source": "frontend/src/services/smsApi.ts",
-          "line": 118,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "messaging",
-      "targetOperation": "smsTemplates",
-      "targetModule": "SmsTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Default-off GraphQL reads page organization-scoped templates with deterministic updated-at/id ordering, escaped filters, integer counts, and retained response mapping.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/sms-templates",
-      "key": "POST /api/sms-templates",
-      "method": "POST",
-      "path": "/api/sms-templates",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/sms-templates.routes.js",
-          "line": 181
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/sms-templates",
-          "rawPath": "/api/sms-templates",
-          "source": "frontend/src/services/smsApi.ts",
-          "line": 140,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/sms-templates",
-          "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 75
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetOperation": "createSmsTemplate",
-      "targetModule": "SmsTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected GraphQL creation validates the 1600-character bound, extracts deterministic variables, and returns standards-aware encoding and segment information.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/sms-templates/:id",
-      "key": "DELETE /api/sms-templates/:*",
-      "method": "DELETE",
-      "path": "/api/sms-templates/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/sms-templates.routes.js",
-          "line": 298
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/sms-templates/:id",
-          "rawPath": "/api/sms-templates/${id}",
-          "source": "frontend/src/services/smsApi.ts",
-          "line": 162,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetOperation": "deleteSmsTemplate",
-      "targetModule": "SmsTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected GraphQL deletion conceals foreign templates while retaining nullable historical log references.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/sms-templates/:id",
-      "key": "GET /api/sms-templates/:*",
-      "method": "GET",
-      "path": "/api/sms-templates/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/sms-templates.routes.js",
-          "line": 152
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/sms-templates/:id",
-          "rawPath": "/api/sms-templates/${id}",
-          "source": "frontend/src/services/smsApi.ts",
-          "line": 129,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/sms-templates/:id",
-          "source": "backend-v2/test/integration/sms-templates.integration-spec.ts",
-          "line": 71
-        },
-        {
-          "method": "GET",
-          "path": "/api/sms-templates/:id",
-          "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 84
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "messaging",
-      "targetOperation": "smsTemplate",
-      "targetModule": "SmsTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Default-off GraphQL detail returns an organization-owned SMS template without cross-tenant existence leakage.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/sms-templates/:id",
-      "key": "PUT /api/sms-templates/:*",
-      "method": "PUT",
-      "path": "/api/sms-templates/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/sms-templates.routes.js",
-          "line": 230
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/sms-templates/:id",
-          "rawPath": "/api/sms-templates/${id}",
-          "source": "frontend/src/services/smsApi.ts",
-          "line": 151,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetOperation": "updateSmsTemplate",
-      "targetModule": "SmsTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected GraphQL partial updates lock the tenant row, prevent lost concurrent changes, and recompute variables plus message information.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/sms-templates/:id/duplicate",
-      "key": "POST /api/sms-templates/:*/duplicate",
-      "method": "POST",
-      "path": "/api/sms-templates/:id/duplicate",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/sms-templates.routes.js",
-          "line": 330
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/sms-templates/:id/duplicate",
-          "rawPath": "/api/sms-templates/${id}/duplicate",
-          "source": "frontend/src/services/smsApi.ts",
-          "line": 188,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetOperation": "duplicateSmsTemplate",
-      "targetModule": "SmsTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected GraphQL duplication bounds the copy suffix, conceals foreign rows, and creates the copy inactive.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/sms-templates/categories/list",
-      "key": "GET /api/sms-templates/categories/list",
-      "method": "GET",
-      "path": "/api/sms-templates/categories/list",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/sms-templates.routes.js",
-          "line": 128
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/sms-templates/categories/list",
-          "rawPath": "/api/sms-templates/categories/list",
-          "source": "frontend/src/services/smsApi.ts",
-          "line": 219,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "messaging",
-      "targetOperation": "smsTemplateCategories",
-      "targetModule": "SmsTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Default-off GraphQL category aggregates preserve category case, deterministic ordering, tenant scope, and safe integer counts.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/sms-templates/message-info",
-      "key": "POST /api/sms-templates/message-info",
-      "method": "POST",
-      "path": "/api/sms-templates/message-info",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/sms-templates.routes.js",
-          "line": 383
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/sms-templates/message-info",
-          "rawPath": "/api/sms-templates/message-info",
-          "source": "frontend/src/services/smsApi.ts",
-          "line": 210,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "messaging",
-      "targetOperation": "smsMessageInfo",
-      "targetModule": "SmsTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Default-off authenticated GraphQL calculation counts GSM-7 extension characters as two septets and Unicode as UTF-16 units across single and concatenated segment boundaries.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
       "id": "POST /api/sms-templates/webhook/inbound",
       "key": "POST /api/sms-templates/webhook/inbound",
       "method": "POST",
       "path": "/api/sms-templates/webhook/inbound",
       "routeSources": [
         {
-          "source": "backend/src/routes/sms-templates.routes.js",
-          "line": 481
+          "source": "backend/src/routes/sms-webhooks.routes.js",
+          "line": 121
         }
       ],
       "consumerCallsites": [],
@@ -9383,8 +9091,8 @@
       "path": "/api/sms-templates/webhook/status",
       "routeSources": [
         {
-          "source": "backend/src/routes/sms-templates.routes.js",
-          "line": 399
+          "source": "backend/src/routes/sms-webhooks.routes.js",
+          "line": 51
         }
       ],
       "consumerCallsites": [],
@@ -11260,6 +10968,7 @@
     "DELETE /api/organizations/:organizationId",
     "DELETE /api/organizations/:organizationId/members/:memberId",
     "DELETE /api/segments/:id",
+    "DELETE /api/sms-templates/:id",
     "DELETE /api/vaults/:vaultId",
     "DELETE /api/vaults/:vaultId/items/:itemId",
     "DELETE /api/vaults/:vaultId/share",
@@ -11295,6 +11004,9 @@
     "GET /api/segments/:id",
     "GET /api/segments/:id/contacts",
     "GET /api/segments/filter-options",
+    "GET /api/sms-templates",
+    "GET /api/sms-templates/:id",
+    "GET /api/sms-templates/categories/list",
     "GET /api/vaults",
     "GET /api/vaults/:vaultId",
     "GET /api/whiteboards",
@@ -11330,7 +11042,10 @@
     "POST /api/segments",
     "POST /api/segments/:id/calculate",
     "POST /api/segments/preview",
+    "POST /api/sms-templates",
+    "POST /api/sms-templates/:id/duplicate",
     "POST /api/sms-templates/:id/send-test",
+    "POST /api/sms-templates/message-info",
     "POST /api/sms-templates/send-to-contact",
     "POST /api/vaults",
     "POST /api/vaults/:vaultId/items",
@@ -11352,6 +11067,7 @@
     "PUT /api/organizations/:organizationId",
     "PUT /api/organizations/:organizationId/members/:memberId",
     "PUT /api/segments/:id",
+    "PUT /api/sms-templates/:id",
     "PUT /api/vaults/:vaultId",
     "PUT /api/vaults/:vaultId/items/:itemId",
     "PUT /api/vaults/:vaultId/items/reorder",

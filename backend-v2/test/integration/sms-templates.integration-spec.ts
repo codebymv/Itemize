@@ -1,8 +1,6 @@
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
-import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -10,7 +8,7 @@ import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
 
 describe('SMS templates GraphQL PostgreSQL contract', () => {
-  let app: NestExpressApplication; let legacyApp: Express; let pool: Pool;
+  let app: NestExpressApplication; let pool: Pool;
   let memberId: number; let outsiderId: number; let organizationId: number; let outsiderOrganizationId: number;
   let memberToken: string; let outsiderToken: string;
   const jwt = new JwtService();
@@ -39,10 +37,6 @@ describe('SMS templates GraphQL PostgreSQL contract', () => {
     outsiderToken = await jwt.signAsync({ id: outsiderId }, { secret: process.env.JWT_SECRET, expiresIn: '15m' });
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).overrideProvider(PG_POOL).useValue(pool).compile();
     app = moduleRef.createNestApplication<NestExpressApplication>({ bodyParser: false, logger: false }); configureApp(app); await app.init();
-    const createRouter = require('../../../backend/src/routes/sms-templates.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    legacyApp = express(); legacyApp.use(cookieParser()); legacyApp.use(express.json());
-    legacyApp.use('/api/sms-templates', createRouter(pool, authenticateJWT, (_req: unknown, _res: unknown, next: () => void) => next()));
   });
 
   afterAll(async () => {
@@ -61,15 +55,20 @@ describe('SMS templates GraphQL PostgreSQL contract', () => {
   const fields = `id organizationId name message variables category isActive createdById createdByName
     messageInfo { length segments encoding charsRemaining } createdAt updatedAt`;
 
-  it('creates, lists, aggregates, calculates segments, and interoperates with REST', async () => {
+  it('creates, lists, aggregates, and calculates message segments', async () => {
     const created = await graphql(memberToken, organizationId,
       `mutation Create($input: CreateSmsTemplateInput!) { createSmsTemplate(input: $input) { ${fields} } }`,
       { input: { name: ' Reminder ', message: 'Hi {{first_name}} {}', category: 'Reminders' } }).expect(200);
     expect(created.body.errors).toBeUndefined();
     expect(created.body.data.createSmsTemplate).toMatchObject({ name: 'Reminder', variables: ['first_name'], category: 'Reminders', isActive: true });
     const id = Number(created.body.data.createSmsTemplate.id);
-    const retained = await request(legacyApp).get(`/api/sms-templates/${id}`).set('Cookie', `itemize_auth=${memberToken}`).set('x-organization-id', String(organizationId)).expect(200);
-    expect(retained.body).toMatchObject({ id, organization_id: organizationId, message: 'Hi {{first_name}} {}' });
+    const detail = await graphql(memberToken, organizationId,
+      `query Detail($id: Int!) { smsTemplate(id: $id) { ${fields} } }`,
+      { id }, false).expect(200);
+    expect(detail.body.errors).toBeUndefined();
+    expect(detail.body.data.smsTemplate).toMatchObject({
+      id, organizationId, message: 'Hi {{first_name}} {}',
+    });
     const listed = await graphql(memberToken, organizationId,
       `query List($filter: SmsTemplateFilterInput, $page: PageInput) { smsTemplates(filter: $filter, page: $page) {
         nodes { ${fields} } pageInfo { total hasNextPage } } smsTemplateCategories { category count }
