@@ -36,9 +36,6 @@ import {
   isBookingGraphqlMutationsEnabled,
   isBookingGraphqlReadsEnabled,
   isBookingSchedulingGraphqlMutationsEnabled,
-  isCalendarGraphqlAvailabilityMutationsEnabled,
-  isCalendarGraphqlMutationsEnabled,
-  isCalendarGraphqlReadsEnabled,
 } from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
@@ -55,9 +52,6 @@ vi.mock('./graphqlClient', () => ({
   isBookingGraphqlMutationsEnabled: vi.fn(),
   isBookingGraphqlReadsEnabled: vi.fn(),
   isBookingSchedulingGraphqlMutationsEnabled: vi.fn(),
-  isCalendarGraphqlReadsEnabled: vi.fn(),
-  isCalendarGraphqlMutationsEnabled: vi.fn(),
-  isCalendarGraphqlAvailabilityMutationsEnabled: vi.fn(),
 }));
 
 vi.mock('./bookingsGraphql', () => ({
@@ -118,34 +112,12 @@ const booking = {
 describe('calendar API transport selection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(isCalendarGraphqlReadsEnabled).mockReturnValue(false);
-    vi.mocked(isCalendarGraphqlMutationsEnabled).mockReturnValue(false);
-    vi.mocked(isCalendarGraphqlAvailabilityMutationsEnabled).mockReturnValue(false);
     vi.mocked(isBookingGraphqlMutationsEnabled).mockReturnValue(false);
     vi.mocked(isBookingGraphqlReadsEnabled).mockReturnValue(false);
     vi.mocked(isBookingSchedulingGraphqlMutationsEnabled).mockReturnValue(false);
   });
 
-  it('keeps list and detail reads on REST by default', async () => {
-    vi.mocked(api.get)
-      .mockResolvedValueOnce({ data: { calendars: [calendar] } })
-      .mockResolvedValueOnce({ data: calendar });
-
-    await getCalendars(3);
-    await getCalendar(4, 3);
-
-    expect(api.get).toHaveBeenNthCalledWith(1, '/api/calendars', {
-      headers: { 'x-organization-id': '3' },
-    });
-    expect(api.get).toHaveBeenNthCalledWith(2, '/api/calendars/4', {
-      headers: { 'x-organization-id': '3' },
-    });
-    expect(getCalendarsViaGraphql).not.toHaveBeenCalled();
-    expect(getCalendarViaGraphql).not.toHaveBeenCalled();
-  });
-
-  it('routes both reads through GraphQL only when enabled', async () => {
-    vi.mocked(isCalendarGraphqlReadsEnabled).mockReturnValue(true);
+  it('routes list and detail reads through GraphQL', async () => {
     vi.mocked(getCalendarsViaGraphql).mockResolvedValue({
       calendars: [calendar],
     });
@@ -159,56 +131,25 @@ describe('calendar API transport selection', () => {
     expect(api.get).not.toHaveBeenCalled();
   });
 
-  it('keeps create and update on REST by default', async () => {
-    vi.mocked(api.post).mockResolvedValueOnce({ data: calendar });
-    vi.mocked(api.put).mockResolvedValueOnce({ data: calendar });
-
-    await createCalendar({ name: 'Consultation', organization_id: 3 });
-    await updateCalendar(4, { description: null }, 3);
-
-    expect(api.post).toHaveBeenCalledWith(
-      '/api/calendars',
-      { name: 'Consultation', organization_id: 3 },
-      { headers: { 'x-organization-id': '3' } },
-    );
-    expect(api.put).toHaveBeenCalledWith(
-      '/api/calendars/4',
-      { description: null },
-      { headers: { 'x-organization-id': '3' } },
-    );
-    expect(createCalendarViaGraphql).not.toHaveBeenCalled();
-    expect(updateCalendarViaGraphql).not.toHaveBeenCalled();
-  });
-
-  it('routes definition writes through GraphQL while availability remains REST', async () => {
-    vi.mocked(isCalendarGraphqlMutationsEnabled).mockReturnValue(true);
+  it('routes definition writes through GraphQL', async () => {
     vi.mocked(createCalendarViaGraphql).mockResolvedValue(calendar);
     vi.mocked(updateCalendarViaGraphql).mockResolvedValue(calendar);
-    vi.mocked(api.put).mockResolvedValueOnce({
-      data: { availability_windows: [] },
-    });
 
     const createInput = { name: 'Consultation', organization_id: 3 };
     const updateInput = { name: 'Renamed' };
     await createCalendar(createInput);
     await updateCalendar(4, updateInput, 3);
-    await updateCalendarAvailability(4, [], 3);
     await deleteCalendar(4, 3);
 
     expect(createCalendarViaGraphql).toHaveBeenCalledWith(createInput);
     expect(updateCalendarViaGraphql).toHaveBeenCalledWith(4, updateInput, 3);
     expect(deleteCalendarViaGraphql).toHaveBeenCalledWith(4, 3);
-    expect(api.put).toHaveBeenCalledWith(
-      '/api/calendars/4/availability',
-      { availability_windows: [] },
-      { headers: { 'x-organization-id': '3' } },
-    );
+    expect(api.put).not.toHaveBeenCalled();
     expect(api.delete).not.toHaveBeenCalled();
     expect(api.post).not.toHaveBeenCalled();
   });
 
-  it('routes availability and override writes through their independent GraphQL flag', async () => {
-    vi.mocked(isCalendarGraphqlAvailabilityMutationsEnabled).mockReturnValue(true);
+  it('routes availability and override writes through GraphQL', async () => {
     vi.mocked(replaceCalendarAvailabilityViaGraphql).mockResolvedValue({
       availability_windows: [],
     });
@@ -247,10 +188,8 @@ describe('calendar API transport selection', () => {
     );
     expect(api.put).not.toHaveBeenCalled();
     expect(api.post).not.toHaveBeenCalled();
-    expect(api.delete).toHaveBeenCalledTimes(1);
-    expect(api.delete).toHaveBeenCalledWith('/api/calendars/4', {
-      headers: { 'x-organization-id': '3' },
-    });
+    expect(deleteCalendarViaGraphql).toHaveBeenCalledWith(4, 3);
+    expect(api.delete).not.toHaveBeenCalled();
   });
 
   it('keeps authenticated booking reads on REST by default', async () => {

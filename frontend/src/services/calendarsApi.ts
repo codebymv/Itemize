@@ -15,9 +15,6 @@ import {
     updateCalendarViaGraphql,
 } from './calendarsGraphql';
 import {
-    isCalendarGraphqlAvailabilityMutationsEnabled,
-    isCalendarGraphqlMutationsEnabled,
-    isCalendarGraphqlReadsEnabled,
     isBookingGraphqlMutationsEnabled,
     isBookingGraphqlReadsEnabled,
     isBookingSchedulingGraphqlMutationsEnabled,
@@ -72,33 +69,15 @@ export interface CalendarCreateData {
 }
 
 export const getCalendars = async (organizationId?: number): Promise<CalendarsResponse> => {
-    if (isCalendarGraphqlReadsEnabled()) {
-        return getCalendarsViaGraphql(organizationId);
-    }
-    const response = await api.get('/api/calendars', {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
-    });
-    return unwrapResponse<CalendarsResponse>(response.data);
+    return getCalendarsViaGraphql(organizationId);
 };
 
 export const getCalendar = async (id: number, organizationId?: number): Promise<Calendar> => {
-    if (isCalendarGraphqlReadsEnabled()) {
-        return getCalendarViaGraphql(id, organizationId);
-    }
-    const response = await api.get(`/api/calendars/${id}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
-    });
-    return unwrapResponse<Calendar>(response.data);
+    return getCalendarViaGraphql(id, organizationId);
 };
 
 export const createCalendar = async (data: CalendarCreateData): Promise<Calendar> => {
-    if (isCalendarGraphqlMutationsEnabled()) {
-        return createCalendarViaGraphql(data);
-    }
-    const response = await api.post('/api/calendars', data, {
-        headers: data.organization_id ? { 'x-organization-id': data.organization_id.toString() } : {},
-    });
-    return unwrapResponse<Calendar>(response.data);
+    return createCalendarViaGraphql(data);
 };
 
 export const updateCalendar = async (
@@ -106,22 +85,11 @@ export const updateCalendar = async (
     data: Partial<CalendarCreateData>,
     organizationId?: number
 ): Promise<Calendar> => {
-    if (isCalendarGraphqlMutationsEnabled()) {
-        return updateCalendarViaGraphql(id, data, organizationId);
-    }
-    const response = await api.put(`/api/calendars/${id}`, data, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
-    });
-    return unwrapResponse<Calendar>(response.data);
+    return updateCalendarViaGraphql(id, data, organizationId);
 };
 
 export const deleteCalendar = async (id: number, organizationId?: number): Promise<void> => {
-    if (isCalendarGraphqlMutationsEnabled()) {
-        return deleteCalendarViaGraphql(id, organizationId);
-    }
-    await api.delete(`/api/calendars/${id}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
-    });
+    return deleteCalendarViaGraphql(id, organizationId);
 };
 
 export const updateCalendarAvailability = async (
@@ -129,17 +97,7 @@ export const updateCalendarAvailability = async (
     availability_windows: AvailabilityWindow[],
     organizationId?: number
 ): Promise<{ availability_windows: AvailabilityWindow[] }> => {
-    if (isCalendarGraphqlAvailabilityMutationsEnabled()) {
-        return replaceCalendarAvailabilityViaGraphql(id, availability_windows, organizationId);
-    }
-    const response = await api.put(
-        `/api/calendars/${id}/availability`,
-        { availability_windows },
-        {
-            headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
-        }
-    );
-    return unwrapResponse<{ availability_windows: AvailabilityWindow[] }>(response.data);
+    return replaceCalendarAvailabilityViaGraphql(id, availability_windows, organizationId);
 };
 
 export const addDateOverride = async (
@@ -153,13 +111,7 @@ export const addDateOverride = async (
     },
     organizationId?: number
 ): Promise<CalendarDateOverride> => {
-    if (isCalendarGraphqlAvailabilityMutationsEnabled()) {
-        return upsertCalendarDateOverrideViaGraphql(calendarId, data, organizationId);
-    }
-    const response = await api.post(`/api/calendars/${calendarId}/date-override`, data, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
-    });
-    return unwrapResponse<CalendarDateOverride>(response.data);
+    return upsertCalendarDateOverrideViaGraphql(calendarId, data, organizationId);
 };
 
 export const removeDateOverride = async (
@@ -167,12 +119,7 @@ export const removeDateOverride = async (
     overrideId: number,
     organizationId?: number
 ): Promise<void> => {
-    if (isCalendarGraphqlAvailabilityMutationsEnabled()) {
-        return deleteCalendarDateOverrideViaGraphql(calendarId, overrideId, organizationId);
-    }
-    await api.delete(`/api/calendars/${calendarId}/date-override/${overrideId}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
-    });
+    return deleteCalendarDateOverrideViaGraphql(calendarId, overrideId, organizationId);
 };
 
 // ======================

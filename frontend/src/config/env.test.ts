@@ -8,9 +8,6 @@ describe('Environment Validation', () => {
     expect(env.VITE_AUTH_SESSION_GRAPHQL).toBe('false');
     expect(env.VITE_AUTH_IDENTITY_GRAPHQL).toBe('false');
     expect(env.VITE_AUTH_RECOVERY_GRAPHQL).toBe('false');
-    expect(env.VITE_CALENDAR_READS_GRAPHQL).toBe('false');
-    expect(env.VITE_CALENDAR_MUTATIONS_GRAPHQL).toBe('false');
-    expect(env.VITE_CALENDAR_AVAILABILITY_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_CALENDAR_INTEGRATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_BOOKING_READS_GRAPHQL).toBe('false');
     expect(env.VITE_BOOKING_MUTATIONS_GRAPHQL).toBe('false');

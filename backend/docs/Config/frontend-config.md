@@ -217,13 +217,6 @@ VITE_FORM_SUBMISSIONS_GRAPHQL=false
 VITE_ORGANIZATION_READS_GRAPHQL=false
 VITE_ORGANIZATION_MUTATIONS_GRAPHQL=false
 
-# Authenticated calendar list/detail reads, definition create/update/delete
-# writes, and availability/date-override writes have three independent
-# default-off rollback boundaries. Anonymous booking protocols remain on REST.
-VITE_CALENDAR_READS_GRAPHQL=false
-VITE_CALENDAR_MUTATIONS_GRAPHQL=false
-VITE_CALENDAR_AVAILABILITY_MUTATIONS_GRAPHQL=false
-
 # Authenticated booking reads, cancellation, and create/reschedule have three
 # independent default-off boundaries. Anonymous protocols remain on REST.
 VITE_BOOKING_READS_GRAPHQL=false

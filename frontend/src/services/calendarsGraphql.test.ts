@@ -9,11 +9,6 @@ import {
   upsertCalendarDateOverrideViaGraphql,
   updateCalendarViaGraphql,
 } from './calendarsGraphql';
-import {
-  isCalendarGraphqlAvailabilityMutationsEnabled,
-  isCalendarGraphqlMutationsEnabled,
-  isCalendarGraphqlReadsEnabled,
-} from './graphqlClient';
 import { fetchCsrfToken } from '@/lib/api';
 
 vi.mock('@/lib/api', () => ({
@@ -66,21 +61,6 @@ describe('calendar GraphQL consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('keeps calendar reads on REST by default', () => {
-    vi.stubEnv('VITE_CALENDAR_READS_GRAPHQL', 'false');
-    expect(isCalendarGraphqlReadsEnabled()).toBe(false);
-    vi.stubEnv('VITE_CALENDAR_READS_GRAPHQL', 'true');
-    expect(isCalendarGraphqlReadsEnabled()).toBe(true);
-    vi.stubEnv('VITE_CALENDAR_MUTATIONS_GRAPHQL', 'false');
-    expect(isCalendarGraphqlMutationsEnabled()).toBe(false);
-    vi.stubEnv('VITE_CALENDAR_MUTATIONS_GRAPHQL', 'true');
-    expect(isCalendarGraphqlMutationsEnabled()).toBe(true);
-    vi.stubEnv('VITE_CALENDAR_AVAILABILITY_MUTATIONS_GRAPHQL', 'false');
-    expect(isCalendarGraphqlAvailabilityMutationsEnabled()).toBe(false);
-    vi.stubEnv('VITE_CALENDAR_AVAILABILITY_MUTATIONS_GRAPHQL', 'true');
-    expect(isCalendarGraphqlAvailabilityMutationsEnabled()).toBe(true);
   });
 
   it('maps list fields into the retained REST response shape', async () => {

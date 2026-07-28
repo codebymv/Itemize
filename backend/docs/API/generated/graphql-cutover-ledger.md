@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 228
-- API operations under `/api`: 221
+- Registered method/path operations: 220
+- API operations under `/api`: 213
 - Non-API registered operations: 7
-- Static frontend callsites: 170
-- Operations with frontend consumers: 163
-- Operations referenced by backend tests: 127
-- Recommended GraphQL queries: 47
-- Recommended GraphQL mutations: 119
+- Static frontend callsites: 162
+- Operations with frontend consumers: 155
+- Operations referenced by backend tests: 119
+- Recommended GraphQL queries: 45
+- Recommended GraphQL mutations: 113
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 176
+- High-risk operations: 171
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -60,14 +60,6 @@
 | GET | `/api/calendar-integrations/google/callback` | 0 | 3 | retain-http | high | scheduling-integrations / CalendarOAuthModule / googleCalendarCallback |
 | GET | `/api/calendar-integrations/sync-status/:connectionId` | 1 | 0 | graphql-query | high | scheduling-integrations / CalendarIntegrationsModule / calendarSyncStatus |
 | POST | `/api/calendar-integrations/sync/:connectionId` | 1 | 1 | graphql-mutation | high | scheduling-integrations / CalendarIntegrationsModule / requestCalendarSync |
-| GET | `/api/calendars` | 1 | 4 | graphql-query | medium | scheduling / CalendarsModule / calendars |
-| POST | `/api/calendars` | 1 | 10 | graphql-mutation | high | scheduling / CalendarsModule / createCalendar |
-| DELETE | `/api/calendars/:id` | 1 | 3 | graphql-mutation | high | scheduling / CalendarsModule / deleteCalendar |
-| GET | `/api/calendars/:id` | 1 | 7 | graphql-query | medium | scheduling / CalendarsModule / calendar |
-| PUT | `/api/calendars/:id` | 1 | 2 | graphql-mutation | high | scheduling / CalendarsModule / updateCalendar |
-| PUT | `/api/calendars/:id/availability` | 1 | 4 | graphql-mutation | high | scheduling / CalendarsModule / replaceCalendarAvailability |
-| POST | `/api/calendars/:id/date-override` | 1 | 4 | graphql-mutation | high | scheduling / CalendarsModule / upsertCalendarDateOverride |
-| DELETE | `/api/calendars/:id/date-override/:overrideId` | 1 | 2 | graphql-mutation | medium | scheduling / CalendarsModule / deleteCalendarDateOverride |
 | GET | `/api/campaigns` | 1 | 6 | graphql-query | medium | growth / CampaignsModule / campaigns |
 | POST | `/api/campaigns` | 1 | 10 | graphql-mutation | medium | growth / CampaignsModule / createCampaign |
 | DELETE | `/api/campaigns/:id` | 1 | 4 | graphql-mutation | medium | growth / CampaignsModule / deleteCampaign |
@@ -265,7 +257,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 50
-- Orphaned manual overrides: 122
+- Orphaned manual overrides: 130
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

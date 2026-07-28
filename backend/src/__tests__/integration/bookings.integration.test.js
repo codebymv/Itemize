@@ -38,15 +38,35 @@ function createApp(pool) {
     return app;
 }
 
-/** Create a calendar and return its id */
+async function insertCalendar(pool, user, name, durationMinutes = 30) {
+    const suffix = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+    const result = await pool.query(
+        `INSERT INTO calendars (
+           organization_id, name, slug, timezone, duration_minutes,
+           assigned_to, created_by, is_active
+         ) VALUES ($1, $2, $3, 'UTC', $4, $5, $5, TRUE)
+         RETURNING id, slug, public_id`,
+        [
+            user.org.id,
+            name,
+            `booking-test-${suffix}`,
+            durationMinutes,
+            user.user.id,
+        ]
+    );
+    return result.rows[0];
+}
+
+/** Seed a booking test calendar without depending on the retired calendar REST surface. */
 async function seedCalendar(app, user) {
-    const res = await request(app)
-        .post('/api/calendars')
-        .set('Cookie', [`itemize_auth=${user.token}`])
-        .set('x-organization-id', String(user.org.id))
-        .send({ name: `Booking Test Calendar ${Date.now()}`, duration_minutes: 60 });
-    await configureCalendarPolicy(app.locals.testPool, res.body.id);
-    return res.body.id;
+    const calendar = await insertCalendar(
+        app.locals.testPool,
+        user,
+        `Booking Test Calendar ${Date.now()}`,
+        60
+    );
+    await configureCalendarPolicy(app.locals.testPool, calendar.id);
+    return calendar.id;
 }
 
 async function configureCalendarPolicy(pool, calendarId, settings = {}) {
@@ -430,14 +450,14 @@ describe('Bookings Integration Tests', () => {
         let calendarId;
 
         beforeAll(async () => {
-            const res = await request(app)
-                .post('/api/calendars')
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id))
-                .send({ name: 'Public Booking Cal', is_active: true });
-            calendarId = res.body.id;
-            calendarSlug = res.body.slug;
-            calendarPublicId = res.body.public_id;
+            const calendar = await insertCalendar(
+                dbHelper.pool,
+                userA,
+                'Public Booking Cal'
+            );
+            calendarId = calendar.id;
+            calendarSlug = calendar.slug;
+            calendarPublicId = calendar.public_id;
 
             // Activate it (it defaults to true already, but ensure it)
             await dbHelper.pool.query(
@@ -559,14 +579,15 @@ describe('Bookings Integration Tests', () => {
         let calendarPublicId;
 
         beforeAll(async () => {
-            const calendar = await request(app)
-                .post('/api/calendars')
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id))
-                .send({ name: `Booking Invariants ${Date.now()}`, duration_minutes: 60 });
-            calendarId = calendar.body.id;
-            calendarSlug = calendar.body.slug;
-            calendarPublicId = calendar.body.public_id;
+            const calendar = await insertCalendar(
+                dbHelper.pool,
+                userA,
+                `Booking Invariants ${Date.now()}`,
+                60
+            );
+            calendarId = calendar.id;
+            calendarSlug = calendar.slug;
+            calendarPublicId = calendar.public_id;
             await configureCalendarPolicy(dbHelper.pool, calendarId);
         });
 
@@ -762,17 +783,15 @@ describe('Bookings Integration Tests', () => {
         const overrideDate = '2027-03-10';
 
         beforeAll(async () => {
-            const calendar = await request(app)
-                .post('/api/calendars')
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id))
-                .send({
-                    name: `Availability Policy ${Date.now()}`,
-                    duration_minutes: 30,
-                });
-            calendarId = calendar.body.id;
-            calendarSlug = calendar.body.slug;
-            calendarPublicId = calendar.body.public_id;
+            const calendar = await insertCalendar(
+                dbHelper.pool,
+                userA,
+                `Availability Policy ${Date.now()}`,
+                30
+            );
+            calendarId = calendar.id;
+            calendarSlug = calendar.slug;
+            calendarPublicId = calendar.public_id;
             await configureCalendarPolicy(dbHelper.pool, calendarId, {
                 maxFutureDays: 1000,
                 timezone: 'UTC',

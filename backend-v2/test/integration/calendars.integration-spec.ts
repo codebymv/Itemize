@@ -142,16 +142,11 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
     configureApp(app);
     await app.init();
 
-    const createCalendarsRouter = require('../../../backend/src/routes/calendars.routes');
     const createBookingsRouter = require('../../../backend/src/routes/bookings.routes');
     const { authenticateJWT } = require('../../../backend/src/auth/middleware');
     legacyApp = express();
     legacyApp.use(cookieParser());
     legacyApp.use(express.json());
-    legacyApp.use(
-      '/api/calendars',
-      createCalendarsRouter(pool, authenticateJWT),
-    );
     legacyApp.use(
       '/api/bookings',
       createBookingsRouter(
@@ -215,17 +210,11 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
     updatedAt
   `;
 
-  it('lists only the selected organization and preserves the REST projection', async () => {
+  it('lists only the selected organization', async () => {
     const graphql = await query(
       organizationId,
       `{ calendars { ${calendarFields} } }`,
     ).expect(200);
-    const legacy = await request(legacyApp)
-      .get('/api/calendars')
-      .set('Cookie', `itemize_auth=${token}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
-
     expect(graphql.body.errors).toBeUndefined();
     expect(graphql.body.data.calendars).toHaveLength(1);
     expect(graphql.body.data.calendars[0]).toMatchObject({
@@ -236,9 +225,6 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
       assignedToName: 'Calendar Member',
       upcomingBookings: 1,
     });
-    expect(legacy.body.calendars).toHaveLength(1);
-    expect(Number(legacy.body.calendars[0].id)).toBe(calendarId);
-    expect(Number(legacy.body.calendars[0].upcoming_bookings)).toBe(1);
   });
 
   it('returns ordered availability and only current/future overrides', async () => {
@@ -311,7 +297,7 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
     ]);
   });
 
-  it('creates a validated calendar with custom availability and preserves REST projection', async () => {
+  it('creates a validated calendar with custom availability', async () => {
     const response = await mutation(
       organizationId,
       `mutation CreateCalendar($input: CreateCalendarInput!) {
@@ -382,20 +368,6 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
         },
       ],
     });
-    const createdId = response.body.data.createCalendar.id;
-    const legacy = await request(legacyApp)
-      .get(`/api/calendars/${createdId}`)
-      .set('Cookie', `itemize_auth=${token}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
-    expect(legacy.body).toMatchObject({
-      id: createdId,
-      name: 'Discovery call',
-      description: 'New lead review',
-      assigned_to: userId,
-      color: '#AABBCC',
-    });
-    expect(legacy.body.availability_windows).toHaveLength(2);
   });
 
   it('updates only supplied fields, clears nullable values, and validates the final assignment', async () => {
@@ -427,21 +399,6 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
       reminderHours: 12,
     });
 
-    const legacy = await request(legacyApp)
-      .get(`/api/calendars/${calendarId}`)
-      .set('Cookie', `itemize_auth=${token}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
-    expect(legacy.body).toMatchObject({
-      id: calendarId,
-      name: 'Primary consultation',
-      description: null,
-      timezone: 'America/Phoenix',
-      assigned_to: null,
-      assignment_mode: 'round_robin',
-      reminder_hours: 12,
-    });
-
     const invalid = await mutation(
       organizationId,
       `mutation UpdateCalendar($id: Int!, $input: UpdateCalendarInput!) {
@@ -455,7 +412,7 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
     });
   });
 
-  it('atomically replaces availability and interoperates with retained REST', async () => {
+  it('atomically replaces availability and exposes the authoritative result', async () => {
     const replaced = await mutation(
       organizationId,
       `mutation ReplaceCalendarAvailability(
@@ -508,39 +465,6 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
       },
     ]);
 
-    const legacyRead = await request(legacyApp)
-      .get(`/api/calendars/${calendarId}`)
-      .set('Cookie', `itemize_auth=${token}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
-    expect(legacyRead.body.availability_windows).toEqual([
-      expect.objectContaining({
-        day_of_week: 1,
-        start_time: '08:00:00',
-        is_active: false,
-      }),
-      expect.objectContaining({
-        day_of_week: 5,
-        start_time: '13:30:00',
-        is_active: true,
-      }),
-    ]);
-
-    await request(legacyApp)
-      .put(`/api/calendars/${calendarId}/availability`)
-      .set('Cookie', `itemize_auth=${token}`)
-      .set('x-organization-id', String(organizationId))
-      .send({
-        availability_windows: [
-          {
-            day_of_week: 2,
-            start_time: '10:00',
-            end_time: '16:00',
-            is_active: true,
-          },
-        ],
-      })
-      .expect(200);
     const graphqlRead = await query(
       organizationId,
       `query Calendar($id: Int!) {
@@ -552,9 +476,15 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
     ).expect(200);
     expect(graphqlRead.body.data.calendar.availabilityWindows).toEqual([
       {
-        dayOfWeek: 2,
-        startTime: '10:00:00',
-        endTime: '16:00:00',
+        dayOfWeek: 1,
+        startTime: '08:00:00',
+        endTime: '12:00:00',
+        isActive: false,
+      },
+      {
+        dayOfWeek: 5,
+        startTime: '13:30:00',
+        endTime: '17:00:00',
         isActive: true,
       },
     ]);
@@ -654,34 +584,6 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
     });
     const overrideId = upserted.body.data.upsertCalendarDateOverride.id;
 
-    const legacyRead = await request(legacyApp)
-      .get(`/api/calendars/${calendarId}`)
-      .set('Cookie', `itemize_auth=${token}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
-    const legacyOverride = legacyRead.body.date_overrides.find(
-      (override: { id: number }) => override.id === overrideId,
-    );
-    expect(legacyOverride).toMatchObject({
-      id: overrideId,
-      is_available: true,
-      start_time: '10:00:00',
-      end_time: '14:30:00',
-    });
-    expect(
-      new Date(legacyOverride.override_date).toISOString().slice(0, 10),
-    ).toBe('2099-02-02');
-
-    await request(legacyApp)
-      .post(`/api/calendars/${calendarId}/date-override`)
-      .set('Cookie', `itemize_auth=${token}`)
-      .set('x-organization-id', String(organizationId))
-      .send({
-        override_date: '2099-02-02',
-        is_available: false,
-        reason: 'Closed through REST',
-      })
-      .expect(200);
     const graphqlRead = await query(
       organizationId,
       `query Calendar($id: Int!) {
@@ -696,10 +598,10 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
     expect(graphqlRead.body.data.calendar.dateOverrides).toContainEqual({
       id: overrideId,
       overrideDate: '2099-02-02',
-      isAvailable: false,
-      startTime: null,
-      endTime: null,
-      reason: 'Closed through REST',
+      isAvailable: true,
+      startTime: '10:00:00',
+      endTime: '14:30:00',
+      reason: 'Extended hours',
     });
 
     const foreignDelete = await mutation(
@@ -775,16 +677,13 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
     ).expect(200);
     expect(deleted.body).toEqual({ data: { deleteCalendar: true } });
 
-    await request(legacyApp)
-      .get(`/api/calendars/${deletableId}`)
-      .set('Cookie', `itemize_auth=${token}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(404);
     const remaining = await pool.query(
-      'SELECT id FROM bookings WHERE calendar_id = $1',
+      `SELECT
+         (SELECT COUNT(*)::int FROM calendars WHERE id = $1) AS calendars,
+         (SELECT COUNT(*)::int FROM bookings WHERE calendar_id = $1) AS bookings`,
       [deletableId],
     );
-    expect(remaining.rows).toHaveLength(0);
+    expect(remaining.rows[0]).toEqual({ calendars: 0, bookings: 0 });
   });
 
   it('serializes retained booking creation against GraphQL calendar deletion', async () => {

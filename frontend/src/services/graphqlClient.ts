@@ -32,15 +32,6 @@ export class GraphqlRequestError extends Error {
   }
 }
 
-export const isCalendarGraphqlReadsEnabled = (): boolean =>
-  import.meta.env.VITE_CALENDAR_READS_GRAPHQL === 'true';
-
-export const isCalendarGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_CALENDAR_MUTATIONS_GRAPHQL === 'true';
-
-export const isCalendarGraphqlAvailabilityMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_CALENDAR_AVAILABILITY_MUTATIONS_GRAPHQL === 'true';
-
 export const isCalendarIntegrationsGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_CALENDAR_INTEGRATIONS_GRAPHQL === 'true';
 
