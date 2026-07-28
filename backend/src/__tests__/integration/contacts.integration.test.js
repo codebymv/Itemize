@@ -155,33 +155,13 @@ describe('Contacts Integration Tests', () => {
             expect(events.rows[0].payload.changed_fields).toContain('company');
         });
 
-        it('requires authentication for the aggregate contact profile', async () => {
+        it('keeps the retired aggregate profile REST route unavailable', async () => {
             const res = await request(app)
-                .get(`/api/contacts/${contactIdA}/profile`)
-                .set('organization_id', String(userA.org.id));
-
-            expect(res.status).toBe(401);
-        });
-
-        it('returns the aggregate profile only through the verified organization context', async () => {
-            const own = await request(app)
                 .get(`/api/contacts/${contactIdA}/profile`)
                 .set('Cookie', [`itemize_auth=${userA.token}`])
                 .set('x-organization-id', String(userA.org.id));
 
-            expect(own.status).toBe(200);
-            expect(own.body.contact).toEqual(expect.objectContaining({
-                id: String(contactIdA),
-                email: 'johndoe@example.com',
-            }));
-
-            const otherTenant = await request(app)
-                .get(`/api/contacts/${contactIdA}/profile`)
-                .set('Cookie', [`itemize_auth=${userB.token}`])
-                .set('x-organization-id', String(userB.org.id))
-                .set('organization_id', String(userA.org.id));
-
-            expect(otherTenant.status).toBe(404);
+            expect(res.status).toBe(404);
         });
 
         it('rejects individual and bulk assignment to a user outside the organization', async () => {

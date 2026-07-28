@@ -143,16 +143,11 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
     await graphqlApp.init();
 
     const createContactsRouter = require('../../../backend/src/routes/contacts.routes');
-    const createContactProfileRouter = require('../../../backend/src/routes/contact-profile.routes');
     const { authenticateJWT } = require('../../../backend/src/auth/middleware');
     const { errorHandler } = require('../../../backend/src/middleware/errorHandler');
     legacyApp = express();
     legacyApp.use(cookieParser());
     legacyApp.use(express.json());
-    legacyApp.use(
-      '/api/contacts',
-      createContactProfileRouter(pool, authenticateJWT),
-    );
     legacyApp.use('/api/contacts', createContactsRouter(pool, authenticateJWT));
     legacyApp.use(errorHandler);
   });
@@ -1008,11 +1003,6 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
       ),
     ]);
 
-    const legacy = await request(legacyApp)
-      .get(`/api/contacts/${contactId}/profile`)
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
     const target = await graphql(
       memberToken,
       organizationId,
@@ -1066,7 +1056,7 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
     const profile = target.body.data.contactProfile;
     expect(profile.contact).toEqual({
       id: contactId,
-      email: legacy.body.contact.email,
+      email: 'gamma@test.itemize',
     });
     for (const section of [
       'invoices',
@@ -1141,10 +1131,6 @@ describe('Contacts REST/GraphQL PostgreSQL parity', () => {
         }),
       ]),
     );
-
-    // The legacy aggregate masks these two stale child-query failures as empty.
-    expect(legacy.body.payments).toEqual([]);
-    expect(legacy.body.lists).toEqual([]);
 
     const privateResult = await graphql(
       outsiderToken,

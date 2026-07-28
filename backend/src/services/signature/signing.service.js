@@ -217,40 +217,6 @@ async function cancelDocument(pool, documentId, organizationId) {
     });
 }
 
-async function scheduleReminders(pool, documentId, organizationId, daysFromNow = 2) {
-    return withTransaction(pool, async (client) => {
-        const scheduledAt = new Date(Date.now() + daysFromNow * 24 * 60 * 60 * 1000);
-
-        const document = await client.query(`
-            SELECT id FROM signature_documents
-            WHERE id = $1 AND organization_id = $2
-              AND status IN ('sent', 'in_progress')
-            FOR UPDATE
-        `, [documentId, organizationId]);
-        if (document.rows.length === 0) return null;
-
-        const inserted = await client.query(`
-            INSERT INTO signature_reminders (document_id, recipient_id, scheduled_at, status)
-            SELECT document_id, id, $1, 'pending'
-            FROM signature_recipients
-            WHERE document_id = $2 AND organization_id = $3
-              AND status IN ('pending', 'sent', 'viewed')
-            RETURNING id
-        `, [scheduledAt, documentId, organizationId]);
-
-        if (inserted.rows.length === 0) {
-            throw new Error('No active recipients to remind');
-        }
-
-        await client.query(`
-            INSERT INTO signature_audit_log (document_id, event_type, description, created_at)
-            VALUES ($1, 'reminder_scheduled', 'Signature reminders scheduled', CURRENT_TIMESTAMP)
-        `, [documentId]);
-
-        return { scheduledAt, reminderCount: inserted.rows.length };
-    });
-}
-
 async function getDocumentForSigning(pool, token, audit = {}) {
     const tokenHash = hashToken(token);
     return withTransaction(pool, async (client) => {
@@ -720,7 +686,6 @@ module.exports = {
     sendForSignature,
     remindForSignature,
     cancelDocument,
-    scheduleReminders,
     getDocumentForSigning,
     submitSignature,
     declineSignature

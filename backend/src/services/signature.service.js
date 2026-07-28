@@ -9,7 +9,6 @@ const {
     sendForSignature,
     remindForSignature,
     cancelDocument,
-    scheduleReminders,
     getDocumentForSigning,
     submitSignature,
     declineSignature
@@ -50,7 +49,6 @@ module.exports = {
     sendForSignature,
     remindForSignature,
     cancelDocument,
-    scheduleReminders,
     getDocumentForSigning,
     submitSignature,
     declineSignature,

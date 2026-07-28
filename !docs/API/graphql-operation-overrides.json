@@ -928,24 +928,6 @@
       "risk": "medium",
       "notes": "Use the shared page contract, organization-scope through the workflow, and support explicit status filtering."
     },
-    "GET /api/workflows/:id/execution-summary": {
-      "disposition": "graphql-query",
-      "owner": "automation",
-      "targetModule": "WorkflowExecutionModule",
-      "targetOperation": "workflowExecutionSummary",
-      "parityStatus": "implemented",
-      "risk": "high",
-      "notes": "Return tenant-scoped enrollment and provider-outbox status/type counts, queue age, due/expired work, attempts, cancellations, dead letters, and operator retry totals without payloads, destinations, headers, or idempotency keys."
-    },
-    "GET /api/workflows/:id/side-effects": {
-      "disposition": "graphql-query",
-      "owner": "automation",
-      "targetModule": "WorkflowExecutionModule",
-      "targetOperation": "workflowSideEffects",
-      "parityStatus": "implemented",
-      "risk": "high",
-      "notes": "Strictly paginate and filter the tenant-owned provider queue. Expose safe status/timing/attempt/error fields and provider correlation IDs while omitting serialized payloads and delivery secrets."
-    },
     "DELETE /api/workflows/:id/enrollments/:enrollmentId": {
       "disposition": "graphql-mutation",
       "owner": "automation",
@@ -981,24 +963,6 @@
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
       "notes": "The active frontend always uses GraphQL without REST fallback. Retry accepts only a failed enrollment under an active tenant-owned workflow and preserves current_step so completed steps are not replayed."
-    },
-    "POST /api/workflows/:id/side-effects/:sideEffectId/retry": {
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetModule": "WorkflowExecutionModule",
-      "targetOperation": "retryWorkflowSideEffect",
-      "parityStatus": "implemented",
-      "risk": "high",
-      "notes": "Retry only a tenant/workflow-owned non-cancelled dead letter whose enrollment is not cancelled. Reset the delivery attempt cycle while retaining operator retry count and timestamp."
-    },
-    "POST /api/workflows/:id/side-effects/:sideEffectId/reconcile": {
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetModule": "WorkflowExecutionModule",
-      "targetOperation": "reconcileWorkflowSmsSideEffect",
-      "parityStatus": "implemented",
-      "risk": "high",
-      "notes": "Resolve only a tenant/workflow-owned SMS attempt in reconciliation_required. A valid Twilio message SID records provider acceptance and a correlated SMS log; resend is an explicit operator authorization that retains reconciliation and retry history."
     },
     "POST /api/webhooks/:workflowId": {
       "disposition": "retain-http",
@@ -1272,10 +1236,6 @@
       "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "deleteContact", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "Organization-scoped deletion with an explicit policy for dependent deals, submissions, activities, and content."
     },
-    "GET /api/contacts/:id/profile": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactProfilesModule", "targetOperation": "contactProfile", "parityStatus": "implemented", "risk": "high",
-      "notes": "Aggregate PII query requires verified authentication and organization context. GraphQL bounds and tenant-scopes all nine child collections, exposes total/truncation plus AVAILABLE/UNAVAILABLE section health, repairs the legacy payment-date and nonexistent list-junction queries, passed the authenticated staging operation/foreign-tenant gate, and has exhaustive nine-section failure isolation. The generated ledger and source regression prove there is no current frontend consumer; introducing one requires a browser/rollback gate."
-    },
     "GET /api/contacts/:id/activities": {
       "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "contactActivities", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "GraphQL returns a bounded page ordered by created time and ID descending, supports the full database activity enum as a filter, and scopes every row through an organization-owned parent contact."
@@ -1479,10 +1439,6 @@
     "POST /api/signatures/documents/:id/remind": {
       "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDeliveryModule", "targetOperation": "sendSignatureReminder", "parityStatus": "consumer-cutover-complete", "risk": "high",
       "notes": "The active frontend always uses GraphQL without REST fallback. Active unsigned recipients receive new hash-only capabilities and durable reminder intents; queued/retry work is superseded, processing work fails closed with a conflict, and signed/declined recipients remain terminal."
-    },
-    "POST /api/signatures/documents/:id/reminders": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDeliveryModule", "targetOperation": "scheduleSignatureReminders", "parityStatus": "implemented", "risk": "high",
-      "notes": "Implemented behind the default-off delivery flag. Organization-owned active documents accept a bounded 1-365 day delay, persist recipient-scoped schedules, and convert due reminders into idempotent leased delivery intents while skipping terminal documents and recipients."
     },
     "GET /api/signatures/documents/:id/audit": {
       "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "signatureAuditTrail", "parityStatus": "consumer-cutover-complete", "risk": "high",

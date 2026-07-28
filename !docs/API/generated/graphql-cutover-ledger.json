@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 319,
-    "apiOperationCount": 312,
+    "operationCount": 313,
+    "apiOperationCount": 306,
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 250,
     "operationsWithFrontendConsumers": 239,
-    "operationsWithBackendTests": 174,
+    "operationsWithBackendTests": 168,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 42,
+    "unmatchedBackendTestCallCount": 48,
     "retainHttpCount": 54,
-    "graphqlQueryCount": 83,
-    "graphqlMutationCount": 174,
-    "highRiskCount": 257,
+    "graphqlQueryCount": 80,
+    "graphqlMutationCount": 171,
+    "highRiskCount": 251,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -3050,7 +3050,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 56
+          "line": 55
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -3476,13 +3476,13 @@
           "method": "GET",
           "path": "/api/contacts",
           "source": "backend-v2/test/integration/contacts.integration-spec.ts",
-          "line": 205
+          "line": 200
         },
         {
           "method": "GET",
           "path": "/api/contacts",
           "source": "backend-v2/test/integration/contacts.integration-spec.ts",
-          "line": 243
+          "line": 238
         },
         {
           "method": "GET",
@@ -3535,31 +3535,31 @@
           "method": "POST",
           "path": "/api/contacts",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 294
+          "line": 274
         },
         {
           "method": "POST",
           "path": "/api/contacts",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 473
+          "line": 453
         },
         {
           "method": "POST",
           "path": "/api/contacts",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 610
+          "line": 590
         },
         {
           "method": "POST",
           "path": "/api/contacts",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 617
+          "line": 597
         },
         {
           "method": "POST",
           "path": "/api/contacts",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 636
+          "line": 616
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -3606,7 +3606,7 @@
           "method": "DELETE",
           "path": "/api/contacts/:contactIdA",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 256
+          "line": 236
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -3647,13 +3647,13 @@
           "method": "GET",
           "path": "/api/contacts/:contactId",
           "source": "backend-v2/test/integration/contacts.integration-spec.ts",
-          "line": 284
+          "line": 279
         },
         {
           "method": "GET",
           "path": "/api/contacts/:contactId",
           "source": "backend-v2/test/integration/contacts.integration-spec.ts",
-          "line": 321
+          "line": 316
         },
         {
           "method": "GET",
@@ -3718,7 +3718,7 @@
           "method": "PUT",
           "path": "/api/contacts/:contactIdA",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 189
+          "line": 169
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -3759,7 +3759,7 @@
           "method": "GET",
           "path": "/api/contacts/:contactId/activities",
           "source": "backend-v2/test/integration/contacts.integration-spec.ts",
-          "line": 798
+          "line": 793
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -3834,7 +3834,7 @@
           "method": "GET",
           "path": "/api/contacts/:contactId/content",
           "source": "backend-v2/test/integration/contacts.integration-spec.ts",
-          "line": 872
+          "line": 867
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -3845,55 +3845,6 @@
       "targetModule": "ContactProfilesModule",
       "parityStatus": "consumer-cutover-complete",
       "notes": "Related lists, notes, and whiteboards use a tenant-private parent lookup, stable newest-first ordering, a 100-row collection bound, and explicit total/truncation metadata; GraphQL and REST rollback passed staging.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/contacts/:id/profile",
-      "key": "GET /api/contacts/:*/profile",
-      "method": "GET",
-      "path": "/api/contacts/:id/profile",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/contact-profile.routes.js",
-          "line": 14
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/contacts/:contactId/profile",
-          "source": "backend-v2/test/integration/contacts.integration-spec.ts",
-          "line": 1012
-        },
-        {
-          "method": "GET",
-          "path": "/api/contacts/:contactIdA/profile",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 160
-        },
-        {
-          "method": "GET",
-          "path": "/api/contacts/:contactIdA/profile",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 168
-        },
-        {
-          "method": "GET",
-          "path": "/api/contacts/:contactIdA/profile",
-          "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 179
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "crm",
-      "targetOperation": "contactProfile",
-      "targetModule": "ContactProfilesModule",
-      "parityStatus": "implemented",
-      "notes": "Aggregate PII query requires verified authentication and organization context. GraphQL bounds and tenant-scopes all nine child collections, exposes total/truncation plus AVAILABLE/UNAVAILABLE section health, repairs the legacy payment-date and nonexistent list-junction queries, passed the authenticated staging operation/foreign-tenant gate, and has exhaustive nine-section failure isolation. The generated ledger and source regression prove there is no current frontend consumer; introducing one requires a browser/rollback gate.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -3958,13 +3909,13 @@
           "method": "POST",
           "path": "/api/contacts/bulk-update",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 197
+          "line": 177
         },
         {
           "method": "POST",
           "path": "/api/contacts/bulk-update",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 216
+          "line": 196
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -3986,7 +3937,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 216
+          "line": 215
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -4009,7 +3960,7 @@
           "method": "GET",
           "path": "/api/contacts/export/csv",
           "source": "backend-v2/test/integration/contacts.integration-spec.ts",
-          "line": 1207
+          "line": 1193
         },
         {
           "method": "GET",
@@ -4039,7 +3990,7 @@
           "method": "GET",
           "path": "/api/contacts/export/csv",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 444
+          "line": 424
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -4061,7 +4012,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 217
+          "line": 216
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -4084,7 +4035,7 @@
           "method": "POST",
           "path": "/api/contacts/import/csv",
           "source": "backend-v2/test/integration/contacts.integration-spec.ts",
-          "line": 1220
+          "line": 1206
         },
         {
           "method": "POST",
@@ -4108,13 +4059,13 @@
           "method": "POST",
           "path": "/api/contacts/import/csv",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 460
+          "line": 440
         },
         {
           "method": "POST",
           "path": "/api/contacts/import/csv",
           "source": "backend/src/__tests__/integration/contacts.integration.test.js",
-          "line": 520
+          "line": 500
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -5165,7 +5116,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 258
+          "line": 257
         },
         {
           "source": "backend/src/routes/invoices/actions.routes.js",
@@ -5653,7 +5604,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 250
+          "line": 249
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -6933,7 +6884,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 254
+          "line": 253
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -6971,7 +6922,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 246
+          "line": 245
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -7344,7 +7295,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 52
+          "line": 51
         }
       ],
       "consumerCallsites": [],
@@ -8879,11 +8830,11 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 312
+          "line": 311
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 582
+          "line": 566
         }
       ],
       "consumerCallsites": [
@@ -8966,11 +8917,11 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 332
+          "line": 331
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 609
+          "line": 593
         }
       ],
       "consumerCallsites": [
@@ -8995,13 +8946,13 @@
           "method": "POST",
           "path": "/api/public/sign/:signingToken",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 450
+          "line": 429
         },
         {
           "method": "POST",
           "path": "/api/public/sign/:signingToken",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 495
+          "line": 474
         },
         {
           "method": "POST",
@@ -9035,11 +8986,11 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 328
+          "line": 327
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 640
+          "line": 624
         }
       ],
       "consumerCallsites": [
@@ -9080,11 +9031,11 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 320
+          "line": 319
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 654
+          "line": 638
         }
       ],
       "consumerCallsites": [],
@@ -9108,11 +9059,11 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 316
+          "line": 315
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 676
+          "line": 660
         }
       ],
       "consumerCallsites": [],
@@ -9143,11 +9094,11 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 324
+          "line": 323
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 605
+          "line": 589
         }
       ],
       "consumerCallsites": [],
@@ -10898,13 +10849,19 @@
           "method": "PUT",
           "path": "/api/signatures/documents/:id",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 399
+          "line": 378
         },
         {
           "method": "PUT",
           "path": "/api/signatures/documents/:id",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 474
+          "line": 453
+        },
+        {
+          "method": "PUT",
+          "path": "/api/signatures/documents/:id",
+          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
+          "line": 499
         },
         {
           "method": "PUT",
@@ -10916,13 +10873,7 @@
           "method": "PUT",
           "path": "/api/signatures/documents/:id",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 541
-        },
-        {
-          "method": "PUT",
-          "path": "/api/signatures/documents/:id",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 553
+          "line": 532
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -10944,7 +10895,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 571
+          "line": 555
         }
       ],
       "consumerCallsites": [
@@ -11019,11 +10970,11 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 298
+          "line": 297
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 533
+          "line": 517
         }
       ],
       "consumerCallsites": [],
@@ -11090,11 +11041,11 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 294
+          "line": 293
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
-          "line": 554
+          "line": 538
         }
       ],
       "consumerCallsites": [],
@@ -11176,7 +11127,7 @@
           "method": "POST",
           "path": "/api/signatures/documents/:id/remind",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 423
+          "line": 402
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -11187,43 +11138,6 @@
       "targetModule": "SignatureDeliveryModule",
       "parityStatus": "consumer-cutover-complete",
       "notes": "The active frontend always uses GraphQL without REST fallback. Active unsigned recipients receive new hash-only capabilities and durable reminder intents; queued/retry work is superseded, processing work fails closed with a conflict, and signed/declined recipients remain terminal.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/signatures/documents/:id/reminders",
-      "key": "POST /api/signatures/documents/:*/reminders",
-      "method": "POST",
-      "path": "/api/signatures/documents/:id/reminders",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 517
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/signatures/documents/:id/reminders",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 375
-        },
-        {
-          "method": "POST",
-          "path": "/api/signatures/documents/:id/reminders",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 393
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "esignatures",
-      "targetOperation": "scheduleSignatureReminders",
-      "targetModule": "SignatureDeliveryModule",
-      "parityStatus": "implemented",
-      "notes": "Implemented behind the default-off delivery flag. Organization-owned active documents accept a bounded 1-365 day delay, persist recipient-scoped schedules, and convert due reminders into idempotent leased delivery intents while skipping terminal documents and recipients.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -11256,13 +11170,13 @@
           "method": "POST",
           "path": "/api/signatures/documents/:id/send",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 443
+          "line": 422
         },
         {
           "method": "POST",
           "path": "/api/signatures/documents/:id/send",
           "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 487
+          "line": 466
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -11284,7 +11198,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 280
+          "line": 279
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -11605,7 +11519,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 302
+          "line": 301
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -11674,7 +11588,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 287
+          "line": 286
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -12240,7 +12154,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 120
+          "line": 119
         }
       ],
       "consumerCallsites": [
@@ -12274,7 +12188,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 64
+          "line": 63
         }
       ],
       "consumerCallsites": [
@@ -12308,7 +12222,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 55
+          "line": 54
         }
       ],
       "consumerCallsites": [],
@@ -12480,7 +12394,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 53
+          "line": 52
         }
       ],
       "consumerCallsites": [],
@@ -12709,7 +12623,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 54
+          "line": 53
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",
@@ -12872,7 +12786,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/workflows.routes.js",
-          "line": 201
+          "line": 119
         }
       ],
       "consumerCallsites": [
@@ -12903,7 +12817,7 @@
           "method": "GET",
           "path": "/api/workflows",
           "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 1195
+          "line": 921
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -12925,7 +12839,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/workflows.routes.js",
-          "line": 326
+          "line": 244
         }
       ],
       "consumerCallsites": [
@@ -13028,19 +12942,19 @@
           "method": "POST",
           "path": "/api/workflows",
           "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 1125
+          "line": 851
         },
         {
           "method": "POST",
           "path": "/api/workflows",
           "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 1175
+          "line": 901
         },
         {
           "method": "POST",
           "path": "/api/workflows",
           "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 1182
+          "line": 908
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -13062,7 +12976,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/workflows.routes.js",
-          "line": 591
+          "line": 509
         }
       ],
       "consumerCallsites": [
@@ -13127,7 +13041,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/workflows.routes.js",
-          "line": 266
+          "line": 184
         }
       ],
       "consumerCallsites": [
@@ -13174,7 +13088,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/workflows.routes.js",
-          "line": 440
+          "line": 358
         }
       ],
       "consumerCallsites": [
@@ -13239,7 +13153,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/workflows.routes.js",
-          "line": 617
+          "line": 535
         }
       ],
       "consumerCallsites": [
@@ -13322,7 +13236,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/workflows.routes.js",
-          "line": 712
+          "line": 630
         }
       ],
       "consumerCallsites": [
@@ -13369,7 +13283,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/workflows.routes.js",
-          "line": 1543
+          "line": 1032
         }
       ],
       "consumerCallsites": [
@@ -13388,13 +13302,13 @@
           "method": "POST",
           "path": "/api/workflows/:sourceId/duplicate",
           "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 1139
+          "line": 865
         },
         {
           "method": "POST",
           "path": "/api/workflows/:sourceId/duplicate",
           "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 1153
+          "line": 879
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -13416,7 +13330,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/workflows.routes.js",
-          "line": 762
+          "line": 680
         }
       ],
       "consumerCallsites": [
@@ -13459,7 +13373,7 @@
           "method": "POST",
           "path": "/api/workflows/:wfId/enroll",
           "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 910
+          "line": 822
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -13481,7 +13395,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/workflows.routes.js",
-          "line": 857
+          "line": 775
         }
       ],
       "consumerCallsites": [
@@ -13522,7 +13436,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/workflows.routes.js",
-          "line": 1471
+          "line": 960
         }
       ],
       "consumerCallsites": [
@@ -13541,13 +13455,13 @@
           "method": "DELETE",
           "path": "/api/workflows/:wfId/enrollments/:enrollmentId",
           "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 826
+          "line": 738
         },
         {
           "method": "DELETE",
           "path": "/api/workflows/:wfId/enrollments/:enrollmentId",
           "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 864
+          "line": 776
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -13569,7 +13483,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/workflows.routes.js",
-          "line": 1182
+          "line": 841
         }
       ],
       "consumerCallsites": [],
@@ -13600,7 +13514,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/workflows.routes.js",
-          "line": 1216
+          "line": 875
         }
       ],
       "consumerCallsites": [],
@@ -13637,7 +13551,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/workflows.routes.js",
-          "line": 1259
+          "line": 918
         }
       ],
       "consumerCallsites": [],
@@ -13657,178 +13571,6 @@
       "targetModule": "WorkflowEnrollmentsModule",
       "parityStatus": "consumer-cutover-complete",
       "notes": "The active frontend always uses GraphQL without REST fallback. Retry accepts only a failed enrollment under an active tenant-owned workflow and preserves current_step so completed steps are not replayed.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/workflows/:id/execution-summary",
-      "key": "GET /api/workflows/:*/execution-summary",
-      "method": "GET",
-      "path": "/api/workflows/:id/execution-summary",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/workflows.routes.js",
-          "line": 923
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/workflows/:wfId/execution-summary",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 733
-        },
-        {
-          "method": "GET",
-          "path": "/api/workflows/:wfId/execution-summary",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 812
-        },
-        {
-          "method": "GET",
-          "path": "/api/workflows/:workflowId/execution-summary",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 1031
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "automation",
-      "targetOperation": "workflowExecutionSummary",
-      "targetModule": "WorkflowExecutionModule",
-      "parityStatus": "implemented",
-      "notes": "Return tenant-scoped enrollment and provider-outbox status/type counts, queue age, due/expired work, attempts, cancellations, dead letters, and operator retry totals without payloads, destinations, headers, or idempotency keys.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/workflows/:id/side-effects",
-      "key": "GET /api/workflows/:*/side-effects",
-      "method": "GET",
-      "path": "/api/workflows/:id/side-effects",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/workflows.routes.js",
-          "line": 1054
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/workflows/:wfId/side-effects",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 770
-        },
-        {
-          "method": "GET",
-          "path": "/api/workflows/:wfId/side-effects",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 805
-        },
-        {
-          "method": "GET",
-          "path": "/api/workflows/:wfId/side-effects",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 816
-        },
-        {
-          "method": "GET",
-          "path": "/api/workflows/:workflowId/side-effects",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 1038
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "automation",
-      "targetOperation": "workflowSideEffects",
-      "targetModule": "WorkflowExecutionModule",
-      "parityStatus": "implemented",
-      "notes": "Strictly paginate and filter the tenant-owned provider queue. Expose safe status/timing/attempt/error fields and provider correlation IDs while omitting serialized payloads and delivery secrets.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/workflows/:id/side-effects/:sideEffectId/reconcile",
-      "key": "POST /api/workflows/:*/side-effects/:*/reconcile",
-      "method": "POST",
-      "path": "/api/workflows/:id/side-effects/:sideEffectId/reconcile",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/workflows.routes.js",
-          "line": 1344
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/workflows/:workflowId/side-effects/:acceptedId/reconcile",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 1051
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows/:workflowId/side-effects/:acceptedId/reconcile",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 1058
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows/:workflowId/side-effects/:acceptedId/reconcile",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 1068
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows/:workflowId/side-effects/:resendId/reconcile",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 1084
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetOperation": "reconcileWorkflowSmsSideEffect",
-      "targetModule": "WorkflowExecutionModule",
-      "parityStatus": "implemented",
-      "notes": "Resolve only a tenant/workflow-owned SMS attempt in reconciliation_required. A valid Twilio message SID records provider acceptance and a correlated SMS log; resend is an explicit operator authorization that retains reconciliation and retry history.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/workflows/:id/side-effects/:sideEffectId/retry",
-      "key": "POST /api/workflows/:*/side-effects/:*/retry",
-      "method": "POST",
-      "path": "/api/workflows/:id/side-effects/:sideEffectId/retry",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/workflows.routes.js",
-          "line": 1301
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/workflows/:wfId/side-effects/:id/retry",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 705
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetOperation": "retryWorkflowSideEffect",
-      "targetModule": "WorkflowExecutionModule",
-      "parityStatus": "implemented",
-      "notes": "Retry only a tenant/workflow-owned non-cancelled dead letter whose enrollment is not cancelled. Reset the delivery attempt cycle while retaining operator retry count and timestamp.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -14221,6 +13963,12 @@
       "line": 504
     },
     {
+      "method": "GET",
+      "path": "/api/contacts/:contactIdA/profile",
+      "source": "backend/src/__tests__/integration/contacts.integration.test.js",
+      "line": 160
+    },
+    {
       "method": "POST",
       "path": "/api/chat-widget/sessions/:id/messages",
       "source": "backend/src/__tests__/integration/realtime.integration.test.js",
@@ -14261,6 +14009,36 @@
       "path": "/api/vaults/:vaultId/share",
       "source": "backend/src/__tests__/integration/sharing.integration.test.js",
       "line": 211
+    },
+    {
+      "method": "POST",
+      "path": "/api/signatures/documents/:id/reminders",
+      "source": "backend/src/__tests__/integration/signatures.integration.test.js",
+      "line": 372
+    },
+    {
+      "method": "GET",
+      "path": "/api/workflows/:wfId/execution-summary",
+      "source": "backend/src/__tests__/integration/workflows.integration.test.js",
+      "line": 706
+    },
+    {
+      "method": "GET",
+      "path": "/api/workflows/:wfId/side-effects",
+      "source": "backend/src/__tests__/integration/workflows.integration.test.js",
+      "line": 710
+    },
+    {
+      "method": "POST",
+      "path": "/api/workflows/:wfId/side-effects/:id/retry",
+      "source": "backend/src/__tests__/integration/workflows.integration.test.js",
+      "line": 714
+    },
+    {
+      "method": "POST",
+      "path": "/api/workflows/:wfId/side-effects/:id/reconcile",
+      "source": "backend/src/__tests__/integration/workflows.integration.test.js",
+      "line": 718
     },
     {
       "method": "POST",

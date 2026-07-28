@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 319
-- API operations under `/api`: 312
+- Registered method/path operations: 313
+- API operations under `/api`: 306
 - Non-API registered operations: 7
 - Static frontend callsites: 250
 - Operations with frontend consumers: 239
-- Operations referenced by backend tests: 174
-- Recommended GraphQL queries: 83
-- Recommended GraphQL mutations: 174
+- Operations referenced by backend tests: 168
+- Recommended GraphQL queries: 80
+- Recommended GraphQL mutations: 171
 - Recommended retained HTTP endpoints: 54
-- High-risk operations: 257
+- High-risk operations: 251
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -112,7 +112,6 @@
 | GET | `/api/contacts/:id/activities` | 1 | 1 | graphql-query | high | crm / ContactsModule / contactActivities |
 | POST | `/api/contacts/:id/activities` | 1 | 0 | graphql-mutation | high | crm / ContactsModule / addContactActivity |
 | GET | `/api/contacts/:id/content` | 1 | 1 | graphql-query | high | crm / ContactProfilesModule / contactContent |
-| GET | `/api/contacts/:id/profile` | 0 | 4 | graphql-query | high | crm / ContactProfilesModule / contactProfile |
 | POST | `/api/contacts/bulk-delete` | 1 | 0 | graphql-mutation | high | crm / ContactsModule / bulkDeleteContacts |
 | POST | `/api/contacts/bulk-update` | 1 | 2 | graphql-mutation | high | crm / ContactsModule / bulkUpdateContacts |
 | GET | `/api/contacts/export/csv` | 1 | 6 | retain-http | high | crm / ContactTransfersModule / exportContactsCsv |
@@ -281,7 +280,6 @@
 | DELETE | `/api/signatures/documents/:id/file` | 0 | 0 | graphql-mutation | high | esignatures / SignatureDocumentsModule / removeSignatureDraftPdf |
 | GET | `/api/signatures/documents/:id/file` | 0 | 8 | retain-http | high | esignatures / SignatureFilesModule / streamSignatureDraftPdf |
 | POST | `/api/signatures/documents/:id/remind` | 0 | 1 | graphql-mutation | high | esignatures / SignatureDeliveryModule / sendSignatureReminder |
-| POST | `/api/signatures/documents/:id/reminders` | 0 | 2 | graphql-mutation | high | esignatures / SignatureDeliveryModule / scheduleSignatureReminders |
 | POST | `/api/signatures/documents/:id/send` | 0 | 4 | graphql-mutation | high | esignatures / SignatureDeliveryModule / sendSignatureDocument |
 | POST | `/api/signatures/documents/upload` | 1 | 13 | retain-http | high | esignatures / SignatureFilesModule / uploadSignatureDraftPdf |
 | POST | `/api/signatures/email/preview` | 1 | 0 | graphql-query | high | esignatures / SignatureDeliveryModule / previewSignatureEmail |
@@ -339,10 +337,6 @@
 | POST | `/api/workflows/:id/enrollments/:enrollmentId/pause` | 0 | 1 | graphql-mutation | high | automation / WorkflowEnrollmentsModule / pauseWorkflowEnrollment |
 | POST | `/api/workflows/:id/enrollments/:enrollmentId/resume` | 0 | 2 | graphql-mutation | high | automation / WorkflowEnrollmentsModule / resumeWorkflowEnrollment |
 | POST | `/api/workflows/:id/enrollments/:enrollmentId/retry` | 0 | 1 | graphql-mutation | high | automation / WorkflowEnrollmentsModule / retryWorkflowEnrollment |
-| GET | `/api/workflows/:id/execution-summary` | 0 | 3 | graphql-query | high | automation / WorkflowExecutionModule / workflowExecutionSummary |
-| GET | `/api/workflows/:id/side-effects` | 0 | 4 | graphql-query | high | automation / WorkflowExecutionModule / workflowSideEffects |
-| POST | `/api/workflows/:id/side-effects/:sideEffectId/reconcile` | 0 | 4 | graphql-mutation | high | automation / WorkflowExecutionModule / reconcileWorkflowSmsSideEffect |
-| POST | `/api/workflows/:id/side-effects/:sideEffectId/retry` | 0 | 1 | graphql-mutation | high | automation / WorkflowExecutionModule / retryWorkflowSideEffect |
 | GET | `/docs/content` | 1 | 0 | non-api | low | _unassigned_ |
 | GET | `/docs/search` | 1 | 0 | non-api | low | _unassigned_ |
 | GET | `/docs/structure` | 1 | 0 | non-api | low | _unassigned_ |
@@ -355,7 +349,7 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 42
+- Unmatched backend test calls: 48
 - Orphaned manual overrides: 49
 - Orphaned runtime-expression overrides: 0
 
@@ -414,6 +408,7 @@
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1057` |
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1079` |
 | POST | `/api/campaigns/1/:action` | `backend/src/__tests__/integration/campaigns.integration.test.js:504` |
+| GET | `/api/contacts/:contactIdA/profile` | `backend/src/__tests__/integration/contacts.integration.test.js:160` |
 | POST | `/api/chat-widget/sessions/:id/messages` | `backend/src/__tests__/integration/realtime.integration.test.js:265` |
 | POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:168` |
 | DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:169` |
@@ -421,6 +416,11 @@
 | DELETE | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:194` |
 | POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:210` |
 | DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:211` |
+| POST | `/api/signatures/documents/:id/reminders` | `backend/src/__tests__/integration/signatures.integration.test.js:372` |
+| GET | `/api/workflows/:wfId/execution-summary` | `backend/src/__tests__/integration/workflows.integration.test.js:706` |
+| GET | `/api/workflows/:wfId/side-effects` | `backend/src/__tests__/integration/workflows.integration.test.js:710` |
+| POST | `/api/workflows/:wfId/side-effects/:id/retry` | `backend/src/__tests__/integration/workflows.integration.test.js:714` |
+| POST | `/api/workflows/:wfId/side-effects/:id/reconcile` | `backend/src/__tests__/integration/workflows.integration.test.js:718` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:32` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:128` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:133` |

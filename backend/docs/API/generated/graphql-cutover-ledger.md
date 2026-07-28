@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 370
-- API operations under `/api`: 363
+- Registered method/path operations: 313
+- API operations under `/api`: 306
 - Non-API registered operations: 7
-- Static frontend callsites: 297
-- Operations with frontend consumers: 285
-- Operations referenced by backend tests: 198
-- Recommended GraphQL queries: 109
-- Recommended GraphQL mutations: 206
-- Recommended retained HTTP endpoints: 47
-- High-risk operations: 305
+- Static frontend callsites: 250
+- Operations with frontend consumers: 239
+- Operations referenced by backend tests: 168
+- Recommended GraphQL queries: 80
+- Recommended GraphQL mutations: 171
+- Recommended retained HTTP endpoints: 54
+- High-risk operations: 251
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -42,15 +42,6 @@
 | GET | `/api/admin/users/count` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminUserCount |
 | GET | `/api/admin/users/ids` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminUserIds |
 | GET | `/api/admin/users/search` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminUsers |
-| GET | `/api/analytics/bookings/summary` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / bookingAnalytics |
-| GET | `/api/analytics/communication-stats` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / communicationStats |
-| GET | `/api/analytics/contacts/trends` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / contactTrends |
-| GET | `/api/analytics/conversion-rates` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / conversionRates |
-| GET | `/api/analytics/dashboard` | 1 | 1 | graphql-query | high | analytics / AnalyticsModule / dashboardAnalytics |
-| GET | `/api/analytics/deals/performance` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / dealPerformance |
-| GET | `/api/analytics/pipeline-velocity` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / pipelineVelocity |
-| GET | `/api/analytics/revenue-trends` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / revenueTrends |
-| GET | `/api/analytics/workflow-performance` | 1 | 0 | graphql-query | high | analytics / AnalyticsModule / workflowPerformance |
 | POST | `/api/auth/change-password` | 0 | 0 | graphql-mutation | high | identity / AuthModule / changePassword |
 | GET | `/api/auth/csrf` | 0 | 5 | retain-http | medium | platform-security / AuthModule / issueCsrfToken |
 | POST | `/api/auth/forgot-password` | 1 | 0 | graphql-mutation | high | identity / AuthModule / requestPasswordReset |
@@ -97,13 +88,9 @@
 | GET | `/api/campaigns/:id` | 1 | 2 | graphql-query | medium | growth / CampaignsModule / campaign |
 | PUT | `/api/campaigns/:id` | 1 | 3 | graphql-mutation | medium | growth / CampaignsModule / updateCampaign |
 | POST | `/api/campaigns/:id/duplicate` | 1 | 2 | graphql-mutation | medium | growth / CampaignsModule / duplicateCampaign |
-| POST | `/api/campaigns/:id/pause` | 1 | 0 | graphql-mutation | high | growth / CampaignDeliveryModule / pauseCampaign |
 | GET | `/api/campaigns/:id/preview` | 1 | 1 | graphql-query | high | growth / CampaignsModule / campaignAudiencePreview |
 | GET | `/api/campaigns/:id/recipients` | 1 | 0 | graphql-query | high | growth / CampaignDeliveryModule / campaignRecipients |
-| POST | `/api/campaigns/:id/resume` | 1 | 0 | graphql-mutation | high | growth / CampaignDeliveryModule / resumeCampaign |
 | POST | `/api/campaigns/:id/schedule` | 1 | 3 | graphql-mutation | medium | growth / CampaignsModule / scheduleCampaign |
-| POST | `/api/campaigns/:id/send` | 1 | 2 | graphql-mutation | high | growth / CampaignDeliveryModule / sendCampaign |
-| POST | `/api/campaigns/:id/send-test` | 1 | 0 | graphql-mutation | high | growth / CampaignDeliveryModule / sendCampaignTest |
 | POST | `/api/campaigns/:id/unschedule` | 1 | 1 | graphql-mutation | medium | growth / CampaignsModule / unscheduleCampaign |
 | GET | `/api/canvas/lists` | 1 | 3 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceLists |
 | PUT | `/api/canvas/positions` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / batchCanvasPositions |
@@ -111,20 +98,12 @@
 | POST | `/api/categories` | 1 | 1 | graphql-mutation | high | workspace-content / CategoriesModule / createCategory |
 | DELETE | `/api/categories/:id` | 1 | 1 | graphql-mutation | high | workspace-content / CategoriesModule / deleteCategory |
 | PUT | `/api/categories/:id` | 1 | 1 | graphql-mutation | high | workspace-content / CategoriesModule / updateCategory |
-| GET | `/api/chat-widget` | 1 | 0 | graphql-query | high | _unassigned_ |
-| POST | `/api/chat-widget` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| PUT | `/api/chat-widget` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/chat-widget/embed-code` | 1 | 0 | graphql-query | high | _unassigned_ |
-| GET | `/api/chat-widget/public/config/:widgetKey` | 1 | 0 | graphql-query | high | _unassigned_ |
-| POST | `/api/chat-widget/public/end-session` | 1 | 1 | graphql-mutation | medium | _unassigned_ |
-| POST | `/api/chat-widget/public/messages` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/chat-widget/public/messages/:sessionToken` | 1 | 1 | graphql-query | medium | _unassigned_ |
-| POST | `/api/chat-widget/public/session` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| POST | `/api/chat-widget/public/typing` | 0 | 1 | graphql-mutation | medium | _unassigned_ |
-| GET | `/api/chat-widget/sessions` | 1 | 0 | graphql-query | high | _unassigned_ |
-| GET | `/api/chat-widget/sessions/:id` | 1 | 0 | graphql-query | high | _unassigned_ |
-| POST | `/api/chat-widget/sessions/:id/convert` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| POST | `/api/chat-widget/sessions/:id/messages` | 1 | 1 | graphql-mutation | medium | _unassigned_ |
+| GET | `/api/chat-widget/public/config/:widgetKey` | 1 | 0 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / getPublicChatWidgetConfig |
+| POST | `/api/chat-widget/public/end-session` | 1 | 1 | retain-http | medium | chat-widget / PublicChatWidgetHttpModule / endPublicChatSession |
+| POST | `/api/chat-widget/public/messages` | 1 | 0 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / sendPublicChatMessage |
+| GET | `/api/chat-widget/public/messages/:sessionToken` | 1 | 1 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / getPublicChatMessages |
+| POST | `/api/chat-widget/public/session` | 1 | 0 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / createPublicChatSession |
+| POST | `/api/chat-widget/public/typing` | 0 | 1 | retain-http | medium | chat-widget / PublicChatWidgetHttpModule / sendPublicChatTyping |
 | GET | `/api/contacts` | 1 | 3 | graphql-query | high | crm / ContactsModule / contacts |
 | POST | `/api/contacts` | 1 | 6 | graphql-mutation | high | crm / ContactsModule / createContact |
 | DELETE | `/api/contacts/:id` | 1 | 2 | graphql-mutation | high | crm / ContactsModule / deleteContact |
@@ -133,7 +112,6 @@
 | GET | `/api/contacts/:id/activities` | 1 | 1 | graphql-query | high | crm / ContactsModule / contactActivities |
 | POST | `/api/contacts/:id/activities` | 1 | 0 | graphql-mutation | high | crm / ContactsModule / addContactActivity |
 | GET | `/api/contacts/:id/content` | 1 | 1 | graphql-query | high | crm / ContactProfilesModule / contactContent |
-| GET | `/api/contacts/:id/profile` | 0 | 4 | graphql-query | high | crm / ContactProfilesModule / contactProfile |
 | POST | `/api/contacts/bulk-delete` | 1 | 0 | graphql-mutation | high | crm / ContactsModule / bulkDeleteContacts |
 | POST | `/api/contacts/bulk-update` | 1 | 2 | graphql-mutation | high | crm / ContactsModule / bulkUpdateContacts |
 | GET | `/api/contacts/export/csv` | 1 | 6 | retain-http | high | crm / ContactTransfersModule / exportContactsCsv |
@@ -144,9 +122,7 @@
 | GET | `/api/email-templates/:id` | 2 | 2 | graphql-query | medium | messaging / EmailTemplatesModule / emailTemplate |
 | PUT | `/api/email-templates/:id` | 1 | 2 | graphql-mutation | medium | messaging / EmailTemplatesModule / updateEmailTemplate |
 | POST | `/api/email-templates/:id/duplicate` | 2 | 2 | graphql-mutation | medium | messaging / EmailTemplatesModule / duplicateEmailTemplate |
-| POST | `/api/email-templates/:id/send-test` | 2 | 0 | graphql-mutation | high | messaging / MessagingDeliveryModule / sendEmailTemplateTest |
 | GET | `/api/email-templates/categories/list` | 1 | 1 | graphql-query | medium | messaging / EmailTemplatesModule / emailTemplateCategories |
-| POST | `/api/email-templates/send-to-contact` | 1 | 2 | graphql-mutation | high | messaging / MessagingDeliveryModule / enqueueContactEmail |
 | POST | `/api/email/webhook/resend` | 0 | 1 | retain-http | high | messaging / EmailWebhooksModule / processResendEmailEvent |
 | GET | `/api/forms/public/form/:identifier` | 1 | 3 | retain-http | high | crm / PublicFormsModule / getPublicForm |
 | POST | `/api/forms/public/form/:identifier` | 1 | 5 | retain-http | high | crm / PublicFormsModule / submitPublicForm |
@@ -248,20 +224,6 @@
 | POST | `/api/pages/:id/versions/:versionId/restore` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / restoreLandingPageVersion |
 | GET | `/api/pages/public/page/:slug` | 1 | 2 | retain-http | high | growth / PublicLandingPagesModule / getPublicLandingPage |
 | POST | `/api/pages/public/page/:slug/analytics` | 1 | 0 | retain-http | high | growth / PublicLandingPagesModule / recordPublicLandingPageAnalytics |
-| GET | `/api/pipelines` | 1 | 4 | graphql-query | high | crm / PipelinesModule / pipelines |
-| POST | `/api/pipelines` | 1 | 10 | graphql-mutation | high | crm / PipelinesModule / createPipeline |
-| DELETE | `/api/pipelines/:id` | 1 | 3 | graphql-mutation | high | crm / PipelinesModule / deletePipeline |
-| GET | `/api/pipelines/:id` | 1 | 2 | graphql-query | high | crm / PipelinesModule / pipeline |
-| PUT | `/api/pipelines/:id` | 1 | 4 | graphql-mutation | high | crm / PipelinesModule / updatePipeline |
-| POST | `/api/pipelines/deals` | 1 | 9 | graphql-mutation | high | crm / DealsModule / createDeal |
-| DELETE | `/api/pipelines/deals/:id` | 1 | 1 | graphql-mutation | high | crm / DealsModule / deleteDeal |
-| GET | `/api/pipelines/deals/:id` | 1 | 2 | graphql-query | high | crm / DealsModule / deal |
-| PUT | `/api/pipelines/deals/:id` | 1 | 4 | graphql-mutation | high | crm / DealsModule / updateDeal |
-| POST | `/api/pipelines/deals/:id/lost` | 1 | 1 | graphql-mutation | high | crm / DealsModule / markDealLost |
-| POST | `/api/pipelines/deals/:id/reopen` | 1 | 3 | graphql-mutation | high | crm / DealsModule / reopenDeal |
-| PATCH | `/api/pipelines/deals/:id/stage` | 1 | 2 | graphql-mutation | high | crm / DealsModule / moveDeal |
-| POST | `/api/pipelines/deals/:id/won` | 1 | 2 | graphql-mutation | high | crm / DealsModule / markDealWon |
-| GET | `/api/pipelines/deals/all` | 1 | 2 | graphql-query | high | crm / DealsModule / deals |
 | GET | `/api/public/sign/:token` | 1 | 8 | retain-http | high | esignatures / PublicSigningModule / getSigningSession |
 | POST | `/api/public/sign/:token` | 1 | 5 | retain-http | high | esignatures / PublicSigningModule / submitSignature |
 | POST | `/api/public/sign/:token/decline` | 1 | 1 | retain-http | high | esignatures / PublicSigningModule / declineSignature |
@@ -318,7 +280,6 @@
 | DELETE | `/api/signatures/documents/:id/file` | 0 | 0 | graphql-mutation | high | esignatures / SignatureDocumentsModule / removeSignatureDraftPdf |
 | GET | `/api/signatures/documents/:id/file` | 0 | 8 | retain-http | high | esignatures / SignatureFilesModule / streamSignatureDraftPdf |
 | POST | `/api/signatures/documents/:id/remind` | 0 | 1 | graphql-mutation | high | esignatures / SignatureDeliveryModule / sendSignatureReminder |
-| POST | `/api/signatures/documents/:id/reminders` | 0 | 2 | graphql-mutation | high | esignatures / SignatureDeliveryModule / scheduleSignatureReminders |
 | POST | `/api/signatures/documents/:id/send` | 0 | 4 | graphql-mutation | high | esignatures / SignatureDeliveryModule / sendSignatureDocument |
 | POST | `/api/signatures/documents/upload` | 1 | 13 | retain-http | high | esignatures / SignatureFilesModule / uploadSignatureDraftPdf |
 | POST | `/api/signatures/email/preview` | 1 | 0 | graphql-query | high | esignatures / SignatureDeliveryModule / previewSignatureEmail |
@@ -336,30 +297,16 @@
 | GET | `/api/sms-templates/:id` | 1 | 2 | graphql-query | high | messaging / SmsTemplatesModule / smsTemplate |
 | PUT | `/api/sms-templates/:id` | 1 | 0 | graphql-mutation | high | messaging / SmsTemplatesModule / updateSmsTemplate |
 | POST | `/api/sms-templates/:id/duplicate` | 1 | 0 | graphql-mutation | high | messaging / SmsTemplatesModule / duplicateSmsTemplate |
-| POST | `/api/sms-templates/:id/send-test` | 1 | 0 | graphql-mutation | high | messaging / MessagingDeliveryModule / sendSmsTemplateTest |
 | GET | `/api/sms-templates/categories/list` | 1 | 0 | graphql-query | high | messaging / SmsTemplatesModule / smsTemplateCategories |
 | POST | `/api/sms-templates/message-info` | 1 | 0 | graphql-query | medium | messaging / SmsTemplatesModule / smsMessageInfo |
-| POST | `/api/sms-templates/send-to-contact` | 1 | 2 | graphql-mutation | high | messaging / MessagingDeliveryModule / enqueueContactSms |
 | POST | `/api/sms-templates/webhook/inbound` | 0 | 6 | retain-http | high | messaging / SmsWebhooksModule / processInboundSmsWebhook |
 | POST | `/api/sms-templates/webhook/status` | 0 | 4 | retain-http | high | messaging / SmsWebhooksModule / processSmsStatusWebhook |
-| GET | `/api/social/analytics` | 1 | 0 | graphql-query | high | _unassigned_ |
-| GET | `/api/social/callback/facebook` | 0 | 0 | retain-http | high | _unassigned_ |
-| GET | `/api/social/channels` | 1 | 0 | graphql-query | high | _unassigned_ |
-| DELETE | `/api/social/channels/:id` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/social/connect/facebook` | 1 | 0 | graphql-query | high | _unassigned_ |
-| GET | `/api/social/conversations` | 1 | 0 | graphql-query | high | _unassigned_ |
-| GET | `/api/social/conversations/:id` | 1 | 0 | graphql-query | high | _unassigned_ |
-| PUT | `/api/social/conversations/:id` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| POST | `/api/social/conversations/:id/messages` | 1 | 0 | graphql-mutation | high | _unassigned_ |
+| GET | `/api/social/callback/facebook` | 0 | 0 | retain-http | high | social-integrations / SocialOAuthModule / completeFacebookConnection |
+| GET | `/api/social/connect/facebook` | 1 | 0 | retain-http | high | social-integrations / SocialOAuthModule / beginFacebookConnection |
 | GET | `/api/social/webhook` | 0 | 2 | retain-http | high | social-integrations / SocialWebhooksModule / verifyMetaWebhook |
 | POST | `/api/social/webhook` | 0 | 1 | retain-http | high | social-integrations / SocialWebhooksModule / processMetaMessagingWebhook |
 | GET | `/api/status` | 1 | 0 | retain-http | high | _unassigned_ |
 | POST | `/api/suggestions` | 1 | 0 | graphql-mutation | high | _unassigned_ |
-| GET | `/api/tags` | 0 | 5 | graphql-query | high | crm / TagsModule / tags |
-| POST | `/api/tags` | 0 | 8 | graphql-mutation | high | crm / TagsModule / createTag |
-| DELETE | `/api/tags/:id` | 0 | 7 | graphql-mutation | high | crm / TagsModule / deleteTag |
-| PUT | `/api/tags/:id` | 0 | 5 | graphql-mutation | high | crm / TagsModule / updateTag |
-| GET | `/api/tags/suggestions` | 0 | 2 | graphql-query | medium | crm / TagsModule / contactTagSuggestions |
 | PUT | `/api/vaults/:vaultId/position` | 0 | 0 | graphql-mutation | high | workspace-content / VaultModule / updateWorkspaceVault |
 | POST | `/api/webhooks/:workflowId` | 0 | 6 | retain-http | high | automation / WorkflowWebhooksModule / processWorkflowWebhook |
 | GET | `/api/whiteboards` | 1 | 3 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceWhiteboards |
@@ -390,10 +337,6 @@
 | POST | `/api/workflows/:id/enrollments/:enrollmentId/pause` | 0 | 1 | graphql-mutation | high | automation / WorkflowEnrollmentsModule / pauseWorkflowEnrollment |
 | POST | `/api/workflows/:id/enrollments/:enrollmentId/resume` | 0 | 2 | graphql-mutation | high | automation / WorkflowEnrollmentsModule / resumeWorkflowEnrollment |
 | POST | `/api/workflows/:id/enrollments/:enrollmentId/retry` | 0 | 1 | graphql-mutation | high | automation / WorkflowEnrollmentsModule / retryWorkflowEnrollment |
-| GET | `/api/workflows/:id/execution-summary` | 0 | 3 | graphql-query | high | automation / WorkflowExecutionModule / workflowExecutionSummary |
-| GET | `/api/workflows/:id/side-effects` | 0 | 4 | graphql-query | high | automation / WorkflowExecutionModule / workflowSideEffects |
-| POST | `/api/workflows/:id/side-effects/:sideEffectId/reconcile` | 0 | 4 | graphql-mutation | high | automation / WorkflowExecutionModule / reconcileWorkflowSmsSideEffect |
-| POST | `/api/workflows/:id/side-effects/:sideEffectId/retry` | 0 | 1 | graphql-mutation | high | automation / WorkflowExecutionModule / retryWorkflowSideEffect |
 | GET | `/docs/content` | 1 | 0 | non-api | low | _unassigned_ |
 | GET | `/docs/search` | 1 | 0 | non-api | low | _unassigned_ |
 | GET | `/docs/structure` | 1 | 0 | non-api | low | _unassigned_ |
@@ -406,8 +349,8 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 12
-- Orphaned manual overrides: 41
+- Unmatched backend test calls: 48
+- Orphaned manual overrides: 49
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls
@@ -433,15 +376,51 @@
 
 | Method | Requested path | Source |
 | --- | --- | --- |
+| GET | `/api/analytics/dashboard` | `backend-v2/test/integration/analytics.integration-spec.ts:284` |
+| GET | `/api/analytics/contacts/trends` | `backend-v2/test/integration/analytics.integration-spec.ts:285` |
+| GET | `/api/analytics/deals/performance` | `backend-v2/test/integration/analytics.integration-spec.ts:286` |
+| GET | `/api/analytics/bookings/summary` | `backend-v2/test/integration/analytics.integration-spec.ts:287` |
+| GET | `/api/analytics/communication-stats` | `backend-v2/test/integration/analytics.integration-spec.ts:288` |
+| GET | `/api/analytics/workflow-performance` | `backend-v2/test/integration/analytics.integration-spec.ts:289` |
+| GET | `/api/analytics/conversion-rates` | `backend-v2/test/integration/analytics.integration-spec.ts:290` |
+| GET | `/api/analytics/revenue-trends` | `backend-v2/test/integration/analytics.integration-spec.ts:291` |
+| GET | `/api/analytics/pipeline-velocity` | `backend-v2/test/integration/analytics.integration-spec.ts:292` |
 | GET | `/api/campaigns:path` | `backend-v2/test/integration/campaigns.integration-spec.ts:126` |
+| GET | `/api/tags` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:378` |
+| GET | `/api/tags/suggestions` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:379` |
+| POST | `/api/tags` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:380` |
+| PUT | `/api/tags/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:381` |
+| DELETE | `/api/tags/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:382` |
+| GET | `/api/pipelines` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:452` |
+| POST | `/api/pipelines` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:453` |
+| GET | `/api/pipelines/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:454` |
+| PUT | `/api/pipelines/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:455` |
+| DELETE | `/api/pipelines/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:456` |
+| GET | `/api/pipelines/deals/all` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:457` |
+| POST | `/api/pipelines/deals` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:458` |
+| GET | `/api/pipelines/deals/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:459` |
+| PUT | `/api/pipelines/deals/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:460` |
+| DELETE | `/api/pipelines/deals/1` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:461` |
+| PATCH | `/api/pipelines/deals/1/stage` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:462` |
+| POST | `/api/pipelines/deals/1/won` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:465` |
+| POST | `/api/pipelines/deals/1/lost` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:466` |
+| POST | `/api/pipelines/deals/1/reopen` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:467` |
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1057` |
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1079` |
+| POST | `/api/campaigns/1/:action` | `backend/src/__tests__/integration/campaigns.integration.test.js:504` |
+| GET | `/api/contacts/:contactIdA/profile` | `backend/src/__tests__/integration/contacts.integration.test.js:160` |
+| POST | `/api/chat-widget/sessions/:id/messages` | `backend/src/__tests__/integration/realtime.integration.test.js:265` |
 | POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:168` |
 | DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:169` |
 | POST | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:188` |
 | DELETE | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:194` |
 | POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:210` |
 | DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:211` |
+| POST | `/api/signatures/documents/:id/reminders` | `backend/src/__tests__/integration/signatures.integration.test.js:372` |
+| GET | `/api/workflows/:wfId/execution-summary` | `backend/src/__tests__/integration/workflows.integration.test.js:706` |
+| GET | `/api/workflows/:wfId/side-effects` | `backend/src/__tests__/integration/workflows.integration.test.js:710` |
+| POST | `/api/workflows/:wfId/side-effects/:id/retry` | `backend/src/__tests__/integration/workflows.integration.test.js:714` |
+| POST | `/api/workflows/:wfId/side-effects/:id/reconcile` | `backend/src/__tests__/integration/workflows.integration.test.js:718` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:32` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:128` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:133` |

@@ -363,37 +363,16 @@ describe('Signature lifecycle PostgreSQL contract', () => {
         expect(revoked.status).toBe(404);
     });
 
-    it('does not allow another organization to schedule reminders', async () => {
-        const foreignDocument = await createDocument(userB, 'Foreign reminder target');
-        await addRecipient(userB, foreignDocument.id, 'foreign-sign@test.itemize');
-        await dbHelper.pool.query(
-            "UPDATE signature_documents SET status = 'sent' WHERE id = $1",
-            [foreignDocument.id]
-        );
-
-        const denied = await authenticated(
-            request(app).post(`/api/signatures/documents/${foreignDocument.id}/reminders`),
-            userA
-        ).send({ days: 2 });
-        expect(denied.status).toBe(404);
-
-        const reminders = await dbHelper.pool.query(
-            'SELECT COUNT(*) FROM signature_reminders WHERE document_id = $1',
-            [foreignDocument.id]
-        );
-        expect(Number(reminders.rows[0].count)).toBe(0);
-    });
-
-    it('rejects invalid reminder delays and edits after the draft lifecycle', async () => {
+    it('keeps the retired scheduled-reminders REST route unavailable', async () => {
         const document = await createDocument(userA, 'Immutable after send');
         await addRecipient(userA, document.id, 'immutable-sign@test.itemize');
         await dbHelper.pool.query("UPDATE signature_documents SET status = 'sent' WHERE id = $1", [document.id]);
 
-        const invalidDelay = await authenticated(
+        const retired = await authenticated(
             request(app).post(`/api/signatures/documents/${document.id}/reminders`),
             userA
-        ).send({ days: 0 });
-        expect(invalidDelay.status).toBe(400);
+        ).send({ days: 2 });
+        expect(retired.status).toBe(404);
 
         const edit = await authenticated(
             request(app).put(`/api/signatures/documents/${document.id}`),

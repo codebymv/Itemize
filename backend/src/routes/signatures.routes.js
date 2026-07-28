@@ -514,22 +514,6 @@ module.exports = (pool, authenticateJWT, publicRateLimit) => {
         return sendSuccess(res, updated);
     }));
 
-    router.post('/signatures/documents/:id/reminders', authenticateJWT, requireOrganization, checkSignatureAccess, asyncHandler(async (req, res) => {
-        const documentId = parseInt(req.params.id, 10);
-        const days = Number(req.body?.days ?? 2);
-        if (!Number.isInteger(days) || days < 1 || days > 365) {
-            return sendBadRequest(res, 'Reminder days must be an integer between 1 and 365');
-        }
-        let result;
-        try {
-            result = await signatureService.scheduleReminders(pool, documentId, req.organizationId, days);
-        } catch (error) {
-            return sendError(res, error.message, 409, 'CONFLICT');
-        }
-        if (!result) return sendNotFound(res, 'Active document not found');
-        return sendSuccess(res, result);
-    }));
-
     router.get('/signatures/documents/:id/download', authenticateJWT, requireOrganization, checkSignatureAccess, asyncHandler(async (req, res) => {
         const documentId = parseInt(req.params.id, 10);
         const data = await signatureService.getDocumentDetails(pool, req.organizationId, documentId);

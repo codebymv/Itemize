@@ -667,7 +667,7 @@ describe('Workflows Integration Tests', () => {
             });
         });
 
-        it('requeues a dead letter with retained operator retry history', async () => {
+        it('keeps retired workflow-operator REST routes unavailable', async () => {
             const steps = await dbHelper.pool.query(
                 `SELECT id FROM workflow_steps
                  WHERE workflow_id = $1 ORDER BY step_order`,
@@ -701,124 +701,36 @@ describe('Workflows Integration Tests', () => {
             sideEffectIds.push(...inserted.rows.map(row => row.id));
             const deadLetter = inserted.rows.find(row => row.status === 'dead_letter');
 
-            const retried = await request(app)
-                .post(`/api/workflows/${wfId}/side-effects/${deadLetter.id}/retry`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id));
-            expect(retried.status).toBe(200);
-            expect(retried.body.data).toMatchObject({
-                status: 'retry',
-                attempt_count: 0,
-                operator_retry_count: 1,
-            });
-        });
-
-        it('exposes tenant-scoped execution metrics and a payload-free side-effect queue', async () => {
-            await dbHelper.pool.query(`
-                UPDATE workflow_side_effect_outbox
-                SET created_at = CURRENT_TIMESTAMP - INTERVAL '10 minutes',
-                    last_error = CASE
-                      WHEN status = 'retry'
-                        THEN 'person@example.test Bearer tenant-secret https://example.com/private'
-                      ELSE last_error
-                    END,
-                    provider_id = CASE
-                      WHEN status = 'processing' THEN 'provider-correlation-1'
-                      ELSE provider_id
-                    END
-                WHERE id = ANY($1::bigint[])
-            `, [sideEffectIds]);
-
-            const summary = await request(app)
-                .get(`/api/workflows/${wfId}/execution-summary`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id));
-
-            expect(summary.status).toBe(200);
-            expect(summary.body.data.workflow_id).toBe(wfId);
-            expect(summary.body.data.side_effects).toMatchObject({
-                total: 2,
-                by_status: {
-                    queued: 0,
-                    processing: 1,
-                    retry: 1,
-                    sent: 0,
-                    dead_letter: 0,
-                    cancelled: 0,
-                },
-                by_type: {
-                    email: 1,
-                    sms: 0,
-                    webhook: 1,
-                },
-                due_count: 1,
-                expired_processing_count: 0,
-                max_attempt_count: 1,
-                total_attempt_count: 1,
-                operator_retry_count: 1,
-            });
-            expect(summary.body.data.side_effects.oldest_pending_age_seconds).toBeGreaterThanOrEqual(590);
-            expect(summary.body.data.enrollments).toMatchObject({
-                total: 1,
-                active: 1,
-                paused: 0,
-                failed: 0,
-                cancelled: 0,
-            });
-
-            const queue = await request(app)
-                .get(`/api/workflows/${wfId}/side-effects?status=retry&effect_type=email&page=1&limit=10`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id));
-
-            expect(queue.status).toBe(200);
-            expect(queue.body.data.pagination).toEqual({
-                page: 1,
-                limit: 10,
-                total: 1,
-                totalPages: 1,
-            });
-            expect(queue.body.data.side_effects).toHaveLength(1);
-            expect(queue.body.data.side_effects[0]).toMatchObject({
-                effect_type: 'email',
-                status: 'retry',
-                attempt_count: 0,
-                operator_retry_count: 1,
-                is_due: true,
-                lease_expired: false,
-                enrollment_status: 'active',
-                contact_id: contactId,
-                contact_name: 'Enroll Test',
-            });
-            expect(queue.body.data.side_effects[0].last_error).toBe(
-                '[redacted-email] [redacted-authorization] [redacted-url]'
-            );
-            expect(queue.body.data.side_effects[0]).not.toHaveProperty('payload');
-            expect(queue.body.data.side_effects[0]).not.toHaveProperty('idempotency_key');
-            expect(JSON.stringify(queue.body)).not.toContain('tenant-secret');
-            expect(JSON.stringify(queue.body)).not.toContain('example.com/private');
-            expect(JSON.stringify(queue.body)).not.toContain('dead@example.test');
-        });
-
-        it('rejects invalid queue filters and hides execution state from another organization', async () => {
-            const invalid = await request(app)
-                .get(`/api/workflows/${wfId}/side-effects?status=unknown&limit=500`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id));
-            expect(invalid.status).toBe(400);
-
-            const [summary, queue] = await Promise.all([
+            const responses = await Promise.all([
                 request(app)
                     .get(`/api/workflows/${wfId}/execution-summary`)
-                    .set('Cookie', [`itemize_auth=${userB.token}`])
-                    .set('x-organization-id', String(userB.org.id)),
+                    .set('Cookie', [`itemize_auth=${userA.token}`])
+                    .set('x-organization-id', String(userA.org.id)),
                 request(app)
                     .get(`/api/workflows/${wfId}/side-effects`)
-                    .set('Cookie', [`itemize_auth=${userB.token}`])
-                    .set('x-organization-id', String(userB.org.id)),
+                    .set('Cookie', [`itemize_auth=${userA.token}`])
+                    .set('x-organization-id', String(userA.org.id)),
+                request(app)
+                    .post(`/api/workflows/${wfId}/side-effects/${deadLetter.id}/retry`)
+                    .set('Cookie', [`itemize_auth=${userA.token}`])
+                    .set('x-organization-id', String(userA.org.id)),
+                request(app)
+                    .post(`/api/workflows/${wfId}/side-effects/${deadLetter.id}/reconcile`)
+                    .set('Cookie', [`itemize_auth=${userA.token}`])
+                    .set('x-organization-id', String(userA.org.id))
+                    .send({ action: 'resend' }),
             ]);
-            expect(summary.status).toBe(404);
-            expect(queue.status).toBe(404);
+            expect(responses.map(response => response.status)).toEqual([404, 404, 404, 404]);
+
+            await dbHelper.pool.query(
+                `UPDATE workflow_side_effect_outbox
+                 SET status = 'retry',
+                     attempt_count = 0,
+                     next_attempt_at = CURRENT_TIMESTAMP,
+                     operator_retry_count = 1
+                 WHERE id = $1`,
+                [deadLetter.id]
+            );
         });
 
         it('prevents another organization from cancelling the enrollment', async () => {
@@ -930,192 +842,6 @@ describe('Workflows Integration Tests', () => {
     });
 
     // ── Duplicate ────────────────────────────────────────────────────────────
-
-    describe('SMS reconciliation', () => {
-        let workflowId;
-        let contactId;
-        let enrollmentId;
-        let acceptedId;
-        let resendId;
-
-        beforeAll(async () => {
-            contactId = (await dbHelper.pool.query(
-                `INSERT INTO contacts (organization_id, first_name, phone, created_by)
-                 VALUES ($1, 'SMS Reconcile', '+16025550131', $2)
-                 RETURNING id`,
-                [userA.org.id, userA.user.id]
-            )).rows[0].id;
-            workflowId = (await dbHelper.pool.query(
-                `INSERT INTO workflows (
-                   organization_id, name, trigger_type, is_active, created_by
-                 ) VALUES ($1, 'SMS Reconciliation Test', 'manual', true, $2)
-                 RETURNING id`,
-                [userA.org.id, userA.user.id]
-            )).rows[0].id;
-            const steps = await dbHelper.pool.query(
-                `INSERT INTO workflow_steps (
-                   workflow_id, step_order, step_type, step_config
-                 ) VALUES
-                   ($1, 1, 'send_sms', '{"message":"First"}'::jsonb),
-                   ($1, 2, 'send_sms', '{"message":"Second"}'::jsonb)
-                 RETURNING id, step_order`,
-                [workflowId]
-            );
-            const enrollment = (await dbHelper.pool.query(
-                `INSERT INTO workflow_enrollments (
-                   workflow_id, contact_id, status, current_step, next_action_at
-                 ) VALUES ($1, $2, 'active', 3, NULL)
-                 RETURNING id, enrolled_at`,
-                [workflowId, contactId]
-            )).rows[0];
-            enrollmentId = enrollment.id;
-            const inserted = await dbHelper.pool.query(
-                `INSERT INTO workflow_side_effect_outbox (
-                   idempotency_key, organization_id, enrollment_id, step_id,
-                   enrollment_run_at, effect_type, payload, status, attempt_count,
-                   reconciliation_required_at, reconciliation_reason
-                 ) VALUES
-                   ($1, $2, $3, $4, $5, 'sms', $6::jsonb,
-                    'reconciliation_required', 1, CURRENT_TIMESTAMP,
-                    'provider_result_unknown'),
-                   ($7, $2, $3, $8, $5, 'sms', $9::jsonb,
-                    'reconciliation_required', 1, CURRENT_TIMESTAMP,
-                    'provider_result_unknown')
-                 RETURNING id`,
-                [
-                    `sms-accepted-${enrollmentId}`,
-                    userA.org.id,
-                    enrollmentId,
-                    steps.rows.find(row => row.step_order === 1).id,
-                    enrollment.enrolled_at,
-                    JSON.stringify({
-                        contactId,
-                        from: '+16025550100',
-                        message: 'First',
-                        segments: 1,
-                        to: '+16025550131',
-                    }),
-                    `sms-resend-${enrollmentId}`,
-                    steps.rows.find(row => row.step_order === 2).id,
-                    JSON.stringify({
-                        contactId,
-                        from: '+16025550100',
-                        message: 'Second',
-                        segments: 1,
-                        to: '+16025550131',
-                    }),
-                ]
-            );
-            [acceptedId, resendId] = inserted.rows.map(row => row.id);
-        });
-
-        afterAll(async () => {
-            await dbHelper.pool.query(
-                'DELETE FROM workflow_side_effect_outbox WHERE enrollment_id = $1',
-                [enrollmentId]
-            );
-            await dbHelper.pool.query(
-                'DELETE FROM workflow_enrollments WHERE id = $1',
-                [enrollmentId]
-            );
-            await dbHelper.pool.query(
-                'DELETE FROM workflow_steps WHERE workflow_id = $1',
-                [workflowId]
-            );
-            await dbHelper.pool.query('DELETE FROM workflows WHERE id = $1', [workflowId]);
-            await dbHelper.pool.query('DELETE FROM contacts WHERE id = $1', [contactId]);
-        });
-
-        it('requires an explicit accepted SID or authorized resend without leaking payloads', async () => {
-            const summary = await request(app)
-                .get(`/api/workflows/${workflowId}/execution-summary`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id));
-            expect(summary.status).toBe(200);
-            expect(summary.body.data.side_effects.by_status.reconciliation_required).toBe(2);
-
-            const queue = await request(app)
-                .get(`/api/workflows/${workflowId}/side-effects?status=reconciliation_required`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id));
-            expect(queue.status).toBe(200);
-            expect(queue.body.data.side_effects).toHaveLength(2);
-            expect(queue.body.data.side_effects[0]).not.toHaveProperty('payload');
-            expect(queue.body.data.side_effects[0]).toMatchObject({
-                effect_type: 'sms',
-                status: 'reconciliation_required',
-                reconciliation_reason: 'provider_result_unknown',
-            });
-
-            const invalid = await request(app)
-                .post(`/api/workflows/${workflowId}/side-effects/${acceptedId}/reconcile`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id))
-                .send({ action: 'accepted', provider_id: 'not-a-twilio-sid' });
-            expect(invalid.status).toBe(400);
-
-            const outsider = await request(app)
-                .post(`/api/workflows/${workflowId}/side-effects/${acceptedId}/reconcile`)
-                .set('Cookie', [`itemize_auth=${userB.token}`])
-                .set('x-organization-id', String(userB.org.id))
-                .send({
-                    action: 'accepted',
-                    provider_id: 'SM00000000000000000000000000000000',
-                });
-            expect(outsider.status).toBe(404);
-
-            const accepted = await request(app)
-                .post(`/api/workflows/${workflowId}/side-effects/${acceptedId}/reconcile`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id))
-                .send({
-                    action: 'accepted',
-                    provider_id: 'SM00000000000000000000000000000000',
-                });
-            expect(accepted.status).toBe(200);
-            expect(accepted.body.data).toMatchObject({
-                status: 'sent',
-                provider_id: 'SM00000000000000000000000000000000',
-                last_reconciliation_action: 'accepted',
-                last_reconciled_by: userA.user.id,
-            });
-
-            const resend = await request(app)
-                .post(`/api/workflows/${workflowId}/side-effects/${resendId}/reconcile`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id))
-                .send({ action: 'resend' });
-            expect(resend.status).toBe(200);
-            expect(resend.body.data).toMatchObject({
-                status: 'retry',
-                attempt_count: 1,
-                operator_retry_count: 1,
-                last_reconciliation_action: 'resend',
-                last_reconciled_by: userA.user.id,
-            });
-
-            const [outbox, logs] = await Promise.all([
-                dbHelper.pool.query(
-                    `SELECT id, status, provider_id, last_reconciliation_action
-                     FROM workflow_side_effect_outbox
-                     WHERE id = ANY($1::bigint[])
-                     ORDER BY id`,
-                    [[acceptedId, resendId]]
-                ),
-                dbHelper.pool.query(
-                    `SELECT workflow_side_effect_id, external_id, metadata
-                     FROM sms_logs WHERE workflow_side_effect_id = $1`,
-                    [acceptedId]
-                ),
-            ]);
-            expect(outbox.rows.map(row => row.status).sort()).toEqual(['retry', 'sent']);
-            expect(logs.rows).toEqual([expect.objectContaining({
-                workflow_side_effect_id: acceptedId,
-                external_id: 'SM00000000000000000000000000000000',
-                metadata: { reconciliation_action: 'accepted' },
-            })]);
-        });
-    });
 
     describe('Workflow duplicate', () => {
         let sourceId;

@@ -147,7 +147,7 @@ Commit `792d4891` deployed through retained backend `0464fd60-9b7e-4a27-b551-1f5
 
 ## Implemented durable request and reminder delivery slice
 
-`SignatureDeliveryModule` now implements `sendSignatureDocument`, `sendSignatureReminder`, and `scheduleSignatureReminders`. The frontend always routes the existing send and remind consumers through GraphQL after the single-owner delivery/completion scheduler handoff. These application-data mutations no longer retain REST fallback branches; reminder scheduling remains a separate unfinished consumer.
+`SignatureDeliveryModule` now implements `sendSignatureDocument`, `sendSignatureReminder`, and `scheduleSignatureReminders`. The frontend always routes the existing send and remind consumers through GraphQL after the single-owner delivery/completion scheduler handoff. Reminder scheduling has no shipped UI consumer, so its unused duplicate Express route is retired and the tested GraphQL mutation is the sole application capability available to a future consumer.
 
 Migration 042 adds `signature_delivery_outbox`. Initial send locks the draft, validates its PDF and recipients, snapshots provider payloads, derives deterministic signing capabilities from the existing JWT secret (or an optional dedicated derivation key), stores only SHA-256 capability hashes on recipients, and commits lifecycle, routing, audit, and delivery intents atomically. Sequential routing activates only the first recipient; parallel routing activates all recipients. Manual reminders target only active unsigned recipients, supersede queued/retry attempts, and refuse to rotate a capability while delivery is processing.
 

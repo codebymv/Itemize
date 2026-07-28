@@ -1,8 +1,8 @@
 # CRM GraphQL cutover contract
 
-**Status:** Phase 1 contact CRUD, activities, bounded related content, aggregate contact profile, tag, pipeline, deal, and authenticated form-definition/submission-management operations, canonical CRM persistence, and the retained public-form boundary implemented; broader CRM characterization continues
+**Status:** Pipeline, deal, tag, and authenticated form consumers are cut over to GraphQL; canonical CRM persistence and retained CSV/public-form protocol boundaries are implemented; broader CRM characterization continues
 
-**Evidence date:** 2026-07-17
+**Evidence date:** 2026-07-26
 
 ## Decision
 
@@ -57,7 +57,7 @@ Contact lists use the shared strict page input and deterministic ordering. Exist
 
 `contactProfile` aggregates contact, invoices, signatures, payments, communications, activities, notes, lists, tasks, and bookings. Every collection now has its own retained-legacy bound, deterministic ID tie-breaker, total/truncation metadata, and `AVAILABLE`/`UNAVAILABLE` status. The parent contact is tenant-private and required; a child query failure preserves the healthy sections while marking only that section unavailable. An exhaustive focused matrix independently fails each of the nine child queries and proves that the other eight remain available; the service matrix proves that every failed section returns explicit `UNAVAILABLE`, empty nodes, zero total, and no false truncation. The legacy aggregator silently replaces a failed child query with an empty array, making "none" indistinguishable from "failed". Fresh-PostgreSQL characterization proves this defect for the stale payment query (`p.date`) and nonexistent list junction tables; GraphQL uses the current payment timestamps and direct organization-qualified contact links instead.
 
-The generated consumer ledger and a source-scanning regression both prove that no shipped frontend calls the aggregate REST route or the `contactProfile` GraphQL field. The contact detail page intentionally composes the narrower contact, activity, and related-content operations. `contactProfile` therefore remains server-only with no browser transport flag; introducing a consumer requires removing that regression deliberately and completing a browser/rollback gate for the new experience.
+The generated consumer ledger and a source-scanning regression both prove that no shipped frontend called the aggregate REST route or currently calls the `contactProfile` GraphQL field. The unused Express aggregate and its stale child-query implementation are retired; `contactProfile` is the sole aggregate capability. The contact detail page intentionally composes narrower contact, activity, and related-content operations, so the aggregate remains server-only until a real product consumer is introduced and browser-tested.
 
 ### Bulk changes and limits
 
@@ -88,7 +88,7 @@ Database triggers keep both directions synchronized while legacy writers remain:
 
 ### Pipeline stages
 
-`pipeline_stages` is now authoritative. The `pipelines.stages` JSON array remains a writable compatibility projection for the retained REST, analytics, segment, and frontend consumers. Stage keys are trimmed, case-sensitive opaque identifiers; names, colors, and order may change without rewriting deal identity. Array position defines order for compatibility writes.
+`pipeline_stages` is now authoritative. The `pipelines.stages` JSON array remains a writable compatibility projection for migration, analytics, segment, and direct-database consumers. Stage keys are trimmed, case-sensitive opaque identifiers; names, colors, and order may change without rewriting deal identity. Array position defines order for compatibility writes.
 
 - A pipeline has a non-blank name and at least one valid stage.
 - Stage IDs are unique within the pipeline and every stage has a name, order, and validated color.
@@ -100,7 +100,7 @@ Clean-database migration `canonical_pipeline_stage_model_v1` and numbered produc
 
 Fresh PostgreSQL proves normalized JSON writes, canonical ordering, duplicate-key rejection, direct row projection, in-use deletion denial, direct cross-tenant and unknown-stage denial, default uniqueness, and idempotent drift repair that preserves deal-referenced missing stages.
 
-`PipelinesModule` now exposes `pipelines`, `pipeline`, `createPipeline`, `updatePipeline`, and `deletePipeline`. Reads use deterministic default/name/ID and deal-created/ID ordering, organization-qualified deal/contact/member projections, and tenant-scoped open-value aggregates. Writes normalize stage position into canonical order, validate opaque keys/names/colors, distinguish omitted description from explicit null, serialize default changes, reject removal of an in-use stage, and lock the tenant-owned pipeline before deletion checks. The board consumer can independently select GraphQL reads or definition mutations; deal transport uses its own independent flags.
+`PipelinesModule` now exposes `pipelines`, `pipeline`, `createPipeline`, `updatePipeline`, and `deletePipeline`. Reads use deterministic default/name/ID and deal-created/ID ordering, organization-qualified deal/contact/member projections, and tenant-scoped open-value aggregates. Writes normalize stage position into canonical order, validate opaque keys/names/colors, distinguish omitted description from explicit null, serialize default changes, reject removal of an in-use stage, and lock the tenant-owned pipeline before deletion checks. The board calls these operations directly; the pipeline rollout flags, REST fallbacks, and all five Express operations are removed.
 
 ### Deal contract
 
@@ -118,6 +118,9 @@ won <-> lost through the explicit terminal mutation
 `won_at` and `lost_at` are mutually exclusive; reopening clears both and the lost reason. Every lifecycle or stage transition records activity and a durable domain event in the state transaction.
 
 `DealsModule` implements both reads and all seven writes. Deal mutations lock the tenant-owned row, validate the effective tenant-consistent reference tuple, and use the decimal-string boundary. Real stage and lifecycle transitions atomically write the deal state, a tenant-owned `deal_activities` row, an optional contact-timeline `deal_update`, and a durable workflow trigger. Repeated no-op transitions do not duplicate activity or event rows. Database checks make won/lost state mutually exclusive and forbid a lost reason without lost state.
+
+The deal board calls the two queries and seven mutations directly with no
+rollout flag or REST fallback. All nine Express deal operations are removed.
 
 `deal_stage_changed`, `deal_won`, `deal_lost`, and `deal_reopened` are canonical workflow trigger types. Existing stage-change automation remains compatible, while the new lifecycle types can be selected explicitly without overloading stage semantics.
 
@@ -162,7 +165,7 @@ Fresh PostgreSQL suites now cover contact CRUD/tenancy, profile authentication a
 
 The NestJS `ContactsModule` implements the contact/profile operations, `ContactTransfersModule` implements the two retained CSV HTTP operations, `TagsModule` implements all five tag operations, `PipelinesModule` implements all five pipeline-definition operations, `DealsModule` implements all nine deal operations, and `FormsModule` implements seven authenticated form-definition operations plus two submission-management operations. Fresh-PostgreSQL tests prove dual REST/GraphQL contact parity; retained CSV authorization, validation, concurrency, limits, and side effects; canonical tag and pipeline behavior; deal validation, isolation, concurrency, and transition side effects; and form list/detail projections, default-field creation, serialized plan enforcement, omitted-versus-null settings, CSRF and tenant privacy, atomic field replacement with conditional-ID remapping, publish validation, duplication with fresh field IDs, deterministic submission paging, and tenant-private deletion. Anonymous public form retrieval/submission remains outside GraphQL.
 
-The shared frontend adapters preserve their existing snake-case consumer shapes, selected-organization headers, session recovery, and CSRF acquisition. Authenticated forms now use GraphQL directly for all nine operations; the three form rollout flags and REST branches have been removed. `getPublicForm` and `submitPublicForm` remain anonymous HTTP by protocol. There is no standalone tag API consumer to switch. Frontend coverage includes CSV parsing and bounds, deal decimal/list/lifecycle mapping, form mapping, conditional-field transport, nullable clearing, submission paging/deletion, authenticated editor settings and ordered field replacement, and public-form transport isolation.
+The shared frontend adapters preserve their existing snake-case consumer shapes, selected-organization headers, session recovery, and CSRF acquisition. Pipelines, deals, and authenticated forms now use GraphQL directly with their rollout flags and REST branches removed. `getPublicForm` and `submitPublicForm` remain anonymous HTTP by protocol. There is no standalone tag API consumer to switch. Frontend coverage includes every pipeline/deal query and mutation, decimal/list/lifecycle mapping, CSV parsing and bounds, form mapping, conditional-field transport, nullable clearing, submission paging/deletion, authenticated editor settings and ordered field replacement, and public-form transport isolation.
 
 The 2026-07-17 mutation rehearsal used a disposable staging account and real credential login against GraphQL deployment `239de591-6f1a-4be7-b10a-08a59070cc15` through backend deployment `095eb5e5-a5c4-4da4-94e8-686fb1e842f6`. Browser create, edit, activity display, and delete passed with GraphQL writes and double-submit CSRF. PostgreSQL showed the expected create/update workflow triggers. Disabling only the mutation flag repeated create/edit/delete through REST while contact reads remained on GraphQL, proving rollback without data repair. Cleanup left zero temporary users, organizations, contacts, or triggers. Privacy-safe proxy and NestJS operation events now distinguish transport/layer and record one correlated request ID, operation name/type, numeric latency, operation/error counters, and stable error codes without source, variables, response data, or identity fields.
 
