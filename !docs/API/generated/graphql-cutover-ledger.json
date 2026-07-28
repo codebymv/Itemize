@@ -6,11 +6,11 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 306,
-    "apiOperationCount": 299,
+    "operationCount": 305,
+    "apiOperationCount": 298,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 250,
-    "operationsWithFrontendConsumers": 239,
+    "frontendCallsiteCount": 249,
+    "operationsWithFrontendConsumers": 238,
     "operationsWithBackendTests": 165,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
@@ -18,8 +18,8 @@
     "unmatchedBackendTestCallCount": 55,
     "retainHttpCount": 55,
     "graphqlQueryCount": 79,
-    "graphqlMutationCount": 165,
-    "highRiskCount": 245,
+    "graphqlMutationCount": 164,
+    "highRiskCount": 244,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -2971,7 +2971,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 55
+          "line": 54
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -3858,7 +3858,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 215
+          "line": 214
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -3933,7 +3933,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 216
+          "line": 215
         },
         {
           "source": "backend/src/routes/contacts.routes.js",
@@ -5037,7 +5037,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 257
+          "line": 256
         },
         {
           "source": "backend/src/routes/invoices/actions.routes.js",
@@ -5525,7 +5525,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 249
+          "line": 248
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -6805,7 +6805,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 253
+          "line": 252
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -6843,7 +6843,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 245
+          "line": 244
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -7131,7 +7131,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 51
+          "line": 50
         }
       ],
       "consumerCallsites": [],
@@ -8635,7 +8635,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 311
+          "line": 310
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8722,7 +8722,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 331
+          "line": 330
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8791,7 +8791,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 327
+          "line": 326
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8836,7 +8836,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 319
+          "line": 318
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8864,7 +8864,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 315
+          "line": 314
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8899,7 +8899,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 323
+          "line": 322
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -9825,40 +9825,6 @@
       "risk": "high"
     },
     {
-      "id": "POST /api/search",
-      "key": "POST /api/search",
-      "method": "POST",
-      "path": "/api/search",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/search.routes.js",
-          "line": 9
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/search",
-          "rawPath": "/api/search",
-          "source": "frontend/src/components/cross-module-search/CrossModuleSearch.tsx",
-          "line": 79,
-          "client": "fetch",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "GET /api/segments",
       "key": "GET /api/segments",
       "method": "GET",
@@ -10775,7 +10741,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 297
+          "line": 296
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -10846,7 +10812,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 293
+          "line": 292
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -11003,7 +10969,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 279
+          "line": 278
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -11324,7 +11290,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 301
+          "line": 300
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -11393,7 +11359,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 286
+          "line": 285
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -11959,7 +11925,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 119
+          "line": 118
         }
       ],
       "consumerCallsites": [
@@ -11993,7 +11959,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 63
+          "line": 62
         }
       ],
       "consumerCallsites": [
@@ -12027,7 +11993,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 54
+          "line": 53
         }
       ],
       "consumerCallsites": [],
@@ -12199,7 +12165,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 52
+          "line": 51
         }
       ],
       "consumerCallsites": [],
@@ -12428,7 +12394,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 53
+          "line": 52
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",

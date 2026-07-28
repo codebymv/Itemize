@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 306
-- API operations under `/api`: 299
+- Registered method/path operations: 305
+- API operations under `/api`: 298
 - Non-API registered operations: 7
-- Static frontend callsites: 250
-- Operations with frontend consumers: 239
+- Static frontend callsites: 249
+- Operations with frontend consumers: 238
 - Operations referenced by backend tests: 165
 - Recommended GraphQL queries: 79
-- Recommended GraphQL mutations: 165
+- Recommended GraphQL mutations: 164
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 245
+- High-risk operations: 244
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -247,7 +247,6 @@
 | DELETE | `/api/reputation/widgets/:id` | 1 | 0 | graphql-mutation | high | reputation / ReputationConfigurationModule / deleteReputationWidget |
 | PUT | `/api/reputation/widgets/:id` | 1 | 0 | graphql-mutation | high | reputation / ReputationConfigurationModule / updateReputationWidget |
 | GET | `/api/reputation/widgets/:id/embed-code` | 1 | 0 | graphql-query | high | reputation / ReputationConfigurationModule / reputationWidgetEmbedCode |
-| POST | `/api/search` | 1 | 0 | graphql-mutation | high | _unassigned_ |
 | GET | `/api/segments` | 1 | 1 | graphql-query | high | audiences / SegmentsModule / segments |
 | POST | `/api/segments` | 1 | 0 | graphql-mutation | high | audiences / SegmentsModule / createSegment |
 | DELETE | `/api/segments/:id` | 1 | 0 | graphql-mutation | high | audiences / SegmentsModule / deleteSegment |

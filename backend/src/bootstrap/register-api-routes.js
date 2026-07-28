@@ -39,7 +39,6 @@ const {
     publicSigningMutationsEnabled,
     publicSigningReadsEnabled,
 } = require('../public-signing-proxy');
-const searchRoutes = require('../routes/search.routes');
 const webhooksRoutes = require('../routes/webhooks.routes');
 const calendarIntegrationsRoutes = require('../routes/calendar-integrations.routes');
 const sharingRoutes = require('../routes/sharing.routes');
@@ -334,8 +333,6 @@ function registerApiRoutes({
     );
     app.use('/api', signaturesRoutes(pool, authenticateJWT, publicRateLimit));
     logger.info('Signatures routes initialized');
-    app.use('/api/search', searchRoutes);
-    logger.info('Search routes initialized');
     app.use('/api/webhooks', webhooksRoutes);
     logger.info('Webhooks routes initialized');
     app.use('/api/calendar-integrations', calendarIntegrationsRoutes(pool, authenticateJWT));
