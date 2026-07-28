@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 220,
-    "apiOperationCount": 213,
+    "operationCount": 215,
+    "apiOperationCount": 208,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 162,
-    "operationsWithFrontendConsumers": 155,
-    "operationsWithBackendTests": 119,
+    "frontendCallsiteCount": 157,
+    "operationsWithFrontendConsumers": 150,
+    "operationsWithBackendTests": 114,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 50,
     "retainHttpCount": 55,
-    "graphqlQueryCount": 45,
-    "graphqlMutationCount": 113,
-    "highRiskCount": 171,
+    "graphqlQueryCount": 43,
+    "graphqlMutationCount": 110,
+    "highRiskCount": 166,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -596,361 +596,6 @@
       "risk": "high"
     },
     {
-      "id": "GET /api/bookings",
-      "key": "GET /api/bookings",
-      "method": "GET",
-      "path": "/api/bookings",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/bookings.routes.js",
-          "line": 109
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/bookings",
-          "rawPath": "/api/bookings",
-          "source": "frontend/src/services/calendarsApi.ts",
-          "line": 145,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/bookings",
-          "source": "backend-v2/test/integration/bookings.integration-spec.ts",
-          "line": 256
-        },
-        {
-          "method": "GET",
-          "path": "/api/bookings",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 227
-        },
-        {
-          "method": "GET",
-          "path": "/api/bookings",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 238
-        },
-        {
-          "method": "GET",
-          "path": "/api/bookings",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 402
-        },
-        {
-          "method": "GET",
-          "path": "/api/bookings",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 412
-        },
-        {
-          "method": "GET",
-          "path": "/api/bookings",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 423
-        },
-        {
-          "method": "GET",
-          "path": "/api/bookings",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 434
-        },
-        {
-          "method": "GET",
-          "path": "/api/bookings",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 1021
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "scheduling",
-      "targetOperation": "bookings",
-      "targetModule": "BookingsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Staging-gated behind the independent default-off booking-read flag with strict organization-scoped filters, bounded pagination, DateTime-range validation, stable start-time/ID ordering, tenant-qualified relations, retained-shape mapping, fresh-PostgreSQL interoperability, real-browser list/status-filter coverage, and same-session REST rollback.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/bookings",
-      "key": "POST /api/bookings",
-      "method": "POST",
-      "path": "/api/bookings",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/bookings.routes.js",
-          "line": 238
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/bookings",
-          "rawPath": "/api/bookings",
-          "source": "frontend/src/services/calendarsApi.ts",
-          "line": 183,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/bookings",
-          "source": "backend-v2/test/integration/bookings.integration-spec.ts",
-          "line": 530
-        },
-        {
-          "method": "POST",
-          "path": "/api/bookings",
-          "source": "backend-v2/test/integration/calendars.integration-spec.ts",
-          "line": 715
-        },
-        {
-          "method": "POST",
-          "path": "/api/bookings",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 154
-        },
-        {
-          "method": "POST",
-          "path": "/api/bookings",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 191
-        },
-        {
-          "method": "POST",
-          "path": "/api/bookings",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 201
-        },
-        {
-          "method": "POST",
-          "path": "/api/bookings",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 212
-        },
-        {
-          "method": "POST",
-          "path": "/api/bookings",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 279
-        },
-        {
-          "method": "POST",
-          "path": "/api/bookings",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 349
-        },
-        {
-          "method": "POST",
-          "path": "/api/bookings",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 376
-        },
-        {
-          "method": "POST",
-          "path": "/api/bookings",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 381
-        },
-        {
-          "method": "POST",
-          "path": "/api/bookings",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 603
-        },
-        {
-          "method": "POST",
-          "path": "/api/bookings",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 624
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "scheduling",
-      "targetOperation": "createBooking",
-      "targetModule": "BookingsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Implemented behind an independent default-off scheduling-mutation flag with CSRF, organization-owned calendar/contact/assignee validation, canonical advisory-lock-first serialization, shared authoritative windows/override/buffer/notice/horizon/activity/DST/external-busy policy, retained-shape mapping, one version-1 durable event, REST interoperability, and a fresh-PostgreSQL simultaneous-slot race. The shipped interface has no create control, so browser parity is not claimed.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/bookings/:id",
-      "key": "GET /api/bookings/:*",
-      "method": "GET",
-      "path": "/api/bookings/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/bookings.routes.js",
-          "line": 207
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/bookings/:id",
-          "rawPath": "/api/bookings/${id}",
-          "source": "frontend/src/services/calendarsApi.ts",
-          "line": 156,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/bookings/:bookingId",
-          "source": "backend-v2/test/integration/bookings.integration-spec.ts",
-          "line": 404
-        },
-        {
-          "method": "GET",
-          "path": "/api/bookings/:bookingId",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 249
-        },
-        {
-          "method": "GET",
-          "path": "/api/bookings/:bookingId",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 260
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "scheduling",
-      "targetOperation": "booking",
-      "targetModule": "BookingsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Staging-gated behind the independent default-off booking-read flag with organization-owned detail, tenant-safe contact/calendar/assignee projections, foreign-ID concealment, cancellation-capability exclusion, retained-shape mapping, fresh-PostgreSQL interoperability, and authenticated direct comparison with retained REST. The shipped app has no booking-detail route.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PATCH /api/bookings/:id/cancel",
-      "key": "PATCH /api/bookings/:*/cancel",
-      "method": "PATCH",
-      "path": "/api/bookings/:id/cancel",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/bookings.routes.js",
-          "line": 354
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PATCH",
-          "path": "/api/bookings/:id/cancel",
-          "rawPath": "/api/bookings/${id}/cancel",
-          "source": "frontend/src/services/calendarsApi.ts",
-          "line": 197,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PATCH",
-          "path": "/api/bookings/:bookingId/cancel",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 335
-        },
-        {
-          "method": "PATCH",
-          "path": "/api/bookings/:freshId/cancel",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 356
-        },
-        {
-          "method": "PATCH",
-          "path": "/api/bookings/:id/cancel",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 720
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "scheduling",
-      "targetOperation": "cancelBooking",
-      "targetModule": "BookingsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Browser-gated behind an independent default-off frontend flag: CSRF and tenant context required; pending/confirmed only; status, timestamp, normalized reason, public-capability revocation, and one versioned durable booking_cancelled event commit transactionally; replay is rejected without another write. Authenticated staging mutation and independent retained-REST rollback both passed with exactly one event.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PATCH /api/bookings/:id/reschedule",
-      "key": "PATCH /api/bookings/:*/reschedule",
-      "method": "PATCH",
-      "path": "/api/bookings/:id/reschedule",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/bookings.routes.js",
-          "line": 404
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PATCH",
-          "path": "/api/bookings/:id/reschedule",
-          "rawPath": "/api/bookings/${id}/reschedule",
-          "source": "frontend/src/services/calendarsApi.ts",
-          "line": 215,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PATCH",
-          "path": "/api/bookings/:bookingId/reschedule",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 300
-        },
-        {
-          "method": "PATCH",
-          "path": "/api/bookings/:bookingId/reschedule",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 315
-        },
-        {
-          "method": "PATCH",
-          "path": "/api/bookings/:bookingId/reschedule",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 325
-        },
-        {
-          "method": "PATCH",
-          "path": "/api/bookings/:id/reschedule",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 701
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "scheduling",
-      "targetOperation": "rescheduleBooking",
-      "targetModule": "BookingsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Implemented behind the independent default-off scheduling-mutation flag with CSRF, tenant concealment, pending/confirmed enforcement, advisory-lock-first authoritative policy checks excluding itself, optional timezone preservation, public-capability expiry realignment to the new end plus one day, one version-1 durable event, retained-shape mapping, and REST interoperability. The shipped interface has no reschedule control, so browser parity is not claimed.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "GET /api/bookings/public/book/:slug",
       "key": "GET /api/bookings/public/book/:*",
       "method": "GET",
@@ -958,7 +603,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/bookings.routes.js",
-          "line": 530
+          "line": 106
         }
       ],
       "consumerCallsites": [
@@ -967,7 +612,7 @@
           "path": "/api/bookings/public/book/:slug",
           "rawPath": "/api/bookings/public/book/${slug}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 226,
+          "line": 186,
           "client": "api",
           "literalInterpolation": false
         }
@@ -977,31 +622,31 @@
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 480
+          "line": 157
         },
         {
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 490
+          "line": 167
         },
         {
           "method": "GET",
           "path": "/api/bookings/public/book/no-such-calendar-slug-xyz",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 498
+          "line": 175
         },
         {
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 1008
+          "line": 612
         },
         {
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 1011
+          "line": 615
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -1023,7 +668,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/bookings.routes.js",
-          "line": 649
+          "line": 225
         }
       ],
       "consumerCallsites": [
@@ -1032,7 +677,7 @@
           "path": "/api/bookings/public/book/:slug",
           "rawPath": "/api/bookings/public/book/${slug}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 260,
+          "line": 220,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1042,49 +687,43 @@
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 506
+          "line": 183
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 547
+          "line": 224
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 567
+          "line": 244
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 633
+          "line": 279
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 679
-        },
-        {
-          "method": "POST",
-          "path": "/api/bookings/public/book/:calendarPublicId",
-          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 697
+          "line": 325
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 861
+          "line": 465
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 872
+          "line": 476
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -1106,7 +745,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/bookings.routes.js",
-          "line": 846
+          "line": 422
         }
       ],
       "consumerCallsites": [
@@ -1115,7 +754,7 @@
           "path": "/api/bookings/public/book/:slug/cancel/:token",
           "rawPath": "/api/bookings/public/book/${slug}/cancel/${token}",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 273,
+          "line": 233,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1125,25 +764,25 @@
           "method": "POST",
           "path": "/api/bookings/public/book/not-:calendarSlug/cancel/:token",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 651
+          "line": 297
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId/cancel/:token",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 656
+          "line": 302
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId/cancel/:token",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 672
+          "line": 318
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId/cancel/:token",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 690
+          "line": 336
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -1165,7 +804,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/bookings.routes.js",
-          "line": 579
+          "line": 155
         }
       ],
       "consumerCallsites": [
@@ -1174,7 +813,7 @@
           "path": "/api/bookings/public/book/:slug/slots",
           "rawPath": "/api/bookings/public/book/${slug}/slots",
           "source": "frontend/src/services/calendarsApi.ts",
-          "line": 235,
+          "line": 195,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1184,13 +823,13 @@
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarSlug/slots",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 828
+          "line": 432
         },
         {
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarSlug/slots",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 847
+          "line": 451
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -10060,6 +9699,8 @@
     "GET /api/billing",
     "GET /api/billing/plans",
     "GET /api/billing/usage",
+    "GET /api/bookings",
+    "GET /api/bookings/:id",
     "GET /api/calendars",
     "GET /api/calendars/:id",
     "GET /api/canvas/lists",
@@ -10092,11 +9733,14 @@
     "GET /api/vaults/:vaultId",
     "GET /api/whiteboards",
     "PATCH /api/admin/me/plan",
+    "PATCH /api/bookings/:id/cancel",
+    "PATCH /api/bookings/:id/reschedule",
     "POST /api/admin/email/preview",
     "POST /api/admin/email/send",
     "POST /api/billing/acknowledge-trial-end",
     "POST /api/billing/checkout",
     "POST /api/billing/portal",
+    "POST /api/bookings",
     "POST /api/calendars",
     "POST /api/calendars/:id/date-override",
     "POST /api/campaigns/:id/pause",

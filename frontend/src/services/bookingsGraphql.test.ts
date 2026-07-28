@@ -7,11 +7,6 @@ import {
   getBookingsViaGraphql,
   rescheduleBookingViaGraphql,
 } from './bookingsGraphql';
-import {
-  isBookingGraphqlMutationsEnabled,
-  isBookingGraphqlReadsEnabled,
-  isBookingSchedulingGraphqlMutationsEnabled,
-} from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(),
@@ -69,27 +64,6 @@ describe('booking GraphQL consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('keeps authenticated booking reads disabled by default', () => {
-    vi.stubEnv('VITE_BOOKING_READS_GRAPHQL', 'false');
-    expect(isBookingGraphqlReadsEnabled()).toBe(false);
-    vi.stubEnv('VITE_BOOKING_READS_GRAPHQL', 'true');
-    expect(isBookingGraphqlReadsEnabled()).toBe(true);
-  });
-
-  it('keeps authenticated booking cancellation independently disabled by default', () => {
-    vi.stubEnv('VITE_BOOKING_MUTATIONS_GRAPHQL', 'false');
-    expect(isBookingGraphqlMutationsEnabled()).toBe(false);
-    vi.stubEnv('VITE_BOOKING_MUTATIONS_GRAPHQL', 'true');
-    expect(isBookingGraphqlMutationsEnabled()).toBe(true);
-  });
-
-  it('keeps authenticated booking scheduling mutations independently disabled by default', () => {
-    vi.stubEnv('VITE_BOOKING_SCHEDULING_MUTATIONS_GRAPHQL', 'false');
-    expect(isBookingSchedulingGraphqlMutationsEnabled()).toBe(false);
-    vi.stubEnv('VITE_BOOKING_SCHEDULING_MUTATIONS_GRAPHQL', 'true');
-    expect(isBookingSchedulingGraphqlMutationsEnabled()).toBe(true);
   });
 
   it('maps filters, stable paging, joined fields, and retained shape', async () => {

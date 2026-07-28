@@ -57,18 +57,6 @@ async function insertCalendar(pool, user, name, durationMinutes = 30) {
     return result.rows[0];
 }
 
-/** Seed a booking test calendar without depending on the retired calendar REST surface. */
-async function seedCalendar(app, user) {
-    const calendar = await insertCalendar(
-        app.locals.testPool,
-        user,
-        `Booking Test Calendar ${Date.now()}`,
-        60
-    );
-    await configureCalendarPolicy(app.locals.testPool, calendar.id);
-    return calendar.id;
-}
-
 async function configureCalendarPolicy(pool, calendarId, settings = {}) {
     await pool.query(
         `UPDATE calendars
@@ -122,7 +110,6 @@ describe('Bookings Integration Tests', () => {
         dbHelper = new TestDbHelper();
         await dbHelper.setup();
         app = createApp(dbHelper.pool);
-        app.locals.testPool = dbHelper.pool;
 
         [userA, userB] = await Promise.all([
             dbHelper.seedUser(`book-a-${Date.now()}@test.itemize`, 'Booking User A'),
@@ -133,316 +120,6 @@ describe('Bookings Integration Tests', () => {
     afterAll(async () => { await dbHelper.teardown(); }, 30000);
 
     // ── Manual booking CRUD ───────────────────────────────────────────────────
-
-    describe('Manual booking CRUD & isolation', () => {
-        let calendarId;
-        let bookingId;
-        const slot = futureSlot(72);
-
-        beforeAll(async () => {
-            calendarId = await seedCalendar(app, userA);
-        });
-
-        afterAll(async () => {
-            await dbHelper.pool.query('DELETE FROM bookings WHERE calendar_id = $1', [calendarId]);
-            await dbHelper.pool.query('DELETE FROM availability_windows WHERE calendar_id = $1', [calendarId]);
-            await dbHelper.pool.query('DELETE FROM calendars WHERE id = $1', [calendarId]);
-        });
-
-        it('creates a manual booking', async () => {
-            const res = await request(app)
-                .post('/api/bookings')
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id))
-                .send({
-                    calendar_id: calendarId,
-                    title: 'Discovery Call',
-                    attendee_name: 'Alice Smith',
-                    attendee_email: 'alice@example.com',
-                    timezone: 'America/New_York',
-                    ...slot,
-                });
-
-            expect(res.status).toBe(201);
-            const b = res.body;
-            expect(b.attendee_name).toBe('Alice Smith');
-            expect(b.attendee_email).toBe('alice@example.com');
-            // DB default status is 'confirmed'
-            expect(b.status).toBe('confirmed');
-            expect(b.organization_id).toBe(userA.org.id);
-            expect(b).not.toHaveProperty('cancellation_token');
-            const capability = await dbHelper.pool.query(
-                `SELECT cancellation_token, cancellation_token_hash,
-                        cancellation_token_expires_at
-                 FROM bookings
-                 WHERE id = $1`,
-                [b.id]
-            );
-            expect(capability.rows[0]).toEqual({
-                cancellation_token: null,
-                cancellation_token_hash: null,
-                cancellation_token_expires_at: null,
-            });
-            bookingId = b.id;
-        });
-
-        it('rejects booking without required fields', async () => {
-            const res = await request(app)
-                .post('/api/bookings')
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id))
-                .send({ calendar_id: calendarId }); // missing start_time / end_time
-
-            expect(res.status).toBe(400);
-        });
-
-        it('rejects booking when calendar belongs to another org', async () => {
-            const res = await request(app)
-                .post('/api/bookings')
-                .set('Cookie', [`itemize_auth=${userB.token}`])
-                .set('x-organization-id', String(userB.org.id))
-                .send({ calendar_id: calendarId, ...futureSlot(80) });
-
-            // Route returns 404 when calendar is not found in the org
-            expect([400, 404]).toContain(res.status);
-        });
-
-        it('rejects double-booking the same slot', async () => {
-            const res = await request(app)
-                .post('/api/bookings')
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id))
-                .send({
-                    calendar_id: calendarId,
-                    attendee_name: 'Bob Jones',
-                    attendee_email: 'bob@example.com',
-                    ...slot, // exact same start/end as the first booking
-                });
-
-            expect(res.status).toBe(409);
-        });
-
-        it('lists bookings for User A org', async () => {
-            const res = await request(app)
-                .get('/api/bookings')
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id));
-
-            expect(res.status).toBe(200);
-            expect(Array.isArray(res.body.bookings)).toBe(true);
-            expect(res.body.bookings.some(b => b.id === bookingId)).toBe(true);
-        });
-
-        it('User B cannot see User A bookings', async () => {
-            const res = await request(app)
-                .get('/api/bookings')
-                .set('Cookie', [`itemize_auth=${userB.token}`])
-                .set('x-organization-id', String(userB.org.id));
-
-            expect(res.status).toBe(200);
-            expect(res.body.bookings.every(b => b.organization_id === userB.org.id)).toBe(true);
-            expect(res.body.bookings.some(b => b.id === bookingId)).toBe(false);
-        });
-
-        it('fetches a single booking by ID', async () => {
-            const res = await request(app)
-                .get(`/api/bookings/${bookingId}`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id));
-
-            expect(res.status).toBe(200);
-            expect(res.body.id).toBe(bookingId);
-            expect(res.body.calendar_name).toBeTruthy();
-        });
-
-        it('User B cannot fetch User A booking', async () => {
-            const res = await request(app)
-                .get(`/api/bookings/${bookingId}`)
-                .set('Cookie', [`itemize_auth=${userB.token}`])
-                .set('x-organization-id', String(userB.org.id));
-
-            expect(res.status).toBe(404);
-        });
-    });
-
-    // ── Booking lifecycle (cancel / reschedule) ───────────────────────────────
-
-    describe('Cancel and reschedule', () => {
-        let calendarId;
-        let bookingId;
-
-        beforeAll(async () => {
-            calendarId = await seedCalendar(app, userA);
-
-            const slot = futureSlot(96);
-            const res = await request(app)
-                .post('/api/bookings')
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id))
-                .send({
-                    calendar_id: calendarId,
-                    attendee_name: 'Cancel Test',
-                    attendee_email: 'cancel@test.com',
-                    ...slot,
-                });
-            bookingId = res.body.id;
-        });
-
-        afterAll(async () => {
-            await dbHelper.pool.query('DELETE FROM bookings WHERE calendar_id = $1', [calendarId]);
-            await dbHelper.pool.query('DELETE FROM availability_windows WHERE calendar_id = $1', [calendarId]);
-            await dbHelper.pool.query('DELETE FROM calendars WHERE id = $1', [calendarId]);
-        });
-
-        it('reschedules a booking to a new slot', async () => {
-            const newSlot = futureSlot(120);
-            const res = await request(app)
-                .patch(`/api/bookings/${bookingId}/reschedule`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id))
-                .send(newSlot);
-
-            expect(res.status).toBe(200);
-            // Verify new time is reflected
-            const startDiff = Math.abs(
-                new Date(res.body.start_time) - new Date(newSlot.start_time)
-            );
-            expect(startDiff).toBeLessThan(2000); // within 2s
-        });
-
-        it('rejects reschedule without start_time and end_time', async () => {
-            const res = await request(app)
-                .patch(`/api/bookings/${bookingId}/reschedule`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id))
-                .send({});
-
-            expect(res.status).toBe(400);
-        });
-
-        it('User B cannot reschedule User A booking', async () => {
-            const res = await request(app)
-                .patch(`/api/bookings/${bookingId}/reschedule`)
-                .set('Cookie', [`itemize_auth=${userB.token}`])
-                .set('x-organization-id', String(userB.org.id))
-                .send(futureSlot(200));
-
-            expect(res.status).toBe(404);
-        });
-
-        it('cancels a booking', async () => {
-            const res = await request(app)
-                .patch(`/api/bookings/${bookingId}/cancel`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id))
-                .send({ reason: 'Schedule conflict' });
-
-            expect(res.status).toBe(200);
-            expect(res.body.status).toBe('cancelled');
-            expect(res.body.cancellation_reason).toBe('Schedule conflict');
-        });
-
-        it('User B cannot cancel User A booking', async () => {
-            // Create a fresh booking for this isolation test
-            const freshSlot = futureSlot(144);
-            const createRes = await request(app)
-                .post('/api/bookings')
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id))
-                .send({ calendar_id: calendarId, attendee_name: 'Fresh', attendee_email: 'f@t.com', ...freshSlot });
-            const freshId = createRes.body.id;
-
-            const res = await request(app)
-                .patch(`/api/bookings/${freshId}/cancel`)
-                .set('Cookie', [`itemize_auth=${userB.token}`])
-                .set('x-organization-id', String(userB.org.id))
-                .send({});
-
-            expect(res.status).toBe(404);
-        });
-    });
-
-    // ── List filtering ────────────────────────────────────────────────────────
-
-    describe('List filtering', () => {
-        let calendarId;
-        let confirmedId;
-
-        beforeAll(async () => {
-            calendarId = await seedCalendar(app, userA);
-
-            const [, r2] = await Promise.all([
-                request(app)
-                    .post('/api/bookings')
-                    .set('Cookie', [`itemize_auth=${userA.token}`])
-                    .set('x-organization-id', String(userA.org.id))
-                    .send({ calendar_id: calendarId, attendee_name: 'A1', attendee_email: 'a1@t.com', ...futureSlot(168) }),
-                request(app)
-                    .post('/api/bookings')
-                    .set('Cookie', [`itemize_auth=${userA.token}`])
-                    .set('x-organization-id', String(userA.org.id))
-                    .send({ calendar_id: calendarId, attendee_name: 'A2', attendee_email: 'a2@t.com', ...futureSlot(192) }),
-            ]);
-            confirmedId = r2.body.id;
-
-            await dbHelper.pool.query(
-                "UPDATE bookings SET status = 'confirmed' WHERE id = $1",
-                [confirmedId]
-            );
-        });
-
-        afterAll(async () => {
-            await dbHelper.pool.query('DELETE FROM bookings WHERE calendar_id = $1', [calendarId]);
-            await dbHelper.pool.query('DELETE FROM availability_windows WHERE calendar_id = $1', [calendarId]);
-            await dbHelper.pool.query('DELETE FROM calendars WHERE id = $1', [calendarId]);
-        });
-
-        it('filters by calendar_id', async () => {
-            const res = await request(app)
-                .get(`/api/bookings?calendar_id=${calendarId}`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id));
-
-            expect(res.status).toBe(200);
-            expect(res.body.bookings.every(b => b.calendar_id === calendarId)).toBe(true);
-        });
-
-        it('filters by status=confirmed', async () => {
-            const res = await request(app)
-                .get('/api/bookings?status=confirmed')
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id));
-
-            expect(res.status).toBe(200);
-            expect(res.body.bookings.every(b => b.status === 'confirmed')).toBe(true);
-            expect(res.body.bookings.some(b => b.id === confirmedId)).toBe(true);
-        });
-
-        it('filters by status=pending', async () => {
-            const res = await request(app)
-                .get('/api/bookings?status=pending')
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id));
-
-            expect(res.status).toBe(200);
-            // Default status is 'confirmed' from DB default; pending bookings may be 0
-            expect(Array.isArray(res.body.bookings)).toBe(true);
-        });
-
-        it('returns pagination metadata', async () => {
-            const res = await request(app)
-                .get('/api/bookings?page=1&limit=1')
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id));
-
-            expect(res.status).toBe(200);
-            expect(res.body.pagination.page).toBe(1);
-            expect(res.body.pagination.limit).toBe(1);
-            expect(res.body.bookings).toHaveLength(1);
-        });
-    });
-
-    // ── Public booking endpoint ───────────────────────────────────────────────
 
     describe('Public booking via global calendar ID', () => {
         let calendarSlug;
@@ -597,37 +274,6 @@ describe('Bookings Integration Tests', () => {
             await dbHelper.pool.query('DELETE FROM calendars WHERE id = $1', [calendarId]);
         });
 
-        it('commits exactly one of two simultaneous reservations for the same slot', async () => {
-            const slot = futureSlot(288);
-            const makeRequest = (email) => request(app)
-                .post('/api/bookings')
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id))
-                .send({ calendar_id: calendarId, attendee_name: 'Concurrent Booker', attendee_email: email, ...slot });
-
-            const responses = await Promise.all([
-                makeRequest('concurrent-one@test.com'),
-                makeRequest('concurrent-two@test.com'),
-            ]);
-
-            expect(responses.map(response => response.status).sort()).toEqual([201, 409]);
-            const count = await dbHelper.pool.query(
-                'SELECT COUNT(*) FROM bookings WHERE calendar_id = $1 AND start_time = $2 AND end_time = $3',
-                [calendarId, slot.start_time, slot.end_time]
-            );
-            expect(Number(count.rows[0].count)).toBe(1);
-        });
-
-        it('rejects inverted time ranges before writing', async () => {
-            const slot = futureSlot(312);
-            const response = await request(app)
-                .post('/api/bookings')
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id))
-                .send({ calendar_id: calendarId, start_time: slot.end_time, end_time: slot.start_time });
-            expect(response.status).toBe(400);
-        });
-
         it('binds a public cancellation token to its calendar and rejects replay', async () => {
             const createRes = await request(app)
                 .post(`/api/bookings/public/book/${calendarPublicId}`)
@@ -690,48 +336,6 @@ describe('Bookings Integration Tests', () => {
                 .post(`/api/bookings/public/book/${calendarPublicId}/cancel/${token}`)
                 .send({});
             expect(expired.status).toBe(404);
-        });
-
-        it('keeps the public capability aligned with authenticated lifecycle changes', async () => {
-            const createRes = await request(app)
-                .post(`/api/bookings/public/book/${calendarPublicId}`)
-                .send({ attendee_name: 'Operator Lifecycle', attendee_email: 'operator-lifecycle@test.com', ...futureSlot(372) });
-            const rescheduledSlot = futureSlot(396);
-            const rescheduled = await request(app)
-                .patch(`/api/bookings/${createRes.body.booking.id}/reschedule`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id))
-                .send(rescheduledSlot);
-            expect(rescheduled.status).toBe(200);
-
-            const movedCapability = await dbHelper.pool.query(
-                `SELECT cancellation_token_hash, cancellation_token_expires_at
-                 FROM bookings
-                 WHERE id = $1`,
-                [createRes.body.booking.id]
-            );
-            expect(movedCapability.rows[0].cancellation_token_hash).not.toBeNull();
-            expect(
-                new Date(movedCapability.rows[0].cancellation_token_expires_at).getTime()
-                - new Date(rescheduledSlot.end_time).getTime()
-            ).toBe(86400000);
-
-            const cancelled = await request(app)
-                .patch(`/api/bookings/${createRes.body.booking.id}/cancel`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id))
-                .send({ reason: 'Operator cancellation' });
-            expect(cancelled.status).toBe(200);
-            const revoked = await dbHelper.pool.query(
-                `SELECT cancellation_token_hash, cancellation_token_expires_at
-                 FROM bookings
-                 WHERE id = $1`,
-                [createRes.body.booking.id]
-            );
-            expect(revoked.rows[0]).toEqual({
-                cancellation_token_hash: null,
-                cancellation_token_expires_at: null,
-            });
         });
 
         it('migrates useful legacy raw tokens once and preserves hashes on rerun', async () => {
@@ -1016,10 +620,14 @@ describe('Bookings Integration Tests', () => {
         });
     });
 
-    describe('Authentication guard', () => {
-        it('returns 401 on unauthenticated booking list', async () => {
-            const res = await request(app).get('/api/bookings');
-            expect(res.status).toBe(401);
-        });
+    it.each([
+        ['get', '/api/bookings'],
+        ['get', '/api/bookings/1'],
+        ['post', '/api/bookings'],
+        ['patch', '/api/bookings/1/cancel'],
+        ['patch', '/api/bookings/1/reschedule'],
+    ])('returns 404 for retired authenticated %s %s', async (method, path) => {
+        const response = await request(app)[method](path).send({});
+        expect(response.status).toBe(404);
     });
 });

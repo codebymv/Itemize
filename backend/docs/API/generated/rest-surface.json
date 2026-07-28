@@ -3,10 +3,10 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 237,
-    "resolvedDeclarationCount": 237,
+    "declarationCount": 232,
+    "resolvedDeclarationCount": 232,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 220,
+    "uniqueResolvedOperationCount": 215,
     "sourceFileCount": 49
   },
   "caveats": [
@@ -149,61 +149,11 @@
     {
       "method": "GET",
       "publicPaths": [
-        "/api/bookings"
-      ],
-      "declaredPath": "/",
-      "source": "backend/src/routes/bookings.routes.js",
-      "line": 109,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/bookings"
-      ],
-      "declaredPath": "/",
-      "source": "backend/src/routes/bookings.routes.js",
-      "line": 238,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/bookings/:id"
-      ],
-      "declaredPath": "/:id",
-      "source": "backend/src/routes/bookings.routes.js",
-      "line": 207,
-      "dynamic": false
-    },
-    {
-      "method": "PATCH",
-      "publicPaths": [
-        "/api/bookings/:id/cancel"
-      ],
-      "declaredPath": "/:id/cancel",
-      "source": "backend/src/routes/bookings.routes.js",
-      "line": 354,
-      "dynamic": false
-    },
-    {
-      "method": "PATCH",
-      "publicPaths": [
-        "/api/bookings/:id/reschedule"
-      ],
-      "declaredPath": "/:id/reschedule",
-      "source": "backend/src/routes/bookings.routes.js",
-      "line": 404,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
         "/api/bookings/public/book/:slug"
       ],
       "declaredPath": "/public/book/:slug",
       "source": "backend/src/routes/bookings.routes.js",
-      "line": 530,
+      "line": 106,
       "dynamic": false
     },
     {
@@ -213,7 +163,7 @@
       ],
       "declaredPath": "/public/book/:slug",
       "source": "backend/src/routes/bookings.routes.js",
-      "line": 649,
+      "line": 225,
       "dynamic": false
     },
     {
@@ -223,7 +173,7 @@
       ],
       "declaredPath": "/public/book/:slug/cancel/:token",
       "source": "backend/src/routes/bookings.routes.js",
-      "line": 846,
+      "line": 422,
       "dynamic": false
     },
     {
@@ -233,7 +183,7 @@
       ],
       "declaredPath": "/public/book/:slug/slots",
       "source": "backend/src/routes/bookings.routes.js",
-      "line": 579,
+      "line": 155,
       "dynamic": false
     },
     {

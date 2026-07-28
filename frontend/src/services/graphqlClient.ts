@@ -35,15 +35,6 @@ export class GraphqlRequestError extends Error {
 export const isCalendarIntegrationsGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_CALENDAR_INTEGRATIONS_GRAPHQL === 'true';
 
-export const isBookingGraphqlReadsEnabled = (): boolean =>
-  import.meta.env.VITE_BOOKING_READS_GRAPHQL === 'true';
-
-export const isBookingGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_BOOKING_MUTATIONS_GRAPHQL === 'true';
-
-export const isBookingSchedulingGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_BOOKING_SCHEDULING_MUTATIONS_GRAPHQL === 'true';
-
 export const isProductGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_PRODUCT_READS_GRAPHQL === 'true';
 

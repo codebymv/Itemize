@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 220
-- API operations under `/api`: 213
+- Registered method/path operations: 215
+- API operations under `/api`: 208
 - Non-API registered operations: 7
-- Static frontend callsites: 162
-- Operations with frontend consumers: 155
-- Operations referenced by backend tests: 119
-- Recommended GraphQL queries: 45
-- Recommended GraphQL mutations: 113
+- Static frontend callsites: 157
+- Operations with frontend consumers: 150
+- Operations referenced by backend tests: 114
+- Recommended GraphQL queries: 43
+- Recommended GraphQL mutations: 110
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 171
+- High-risk operations: 166
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -43,13 +43,8 @@
 | POST | `/api/auth/reset-password` | 1 | 0 | graphql-mutation | high | identity / AuthModule / resetPassword |
 | POST | `/api/auth/verify-email` | 1 | 0 | graphql-mutation | high | identity / AuthModule / verifyEmail |
 | POST | `/api/billing/webhook` | 0 | 3 | retain-http | high | billing / SubscriptionWebhooksModule / processStripeSubscriptionEvent |
-| GET | `/api/bookings` | 1 | 8 | graphql-query | high | scheduling / BookingsModule / bookings |
-| POST | `/api/bookings` | 1 | 12 | graphql-mutation | high | scheduling / BookingsModule / createBooking |
-| GET | `/api/bookings/:id` | 1 | 3 | graphql-query | high | scheduling / BookingsModule / booking |
-| PATCH | `/api/bookings/:id/cancel` | 1 | 3 | graphql-mutation | high | scheduling / BookingsModule / cancelBooking |
-| PATCH | `/api/bookings/:id/reschedule` | 1 | 4 | graphql-mutation | high | scheduling / BookingsModule / rescheduleBooking |
 | GET | `/api/bookings/public/book/:slug` | 1 | 5 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingPage |
-| POST | `/api/bookings/public/book/:slug` | 1 | 8 | retain-http | high | scheduling / PublicBookingsModule / createPublicBooking |
+| POST | `/api/bookings/public/book/:slug` | 1 | 7 | retain-http | high | scheduling / PublicBookingsModule / createPublicBooking |
 | POST | `/api/bookings/public/book/:slug/cancel/:token` | 1 | 4 | retain-http | high | scheduling / PublicBookingsModule / cancelPublicBooking |
 | GET | `/api/bookings/public/book/:slug/slots` | 1 | 2 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingSlots |
 | GET | `/api/calendar-integrations/connections` | 1 | 0 | graphql-query | high | scheduling-integrations / CalendarIntegrationsModule / calendarConnections |
@@ -257,7 +252,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 50
-- Orphaned manual overrides: 130
+- Orphaned manual overrides: 135
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

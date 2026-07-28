@@ -6,10 +6,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 237
-- Resolved declarations: 237
+- Route declarations: 232
+- Resolved declarations: 232
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 220
+- Unique resolved method/path operations: 215
 - Files containing declarations: 49
 
 ## Interpretation limits
@@ -36,15 +36,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/auth/reset-password` | `/reset-password` | `backend/src/auth/credentials.routes.js:401` |
 | POST | `/api/auth/verify-email` | `/verify-email` | `backend/src/auth/credentials.routes.js:192` |
 | POST | `/api/billing/webhook` | `/webhook` | `backend/src/routes/billing.routes.js:28` |
-| GET | `/api/bookings` | `/` | `backend/src/routes/bookings.routes.js:109` |
-| POST | `/api/bookings` | `/` | `backend/src/routes/bookings.routes.js:238` |
-| GET | `/api/bookings/:id` | `/:id` | `backend/src/routes/bookings.routes.js:207` |
-| PATCH | `/api/bookings/:id/cancel` | `/:id/cancel` | `backend/src/routes/bookings.routes.js:354` |
-| PATCH | `/api/bookings/:id/reschedule` | `/:id/reschedule` | `backend/src/routes/bookings.routes.js:404` |
-| GET | `/api/bookings/public/book/:slug` | `/public/book/:slug` | `backend/src/routes/bookings.routes.js:530` |
-| POST | `/api/bookings/public/book/:slug` | `/public/book/:slug` | `backend/src/routes/bookings.routes.js:649` |
-| POST | `/api/bookings/public/book/:slug/cancel/:token` | `/public/book/:slug/cancel/:token` | `backend/src/routes/bookings.routes.js:846` |
-| GET | `/api/bookings/public/book/:slug/slots` | `/public/book/:slug/slots` | `backend/src/routes/bookings.routes.js:579` |
+| GET | `/api/bookings/public/book/:slug` | `/public/book/:slug` | `backend/src/routes/bookings.routes.js:106` |
+| POST | `/api/bookings/public/book/:slug` | `/public/book/:slug` | `backend/src/routes/bookings.routes.js:225` |
+| POST | `/api/bookings/public/book/:slug/cancel/:token` | `/public/book/:slug/cancel/:token` | `backend/src/routes/bookings.routes.js:422` |
+| GET | `/api/bookings/public/book/:slug/slots` | `/public/book/:slug/slots` | `backend/src/routes/bookings.routes.js:155` |
 | GET | `/api/calendar-integrations/connections` | `/connections` | `backend/src/routes/calendar-integrations.routes.js:45` |
 | DELETE | `/api/calendar-integrations/connections/:id` | `/connections/:id` | `backend/src/routes/calendar-integrations.routes.js:68` |
 | PATCH | `/api/calendar-integrations/connections/:id` | `/connections/:id` | `backend/src/routes/calendar-integrations.routes.js:91` |

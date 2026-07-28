@@ -201,7 +201,7 @@ function registerApiRoutes({
     app.use('/api/pages', pageVersionsRoutes(pool, authenticateJWT, requireOrganization));
     logger.info('Page Versions routes initialized');
 
-    app.use('/api/bookings', bookingsRoutes(pool, authenticateJWT, publicRateLimit));
+    app.use('/api/bookings', bookingsRoutes(pool, publicRateLimit));
     logger.info('Bookings routes initialized');
     app.use('/api/forms', formsRoutes(pool, authenticateJWT, publicRateLimit));
     logger.info('Forms routes initialized');

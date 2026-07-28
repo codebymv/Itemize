@@ -1,8 +1,6 @@
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
-import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -11,7 +9,6 @@ import { PG_POOL } from '../../src/database/database.module';
 
 describe('Calendar GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   let userId: number;
   let outsiderUserId: number;
@@ -142,19 +139,6 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
     configureApp(app);
     await app.init();
 
-    const createBookingsRouter = require('../../../backend/src/routes/bookings.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use(
-      '/api/bookings',
-      createBookingsRouter(
-        pool,
-        authenticateJWT,
-        (_request: unknown, _response: unknown, next: () => void) => next(),
-      ),
-    );
   });
 
   afterAll(async () => {
@@ -686,7 +670,7 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
     expect(remaining.rows[0]).toEqual({ calendars: 0, bookings: 0 });
   });
 
-  it('serializes retained booking creation against GraphQL calendar deletion', async () => {
+  it('serializes GraphQL booking creation against GraphQL calendar deletion', async () => {
     const calendar = await pool.query<{ id: number }>(
       `INSERT INTO calendars (
          organization_id, name, slug, timezone, assigned_to, created_by
@@ -711,32 +695,37 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
     const bookingDate = raceDate.rows[0].date;
 
     const [booking, deletion] = await Promise.all([
-      request(legacyApp)
-        .post('/api/bookings')
-        .set('Cookie', `itemize_auth=${token}`)
-        .set('x-organization-id', String(organizationId))
-        .send({
-          calendar_id: raceCalendarId,
-          title: 'Concurrent booking',
-          start_time: `${bookingDate}T17:00:00Z`,
-          end_time: `${bookingDate}T17:30:00Z`,
-          timezone: 'America/Phoenix',
-        }),
+      mutation(
+        organizationId,
+        `mutation CreateBooking($input: CreateBookingInput!) {
+          createBooking(input: $input) { id }
+        }`,
+        {
+          input: {
+            calendarId: raceCalendarId,
+            title: 'Concurrent booking',
+            startTime: `${bookingDate}T17:00:00Z`,
+            endTime: `${bookingDate}T17:30:00Z`,
+            timezone: 'America/Phoenix',
+          },
+        },
+      ),
       mutation(
         organizationId,
         `mutation { deleteCalendar(id: ${raceCalendarId}) }`,
       ),
     ]);
 
-    expect([201, 404]).toContain(booking.status);
+    expect(booking.status).toBe(200);
     expect(deletion.status).toBe(200);
-    if (booking.status === 201) {
+    if (booking.body.data?.createBooking) {
       expect(deletion.body.errors[0].extensions).toMatchObject({
         code: 'BAD_USER_INPUT',
         reason: 'UPCOMING_BOOKINGS',
       });
       await pool.query('DELETE FROM calendars WHERE id = $1', [raceCalendarId]);
     } else {
+      expect(booking.body.errors[0].extensions.code).toBe('NOT_FOUND');
       expect(deletion.body).toEqual({ data: { deleteCalendar: true } });
     }
     const counts = await pool.query<{

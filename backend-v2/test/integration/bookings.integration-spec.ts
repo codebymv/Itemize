@@ -1,8 +1,6 @@
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
-import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -11,7 +9,6 @@ import { PG_POOL } from '../../src/database/database.module';
 
 describe('Booking read GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   let userId: number;
   let otherUserId: number;
@@ -146,6 +143,13 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
       ],
     );
     bookingIds = bookings.rows.map((row) => Number(row.id));
+    await pool.query(
+      `UPDATE bookings
+       SET cancellation_token_hash = repeat('b', 64),
+           cancellation_token_expires_at = '2099-08-04T17:30:00Z'
+       WHERE id = $1`,
+      [bookingIds[0]],
+    );
     const foreign = await pool.query<{ id: number }>(
       `INSERT INTO bookings (
          organization_id, calendar_id, contact_id, title,
@@ -174,19 +178,6 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
     configureApp(app);
     await app.init();
 
-    const createBookingsRouter = require('../../../backend/src/routes/bookings.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use(
-      '/api/bookings',
-      createBookingsRouter(
-        pool,
-        authenticateJWT,
-        (_request: unknown, _response: unknown, next: () => void) => next(),
-      ),
-    );
   });
 
   afterAll(async () => {
@@ -241,7 +232,7 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
     contactEmail contactPhone createdAt updatedAt
   `;
 
-  it('lists only the selected organization with deterministic paging and REST-compatible data', async () => {
+  it('lists only the selected organization with deterministic paging', async () => {
     const graphql = await query(
       organizationId,
       `query BookingReads($page: PageInput) {
@@ -252,12 +243,6 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
       }`,
       { page: { page: 1, pageSize: 2 } },
     ).expect(200);
-    const legacy = await request(legacyApp)
-      .get('/api/bookings')
-      .set('Cookie', `itemize_auth=${token}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
-
     expect(graphql.body.errors).toBeUndefined();
     expect(graphql.body.data.bookings.pageInfo).toEqual({
       page: 1,
@@ -270,12 +255,11 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
         Number(booking.id),
       ),
     ).toEqual([bookingIds[0], bookingIds[1]]);
-    expect(legacy.body.bookings).toHaveLength(3);
     expect(graphql.body.data.bookings.nodes[0]).toMatchObject({
-      title: legacy.body.bookings[0].title,
-      calendarName: legacy.body.bookings[0].calendar_name,
-      contactEmail: legacy.body.bookings[0].contact_email,
-      assignedToName: legacy.body.bookings[0].assigned_to_name,
+      title: 'Newest confirmed',
+      calendarName: 'Primary Calendar',
+      contactEmail: expect.stringContaining('ada-'),
+      assignedToName: 'Booking Member',
     });
   });
 
@@ -400,35 +384,32 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
       customFields: { channel: 'graphql' },
     });
     const bookingId = Number(response.body.data.createBooking.id);
-    const legacy = await request(legacyApp)
-      .get(`/api/bookings/${bookingId}`)
-      .set('Cookie', `itemize_auth=${token}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
-    expect(legacy.body).toMatchObject({
-      id: bookingId,
-      title: 'GraphQL manual booking',
-      attendee_name: 'Ada Lovelace',
-      assigned_to: userId,
-      internal_notes: 'Prepared',
-      source: 'manual',
-    });
-    expect(legacy.body).not.toHaveProperty('cancellation_token');
     expect(response.body.data.createBooking).not.toHaveProperty(
       'cancellationToken',
     );
     const storedCapability = await pool.query<{
+      title: string;
+      attendee_name: string;
+      assigned_to: number;
+      internal_notes: string;
+      source: string;
       cancellation_token: string | null;
       cancellation_token_hash: string | null;
       cancellation_token_expires_at: Date | null;
     }>(
-      `SELECT cancellation_token, cancellation_token_hash,
+      `SELECT title, attendee_name, assigned_to, internal_notes, source,
+              cancellation_token, cancellation_token_hash,
               cancellation_token_expires_at
        FROM bookings
        WHERE id = $1`,
       [bookingId],
     );
-    expect(storedCapability.rows[0]).toEqual({
+    expect(storedCapability.rows[0]).toMatchObject({
+      title: 'GraphQL manual booking',
+      attendee_name: 'Ada Lovelace',
+      assigned_to: userId,
+      internal_notes: 'Prepared',
+      source: 'manual',
       cancellation_token: null,
       cancellation_token_hash: null,
       cancellation_token_expires_at: null,
@@ -525,19 +506,20 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
     expect(persisted.rows[0].total).toBe(1);
   });
 
-  it('reschedules a retained booking with one versioned event and rejects overlap', async () => {
-    const retained = await request(legacyApp)
-      .post('/api/bookings')
-      .set('Cookie', `itemize_auth=${token}`)
-      .set('x-organization-id', String(organizationId))
-      .send({
-        calendar_id: calendarId,
-        start_time: '2099-09-04T17:00:00.000Z',
-        end_time: '2099-09-04T17:30:00.000Z',
-        timezone: 'America/Phoenix',
-      })
-      .expect(201);
-    const bookingId = Number(retained.body.id);
+  it('reschedules an existing booking with one versioned event and rejects overlap', async () => {
+    const existing = await pool.query<{ id: number }>(
+      `INSERT INTO bookings (
+         organization_id, calendar_id, start_time, end_time, timezone,
+         status, source, cancellation_token_hash, cancellation_token_expires_at
+       ) VALUES (
+         $1, $2, '2099-09-04T17:00:00Z', '2099-09-04T17:30:00Z',
+         'America/Phoenix', 'confirmed', 'booking_page', repeat('a', 64),
+         '2099-09-05T17:30:00Z'
+       )
+       RETURNING id`,
+      [organizationId, calendarId],
+    );
+    const bookingId = Number(existing.rows[0].id);
     const document = `mutation RescheduleBooking(
       $id: Int!,
       $input: RescheduleBookingInput!
@@ -588,6 +570,19 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
     expect(new Date(events.rows[0].new_start).toISOString()).toBe(
       '2099-09-05T18:00:00.000Z',
     );
+    const capability = await pool.query<{
+      cancellation_token_hash: string;
+      cancellation_token_expires_at: Date;
+    }>(
+      `SELECT cancellation_token_hash, cancellation_token_expires_at
+       FROM bookings
+       WHERE id = $1`,
+      [bookingId],
+    );
+    expect(capability.rows[0].cancellation_token_hash).toBe('a'.repeat(64));
+    expect(
+      capability.rows[0].cancellation_token_expires_at.toISOString(),
+    ).toBe('2099-09-06T18:30:00.000Z');
 
     const overlap = await mutate(organizationId, document, {
       id: bookingId,
@@ -678,6 +673,19 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
       calendarName: 'Primary Calendar',
     });
     expect(first.body.data.cancelBooking.cancelledAt).toBeTruthy();
+    const revokedCapability = await pool.query<{
+      cancellation_token_hash: string | null;
+      cancellation_token_expires_at: Date | null;
+    }>(
+      `SELECT cancellation_token_hash, cancellation_token_expires_at
+       FROM bookings
+       WHERE id = $1`,
+      [bookingIds[0]],
+    );
+    expect(revokedCapability.rows[0]).toEqual({
+      cancellation_token_hash: null,
+      cancellation_token_expires_at: null,
+    });
 
     const replay = await mutate(organizationId, document, {
       id: bookingIds[0],
