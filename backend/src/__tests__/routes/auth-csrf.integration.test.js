@@ -276,4 +276,15 @@ describe('auth cookies and csrf integration', () => {
             pool.client.query.mock.calls.some(([sql]) => String(sql).includes('UPDATE users SET')),
         ).toBe(false);
     });
+
+    it('keeps the unused Google credential bootstrap retired', async () => {
+        const pool = createPool(async () => ({ rows: [] }));
+
+        await request(createApp(pool))
+            .post('/api/auth/google-credential')
+            .send({ credential: 'untrusted-canary' })
+            .expect(404);
+
+        expect(pool.connect).not.toHaveBeenCalled();
+    });
 });

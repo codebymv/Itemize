@@ -60,7 +60,6 @@ function csrfProtection(req, res, next) {
         '/api/auth/forgot-password',
         '/api/auth/reset-password',
         '/api/auth/google-login',
-        '/api/auth/google-credential',
     ];
 
     if (sessionBootstrapPaths.includes(req.path)) {

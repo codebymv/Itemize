@@ -10,6 +10,15 @@
       "risk": "medium",
       "notes": "Retain as the browser double-submit token bootstrap while cookie-authenticated GraphQL mutations are introduced."
     },
+    "GET /api/health": {
+      "disposition": "retain-http",
+      "owner": "platform-operations",
+      "targetModule": "HealthBoundary",
+      "targetOperation": "readiness",
+      "parityStatus": "characterized",
+      "risk": "low",
+      "notes": "Retain as the Railway liveness/readiness protocol. It must remain cheap, unauthenticated, and independent of GraphQL execution."
+    },
     "POST /api/auth/forgot-password": {
       "disposition": "graphql-mutation",
       "owner": "identity",
@@ -18,15 +27,6 @@
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
       "notes": "NestJS preserves the generic response and strict throttle, rotates a random token stored only as a hash with one-hour expiry for eligible local accounts, and starts delivery after persistence without awaiting provider latency in the public response."
-    },
-    "POST /api/auth/google-credential": {
-      "disposition": "merge-into-graphql-operation",
-      "owner": "identity",
-      "targetModule": "AuthModule",
-      "targetOperation": "loginWithGoogle",
-      "parityStatus": "not-started",
-      "risk": "high",
-      "notes": "Merge the verified ID-token and access-token flows behind one provider-verification service; do not trust client-supplied identity fields."
     },
     "POST /api/auth/google-login": {
       "disposition": "graphql-mutation",

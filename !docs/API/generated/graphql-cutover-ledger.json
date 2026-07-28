@@ -6,8 +6,8 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 307,
-    "apiOperationCount": 300,
+    "operationCount": 306,
+    "apiOperationCount": 299,
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 250,
     "operationsWithFrontendConsumers": 239,
@@ -15,11 +15,11 @@
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 54,
-    "retainHttpCount": 54,
-    "graphqlQueryCount": 80,
+    "unmatchedBackendTestCallCount": 55,
+    "retainHttpCount": 55,
+    "graphqlQueryCount": 79,
     "graphqlMutationCount": 165,
-    "highRiskCount": 246,
+    "highRiskCount": 245,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -513,30 +513,6 @@
       "targetModule": "AuthModule",
       "parityStatus": "consumer-cutover-complete",
       "notes": "NestJS preserves the generic response and strict throttle, rotates a random token stored only as a hash with one-hour expiry for eligible local accounts, and starts delivery after persistence without awaiting provider latency in the public response.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/auth/google-credential",
-      "key": "POST /api/auth/google-credential",
-      "method": "POST",
-      "path": "/api/auth/google-credential",
-      "routeSources": [
-        {
-          "source": "backend/src/auth/google.routes.js",
-          "line": 133
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "merge-into-graphql-operation",
-      "owner": "identity",
-      "targetOperation": "loginWithGoogle",
-      "targetModule": "AuthModule",
-      "parityStatus": "not-started",
-      "notes": "Merge the verified ID-token and access-token flows behind one provider-verification service; do not trust client-supplied identity fields.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -4619,14 +4595,14 @@
       "testCallsites": [],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
-      "parityStatus": "not-started",
-      "notes": null,
+      "disposition": "retain-http",
+      "owner": "platform-operations",
+      "targetOperation": "readiness",
+      "targetModule": "HealthBoundary",
+      "parityStatus": "characterized",
+      "notes": "Retain as the Railway liveness/readiness protocol. It must remain cheap, unauthenticated, and independent of GraphQL execution.",
       "literalInterpolationRisk": false,
-      "risk": "unknown"
+      "risk": "low"
     },
     {
       "id": "GET /api/invoices",
@@ -13922,6 +13898,12 @@
       "path": "/api/auth/change-password",
       "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
       "line": 270
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/google-credential",
+      "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
+      "line": 284
     }
   ],
   "orphanedOverrides": [

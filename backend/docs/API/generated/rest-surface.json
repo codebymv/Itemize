@@ -3,10 +3,10 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 326,
-    "resolvedDeclarationCount": 326,
+    "declarationCount": 325,
+    "resolvedDeclarationCount": 325,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 307,
+    "uniqueResolvedOperationCount": 306,
     "sourceFileCount": 63
   },
   "caveats": [
@@ -154,16 +154,6 @@
       "declaredPath": "/forgot-password",
       "source": "backend/src/auth/credentials.routes.js",
       "line": 336,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/auth/google-credential"
-      ],
-      "declaredPath": "/google-credential",
-      "source": "backend/src/auth/google.routes.js",
-      "line": 133,
       "dynamic": false
     },
     {

@@ -18,6 +18,8 @@ Forgot/reset password were enabled on 2026-07-21 from commit `28d0b0af`: backend
 
 The active Google flow now sends an access token to the backend. The backend validates that token's audience against `GOOGLE_CLIENT_ID`, fetches the Google profile itself, requires a verified email, and derives the account identity from that provider response. Client-supplied Google IDs, email addresses, and names are not trusted.
 
+The unused Google One Tap `POST /api/auth/google-credential` variant had no shipped consumer and was retired on 2026-07-27 together with its public CSRF exemption. The access-token GraphQL flow is the single supported Google session bootstrap.
+
 ## Operation map
 
 | Legacy operation | Target | Required behavior |
@@ -25,7 +27,6 @@ The active Google flow now sends an access token to the backend. The backend val
 | `POST /api/auth/register` | `register(input)` | Validate and normalize credentials; create user and personal workspace atomically; send verification email without exposing its token |
 | `POST /api/auth/login` | `login(input)` | Generic bad-credential response; verified email required; set both session cookies; return user without tokens |
 | `POST /api/auth/google-login` | `loginWithGoogleAccessToken(input)` | Verify provider token and audience server-side; require verified provider email; set cookie-only session |
-| `POST /api/auth/google-credential` | future merge into the Google login service | Use the same provider-verification and account-linking service |
 | `GET /api/auth/me` | `currentUser` | Read the signed access cookie; return normalized user identity; never cache |
 | retired `PUT /api/auth/me` | `updateViewerProfile(input)` | Authenticated and CSRF-protected; trim name; enforce 1-100 characters |
 | `POST /api/auth/logout` | `logout` | CSRF-protected; expire both session cookies; remain idempotent |

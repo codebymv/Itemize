@@ -6,10 +6,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 326
-- Resolved declarations: 326
+- Route declarations: 325
+- Resolved declarations: 325
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 307
+- Unique resolved method/path operations: 306
 - Files containing declarations: 63
 
 ## Interpretation limits
@@ -37,7 +37,6 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/admin/users/search` | `/users/search` | `backend/src/routes/admin.routes.js:109` |
 | GET | `/api/auth/csrf` | `/api/auth/csrf` | `backend/src/index.js:166` |
 | POST | `/api/auth/forgot-password` | `/forgot-password` | `backend/src/auth/credentials.routes.js:336` |
-| POST | `/api/auth/google-credential` | `/google-credential` | `backend/src/auth/google.routes.js:133` |
 | POST | `/api/auth/google-login` | `/google-login` | `backend/src/auth/google.routes.js:18` |
 | POST | `/api/auth/login` | `/login` | `backend/src/auth/credentials.routes.js:117` |
 | POST | `/api/auth/logout` | `/logout` | `backend/src/auth/session.routes.js:17` |

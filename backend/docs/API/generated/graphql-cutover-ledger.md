@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 307
-- API operations under `/api`: 300
+- Registered method/path operations: 306
+- API operations under `/api`: 299
 - Non-API registered operations: 7
 - Static frontend callsites: 250
 - Operations with frontend consumers: 239
 - Operations referenced by backend tests: 165
-- Recommended GraphQL queries: 80
+- Recommended GraphQL queries: 79
 - Recommended GraphQL mutations: 165
-- Recommended retained HTTP endpoints: 54
-- High-risk operations: 246
+- Recommended retained HTTP endpoints: 55
+- High-risk operations: 245
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -44,7 +44,6 @@
 | GET | `/api/admin/users/search` | 1 | 0 | graphql-query | high | platform-operations / AdminOperationsModule / adminUsers |
 | GET | `/api/auth/csrf` | 0 | 5 | retain-http | medium | platform-security / AuthModule / issueCsrfToken |
 | POST | `/api/auth/forgot-password` | 1 | 0 | graphql-mutation | high | identity / AuthModule / requestPasswordReset |
-| POST | `/api/auth/google-credential` | 0 | 0 | merge-into-graphql-operation | high | identity / AuthModule / loginWithGoogle |
 | POST | `/api/auth/google-login` | 2 | 4 | graphql-mutation | high | identity / AuthModule / loginWithGoogle |
 | POST | `/api/auth/login` | 1 | 6 | graphql-mutation | medium | identity / AuthModule / login |
 | POST | `/api/auth/logout` | 1 | 1 | graphql-mutation | medium | identity / AuthModule / logout |
@@ -124,7 +123,7 @@
 | POST | `/api/email/webhook/resend` | 0 | 1 | retain-http | high | messaging / EmailWebhooksModule / processResendEmailEvent |
 | GET | `/api/forms/public/form/:identifier` | 1 | 3 | retain-http | high | crm / PublicFormsModule / getPublicForm |
 | POST | `/api/forms/public/form/:identifier` | 1 | 5 | retain-http | high | crm / PublicFormsModule / submitPublicForm |
-| GET | `/api/health` | 0 | 0 | graphql-query | unknown | _unassigned_ |
+| GET | `/api/health` | 0 | 0 | retain-http | low | platform-operations / HealthBoundary / readiness |
 | GET | `/api/invoices` | 1 | 5 | graphql-query | medium | billing / InvoicesModule / invoices |
 | POST | `/api/invoices` | 1 | 13 | graphql-mutation | medium | billing / InvoicesModule / createInvoice |
 | DELETE | `/api/invoices/:id` | 1 | 9 | graphql-mutation | medium | billing / InvoicesModule / deleteInvoice |
@@ -343,7 +342,7 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 54
+- Unmatched backend test calls: 55
 - Orphaned manual overrides: 49
 - Orphaned runtime-expression overrides: 0
 
@@ -424,3 +423,4 @@
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:133` |
 | PUT | `/api/auth/me` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:265` |
 | POST | `/api/auth/change-password` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:270` |
+| POST | `/api/auth/google-credential` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:284` |
