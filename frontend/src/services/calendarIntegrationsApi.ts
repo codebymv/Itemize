@@ -10,7 +10,6 @@ import {
     requestCalendarSyncViaGraphql,
     updateCalendarConnectionViaGraphql,
 } from './calendarIntegrationsGraphql';
-import { isCalendarIntegrationsGraphqlEnabled } from './graphqlClient';
 
 // ======================
 // Types
@@ -79,25 +78,14 @@ export interface SyncStatus {
  * Get all calendar connections for the current user
  */
 export const getCalendarConnections = async (organizationId?: number): Promise<CalendarConnection[]> => {
-    if (isCalendarIntegrationsGraphqlEnabled()) {
-        return getCalendarConnectionsViaGraphql(organizationId);
-    }
-    const response = await api.get('/api/calendar-integrations/connections', {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return getCalendarConnectionsViaGraphql(organizationId);
 };
 
 /**
  * Disconnect a calendar integration
  */
 export const disconnectCalendar = async (connectionId: number, organizationId?: number): Promise<void> => {
-    if (isCalendarIntegrationsGraphqlEnabled()) {
-        return disconnectCalendarViaGraphql(connectionId, organizationId);
-    }
-    await api.delete(`/api/calendar-integrations/connections/${connectionId}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
+    return disconnectCalendarViaGraphql(connectionId, organizationId);
 };
 
 /**
@@ -112,15 +100,7 @@ export const updateCalendarConnection = async (
     },
     organizationId?: number
 ): Promise<CalendarConnection> => {
-    if (isCalendarIntegrationsGraphqlEnabled()) {
-        return updateCalendarConnectionViaGraphql(connectionId, updates, organizationId);
-    }
-    const response = await api.patch(
-        `/api/calendar-integrations/connections/${connectionId}`,
-        updates,
-        { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
-    );
-    return response.data;
+    return updateCalendarConnectionViaGraphql(connectionId, updates, organizationId);
 };
 
 /**
@@ -168,18 +148,7 @@ export const syncCalendar = async (
     connectionId: number,
     organizationId?: number
 ): Promise<SyncResult> => {
-    if (isCalendarIntegrationsGraphqlEnabled()) {
-        return requestCalendarSyncViaGraphql(connectionId, organizationId);
-    }
-    const response = await api.post(
-        `/api/calendar-integrations/sync/${connectionId}`,
-        {},
-        { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
-    );
-    return {
-        ...response.data,
-        created: response.data.message === 'Sync queued',
-    };
+    return requestCalendarSyncViaGraphql(connectionId, organizationId);
 };
 
 /**
@@ -189,14 +158,7 @@ export const getSyncStatus = async (
     connectionId: number,
     organizationId?: number
 ): Promise<SyncStatus> => {
-    if (isCalendarIntegrationsGraphqlEnabled()) {
-        return getCalendarSyncStatusViaGraphql(connectionId, organizationId);
-    }
-    const response = await api.get(
-        `/api/calendar-integrations/sync-status/${connectionId}`,
-        { headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {} }
-    );
-    return response.data;
+    return getCalendarSyncStatusViaGraphql(connectionId, organizationId);
 };
 
 export default {

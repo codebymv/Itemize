@@ -1360,15 +1360,15 @@
     },
     "GET /api/calendar-integrations/connections": {
       "disposition": "graphql-query", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "calendarConnections", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Implemented behind VITE_CALENDAR_INTEGRATIONS_GRAPHQL. Returns only the current user's connections in the verified organization; provider account IDs, tokens, cursors, and job internals are absent from the schema."
+      "notes": "Permanent GraphQL consumer; the retired Express route returns 404. Returns only the current user's connections in the verified organization; provider account IDs, tokens, cursors, and job internals are absent from the schema."
     },
     "DELETE /api/calendar-integrations/connections/:id": {
       "disposition": "graphql-mutation", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "disconnectCalendar", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected user-and-organization scoped disconnect behind the default-off integration flag. Remote provider events are retained, matching the shipped UI warning; foreign and peer-user IDs return NOT_FOUND."
+      "notes": "Permanent CSRF-protected GraphQL consumer; the retired Express route returns 404. Disconnect is user-and-organization scoped, remote provider events are retained to match the shipped UI warning, and foreign or peer-user IDs return NOT_FOUND."
     },
     "PATCH /api/calendar-integrations/connections/:id": {
       "disposition": "graphql-mutation", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "updateCalendarConnection", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected and implemented behind the default-off integration flag. It rejects null settings, validates push/pull/both direction and at most 100 unique non-empty 255-character provider calendar IDs, then updates only the current user's organization-qualified connection."
+      "notes": "Permanent CSRF-protected GraphQL consumer; the retired Express route returns 404. It rejects null settings, validates push/pull/both direction and at most 100 unique non-empty 255-character provider calendar IDs, then updates only the current user's organization-qualified connection."
     },
     "GET /api/calendar-integrations/google/auth": {
       "disposition": "retain-http", "owner": "scheduling-integrations", "targetModule": "CalendarOAuthModule", "targetOperation": "beginGoogleCalendarConnection", "parityStatus": "characterized", "risk": "high",
@@ -1384,11 +1384,11 @@
     },
     "POST /api/calendar-integrations/sync/:connectionId": {
       "disposition": "graphql-mutation", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "requestCalendarSync", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected and implemented behind the default-off integration flag. It returns immediately after idempotent durable enqueue and never performs provider I/O inline. Migration 033 enforces one active connection job and durable coalesced request aliases; leased workers fence completion, retry with redacted errors, dead-letter, and execute snapshotted push/pull/both policy."
+      "notes": "Permanent CSRF-protected GraphQL consumer; the retired Express route returns 404. It returns immediately after idempotent durable enqueue and never performs provider I/O inline. Migration 033 enforces one active connection job and durable coalesced request aliases; leased workers fence completion, retry with redacted errors, dead-letter, and execute snapshotted push/pull/both policy."
     },
     "GET /api/calendar-integrations/sync-status/:connectionId": {
       "disposition": "graphql-query", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "calendarSyncStatus", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Implemented behind the default-off integration flag with user-and-organization scoped connection status, bounded sync aggregates, and the ten newest safe durable-job projections including retry/dead-letter state and redacted diagnostics."
+      "notes": "Permanent GraphQL consumer; the retired Express route returns 404. It returns user-and-organization scoped connection status, bounded sync aggregates, and the ten newest safe durable-job projections including retry/dead-letter state and redacted diagnostics."
     },
     "GET /api/signatures/documents": {
       "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "signatureDocuments", "parityStatus": "consumer-cutover-complete", "risk": "high",

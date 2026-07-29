@@ -32,9 +32,6 @@ export class GraphqlRequestError extends Error {
   }
 }
 
-export const isCalendarIntegrationsGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_CALENDAR_INTEGRATIONS_GRAPHQL === 'true';
-
 export const isProductGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_PRODUCT_READS_GRAPHQL === 'true';
 

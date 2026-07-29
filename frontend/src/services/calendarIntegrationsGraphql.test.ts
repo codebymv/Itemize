@@ -7,7 +7,6 @@ import {
   requestCalendarSyncViaGraphql,
   updateCalendarConnectionViaGraphql,
 } from './calendarIntegrationsGraphql';
-import { isCalendarIntegrationsGraphqlEnabled } from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(),
@@ -61,13 +60,6 @@ describe('calendar integrations GraphQL consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('keeps the integration cutover disabled by default', () => {
-    vi.stubEnv('VITE_CALENDAR_INTEGRATIONS_GRAPHQL', 'false');
-    expect(isCalendarIntegrationsGraphqlEnabled()).toBe(false);
-    vi.stubEnv('VITE_CALENDAR_INTEGRATIONS_GRAPHQL', 'true');
-    expect(isCalendarIntegrationsGraphqlEnabled()).toBe(true);
   });
 
   it('maps connection reads into the retained REST shape', async () => {

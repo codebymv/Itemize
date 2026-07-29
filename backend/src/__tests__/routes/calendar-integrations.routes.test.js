@@ -17,17 +17,7 @@ jest.mock('../../services/googleCalendarService', () => ({
     listCalendars: jest.fn(),
     syncBookingsToGoogle: jest.fn(),
 }));
-jest.mock('../../services/calendarSyncJobs', () => ({
-    enqueueCalendarSyncJob: jest.fn(),
-    normalizeSelectedCalendars: jest.fn(value => value),
-    publicCalendarSyncJob: jest.fn(job => ({
-        id: Number(job.id),
-        status: job.status,
-    })),
-}));
-
 const googleCalendarService = require('../../services/googleCalendarService');
-const { enqueueCalendarSyncJob } = require('../../services/calendarSyncJobs');
 const { createCalendarOAuthState, verifyCalendarOAuthState } = require('../../services/calendarOAuthState');
 const { decryptCalendarToken } = require('../../utils/calendarTokenEncryption');
 const createCalendarIntegrationRoutes = require('../../routes/calendar-integrations.routes');
@@ -133,27 +123,14 @@ describe('calendar integration OAuth route contract', () => {
         expect(decryptCalendarToken(insertCall[1][5], 'refresh')).toBe('provider-refresh');
     });
 
-    it('queues sync work with request idempotency instead of calling Google inline', async () => {
-        enqueueCalendarSyncJob.mockResolvedValue({
-            created: true,
-            job: { id: '91', status: 'queued' },
-        });
-
-        const response = await request(app)
-            .post('/api/calendar-integrations/sync/22')
-            .set('Idempotency-Key', 'calendar-sync-request-1');
-
-        expect(response.status).toBe(202);
-        expect(response.body).toEqual({
-            message: 'Sync queued',
-            job: { id: 91, status: 'queued' },
-        });
-        expect(enqueueCalendarSyncJob).toHaveBeenCalledWith(pool, {
-            connectionId: '22',
-            userId: 42,
-            organizationId: 17,
-            idempotencyKey: 'calendar-sync-request-1',
-        });
-        expect(googleCalendarService.syncBookingsToGoogle).not.toHaveBeenCalled();
+    it.each([
+        ['get', '/api/calendar-integrations/connections'],
+        ['delete', '/api/calendar-integrations/connections/22'],
+        ['patch', '/api/calendar-integrations/connections/22'],
+        ['post', '/api/calendar-integrations/sync/22'],
+        ['get', '/api/calendar-integrations/sync-status/22'],
+    ])('returns 404 for retired authenticated %s %s', async (method, path) => {
+        const response = await request(app)[method](path);
+        expect(response.status).toBe(404);
     });
 });

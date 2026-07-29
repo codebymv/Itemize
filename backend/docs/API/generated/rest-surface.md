@@ -6,10 +6,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 232
-- Resolved declarations: 232
+- Route declarations: 227
+- Resolved declarations: 227
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 215
+- Unique resolved method/path operations: 210
 - Files containing declarations: 49
 
 ## Interpretation limits
@@ -40,14 +40,9 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/bookings/public/book/:slug` | `/public/book/:slug` | `backend/src/routes/bookings.routes.js:225` |
 | POST | `/api/bookings/public/book/:slug/cancel/:token` | `/public/book/:slug/cancel/:token` | `backend/src/routes/bookings.routes.js:422` |
 | GET | `/api/bookings/public/book/:slug/slots` | `/public/book/:slug/slots` | `backend/src/routes/bookings.routes.js:155` |
-| GET | `/api/calendar-integrations/connections` | `/connections` | `backend/src/routes/calendar-integrations.routes.js:45` |
-| DELETE | `/api/calendar-integrations/connections/:id` | `/connections/:id` | `backend/src/routes/calendar-integrations.routes.js:68` |
-| PATCH | `/api/calendar-integrations/connections/:id` | `/connections/:id` | `backend/src/routes/calendar-integrations.routes.js:91` |
-| GET | `/api/calendar-integrations/google/auth` | `/google/auth` | `backend/src/routes/calendar-integrations.routes.js:150` |
-| GET | `/api/calendar-integrations/google/calendars/:connectionId` | `/google/calendars/:connectionId` | `backend/src/routes/calendar-integrations.routes.js:277` |
-| GET | `/api/calendar-integrations/google/callback` | `/google/callback` | `backend/src/routes/calendar-integrations.routes.js:170` |
-| GET | `/api/calendar-integrations/sync-status/:connectionId` | `/sync-status/:connectionId` | `backend/src/routes/calendar-integrations.routes.js:339` |
-| POST | `/api/calendar-integrations/sync/:connectionId` | `/sync/:connectionId` | `backend/src/routes/calendar-integrations.routes.js:308` |
+| GET | `/api/calendar-integrations/google/auth` | `/google/auth` | `backend/src/routes/calendar-integrations.routes.js:40` |
+| GET | `/api/calendar-integrations/google/calendars/:connectionId` | `/google/calendars/:connectionId` | `backend/src/routes/calendar-integrations.routes.js:167` |
+| GET | `/api/calendar-integrations/google/callback` | `/google/callback` | `backend/src/routes/calendar-integrations.routes.js:60` |
 | GET | `/api/campaigns` | `/` | `backend/src/routes/campaigns/crud.routes.js:19` |
 | POST | `/api/campaigns` | `/` | `backend/src/routes/campaigns/crud.routes.js:109` |
 | DELETE | `/api/campaigns/:id` | `/:id` | `backend/src/routes/campaigns/crud.routes.js:279` |

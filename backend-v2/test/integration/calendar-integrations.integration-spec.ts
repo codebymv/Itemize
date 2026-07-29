@@ -319,6 +319,31 @@ describe('Calendar integrations GraphQL PostgreSQL contract', () => {
     expect(JSON.stringify(status.body.data)).not.toContain(
       'graphql-sync-request-1',
     );
+
+    for (const hiddenConnectionId of [
+      otherOrganizationConnectionId,
+      otherUserConnectionId,
+    ]) {
+      const hiddenSync = await graphql(
+        mutation,
+        {
+          connectionId: hiddenConnectionId,
+          key: `hidden-sync-${hiddenConnectionId}`,
+        },
+        { csrf: true },
+      ).expect(200);
+      expect(hiddenSync.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+      const hiddenStatus = await graphql(
+        `query HiddenSyncStatus($connectionId: Int!) {
+          calendarSyncStatus(connectionId: $connectionId) {
+            connection { id }
+          }
+        }`,
+        { connectionId: hiddenConnectionId },
+      ).expect(200);
+      expect(hiddenStatus.body.errors[0].extensions.code).toBe('NOT_FOUND');
+    }
   });
 
   it('disconnects only owned connections and requires CSRF', async () => {

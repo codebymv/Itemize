@@ -3,10 +3,10 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 232,
-    "resolvedDeclarationCount": 232,
+    "declarationCount": 227,
+    "resolvedDeclarationCount": 227,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 215,
+    "uniqueResolvedOperationCount": 210,
     "sourceFileCount": 49
   },
   "caveats": [
@@ -189,41 +189,11 @@
     {
       "method": "GET",
       "publicPaths": [
-        "/api/calendar-integrations/connections"
-      ],
-      "declaredPath": "/connections",
-      "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 45,
-      "dynamic": false
-    },
-    {
-      "method": "DELETE",
-      "publicPaths": [
-        "/api/calendar-integrations/connections/:id"
-      ],
-      "declaredPath": "/connections/:id",
-      "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 68,
-      "dynamic": false
-    },
-    {
-      "method": "PATCH",
-      "publicPaths": [
-        "/api/calendar-integrations/connections/:id"
-      ],
-      "declaredPath": "/connections/:id",
-      "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 91,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
         "/api/calendar-integrations/google/auth"
       ],
       "declaredPath": "/google/auth",
       "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 150,
+      "line": 40,
       "dynamic": false
     },
     {
@@ -233,7 +203,7 @@
       ],
       "declaredPath": "/google/calendars/:connectionId",
       "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 277,
+      "line": 167,
       "dynamic": false
     },
     {
@@ -243,27 +213,7 @@
       ],
       "declaredPath": "/google/callback",
       "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 170,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/calendar-integrations/sync-status/:connectionId"
-      ],
-      "declaredPath": "/sync-status/:connectionId",
-      "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 339,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/calendar-integrations/sync/:connectionId"
-      ],
-      "declaredPath": "/sync/:connectionId",
-      "source": "backend/src/routes/calendar-integrations.routes.js",
-      "line": 308,
+      "line": 60,
       "dynamic": false
     },
     {

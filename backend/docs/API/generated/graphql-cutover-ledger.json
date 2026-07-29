@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 215,
-    "apiOperationCount": 208,
+    "operationCount": 210,
+    "apiOperationCount": 203,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 157,
-    "operationsWithFrontendConsumers": 150,
-    "operationsWithBackendTests": 114,
+    "frontendCallsiteCount": 152,
+    "operationsWithFrontendConsumers": 145,
+    "operationsWithBackendTests": 113,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 50,
     "retainHttpCount": 55,
-    "graphqlQueryCount": 43,
-    "graphqlMutationCount": 110,
-    "highRiskCount": 166,
+    "graphqlQueryCount": 41,
+    "graphqlMutationCount": 107,
+    "highRiskCount": 161,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -844,108 +844,6 @@
       "risk": "high"
     },
     {
-      "id": "GET /api/calendar-integrations/connections",
-      "key": "GET /api/calendar-integrations/connections",
-      "method": "GET",
-      "path": "/api/calendar-integrations/connections",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 45
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/calendar-integrations/connections",
-          "rawPath": "/api/calendar-integrations/connections",
-          "source": "frontend/src/services/calendarIntegrationsApi.ts",
-          "line": 85,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "scheduling-integrations",
-      "targetOperation": "calendarConnections",
-      "targetModule": "CalendarIntegrationsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Implemented behind VITE_CALENDAR_INTEGRATIONS_GRAPHQL. Returns only the current user's connections in the verified organization; provider account IDs, tokens, cursors, and job internals are absent from the schema.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/calendar-integrations/connections/:id",
-      "key": "DELETE /api/calendar-integrations/connections/:*",
-      "method": "DELETE",
-      "path": "/api/calendar-integrations/connections/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 68
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/calendar-integrations/connections/:connectionId",
-          "rawPath": "/api/calendar-integrations/connections/${connectionId}",
-          "source": "frontend/src/services/calendarIntegrationsApi.ts",
-          "line": 98,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "scheduling-integrations",
-      "targetOperation": "disconnectCalendar",
-      "targetModule": "CalendarIntegrationsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected user-and-organization scoped disconnect behind the default-off integration flag. Remote provider events are retained, matching the shipped UI warning; foreign and peer-user IDs return NOT_FOUND.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PATCH /api/calendar-integrations/connections/:id",
-      "key": "PATCH /api/calendar-integrations/connections/:*",
-      "method": "PATCH",
-      "path": "/api/calendar-integrations/connections/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 91
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PATCH",
-          "path": "/api/calendar-integrations/connections/:connectionId",
-          "rawPath": "/api/calendar-integrations/connections/${connectionId}",
-          "source": "frontend/src/services/calendarIntegrationsApi.ts",
-          "line": 118,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "scheduling-integrations",
-      "targetOperation": "updateCalendarConnection",
-      "targetModule": "CalendarIntegrationsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected and implemented behind the default-off integration flag. It rejects null settings, validates push/pull/both direction and at most 100 unique non-empty 255-character provider calendar IDs, then updates only the current user's organization-qualified connection.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "GET /api/calendar-integrations/google/auth",
       "key": "GET /api/calendar-integrations/google/auth",
       "method": "GET",
@@ -953,7 +851,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 150
+          "line": 40
         }
       ],
       "consumerCallsites": [
@@ -962,7 +860,7 @@
           "path": "/api/calendar-integrations/google/auth",
           "rawPath": "/api/calendar-integrations/google/auth",
           "source": "frontend/src/services/calendarIntegrationsApi.ts",
-          "line": 133,
+          "line": 113,
           "client": "api",
           "literalInterpolation": false
         }
@@ -972,7 +870,7 @@
           "method": "GET",
           "path": "/api/calendar-integrations/google/auth",
           "source": "backend/src/__tests__/routes/calendar-integrations.routes.test.js",
-          "line": 56
+          "line": 46
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -994,7 +892,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 277
+          "line": 167
         }
       ],
       "consumerCallsites": [
@@ -1003,7 +901,7 @@
           "path": "/api/calendar-integrations/google/calendars/:connectionId",
           "rawPath": "/api/calendar-integrations/google/calendars/${connectionId}",
           "source": "frontend/src/services/calendarIntegrationsApi.ts",
-          "line": 157,
+          "line": 137,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1028,7 +926,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 170
+          "line": 60
         }
       ],
       "consumerCallsites": [],
@@ -1037,19 +935,19 @@
           "method": "GET",
           "path": "/api/calendar-integrations/google/callback",
           "source": "backend/src/__tests__/routes/calendar-integrations.routes.test.js",
-          "line": 70
+          "line": 60
         },
         {
           "method": "GET",
           "path": "/api/calendar-integrations/google/callback",
           "source": "backend/src/__tests__/routes/calendar-integrations.routes.test.js",
-          "line": 83
+          "line": 73
         },
         {
           "method": "GET",
           "path": "/api/calendar-integrations/google/callback",
           "source": "backend/src/__tests__/routes/calendar-integrations.routes.test.js",
-          "line": 122
+          "line": 112
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -1060,81 +958,6 @@
       "targetModule": "CalendarOAuthModule",
       "parityStatus": "characterized",
       "notes": "Provider redirect protocol; verifies signed expiring state and current organization membership before token exchange, then stores access/refresh credentials only as versioned AES-256-GCM envelopes under the active rotation key.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/calendar-integrations/sync-status/:connectionId",
-      "key": "GET /api/calendar-integrations/sync-status/:*",
-      "method": "GET",
-      "path": "/api/calendar-integrations/sync-status/:connectionId",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 339
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/calendar-integrations/sync-status/:connectionId",
-          "rawPath": "/api/calendar-integrations/sync-status/${connectionId}",
-          "source": "frontend/src/services/calendarIntegrationsApi.ts",
-          "line": 195,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "scheduling-integrations",
-      "targetOperation": "calendarSyncStatus",
-      "targetModule": "CalendarIntegrationsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Implemented behind the default-off integration flag with user-and-organization scoped connection status, bounded sync aggregates, and the ten newest safe durable-job projections including retry/dead-letter state and redacted diagnostics.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/calendar-integrations/sync/:connectionId",
-      "key": "POST /api/calendar-integrations/sync/:*",
-      "method": "POST",
-      "path": "/api/calendar-integrations/sync/:connectionId",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/calendar-integrations.routes.js",
-          "line": 308
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/calendar-integrations/sync/:connectionId",
-          "rawPath": "/api/calendar-integrations/sync/${connectionId}",
-          "source": "frontend/src/services/calendarIntegrationsApi.ts",
-          "line": 174,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/calendar-integrations/sync/22",
-          "source": "backend/src/__tests__/routes/calendar-integrations.routes.test.js",
-          "line": 143
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "scheduling-integrations",
-      "targetOperation": "requestCalendarSync",
-      "targetModule": "CalendarIntegrationsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected and implemented behind the default-off integration flag. It returns immediately after idempotent durable enqueue and never performs provider I/O inline. Migration 033 enforces one active connection job and durable coalesced request aliases; leased workers fence completion, retry with redacted errors, dead-letter, and execute snapshotted push/pull/both policy.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -9670,6 +9493,7 @@
     }
   ],
   "orphanedOverrides": [
+    "DELETE /api/calendar-integrations/connections/:id",
     "DELETE /api/calendars/:id",
     "DELETE /api/calendars/:id/date-override/:overrideId",
     "DELETE /api/categories/:id",
@@ -9701,6 +9525,8 @@
     "GET /api/billing/usage",
     "GET /api/bookings",
     "GET /api/bookings/:id",
+    "GET /api/calendar-integrations/connections",
+    "GET /api/calendar-integrations/sync-status/:connectionId",
     "GET /api/calendars",
     "GET /api/calendars/:id",
     "GET /api/canvas/lists",
@@ -9735,12 +9561,14 @@
     "PATCH /api/admin/me/plan",
     "PATCH /api/bookings/:id/cancel",
     "PATCH /api/bookings/:id/reschedule",
+    "PATCH /api/calendar-integrations/connections/:id",
     "POST /api/admin/email/preview",
     "POST /api/admin/email/send",
     "POST /api/billing/acknowledge-trial-end",
     "POST /api/billing/checkout",
     "POST /api/billing/portal",
     "POST /api/bookings",
+    "POST /api/calendar-integrations/sync/:connectionId",
     "POST /api/calendars",
     "POST /api/calendars/:id/date-override",
     "POST /api/campaigns/:id/pause",

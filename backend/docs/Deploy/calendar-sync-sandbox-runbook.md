@@ -26,13 +26,13 @@ Use `railway variable set NAME --stdin --skip-deploys` for secrets so their valu
 ## Rehearsal
 
 1. Keep `CALENDAR_SYNC_JOBS_ENABLED=false`. Use a disposable Itemize account and organization, connect the sandbox Google account through the real browser flow, and verify the callback returns to staging.
-2. Enable `VITE_CALENDAR_INTEGRATIONS_GRAPHQL` only in the local staging browser harness. Verify connection list, calendar selection, direction changes, enqueue, and status use GraphQL while OAuth initiation/callback and live provider-calendar discovery remain HTTP.
+2. Verify connection list, calendar selection, direction changes, enqueue, and status use the permanent GraphQL management operations while OAuth initiation/callback and live provider-calendar discovery remain HTTP.
 3. Create one future Itemize booking. Set direction to `push`, enqueue once, then enable the worker on one backend replica. Verify one deterministic Google event, a succeeded job, and no duplicate after replaying the same request key.
 4. Create one non-Itemize Google event in the selected calendar. Set direction to `pull`, enqueue, and verify the normalized busy interval suppresses the corresponding public slot. Remove the Google event, repeat, and verify the stale busy interval is removed.
 5. Set direction to `both`, change the Itemize booking, and create another external event. Verify one job records successful push and pull results.
 6. Exercise the Google test project's constrained quota or an approved provider fault proxy. Verify the job enters `retry`, the stored/operator-visible error is redacted, and a later attempt succeeds without a duplicate remote event. Do not generate uncontrolled provider traffic.
 7. Revoke the sandbox account's Google grant. Verify the bounded attempts end in `dead_letter`, credentials never appear in logs or GraphQL, and reconnecting creates a usable encrypted token generation.
-8. Disable only `VITE_CALENDAR_INTEGRATIONS_GRAPHQL`. With the same session and rows, verify connection settings, enqueue, and status through retained REST without data repair.
+8. With the same session and rows, reload the browser and verify connection settings, enqueue, and status remain correct through GraphQL without data repair or duplicate sync jobs.
 9. Set `CALENDAR_SYNC_JOBS_ENABLED=false`, wait for zero `processing` jobs, and capture the connection/job/event/busy-interval counts plus relevant request IDs and deployment IDs.
 
 ## Cleanup

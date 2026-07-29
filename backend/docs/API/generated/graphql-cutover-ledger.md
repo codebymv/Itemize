@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 215
-- API operations under `/api`: 208
+- Registered method/path operations: 210
+- API operations under `/api`: 203
 - Non-API registered operations: 7
-- Static frontend callsites: 157
-- Operations with frontend consumers: 150
-- Operations referenced by backend tests: 114
-- Recommended GraphQL queries: 43
-- Recommended GraphQL mutations: 110
+- Static frontend callsites: 152
+- Operations with frontend consumers: 145
+- Operations referenced by backend tests: 113
+- Recommended GraphQL queries: 41
+- Recommended GraphQL mutations: 107
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 166
+- High-risk operations: 161
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -47,14 +47,9 @@
 | POST | `/api/bookings/public/book/:slug` | 1 | 7 | retain-http | high | scheduling / PublicBookingsModule / createPublicBooking |
 | POST | `/api/bookings/public/book/:slug/cancel/:token` | 1 | 4 | retain-http | high | scheduling / PublicBookingsModule / cancelPublicBooking |
 | GET | `/api/bookings/public/book/:slug/slots` | 1 | 2 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingSlots |
-| GET | `/api/calendar-integrations/connections` | 1 | 0 | graphql-query | high | scheduling-integrations / CalendarIntegrationsModule / calendarConnections |
-| DELETE | `/api/calendar-integrations/connections/:id` | 1 | 0 | graphql-mutation | high | scheduling-integrations / CalendarIntegrationsModule / disconnectCalendar |
-| PATCH | `/api/calendar-integrations/connections/:id` | 1 | 0 | graphql-mutation | high | scheduling-integrations / CalendarIntegrationsModule / updateCalendarConnection |
 | GET | `/api/calendar-integrations/google/auth` | 1 | 1 | retain-http | high | scheduling-integrations / CalendarOAuthModule / beginGoogleCalendarConnection |
 | GET | `/api/calendar-integrations/google/calendars/:connectionId` | 1 | 0 | retain-http | high | scheduling-integrations / CalendarProviderHttpModule / providerCalendars |
 | GET | `/api/calendar-integrations/google/callback` | 0 | 3 | retain-http | high | scheduling-integrations / CalendarOAuthModule / googleCalendarCallback |
-| GET | `/api/calendar-integrations/sync-status/:connectionId` | 1 | 0 | graphql-query | high | scheduling-integrations / CalendarIntegrationsModule / calendarSyncStatus |
-| POST | `/api/calendar-integrations/sync/:connectionId` | 1 | 1 | graphql-mutation | high | scheduling-integrations / CalendarIntegrationsModule / requestCalendarSync |
 | GET | `/api/campaigns` | 1 | 6 | graphql-query | medium | growth / CampaignsModule / campaigns |
 | POST | `/api/campaigns` | 1 | 10 | graphql-mutation | medium | growth / CampaignsModule / createCampaign |
 | DELETE | `/api/campaigns/:id` | 1 | 4 | graphql-mutation | medium | growth / CampaignsModule / deleteCampaign |
@@ -252,7 +247,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 50
-- Orphaned manual overrides: 135
+- Orphaned manual overrides: 140
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls
