@@ -3,11 +3,11 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 227,
-    "resolvedDeclarationCount": 227,
+    "declarationCount": 223,
+    "resolvedDeclarationCount": 223,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 210,
-    "sourceFileCount": 49
+    "uniqueResolvedOperationCount": 206,
+    "sourceFileCount": 48
   },
   "caveats": [
     "This is static source analysis; it does not execute application modules.",
@@ -734,46 +734,6 @@
       "declaredPath": "/payments",
       "source": "backend/src/routes/invoices/payments.routes.js",
       "line": 22,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/invoices/products"
-      ],
-      "declaredPath": "/products",
-      "source": "backend/src/routes/invoices/products.routes.js",
-      "line": 17,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/invoices/products"
-      ],
-      "declaredPath": "/products",
-      "source": "backend/src/routes/invoices/products.routes.js",
-      "line": 49,
-      "dynamic": false
-    },
-    {
-      "method": "DELETE",
-      "publicPaths": [
-        "/api/invoices/products/:id"
-      ],
-      "declaredPath": "/products/:id",
-      "source": "backend/src/routes/invoices/products.routes.js",
-      "line": 117,
-      "dynamic": false
-    },
-    {
-      "method": "PUT",
-      "publicPaths": [
-        "/api/invoices/products/:id"
-      ],
-      "declaredPath": "/products/:id",
-      "source": "backend/src/routes/invoices/products.routes.js",
-      "line": 84,
       "dynamic": false
     },
     {

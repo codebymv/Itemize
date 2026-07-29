@@ -458,7 +458,7 @@
       "targetOperation": "products",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Default-off GraphQL consumer pages deterministic organization-scoped reads; fresh PostgreSQL proves active/search filters, REST interoperability, tenant isolation, and decimal-string output."
+      "notes": "The frontend permanently uses this deterministic organization-scoped GraphQL query. Fresh PostgreSQL proves active and literal-search filters, tenant isolation, and decimal-string output; the retired Express path returns 404."
     },
     "POST /api/invoices/products": {
       "disposition": "graphql-mutation",
@@ -467,7 +467,7 @@
       "targetOperation": "createProduct",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "NestJS validates product type, recurring period, currency, bounded decimal strings, and normalized optional fields; CSRF and REST rollback remain independently tested."
+      "notes": "The frontend permanently uses this CSRF-protected GraphQL mutation. NestJS validates product type, recurring period, currency, bounded decimal strings, and normalized optional fields; the retired Express path returns 404."
     },
     "DELETE /api/invoices/products/:id": {
       "disposition": "graphql-mutation",
@@ -476,7 +476,7 @@
       "targetOperation": "deleteProduct",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Organization-scoped delete returns a stable deleted identity; foreign and absent rows are indistinguishable and the retained REST path remains available."
+      "notes": "The frontend permanently uses this GraphQL mutation. Organization-scoped deletion returns a stable identity, foreign and absent rows are indistinguishable, and the retired Express path returns 404."
     },
     "PUT /api/invoices/products/:id": {
       "disposition": "graphql-mutation",
@@ -485,7 +485,7 @@
       "targetOperation": "updateProduct",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Partial updates preserve omitted fields, clear nullable text explicitly, enforce recurring-period invariants from stored state, and keep one-time billing periods null."
+      "notes": "The frontend permanently uses this GraphQL mutation. Partial updates preserve omitted fields, clear nullable text explicitly, enforce recurring-period invariants from stored state, and keep one-time billing periods null; the retired Express path returns 404."
     },
     "GET /api/invoices/recurring": {
       "disposition": "graphql-query",

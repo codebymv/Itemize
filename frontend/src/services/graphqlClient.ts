@@ -32,12 +32,6 @@ export class GraphqlRequestError extends Error {
   }
 }
 
-export const isProductGraphqlReadsEnabled = (): boolean =>
-  import.meta.env.VITE_PRODUCT_READS_GRAPHQL === 'true';
-
-export const isProductGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_PRODUCT_MUTATIONS_GRAPHQL === 'true';
-
 export const isInvoiceBusinessGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_INVOICE_BUSINESS_READS_GRAPHQL === 'true';
 

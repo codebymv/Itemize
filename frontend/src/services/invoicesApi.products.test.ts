@@ -7,10 +7,6 @@ import {
   updateProduct,
 } from './invoicesApi';
 import {
-  isProductGraphqlMutationsEnabled,
-  isProductGraphqlReadsEnabled,
-} from './graphqlClient';
-import {
   createProductViaGraphql,
   deleteProductViaGraphql,
   getProductsViaGraphql,
@@ -24,10 +20,6 @@ vi.mock('@/lib/api', () => ({
     post: vi.fn(),
     put: vi.fn(),
   },
-}));
-vi.mock('./graphqlClient', () => ({
-  isProductGraphqlMutationsEnabled: vi.fn(),
-  isProductGraphqlReadsEnabled: vi.fn(),
 }));
 vi.mock('./productsGraphql', () => ({
   createProductViaGraphql: vi.fn(),
@@ -54,35 +46,9 @@ const product = {
 describe('product API transport selection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(isProductGraphqlReadsEnabled).mockReturnValue(false);
-    vi.mocked(isProductGraphqlMutationsEnabled).mockReturnValue(false);
   });
 
-  it('keeps all product operations on REST by default', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: { data: [product] } });
-    vi.mocked(api.post).mockResolvedValue({ data: { data: product } });
-    vi.mocked(api.put).mockResolvedValue({ data: { data: product } });
-    vi.mocked(api.delete).mockResolvedValue({
-      data: { data: { success: true } },
-    });
-    await getProducts({ is_active: true }, 4);
-    await createProduct(product, 4);
-    await updateProduct(9, { name: 'Retainer' }, 4);
-    await deleteProduct(9, 4);
-    const headers = { 'x-organization-id': '4' };
-    expect(api.get).toHaveBeenCalledWith('/api/invoices/products', {
-      params: { is_active: true },
-      headers,
-    });
-    expect(api.post).toHaveBeenCalled();
-    expect(api.put).toHaveBeenCalled();
-    expect(api.delete).toHaveBeenCalled();
-    expect(getProductsViaGraphql).not.toHaveBeenCalled();
-  });
-
-  it('routes reads and mutations independently when enabled', async () => {
-    vi.mocked(isProductGraphqlReadsEnabled).mockReturnValue(true);
-    vi.mocked(isProductGraphqlMutationsEnabled).mockReturnValue(true);
+  it('routes all product reads and mutations through GraphQL', async () => {
     vi.mocked(getProductsViaGraphql).mockResolvedValue([product]);
     vi.mocked(createProductViaGraphql).mockResolvedValue(product);
     vi.mocked(updateProductViaGraphql).mockResolvedValue(product);
@@ -100,5 +66,8 @@ describe('product API transport selection', () => {
     );
     expect(deleteProductViaGraphql).toHaveBeenCalledWith(9, 4);
     expect(api.get).not.toHaveBeenCalled();
+    expect(api.post).not.toHaveBeenCalled();
+    expect(api.put).not.toHaveBeenCalled();
+    expect(api.delete).not.toHaveBeenCalled();
   });
 });

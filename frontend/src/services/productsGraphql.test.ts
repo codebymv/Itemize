@@ -6,10 +6,6 @@ import {
   getProductsViaGraphql,
   updateProductViaGraphql,
 } from './productsGraphql';
-import {
-  isProductGraphqlMutationsEnabled,
-  isProductGraphqlReadsEnabled,
-} from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(),
@@ -52,16 +48,6 @@ describe('product GraphQL consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('keeps read and mutation rollback flags independent and default-off', () => {
-    vi.stubEnv('VITE_PRODUCT_READS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_PRODUCT_MUTATIONS_GRAPHQL', 'false');
-    expect(isProductGraphqlReadsEnabled()).toBe(false);
-    expect(isProductGraphqlMutationsEnabled()).toBe(false);
-    vi.stubEnv('VITE_PRODUCT_READS_GRAPHQL', 'true');
-    expect(isProductGraphqlReadsEnabled()).toBe(true);
-    expect(isProductGraphqlMutationsEnabled()).toBe(false);
   });
 
   it('pages reads and maps decimal strings into the legacy product shape', async () => {

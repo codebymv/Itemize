@@ -1,8 +1,6 @@
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
-import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -11,7 +9,6 @@ import { PG_POOL } from '../../src/database/database.module';
 
 describe('Product catalog GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   let memberId: number;
   let outsiderId: number;
@@ -95,18 +92,6 @@ describe('Product catalog GraphQL PostgreSQL contract', () => {
     });
     configureApp(app);
     await app.init();
-
-    const createProductsRouter = require('../../../backend/src/routes/invoices/products.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    const { requireOrganization } =
-      require('../../../backend/src/middleware/organization')(pool);
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use(
-      '/api/invoices',
-      createProductsRouter({ pool, authenticateJWT, requireOrganization }),
-    );
   });
 
   afterAll(async () => {
@@ -140,58 +125,58 @@ describe('Product catalog GraphQL PostgreSQL contract', () => {
     return call.send({ query: document, variables });
   };
 
-  const legacy = (
-    method: 'get' | 'post' | 'put' | 'delete',
-    path: string,
-    token = memberToken,
-    orgId = organizationId,
-  ) =>
-    request(legacyApp)
-      [method](path)
-      .set('Cookie', `itemize_auth=${token}`)
-      .set('x-organization-id', String(orgId));
-
   const fields = `
     id organizationId name description sku price currency productType
     billingPeriod taxRate taxable isActive createdById createdAt updatedAt
   `;
 
-  it('characterizes the organization-scoped REST rollback path', async () => {
-    const created = await legacy('post', '/api/invoices/products')
-      .send({
-        name: 'Legacy service',
-        sku: 'LEGACY-1',
-        price: 49.95,
-        tax_rate: 5,
-      })
-      .expect(201);
-    const id = Number(created.body.data.id);
-    expect(created.body.data).toMatchObject({
-      organization_id: organizationId,
-      name: 'Legacy service',
-      price: '49.95',
-      is_active: true,
-    });
+  it('lists only the verified organization and treats search metacharacters literally', async () => {
+    const fixtures = await pool.query<{ id: number }>(
+      `INSERT INTO products (
+         organization_id, name, sku, price, created_by
+       ) VALUES
+         ($1, 'Literal %_ service', 'OWN-%_', 49.95, $3),
+         ($2, 'Literal %_ foreign', 'OTHER-%_', 49.95, $4)
+       RETURNING id`,
+      [organizationId, outsiderOrganizationId, memberId, outsiderId],
+    );
+    const ownId = Number(fixtures.rows[0].id);
+    const foreignId = Number(fixtures.rows[1].id);
 
-    const searched = await legacy(
-      'get',
-      '/api/invoices/products?is_active=true&search=LEGACY',
+    const listed = await graphql(
+      memberToken,
+      organizationId,
+      `query Products($filter: ProductFilterInput) {
+        products(filter: $filter) {
+          nodes { id organizationId name sku }
+          pageInfo { total }
+        }
+      }`,
+      { filter: { search: '%_' } },
+      false,
     ).expect(200);
-    expect(searched.body.data.map((product: { id: number }) => Number(product.id)))
-      .toContain(id);
+    expect(listed.body.errors).toBeUndefined();
+    expect(listed.body.data.products).toMatchObject({
+      nodes: [
+        {
+          id: ownId,
+          organizationId,
+          name: 'Literal %_ service',
+          sku: 'OWN-%_',
+        },
+      ],
+      pageInfo: { total: 1 },
+    });
+    expect(
+      listed.body.data.products.nodes.map((product: { id: number }) => product.id),
+    ).toEqual([ownId]);
 
-    await legacy(
-      'put',
-      `/api/invoices/products/${id}`,
-      outsiderToken,
-      outsiderOrganizationId,
-    )
-      .send({ name: 'Stolen' })
-      .expect(404);
-    await legacy('delete', `/api/invoices/products/${id}`).expect(200);
+    await pool.query('DELETE FROM products WHERE id = ANY($1::int[])', [
+      [ownId, foreignId],
+    ]);
   });
 
-  it('keeps GraphQL CRUD interoperable with REST and decimal-safe', async () => {
+  it('keeps GraphQL CRUD decimal-safe and authoritative in PostgreSQL', async () => {
     const created = await graphql(
       memberToken,
       organizationId,
@@ -225,12 +210,18 @@ describe('Product catalog GraphQL PostgreSQL contract', () => {
     });
     const id = Number(created.body.data.createProduct.id);
 
-    const restRead = await legacy(
-      'get',
-      '/api/invoices/products?search=RETAINER',
-    ).expect(200);
-    expect(restRead.body.data).toHaveLength(1);
-    expect(restRead.body.data[0]).toMatchObject({
+    const stored = await pool.query<{
+      id: number;
+      product_type: string;
+      billing_period: string | null;
+      price: string;
+    }>(
+      `SELECT id, product_type, billing_period, price
+       FROM products
+       WHERE id = $1 AND organization_id = $2`,
+      [id, organizationId],
+    );
+    expect(stored.rows[0]).toMatchObject({
       id,
       product_type: 'recurring',
       billing_period: 'monthly',

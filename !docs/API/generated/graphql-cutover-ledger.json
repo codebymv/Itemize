@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 210,
-    "apiOperationCount": 203,
+    "operationCount": 206,
+    "apiOperationCount": 199,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 152,
-    "operationsWithFrontendConsumers": 145,
+    "frontendCallsiteCount": 148,
+    "operationsWithFrontendConsumers": 141,
     "operationsWithBackendTests": 113,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 50,
     "retainHttpCount": 55,
-    "graphqlQueryCount": 41,
-    "graphqlMutationCount": 107,
-    "highRiskCount": 161,
+    "graphqlQueryCount": 40,
+    "graphqlMutationCount": 104,
+    "highRiskCount": 157,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -2053,7 +2053,7 @@
           "path": "/api/invoices",
           "rawPath": "/api/invoices",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 290,
+          "line": 263,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2118,7 +2118,7 @@
           "path": "/api/invoices",
           "rawPath": "/api/invoices",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 348,
+          "line": 321,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2231,7 +2231,7 @@
           "path": "/api/invoices/:invoiceId",
           "rawPath": "/api/invoices/${invoiceId}",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 375,
+          "line": 348,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2320,7 +2320,7 @@
           "path": "/api/invoices/:invoiceId",
           "rawPath": "/api/invoices/${invoiceId}",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 319,
+          "line": 292,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2391,7 +2391,7 @@
           "path": "/api/invoices/:invoiceId",
           "rawPath": "/api/invoices/${invoiceId}",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 362,
+          "line": 335,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2444,7 +2444,7 @@
           "path": "/api/invoices/:invoiceId/create-payment-link",
           "rawPath": "/api/invoices/${invoiceId}/create-payment-link",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 473,
+          "line": 446,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2482,7 +2482,7 @@
           "path": "/api/invoices/:invoiceId/pdf",
           "rawPath": "/api/invoices/${invoiceId}/pdf",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 682,
+          "line": 655,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2583,7 +2583,7 @@
           "path": "/api/invoices/:invoiceId/record-payment",
           "rawPath": "/api/invoices/${invoiceId}/record-payment",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 460,
+          "line": 433,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2684,7 +2684,7 @@
           "path": "/api/invoices/:invoiceId/send",
           "rawPath": "/api/invoices/${invoiceId}/send",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 402,
+          "line": 375,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2755,7 +2755,7 @@
           "path": "/api/invoices/businesses",
           "rawPath": "/api/invoices/businesses",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 571,
+          "line": 544,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2789,7 +2789,7 @@
           "path": "/api/invoices/businesses",
           "rawPath": "/api/invoices/businesses",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 604,
+          "line": 577,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2830,7 +2830,7 @@
           "path": "/api/invoices/businesses/:businessId",
           "rawPath": "/api/invoices/businesses/${businessId}",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 631,
+          "line": 604,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2864,7 +2864,7 @@
           "path": "/api/invoices/businesses/:businessId",
           "rawPath": "/api/invoices/businesses/${businessId}",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 591,
+          "line": 564,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2898,7 +2898,7 @@
           "path": "/api/invoices/businesses/:businessId",
           "rawPath": "/api/invoices/businesses/${businessId}",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 618,
+          "line": 591,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2932,7 +2932,7 @@
           "path": "/api/invoices/businesses/:businessId/logo",
           "rawPath": "/api/invoices/businesses/${businessId}/logo",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 660,
+          "line": 633,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2970,7 +2970,7 @@
           "path": "/api/invoices/businesses/:businessId/logo",
           "rawPath": "/api/invoices/businesses/${businessId}/logo",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 644,
+          "line": 617,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3059,7 +3059,7 @@
           "path": "/api/invoices/email/preview",
           "rawPath": "/api/invoices/email/preview",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 430,
+          "line": 403,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3565,142 +3565,6 @@
       "risk": "medium"
     },
     {
-      "id": "GET /api/invoices/products",
-      "key": "GET /api/invoices/products",
-      "method": "GET",
-      "path": "/api/invoices/products",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/invoices/products.routes.js",
-          "line": 17
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/invoices/products",
-          "rawPath": "/api/invoices/products",
-          "source": "frontend/src/services/invoicesApi.ts",
-          "line": 226,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetOperation": "products",
-      "targetModule": "ProductsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Default-off GraphQL consumer pages deterministic organization-scoped reads; fresh PostgreSQL proves active/search filters, REST interoperability, tenant isolation, and decimal-string output.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/invoices/products",
-      "key": "POST /api/invoices/products",
-      "method": "POST",
-      "path": "/api/invoices/products",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/invoices/products.routes.js",
-          "line": 49
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/products",
-          "rawPath": "/api/invoices/products",
-          "source": "frontend/src/services/invoicesApi.ts",
-          "line": 240,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetOperation": "createProduct",
-      "targetModule": "ProductsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "NestJS validates product type, recurring period, currency, bounded decimal strings, and normalized optional fields; CSRF and REST rollback remain independently tested.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/invoices/products/:id",
-      "key": "DELETE /api/invoices/products/:*",
-      "method": "DELETE",
-      "path": "/api/invoices/products/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/invoices/products.routes.js",
-          "line": 117
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/invoices/products/:productId",
-          "rawPath": "/api/invoices/products/${productId}",
-          "source": "frontend/src/services/invoicesApi.ts",
-          "line": 267,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetOperation": "deleteProduct",
-      "targetModule": "ProductsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Organization-scoped delete returns a stable deleted identity; foreign and absent rows are indistinguishable and the retained REST path remains available.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/invoices/products/:id",
-      "key": "PUT /api/invoices/products/:*",
-      "method": "PUT",
-      "path": "/api/invoices/products/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/invoices/products.routes.js",
-          "line": 84
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/invoices/products/:productId",
-          "rawPath": "/api/invoices/products/${productId}",
-          "source": "frontend/src/services/invoicesApi.ts",
-          "line": 254,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetOperation": "updateProduct",
-      "targetModule": "ProductsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Partial updates preserve omitted fields, clear nullable text explicitly, enforce recurring-period invariants from stored state, and keep one-time billing periods null.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "GET /api/invoices/recurring",
       "key": "GET /api/invoices/recurring",
       "method": "GET",
@@ -4062,7 +3926,7 @@
           "path": "/api/invoices/recurring/from-invoice/:invoiceId",
           "rawPath": "/api/invoices/recurring/from-invoice/${invoiceId}",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 496,
+          "line": 469,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4130,7 +3994,7 @@
           "path": "/api/invoices/settings",
           "rawPath": "/api/invoices/settings",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 519,
+          "line": 492,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4171,7 +4035,7 @@
           "path": "/api/invoices/settings",
           "rawPath": "/api/invoices/settings",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 532,
+          "line": 505,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4212,7 +4076,7 @@
           "path": "/api/invoices/settings/logo",
           "rawPath": "/api/invoices/settings/logo",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 557,
+          "line": 530,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4250,7 +4114,7 @@
           "path": "/api/invoices/settings/logo",
           "rawPath": "/api/invoices/settings/logo",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 544,
+          "line": 517,
           "client": "api",
           "literalInterpolation": false
         }
@@ -9501,6 +9365,7 @@
     "DELETE /api/email-templates/:id",
     "DELETE /api/forms/:id",
     "DELETE /api/forms/:id/submissions/:subId",
+    "DELETE /api/invoices/products/:id",
     "DELETE /api/lists/:id",
     "DELETE /api/notes/:noteId",
     "DELETE /api/onboarding/reset",
@@ -9541,6 +9406,7 @@
     "GET /api/forms",
     "GET /api/forms/:id",
     "GET /api/forms/:id/submissions",
+    "GET /api/invoices/products",
     "GET /api/lists",
     "GET /api/notes",
     "GET /api/onboarding/progress",
@@ -9586,6 +9452,7 @@
     "POST /api/email-templates/send-to-contact",
     "POST /api/forms",
     "POST /api/forms/:id/duplicate",
+    "POST /api/invoices/products",
     "POST /api/lists",
     "POST /api/notes",
     "POST /api/onboarding/complete-step",
@@ -9618,6 +9485,7 @@
     "PUT /api/email-templates/:id",
     "PUT /api/forms/:id",
     "PUT /api/forms/:id/fields",
+    "PUT /api/invoices/products/:id",
     "PUT /api/lists/:id",
     "PUT /api/lists/:id/position",
     "PUT /api/notes/:noteId",

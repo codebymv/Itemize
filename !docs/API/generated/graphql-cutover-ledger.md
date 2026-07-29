@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 210
-- API operations under `/api`: 203
+- Registered method/path operations: 206
+- API operations under `/api`: 199
 - Non-API registered operations: 7
-- Static frontend callsites: 152
-- Operations with frontend consumers: 145
+- Static frontend callsites: 148
+- Operations with frontend consumers: 141
 - Operations referenced by backend tests: 113
-- Recommended GraphQL queries: 41
-- Recommended GraphQL mutations: 107
+- Recommended GraphQL queries: 40
+- Recommended GraphQL mutations: 104
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 161
+- High-risk operations: 157
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -99,10 +99,6 @@
 | POST | `/api/invoices/estimates/:id/send` | 1 | 0 | graphql-mutation | high | billing / EstimatesModule / sendEstimate |
 | GET | `/api/invoices/payments` | 1 | 0 | graphql-query | high | billing / PaymentsModule / payments |
 | POST | `/api/invoices/payments` | 1 | 3 | graphql-mutation | medium | billing / PaymentsModule / recordPayment |
-| GET | `/api/invoices/products` | 1 | 0 | graphql-query | high | billing / ProductsModule / products |
-| POST | `/api/invoices/products` | 1 | 0 | graphql-mutation | high | billing / ProductsModule / createProduct |
-| DELETE | `/api/invoices/products/:id` | 1 | 0 | graphql-mutation | high | billing / ProductsModule / deleteProduct |
-| PUT | `/api/invoices/products/:id` | 1 | 0 | graphql-mutation | high | billing / ProductsModule / updateProduct |
 | GET | `/api/invoices/recurring` | 1 | 0 | graphql-query | high | billing / RecurringInvoicesModule / recurringInvoices |
 | POST | `/api/invoices/recurring` | 1 | 0 | graphql-mutation | high | billing / RecurringInvoicesModule / createRecurringInvoice |
 | DELETE | `/api/invoices/recurring/:id` | 1 | 0 | graphql-mutation | high | billing / RecurringInvoicesModule / deleteRecurringInvoice |
@@ -247,7 +243,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 50
-- Orphaned manual overrides: 140
+- Orphaned manual overrides: 144
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls
