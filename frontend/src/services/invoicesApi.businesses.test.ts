@@ -10,10 +10,6 @@ import {
   uploadBusinessLogo,
 } from './invoicesApi';
 import {
-  isInvoiceBusinessGraphqlMutationsEnabled,
-  isInvoiceBusinessGraphqlReadsEnabled,
-} from './graphqlClient';
-import {
   createInvoiceBusinessViaGraphql,
   deleteInvoiceBusinessViaGraphql,
   getInvoiceBusinessesViaGraphql,
@@ -29,10 +25,6 @@ vi.mock('@/lib/api', () => ({
     post: vi.fn(),
     put: vi.fn(),
   },
-}));
-vi.mock('./graphqlClient', () => ({
-  isInvoiceBusinessGraphqlMutationsEnabled: vi.fn(),
-  isInvoiceBusinessGraphqlReadsEnabled: vi.fn(),
 }));
 vi.mock('./invoiceBusinessesGraphql', () => ({
   createInvoiceBusinessViaGraphql: vi.fn(),
@@ -56,44 +48,9 @@ const business = {
 describe('invoice business API transport selection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(isInvoiceBusinessGraphqlReadsEnabled).mockReturnValue(false);
-    vi.mocked(isInvoiceBusinessGraphqlMutationsEnabled).mockReturnValue(false);
   });
 
-  it('keeps business CRUD and logo uploads on REST by default', async () => {
-    vi.mocked(api.get)
-      .mockResolvedValueOnce({ data: { data: [business] } })
-      .mockResolvedValueOnce({ data: { data: business } });
-    vi.mocked(api.post)
-      .mockResolvedValueOnce({ data: { data: business } })
-      .mockResolvedValueOnce({
-        data: { data: { logo_url: '/uploads/logos/safe.png' } },
-      });
-    vi.mocked(api.put).mockResolvedValue({ data: { data: business } });
-    vi.mocked(api.delete).mockResolvedValue({
-      data: { data: { success: true } },
-    });
-    await getBusinesses(4);
-    await getBusiness(8, 4);
-    await createBusiness(business, 4);
-    await updateBusiness(8, { name: 'Itemize Studio' }, 4);
-    await deleteBusiness(8, 4);
-    await deleteBusinessLogo(8, 4);
-    await uploadBusinessLogo(
-      8,
-      new File(['logo'], 'logo.png', { type: 'image/png' }),
-      4,
-    );
-    expect(api.get).toHaveBeenCalledTimes(2);
-    expect(api.post).toHaveBeenCalledTimes(2);
-    expect(api.put).toHaveBeenCalledTimes(1);
-    expect(api.delete).toHaveBeenCalledTimes(2);
-    expect(getInvoiceBusinessesViaGraphql).not.toHaveBeenCalled();
-  });
-
-  it('switches CRUD independently while always retaining multipart HTTP', async () => {
-    vi.mocked(isInvoiceBusinessGraphqlReadsEnabled).mockReturnValue(true);
-    vi.mocked(isInvoiceBusinessGraphqlMutationsEnabled).mockReturnValue(true);
+  it('routes profile state through GraphQL while retaining multipart HTTP', async () => {
     vi.mocked(getInvoiceBusinessesViaGraphql).mockResolvedValue([business]);
     vi.mocked(getInvoiceBusinessViaGraphql).mockResolvedValue(business);
     vi.mocked(createInvoiceBusinessViaGraphql).mockResolvedValue(business);

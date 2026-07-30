@@ -1,8 +1,6 @@
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
-import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -15,7 +13,6 @@ import {
 
 describe('Invoice business GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   let memberId: number;
   let outsiderId: number;
@@ -103,17 +100,6 @@ describe('Invoice business GraphQL PostgreSQL contract', () => {
     configureApp(app);
     await app.init();
 
-    const createBusinessRouter = require('../../../backend/src/routes/invoices/businesses.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    const { requireOrganization } =
-      require('../../../backend/src/middleware/organization')(pool);
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use(
-      '/api/invoices',
-      createBusinessRouter({ pool, authenticateJWT, requireOrganization }),
-    );
   });
 
   afterAll(async () => {
@@ -151,36 +137,25 @@ describe('Invoice business GraphQL PostgreSQL contract', () => {
     return call.send({ query: document, variables });
   };
 
-  const legacy = (
-    method: 'get' | 'post' | 'put' | 'delete',
-    path: string,
-    token = memberToken,
-    orgId = organizationId,
-  ) =>
-    request(legacyApp)
-      [method](path)
-      .set('Cookie', `itemize_auth=${token}`)
-      .set('x-organization-id', String(orgId));
-
   const fields = `
     id organizationId name email phone address taxId logoUrl isActive
     lastUsedAt createdAt updatedAt
   `;
 
-  it('characterizes active-only REST listing, ordering, and soft deletion', async () => {
-    const older = await legacy('post', '/api/invoices/businesses')
-      .send({
-        name: 'Legacy older',
-        email: 'older@test.itemize',
-        logo_url: 'https://attacker.invalid/logo.png',
-      })
-      .expect(201);
-    const newer = await legacy('post', '/api/invoices/businesses')
-      .send({ name: 'Legacy selected' })
-      .expect(201);
-    const olderId = Number(older.body.data.id);
-    const newerId = Number(newer.body.data.id);
-    expect(older.body.data.logo_url).toBeNull();
+  it('owns active-only ordering, soft deletion, and tenant isolation', async () => {
+    const fixtures = await pool.query<{ id: number }>(
+      `INSERT INTO businesses (
+         organization_id, name, email, is_active, last_used_at
+       ) VALUES
+         ($1, 'GraphQL older', 'older@test.itemize', true, NULL),
+         ($1, 'GraphQL selected', NULL, true, NULL),
+         ($2, 'Foreign business', NULL, true, NOW())
+       RETURNING id`,
+      [organizationId, outsiderOrganizationId],
+    );
+    const olderId = Number(fixtures.rows[0].id);
+    const newerId = Number(fixtures.rows[1].id);
+    const foreignId = Number(fixtures.rows[2].id);
     await pool.query(
       `UPDATE businesses
        SET last_used_at = NOW()
@@ -188,26 +163,51 @@ describe('Invoice business GraphQL PostgreSQL contract', () => {
       [olderId, organizationId],
     );
 
-    const listed = await legacy(
-      'get',
-      '/api/invoices/businesses',
+    const listed = await graphql(
+      memberToken,
+      organizationId,
+      `query {
+        invoiceBusinesses(page: { page: 1, pageSize: 100 }) {
+          nodes { id name }
+        }
+      }`,
+      {},
+      false,
     ).expect(200);
-    expect(listed.body.data.slice(0, 2).map(
-      (business: { id: number }) => Number(business.id),
-    )).toEqual([olderId, newerId]);
+    expect(listed.body.errors).toBeUndefined();
+    expect(
+      listed.body.data.invoiceBusinesses.nodes
+        .slice(0, 2)
+        .map((business: { id: number }) => business.id),
+    ).toEqual([olderId, newerId]);
+    expect(
+      listed.body.data.invoiceBusinesses.nodes
+        .map((business: { id: number }) => business.id),
+    ).not.toContain(foreignId);
 
-    await legacy(
-      'put',
-      `/api/invoices/businesses/${olderId}`,
-      outsiderToken,
-      outsiderOrganizationId,
-    )
-      .send({ name: 'Stolen' })
-      .expect(404);
-    await legacy(
-      'delete',
-      `/api/invoices/businesses/${newerId}`,
+    const hidden = await graphql(
+      memberToken,
+      organizationId,
+      `query Business($id: Int!) {
+        invoiceBusiness(id: $id) { id }
+      }`,
+      { id: foreignId },
+      false,
     ).expect(200);
+    expect(hidden.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const deleted = await graphql(
+      memberToken,
+      organizationId,
+      `mutation Delete($id: Int!) {
+        deleteInvoiceBusiness(id: $id) { deletedId success }
+      }`,
+      { id: newerId },
+    ).expect(200);
+    expect(deleted.body.data.deleteInvoiceBusiness).toEqual({
+      deletedId: newerId,
+      success: true,
+    });
     const persisted = await pool.query<{ is_active: boolean }>(
       'SELECT is_active FROM businesses WHERE id = $1',
       [newerId],
@@ -215,7 +215,7 @@ describe('Invoice business GraphQL PostgreSQL contract', () => {
     expect(persisted.rows[0].is_active).toBe(false);
   });
 
-  it('keeps GraphQL CRUD interoperable with REST and logo ownership retained', async () => {
+  it('keeps GraphQL CRUD authoritative and preserves server-owned logos', async () => {
     const created = await graphql(
       memberToken,
       organizationId,
@@ -251,11 +251,17 @@ describe('Invoice business GraphQL PostgreSQL contract', () => {
       [id, organizationId],
     );
 
-    const restRead = await legacy(
-      'get',
-      `/api/invoices/businesses/${id}`,
-    ).expect(200);
-    expect(restRead.body.data).toMatchObject({
+    const stored = await pool.query<{
+      id: number;
+      name: string;
+      logo_url: string | null;
+    }>(
+      `SELECT id, name, logo_url
+       FROM businesses
+       WHERE id = $1 AND organization_id = $2`,
+      [id, organizationId],
+    );
+    expect(stored.rows[0]).toMatchObject({
       id,
       name: 'Itemize Studio',
       logo_url: '/uploads/logos/retained.png',

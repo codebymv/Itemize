@@ -5,8 +5,6 @@
 import api from '@/lib/api';
 import type { JsonRecord } from '@/types';
 import {
-    isInvoiceBusinessGraphqlMutationsEnabled,
-    isInvoiceBusinessGraphqlReadsEnabled,
     isInvoiceSettingsGraphqlMutationsEnabled,
     isInvoiceSettingsGraphqlReadsEnabled,
     isInvoiceEmailPreviewGraphqlEnabled,
@@ -538,46 +536,21 @@ export const deleteLogo = async (organizationId?: number): Promise<{ success: bo
 // ======================
 
 export const getBusinesses = async (organizationId?: number): Promise<Business[]> => {
-    if (isInvoiceBusinessGraphqlReadsEnabled()) {
-        return getInvoiceBusinessesViaGraphql(organizationId);
-    }
-    const response = await api.get('/api/invoices/businesses', {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    const data = unwrapResponse<Business[] | { businesses?: Business[] }>(response.data);
-    if (Array.isArray(data)) {
-        return data;
-    }
-    if (data && Array.isArray(data.businesses)) {
-        return data.businesses;
-    }
-    return [];
+    return getInvoiceBusinessesViaGraphql(organizationId);
 };
 
 export const getBusiness = async (
     businessId: number,
     organizationId?: number
 ): Promise<Business> => {
-    if (isInvoiceBusinessGraphqlReadsEnabled()) {
-        return getInvoiceBusinessViaGraphql(businessId, organizationId);
-    }
-    const response = await api.get(`/api/invoices/businesses/${businessId}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<Business>(response.data);
+    return getInvoiceBusinessViaGraphql(businessId, organizationId);
 };
 
 export const createBusiness = async (
     business: Partial<Business>,
     organizationId?: number
 ): Promise<Business> => {
-    if (isInvoiceBusinessGraphqlMutationsEnabled()) {
-        return createInvoiceBusinessViaGraphql(business, organizationId);
-    }
-    const response = await api.post('/api/invoices/businesses', business, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<Business>(response.data);
+    return createInvoiceBusinessViaGraphql(business, organizationId);
 };
 
 export const updateBusiness = async (
@@ -585,26 +558,14 @@ export const updateBusiness = async (
     business: Partial<Business>,
     organizationId?: number
 ): Promise<Business> => {
-    if (isInvoiceBusinessGraphqlMutationsEnabled()) {
-        return updateInvoiceBusinessViaGraphql(businessId, business, organizationId);
-    }
-    const response = await api.put(`/api/invoices/businesses/${businessId}`, business, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<Business>(response.data);
+    return updateInvoiceBusinessViaGraphql(businessId, business, organizationId);
 };
 
 export const deleteBusiness = async (
     businessId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
-    if (isInvoiceBusinessGraphqlMutationsEnabled()) {
-        return deleteInvoiceBusinessViaGraphql(businessId, organizationId);
-    }
-    const response = await api.delete(`/api/invoices/businesses/${businessId}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<{ success: boolean }>(response.data);
+    return deleteInvoiceBusinessViaGraphql(businessId, organizationId);
 };
 
 export const uploadBusinessLogo = async (
@@ -627,13 +588,7 @@ export const deleteBusinessLogo = async (
     businessId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
-    if (isInvoiceBusinessGraphqlMutationsEnabled()) {
-        return removeInvoiceBusinessLogoViaGraphql(businessId, organizationId);
-    }
-    const response = await api.delete(`/api/invoices/businesses/${businessId}/logo`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return removeInvoiceBusinessLogoViaGraphql(businessId, organizationId);
 };
 
 const invoicePdfFilename = (contentDisposition: unknown, invoiceId: number): string => {

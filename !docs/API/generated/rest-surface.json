@@ -3,10 +3,10 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 223,
-    "resolvedDeclarationCount": 223,
+    "declarationCount": 217,
+    "resolvedDeclarationCount": 217,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 206,
+    "uniqueResolvedOperationCount": 200,
     "sourceFileCount": 48
   },
   "caveats": [
@@ -557,66 +557,6 @@
       "dynamic": false
     },
     {
-      "method": "GET",
-      "publicPaths": [
-        "/api/invoices/businesses"
-      ],
-      "declaredPath": "/businesses",
-      "source": "backend/src/routes/invoices/businesses.routes.js",
-      "line": 21,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/invoices/businesses"
-      ],
-      "declaredPath": "/businesses",
-      "source": "backend/src/routes/invoices/businesses.routes.js",
-      "line": 72,
-      "dynamic": false
-    },
-    {
-      "method": "DELETE",
-      "publicPaths": [
-        "/api/invoices/businesses/:id"
-      ],
-      "declaredPath": "/businesses/:id",
-      "source": "backend/src/routes/invoices/businesses.routes.js",
-      "line": 170,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/invoices/businesses/:id"
-      ],
-      "declaredPath": "/businesses/:id",
-      "source": "backend/src/routes/invoices/businesses.routes.js",
-      "line": 42,
-      "dynamic": false
-    },
-    {
-      "method": "PUT",
-      "publicPaths": [
-        "/api/invoices/businesses/:id"
-      ],
-      "declaredPath": "/businesses/:id",
-      "source": "backend/src/routes/invoices/businesses.routes.js",
-      "line": 105,
-      "dynamic": false
-    },
-    {
-      "method": "DELETE",
-      "publicPaths": [
-        "/api/invoices/businesses/:id/logo"
-      ],
-      "declaredPath": "/businesses/:id/logo",
-      "source": "backend/src/routes/invoices/businesses.routes.js",
-      "line": 318,
-      "dynamic": false
-    },
-    {
       "method": "POST",
       "publicPaths": [
         "/api/invoices/businesses/:id/logo"
@@ -633,7 +573,7 @@
       ],
       "declaredPath": "/businesses/:id/logo",
       "source": "backend/src/routes/invoices/businesses.routes.js",
-      "line": 213,
+      "line": 17,
       "dynamic": false
     },
     {

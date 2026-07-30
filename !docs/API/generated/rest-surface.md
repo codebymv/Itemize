@@ -6,10 +6,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 223
-- Resolved declarations: 223
+- Route declarations: 217
+- Resolved declarations: 217
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 206
+- Unique resolved method/path operations: 200
 - Files containing declarations: 48
 
 ## Interpretation limits
@@ -77,14 +77,8 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/invoices/:id/pdf` | `/:id/pdf` | `backend/src/routes/invoices/actions.routes.js:262` |
 | POST | `/api/invoices/:id/record-payment` | `/:id/record-payment` | `backend/src/routes/invoices/actions.routes.js:330` |
 | POST | `/api/invoices/:id/send` | `/:id/send` | `backend/src/routes/invoices/actions.routes.js:27` |
-| GET | `/api/invoices/businesses` | `/businesses` | `backend/src/routes/invoices/businesses.routes.js:21` |
-| POST | `/api/invoices/businesses` | `/businesses` | `backend/src/routes/invoices/businesses.routes.js:72` |
-| DELETE | `/api/invoices/businesses/:id` | `/businesses/:id` | `backend/src/routes/invoices/businesses.routes.js:170` |
-| GET | `/api/invoices/businesses/:id` | `/businesses/:id` | `backend/src/routes/invoices/businesses.routes.js:42` |
-| PUT | `/api/invoices/businesses/:id` | `/businesses/:id` | `backend/src/routes/invoices/businesses.routes.js:105` |
-| DELETE | `/api/invoices/businesses/:id/logo` | `/businesses/:id/logo` | `backend/src/routes/invoices/businesses.routes.js:318` |
 | POST | `/api/invoices/businesses/:id/logo` | `/api/invoices/businesses/:id/logo` | `backend/src/bootstrap/register-api-routes.js:180` |
-| POST | `/api/invoices/businesses/:id/logo` | `/businesses/:id/logo` | `backend/src/routes/invoices/businesses.routes.js:213` |
+| POST | `/api/invoices/businesses/:id/logo` | `/businesses/:id/logo` | `backend/src/routes/invoices/businesses.routes.js:17` |
 | POST | `/api/invoices/email/preview` | `/email/preview` | `backend/src/routes/invoices/email-preview.routes.js:16` |
 | GET | `/api/invoices/estimates` | `/` | `backend/src/routes/estimates.routes.js:29` |
 | POST | `/api/invoices/estimates` | `/` | `backend/src/routes/estimates.routes.js:130` |

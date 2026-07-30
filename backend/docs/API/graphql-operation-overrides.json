@@ -305,7 +305,7 @@
       "targetOperation": "invoiceBusinesses",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Default-off GraphQL consumer pages active profiles in last-used/newest order; fresh PostgreSQL proves REST parity and tenant-scoped counts."
+      "notes": "The frontend permanently uses this GraphQL query for active profiles in last-used/newest order. Fresh PostgreSQL proves tenant-scoped ordering and counts; the retired Express path returns 404."
     },
     "POST /api/invoices/businesses": {
       "disposition": "graphql-mutation",
@@ -314,7 +314,7 @@
       "targetOperation": "createInvoiceBusiness",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "GraphQL accepts bounded profile fields but never accepts a client-selected logo URL; multipart logo ownership remains on retained HTTP."
+      "notes": "The frontend permanently uses this CSRF-protected GraphQL mutation. It accepts bounded profile fields but never a client-selected logo URL; the retired JSON Express path returns 404 while multipart upload remains HTTP."
     },
     "DELETE /api/invoices/businesses/:id": {
       "disposition": "graphql-mutation",
@@ -323,7 +323,7 @@
       "targetOperation": "deleteInvoiceBusiness",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Organization-scoped soft deletion preserves historical invoice references while removing the profile from active lists."
+      "notes": "The frontend permanently uses this organization-scoped GraphQL soft deletion, which preserves historical invoice references while removing the profile from active lists; the retired Express path returns 404."
     },
     "GET /api/invoices/businesses/:id": {
       "disposition": "graphql-query",
@@ -332,7 +332,7 @@
       "targetOperation": "invoiceBusiness",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Detail reads include inactive historical profiles and return the same NOT_FOUND outcome for absent and foreign rows."
+      "notes": "The frontend permanently uses this GraphQL detail query. Inactive historical profiles remain readable, absent and foreign rows share NOT_FOUND, and the retired Express path returns 404."
     },
     "PUT /api/invoices/businesses/:id": {
       "disposition": "graphql-mutation",
@@ -341,7 +341,7 @@
       "targetOperation": "updateInvoiceBusiness",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Partial writes preserve omitted fields, normalize blank optional values to null, retain server-owned logo URLs, and require CSRF."
+      "notes": "The frontend permanently uses this CSRF-protected GraphQL mutation. Partial writes preserve omitted fields, normalize blank optional values to null, retain server-owned logo URLs, and the retired Express path returns 404."
     },
     "DELETE /api/invoices/businesses/:id/logo": {
       "disposition": "graphql-mutation",
@@ -350,7 +350,7 @@
       "targetOperation": "removeInvoiceBusinessLogo",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "CSRF-protected tenant-scoped removal clears the server-owned URL and enqueues its exact prior value in one transaction. A leased worker retries safe local or exact configured-S3 deletion; foreign URLs dead-letter without storage access. The existing business mutation flag is independently default-off while multipart upload remains HTTP."
+      "notes": "The frontend permanently uses this CSRF-protected GraphQL mutation. Tenant-scoped removal clears the server-owned URL and enqueues its exact prior value in one transaction; a leased worker retries safe local or exact configured-S3 deletion, foreign URLs dead-letter without storage access, the retired Express DELETE returns 404, and multipart upload remains HTTP."
     },
     "POST /api/invoices/businesses/:id/logo": {
       "disposition": "retain-http",

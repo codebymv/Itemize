@@ -8,10 +8,6 @@ import {
   removeInvoiceBusinessLogoViaGraphql,
   updateInvoiceBusinessViaGraphql,
 } from './invoiceBusinessesGraphql';
-import {
-  isInvoiceBusinessGraphqlMutationsEnabled,
-  isInvoiceBusinessGraphqlReadsEnabled,
-} from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(),
@@ -52,16 +48,6 @@ describe('invoice business GraphQL consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('keeps read and mutation rollback flags independent and default-off', () => {
-    vi.stubEnv('VITE_INVOICE_BUSINESS_READS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_INVOICE_BUSINESS_MUTATIONS_GRAPHQL', 'false');
-    expect(isInvoiceBusinessGraphqlReadsEnabled()).toBe(false);
-    expect(isInvoiceBusinessGraphqlMutationsEnabled()).toBe(false);
-    vi.stubEnv('VITE_INVOICE_BUSINESS_READS_GRAPHQL', 'true');
-    expect(isInvoiceBusinessGraphqlReadsEnabled()).toBe(true);
-    expect(isInvoiceBusinessGraphqlMutationsEnabled()).toBe(false);
   });
 
   it('pages list reads and maps detail casing into the retained shape', async () => {

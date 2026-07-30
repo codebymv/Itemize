@@ -29,20 +29,6 @@ function createHarness() {
 }
 
 describe('invoice logo route boundary', () => {
-    it('does not let business JSON choose a storage URL', async () => {
-        const { app, client } = createHarness();
-        const response = await request(app).post('/api/invoices/businesses').send({
-            name: 'Safe business',
-            logo_url: 'http://169.254.169.254/latest/meta-data',
-        });
-
-        expect(response.status).toBe(201);
-        const [sql, params] = client.query.mock.calls[0];
-        const insertColumns = sql.match(/INSERT INTO businesses\s*\(([^)]*)\)/i)?.[1];
-        expect(insertColumns).not.toContain('logo_url');
-        expect(params).not.toContain('http://169.254.169.254/latest/meta-data');
-    });
-
     it('does not let settings JSON replace the managed logo URL', async () => {
         const { app, client } = createHarness();
         const response = await request(app).put('/api/invoices/settings').send({

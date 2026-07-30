@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 206
-- API operations under `/api`: 199
+- Registered method/path operations: 200
+- API operations under `/api`: 193
 - Non-API registered operations: 7
-- Static frontend callsites: 148
-- Operations with frontend consumers: 141
-- Operations referenced by backend tests: 113
-- Recommended GraphQL queries: 40
-- Recommended GraphQL mutations: 104
+- Static frontend callsites: 142
+- Operations with frontend consumers: 135
+- Operations referenced by backend tests: 112
+- Recommended GraphQL queries: 38
+- Recommended GraphQL mutations: 100
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 157
+- High-risk operations: 151
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -82,12 +82,6 @@
 | GET | `/api/invoices/:id/pdf` | 1 | 11 | retain-http | high | billing / InvoicesModule / invoicePdf |
 | POST | `/api/invoices/:id/record-payment` | 1 | 11 | graphql-mutation | medium | billing / PaymentsModule / recordInvoicePayment |
 | POST | `/api/invoices/:id/send` | 1 | 6 | graphql-mutation | medium | billing / InvoicesModule / sendInvoice |
-| GET | `/api/invoices/businesses` | 1 | 0 | graphql-query | high | billing / InvoiceBusinessesModule / invoiceBusinesses |
-| POST | `/api/invoices/businesses` | 1 | 1 | graphql-mutation | high | billing / InvoiceBusinessesModule / createInvoiceBusiness |
-| DELETE | `/api/invoices/businesses/:id` | 1 | 0 | graphql-mutation | high | billing / InvoiceBusinessesModule / deleteInvoiceBusiness |
-| GET | `/api/invoices/businesses/:id` | 1 | 0 | graphql-query | high | billing / InvoiceBusinessesModule / invoiceBusiness |
-| PUT | `/api/invoices/businesses/:id` | 1 | 0 | graphql-mutation | high | billing / InvoiceBusinessesModule / updateInvoiceBusiness |
-| DELETE | `/api/invoices/businesses/:id/logo` | 1 | 0 | graphql-mutation | high | billing / InvoiceBusinessesModule / removeInvoiceBusinessLogo |
 | POST | `/api/invoices/businesses/:id/logo` | 1 | 9 | retain-http | high | billing / InvoiceBusinessesModule / uploadInvoiceBusinessLogo |
 | POST | `/api/invoices/email/preview` | 1 | 1 | graphql-mutation | high | billing / InvoicesModule / previewInvoiceEmail |
 | GET | `/api/invoices/estimates` | 1 | 6 | graphql-query | medium | billing / EstimatesModule / estimates |
@@ -243,7 +237,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 50
-- Orphaned manual overrides: 144
+- Orphaned manual overrides: 150
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

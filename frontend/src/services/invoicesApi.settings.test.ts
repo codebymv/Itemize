@@ -17,8 +17,6 @@ vi.mock('@/lib/api', () => ({
 vi.mock('./graphqlClient', () => ({
   isInvoiceSettingsGraphqlMutationsEnabled: vi.fn(),
   isInvoiceSettingsGraphqlReadsEnabled: vi.fn(),
-  isInvoiceBusinessGraphqlMutationsEnabled: vi.fn(() => false),
-  isInvoiceBusinessGraphqlReadsEnabled: vi.fn(() => false),
   isInvoiceGraphqlMutationsEnabled: vi.fn(() => false),
   isInvoiceGraphqlReadsEnabled: vi.fn(() => false),
   isPaymentGraphqlMutationsEnabled: vi.fn(() => false),
