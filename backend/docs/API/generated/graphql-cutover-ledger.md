@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 200
-- API operations under `/api`: 193
+- Registered method/path operations: 197
+- API operations under `/api`: 190
 - Non-API registered operations: 7
-- Static frontend callsites: 142
-- Operations with frontend consumers: 135
-- Operations referenced by backend tests: 112
-- Recommended GraphQL queries: 38
-- Recommended GraphQL mutations: 100
+- Static frontend callsites: 139
+- Operations with frontend consumers: 132
+- Operations referenced by backend tests: 110
+- Recommended GraphQL queries: 37
+- Recommended GraphQL mutations: 98
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 151
+- High-risk operations: 148
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -104,9 +104,6 @@
 | POST | `/api/invoices/recurring/:id/resume` | 1 | 0 | graphql-mutation | high | billing / RecurringInvoicesModule / resumeRecurringInvoice |
 | POST | `/api/invoices/recurring/from-invoice/:invoiceId` | 1 | 0 | graphql-mutation | high | billing / RecurringInvoicesModule / createRecurringInvoiceFromInvoice |
 | GET | `/api/invoices/recurring/preview-invoice-number` | 1 | 0 | graphql-query | high | billing / RecurringInvoicesModule / previewRecurringInvoiceNumber |
-| GET | `/api/invoices/settings` | 1 | 1 | graphql-query | high | billing / InvoiceSettingsModule / invoiceSettings |
-| PUT | `/api/invoices/settings` | 1 | 1 | graphql-mutation | high | billing / InvoiceSettingsModule / updateInvoiceSettings |
-| DELETE | `/api/invoices/settings/logo` | 1 | 0 | graphql-mutation | high | billing / InvoiceSettingsModule / removeInvoiceSettingsLogo |
 | POST | `/api/invoices/settings/logo` | 1 | 0 | retain-http | high | billing / InvoiceSettingsModule / uploadInvoiceSettingsLogo |
 | POST | `/api/invoices/webhook/stripe` | 0 | 13 | retain-http | medium | billing / InvoiceWebhooksModule / stripeInvoiceWebhook |
 | DELETE | `/api/lists/:listId/share` | 0 | 2 | graphql-mutation | high | sharing / WorkspaceContentModule / disableListSharing |
@@ -237,7 +234,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 50
-- Orphaned manual overrides: 150
+- Orphaned manual overrides: 153
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

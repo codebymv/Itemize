@@ -6,10 +6,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 217
-- Resolved declarations: 217
+- Route declarations: 214
+- Resolved declarations: 214
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 200
+- Unique resolved method/path operations: 197
 - Files containing declarations: 48
 
 ## Interpretation limits
@@ -100,11 +100,8 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/invoices/recurring/:id/resume` | `/:id/resume` | `backend/src/routes/recurring.routes.js:413` |
 | POST | `/api/invoices/recurring/from-invoice/:invoiceId` | `/from-invoice/:invoiceId` | `backend/src/routes/recurring.routes.js:639` |
 | GET | `/api/invoices/recurring/preview-invoice-number` | `/preview-invoice-number` | `backend/src/routes/recurring.routes.js:44` |
-| GET | `/api/invoices/settings` | `/settings` | `backend/src/routes/invoices/settings.routes.js:21` |
-| PUT | `/api/invoices/settings` | `/settings` | `backend/src/routes/invoices/settings.routes.js:51` |
-| DELETE | `/api/invoices/settings/logo` | `/settings/logo` | `backend/src/routes/invoices/settings.routes.js:210` |
 | POST | `/api/invoices/settings/logo` | `/api/invoices/settings/logo` | `backend/src/bootstrap/register-api-routes.js:184` |
-| POST | `/api/invoices/settings/logo` | `/settings/logo` | `backend/src/routes/invoices/settings.routes.js:114` |
+| POST | `/api/invoices/settings/logo` | `/settings/logo` | `backend/src/routes/invoices/settings.routes.js:15` |
 | POST | `/api/invoices/webhook/stripe` | `/api/invoices/webhook/stripe` | `backend/src/bootstrap/register-api-routes.js:176` |
 | POST | `/api/invoices/webhook/stripe` | `/webhook/stripe` | `backend/src/routes/invoices/stripe-webhook.routes.js:18` |
 | DELETE | `/api/lists/:listId/share` | `/lists/:listId/share` | `backend/src/routes/sharing.routes.js:126` |

@@ -593,7 +593,7 @@
       "targetOperation": "invoiceSettings",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Returns selected-organization settings or virtual retained defaults without creating a row; provider-owned Stripe fields and the server-owned logo URL are read-only."
+      "notes": "The frontend permanently uses this GraphQL query. It returns selected-organization settings or virtual retained defaults without creating a row; provider-owned Stripe fields and the server-owned logo URL are read-only, and the retired Express path returns 404."
     },
     "PUT /api/invoices/settings": {
       "disposition": "graphql-mutation",
@@ -602,7 +602,7 @@
       "targetOperation": "updateInvoiceSettings",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "CSRF-protected partial writes validate bounded settings, preserve omitted fields, serialize on the shared invoice-number row, reject counter regression and exact-number collision, and never accept Stripe or logo fields."
+      "notes": "The frontend permanently uses this CSRF-protected GraphQL mutation. Partial writes validate bounded settings, preserve omitted fields, serialize on the shared invoice-number row, reject counter regression and exact-number collision, never accept Stripe or logo fields, and the retired Express path returns 404."
     },
     "DELETE /api/invoices/settings/logo": {
       "disposition": "graphql-mutation",
@@ -611,7 +611,7 @@
       "targetOperation": "removeInvoiceSettingsLogo",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "CSRF-protected selected-organization removal clears the server-owned URL and enqueues its exact prior value in one transaction. A leased worker retries safe local or exact configured-S3 deletion; foreign URLs dead-letter without storage access. The existing settings mutation flag is independently default-off while multipart upload remains HTTP."
+      "notes": "The frontend permanently uses this CSRF-protected GraphQL mutation. Selected-organization removal clears the server-owned URL and enqueues its exact prior value in one transaction; a leased worker retries safe local or exact configured-S3 deletion, foreign URLs dead-letter without storage access, the retired Express DELETE returns 404, and multipart upload remains HTTP."
     },
     "POST /api/invoices/settings/logo": {
       "disposition": "retain-http",

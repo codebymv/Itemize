@@ -5,10 +5,6 @@ import {
   removeInvoiceSettingsLogoViaGraphql,
   updateInvoiceSettingsViaGraphql,
 } from './invoiceSettingsGraphql';
-import {
-  isInvoiceSettingsGraphqlMutationsEnabled,
-  isInvoiceSettingsGraphqlReadsEnabled,
-} from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(),
@@ -57,16 +53,6 @@ describe('invoice settings GraphQL consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('keeps read and mutation flags independent and default-off', () => {
-    vi.stubEnv('VITE_INVOICE_SETTINGS_READS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_INVOICE_SETTINGS_MUTATIONS_GRAPHQL', 'false');
-    expect(isInvoiceSettingsGraphqlReadsEnabled()).toBe(false);
-    expect(isInvoiceSettingsGraphqlMutationsEnabled()).toBe(false);
-    vi.stubEnv('VITE_INVOICE_SETTINGS_READS_GRAPHQL', 'true');
-    expect(isInvoiceSettingsGraphqlReadsEnabled()).toBe(true);
-    expect(isInvoiceSettingsGraphqlMutationsEnabled()).toBe(false);
   });
 
   it('maps settings reads into the retained snake-case shape', async () => {

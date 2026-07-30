@@ -150,8 +150,6 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
 
     const createCrudRouter =
       require('../../../backend/src/routes/invoices/crud.routes');
-    const createSettingsRouter =
-      require('../../../backend/src/routes/invoices/settings.routes');
     const createEmailPreviewRouter =
       require('../../../backend/src/routes/invoices/email-preview.routes');
     const { authenticateJWT } = require('../../../backend/src/auth/middleware');
@@ -171,10 +169,6 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     legacyApp.use(
       '/api/invoices/recurring',
       createRecurringRouter(pool, authenticateJWT),
-    );
-    legacyApp.use(
-      '/api/invoices',
-      createSettingsRouter({ pool, authenticateJWT, requireOrganization }),
     );
     legacyApp.use(
       '/api/invoices',
@@ -848,14 +842,18 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     await pool.query(
       `INSERT INTO payment_settings (
          organization_id, invoice_prefix, next_invoice_number,
-         default_payment_terms, default_tax_rate, default_currency
-       ) VALUES ($1, 'SET-', 900, 30, 10, 'USD')
+         default_payment_terms, default_tax_rate, default_currency, logo_url
+       ) VALUES (
+         $1, 'SET-', 900, 30, 10, 'USD',
+         '/uploads/logos/settings-authoritative.png'
+       )
        ON CONFLICT (organization_id) DO UPDATE SET
          invoice_prefix = EXCLUDED.invoice_prefix,
          next_invoice_number = EXCLUDED.next_invoice_number,
          default_payment_terms = EXCLUDED.default_payment_terms,
          default_tax_rate = EXCLUDED.default_tax_rate,
-         default_currency = EXCLUDED.default_currency`,
+         default_currency = EXCLUDED.default_currency,
+         logo_url = EXCLUDED.logo_url`,
       [organizationId],
     );
     await pool.query(
@@ -945,18 +943,33 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       businessEmail: 'billing@example.com',
       defaultCurrency: 'USD',
     });
-    const retained = await request(legacyApp)
-      .get('/api/invoices/settings')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
-    expect(retained.body.data).toMatchObject({
+    const persisted = await pool.query<{
+      invoice_prefix: string;
+      next_invoice_number: number;
+      default_payment_terms: number;
+      default_tax_rate: string;
+      business_email: string | null;
+      default_currency: string;
+      logo_url: string | null;
+    }>(
+      `SELECT invoice_prefix, next_invoice_number, default_payment_terms,
+              default_tax_rate::text, business_email, default_currency,
+              logo_url
+       FROM payment_settings
+       WHERE organization_id = $1`,
+      [organizationId],
+    );
+    expect(persisted.rows[0]).toMatchObject({
       invoice_prefix: 'SET-',
       next_invoice_number: 901,
       default_payment_terms: 14,
-      default_tax_rate: '8.25',
       business_email: 'billing@example.com',
       default_currency: 'USD',
+      logo_url: '/uploads/logos/settings-authoritative.png',
+    });
+    expect(Number(persisted.rows[0].default_tax_rate)).toBe(8.25);
+    expect(updated.body.data.updateInvoiceSettings).toMatchObject({
+      logoUrl: '/uploads/logos/settings-authoritative.png',
     });
 
     const regression = await graphql(

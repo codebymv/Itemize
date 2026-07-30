@@ -5,8 +5,6 @@
 import api from '@/lib/api';
 import type { JsonRecord } from '@/types';
 import {
-    isInvoiceSettingsGraphqlMutationsEnabled,
-    isInvoiceSettingsGraphqlReadsEnabled,
     isInvoiceEmailPreviewGraphqlEnabled,
     isInvoiceGraphqlMutationsEnabled,
     isInvoiceGraphqlReadsEnabled,
@@ -484,26 +482,14 @@ export const createRecurringTemplateFromInvoice = async (
 // ======================
 
 export const getPaymentSettings = async (organizationId?: number): Promise<PaymentSettings> => {
-    if (isInvoiceSettingsGraphqlReadsEnabled()) {
-        return getInvoiceSettingsViaGraphql(organizationId);
-    }
-    const response = await api.get('/api/invoices/settings', {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<PaymentSettings>(response.data);
+    return getInvoiceSettingsViaGraphql(organizationId);
 };
 
 export const updatePaymentSettings = async (
     settings: Partial<PaymentSettings>,
     organizationId?: number
 ): Promise<PaymentSettings> => {
-    if (isInvoiceSettingsGraphqlMutationsEnabled()) {
-        return updateInvoiceSettingsViaGraphql(settings, organizationId);
-    }
-    const response = await api.put('/api/invoices/settings', settings, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<PaymentSettings>(response.data);
+    return updateInvoiceSettingsViaGraphql(settings, organizationId);
 };
 
 export const uploadLogo = async (
@@ -522,13 +508,7 @@ export const uploadLogo = async (
 };
 
 export const deleteLogo = async (organizationId?: number): Promise<{ success: boolean }> => {
-    if (isInvoiceSettingsGraphqlMutationsEnabled()) {
-        return removeInvoiceSettingsLogoViaGraphql(organizationId);
-    }
-    const response = await api.delete('/api/invoices/settings/logo', {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<{ success: boolean }>(response.data);
+    return removeInvoiceSettingsLogoViaGraphql(organizationId);
 };
 
 // ======================

@@ -38,6 +38,9 @@ module.exports = (pool, authenticateJWT, _publicRateLimit) => {
     // path is retired and must not fall into the generic invoice /:id routes.
     router.use('/businesses', (_req, _res, next) => next('router'));
     router.use(createSettingsRoutes({ pool, authenticateJWT, requireOrganization }));
+    // Multipart logo upload above remains HTTP. Every other settings path is
+    // retired and must not fall into the generic invoice /:id routes.
+    router.use('/settings', (_req, _res, next) => next('router'));
     router.use(createStripeWebhookRoutes({ pool, stripe }));
     router.use(createCrudRoutes({ pool, authenticateJWT, requireOrganization }));
     router.use(createActionRoutes({ pool, authenticateJWT, requireOrganization, stripe }));

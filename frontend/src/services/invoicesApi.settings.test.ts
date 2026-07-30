@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '@/lib/api';
-import { deleteLogo, getPaymentSettings, updatePaymentSettings } from './invoicesApi';
 import {
-  isInvoiceSettingsGraphqlMutationsEnabled,
-  isInvoiceSettingsGraphqlReadsEnabled,
-} from './graphqlClient';
+  deleteLogo,
+  getPaymentSettings,
+  updatePaymentSettings,
+  uploadLogo,
+} from './invoicesApi';
 import {
   getInvoiceSettingsViaGraphql,
   removeInvoiceSettingsLogoViaGraphql,
@@ -12,11 +13,9 @@ import {
 } from './invoiceSettingsGraphql';
 
 vi.mock('@/lib/api', () => ({
-  default: { delete: vi.fn(), get: vi.fn(), put: vi.fn() },
+  default: { post: vi.fn() },
 }));
 vi.mock('./graphqlClient', () => ({
-  isInvoiceSettingsGraphqlMutationsEnabled: vi.fn(),
-  isInvoiceSettingsGraphqlReadsEnabled: vi.fn(),
   isInvoiceGraphqlMutationsEnabled: vi.fn(() => false),
   isInvoiceGraphqlReadsEnabled: vi.fn(() => false),
   isPaymentGraphqlMutationsEnabled: vi.fn(() => false),
@@ -38,39 +37,16 @@ const settings = {
   default_currency: 'USD',
 };
 
-describe('invoice settings API transport selection', () => {
+describe('invoice settings API transport', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(isInvoiceSettingsGraphqlReadsEnabled).mockReturnValue(false);
-    vi.mocked(isInvoiceSettingsGraphqlMutationsEnabled).mockReturnValue(false);
   });
 
-  it('keeps settings reads and writes on REST by default', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: { data: settings } });
-    vi.mocked(api.put).mockResolvedValue({ data: { data: settings } });
-    vi.mocked(api.delete).mockResolvedValue({ data: { data: { success: true } } });
-    await getPaymentSettings(7);
-    await updatePaymentSettings({ default_tax_rate: 10 }, 7);
-    await deleteLogo(7);
-    expect(api.get).toHaveBeenCalledWith('/api/invoices/settings', {
-      headers: { 'x-organization-id': '7' },
-    });
-    expect(api.put).toHaveBeenCalled();
-    expect(api.delete).toHaveBeenCalledWith('/api/invoices/settings/logo', {
-      headers: { 'x-organization-id': '7' },
-    });
-    expect(getInvoiceSettingsViaGraphql).not.toHaveBeenCalled();
-  });
-
-  it('routes settings reads and writes independently', async () => {
-    vi.mocked(isInvoiceSettingsGraphqlReadsEnabled).mockReturnValue(true);
+  it('routes settings reads, writes, and logo removal through GraphQL', async () => {
     vi.mocked(getInvoiceSettingsViaGraphql).mockResolvedValue(settings);
     await getPaymentSettings(7);
     expect(getInvoiceSettingsViaGraphql).toHaveBeenCalledWith(7);
-    expect(api.get).not.toHaveBeenCalled();
-    expect(api.put).not.toHaveBeenCalled();
 
-    vi.mocked(isInvoiceSettingsGraphqlMutationsEnabled).mockReturnValue(true);
     vi.mocked(updateInvoiceSettingsViaGraphql).mockResolvedValue(settings);
     vi.mocked(removeInvoiceSettingsLogoViaGraphql).mockResolvedValue({ success: true });
     await updatePaymentSettings({ default_tax_rate: 10 }, 7);
@@ -79,8 +55,26 @@ describe('invoice settings API transport selection', () => {
       { default_tax_rate: 10 },
       7,
     );
-    expect(api.put).not.toHaveBeenCalled();
     expect(removeInvoiceSettingsLogoViaGraphql).toHaveBeenCalledWith(7);
-    expect(api.delete).not.toHaveBeenCalled();
+    expect(api.post).not.toHaveBeenCalled();
+
+    vi.mocked(api.post).mockResolvedValue({
+      data: { data: { success: true, logo_url: '/uploads/logos/settings.png' } },
+    });
+    const logo = new File(['image'], 'settings.png', { type: 'image/png' });
+    await expect(uploadLogo(logo, 7)).resolves.toEqual({
+      success: true,
+      logo_url: '/uploads/logos/settings.png',
+    });
+    expect(api.post).toHaveBeenCalledWith(
+      '/api/invoices/settings/logo',
+      expect.any(FormData),
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'x-organization-id': '7',
+        },
+      },
+    );
   });
 });

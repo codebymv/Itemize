@@ -3,10 +3,10 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 217,
-    "resolvedDeclarationCount": 217,
+    "declarationCount": 214,
+    "resolvedDeclarationCount": 214,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 200,
+    "uniqueResolvedOperationCount": 197,
     "sourceFileCount": 48
   },
   "caveats": [
@@ -787,36 +787,6 @@
       "dynamic": false
     },
     {
-      "method": "GET",
-      "publicPaths": [
-        "/api/invoices/settings"
-      ],
-      "declaredPath": "/settings",
-      "source": "backend/src/routes/invoices/settings.routes.js",
-      "line": 21,
-      "dynamic": false
-    },
-    {
-      "method": "PUT",
-      "publicPaths": [
-        "/api/invoices/settings"
-      ],
-      "declaredPath": "/settings",
-      "source": "backend/src/routes/invoices/settings.routes.js",
-      "line": 51,
-      "dynamic": false
-    },
-    {
-      "method": "DELETE",
-      "publicPaths": [
-        "/api/invoices/settings/logo"
-      ],
-      "declaredPath": "/settings/logo",
-      "source": "backend/src/routes/invoices/settings.routes.js",
-      "line": 210,
-      "dynamic": false
-    },
-    {
       "method": "POST",
       "publicPaths": [
         "/api/invoices/settings/logo"
@@ -833,7 +803,7 @@
       ],
       "declaredPath": "/settings/logo",
       "source": "backend/src/routes/invoices/settings.routes.js",
-      "line": 114,
+      "line": 15,
       "dynamic": false
     },
     {
