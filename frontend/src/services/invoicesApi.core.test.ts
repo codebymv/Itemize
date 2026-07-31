@@ -12,8 +12,6 @@ import {
   updateInvoice,
 } from './invoicesApi';
 import {
-  isInvoiceGraphqlMutationsEnabled,
-  isInvoiceGraphqlReadsEnabled,
   isInvoiceGraphqlSendEnabled,
   isInvoicePaymentLinkGraphqlEnabled,
   isRecurringInvoiceGraphqlCloneEnabled,
@@ -38,8 +36,6 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 vi.mock('./graphqlClient', () => ({
-  isInvoiceGraphqlMutationsEnabled: vi.fn(),
-  isInvoiceGraphqlReadsEnabled: vi.fn(),
   isInvoiceGraphqlSendEnabled: vi.fn(),
   isInvoicePaymentLinkGraphqlEnabled: vi.fn(),
   isPaymentGraphqlMutationsEnabled: vi.fn(() => false),
@@ -83,8 +79,6 @@ const invoice = {
 describe('core invoice API transport selection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(isInvoiceGraphqlReadsEnabled).mockReturnValue(false);
-    vi.mocked(isInvoiceGraphqlMutationsEnabled).mockReturnValue(false);
     vi.mocked(isInvoiceGraphqlSendEnabled).mockReturnValue(false);
     vi.mocked(isInvoicePaymentLinkGraphqlEnabled).mockReturnValue(false);
     vi.mocked(isRecurringInvoiceGraphqlCloneEnabled).mockReturnValue(false);
@@ -136,37 +130,7 @@ describe('core invoice API transport selection', () => {
     expect(api.post).not.toHaveBeenCalled();
   });
 
-  it('retains all five operations on REST by default', async () => {
-    vi.mocked(api.get)
-      .mockResolvedValueOnce({
-        data: {
-          data: [invoice],
-          pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
-        },
-      })
-      .mockResolvedValueOnce({ data: { data: invoice } });
-    vi.mocked(api.post).mockResolvedValue({ data: { data: invoice } });
-    vi.mocked(api.put).mockResolvedValue({ data: { data: invoice } });
-    vi.mocked(api.delete).mockResolvedValue({
-      data: { data: { success: true } },
-    });
-    await getInvoices({ status: 'draft' }, 4);
-    await getInvoice(12, 4);
-    await createInvoice({ items: invoice.items }, 4);
-    await updateInvoice(12, { notes: 'Updated' }, 4);
-    await deleteInvoice(12, 4);
-    expect(api.get).toHaveBeenCalledTimes(2);
-    expect(api.post).toHaveBeenCalledWith(
-      '/api/invoices',
-      { items: invoice.items },
-      { headers: { 'x-organization-id': '4' } },
-    );
-    expect(createInvoiceViaGraphql).not.toHaveBeenCalled();
-  });
-
-  it('routes reads and CRUD through independent GraphQL flags', async () => {
-    vi.mocked(isInvoiceGraphqlReadsEnabled).mockReturnValue(true);
-    vi.mocked(isInvoiceGraphqlMutationsEnabled).mockReturnValue(true);
+  it('routes all five core invoice operations through GraphQL', async () => {
     vi.mocked(getInvoicesViaGraphql).mockResolvedValue({
       invoices: [invoice],
       pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
@@ -193,6 +157,9 @@ describe('core invoice API transport selection', () => {
     );
     expect(deleteInvoiceViaGraphql).toHaveBeenCalledWith(12, 4);
     expect(api.get).not.toHaveBeenCalled();
+    expect(api.post).not.toHaveBeenCalled();
+    expect(api.put).not.toHaveBeenCalled();
+    expect(api.delete).not.toHaveBeenCalled();
   });
 
   it('keeps send on REST by default and cuts it over independently', async () => {

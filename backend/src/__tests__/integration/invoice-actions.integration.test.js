@@ -33,19 +33,43 @@ function createApp(pool) {
     return app;
 }
 
-/** Create and return a draft invoice id */
-async function createInvoice(app, user, overrides = {}) {
-    const res = await request(app)
-        .post('/api/invoices')
-        .set('Cookie', [`itemize_auth=${user.token}`])
-        .set('x-organization-id', String(user.org.id))
-        .send({
-            customer_name: 'Test Customer',
-            customer_email: 'customer@test.com',
-            items: [{ name: 'Service', quantity: 1, unit_price: 500 }],
-            ...overrides,
-        });
-    return res.body.data;
+/** Seed a draft invoice without depending on the retired Express CRUD routes. */
+async function createInvoice(dbHelper, user, overrides = {}) {
+    const item = overrides.items?.[0] || { name: 'Service', quantity: 1, unit_price: 500 };
+    const quantity = Number(item.quantity);
+    const unitPrice = Number(item.unit_price);
+    const total = quantity * unitPrice;
+    const customerName = overrides.customer_name === undefined
+        ? 'Test Customer'
+        : overrides.customer_name;
+    const customerEmail = overrides.customer_email === undefined
+        ? 'customer@test.com'
+        : overrides.customer_email;
+    const invoiceNumber = `ACTION-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+    const invoiceResult = await dbHelper.pool.query(`
+        INSERT INTO invoices (
+            organization_id, invoice_number, customer_name, customer_email,
+            due_date, subtotal, total, amount_due, created_by
+        ) VALUES ($1, $2, $3, $4, CURRENT_DATE + 30, $5, $5, $5, $6)
+        RETURNING *
+    `, [
+        user.org.id,
+        invoiceNumber,
+        customerName,
+        customerEmail,
+        total,
+        user.user.id,
+    ]);
+    const invoice = invoiceResult.rows[0];
+
+    await dbHelper.pool.query(`
+        INSERT INTO invoice_items (
+            invoice_id, organization_id, name, quantity, unit_price, total
+        ) VALUES ($1, $2, $3, $4, $5, $6)
+    `, [invoice.id, user.org.id, item.name, quantity, unitPrice, total]);
+
+    return invoice;
 }
 
 async function cleanupInvoice(dbHelper, invoiceId) {
@@ -77,7 +101,7 @@ describe('Invoice Actions Integration Tests', () => {
 
     describe('POST /api/invoices/:id/record-payment', () => {
         it('records a partial payment and sets status to partial', async () => {
-            const inv = await createInvoice(app, userA);
+            const inv = await createInvoice(dbHelper, userA);
             expect(Number(inv.total)).toBe(500);
 
             const res = await request(app)
@@ -98,7 +122,7 @@ describe('Invoice Actions Integration Tests', () => {
         });
 
         it('records full payment and sets status to paid', async () => {
-            const inv = await createInvoice(app, userA);
+            const inv = await createInvoice(dbHelper, userA);
 
             const res = await request(app)
                 .post(`/api/invoices/${inv.id}/record-payment`)
@@ -132,7 +156,7 @@ describe('Invoice Actions Integration Tests', () => {
         });
 
         it('rejects payment with invalid amount (0)', async () => {
-            const inv = await createInvoice(app, userA);
+            const inv = await createInvoice(dbHelper, userA);
 
             const res = await request(app)
                 .post(`/api/invoices/${inv.id}/record-payment`)
@@ -146,7 +170,7 @@ describe('Invoice Actions Integration Tests', () => {
         });
 
         it('rejects payment with missing amount', async () => {
-            const inv = await createInvoice(app, userA);
+            const inv = await createInvoice(dbHelper, userA);
 
             const res = await request(app)
                 .post(`/api/invoices/${inv.id}/record-payment`)
@@ -160,7 +184,7 @@ describe('Invoice Actions Integration Tests', () => {
         });
 
         it('rejects an unsupported payment method as a client error', async () => {
-            const inv = await createInvoice(app, userA);
+            const inv = await createInvoice(dbHelper, userA);
 
             const res = await request(app)
                 .post(`/api/invoices/${inv.id}/record-payment`)
@@ -175,7 +199,7 @@ describe('Invoice Actions Integration Tests', () => {
         });
 
         it('returns 404 when invoice does not belong to org', async () => {
-            const inv = await createInvoice(app, userA);
+            const inv = await createInvoice(dbHelper, userA);
 
             const res = await request(app)
                 .post(`/api/invoices/${inv.id}/record-payment`)
@@ -189,7 +213,7 @@ describe('Invoice Actions Integration Tests', () => {
         });
 
         it('accumulates multiple payments correctly', async () => {
-            const inv = await createInvoice(app, userA, {
+            const inv = await createInvoice(dbHelper, userA, {
                 items: [{ name: 'Project', quantity: 1, unit_price: 1000 }],
             });
 
@@ -213,7 +237,7 @@ describe('Invoice Actions Integration Tests', () => {
         });
 
         it('accumulates simultaneous payments without losing an update', async () => {
-            const inv = await createInvoice(app, userA, {
+            const inv = await createInvoice(dbHelper, userA, {
                 items: [{ name: 'Project', quantity: 1, unit_price: 1000 }],
             });
 
@@ -227,21 +251,23 @@ describe('Invoice Actions Integration Tests', () => {
             expect(first.status).toBe(200);
             expect(second.status).toBe(200);
 
-            const fetchRes = await request(app)
-                .get(`/api/invoices/${inv.id}`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id));
+            const invoiceResult = await dbHelper.pool.query(
+                `SELECT amount_paid, amount_due, status
+                 FROM invoices
+                 WHERE id = $1 AND organization_id = $2`,
+                [inv.id, userA.org.id]
+            );
 
-            expect(fetchRes.status).toBe(200);
-            expect(Number(fetchRes.body.data.amount_paid)).toBe(1000);
-            expect(Number(fetchRes.body.data.amount_due)).toBe(0);
-            expect(fetchRes.body.data.status).toBe('paid');
+            expect(invoiceResult.rows).toHaveLength(1);
+            expect(Number(invoiceResult.rows[0].amount_paid)).toBe(1000);
+            expect(Number(invoiceResult.rows[0].amount_due)).toBe(0);
+            expect(invoiceResult.rows[0].status).toBe('paid');
 
             await cleanupInvoice(dbHelper, inv.id);
         });
 
         it('payments appear on subsequent invoice fetch', async () => {
-            const inv = await createInvoice(app, userA);
+            const inv = await createInvoice(dbHelper, userA);
 
             await request(app)
                 .post(`/api/invoices/${inv.id}/record-payment`)
@@ -249,15 +275,16 @@ describe('Invoice Actions Integration Tests', () => {
                 .set('x-organization-id', String(userA.org.id))
                 .send({ amount: 250, payment_method: 'check' });
 
-            const fetchRes = await request(app)
-                .get(`/api/invoices/${inv.id}`)
-                .set('Cookie', [`itemize_auth=${userA.token}`])
-                .set('x-organization-id', String(userA.org.id));
+            const paymentsResult = await dbHelper.pool.query(
+                `SELECT amount, payment_method
+                 FROM payments
+                 WHERE invoice_id = $1 AND organization_id = $2`,
+                [inv.id, userA.org.id]
+            );
 
-            expect(fetchRes.status).toBe(200);
-            expect(fetchRes.body.data.payments).toHaveLength(1);
-            expect(Number(fetchRes.body.data.payments[0].amount)).toBe(250);
-            expect(fetchRes.body.data.payments[0].payment_method).toBe('check');
+            expect(paymentsResult.rows).toHaveLength(1);
+            expect(Number(paymentsResult.rows[0].amount)).toBe(250);
+            expect(paymentsResult.rows[0].payment_method).toBe('check');
 
             await cleanupInvoice(dbHelper, inv.id);
         });
@@ -267,7 +294,7 @@ describe('Invoice Actions Integration Tests', () => {
 
     describe('POST /api/invoices/:id/send', () => {
         it('marks a draft invoice as sent when customer_email is set', async () => {
-            const inv = await createInvoice(app, userA, {
+            const inv = await createInvoice(dbHelper, userA, {
                 customer_email: 'to-send@example.com',
             });
             expect(inv.status).toBe('draft');
@@ -286,7 +313,7 @@ describe('Invoice Actions Integration Tests', () => {
         });
 
         it('rejects send when customer_email is missing', async () => {
-            const inv = await createInvoice(app, userA, {
+            const inv = await createInvoice(dbHelper, userA, {
                 customer_name: 'No Email',
                 customer_email: null,
             });
@@ -310,7 +337,7 @@ describe('Invoice Actions Integration Tests', () => {
         });
 
         it('returns 404 when invoice does not belong to org', async () => {
-            const inv = await createInvoice(app, userA, { customer_email: 'x@y.com' });
+            const inv = await createInvoice(dbHelper, userA, { customer_email: 'x@y.com' });
 
             const res = await request(app)
                 .post(`/api/invoices/${inv.id}/send`)
@@ -324,7 +351,7 @@ describe('Invoice Actions Integration Tests', () => {
         });
 
         it('allows resending an already-sent invoice', async () => {
-            const inv = await createInvoice(app, userA, { customer_email: 'resend@example.com' });
+            const inv = await createInvoice(dbHelper, userA, { customer_email: 'resend@example.com' });
 
             // First send
             await request(app)
@@ -347,7 +374,7 @@ describe('Invoice Actions Integration Tests', () => {
         });
 
         it('blocks sending a paid invoice (without resend flag)', async () => {
-            const inv = await createInvoice(app, userA, { customer_email: 'paid@example.com' });
+            const inv = await createInvoice(dbHelper, userA, { customer_email: 'paid@example.com' });
 
             // Force paid status
             await dbHelper.pool.query(

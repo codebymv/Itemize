@@ -4,14 +4,14 @@
 
 ## Summary
 
-- Registered method/path operations: 196
-- API operations under `/api`: 189
+- Registered method/path operations: 191
+- API operations under `/api`: 184
 - Non-API registered operations: 7
-- Static frontend callsites: 138
-- Operations with frontend consumers: 131
-- Operations referenced by backend tests: 109
-- Recommended GraphQL queries: 37
-- Recommended GraphQL mutations: 97
+- Static frontend callsites: 133
+- Operations with frontend consumers: 126
+- Operations referenced by backend tests: 104
+- Recommended GraphQL queries: 35
+- Recommended GraphQL mutations: 94
 - Recommended retained HTTP endpoints: 55
 - High-risk operations: 147
 - Unmatched frontend calls: 0
@@ -73,11 +73,6 @@
 | GET | `/api/forms/public/form/:identifier` | 1 | 3 | retain-http | high | crm / PublicFormsModule / getPublicForm |
 | POST | `/api/forms/public/form/:identifier` | 1 | 5 | retain-http | high | crm / PublicFormsModule / submitPublicForm |
 | GET | `/api/health` | 0 | 0 | retain-http | low | platform-operations / HealthBoundary / readiness |
-| GET | `/api/invoices` | 1 | 5 | graphql-query | medium | billing / InvoicesModule / invoices |
-| POST | `/api/invoices` | 1 | 13 | graphql-mutation | medium | billing / InvoicesModule / createInvoice |
-| DELETE | `/api/invoices/:id` | 1 | 9 | graphql-mutation | medium | billing / InvoicesModule / deleteInvoice |
-| GET | `/api/invoices/:id` | 1 | 6 | graphql-query | medium | billing / InvoicesModule / invoice |
-| PUT | `/api/invoices/:id` | 1 | 3 | graphql-mutation | medium | billing / InvoicesModule / updateInvoice |
 | POST | `/api/invoices/:id/create-payment-link` | 1 | 0 | graphql-mutation | medium | billing / InvoicesModule / createInvoicePaymentLink |
 | GET | `/api/invoices/:id/pdf` | 1 | 11 | retain-http | high | billing / InvoicesModule / invoicePdf |
 | POST | `/api/invoices/:id/record-payment` | 1 | 11 | graphql-mutation | medium | billing / PaymentsModule / recordInvoicePayment |
@@ -233,7 +228,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 51
-- Orphaned manual overrides: 154
+- Orphaned manual overrides: 159
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

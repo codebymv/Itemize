@@ -224,7 +224,7 @@
       "targetOperation": "invoices",
       "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "Organization-scoped status/contact/search filters use the shared page contract, literal search, deterministic created/id ordering, cross-tenant-safe counts, and decimal strings. A default-off frontend read flag preserves REST rollback."
+      "notes": "The frontend permanently uses this GraphQL query. Organization-scoped status/contact/search filters use the shared page contract, literal search, deterministic created/id ordering, cross-tenant-safe counts, and decimal strings; the retired Express path returns 404."
     },
     "POST /api/invoices": {
       "disposition": "graphql-mutation",
@@ -233,7 +233,7 @@
       "targetOperation": "createInvoice",
       "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "CSRF-protected creation validates tenant-owned contact, business, and product references; allocates the invoice number atomically; and commits line items plus PostgreSQL-calculated totals in one transaction. A default-off frontend mutation flag preserves REST rollback."
+      "notes": "The frontend permanently uses this CSRF-protected GraphQL mutation. It validates tenant-owned contact, business, and product references, allocates the invoice number atomically, commits line items plus PostgreSQL-calculated totals in one transaction, and the retired Express path returns 404."
     },
     "DELETE /api/invoices/:id": {
       "disposition": "graphql-mutation",
@@ -242,7 +242,7 @@
       "targetOperation": "deleteInvoice",
       "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "CSRF-protected organization-scoped deletion returns a stable deleted ID and number, conceals foreign rows, and retains the REST path behind the default-off mutation flag."
+      "notes": "The frontend permanently uses this CSRF-protected organization-scoped GraphQL deletion. It returns a stable deleted ID and number, conceals foreign rows, and the retired Express path returns 404."
     },
     "GET /api/invoices/:id": {
       "disposition": "graphql-query",
@@ -251,7 +251,7 @@
       "targetOperation": "invoice",
       "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "Organization-qualified detail reads return line items, payments, contact, and business projections with decimal strings and conceal foreign invoice IDs. A default-off frontend read flag preserves REST rollback."
+      "notes": "The frontend permanently uses this GraphQL detail query. Organization-qualified reads return line items, payments, contact, and business projections with decimal strings, conceal foreign invoice IDs, and the retired Express path returns 404."
     },
     "PUT /api/invoices/:id": {
       "disposition": "graphql-mutation",
@@ -260,7 +260,7 @@
       "targetOperation": "updateInvoice",
       "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "CSRF-protected updates lock the tenant-owned invoice, allow only draft/sent edits, validate effective references and dates, and atomically replace line items with PostgreSQL decimal recalculation. A default-off frontend mutation flag preserves REST rollback."
+      "notes": "The frontend permanently uses this CSRF-protected GraphQL mutation. Updates lock the tenant-owned invoice, allow only draft/sent edits, validate effective references and dates, atomically replace line items with PostgreSQL decimal recalculation, and the retired Express path returns 404."
     },
     "POST /api/invoices/:id/create-payment-link": {
       "disposition": "graphql-mutation",

@@ -148,8 +148,6 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     configureApp(app);
     await app.init();
 
-    const createCrudRouter =
-      require('../../../backend/src/routes/invoices/crud.routes');
     const { authenticateJWT } = require('../../../backend/src/auth/middleware');
     const { requireOrganization } =
       require('../../../backend/src/middleware/organization')(pool);
@@ -167,10 +165,6 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     legacyApp.use(
       '/api/invoices/recurring',
       createRecurringRouter(pool, authenticateJWT),
-    );
-    legacyApp.use(
-      '/api/invoices',
-      createCrudRouter({ pool, authenticateJWT, requireOrganization }),
     );
   });
 
@@ -298,12 +292,17 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       }],
     });
     const id = Number(created.body.data.createInvoice.id);
-    const rest = await request(legacyApp)
-      .get(`/api/invoices/${id}`)
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
-    expect(rest.body.data).toMatchObject({
+    const persisted = await pool.query<{
+      id: number;
+      invoice_number: string;
+      total: string;
+    }>(
+      `SELECT id, invoice_number, total::text
+       FROM invoices
+       WHERE id = $1 AND organization_id = $2`,
+      [id, organizationId],
+    );
+    expect(persisted.rows[0]).toMatchObject({
       id,
       invoice_number: created.body.data.createInvoice.invoiceNumber,
       total: '26.06',
@@ -1524,12 +1523,17 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       invoiceNumber: 'CONV-00051',
       replayed: true,
     });
-    const retained = await request(legacyApp)
-      .get(`/api/invoices/${invoiceId}`)
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
-    expect(retained.body.data).toMatchObject({
+    const persistedInvoice = await pool.query<{
+      id: number;
+      invoice_number: string;
+      total: string;
+    }>(
+      `SELECT id, invoice_number, total::text
+       FROM invoices
+       WHERE id = $1 AND organization_id = $2`,
+      [invoiceId, organizationId],
+    );
+    expect(persistedInvoice.rows[0]).toMatchObject({
       id: invoiceId,
       invoice_number: 'CONV-00051',
       total: '26.00',

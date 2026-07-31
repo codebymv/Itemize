@@ -3,11 +3,11 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 213,
-    "resolvedDeclarationCount": 213,
+    "declarationCount": 208,
+    "resolvedDeclarationCount": 208,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 196,
-    "sourceFileCount": 47
+    "uniqueResolvedOperationCount": 191,
+    "sourceFileCount": 46
   },
   "caveats": [
     "This is static source analysis; it does not execute application modules.",
@@ -454,56 +454,6 @@
       "declaredPath": "/api/health",
       "source": "backend/src/index.js",
       "line": 246,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/invoices"
-      ],
-      "declaredPath": "/",
-      "source": "backend/src/routes/invoices/crud.routes.js",
-      "line": 18,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/invoices"
-      ],
-      "declaredPath": "/",
-      "source": "backend/src/routes/invoices/crud.routes.js",
-      "line": 145,
-      "dynamic": false
-    },
-    {
-      "method": "DELETE",
-      "publicPaths": [
-        "/api/invoices/:id"
-      ],
-      "declaredPath": "/:id",
-      "source": "backend/src/routes/invoices/crud.routes.js",
-      "line": 537,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/invoices/:id"
-      ],
-      "declaredPath": "/:id",
-      "source": "backend/src/routes/invoices/crud.routes.js",
-      "line": 72,
-      "dynamic": false
-    },
-    {
-      "method": "PUT",
-      "publicPaths": [
-        "/api/invoices/:id"
-      ],
-      "declaredPath": "/:id",
-      "source": "backend/src/routes/invoices/crud.routes.js",
-      "line": 319,
       "dynamic": false
     },
     {
