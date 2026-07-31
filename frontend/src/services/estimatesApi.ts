@@ -1,7 +1,3 @@
-import api from '@/lib/api';
-import {
-  isEstimateGraphqlSendEnabled,
-} from './graphqlClient';
 import {
   createEstimateViaGraphql,
   convertEstimateToInvoiceViaGraphql,
@@ -97,9 +93,6 @@ export interface EstimateListResponse {
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
-const headers = (organizationId?: number) =>
-  organizationId ? { 'x-organization-id': organizationId.toString() } : {};
-
 export const getEstimates = async (
   params: EstimateListParams = {},
   organizationId?: number,
@@ -140,12 +133,7 @@ export const sendEstimate = async (
   id: number,
   organizationId?: number,
 ): Promise<void> => {
-  if (isEstimateGraphqlSendEnabled()) {
-    return sendEstimateViaGraphql(id, organizationId);
-  }
-  await api.post(`/api/invoices/estimates/${id}/send`, {}, {
-    headers: headers(organizationId),
-  });
+  return sendEstimateViaGraphql(id, organizationId);
 };
 
 export const convertEstimateToInvoice = async (

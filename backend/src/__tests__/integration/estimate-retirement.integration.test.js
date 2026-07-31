@@ -66,6 +66,7 @@ describe('Estimate Express retirement contract', () => {
         ['put', '/api/invoices/estimates/1'],
         ['delete', '/api/invoices/estimates/1'],
         ['post', '/api/invoices/estimates/1/convert-to-invoice'],
+        ['post', '/api/invoices/estimates/1/send'],
     ])('%s %s stays retired after full route composition', async (method, path) => {
         const response = request(app)[method](path)
             .set('Cookie', [`itemize_auth=${user.token}`])
@@ -74,10 +75,4 @@ describe('Estimate Express retirement contract', () => {
         await response.expect(404);
     });
 
-    test('retains authenticated estimate sending', async () => {
-        await request(app)
-            .post('/api/invoices/estimates/1/send')
-            .send({})
-            .expect(401);
-    });
 });

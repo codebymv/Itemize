@@ -1,10 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import api from '@/lib/api';
 import {
   convertEstimateToInvoice, createEstimate, deleteEstimate, getEstimate,
   getEstimates, sendEstimate, updateEstimate,
 } from './estimatesApi';
-import { isEstimateGraphqlSendEnabled } from './graphqlClient';
 import {
   convertEstimateToInvoiceViaGraphql, createEstimateViaGraphql,
   deleteEstimateViaGraphql, getEstimateViaGraphql, getEstimatesViaGraphql,
@@ -12,12 +10,6 @@ import {
   updateEstimateViaGraphql,
 } from './estimatesGraphql';
 
-vi.mock('@/lib/api', () => ({
-  default: { delete: vi.fn(), get: vi.fn(), post: vi.fn(), put: vi.fn() },
-}));
-vi.mock('./graphqlClient', () => ({
-  isEstimateGraphqlSendEnabled: vi.fn(),
-}));
 vi.mock('./estimatesGraphql', () => ({
   convertEstimateToInvoiceViaGraphql: vi.fn(),
   createEstimateViaGraphql: vi.fn(),
@@ -41,10 +33,9 @@ const estimate = {
 describe('estimate API transport selection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(isEstimateGraphqlSendEnabled).mockReturnValue(false);
   });
 
-  it('always routes CRUD and conversion through GraphQL while retaining send rollback', async () => {
+  it('always routes CRUD and conversion through GraphQL', async () => {
     vi.mocked(getEstimatesViaGraphql).mockResolvedValue({
       estimates: [estimate],
       pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
@@ -57,13 +48,11 @@ describe('estimate API transport selection', () => {
       invoice_id: 19,
       invoice_number: 'INV-00019',
     });
-    vi.mocked(api.post).mockResolvedValueOnce({ data: estimate });
     await getEstimates({ search: 'EST' }, 4);
     await getEstimate(8, 4);
     await createEstimate({ items: estimate.items }, 4);
     await updateEstimate(8, { notes: 'Updated' }, 4);
     await deleteEstimate(8, 4);
-    await sendEstimate(8, 4);
     await expect(convertEstimateToInvoice(8, 4)).resolves.toEqual({
       invoice_id: 19,
       invoice_number: 'INV-00019',
@@ -80,18 +69,12 @@ describe('estimate API transport selection', () => {
       4,
     );
     expect(deleteEstimateViaGraphql).toHaveBeenCalledWith(8, 4);
-    expect(api.post).toHaveBeenCalledWith(
-      '/api/invoices/estimates/8/send', {},
-      { headers: { 'x-organization-id': '4' } },
-    );
     expect(convertEstimateToInvoiceViaGraphql).toHaveBeenCalledWith(8, 4);
   });
 
-  it('routes send through its independent GraphQL flag', async () => {
-    vi.mocked(isEstimateGraphqlSendEnabled).mockReturnValue(true);
+  it('routes sending through GraphQL without a REST fallback', async () => {
     vi.mocked(sendEstimateViaGraphql).mockResolvedValue();
     await sendEstimate(8, 4);
-    expect(api.post).not.toHaveBeenCalled();
     expect(sendEstimateViaGraphql).toHaveBeenCalledWith(8, 4);
   });
 });

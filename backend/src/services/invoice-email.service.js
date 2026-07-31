@@ -453,78 +453,9 @@ async function sendPaymentReminderEmail(emailService, invoice, settings, isOverd
     }
 }
 
-/**
- * Send estimate email
- */
-async function sendEstimateEmail(emailService, estimate, settings) {
-    if (!emailService || !estimate.customer_email) {
-        return false;
-    }
-
-    const subject = `Estimate ${estimate.estimate_number} from ${settings.business_name || 'Our Company'}`;
-    
-    const bodyContent = `
-        <h1 style="font-size: 24px; margin: 0 0 16px; color: #111827;">
-            Estimate ${estimate.estimate_number}
-        </h1>
-        <p style="color: #6b7280; margin: 0 0 24px;">
-            Hi ${estimate.customer_name || 'Valued Customer'},
-        </p>
-        <p style="color: #374151; margin: 0 0 24px;">
-            Please find attached your estimate from ${settings.business_name || 'Our Company'}.
-        </p>
-        
-        <table width="100%" cellpadding="0" cellspacing="0" style="background: #f3f4f6; border-radius: 8px; margin-bottom: 24px;">
-            <tr>
-                <td style="padding: 20px;">
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                        <tr>
-                            <td style="color: #6b7280; padding-bottom: 12px;">Estimated Total:</td>
-                            <td style="text-align: right; font-weight: 600; font-size: 20px; color: #111827; padding-bottom: 12px;">${formatCurrency(estimate.total, estimate.currency)}</td>
-                        </tr>
-                        <tr>
-                            <td style="color: #6b7280;">Valid Until:</td>
-                            <td style="text-align: right; color: #111827;">${formatDate(estimate.valid_until)}</td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-        </table>
-
-        <p style="color: #6b7280; font-size: 14px; margin-top: 24px;">
-            If you have any questions or would like to proceed, please don't hesitate to contact us.
-        </p>
-        
-        <p style="color: #9ca3af; font-size: 12px; margin-top: 16px; font-style: italic;">
-            📎 Estimate PDF attached
-        </p>
-    `;
-
-    // Wrap in branded template
-    const html = wrapInBrandedTemplate(bodyContent, {
-        subject,
-        isPreview: false,
-        showUnsubscribe: false
-    });
-
-    try {
-        await emailService.sendEmail({
-            to: estimate.customer_email,
-            subject,
-            html
-        });
-        logger.info(`Estimate email sent to ${estimate.customer_email} for estimate ${estimate.estimate_number}`);
-        return true;
-    } catch (error) {
-        logger.error('Failed to send estimate email:', error);
-        return false;
-    }
-}
-
 module.exports = {
     sendInvoiceEmail,
     sendPaymentReceivedEmail,
     sendPaymentReminderEmail,
-    sendEstimateEmail,
     EMAIL_TEMPLATES
 };

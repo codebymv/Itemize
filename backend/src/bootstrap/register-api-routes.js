@@ -7,7 +7,6 @@ const workflowsRoutes = require('../routes/workflows.routes');
 const smsWebhooksRoutes = require('../routes/sms-webhooks.routes');
 const chatWidgetRoutes = require('../routes/chat-widget.routes');
 const campaignsRoutes = require('../routes/campaigns.routes');
-const estimateActionsRoutes = require('../routes/estimate-actions.routes');
 const recurringRoutes = require('../routes/recurring.routes');
 const invoicesRoutes = require('../routes/invoices.routes');
 const { createInvoicePdfProxy } = require('../invoice-pdf-proxy');
@@ -169,11 +168,6 @@ function registerApiRoutes({
     logger.info('Chat Widget routes initialized');
     app.use('/api/campaigns', campaignsRoutes(pool, authenticateJWT));
     logger.info('Email Campaigns routes initialized');
-    app.use(
-        '/api/invoices/estimates',
-        estimateActionsRoutes(pool, authenticateJWT),
-    );
-    logger.info('Retained estimate action routes initialized');
     app.use('/api/invoices/recurring', recurringRoutes(pool, authenticateJWT));
     logger.info('Recurring Invoices routes initialized');
     app.post(

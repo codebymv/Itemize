@@ -1,12 +1,11 @@
 /**
  * PDF Service
- * Compatibility facade for invoice and estimate PDF generation.
+ * Compatibility facade for invoice PDF generation.
  */
 
 const { logger } = require('../utils/logger');
 const { generatePDF, isPDFAvailable } = require('./pdf/renderer');
 const { generateInvoiceHTML } = require('./pdf/invoice-template');
-const { generateEstimateHTML } = require('./pdf/estimate-template');
 
 async function generateInvoicePDF(invoice, settings = {}) {
     logger.info(`Generating PDF for invoice: ${invoice.invoice_number}`);
@@ -19,23 +18,9 @@ async function generateInvoicePDF(invoice, settings = {}) {
     return generatePDF(html);
 }
 
-async function generateEstimatePDF(estimate, settings = {}) {
-    logger.info(`Generating PDF for estimate: ${estimate.estimate_number}`);
-
-    const html = await generateEstimateHTML(estimate, settings);
-    return generatePDF(html);
-}
-
-function isEstimatePDFAvailable() {
-    return isPDFAvailable();
-}
-
 module.exports = {
     generateInvoicePDF,
     generateInvoiceHTML,
-    generateEstimatePDF,
-    generateEstimateHTML,
     generatePDF,
-    isPDFAvailable,
-    isEstimatePDFAvailable
+    isPDFAvailable
 };

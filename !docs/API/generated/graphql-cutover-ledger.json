@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 180,
-    "apiOperationCount": 173,
+    "operationCount": 179,
+    "apiOperationCount": 172,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 122,
-    "operationsWithFrontendConsumers": 115,
-    "operationsWithBackendTests": 96,
+    "frontendCallsiteCount": 121,
+    "operationsWithFrontendConsumers": 114,
+    "operationsWithBackendTests": 95,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 51,
     "retainHttpCount": 55,
     "graphqlQueryCount": 32,
-    "graphqlMutationCount": 86,
-    "highRiskCount": 145,
+    "graphqlMutationCount": 85,
+    "highRiskCount": 144,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -1510,7 +1510,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 40
+          "line": 39
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -1753,7 +1753,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 154
+          "line": 153
         }
       ],
       "consumerCallsites": [
@@ -1812,7 +1812,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 155
+          "line": 154
         }
       ],
       "consumerCallsites": [
@@ -2044,7 +2044,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 191
+          "line": 185
         },
         {
           "source": "backend/src/routes/invoices/pdf.routes.js",
@@ -2155,7 +2155,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 183
+          "line": 177
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -2237,53 +2237,6 @@
       "targetModule": "InvoiceBusinessesModule",
       "parityStatus": "implemented",
       "notes": "NestJS retains tenant-authorized multipart HTTP with a 2 MiB limit, bounded parts, structural PNG/JPEG/GIF/WebP checks, server-owned names, store-first replacement, durable old-logo cleanup, and compensating cleanup on database failure. A default-off legacy-origin proxy preserves rollback.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/invoices/estimates/:id/send",
-      "key": "POST /api/invoices/estimates/:*/send",
-      "method": "POST",
-      "path": "/api/invoices/estimates/:id/send",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/estimate-actions.routes.js",
-          "line": 27
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/estimates/:id/send",
-          "rawPath": "/api/invoices/estimates/${id}/send",
-          "source": "frontend/src/services/estimatesApi.ts",
-          "line": 146,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/estimates/1/send",
-          "source": "backend/src/__tests__/integration/estimate-crud-retirement.integration.test.js",
-          "line": 79
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/estimates/1/send",
-          "source": "backend/src/__tests__/routes/estimate-actions.routes.test.js",
-          "line": 39
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetOperation": "sendEstimate",
-      "targetModule": "EstimatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The CSRF-protected mutation locks and conceals the tenant-owned estimate, requires a bounded idempotency key and recipient, and persists a delivery snapshot before provider work. Resend receives an intent-derived idempotency key; only confirmed delivery atomically marks the intent and draft estimate sent. Definite failures retry through a leased one-shot worker, ambiguous failures require reconciliation, and exact request replay cannot duplicate delivery. Fresh PostgreSQL proves success evidence, replay, provider failure and worker recovery, ambiguous quarantine, CSRF, tenant isolation, recipient/key validation, and terminal-state denial. The frontend adapter is independently default-off.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2708,7 +2661,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 187
+          "line": 181
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -2746,7 +2699,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 179
+          "line": 173
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -3588,7 +3541,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 243
+          "line": 237
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -3675,7 +3628,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 263
+          "line": 257
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -3744,7 +3697,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 259
+          "line": 253
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -3789,7 +3742,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 251
+          "line": 245
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -3817,7 +3770,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 247
+          "line": 241
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -3852,7 +3805,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 255
+          "line": 249
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -5381,7 +5334,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 229
+          "line": 223
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -5452,7 +5405,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 225
+          "line": 219
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -5609,7 +5562,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 211
+          "line": 205
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -5930,7 +5883,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 233
+          "line": 227
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -5999,7 +5952,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 218
+          "line": 212
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -6273,7 +6226,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 67
+          "line": 66
         }
       ],
       "consumerCallsites": [
@@ -6307,7 +6260,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 39
+          "line": 38
         }
       ],
       "consumerCallsites": [],
@@ -6515,7 +6468,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 38
+          "line": 37
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",
@@ -8086,6 +8039,7 @@
     "POST /api/invoices/email/preview",
     "POST /api/invoices/estimates",
     "POST /api/invoices/estimates/:id/convert-to-invoice",
+    "POST /api/invoices/estimates/:id/send",
     "POST /api/invoices/payments",
     "POST /api/invoices/products",
     "POST /api/lists",
