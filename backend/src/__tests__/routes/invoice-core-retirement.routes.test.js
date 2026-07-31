@@ -2,7 +2,7 @@ const express = require('express');
 const request = require('supertest');
 const createInvoicesRoutes = require('../../routes/invoices.routes');
 
-describe('retired core invoice HTTP routes', () => {
+describe('retired invoice state and JSON-action HTTP routes', () => {
     const authenticateJWT = jest.fn((_req, res) => res.status(401).end());
     const app = express();
 
@@ -19,19 +19,17 @@ describe('retired core invoice HTTP routes', () => {
         ['get', '/api/invoices/1'],
         ['put', '/api/invoices/1'],
         ['delete', '/api/invoices/1'],
+        ['post', '/api/invoices/1/send'],
+        ['post', '/api/invoices/1/create-payment-link'],
+        ['post', '/api/invoices/1/record-payment'],
     ])('returns 404 for retired %s %s', async (method, path) => {
         const response = await request(app)[method](path).send({});
         expect(response.status).toBe(404);
         expect(authenticateJWT).not.toHaveBeenCalled();
     });
 
-    it.each([
-        ['get', '/api/invoices/1/pdf'],
-        ['post', '/api/invoices/1/send'],
-        ['post', '/api/invoices/1/create-payment-link'],
-        ['post', '/api/invoices/1/record-payment'],
-    ])('preserves authenticated %s %s', async (method, path) => {
-        const response = await request(app)[method](path).send({});
+    it('preserves the authenticated PDF fallback', async () => {
+        const response = await request(app).get('/api/invoices/1/pdf');
         expect(response.status).toBe(401);
         expect(authenticateJWT).toHaveBeenCalledTimes(1);
     });

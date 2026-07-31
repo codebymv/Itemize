@@ -10,7 +10,7 @@ const createPaymentsRoutes = require('./invoices/payments.routes');
 const createBusinessesRoutes = require('./invoices/businesses.routes');
 const createSettingsRoutes = require('./invoices/settings.routes');
 const createStripeWebhookRoutes = require('./invoices/stripe-webhook.routes');
-const createActionRoutes = require('./invoices/actions.routes');
+const createPdfRoutes = require('./invoices/pdf.routes');
 
 // Stripe initialization (will be null if not configured)
 let stripe = null;
@@ -41,9 +41,9 @@ module.exports = (pool, authenticateJWT, _publicRateLimit) => {
     // retired and must not fall into the generic invoice /:id routes.
     router.use('/settings', (_req, _res, next) => next('router'));
     router.use(createStripeWebhookRoutes({ pool, stripe }));
-    // Core invoice list/detail/CRUD are permanently GraphQL-owned. The action
-    // router below intentionally retains send, payment, link, and PDF paths.
-    router.use(createActionRoutes({ pool, authenticateJWT, requireOrganization, stripe }));
+    // Core invoice state and JSON actions are permanently GraphQL-owned. Only
+    // the binary PDF fallback remains in this shared /:id namespace.
+    router.use(createPdfRoutes({ pool, authenticateJWT, requireOrganization }));
 
     return router;
 };

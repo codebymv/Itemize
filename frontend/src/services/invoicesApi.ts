@@ -5,9 +5,6 @@
 import api from '@/lib/api';
 import type { JsonRecord } from '@/types';
 import {
-    isInvoiceGraphqlSendEnabled,
-    isInvoicePaymentLinkGraphqlEnabled,
-    isPaymentGraphqlMutationsEnabled,
     isRecurringInvoiceGraphqlCloneEnabled,
 } from './graphqlClient';
 import {
@@ -316,13 +313,7 @@ export const sendInvoice = async (
     organizationId?: number,
     options?: SendInvoiceOptions
 ): Promise<SendInvoiceResponse> => {
-    if (isInvoiceGraphqlSendEnabled()) {
-        return sendInvoiceViaGraphql(invoiceId, options ?? {}, organizationId);
-    }
-    const response = await api.post(`/api/invoices/${invoiceId}/send`, options || {}, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<SendInvoiceResponse>(response.data);
+    return sendInvoiceViaGraphql(invoiceId, options ?? {}, organizationId);
 };
 
 /**
@@ -355,38 +346,26 @@ export const recordPayment = async (
     },
     organizationId?: number
 ): Promise<{ payment: Payment; invoice: { amount_paid: number; amount_due: number; status: string } }> => {
-    if (isPaymentGraphqlMutationsEnabled()) {
-        const result = await recordInvoicePaymentViaGraphql(
-            invoiceId,
-            payment,
-            organizationId
-        );
-        return {
-            payment: {
-                ...result.payment,
-                refund_amount: 0,
-                updated_at: result.payment.updated_at ?? result.payment.created_at
-            },
-            invoice: result.invoice
-        };
-    }
-    const response = await api.post(`/api/invoices/${invoiceId}/record-payment`, payment, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<{ payment: Payment; invoice: { amount_paid: number; amount_due: number; status: string } }>(response.data);
+    const result = await recordInvoicePaymentViaGraphql(
+        invoiceId,
+        payment,
+        organizationId
+    );
+    return {
+        payment: {
+            ...result.payment,
+            refund_amount: 0,
+            updated_at: result.payment.updated_at ?? result.payment.created_at
+        },
+        invoice: result.invoice
+    };
 };
 
 export const createPaymentLink = async (
     invoiceId: number,
     organizationId?: number
 ): Promise<{ url: string; session_id: string }> => {
-    if (isInvoicePaymentLinkGraphqlEnabled()) {
-        return createInvoicePaymentLinkViaGraphql(invoiceId, organizationId);
-    }
-    const response = await api.post(`/api/invoices/${invoiceId}/create-payment-link`, {}, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<{ url: string; session_id: string }>(response.data);
+    return createInvoicePaymentLinkViaGraphql(invoiceId, organizationId);
 };
 
 export const createRecurringTemplateFromInvoice = async (

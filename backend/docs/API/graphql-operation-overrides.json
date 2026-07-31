@@ -269,7 +269,7 @@
       "targetOperation": "createInvoicePaymentLink",
       "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "The CSRF-protected mutation snapshots the exact tenant-owned payable balance in a durable intent before Stripe. Intent-derived provider idempotency, exact replay, conflicting stale-key rejection, unresolved ambiguous-outcome fencing, and a post-provider balance/state recheck prevent duplicate or stale links. Definite rejection permits a fresh request; ambiguous and raced outcomes expose no URL and require reconciliation. The frontend adapter is independently default-off."
+      "notes": "The frontend permanently uses this CSRF-protected mutation. It snapshots the exact tenant-owned payable balance in a durable intent before Stripe; intent-derived provider idempotency, exact replay, conflicting stale-key rejection, unresolved ambiguous-outcome fencing, and a post-provider balance/state recheck prevent duplicate or stale links. Definite rejection permits a fresh request; ambiguous and raced outcomes expose no URL and require reconciliation. The rollout flag and Express handler are removed, and the retired path returns 404."
     },
     "GET /api/invoices/:id/pdf": {
       "disposition": "retain-http",
@@ -287,7 +287,7 @@
       "targetOperation": "recordInvoicePayment",
       "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "Default-off GraphQL mutation inserts the payment, locks the tenant-owned invoice, performs decimal balance/status arithmetic in PostgreSQL, and enqueues invoice_paid exactly once in the same transaction. Concurrent final payments, CSRF, validation, and tenant-hidden misses pass fresh PostgreSQL."
+      "notes": "The frontend permanently uses this GraphQL mutation. It inserts the payment, locks the tenant-owned invoice, performs decimal balance/status arithmetic in PostgreSQL, and enqueues invoice_paid exactly once in the same transaction. Concurrent final payments, CSRF, validation, and tenant-hidden misses pass fresh PostgreSQL. The former Express handler is removed and the retired path returns 404."
     },
     "POST /api/invoices/:id/send": {
       "disposition": "graphql-mutation",
@@ -296,7 +296,7 @@
       "targetOperation": "sendInvoice",
       "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "The CSRF-protected mutation snapshots the tenant-owned invoice, recipient, custom message, CC list, resend intent, PDF inputs, and optional payment-link request into a durable delivery row. Stripe and Resend receive intent-derived idempotency keys; the PDF attachment and requested payment link are required, and only confirmed email delivery marks a draft sent. Definite failures retry through a leased worker, ambiguous provider outcomes require reconciliation, conflicting key reuse fails, one unresolved intent prevents bypass with a new key, exact replay cannot duplicate delivery, and the frontend adapter is independently default-off."
+      "notes": "The frontend permanently uses this CSRF-protected mutation. It snapshots the tenant-owned invoice, recipient, custom message, CC list, resend intent, PDF inputs, and optional payment-link request into a durable delivery row. Stripe and Resend receive intent-derived idempotency keys; the PDF attachment and requested payment link are required, and only confirmed email delivery marks a draft sent. Definite failures retry through a leased worker, ambiguous provider outcomes require reconciliation, conflicting key reuse fails, one unresolved intent prevents bypass with a new key, and exact replay cannot duplicate delivery. The rollout flag and Express handler are removed, and the retired path returns 404."
     },
     "GET /api/invoices/businesses": {
       "disposition": "graphql-query",

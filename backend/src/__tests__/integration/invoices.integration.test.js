@@ -58,6 +58,9 @@ describe('Core invoice Express retirement contract', () => {
         ['get', '/api/invoices/1'],
         ['put', '/api/invoices/1'],
         ['delete', '/api/invoices/1'],
+        ['post', '/api/invoices/1/send'],
+        ['post', '/api/invoices/1/create-payment-link'],
+        ['post', '/api/invoices/1/record-payment'],
     ])('%s %s stays retired after full route composition', async (method, path) => {
         const response = request(app)[method](path)
             .set('Cookie', [`itemize_auth=${user.token}`])

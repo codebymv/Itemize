@@ -6,19 +6,19 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 191,
-    "apiOperationCount": 184,
+    "operationCount": 188,
+    "apiOperationCount": 181,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 133,
-    "operationsWithFrontendConsumers": 126,
-    "operationsWithBackendTests": 104,
+    "frontendCallsiteCount": 130,
+    "operationsWithFrontendConsumers": 123,
+    "operationsWithBackendTests": 102,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 51,
     "retainHttpCount": 55,
     "graphqlQueryCount": 35,
-    "graphqlMutationCount": 94,
+    "graphqlMutationCount": 91,
     "highRiskCount": 147,
     "literalInterpolationRiskCount": 0
   },
@@ -2037,40 +2037,6 @@
       "risk": "low"
     },
     {
-      "id": "POST /api/invoices/:id/create-payment-link",
-      "key": "POST /api/invoices/:*/create-payment-link",
-      "method": "POST",
-      "path": "/api/invoices/:id/create-payment-link",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/invoices/actions.routes.js",
-          "line": 449
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/:invoiceId/create-payment-link",
-          "rawPath": "/api/invoices/${invoiceId}/create-payment-link",
-          "source": "frontend/src/services/invoicesApi.ts",
-          "line": 386,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetOperation": "createInvoicePaymentLink",
-      "targetModule": "InvoicesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The CSRF-protected mutation snapshots the exact tenant-owned payable balance in a durable intent before Stripe. Intent-derived provider idempotency, exact replay, conflicting stale-key rejection, unresolved ambiguous-outcome fencing, and a post-provider balance/state recheck prevent duplicate or stale links. Definite rejection permits a fresh request; ambiguous and raced outcomes expose no URL and require reconciliation. The frontend adapter is independently default-off.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
       "id": "GET /api/invoices/:id/pdf",
       "key": "GET /api/invoices/:*/pdf",
       "method": "GET",
@@ -2081,8 +2047,8 @@
           "line": 188
         },
         {
-          "source": "backend/src/routes/invoices/actions.routes.js",
-          "line": 262
+          "source": "backend/src/routes/invoices/pdf.routes.js",
+          "line": 17
         }
       ],
       "consumerCallsites": [
@@ -2091,7 +2057,7 @@
           "path": "/api/invoices/:invoiceId/pdf",
           "rawPath": "/api/invoices/${invoiceId}/pdf",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 534,
+          "line": 513,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2162,6 +2128,12 @@
           "path": "/api/invoices/12/pdf",
           "source": "backend/src/__tests__/invoice-pdf-proxy.test.js",
           "line": 115
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/1/pdf",
+          "source": "backend/src/__tests__/routes/invoice-core-retirement.routes.test.js",
+          "line": 32
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -2174,178 +2146,6 @@
       "notes": "NestJS owns the retained cookie-authenticated binary route with selected-organization concealment, the legacy renderer's tenant snapshot, validated PDF output, safe attachment naming, and private/no-store, nosniff, sandbox headers. The existing origin proxies this exact URL behind a default-off server flag; the active frontend controls download the blob without selecting a transport.",
       "literalInterpolationRisk": false,
       "risk": "high"
-    },
-    {
-      "id": "POST /api/invoices/:id/record-payment",
-      "key": "POST /api/invoices/:*/record-payment",
-      "method": "POST",
-      "path": "/api/invoices/:id/record-payment",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/invoices/actions.routes.js",
-          "line": 330
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/:invoiceId/record-payment",
-          "rawPath": "/api/invoices/${invoiceId}/record-payment",
-          "source": "frontend/src/services/invoicesApi.ts",
-          "line": 373,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/:id/record-payment",
-          "source": "backend/src/__tests__/integration/invoice-actions.integration.test.js",
-          "line": 108
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/:id/record-payment",
-          "source": "backend/src/__tests__/integration/invoice-actions.integration.test.js",
-          "line": 128
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/:id/record-payment",
-          "source": "backend/src/__tests__/integration/invoice-actions.integration.test.js",
-          "line": 162
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/:id/record-payment",
-          "source": "backend/src/__tests__/integration/invoice-actions.integration.test.js",
-          "line": 176
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/:id/record-payment",
-          "source": "backend/src/__tests__/integration/invoice-actions.integration.test.js",
-          "line": 190
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/:id/record-payment",
-          "source": "backend/src/__tests__/integration/invoice-actions.integration.test.js",
-          "line": 205
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/:id/record-payment",
-          "source": "backend/src/__tests__/integration/invoice-actions.integration.test.js",
-          "line": 221
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/:id/record-payment",
-          "source": "backend/src/__tests__/integration/invoice-actions.integration.test.js",
-          "line": 227
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/:id/record-payment",
-          "source": "backend/src/__tests__/integration/invoice-actions.integration.test.js",
-          "line": 245
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/:id/record-payment",
-          "source": "backend/src/__tests__/integration/invoice-actions.integration.test.js",
-          "line": 273
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/1/record-payment",
-          "source": "backend/src/__tests__/integration/invoice-actions.integration.test.js",
-          "line": 402
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetOperation": "recordInvoicePayment",
-      "targetModule": "PaymentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Default-off GraphQL mutation inserts the payment, locks the tenant-owned invoice, performs decimal balance/status arithmetic in PostgreSQL, and enqueues invoice_paid exactly once in the same transaction. Concurrent final payments, CSRF, validation, and tenant-hidden misses pass fresh PostgreSQL.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/invoices/:id/send",
-      "key": "POST /api/invoices/:*/send",
-      "method": "POST",
-      "path": "/api/invoices/:id/send",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/invoices/actions.routes.js",
-          "line": 27
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/:invoiceId/send",
-          "rawPath": "/api/invoices/${invoiceId}/send",
-          "source": "frontend/src/services/invoicesApi.ts",
-          "line": 322,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/:id/send",
-          "source": "backend/src/__tests__/integration/invoice-actions.integration.test.js",
-          "line": 303
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/:id/send",
-          "source": "backend/src/__tests__/integration/invoice-actions.integration.test.js",
-          "line": 328
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/:id/send",
-          "source": "backend/src/__tests__/integration/invoice-actions.integration.test.js",
-          "line": 343
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/:id/send",
-          "source": "backend/src/__tests__/integration/invoice-actions.integration.test.js",
-          "line": 358
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/:id/send",
-          "source": "backend/src/__tests__/integration/invoice-actions.integration.test.js",
-          "line": 365
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/:id/send",
-          "source": "backend/src/__tests__/integration/invoice-actions.integration.test.js",
-          "line": 386
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetOperation": "sendInvoice",
-      "targetModule": "InvoicesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The CSRF-protected mutation snapshots the tenant-owned invoice, recipient, custom message, CC list, resend intent, PDF inputs, and optional payment-link request into a durable delivery row. Stripe and Resend receive intent-derived idempotency keys; the PDF attachment and requested payment link are required, and only confirmed email delivery marks a draft sent. Definite failures retry through a leased worker, ambiguous provider outcomes require reconciliation, conflicting key reuse fails, one unresolved intent prevents bypass with a new key, exact replay cannot duplicate delivery, and the frontend adapter is independently default-off.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
     },
     {
       "id": "POST /api/invoices/businesses/:id/logo",
@@ -2368,7 +2168,7 @@
           "path": "/api/invoices/businesses/:businessId/logo",
           "rawPath": "/api/invoices/businesses/${businessId}/logo",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 502,
+          "line": 481,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3283,7 +3083,7 @@
           "path": "/api/invoices/recurring/from-invoice/:invoiceId",
           "rawPath": "/api/invoices/recurring/from-invoice/${invoiceId}",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 409,
+          "line": 388,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3355,7 +3155,7 @@
           "path": "/api/invoices/settings/logo",
           "rawPath": "/api/invoices/settings/logo",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 445,
+          "line": 424,
           "client": "api",
           "literalInterpolation": false
         }
@@ -8709,6 +8509,9 @@
     "POST /api/forms",
     "POST /api/forms/:id/duplicate",
     "POST /api/invoices",
+    "POST /api/invoices/:id/create-payment-link",
+    "POST /api/invoices/:id/record-payment",
+    "POST /api/invoices/:id/send",
     "POST /api/invoices/businesses",
     "POST /api/invoices/email/preview",
     "POST /api/invoices/products",

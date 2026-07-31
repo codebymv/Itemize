@@ -6,10 +6,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 208
-- Resolved declarations: 208
+- Route declarations: 205
+- Resolved declarations: 205
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 191
+- Unique resolved method/path operations: 188
 - Files containing declarations: 46
 
 ## Interpretation limits
@@ -67,11 +67,8 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:88` |
 | POST | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:123` |
 | GET | `/api/health` | `/api/health` | `backend/src/index.js:246` |
-| POST | `/api/invoices/:id/create-payment-link` | `/:id/create-payment-link` | `backend/src/routes/invoices/actions.routes.js:449` |
 | GET | `/api/invoices/:id/pdf` | `/api/invoices/:id/pdf` | `backend/src/bootstrap/register-api-routes.js:188` |
-| GET | `/api/invoices/:id/pdf` | `/:id/pdf` | `backend/src/routes/invoices/actions.routes.js:262` |
-| POST | `/api/invoices/:id/record-payment` | `/:id/record-payment` | `backend/src/routes/invoices/actions.routes.js:330` |
-| POST | `/api/invoices/:id/send` | `/:id/send` | `backend/src/routes/invoices/actions.routes.js:27` |
+| GET | `/api/invoices/:id/pdf` | `/:id/pdf` | `backend/src/routes/invoices/pdf.routes.js:17` |
 | POST | `/api/invoices/businesses/:id/logo` | `/api/invoices/businesses/:id/logo` | `backend/src/bootstrap/register-api-routes.js:180` |
 | POST | `/api/invoices/businesses/:id/logo` | `/businesses/:id/logo` | `backend/src/routes/invoices/businesses.routes.js:17` |
 | GET | `/api/invoices/estimates` | `/` | `backend/src/routes/estimates.routes.js:29` |

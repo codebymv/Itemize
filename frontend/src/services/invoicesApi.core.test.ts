@@ -12,8 +12,6 @@ import {
   updateInvoice,
 } from './invoicesApi';
 import {
-  isInvoiceGraphqlSendEnabled,
-  isInvoicePaymentLinkGraphqlEnabled,
   isRecurringInvoiceGraphqlCloneEnabled,
 } from './graphqlClient';
 import {
@@ -36,9 +34,6 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 vi.mock('./graphqlClient', () => ({
-  isInvoiceGraphqlSendEnabled: vi.fn(),
-  isInvoicePaymentLinkGraphqlEnabled: vi.fn(),
-  isPaymentGraphqlMutationsEnabled: vi.fn(() => false),
   isRecurringInvoiceGraphqlCloneEnabled: vi.fn(),
 }));
 vi.mock('./invoicesGraphql', () => ({
@@ -79,8 +74,6 @@ const invoice = {
 describe('core invoice API transport selection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(isInvoiceGraphqlSendEnabled).mockReturnValue(false);
-    vi.mocked(isInvoicePaymentLinkGraphqlEnabled).mockReturnValue(false);
     vi.mocked(isRecurringInvoiceGraphqlCloneEnabled).mockReturnValue(false);
   });
 
@@ -162,22 +155,11 @@ describe('core invoice API transport selection', () => {
     expect(api.delete).not.toHaveBeenCalled();
   });
 
-  it('keeps send on REST by default and cuts it over independently', async () => {
+  it('sends invoices through GraphQL without an HTTP fallback', async () => {
     const options = {
       subject: 'Your invoice', message: 'Please pay.',
       ccEmails: ['owner@example.com'], includePaymentLink: true,
     };
-    vi.mocked(api.post).mockResolvedValue({
-      data: { data: { ...invoice, emailSent: true } },
-    });
-    await sendInvoice(12, 4, options);
-    expect(api.post).toHaveBeenCalledWith(
-      '/api/invoices/12/send', options,
-      { headers: { 'x-organization-id': '4' } },
-    );
-
-    vi.clearAllMocks();
-    vi.mocked(isInvoiceGraphqlSendEnabled).mockReturnValue(true);
     vi.mocked(sendInvoiceViaGraphql).mockResolvedValue({
       ...invoice, status: 'sent', emailSent: true,
     });
@@ -186,20 +168,7 @@ describe('core invoice API transport selection', () => {
     expect(api.post).not.toHaveBeenCalled();
   });
 
-  it('keeps payment-link creation on REST by default and cuts it over independently', async () => {
-    vi.mocked(api.post).mockResolvedValue({
-      data: { data: { url: 'https://pay.test/rest', session_id: 'cs_rest' } },
-    });
-    await expect(createPaymentLink(12, 4)).resolves.toEqual({
-      url: 'https://pay.test/rest', session_id: 'cs_rest',
-    });
-    expect(api.post).toHaveBeenCalledWith(
-      '/api/invoices/12/create-payment-link', {},
-      { headers: { 'x-organization-id': '4' } },
-    );
-
-    vi.clearAllMocks();
-    vi.mocked(isInvoicePaymentLinkGraphqlEnabled).mockReturnValue(true);
+  it('creates payment links through GraphQL without an HTTP fallback', async () => {
     vi.mocked(createInvoicePaymentLinkViaGraphql).mockResolvedValue({
       url: 'https://pay.test/graphql', session_id: 'cs_graphql',
     });

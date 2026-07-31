@@ -3,10 +3,10 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 208,
-    "resolvedDeclarationCount": 208,
+    "declarationCount": 205,
+    "resolvedDeclarationCount": 205,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 191,
+    "uniqueResolvedOperationCount": 188,
     "sourceFileCount": 46
   },
   "caveats": [
@@ -457,16 +457,6 @@
       "dynamic": false
     },
     {
-      "method": "POST",
-      "publicPaths": [
-        "/api/invoices/:id/create-payment-link"
-      ],
-      "declaredPath": "/:id/create-payment-link",
-      "source": "backend/src/routes/invoices/actions.routes.js",
-      "line": 449,
-      "dynamic": false
-    },
-    {
       "method": "GET",
       "publicPaths": [
         "/api/invoices/:id/pdf"
@@ -482,28 +472,8 @@
         "/api/invoices/:id/pdf"
       ],
       "declaredPath": "/:id/pdf",
-      "source": "backend/src/routes/invoices/actions.routes.js",
-      "line": 262,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/invoices/:id/record-payment"
-      ],
-      "declaredPath": "/:id/record-payment",
-      "source": "backend/src/routes/invoices/actions.routes.js",
-      "line": 330,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/invoices/:id/send"
-      ],
-      "declaredPath": "/:id/send",
-      "source": "backend/src/routes/invoices/actions.routes.js",
-      "line": 27,
+      "source": "backend/src/routes/invoices/pdf.routes.js",
+      "line": 17,
       "dynamic": false
     },
     {
