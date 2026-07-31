@@ -1,17 +1,153 @@
-import { beforeEach,describe,expect,it,vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '@/lib/api';
-import { cancelSignatureDocument,createSignatureDocument,createSignatureTemplate,deleteSignatureDocument,deleteSignatureDocumentFile,deleteSignatureTemplate,getSignatureAudit,getSignatureDocument,getSignatureEmailPreview,getSignatureTemplate,instantiateSignatureTemplate,listSignatureDocuments,listSignatureTemplates,remindSignatureDocument,sendSignatureDocument,updateSignatureDocument,updateSignatureTemplate } from './signaturesApi';
-import { isSignatureCancellationGraphqlEnabled,isSignatureDocumentGraphqlMutationsEnabled,isSignatureDocumentGraphqlReadsEnabled,isSignatureEmailPreviewGraphqlEnabled,isSignatureTemplateGraphqlMutationsEnabled,isSignatureTemplateGraphqlReadsEnabled } from './graphqlClient';
-import { cancelSignatureDocumentViaGraphql,createSignatureDocumentViaGraphql,createSignatureTemplateViaGraphql,deleteSignatureDocumentViaGraphql,deleteSignatureTemplateViaGraphql,getSignatureAuditViaGraphql,getSignatureDocumentViaGraphql,getSignatureEmailPreviewViaGraphql,getSignatureTemplateViaGraphql,instantiateSignatureTemplateViaGraphql,listSignatureDocumentsViaGraphql,listSignatureTemplatesViaGraphql,remindSignatureDocumentViaGraphql,removeSignatureDocumentFileViaGraphql,sendSignatureDocumentViaGraphql,updateSignatureDocumentViaGraphql,updateSignatureTemplateViaGraphql } from './signaturesGraphql';
-vi.mock('@/lib/api',()=>({default:{get:vi.fn(),post:vi.fn(),put:vi.fn(),delete:vi.fn()},getApiUrl:vi.fn(()=> 'https://api.test')}));
-vi.mock('./graphqlClient',()=>({isSignatureDocumentGraphqlReadsEnabled:vi.fn(),isSignatureTemplateGraphqlReadsEnabled:vi.fn(),isSignatureDocumentGraphqlMutationsEnabled:vi.fn(),isSignatureTemplateGraphqlMutationsEnabled:vi.fn(),isSignatureCancellationGraphqlEnabled:vi.fn(),isSignatureEmailPreviewGraphqlEnabled:vi.fn(),isSignatureDeliveryGraphqlEnabled:vi.fn(),isSignatureFileMutationsGraphqlEnabled:vi.fn()}));
-vi.mock('./signaturesGraphql',()=>({createSignatureDocumentViaGraphql:vi.fn(),updateSignatureDocumentViaGraphql:vi.fn(),deleteSignatureDocumentViaGraphql:vi.fn(),removeSignatureDocumentFileViaGraphql:vi.fn(),cancelSignatureDocumentViaGraphql:vi.fn(),getSignatureEmailPreviewViaGraphql:vi.fn(),sendSignatureDocumentViaGraphql:vi.fn(),remindSignatureDocumentViaGraphql:vi.fn(),createSignatureTemplateViaGraphql:vi.fn(),updateSignatureTemplateViaGraphql:vi.fn(),deleteSignatureTemplateViaGraphql:vi.fn(),instantiateSignatureTemplateViaGraphql:vi.fn(),getSignatureAuditViaGraphql:vi.fn(),getSignatureDocumentViaGraphql:vi.fn(),getSignatureTemplateViaGraphql:vi.fn(),listSignatureDocumentsViaGraphql:vi.fn(),listSignatureTemplatesViaGraphql:vi.fn()}));
-describe('signature transport selection',()=>{beforeEach(()=>{vi.clearAllMocks();vi.mocked(isSignatureDocumentGraphqlReadsEnabled).mockReturnValue(false);vi.mocked(isSignatureTemplateGraphqlReadsEnabled).mockReturnValue(false);vi.mocked(isSignatureDocumentGraphqlMutationsEnabled).mockReturnValue(false);vi.mocked(isSignatureTemplateGraphqlMutationsEnabled).mockReturnValue(false);vi.mocked(isSignatureCancellationGraphqlEnabled).mockReturnValue(false);vi.mocked(isSignatureEmailPreviewGraphqlEnabled).mockReturnValue(false);});
-  it('retains REST by default',async()=>{vi.mocked(api.get).mockResolvedValue({data:{data:[]}});await listSignatureDocuments();await getSignatureDocument(7);await getSignatureAudit(7);await listSignatureTemplates();await getSignatureTemplate(5);expect(api.get).toHaveBeenCalledTimes(5);expect(listSignatureDocumentsViaGraphql).not.toHaveBeenCalled();});
-  it('routes only enabled read families through GraphQL',async()=>{vi.mocked(isSignatureDocumentGraphqlReadsEnabled).mockReturnValue(true);vi.mocked(isSignatureTemplateGraphqlReadsEnabled).mockReturnValue(true);vi.mocked(listSignatureDocumentsViaGraphql).mockResolvedValue({items:[],pagination:{page:1,limit:20,total:0,totalPages:0}});vi.mocked(getSignatureDocumentViaGraphql).mockResolvedValue({document:{} as never,recipients:[],fields:[],audit:[]});vi.mocked(getSignatureAuditViaGraphql).mockResolvedValue([]);vi.mocked(listSignatureTemplatesViaGraphql).mockResolvedValue([]);vi.mocked(getSignatureTemplateViaGraphql).mockResolvedValue({template:{} as never,roles:[],fields:[]});await listSignatureDocuments();await getSignatureDocument(7);await getSignatureAudit(7);await listSignatureTemplates();await getSignatureTemplate(5);expect(api.get).not.toHaveBeenCalled();expect(getSignatureDocumentViaGraphql).toHaveBeenCalledWith(7);expect(getSignatureTemplateViaGraphql).toHaveBeenCalledWith(5);});
-  it('retains all mutation routes by default',async()=>{vi.mocked(api.post).mockResolvedValue({data:{data:{}}});vi.mocked(api.put).mockResolvedValue({data:{data:{}}});vi.mocked(api.delete).mockResolvedValue({data:{data:{}}});await createSignatureDocument({title:'D'});await updateSignatureDocument(1,{});await deleteSignatureDocument(1);await createSignatureTemplate({title:'T'});await updateSignatureTemplate(2,{});await instantiateSignatureTemplate(2,{});await deleteSignatureTemplate(2);expect(api.post).toHaveBeenCalledTimes(3);expect(api.put).toHaveBeenCalledTimes(2);expect(api.delete).toHaveBeenCalledTimes(2);expect(createSignatureDocumentViaGraphql).not.toHaveBeenCalled();});
-  it('routes only enabled mutation families through GraphQL',async()=>{vi.mocked(isSignatureDocumentGraphqlMutationsEnabled).mockReturnValue(true);vi.mocked(isSignatureTemplateGraphqlMutationsEnabled).mockReturnValue(true);for(const mock of [createSignatureDocumentViaGraphql,updateSignatureDocumentViaGraphql,deleteSignatureDocumentViaGraphql,createSignatureTemplateViaGraphql,updateSignatureTemplateViaGraphql,instantiateSignatureTemplateViaGraphql,deleteSignatureTemplateViaGraphql])vi.mocked(mock).mockResolvedValue({} as never);await createSignatureDocument({title:'D'});await updateSignatureDocument(1,{});await deleteSignatureDocument(1);await createSignatureTemplate({title:'T'});await updateSignatureTemplate(2,{});await instantiateSignatureTemplate(2,{});await deleteSignatureTemplate(2);expect(api.post).not.toHaveBeenCalled();expect(api.put).not.toHaveBeenCalled();expect(api.delete).not.toHaveBeenCalled();expect(instantiateSignatureTemplateViaGraphql).toHaveBeenCalledWith(2,{});});
-  it('keeps cancellation and preview on independent rollback switches',async()=>{vi.mocked(api.post).mockResolvedValue({data:{data:{}}});await cancelSignatureDocument(7);await getSignatureEmailPreview({message:'Sign'});expect(api.post).toHaveBeenCalledTimes(2);vi.mocked(isSignatureCancellationGraphqlEnabled).mockReturnValue(true);vi.mocked(isSignatureEmailPreviewGraphqlEnabled).mockReturnValue(true);vi.mocked(cancelSignatureDocumentViaGraphql).mockResolvedValue({} as never);vi.mocked(getSignatureEmailPreviewViaGraphql).mockResolvedValue({html:'<p>safe</p>',subject:'Preview'});await cancelSignatureDocument(7);await getSignatureEmailPreview({message:'Sign'});expect(cancelSignatureDocumentViaGraphql).toHaveBeenCalledWith(7);expect(getSignatureEmailPreviewViaGraphql).toHaveBeenCalledWith({message:'Sign'});expect(api.post).toHaveBeenCalledTimes(2);});
-  it('always routes send and remind through durable GraphQL delivery',async()=>{vi.mocked(sendSignatureDocumentViaGraphql).mockResolvedValue({} as never);vi.mocked(remindSignatureDocumentViaGraphql).mockResolvedValue({} as never);await sendSignatureDocument(7);await remindSignatureDocument(7);expect(sendSignatureDocumentViaGraphql).toHaveBeenCalledWith(7);expect(remindSignatureDocumentViaGraphql).toHaveBeenCalledWith(7);expect(api.post).not.toHaveBeenCalled();});
-  it('always routes draft PDF removal through GraphQL',async()=>{vi.mocked(removeSignatureDocumentFileViaGraphql).mockResolvedValue({} as never);await deleteSignatureDocumentFile(7);expect(removeSignatureDocumentFileViaGraphql).toHaveBeenCalledWith(7);expect(api.delete).not.toHaveBeenCalled();});
+import {
+  cancelSignatureDocument,
+  createSignatureDocument,
+  createSignatureTemplate,
+  declinePublicSignature,
+  deleteSignatureDocument,
+  deleteSignatureDocumentFile,
+  deleteSignatureTemplate,
+  downloadSignedDocument,
+  getPublicSigningData,
+  getSignatureAudit,
+  getSignatureDocument,
+  getSignatureEmailPreview,
+  getSignatureTemplate,
+  getSignatures,
+  instantiateSignatureTemplate,
+  listSignatureDocuments,
+  listSignatureTemplates,
+  remindSignatureDocument,
+  sendSignatureDocument,
+  submitPublicSignature,
+  updateSignatureDocument,
+  updateSignatureTemplate,
+  uploadSignatureDocument,
+  uploadSignatureTemplate,
+} from './signaturesApi';
+import * as graphql from './signaturesGraphql';
+
+vi.mock('@/lib/api', () => ({
+  default: { get: vi.fn(), post: vi.fn() },
+  getApiUrl: vi.fn(() => 'https://api.test'),
+}));
+vi.mock('./signaturesGraphql', () => ({
+  cancelSignatureDocumentViaGraphql: vi.fn(),
+  createSignatureDocumentViaGraphql: vi.fn(),
+  createSignatureTemplateViaGraphql: vi.fn(),
+  deleteSignatureDocumentViaGraphql: vi.fn(),
+  deleteSignatureTemplateViaGraphql: vi.fn(),
+  getSignatureAuditViaGraphql: vi.fn(),
+  getSignatureDocumentViaGraphql: vi.fn(),
+  getSignatureEmailPreviewViaGraphql: vi.fn(),
+  getSignatureTemplateViaGraphql: vi.fn(),
+  instantiateSignatureTemplateViaGraphql: vi.fn(),
+  listSignatureDocumentsViaGraphql: vi.fn(),
+  listSignatureTemplatesViaGraphql: vi.fn(),
+  remindSignatureDocumentViaGraphql: vi.fn(),
+  removeSignatureDocumentFileViaGraphql: vi.fn(),
+  sendSignatureDocumentViaGraphql: vi.fn(),
+  updateSignatureDocumentViaGraphql: vi.fn(),
+  updateSignatureTemplateViaGraphql: vi.fn(),
+}));
+
+describe('signature API transport boundaries', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(graphql.listSignatureDocumentsViaGraphql).mockResolvedValue({
+      items: [],
+      pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+    });
+  });
+
+  it('routes authenticated signature reads and mutations through GraphQL', async () => {
+    const document = { title: 'NDA' };
+    const update = { message: 'Please sign' };
+    const template = { title: 'Agreement' };
+    const templateUpdate = { description: 'Reusable' };
+
+    await listSignatureDocuments({ status: 'draft', page: 2, limit: 10 });
+    await getSignatures({ search: 'nda' });
+    await getSignatureDocument(7);
+    await getSignatureAudit(7);
+    await createSignatureDocument(document);
+    await updateSignatureDocument(7, update);
+    await deleteSignatureDocument(7);
+    await deleteSignatureDocumentFile(7);
+    await sendSignatureDocument(7);
+    await cancelSignatureDocument(7);
+    await remindSignatureDocument(7);
+    await getSignatureEmailPreview({ message: 'Sign this' });
+    await listSignatureTemplates();
+    await getSignatureTemplate(5);
+    await createSignatureTemplate(template);
+    await updateSignatureTemplate(5, templateUpdate);
+    await instantiateSignatureTemplate(5, { title: 'Generated' });
+    await deleteSignatureTemplate(5);
+
+    expect(graphql.listSignatureDocumentsViaGraphql).toHaveBeenNthCalledWith(
+      1, { status: 'draft', page: 2, limit: 10 },
+    );
+    expect(graphql.listSignatureDocumentsViaGraphql).toHaveBeenNthCalledWith(
+      2, { search: 'nda' },
+    );
+    expect(graphql.getSignatureDocumentViaGraphql).toHaveBeenCalledWith(7);
+    expect(graphql.getSignatureAuditViaGraphql).toHaveBeenCalledWith(7);
+    expect(graphql.createSignatureDocumentViaGraphql).toHaveBeenCalledWith(document);
+    expect(graphql.updateSignatureDocumentViaGraphql).toHaveBeenCalledWith(7, update);
+    expect(graphql.deleteSignatureDocumentViaGraphql).toHaveBeenCalledWith(7);
+    expect(graphql.removeSignatureDocumentFileViaGraphql).toHaveBeenCalledWith(7);
+    expect(graphql.sendSignatureDocumentViaGraphql).toHaveBeenCalledWith(7);
+    expect(graphql.cancelSignatureDocumentViaGraphql).toHaveBeenCalledWith(7);
+    expect(graphql.remindSignatureDocumentViaGraphql).toHaveBeenCalledWith(7);
+    expect(graphql.getSignatureEmailPreviewViaGraphql).toHaveBeenCalledWith({
+      message: 'Sign this',
+    });
+    expect(graphql.listSignatureTemplatesViaGraphql).toHaveBeenCalledOnce();
+    expect(graphql.getSignatureTemplateViaGraphql).toHaveBeenCalledWith(5);
+    expect(graphql.createSignatureTemplateViaGraphql).toHaveBeenCalledWith(template);
+    expect(graphql.updateSignatureTemplateViaGraphql).toHaveBeenCalledWith(
+      5, templateUpdate,
+    );
+    expect(graphql.instantiateSignatureTemplateViaGraphql).toHaveBeenCalledWith(
+      5, { title: 'Generated' },
+    );
+    expect(graphql.deleteSignatureTemplateViaGraphql).toHaveBeenCalledWith(5);
+  });
+
+  it('retains HTTP only for multipart files, streams, and public capabilities', async () => {
+    vi.mocked(api.post).mockResolvedValue({ data: { data: {} } });
+    vi.mocked(api.get).mockResolvedValue({ data: { data: {} } });
+    const file = new File(['%PDF'], 'source.pdf', { type: 'application/pdf' });
+
+    await uploadSignatureDocument(7, file);
+    await uploadSignatureTemplate(5, file);
+    await getPublicSigningData('public-token');
+    await submitPublicSignature('public-token', { fields: [{ id: 1, value: 'signed' }] });
+    await declinePublicSignature('public-token', 'Declined');
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/api/signatures/documents/upload',
+      expect.any(FormData),
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    expect(api.post).toHaveBeenCalledWith(
+      '/api/signatures/templates/upload',
+      expect.any(FormData),
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    expect(api.get).toHaveBeenCalledWith('/api/public/sign/public-token');
+    expect(api.post).toHaveBeenCalledWith(
+      '/api/public/sign/public-token',
+      { fields: [{ id: 1, value: 'signed' }] },
+    );
+    expect(api.post).toHaveBeenCalledWith(
+      '/api/public/sign/public-token/decline',
+      { reason: 'Declined' },
+    );
+    expect(downloadSignedDocument(7)).toEqual({
+      url: 'https://api.test/api/signatures/documents/7/download',
+    });
+  });
 });

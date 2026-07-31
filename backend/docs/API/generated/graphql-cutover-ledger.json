@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 123,
-    "apiOperationCount": 116,
+    "operationCount": 106,
+    "apiOperationCount": 99,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 68,
-    "operationsWithFrontendConsumers": 61,
-    "operationsWithBackendTests": 63,
+    "frontendCallsiteCount": 53,
+    "operationsWithFrontendConsumers": 47,
+    "operationsWithBackendTests": 57,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 45,
+    "unmatchedBackendTestCallCount": 44,
     "retainHttpCount": 55,
-    "graphqlQueryCount": 13,
-    "graphqlMutationCount": 48,
-    "highRiskCount": 107,
+    "graphqlQueryCount": 7,
+    "graphqlMutationCount": 37,
+    "highRiskCount": 90,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -969,7 +969,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 36
+          "line": 35
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -1212,7 +1212,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 150
+          "line": 149
         }
       ],
       "consumerCallsites": [
@@ -1271,7 +1271,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 151
+          "line": 150
         }
       ],
       "consumerCallsites": [
@@ -1503,7 +1503,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 178
+          "line": 177
         },
         {
           "source": "backend/src/routes/invoices/pdf.routes.js",
@@ -1614,7 +1614,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 170
+          "line": 169
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -1707,7 +1707,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 174
+          "line": 173
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -1745,7 +1745,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 166
+          "line": 165
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -2587,11 +2587,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 230
-        },
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 566
+          "line": 229
         }
       ],
       "consumerCallsites": [
@@ -2600,7 +2596,7 @@
           "path": "/api/public/sign/:token",
           "rawPath": "/api/public/sign/${token}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 235,
+          "line": 205,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2610,25 +2606,19 @@
           "method": "GET",
           "path": "/api/public/sign/:invalidToken",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1335
+          "line": 1339
         },
         {
           "method": "GET",
           "path": "/api/public/sign/:secondToken",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1471
+          "line": 1475
         },
         {
           "method": "GET",
           "path": "/api/public/sign/:secondToken",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1495
-        },
-        {
-          "method": "GET",
-          "path": "/api/public/sign/:signingToken",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 362
+          "line": 1499
         },
         {
           "method": "GET",
@@ -2674,11 +2664,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 250
-        },
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 593
+          "line": 249
         }
       ],
       "consumerCallsites": [
@@ -2687,7 +2673,7 @@
           "path": "/api/public/sign/:token",
           "rawPath": "/api/public/sign/${token}",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 240,
+          "line": 210,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2697,19 +2683,7 @@
           "method": "POST",
           "path": "/api/public/sign/:token",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1447
-        },
-        {
-          "method": "POST",
-          "path": "/api/public/sign/:signingToken",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 429
-        },
-        {
-          "method": "POST",
-          "path": "/api/public/sign/:signingToken",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 474
+          "line": 1451
         },
         {
           "method": "POST",
@@ -2743,11 +2717,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 246
-        },
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 624
+          "line": 245
         }
       ],
       "consumerCallsites": [
@@ -2756,7 +2726,7 @@
           "path": "/api/public/sign/:token/decline",
           "rawPath": "/api/public/sign/${token}/decline",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 245,
+          "line": 215,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2766,7 +2736,7 @@
           "method": "POST",
           "path": "/api/public/sign/:secondToken/decline",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 1474
+          "line": 1478
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -2788,11 +2758,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 238
-        },
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 638
+          "line": 237
         }
       ],
       "consumerCallsites": [],
@@ -2816,11 +2782,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 234
-        },
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 660
+          "line": 233
         }
       ],
       "consumerCallsites": [],
@@ -2851,11 +2813,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 242
-        },
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 589
+          "line": 241
         }
       ],
       "consumerCallsites": [],
@@ -3307,304 +3265,6 @@
       "risk": "high"
     },
     {
-      "id": "GET /api/signatures/documents",
-      "key": "GET /api/signatures/documents",
-      "method": "GET",
-      "path": "/api/signatures/documents",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 450
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/signatures/documents",
-          "rawPath": "/api/signatures/documents",
-          "source": "frontend/src/services/signaturesApi.ts",
-          "line": 162,
-          "client": "api",
-          "literalInterpolation": false
-        },
-        {
-          "method": "GET",
-          "path": "/api/signatures/documents",
-          "rawPath": "/api/signatures/documents",
-          "source": "frontend/src/services/signaturesApi.ts",
-          "line": 171,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "esignatures",
-      "targetOperation": "signatureDocuments",
-      "targetModule": "SignatureDocumentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Production consumer enabled through the independent document-read flag with organization-scoped strict enum filtering, bounded stable pagination, REST-shape mapping, fresh-PostgreSQL interoperability, and authenticated browser/log evidence.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/signatures/documents",
-      "key": "POST /api/signatures/documents",
-      "method": "POST",
-      "path": "/api/signatures/documents",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 293
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/signatures/documents",
-          "rawPath": "/api/signatures/documents",
-          "source": "frontend/src/services/signaturesApi.ts",
-          "line": 135,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/signatures/documents",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 78
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "esignatures",
-      "targetOperation": "createSignatureDocument",
-      "targetModule": "SignatureDocumentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Production consumer enabled through the independent document-mutation flag; creates one tenant-owned draft aggregate with serialized monthly plan quota, template/contact validation, bounded recipients/fields, atomic rollback, and authenticated browser/log evidence.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/signatures/documents/:id",
-      "key": "DELETE /api/signatures/documents/:*",
-      "method": "DELETE",
-      "path": "/api/signatures/documents/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 436
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/signatures/documents/:id",
-          "rawPath": "/api/signatures/documents/${id}",
-          "source": "frontend/src/services/signaturesApi.ts",
-          "line": 194,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "esignatures",
-      "targetOperation": "deleteSignatureDraft",
-      "targetModule": "SignatureDocumentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Production consumer enabled through the independent document-mutation flag; the tenant-owned row is locked and only drafts can be deleted, every non-draft lifecycle state fails with a conflict, and both disposable production drafts were removed successfully.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/signatures/documents/:id",
-      "key": "GET /api/signatures/documents/:*",
-      "method": "GET",
-      "path": "/api/signatures/documents/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 456
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/signatures/documents/:id",
-          "rawPath": "/api/signatures/documents/${id}",
-          "source": "frontend/src/services/signaturesApi.ts",
-          "line": 178,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "esignatures",
-      "targetOperation": "signatureDocument",
-      "targetModule": "SignatureDocumentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Production consumer enabled through the independent document-read flag as one repeatable-read tenant-owned aggregate of document, recipients, fields, and ordered audit projection; token hashes, IP/user-agent, audit metadata, storage locations, and file hashes are excluded from the schema.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/signatures/documents/:id",
-      "key": "PUT /api/signatures/documents/:*",
-      "method": "PUT",
-      "path": "/api/signatures/documents/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 312
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/signatures/documents/:id",
-          "rawPath": "/api/signatures/documents/${id}",
-          "source": "frontend/src/services/signaturesApi.ts",
-          "line": 141,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/signatures/documents/:documentId",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 87
-        },
-        {
-          "method": "PUT",
-          "path": "/api/signatures/documents/:id",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 378
-        },
-        {
-          "method": "PUT",
-          "path": "/api/signatures/documents/:id",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 453
-        },
-        {
-          "method": "PUT",
-          "path": "/api/signatures/documents/:id",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 499
-        },
-        {
-          "method": "PUT",
-          "path": "/api/signatures/documents/:id",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 520
-        },
-        {
-          "method": "PUT",
-          "path": "/api/signatures/documents/:id",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 532
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "esignatures",
-      "targetOperation": "updateSignatureDraft",
-      "targetModule": "SignatureDocumentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Production consumer enabled through the independent document-mutation flag as one row-locked metadata, recipient, and field transaction; invalid tenant references or role mappings roll back the complete aggregate, and authenticated production create/edit cleanup passed.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/signatures/documents/:id/audit",
-      "key": "GET /api/signatures/documents/:*/audit",
-      "method": "GET",
-      "path": "/api/signatures/documents/:id/audit",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 555
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/signatures/documents/:id/audit",
-          "rawPath": "/api/signatures/documents/${id}/audit",
-          "source": "frontend/src/services/signaturesApi.ts",
-          "line": 230,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "esignatures",
-      "targetOperation": "signatureAuditTrail",
-      "targetModule": "SignatureDocumentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Production consumer enabled through the independent document-read flag as a repeatable-read tenant-owned ordered safe projection; IP, user-agent, and structured metadata remain deliberately absent.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/signatures/documents/:id/cancel",
-      "key": "POST /api/signatures/documents/:*/cancel",
-      "method": "POST",
-      "path": "/api/signatures/documents/:id/cancel",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 485
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/signatures/documents/:id/cancel",
-          "rawPath": "/api/signatures/documents/${id}/cancel",
-          "source": "frontend/src/services/signaturesApi.ts",
-          "line": 188,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/signatures/documents/:id/cancel",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 339
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "esignatures",
-      "targetOperation": "cancelSignatureDocument",
-      "targetModule": "SignatureDocumentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Production consumer enabled through the independent cancellation flag. One row-locked transaction idempotently cancels non-completed documents, revokes active capability tokens, locks routing, cancels pending reminders, and writes exactly one audit event; an authenticated disposable production fixture proved every postcondition and was removed.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "GET /api/signatures/documents/:id/download",
       "key": "GET /api/signatures/documents/:*/download",
       "method": "GET",
@@ -3612,21 +3272,11 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 216
-        },
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 517
+          "line": 215
         }
       ],
       "consumerCallsites": [],
       "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/signatures/documents/12/download",
-          "source": "backend/src/__tests__/routes/signature-files.routes.test.js",
-          "line": 82
-        },
         {
           "method": "GET",
           "path": "/api/signatures/documents/:id/download",
@@ -3652,30 +3302,6 @@
       "risk": "high"
     },
     {
-      "id": "DELETE /api/signatures/documents/:id/file",
-      "key": "DELETE /api/signatures/documents/:*/file",
-      "method": "DELETE",
-      "path": "/api/signatures/documents/:id/file",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 423
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "esignatures",
-      "targetOperation": "removeSignatureDraftPdf",
-      "targetModule": "SignatureDocumentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The active frontend always uses GraphQL without REST fallback. Draft-only metadata removal atomically enqueues exact server-owned storage cleanup; sent/completed source and signed artifacts are immutable.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "GET /api/signatures/documents/:id/file",
       "key": "GET /api/signatures/documents/:*/file",
       "method": "GET",
@@ -3683,51 +3309,11 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 212
-        },
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 538
+          "line": 211
         }
       ],
       "consumerCallsites": [],
       "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/signatures/documents/:id/file",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 257
-        },
-        {
-          "method": "GET",
-          "path": "/api/signatures/documents/:id/file",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 270
-        },
-        {
-          "method": "GET",
-          "path": "/api/signatures/documents/:id/file",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 275
-        },
-        {
-          "method": "GET",
-          "path": "/api/signatures/documents/:id/file",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 284
-        },
-        {
-          "method": "GET",
-          "path": "/api/signatures/documents/12/file",
-          "source": "backend/src/__tests__/routes/signature-files.routes.test.js",
-          "line": 66
-        },
-        {
-          "method": "GET",
-          "path": "/api/signatures/documents/12/file",
-          "source": "backend/src/__tests__/routes/signature-files.routes.test.js",
-          "line": 105
-        },
         {
           "method": "GET",
           "path": "/api/signatures/documents/:id/file",
@@ -3753,86 +3339,6 @@
       "risk": "high"
     },
     {
-      "id": "POST /api/signatures/documents/:id/remind",
-      "key": "POST /api/signatures/documents/:*/remind",
-      "method": "POST",
-      "path": "/api/signatures/documents/:id/remind",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 497
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/signatures/documents/:id/remind",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 402
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "esignatures",
-      "targetOperation": "sendSignatureReminder",
-      "targetModule": "SignatureDeliveryModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The active frontend always uses GraphQL without REST fallback. Active unsigned recipients receive new hash-only capabilities and durable reminder intents; queued/retry work is superseded, processing work fails closed with a conflict, and signed/declined recipients remain terminal.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/signatures/documents/:id/send",
-      "key": "POST /api/signatures/documents/:*/send",
-      "method": "POST",
-      "path": "/api/signatures/documents/:id/send",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 463
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/signatures/documents/:id/send",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 300
-        },
-        {
-          "method": "POST",
-          "path": "/api/signatures/documents/:id/send",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 324
-        },
-        {
-          "method": "POST",
-          "path": "/api/signatures/documents/:id/send",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 422
-        },
-        {
-          "method": "POST",
-          "path": "/api/signatures/documents/:id/send",
-          "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-          "line": 466
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "esignatures",
-      "targetOperation": "sendSignatureDocument",
-      "targetModule": "SignatureDeliveryModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The active frontend always uses GraphQL without REST fallback. One document-row-locked transaction moves the draft to sent, derives hash-only recipient capabilities, and appends immutable delivery intents; a leased worker uses stable provider idempotency keys with retry/dead-letter state, and PostgreSQL proves one winner and one provider call under concurrent mutation/worker races.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "POST /api/signatures/documents/upload",
       "key": "POST /api/signatures/documents/upload",
       "method": "POST",
@@ -3840,11 +3346,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 198
-        },
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 355
+          "line": 197
         }
       ],
       "consumerCallsites": [
@@ -3853,7 +3355,7 @@
           "path": "/api/signatures/documents/upload",
           "rawPath": "/api/signatures/documents/upload",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 150,
+          "line": 138,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3863,25 +3365,7 @@
           "method": "POST",
           "path": "/api/signatures/documents/upload",
           "source": "backend-v2/test/integration/signatures.integration-spec.ts",
-          "line": 602
-        },
-        {
-          "method": "POST",
-          "path": "/api/signatures/documents/upload",
-          "source": "backend/src/__tests__/routes/signature-files.routes.test.js",
-          "line": 112
-        },
-        {
-          "method": "POST",
-          "path": "/api/signatures/documents/upload",
-          "source": "backend/src/__tests__/routes/signature-files.routes.test.js",
-          "line": 134
-        },
-        {
-          "method": "POST",
-          "path": "/api/signatures/documents/upload",
-          "source": "backend/src/__tests__/routes/signature-files.routes.test.js",
-          "line": 157
+          "line": 587
         },
         {
           "method": "POST",
@@ -3950,210 +3434,6 @@
       "risk": "high"
     },
     {
-      "id": "POST /api/signatures/email/preview",
-      "key": "POST /api/signatures/email/preview",
-      "method": "POST",
-      "path": "/api/signatures/email/preview",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 400
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/signatures/email/preview",
-          "rawPath": "/api/signatures/email/preview",
-          "source": "frontend/src/services/signaturesApi.ts",
-          "line": 224,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "esignatures",
-      "targetOperation": "previewSignatureEmail",
-      "targetModule": "SignatureDeliveryModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Production consumer enabled through the independent preview flag as a pure bounded query; all user content is HTML-escaped, the server controls links/assets, output is not a delivery receipt, and an authenticated production editor rendered the server preview with zero GraphQL or browser errors.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/signatures/templates",
-      "key": "GET /api/signatures/templates",
-      "method": "GET",
-      "path": "/api/signatures/templates",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 245
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/signatures/templates",
-          "rawPath": "/api/signatures/templates",
-          "source": "frontend/src/services/signaturesApi.ts",
-          "line": 315,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "esignatures",
-      "targetOperation": "signatureTemplates",
-      "targetModule": "SignatureTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Production consumer enabled through the independent template-read flag with organization scope, deterministic ordering, safe file-presence metadata, REST-shape mapping, fresh-PostgreSQL interoperability, and authenticated browser/log evidence.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/signatures/templates",
-      "key": "POST /api/signatures/templates",
-      "method": "POST",
-      "path": "/api/signatures/templates",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 158
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/signatures/templates",
-          "rawPath": "/api/signatures/templates",
-          "source": "frontend/src/services/signaturesApi.ts",
-          "line": 289,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "esignatures",
-      "targetOperation": "createSignatureTemplate",
-      "targetModule": "SignatureTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Production consumer enabled through the independent template-mutation flag as one organization-owned metadata, unique-role, and bounded-field transaction, with authenticated browser/log evidence.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/signatures/templates/:id",
-      "key": "DELETE /api/signatures/templates/:*",
-      "method": "DELETE",
-      "path": "/api/signatures/templates/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 193
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/signatures/templates/:id",
-          "rawPath": "/api/signatures/templates/${id}",
-          "source": "frontend/src/services/signaturesApi.ts",
-          "line": 333,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "esignatures",
-      "targetOperation": "deleteSignatureTemplate",
-      "targetModule": "SignatureTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Production consumer enabled through the independent template-mutation flag as a row-locked tenant-owned delete; any private template PDF is atomically enqueued for leased cleanup, while already-instantiated documents retain their immutable snapshot and advisory template ID.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/signatures/templates/:id",
-      "key": "GET /api/signatures/templates/:*",
-      "method": "GET",
-      "path": "/api/signatures/templates/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 250
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/signatures/templates/:id",
-          "rawPath": "/api/signatures/templates/${id}",
-          "source": "frontend/src/services/signaturesApi.ts",
-          "line": 321,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "esignatures",
-      "targetOperation": "signatureTemplate",
-      "targetModule": "SignatureTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Production consumer enabled through the independent template-read flag as one repeatable-read tenant-owned aggregate with ordered roles and fields; storage locations and source hashes are excluded.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/signatures/templates/:id",
-      "key": "PUT /api/signatures/templates/:*",
-      "method": "PUT",
-      "path": "/api/signatures/templates/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 167
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/signatures/templates/:id",
-          "rawPath": "/api/signatures/templates/${id}",
-          "source": "frontend/src/services/signaturesApi.ts",
-          "line": 298,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "esignatures",
-      "targetOperation": "updateSignatureTemplate",
-      "targetModule": "SignatureTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Production consumer enabled through the independent template-mutation flag; row-locked metadata, role, and field changes commit together, role changes cannot orphan existing role-bound fields, and authenticated production editing passed.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "GET /api/signatures/templates/:id/file",
       "key": "GET /api/signatures/templates/:*/file",
       "method": "GET",
@@ -4161,22 +3441,11 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 220
-        },
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 257
+          "line": 219
         }
       ],
       "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/signatures/templates/5/file",
-          "source": "backend/src/__tests__/routes/signature-files.routes.test.js",
-          "line": 94
-        }
-      ],
+      "testCallsites": [],
       "recommendedDisposition": "retain-http",
       "dispositionReason": "Binary upload/download transport.",
       "disposition": "retain-http",
@@ -4189,40 +3458,6 @@
       "risk": "high"
     },
     {
-      "id": "POST /api/signatures/templates/:id/instantiate",
-      "key": "POST /api/signatures/templates/:*/instantiate",
-      "method": "POST",
-      "path": "/api/signatures/templates/:id/instantiate",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 274
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/signatures/templates/:id/instantiate",
-          "rawPath": "/api/signatures/templates/${id}/instantiate",
-          "source": "frontend/src/services/signaturesApi.ts",
-          "line": 327,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "esignatures",
-      "targetOperation": "instantiateSignatureTemplate",
-      "targetModule": "SignatureTemplatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Production consumer enabled through the independent template-mutation flag as an atomic tenant-owned file/metadata/role/field snapshot with serialized monthly quota, validated recipient contacts, and authenticated browser/log evidence.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "POST /api/signatures/templates/upload",
       "key": "POST /api/signatures/templates/upload",
       "method": "POST",
@@ -4230,11 +3465,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 205
-        },
-        {
-          "source": "backend/src/routes/signatures.routes.js",
-          "line": 205
+          "line": 204
         }
       ],
       "consumerCallsites": [
@@ -4243,7 +3474,7 @@
           "path": "/api/signatures/templates/upload",
           "rawPath": "/api/signatures/templates/upload",
           "source": "frontend/src/services/signaturesApi.ts",
-          "line": 307,
+          "line": 273,
           "client": "api",
           "literalInterpolation": false
         }
@@ -4504,7 +3735,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 63
+          "line": 62
         }
       ],
       "consumerCallsites": [
@@ -4538,7 +3769,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 35
+          "line": 34
         }
       ],
       "consumerCallsites": [],
@@ -4746,7 +3977,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 34
+          "line": 33
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",
@@ -5321,12 +4552,6 @@
     },
     {
       "method": "POST",
-      "path": "/api/signatures/documents/:id/reminders",
-      "source": "backend/src/__tests__/integration/signatures.integration.test.js",
-      "line": 372
-    },
-    {
-      "method": "POST",
       "path": "/api/protected-write",
       "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
       "line": 32
@@ -5395,6 +4620,9 @@
     "DELETE /api/reputation/reviews/:id",
     "DELETE /api/reputation/widgets/:id",
     "DELETE /api/segments/:id",
+    "DELETE /api/signatures/documents/:id",
+    "DELETE /api/signatures/documents/:id/file",
+    "DELETE /api/signatures/templates/:id",
     "DELETE /api/sms-templates/:id",
     "DELETE /api/vaults/:vaultId",
     "DELETE /api/vaults/:vaultId/items/:itemId",
@@ -5467,6 +4695,11 @@
     "GET /api/segments/:id",
     "GET /api/segments/:id/contacts",
     "GET /api/segments/filter-options",
+    "GET /api/signatures/documents",
+    "GET /api/signatures/documents/:id",
+    "GET /api/signatures/documents/:id/audit",
+    "GET /api/signatures/templates",
+    "GET /api/signatures/templates/:id",
     "GET /api/sms-templates",
     "GET /api/sms-templates/:id",
     "GET /api/sms-templates/categories/list",
@@ -5543,6 +4776,13 @@
     "POST /api/segments",
     "POST /api/segments/:id/calculate",
     "POST /api/segments/preview",
+    "POST /api/signatures/documents",
+    "POST /api/signatures/documents/:id/cancel",
+    "POST /api/signatures/documents/:id/remind",
+    "POST /api/signatures/documents/:id/send",
+    "POST /api/signatures/email/preview",
+    "POST /api/signatures/templates",
+    "POST /api/signatures/templates/:id/instantiate",
     "POST /api/sms-templates",
     "POST /api/sms-templates/:id/duplicate",
     "POST /api/sms-templates/:id/send-test",
@@ -5589,6 +4829,8 @@
     "PUT /api/reputation/settings",
     "PUT /api/reputation/widgets/:id",
     "PUT /api/segments/:id",
+    "PUT /api/signatures/documents/:id",
+    "PUT /api/signatures/templates/:id",
     "PUT /api/sms-templates/:id",
     "PUT /api/vaults/:vaultId",
     "PUT /api/vaults/:vaultId/items/:itemId",

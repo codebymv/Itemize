@@ -16,7 +16,6 @@ const pagesRoutes = require('../routes/pages.routes');
 const pageVersionsRoutes = require('../routes/pageVersions.routes');
 const bookingsRoutes = require('../routes/bookings.routes');
 const formsRoutes = require('../routes/forms.routes');
-const signaturesRoutes = require('../routes/signatures.routes');
 const {
     createSignatureFileReadProxy,
     createSignatureFileUploadProxy,
@@ -251,8 +250,7 @@ function registerApiRoutes({
         '/api/public/sign/:token',
         ...publicSigningRoute('submit', publicSigningMutationsEnabled()),
     );
-    app.use('/api', signaturesRoutes(pool, authenticateJWT, publicRateLimit));
-    logger.info('Signatures routes initialized');
+    logger.info('Signature file and public signing routes initialized');
     app.use('/api/webhooks', webhooksRoutes);
     logger.info('Webhooks routes initialized');
     app.use('/api/calendar-integrations', calendarIntegrationsRoutes(pool, authenticateJWT));

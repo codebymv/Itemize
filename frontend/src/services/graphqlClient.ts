@@ -32,30 +32,6 @@ export class GraphqlRequestError extends Error {
   }
 }
 
-export const isSignatureDocumentGraphqlReadsEnabled = (): boolean =>
-  import.meta.env.VITE_SIGNATURE_DOCUMENT_READS_GRAPHQL === 'true';
-
-export const isSignatureTemplateGraphqlReadsEnabled = (): boolean =>
-  import.meta.env.VITE_SIGNATURE_TEMPLATE_READS_GRAPHQL === 'true';
-
-export const isSignatureDocumentGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_SIGNATURE_DOCUMENT_MUTATIONS_GRAPHQL === 'true';
-
-export const isSignatureTemplateGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_SIGNATURE_TEMPLATE_MUTATIONS_GRAPHQL === 'true';
-
-export const isSignatureCancellationGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_SIGNATURE_CANCELLATION_GRAPHQL === 'true';
-
-export const isSignatureEmailPreviewGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_SIGNATURE_EMAIL_PREVIEW_GRAPHQL === 'true';
-
-export const isSignatureDeliveryGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_SIGNATURE_DELIVERY_GRAPHQL === 'true';
-
-export const isSignatureFileMutationsGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_SIGNATURE_FILE_MUTATIONS_GRAPHQL === 'true';
-
 export const getGraphqlUrl = (): string => {
   const configured = import.meta.env.VITE_GRAPHQL_URL?.trim();
   if (configured) return configured;

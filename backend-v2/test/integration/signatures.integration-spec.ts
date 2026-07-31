@@ -2,8 +2,6 @@ import { createHash } from 'node:crypto';
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
-import express, { Express } from 'express';
 import { PDFDocument } from 'pdf-lib';
 import { Pool } from 'pg';
 import request from 'supertest';
@@ -31,7 +29,6 @@ async function signaturePdf(title: string): Promise<Buffer> {
 
 describe('E-signature GraphQL read contract', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   let memberId: number;
   let outsiderId: number;
@@ -224,13 +221,6 @@ describe('E-signature GraphQL read contract', () => {
     configureApp(app);
     await app.init();
 
-    const createSignaturesRouter = require('../../../backend/src/routes/signatures.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    const passThrough = (_request: unknown, _response: unknown, next: () => void) => next();
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use('/api', createSignaturesRouter(pool, authenticateJWT, passThrough));
   });
 
   afterAll(async () => {
@@ -258,11 +248,6 @@ describe('E-signature GraphQL read contract', () => {
     .set('x-csrf-token', 'signature-csrf')
     .set('x-organization-id', String(orgId))
     .send({ query: document, variables });
-
-  const legacy = (path: string) => request(legacyApp)
-    .get(path)
-    .set('Cookie', `itemize_auth=${memberToken}`)
-    .set('x-organization-id', String(organizationId));
 
   const signatureUpload = (path: string, token = memberToken, orgId = organizationId) =>
     request(app.getHttpServer())
@@ -618,7 +603,7 @@ describe('E-signature GraphQL read contract', () => {
     ).expect(404);
   });
 
-  it('filters and deterministically pages documents with REST parity', async () => {
+  it('filters and deterministically pages documents through GraphQL', async () => {
     const listed = await graphql(
       memberToken,
       organizationId,
@@ -636,14 +621,9 @@ describe('E-signature GraphQL read contract', () => {
       pageInfo: { page: 1, pageSize: 1, total: 2, totalPages: 2, hasNextPage: true },
     });
 
-    const retained = await legacy('/api/signatures/documents?status=draft&page=1&limit=20')
-      .expect(200);
-    expect(retained.body.data.items.map((item: { id: number }) => Number(item.id)))
-      .toEqual(expect.arrayContaining([firstDocumentId, secondDocumentId]));
-    expect(Number(retained.body.data.pagination.total)).toBe(2);
   });
 
-  it('returns one safe aggregate snapshot and keeps retained file delivery URLs private', async () => {
+  it('returns one safe aggregate snapshot and keeps file delivery locators private', async () => {
     const detail = await graphql(
       memberToken,
       organizationId,
@@ -684,14 +664,9 @@ describe('E-signature GraphQL read contract', () => {
       /token-hash-secret|secret-user-agent|203\.0\.113\.10|original-secret|private\/original/,
     );
 
-    const retained = await legacy(`/api/signatures/documents/${firstDocumentId}`).expect(200);
-    expect(Number(retained.body.data.document.id)).toBe(firstDocumentId);
-    expect(retained.body.data.recipients).toHaveLength(1);
-    expect(retained.body.data.fields).toHaveLength(1);
-    expect(retained.body.data.audit).toHaveLength(1);
   });
 
-  it('lists template aggregates and interoperates with retained REST reads', async () => {
+  it('lists template aggregates through GraphQL', async () => {
     const result = await graphql(
       memberToken,
       organizationId,
@@ -717,10 +692,6 @@ describe('E-signature GraphQL read contract', () => {
     });
     expect(JSON.stringify(result.body.data)).not.toMatch(/template-secret|private\/template/);
 
-    const retained = await legacy(`/api/signatures/templates/${templateId}`).expect(200);
-    expect(Number(retained.body.data.template.id)).toBe(templateId);
-    expect(retained.body.data.roles).toHaveLength(1);
-    expect(retained.body.data.fields).toHaveLength(1);
   });
 
   it('conceals documents and templates owned by another organization', async () => {
@@ -758,7 +729,7 @@ describe('E-signature GraphQL read contract', () => {
     expect(ownForeign.body.data.signatureDocument.document.id).toBe(foreignDocumentId);
   });
 
-  it('atomically creates and replaces a draft aggregate with retained REST interoperability', async () => {
+  it('atomically creates and replaces a draft aggregate through GraphQL', async () => {
     const create = await graphql(memberToken, organizationId, `mutation Create($input:CreateSignatureDocumentInput!){createSignatureDocument(input:$input){${documentFields}}}`, {
       input: {
         title: 'Atomic draft', routingMode: 'sequential', expirationDays: 45,
@@ -789,10 +760,26 @@ describe('E-signature GraphQL read contract', () => {
       },
     }).expect(200);
     expect(updated.body.errors).toBeUndefined();
-    const retained = await legacy(`/api/signatures/documents/${id}`).expect(200);
-    expect(retained.body.data.document.title).toBe('Atomic draft updated');
-    expect(retained.body.data.recipients).toMatchObject([{ email: 'new-signer@test.itemize', role_name: 'Signer' }]);
-    expect(retained.body.data.fields).toMatchObject([{ field_type: 'date', role_name: 'Signer' }]);
+    const aggregate = await graphql(
+      memberToken,
+      organizationId,
+      `query Updated($id:Int!){
+        signatureDocument(id:$id){
+          document{id title}
+          recipients{id email roleName}
+          fields{recipientId fieldType roleName}
+        }
+      }`,
+      { id },
+    ).expect(200);
+    expect(aggregate.body.errors).toBeUndefined();
+    expect(aggregate.body.data.signatureDocument.document.title).toBe('Atomic draft updated');
+    expect(aggregate.body.data.signatureDocument.recipients).toMatchObject([
+      { email: 'new-signer@test.itemize', roleName: 'Signer' },
+    ]);
+    expect(aggregate.body.data.signatureDocument.fields).toMatchObject([
+      { fieldType: 'date', roleName: 'Signer' },
+    ]);
 
     const deleted = await graphql(memberToken, organizationId, `mutation Delete($id:Int!){deleteSignatureDraft(id:$id){id title}}`, { id }).expect(200);
     expect(deleted.body.errors).toBeUndefined();
@@ -822,9 +809,26 @@ describe('E-signature GraphQL read contract', () => {
     }).expect(200);
     expect(instantiated.body.errors).toBeUndefined();
     const documentId = Number(instantiated.body.data.instantiateSignatureTemplate.id);
-    const snapshot = await legacy(`/api/signatures/documents/${documentId}`).expect(200);
-    expect(snapshot.body.data.document).toMatchObject({ title: 'Template draft', template_id: id, status: 'draft' });
-    expect(snapshot.body.data.fields[0].recipient_id).toBe(snapshot.body.data.recipients[0].id);
+    const snapshot = await graphql(
+      memberToken,
+      organizationId,
+      `query Snapshot($id:Int!){
+        signatureDocument(id:$id){
+          document{id title templateId status}
+          recipients{id}
+          fields{recipientId}
+        }
+      }`,
+      { id: documentId },
+    ).expect(200);
+    expect(snapshot.body.errors).toBeUndefined();
+    expect(snapshot.body.data.signatureDocument.document).toMatchObject({
+      title: 'Template draft',
+      templateId: id,
+      status: 'DRAFT',
+    });
+    expect(snapshot.body.data.signatureDocument.fields[0].recipientId)
+      .toBe(snapshot.body.data.signatureDocument.recipients[0].id);
 
     await graphql(memberToken, organizationId, 'mutation Delete($id:Int!){deleteSignatureDraft(id:$id){id}}', { id: documentId }).expect(200);
     const deletedTemplateUrl = '/uploads/signatures/deleted-template.pdf';

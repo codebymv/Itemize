@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 123
-- API operations under `/api`: 116
+- Registered method/path operations: 106
+- API operations under `/api`: 99
 - Non-API registered operations: 7
-- Static frontend callsites: 68
-- Operations with frontend consumers: 61
-- Operations referenced by backend tests: 63
-- Recommended GraphQL queries: 13
-- Recommended GraphQL mutations: 48
+- Static frontend callsites: 53
+- Operations with frontend consumers: 47
+- Operations referenced by backend tests: 57
+- Recommended GraphQL queries: 7
+- Recommended GraphQL mutations: 37
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 107
+- High-risk operations: 90
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -93,8 +93,8 @@
 | POST | `/api/pages/:id/versions/:versionId/restore` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / restoreLandingPageVersion |
 | GET | `/api/pages/public/page/:slug` | 1 | 2 | retain-http | high | growth / PublicLandingPagesModule / getPublicLandingPage |
 | POST | `/api/pages/public/page/:slug/analytics` | 1 | 0 | retain-http | high | growth / PublicLandingPagesModule / recordPublicLandingPageAnalytics |
-| GET | `/api/public/sign/:token` | 1 | 8 | retain-http | high | esignatures / PublicSigningModule / getSigningSession |
-| POST | `/api/public/sign/:token` | 1 | 5 | retain-http | high | esignatures / PublicSigningModule / submitSignature |
+| GET | `/api/public/sign/:token` | 1 | 7 | retain-http | high | esignatures / PublicSigningModule / getSigningSession |
+| POST | `/api/public/sign/:token` | 1 | 3 | retain-http | high | esignatures / PublicSigningModule / submitSignature |
 | POST | `/api/public/sign/:token/decline` | 1 | 1 | retain-http | high | esignatures / PublicSigningModule / declineSignature |
 | GET | `/api/public/sign/:token/download` | 0 | 0 | retain-http | high | esignatures / SignatureFilesModule / downloadSigningPdf |
 | GET | `/api/public/sign/:token/file` | 0 | 1 | retain-http | high | esignatures / SignatureFilesModule / streamSigningPdf |
@@ -107,27 +107,10 @@
 | GET | `/api/shared/vault/:token` | 1 | 3 | retain-http | high | sharing / VaultModule / getSharedVault |
 | GET | `/api/shared/whiteboard/:token` | 3 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedWhiteboard |
 | GET | `/api/shared/wireframe/:token` | 2 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedWireframe |
-| GET | `/api/signatures/documents` | 2 | 0 | graphql-query | high | esignatures / SignatureDocumentsModule / signatureDocuments |
-| POST | `/api/signatures/documents` | 1 | 1 | graphql-mutation | high | esignatures / SignatureDocumentsModule / createSignatureDocument |
-| DELETE | `/api/signatures/documents/:id` | 1 | 0 | graphql-mutation | high | esignatures / SignatureDocumentsModule / deleteSignatureDraft |
-| GET | `/api/signatures/documents/:id` | 1 | 0 | graphql-query | high | esignatures / SignatureDocumentsModule / signatureDocument |
-| PUT | `/api/signatures/documents/:id` | 1 | 6 | graphql-mutation | high | esignatures / SignatureDocumentsModule / updateSignatureDraft |
-| GET | `/api/signatures/documents/:id/audit` | 1 | 0 | graphql-query | high | esignatures / SignatureDocumentsModule / signatureAuditTrail |
-| POST | `/api/signatures/documents/:id/cancel` | 1 | 1 | graphql-mutation | high | esignatures / SignatureDocumentsModule / cancelSignatureDocument |
-| GET | `/api/signatures/documents/:id/download` | 0 | 3 | retain-http | high | esignatures / SignatureFilesModule / downloadCompletedSignaturePdf |
-| DELETE | `/api/signatures/documents/:id/file` | 0 | 0 | graphql-mutation | high | esignatures / SignatureDocumentsModule / removeSignatureDraftPdf |
-| GET | `/api/signatures/documents/:id/file` | 0 | 8 | retain-http | high | esignatures / SignatureFilesModule / streamSignatureDraftPdf |
-| POST | `/api/signatures/documents/:id/remind` | 0 | 1 | graphql-mutation | high | esignatures / SignatureDeliveryModule / sendSignatureReminder |
-| POST | `/api/signatures/documents/:id/send` | 0 | 4 | graphql-mutation | high | esignatures / SignatureDeliveryModule / sendSignatureDocument |
-| POST | `/api/signatures/documents/upload` | 1 | 13 | retain-http | high | esignatures / SignatureFilesModule / uploadSignatureDraftPdf |
-| POST | `/api/signatures/email/preview` | 1 | 0 | graphql-query | high | esignatures / SignatureDeliveryModule / previewSignatureEmail |
-| GET | `/api/signatures/templates` | 1 | 0 | graphql-query | high | esignatures / SignatureTemplatesModule / signatureTemplates |
-| POST | `/api/signatures/templates` | 1 | 0 | graphql-mutation | high | esignatures / SignatureTemplatesModule / createSignatureTemplate |
-| DELETE | `/api/signatures/templates/:id` | 1 | 0 | graphql-mutation | high | esignatures / SignatureTemplatesModule / deleteSignatureTemplate |
-| GET | `/api/signatures/templates/:id` | 1 | 0 | graphql-query | high | esignatures / SignatureTemplatesModule / signatureTemplate |
-| PUT | `/api/signatures/templates/:id` | 1 | 0 | graphql-mutation | high | esignatures / SignatureTemplatesModule / updateSignatureTemplate |
-| GET | `/api/signatures/templates/:id/file` | 0 | 1 | retain-http | high | esignatures / SignatureFilesModule / streamSignatureTemplatePdf |
-| POST | `/api/signatures/templates/:id/instantiate` | 1 | 0 | graphql-mutation | high | esignatures / SignatureTemplatesModule / instantiateSignatureTemplate |
+| GET | `/api/signatures/documents/:id/download` | 0 | 2 | retain-http | high | esignatures / SignatureFilesModule / downloadCompletedSignaturePdf |
+| GET | `/api/signatures/documents/:id/file` | 0 | 2 | retain-http | high | esignatures / SignatureFilesModule / streamSignatureDraftPdf |
+| POST | `/api/signatures/documents/upload` | 1 | 10 | retain-http | high | esignatures / SignatureFilesModule / uploadSignatureDraftPdf |
+| GET | `/api/signatures/templates/:id/file` | 0 | 0 | retain-http | high | esignatures / SignatureFilesModule / streamSignatureTemplatePdf |
 | POST | `/api/signatures/templates/upload` | 1 | 0 | retain-http | high | esignatures / SignatureFilesModule / uploadSignatureTemplatePdf |
 | POST | `/api/sms-templates/webhook/inbound` | 0 | 6 | retain-http | high | messaging / SmsWebhooksModule / processInboundSmsWebhook |
 | POST | `/api/sms-templates/webhook/status` | 0 | 4 | retain-http | high | messaging / SmsWebhooksModule / processSmsStatusWebhook |
@@ -159,8 +142,8 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 45
-- Orphaned manual overrides: 227
+- Unmatched backend test calls: 44
+- Orphaned manual overrides: 244
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls
@@ -223,7 +206,6 @@
 | DELETE | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:194` |
 | POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:210` |
 | DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:211` |
-| POST | `/api/signatures/documents/:id/reminders` | `backend/src/__tests__/integration/signatures.integration.test.js:372` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:32` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:128` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:133` |
