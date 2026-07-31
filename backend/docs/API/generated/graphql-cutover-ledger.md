@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 179
-- API operations under `/api`: 172
+- Registered method/path operations: 168
+- API operations under `/api`: 161
 - Non-API registered operations: 7
-- Static frontend callsites: 121
-- Operations with frontend consumers: 114
-- Operations referenced by backend tests: 95
-- Recommended GraphQL queries: 32
-- Recommended GraphQL mutations: 85
+- Static frontend callsites: 110
+- Operations with frontend consumers: 103
+- Operations referenced by backend tests: 92
+- Recommended GraphQL queries: 28
+- Recommended GraphQL mutations: 78
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 144
+- High-risk operations: 134
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -75,17 +75,6 @@
 | GET | `/api/health` | 0 | 0 | retain-http | low | platform-operations / HealthBoundary / readiness |
 | GET | `/api/invoices/:id/pdf` | 1 | 12 | retain-http | high | billing / InvoicesModule / invoicePdf |
 | POST | `/api/invoices/businesses/:id/logo` | 1 | 9 | retain-http | high | billing / InvoiceBusinessesModule / uploadInvoiceBusinessLogo |
-| GET | `/api/invoices/recurring` | 1 | 0 | graphql-query | high | billing / RecurringInvoicesModule / recurringInvoices |
-| POST | `/api/invoices/recurring` | 1 | 0 | graphql-mutation | high | billing / RecurringInvoicesModule / createRecurringInvoice |
-| DELETE | `/api/invoices/recurring/:id` | 1 | 0 | graphql-mutation | high | billing / RecurringInvoicesModule / deleteRecurringInvoice |
-| GET | `/api/invoices/recurring/:id` | 1 | 3 | graphql-query | high | billing / RecurringInvoicesModule / recurringInvoice |
-| PUT | `/api/invoices/recurring/:id` | 1 | 0 | graphql-mutation | high | billing / RecurringInvoicesModule / updateRecurringInvoice |
-| POST | `/api/invoices/recurring/:id/generate-now` | 1 | 2 | graphql-mutation | high | billing / RecurringInvoicesModule / generateRecurringInvoiceNow |
-| GET | `/api/invoices/recurring/:id/history` | 1 | 0 | graphql-query | medium | billing / RecurringInvoicesModule / recurringInvoiceHistory |
-| POST | `/api/invoices/recurring/:id/pause` | 1 | 1 | graphql-mutation | high | billing / RecurringInvoicesModule / pauseRecurringInvoice |
-| POST | `/api/invoices/recurring/:id/resume` | 1 | 0 | graphql-mutation | high | billing / RecurringInvoicesModule / resumeRecurringInvoice |
-| POST | `/api/invoices/recurring/from-invoice/:invoiceId` | 1 | 0 | graphql-mutation | high | billing / RecurringInvoicesModule / createRecurringInvoiceFromInvoice |
-| GET | `/api/invoices/recurring/preview-invoice-number` | 1 | 0 | graphql-query | high | billing / RecurringInvoicesModule / previewRecurringInvoiceNumber |
 | POST | `/api/invoices/settings/logo` | 1 | 0 | retain-http | high | billing / InvoiceSettingsModule / uploadInvoiceSettingsLogo |
 | POST | `/api/invoices/webhook/stripe` | 0 | 13 | retain-http | medium | billing / InvoiceWebhooksModule / stripeInvoiceWebhook |
 | DELETE | `/api/lists/:listId/share` | 0 | 2 | graphql-mutation | high | sharing / WorkspaceContentModule / disableListSharing |
@@ -216,7 +205,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 51
-- Orphaned manual overrides: 171
+- Orphaned manual overrides: 182
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

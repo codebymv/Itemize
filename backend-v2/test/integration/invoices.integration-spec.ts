@@ -1,8 +1,6 @@
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
-import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -20,7 +18,6 @@ import {
 
 describe('Core invoice GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   let memberId: number;
   let outsiderId: number;
@@ -148,16 +145,6 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     configureApp(app);
     await app.init();
 
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    const createRecurringRouter =
-      require('../../../backend/src/routes/recurring.routes');
-    legacyApp.use(
-      '/api/invoices/recurring',
-      createRecurringRouter(pool, authenticateJWT),
-    );
   });
 
   afterAll(async () => {
@@ -1837,7 +1824,7 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     }],
   });
 
-  it('supports recurring CRUD, recalculates stored items, and interoperates with REST', async () => {
+  it('supports recurring CRUD and recalculates stored items', async () => {
     const created = await graphql(
       memberToken, organizationId, recurringMutation,
       { input: recurringInput() },
@@ -1855,12 +1842,19 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       items: [{ productId, unitPrice: '12.50', taxRate: '8' }],
     });
     const id = Number(created.body.data.createRecurringInvoice.id);
-    const rest = await request(legacyApp)
-      .get(`/api/invoices/recurring/${id}`)
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
-    expect(rest.body.template_name).toBe('Monthly Consulting');
+    const detail = await graphql(
+      memberToken,
+      organizationId,
+      `query RecurringInvoice($id: Int!) {
+        recurringInvoice(id: $id) { id templateName }
+      }`,
+      { id },
+      false,
+    ).expect(200);
+    expect(detail.body.data.recurringInvoice).toEqual({
+      id,
+      templateName: 'Monthly Consulting',
+    });
     const updated = await graphql(
       memberToken,
       organizationId,
@@ -1889,11 +1883,18 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       discountAmount: '2.50',
       total: '24.50',
     });
-    await request(legacyApp)
-      .post(`/api/invoices/recurring/${id}/pause`)
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
+    const pause = await graphql(
+      memberToken,
+      organizationId,
+      `mutation PauseRecurringInvoice($id: Int!) {
+        pauseRecurringInvoice(id: $id) { id status }
+      }`,
+      { id },
+    ).expect(200);
+    expect(pause.body.data.pauseRecurringInvoice).toEqual({
+      id,
+      status: 'paused',
+    });
     const paused = await graphql(
       memberToken,
       organizationId,
@@ -2033,16 +2034,20 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       [id, organizationId],
     );
     expect(dateCheck.rows[0].future).toBe(true);
-    const rest = await request(legacyApp)
-      .get(`/api/invoices/recurring/${id}`)
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
-    expect(rest.body).toMatchObject({
+    const detail = await graphql(
+      memberToken,
+      organizationId,
+      `query RecurringInvoice($id: Int!) {
+        recurringInvoice(id: $id) { id status nextRunDate }
+      }`,
+      { id },
+      false,
+    ).expect(200);
+    expect(detail.body.data.recurringInvoice).toMatchObject({
       id,
       status: 'active',
     });
-    expect(rest.body.next_run_date.slice(0, 10))
+    expect(detail.body.data.recurringInvoice.nextRunDate)
       .toBe(resumed.body.data.resumeRecurringInvoice.nextRunDate);
     const resumeReplay = await graphql(
       memberToken,
@@ -2203,14 +2208,20 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       [organizationId],
     );
     expect(Number(allocation.rows[0].next_invoice_number)).toBe(38);
-    const retained = await request(legacyApp)
-      .get(`/api/invoices/recurring/${templateId}`)
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
-    expect(retained.body).toMatchObject({
+    const detail = await graphql(
+      memberToken,
+      organizationId,
+      `query RecurringInvoice($id: Int!) {
+        recurringInvoice(id: $id) {
+          id sourceInvoiceId total
+        }
+      }`,
+      { id: templateId },
+      false,
+    ).expect(200);
+    expect(detail.body.data.recurringInvoice).toMatchObject({
       id: templateId,
-      source_invoice_id: sourceId,
+      sourceInvoiceId: sourceId,
       total: '25.25',
     });
     const hidden = await graphql(

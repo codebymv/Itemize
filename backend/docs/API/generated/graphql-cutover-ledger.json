@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 179,
-    "apiOperationCount": 172,
+    "operationCount": 168,
+    "apiOperationCount": 161,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 121,
-    "operationsWithFrontendConsumers": 114,
-    "operationsWithBackendTests": 95,
+    "frontendCallsiteCount": 110,
+    "operationsWithFrontendConsumers": 103,
+    "operationsWithBackendTests": 92,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 51,
     "retainHttpCount": 55,
-    "graphqlQueryCount": 32,
-    "graphqlMutationCount": 85,
-    "highRiskCount": 144,
+    "graphqlQueryCount": 28,
+    "graphqlMutationCount": 78,
+    "highRiskCount": 134,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -1510,7 +1510,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 39
+          "line": 38
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -1753,7 +1753,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 153
+          "line": 152
         }
       ],
       "consumerCallsites": [
@@ -1812,7 +1812,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 154
+          "line": 153
         }
       ],
       "consumerCallsites": [
@@ -2044,7 +2044,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 185
+          "line": 182
         },
         {
           "source": "backend/src/routes/invoices/pdf.routes.js",
@@ -2057,7 +2057,7 @@
           "path": "/api/invoices/:invoiceId/pdf",
           "rawPath": "/api/invoices/${invoiceId}/pdf",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 513,
+          "line": 495,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2067,37 +2067,37 @@
           "method": "GET",
           "path": "/api/invoices/:id/pdf",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 382
+          "line": 369
         },
         {
           "method": "GET",
           "path": "/api/invoices/not-an-id/pdf",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 388
+          "line": 375
         },
         {
           "method": "GET",
           "path": "/api/invoices/:id/pdf",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 395
+          "line": 382
         },
         {
           "method": "GET",
           "path": "/api/invoices/:id/pdf",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 405
+          "line": 392
         },
         {
           "method": "GET",
           "path": "/api/invoices/:id/pdf",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 436
+          "line": 423
         },
         {
           "method": "GET",
           "path": "/api/invoices/:id/pdf",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 446
+          "line": 433
         },
         {
           "method": "GET",
@@ -2155,7 +2155,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 177
+          "line": 174
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -2168,7 +2168,7 @@
           "path": "/api/invoices/businesses/:businessId/logo",
           "rawPath": "/api/invoices/businesses/${businessId}/logo",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 481,
+          "line": 463,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2241,419 +2241,6 @@
       "risk": "high"
     },
     {
-      "id": "GET /api/invoices/recurring",
-      "key": "GET /api/invoices/recurring",
-      "method": "GET",
-      "path": "/api/invoices/recurring",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/recurring.routes.js",
-          "line": 73
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/invoices/recurring",
-          "rawPath": "/api/invoices/recurring",
-          "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 103,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetOperation": "recurringInvoices",
-      "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Tenant-scoped status filtering and deterministic paging map decimal strings and generated counts into the retained frontend shape behind a default-off read flag.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/invoices/recurring",
-      "key": "POST /api/invoices/recurring",
-      "method": "POST",
-      "path": "/api/invoices/recurring",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/recurring.routes.js",
-          "line": 139
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/recurring",
-          "rawPath": "/api/invoices/recurring",
-          "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 135,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetOperation": "createRecurringInvoice",
-      "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected creation validates tenant contacts/products, frequency and date bounds, stores legacy-compatible JSON items, and calculates totals transactionally.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/invoices/recurring/:id",
-      "key": "DELETE /api/invoices/recurring/:*",
-      "method": "DELETE",
-      "path": "/api/invoices/recurring/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/recurring.routes.js",
-          "line": 363
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/invoices/recurring/:id",
-          "rawPath": "/api/invoices/recurring/${id}",
-          "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 162,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetOperation": "deleteRecurringInvoice",
-      "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Tenant-scoped deletion returns stable identity and conceals foreign or absent templates.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/invoices/recurring/:id",
-      "key": "GET /api/invoices/recurring/:*",
-      "method": "GET",
-      "path": "/api/invoices/recurring/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/recurring.routes.js",
-          "line": 109
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/invoices/recurring/:id",
-          "rawPath": "/api/invoices/recurring/${id}",
-          "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 117,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/invoices/recurring/:id",
-          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 1859
-        },
-        {
-          "method": "GET",
-          "path": "/api/invoices/recurring/:id",
-          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 2037
-        },
-        {
-          "method": "GET",
-          "path": "/api/invoices/recurring/:templateId",
-          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 2207
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetOperation": "recurringInvoice",
-      "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Detail reads qualify contact, source-invoice, and generated-invoice projections through the active organization and conceal foreign templates.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/invoices/recurring/:id",
-      "key": "PUT /api/invoices/recurring/:*",
-      "method": "PUT",
-      "path": "/api/invoices/recurring/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/recurring.routes.js",
-          "line": 228
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/invoices/recurring/:id",
-          "rawPath": "/api/invoices/recurring/${id}",
-          "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 149,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetOperation": "updateRecurringInvoice",
-      "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Partial updates lock the template, validate effective tenant references and dates, replace items when supplied, and recalculate totals from stored legacy JSON when discounts change.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/invoices/recurring/:id/generate-now",
-      "key": "POST /api/invoices/recurring/:*/generate-now",
-      "method": "POST",
-      "path": "/api/invoices/recurring/:id/generate-now",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/recurring.routes.js",
-          "line": 470
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/recurring/:id/generate-now",
-          "rawPath": "/api/invoices/recurring/${id}/generate-now",
-          "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 214,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/recurring/12/generate-now",
-          "source": "backend/src/__tests__/routes/recurring-generation.routes.test.js",
-          "line": 69
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/recurring/12/generate-now",
-          "source": "backend/src/__tests__/routes/recurring-generation.routes.test.js",
-          "line": 99
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetOperation": "generateRecurringInvoiceNow",
-      "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The CSRF-protected mutation locks the tenant-owned template, validates generation data and qualified references before allocation, atomically creates the invoice/items and advances the schedule, and persists a namespaced request receipt. Concurrent requests with the same explicit idempotency key return one stable invoice and consume one number.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/invoices/recurring/:id/history",
-      "key": "GET /api/invoices/recurring/:*/history",
-      "method": "GET",
-      "path": "/api/invoices/recurring/:id/history",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/recurring.routes.js",
-          "line": 616
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/invoices/recurring/:id/history",
-          "rawPath": "/api/invoices/recurring/${id}/history",
-          "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 201,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetOperation": "recurringInvoiceHistory",
-      "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Tenant-private history uses bounded stable paging, decimal-string totals, and a parent ownership check so missing and foreign templates are indistinguishable.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/invoices/recurring/:id/pause",
-      "key": "POST /api/invoices/recurring/:*/pause",
-      "method": "POST",
-      "path": "/api/invoices/recurring/:id/pause",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/recurring.routes.js",
-          "line": 387
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/recurring/:id/pause",
-          "rawPath": "/api/invoices/recurring/${id}/pause",
-          "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 176,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/recurring/:id/pause",
-          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 1893
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetOperation": "pauseRecurringInvoice",
-      "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The CSRF-protected mutation row-locks the tenant-owned template, permits only active-to-paused transitions, and reports replay or wrong-state attempts as a stable conflict.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/invoices/recurring/:id/resume",
-      "key": "POST /api/invoices/recurring/:*/resume",
-      "method": "POST",
-      "path": "/api/invoices/recurring/:id/resume",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/recurring.routes.js",
-          "line": 413
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/recurring/:id/resume",
-          "rawPath": "/api/invoices/recurring/${id}/resume",
-          "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 189,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetOperation": "resumeRecurringInvoice",
-      "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The CSRF-protected mutation row-locks the tenant-owned template, permits only paused-to-active transitions, and advances a stale date-only schedule beyond the database current date before commit.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/invoices/recurring/from-invoice/:invoiceId",
-      "key": "POST /api/invoices/recurring/from-invoice/:*",
-      "method": "POST",
-      "path": "/api/invoices/recurring/from-invoice/:invoiceId",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/recurring.routes.js",
-          "line": 639
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/recurring/from-invoice/:invoiceId",
-          "rawPath": "/api/invoices/recurring/from-invoice/${invoiceId}",
-          "source": "frontend/src/services/invoicesApi.ts",
-          "line": 388,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetOperation": "createRecurringInvoiceFromInvoice",
-      "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The CSRF-protected mutation row-locks the tenant-owned source invoice, rejects terminal sources, clones tenant-qualified item snapshots into legacy-compatible JSON, recalculates exact recurring totals in PostgreSQL, marks the preserved source, and commits all effects atomically.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/invoices/recurring/preview-invoice-number",
-      "key": "GET /api/invoices/recurring/preview-invoice-number",
-      "method": "GET",
-      "path": "/api/invoices/recurring/preview-invoice-number",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/recurring.routes.js",
-          "line": 44
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/invoices/recurring/preview-invoice-number",
-          "rawPath": "/api/invoices/recurring/preview-invoice-number",
-          "source": "frontend/src/services/recurringInvoicesApi.ts",
-          "line": 226,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetOperation": "previewRecurringInvoiceNumber",
-      "targetModule": "RecurringInvoicesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The tenant-scoped query returns the configured prefix and current next number without reserving or incrementing it; invoice creation remains the atomic allocation authority.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "POST /api/invoices/settings/logo",
       "key": "POST /api/invoices/settings/logo",
       "method": "POST",
@@ -2661,7 +2248,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 181
+          "line": 178
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -2674,7 +2261,7 @@
           "path": "/api/invoices/settings/logo",
           "rawPath": "/api/invoices/settings/logo",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 424,
+          "line": 406,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2699,7 +2286,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 173
+          "line": 170
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -3541,7 +3128,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 237
+          "line": 234
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -3628,7 +3215,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 257
+          "line": 254
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -3697,7 +3284,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 253
+          "line": 250
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -3742,7 +3329,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 245
+          "line": 242
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -3770,7 +3357,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 241
+          "line": 238
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -3805,7 +3392,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 249
+          "line": 246
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -5334,7 +4921,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 223
+          "line": 220
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -5405,7 +4992,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 219
+          "line": 216
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -5562,7 +5149,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 205
+          "line": 202
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -5883,7 +5470,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 227
+          "line": 224
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -5952,7 +5539,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 212
+          "line": 209
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -6226,7 +5813,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 66
+          "line": 65
         }
       ],
       "consumerCallsites": [
@@ -6260,7 +5847,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 38
+          "line": 37
         }
       ],
       "consumerCallsites": [],
@@ -6468,7 +6055,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 37
+          "line": 36
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",
@@ -7936,6 +7523,7 @@
     "DELETE /api/invoices/businesses/:id/logo",
     "DELETE /api/invoices/estimates/:id",
     "DELETE /api/invoices/products/:id",
+    "DELETE /api/invoices/recurring/:id",
     "DELETE /api/invoices/settings/logo",
     "DELETE /api/lists/:id",
     "DELETE /api/notes/:noteId",
@@ -7985,6 +7573,10 @@
     "GET /api/invoices/estimates/:id",
     "GET /api/invoices/payments",
     "GET /api/invoices/products",
+    "GET /api/invoices/recurring",
+    "GET /api/invoices/recurring/:id",
+    "GET /api/invoices/recurring/:id/history",
+    "GET /api/invoices/recurring/preview-invoice-number",
     "GET /api/invoices/settings",
     "GET /api/lists",
     "GET /api/notes",
@@ -8042,6 +7634,11 @@
     "POST /api/invoices/estimates/:id/send",
     "POST /api/invoices/payments",
     "POST /api/invoices/products",
+    "POST /api/invoices/recurring",
+    "POST /api/invoices/recurring/:id/generate-now",
+    "POST /api/invoices/recurring/:id/pause",
+    "POST /api/invoices/recurring/:id/resume",
+    "POST /api/invoices/recurring/from-invoice/:invoiceId",
     "POST /api/lists",
     "POST /api/notes",
     "POST /api/onboarding/complete-step",
@@ -8078,6 +7675,7 @@
     "PUT /api/invoices/businesses/:id",
     "PUT /api/invoices/estimates/:id",
     "PUT /api/invoices/products/:id",
+    "PUT /api/invoices/recurring/:id",
     "PUT /api/invoices/settings",
     "PUT /api/lists/:id",
     "PUT /api/lists/:id/position",

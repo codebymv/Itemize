@@ -3,11 +3,11 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 196,
-    "resolvedDeclarationCount": 196,
+    "declarationCount": 185,
+    "resolvedDeclarationCount": 185,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 179,
-    "sourceFileCount": 44
+    "uniqueResolvedOperationCount": 168,
+    "sourceFileCount": 43
   },
   "caveats": [
     "This is static source analysis; it does not execute application modules.",
@@ -323,7 +323,7 @@
       ],
       "declaredPath": "/api/canvas/positions",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 39,
+      "line": 38,
       "dynamic": false
     },
     {
@@ -403,7 +403,7 @@
       ],
       "declaredPath": "/api/contacts/export/csv",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 153,
+      "line": 152,
       "dynamic": false
     },
     {
@@ -413,7 +413,7 @@
       ],
       "declaredPath": "/api/contacts/import/csv",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 154,
+      "line": 153,
       "dynamic": false
     },
     {
@@ -463,7 +463,7 @@
       ],
       "declaredPath": "/api/invoices/:id/pdf",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 185,
+      "line": 182,
       "dynamic": false
     },
     {
@@ -483,7 +483,7 @@
       ],
       "declaredPath": "/api/invoices/businesses/:id/logo",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 177,
+      "line": 174,
       "dynamic": false
     },
     {
@@ -497,123 +497,13 @@
       "dynamic": false
     },
     {
-      "method": "GET",
-      "publicPaths": [
-        "/api/invoices/recurring"
-      ],
-      "declaredPath": "/",
-      "source": "backend/src/routes/recurring.routes.js",
-      "line": 73,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/invoices/recurring"
-      ],
-      "declaredPath": "/",
-      "source": "backend/src/routes/recurring.routes.js",
-      "line": 139,
-      "dynamic": false
-    },
-    {
-      "method": "DELETE",
-      "publicPaths": [
-        "/api/invoices/recurring/:id"
-      ],
-      "declaredPath": "/:id",
-      "source": "backend/src/routes/recurring.routes.js",
-      "line": 363,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/invoices/recurring/:id"
-      ],
-      "declaredPath": "/:id",
-      "source": "backend/src/routes/recurring.routes.js",
-      "line": 109,
-      "dynamic": false
-    },
-    {
-      "method": "PUT",
-      "publicPaths": [
-        "/api/invoices/recurring/:id"
-      ],
-      "declaredPath": "/:id",
-      "source": "backend/src/routes/recurring.routes.js",
-      "line": 228,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/invoices/recurring/:id/generate-now"
-      ],
-      "declaredPath": "/:id/generate-now",
-      "source": "backend/src/routes/recurring.routes.js",
-      "line": 470,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/invoices/recurring/:id/history"
-      ],
-      "declaredPath": "/:id/history",
-      "source": "backend/src/routes/recurring.routes.js",
-      "line": 616,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/invoices/recurring/:id/pause"
-      ],
-      "declaredPath": "/:id/pause",
-      "source": "backend/src/routes/recurring.routes.js",
-      "line": 387,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/invoices/recurring/:id/resume"
-      ],
-      "declaredPath": "/:id/resume",
-      "source": "backend/src/routes/recurring.routes.js",
-      "line": 413,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/invoices/recurring/from-invoice/:invoiceId"
-      ],
-      "declaredPath": "/from-invoice/:invoiceId",
-      "source": "backend/src/routes/recurring.routes.js",
-      "line": 639,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/invoices/recurring/preview-invoice-number"
-      ],
-      "declaredPath": "/preview-invoice-number",
-      "source": "backend/src/routes/recurring.routes.js",
-      "line": 44,
-      "dynamic": false
-    },
-    {
       "method": "POST",
       "publicPaths": [
         "/api/invoices/settings/logo"
       ],
       "declaredPath": "/api/invoices/settings/logo",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 181,
+      "line": 178,
       "dynamic": false
     },
     {
@@ -633,7 +523,7 @@
       ],
       "declaredPath": "/api/invoices/webhook/stripe",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 173,
+      "line": 170,
       "dynamic": false
     },
     {
@@ -913,7 +803,7 @@
       ],
       "declaredPath": "/api/public/sign/:token",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 237,
+      "line": 234,
       "dynamic": false
     },
     {
@@ -933,7 +823,7 @@
       ],
       "declaredPath": "/api/public/sign/:token",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 257,
+      "line": 254,
       "dynamic": false
     },
     {
@@ -953,7 +843,7 @@
       ],
       "declaredPath": "/api/public/sign/:token/decline",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 253,
+      "line": 250,
       "dynamic": false
     },
     {
@@ -973,7 +863,7 @@
       ],
       "declaredPath": "/api/public/sign/:token/download",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 245,
+      "line": 242,
       "dynamic": false
     },
     {
@@ -993,7 +883,7 @@
       ],
       "declaredPath": "/api/public/sign/:token/file",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 241,
+      "line": 238,
       "dynamic": false
     },
     {
@@ -1013,7 +903,7 @@
       ],
       "declaredPath": "/api/public/sign/:token/verify",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 249,
+      "line": 246,
       "dynamic": false
     },
     {
@@ -1393,7 +1283,7 @@
       ],
       "declaredPath": "/api/signatures/documents/:id/download",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 223,
+      "line": 220,
       "dynamic": false
     },
     {
@@ -1423,7 +1313,7 @@
       ],
       "declaredPath": "/api/signatures/documents/:id/file",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 219,
+      "line": 216,
       "dynamic": false
     },
     {
@@ -1463,7 +1353,7 @@
       ],
       "declaredPath": "/api/signatures/documents/upload",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 205,
+      "line": 202,
       "dynamic": false
     },
     {
@@ -1543,7 +1433,7 @@
       ],
       "declaredPath": "/api/signatures/templates/:id/file",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 227,
+      "line": 224,
       "dynamic": false
     },
     {
@@ -1573,7 +1463,7 @@
       ],
       "declaredPath": "/api/signatures/templates/upload",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 212,
+      "line": 209,
       "dynamic": false
     },
     {
@@ -1653,7 +1543,7 @@
       ],
       "declaredPath": "/api/status",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 66,
+      "line": 65,
       "dynamic": false
     },
     {
@@ -1663,7 +1553,7 @@
       ],
       "declaredPath": "/api/vaults/:vaultId/position",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 38,
+      "line": 37,
       "dynamic": false
     },
     {
@@ -1723,7 +1613,7 @@
       ],
       "declaredPath": "/api/wireframes/:id/position",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 37,
+      "line": 36,
       "dynamic": false
     },
     {

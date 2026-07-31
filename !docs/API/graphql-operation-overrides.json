@@ -494,7 +494,7 @@
       "targetOperation": "recurringInvoices",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Tenant-scoped status filtering and deterministic paging map decimal strings and generated counts into the retained frontend shape behind a default-off read flag."
+      "notes": "The frontend permanently uses this tenant-scoped query. Status filtering and deterministic paging map decimal strings and generated counts into the retained frontend shape; the read flag and Express route are removed, and the old URL returns 404."
     },
     "POST /api/invoices/recurring": {
       "disposition": "graphql-mutation",
@@ -503,7 +503,7 @@
       "targetOperation": "createRecurringInvoice",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "CSRF-protected creation validates tenant contacts/products, frequency and date bounds, stores legacy-compatible JSON items, and calculates totals transactionally."
+      "notes": "The frontend permanently uses this CSRF-protected mutation. Creation validates tenant contacts/products, frequency and date bounds, stores legacy-compatible JSON items, and calculates totals transactionally; the mutation flag and Express route are removed, and the old URL returns 404."
     },
     "DELETE /api/invoices/recurring/:id": {
       "disposition": "graphql-mutation",
@@ -512,7 +512,7 @@
       "targetOperation": "deleteRecurringInvoice",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Tenant-scoped deletion returns stable identity and conceals foreign or absent templates."
+      "notes": "The frontend permanently uses this CSRF-protected mutation. Tenant-scoped deletion returns stable identity and conceals foreign or absent templates; the mutation flag and Express route are removed, and the old URL returns 404."
     },
     "GET /api/invoices/recurring/:id": {
       "disposition": "graphql-query",
@@ -521,7 +521,7 @@
       "targetOperation": "recurringInvoice",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Detail reads qualify contact, source-invoice, and generated-invoice projections through the active organization and conceal foreign templates."
+      "notes": "The frontend permanently uses this query. Detail reads qualify contact, source-invoice, and generated-invoice projections through the active organization and conceal foreign templates; the read flag and Express route are removed, and the old URL returns 404."
     },
     "PUT /api/invoices/recurring/:id": {
       "disposition": "graphql-mutation",
@@ -530,7 +530,7 @@
       "targetOperation": "updateRecurringInvoice",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Partial updates lock the template, validate effective tenant references and dates, replace items when supplied, and recalculate totals from stored legacy JSON when discounts change."
+      "notes": "The frontend permanently uses this CSRF-protected mutation. Partial updates lock the template, validate effective tenant references and dates, replace items when supplied, and recalculate totals from stored legacy JSON when discounts change; the mutation flag and Express route are removed, and the old URL returns 404."
     },
     "POST /api/invoices/recurring/:id/generate-now": {
       "disposition": "graphql-mutation",
@@ -539,7 +539,7 @@
       "targetOperation": "generateRecurringInvoiceNow",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "The CSRF-protected mutation locks the tenant-owned template, validates generation data and qualified references before allocation, atomically creates the invoice/items and advances the schedule, and persists a namespaced request receipt. Concurrent requests with the same explicit idempotency key return one stable invoice and consume one number."
+      "notes": "The frontend permanently uses this CSRF-protected mutation. It locks the tenant-owned template, validates generation data and qualified references before allocation, atomically creates the invoice/items and advances the schedule, and persists a namespaced request receipt. Concurrent requests with the same explicit idempotency key return one stable invoice and consume one number; the generation flag and Express route are removed, and the old URL returns 404."
     },
     "GET /api/invoices/recurring/:id/history": {
       "disposition": "graphql-query",
@@ -548,7 +548,7 @@
       "targetOperation": "recurringInvoiceHistory",
       "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "Tenant-private history uses bounded stable paging, decimal-string totals, and a parent ownership check so missing and foreign templates are indistinguishable."
+      "notes": "The frontend permanently uses this query. Tenant-private history uses bounded stable paging, decimal-string totals, and a parent ownership check so missing and foreign templates are indistinguishable; the read flag and Express route are removed, and the old URL returns 404."
     },
     "POST /api/invoices/recurring/:id/pause": {
       "disposition": "graphql-mutation",
@@ -557,7 +557,7 @@
       "targetOperation": "pauseRecurringInvoice",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "The CSRF-protected mutation row-locks the tenant-owned template, permits only active-to-paused transitions, and reports replay or wrong-state attempts as a stable conflict."
+      "notes": "The frontend permanently uses this CSRF-protected mutation. It row-locks the tenant-owned template, permits only active-to-paused transitions, and reports replay or wrong-state attempts as a stable conflict; the lifecycle flag and Express route are removed, and the old URL returns 404."
     },
     "POST /api/invoices/recurring/:id/resume": {
       "disposition": "graphql-mutation",
@@ -566,7 +566,7 @@
       "targetOperation": "resumeRecurringInvoice",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "The CSRF-protected mutation row-locks the tenant-owned template, permits only paused-to-active transitions, and advances a stale date-only schedule beyond the database current date before commit."
+      "notes": "The frontend permanently uses this CSRF-protected mutation. It row-locks the tenant-owned template, permits only paused-to-active transitions, and advances a stale date-only schedule beyond the database current date before commit; the lifecycle flag and Express route are removed, and the old URL returns 404."
     },
     "POST /api/invoices/recurring/from-invoice/:invoiceId": {
       "disposition": "graphql-mutation",
@@ -575,7 +575,7 @@
       "targetOperation": "createRecurringInvoiceFromInvoice",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "The CSRF-protected mutation row-locks the tenant-owned source invoice, rejects terminal sources, clones tenant-qualified item snapshots into legacy-compatible JSON, recalculates exact recurring totals in PostgreSQL, marks the preserved source, and commits all effects atomically."
+      "notes": "The frontend permanently uses this CSRF-protected mutation. It row-locks the tenant-owned source invoice, rejects terminal sources, clones tenant-qualified item snapshots into legacy-compatible JSON, recalculates exact recurring totals in PostgreSQL, marks the preserved source, and commits all effects atomically; the clone flag and Express route are removed, and the old URL returns 404."
     },
     "GET /api/invoices/recurring/preview-invoice-number": {
       "disposition": "graphql-query",
@@ -584,7 +584,7 @@
       "targetOperation": "previewRecurringInvoiceNumber",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "The tenant-scoped query returns the configured prefix and current next number without reserving or incrementing it; invoice creation remains the atomic allocation authority."
+      "notes": "The frontend permanently uses this tenant-scoped query. It returns the configured prefix and current next number without reserving or incrementing it; invoice creation remains the atomic allocation authority. The read flag and Express route are removed, and the old URL returns 404."
     },
     "GET /api/invoices/settings": {
       "disposition": "graphql-query",

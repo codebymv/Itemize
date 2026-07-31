@@ -1,10 +1,3 @@
-import api from '@/lib/api';
-import {
-  isRecurringInvoiceGraphqlGenerationEnabled,
-  isRecurringInvoiceGraphqlLifecycleEnabled,
-  isRecurringInvoiceGraphqlMutationsEnabled,
-  isRecurringInvoiceGraphqlReadsEnabled,
-} from './graphqlClient';
 import {
   createRecurringInvoiceViaGraphql,
   deleteRecurringInvoiceViaGraphql,
@@ -90,34 +83,18 @@ export interface RecurringInvoiceHistoryEntry {
   created_at: string;
 }
 
-const headers = (organizationId?: number) =>
-  organizationId ? { 'x-organization-id': organizationId.toString() } : {};
-
 export const getRecurringInvoices = async (
   status: RecurringStatus | 'all' = 'all',
   organizationId?: number,
 ): Promise<RecurringInvoice[]> => {
-  if (isRecurringInvoiceGraphqlReadsEnabled()) {
-    return getRecurringInvoicesViaGraphql(status, organizationId);
-  }
-  const response = await api.get('/api/invoices/recurring', {
-    params: status === 'all' ? {} : { status },
-    headers: headers(organizationId),
-  });
-  return (response.data.recurring || response.data || []) as RecurringInvoice[];
+  return getRecurringInvoicesViaGraphql(status, organizationId);
 };
 
 export const getRecurringInvoice = async (
   id: number,
   organizationId?: number,
 ): Promise<RecurringInvoice> => {
-  if (isRecurringInvoiceGraphqlReadsEnabled()) {
-    return getRecurringInvoiceViaGraphql(id, organizationId);
-  }
-  const response = await api.get(`/api/invoices/recurring/${id}`, {
-    headers: headers(organizationId),
-  });
-  return response.data as RecurringInvoice;
+  return getRecurringInvoiceViaGraphql(id, organizationId);
 };
 
 export const createRecurringInvoice = async (
@@ -129,13 +106,7 @@ export const createRecurringInvoice = async (
   },
   organizationId?: number,
 ): Promise<RecurringInvoice> => {
-  if (isRecurringInvoiceGraphqlMutationsEnabled()) {
-    return createRecurringInvoiceViaGraphql(input, organizationId);
-  }
-  const response = await api.post('/api/invoices/recurring', input, {
-    headers: headers(organizationId),
-  });
-  return response.data as RecurringInvoice;
+  return createRecurringInvoiceViaGraphql(input, organizationId);
 };
 
 export const updateRecurringInvoice = async (
@@ -143,88 +114,46 @@ export const updateRecurringInvoice = async (
   input: RecurringInvoiceWriteInput,
   organizationId?: number,
 ): Promise<RecurringInvoice> => {
-  if (isRecurringInvoiceGraphqlMutationsEnabled()) {
-    return updateRecurringInvoiceViaGraphql(id, input, organizationId);
-  }
-  const response = await api.put(`/api/invoices/recurring/${id}`, input, {
-    headers: headers(organizationId),
-  });
-  return response.data as RecurringInvoice;
+  return updateRecurringInvoiceViaGraphql(id, input, organizationId);
 };
 
 export const deleteRecurringInvoice = async (
   id: number,
   organizationId?: number,
 ): Promise<{ success: boolean }> => {
-  if (isRecurringInvoiceGraphqlMutationsEnabled()) {
-    return deleteRecurringInvoiceViaGraphql(id, organizationId);
-  }
-  const response = await api.delete(`/api/invoices/recurring/${id}`, {
-    headers: headers(organizationId),
-  });
-  return response.data as { success: boolean };
+  return deleteRecurringInvoiceViaGraphql(id, organizationId);
 };
 
 export const pauseRecurringInvoice = async (
   id: number,
   organizationId?: number,
 ): Promise<void> => {
-  if (isRecurringInvoiceGraphqlLifecycleEnabled()) {
-    await pauseRecurringInvoiceViaGraphql(id, organizationId);
-    return;
-  }
-  await api.post(`/api/invoices/recurring/${id}/pause`, {}, {
-    headers: headers(organizationId),
-  });
+  await pauseRecurringInvoiceViaGraphql(id, organizationId);
 };
 
 export const resumeRecurringInvoice = async (
   id: number,
   organizationId?: number,
 ): Promise<void> => {
-  if (isRecurringInvoiceGraphqlLifecycleEnabled()) {
-    await resumeRecurringInvoiceViaGraphql(id, organizationId);
-    return;
-  }
-  await api.post(`/api/invoices/recurring/${id}/resume`, {}, {
-    headers: headers(organizationId),
-  });
+  await resumeRecurringInvoiceViaGraphql(id, organizationId);
 };
 
 export const getRecurringInvoiceHistory = async (
   id: number,
   organizationId?: number,
 ): Promise<RecurringInvoiceHistoryEntry[]> => {
-  if (isRecurringInvoiceGraphqlReadsEnabled()) {
-    return getRecurringInvoiceHistoryViaGraphql(id, organizationId);
-  }
-  const response = await api.get(`/api/invoices/recurring/${id}/history`, {
-    headers: headers(organizationId),
-  });
-  return (response.data.invoices || []) as RecurringInvoiceHistoryEntry[];
+  return getRecurringInvoiceHistoryViaGraphql(id, organizationId);
 };
 
 export const generateRecurringInvoiceNow = async (
   id: number,
   organizationId?: number,
 ): Promise<{ invoice_number: string }> => {
-  if (isRecurringInvoiceGraphqlGenerationEnabled()) {
-    return generateRecurringInvoiceNowViaGraphql(id, organizationId);
-  }
-  const response = await api.post(`/api/invoices/recurring/${id}/generate-now`, {}, {
-    headers: headers(organizationId),
-  });
-  return response.data as { invoice_number: string };
+  return generateRecurringInvoiceNowViaGraphql(id, organizationId);
 };
 
 export const getRecurringInvoiceNumberPreview = async (
   organizationId?: number,
 ): Promise<string> => {
-  if (isRecurringInvoiceGraphqlReadsEnabled()) {
-    return getRecurringInvoiceNumberPreviewViaGraphql(organizationId);
-  }
-  const response = await api.get('/api/invoices/recurring/preview-invoice-number', {
-    headers: headers(organizationId),
-  });
-  return response.data.invoice_number || 'INV-00001';
+  return getRecurringInvoiceNumberPreviewViaGraphql(organizationId);
 };

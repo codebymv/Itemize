@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import api from '@/lib/api';
 import {
   createRecurringInvoice,
   deleteRecurringInvoice,
@@ -13,12 +12,6 @@ import {
   updateRecurringInvoice,
 } from './recurringInvoicesApi';
 import {
-  isRecurringInvoiceGraphqlGenerationEnabled,
-  isRecurringInvoiceGraphqlLifecycleEnabled,
-  isRecurringInvoiceGraphqlMutationsEnabled,
-  isRecurringInvoiceGraphqlReadsEnabled,
-} from './graphqlClient';
-import {
   createRecurringInvoiceViaGraphql,
   deleteRecurringInvoiceViaGraphql,
   generateRecurringInvoiceNowViaGraphql,
@@ -31,15 +24,6 @@ import {
   updateRecurringInvoiceViaGraphql,
 } from './recurringInvoicesGraphql';
 
-vi.mock('@/lib/api', () => ({
-  default: { delete: vi.fn(), get: vi.fn(), post: vi.fn(), put: vi.fn() },
-}));
-vi.mock('./graphqlClient', () => ({
-  isRecurringInvoiceGraphqlGenerationEnabled: vi.fn(),
-  isRecurringInvoiceGraphqlLifecycleEnabled: vi.fn(),
-  isRecurringInvoiceGraphqlMutationsEnabled: vi.fn(),
-  isRecurringInvoiceGraphqlReadsEnabled: vi.fn(),
-}));
 vi.mock('./recurringInvoicesGraphql', () => ({
   createRecurringInvoiceViaGraphql: vi.fn(),
   deleteRecurringInvoiceViaGraphql: vi.fn(),
@@ -69,106 +53,56 @@ const createInput = {
   start_date: '2026-07-20', items: recurring.items,
 };
 
-describe('recurring invoice API transport selection', () => {
+describe('recurring invoice API transport', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(isRecurringInvoiceGraphqlReadsEnabled).mockReturnValue(false);
-    vi.mocked(isRecurringInvoiceGraphqlMutationsEnabled).mockReturnValue(false);
-    vi.mocked(isRecurringInvoiceGraphqlLifecycleEnabled).mockReturnValue(false);
-    vi.mocked(isRecurringInvoiceGraphqlGenerationEnabled).mockReturnValue(false);
   });
 
-  it('keeps CRUD and lifecycle operations on REST by default', async () => {
-    vi.mocked(api.get)
-      .mockResolvedValueOnce({ data: { recurring: [recurring] } })
-      .mockResolvedValueOnce({ data: recurring })
-      .mockResolvedValueOnce({ data: { invoices: [] } })
-      .mockResolvedValueOnce({ data: { invoice_number: 'INV-00009' } });
-    vi.mocked(api.post)
-      .mockResolvedValueOnce({ data: recurring })
-      .mockResolvedValueOnce({ data: recurring })
-      .mockResolvedValueOnce({ data: recurring })
-      .mockResolvedValueOnce({ data: { invoice_number: 'INV-00010' } });
-    vi.mocked(api.put).mockResolvedValue({ data: recurring });
-    vi.mocked(api.delete).mockResolvedValue({ data: { success: true } });
-    await getRecurringInvoices('all', 4);
-    await getRecurringInvoice(8, 4);
-    await getRecurringInvoiceHistory(8, 4);
-    await createRecurringInvoice(createInput, 4);
-    await updateRecurringInvoice(8, { notes: 'Updated' }, 4);
-    await deleteRecurringInvoice(8, 4);
-    await pauseRecurringInvoice(8, 4);
-    await resumeRecurringInvoice(8, 4);
-    await generateRecurringInvoiceNow(8, 4);
-    await getRecurringInvoiceNumberPreview(4);
-    expect(api.put).toHaveBeenCalledWith(
-      '/api/invoices/recurring/8', { notes: 'Updated' },
-      { headers: { 'x-organization-id': '4' } },
-    );
-    expect(createRecurringInvoiceViaGraphql).not.toHaveBeenCalled();
-  });
-
-  it('switches reads and CRUD while lifecycle protocols remain independently REST', async () => {
-    vi.mocked(isRecurringInvoiceGraphqlReadsEnabled).mockReturnValue(true);
-    vi.mocked(isRecurringInvoiceGraphqlMutationsEnabled).mockReturnValue(true);
+  it('routes every read through GraphQL without a REST fallback', async () => {
     vi.mocked(getRecurringInvoicesViaGraphql).mockResolvedValue([recurring]);
     vi.mocked(getRecurringInvoiceViaGraphql).mockResolvedValue(recurring);
     vi.mocked(getRecurringInvoiceHistoryViaGraphql).mockResolvedValue([]);
     vi.mocked(getRecurringInvoiceNumberPreviewViaGraphql)
       .mockResolvedValue('INV-00009');
+
+    await expect(getRecurringInvoices('paused', 4)).resolves.toEqual([recurring]);
+    await expect(getRecurringInvoice(8, 4)).resolves.toEqual(recurring);
+    await expect(getRecurringInvoiceHistory(8, 4)).resolves.toEqual([]);
+    await expect(getRecurringInvoiceNumberPreview(4)).resolves.toBe('INV-00009');
+
+    expect(getRecurringInvoicesViaGraphql).toHaveBeenCalledWith('paused', 4);
+    expect(getRecurringInvoiceViaGraphql).toHaveBeenCalledWith(8, 4);
+    expect(getRecurringInvoiceHistoryViaGraphql).toHaveBeenCalledWith(8, 4);
+    expect(getRecurringInvoiceNumberPreviewViaGraphql).toHaveBeenCalledWith(4);
+  });
+
+  it('routes CRUD, lifecycle, and generation through GraphQL without REST fallbacks', async () => {
     vi.mocked(createRecurringInvoiceViaGraphql).mockResolvedValue(recurring);
     vi.mocked(updateRecurringInvoiceViaGraphql).mockResolvedValue(recurring);
     vi.mocked(deleteRecurringInvoiceViaGraphql).mockResolvedValue({ success: true });
-    vi.mocked(api.post).mockResolvedValue({ data: recurring });
-    await getRecurringInvoices('paused', 4);
-    await getRecurringInvoice(8, 4);
-    await getRecurringInvoiceHistory(8, 4);
-    await getRecurringInvoiceNumberPreview(4);
-    await createRecurringInvoice(createInput, 4);
-    await updateRecurringInvoice(8, { notes: 'Updated' }, 4);
-    await deleteRecurringInvoice(8, 4);
-    await pauseRecurringInvoice(8, 4);
-    expect(getRecurringInvoicesViaGraphql).toHaveBeenCalledWith('paused', 4);
-    expect(updateRecurringInvoiceViaGraphql).toHaveBeenCalledWith(
-      8, { notes: 'Updated' }, 4,
-    );
-    expect(getRecurringInvoiceHistoryViaGraphql).toHaveBeenCalledWith(8, 4);
-    expect(getRecurringInvoiceNumberPreviewViaGraphql).toHaveBeenCalledWith(4);
-    expect(api.post).toHaveBeenCalledWith(
-      '/api/invoices/recurring/8/pause', {},
-      { headers: { 'x-organization-id': '4' } },
-    );
-  });
-
-  it('switches pause and resume without moving generation across its boundary', async () => {
-    vi.mocked(isRecurringInvoiceGraphqlLifecycleEnabled).mockReturnValue(true);
     vi.mocked(pauseRecurringInvoiceViaGraphql).mockResolvedValue({
       ...recurring, status: 'paused',
     });
     vi.mocked(resumeRecurringInvoiceViaGraphql).mockResolvedValue(recurring);
-    vi.mocked(api.post).mockResolvedValue({
-      data: { invoice_number: 'INV-00010' },
-    });
-    await pauseRecurringInvoice(8, 4);
-    await resumeRecurringInvoice(8, 4);
-    await generateRecurringInvoiceNow(8, 4);
-    expect(pauseRecurringInvoiceViaGraphql).toHaveBeenCalledWith(8, 4);
-    expect(resumeRecurringInvoiceViaGraphql).toHaveBeenCalledWith(8, 4);
-    expect(api.post).toHaveBeenCalledTimes(1);
-    expect(api.post).toHaveBeenCalledWith(
-      '/api/invoices/recurring/8/generate-now', {},
-      { headers: { 'x-organization-id': '4' } },
-    );
-  });
-
-  it('switches generation independently and preserves the retained result', async () => {
-    vi.mocked(isRecurringInvoiceGraphqlGenerationEnabled).mockReturnValue(true);
     vi.mocked(generateRecurringInvoiceNowViaGraphql).mockResolvedValue({
       invoice_number: 'INV-00010',
     });
+
+    await expect(createRecurringInvoice(createInput, 4)).resolves.toEqual(recurring);
+    await expect(updateRecurringInvoice(8, { notes: 'Updated' }, 4))
+      .resolves.toEqual(recurring);
+    await expect(deleteRecurringInvoice(8, 4)).resolves.toEqual({ success: true });
+    await expect(pauseRecurringInvoice(8, 4)).resolves.toBeUndefined();
+    await expect(resumeRecurringInvoice(8, 4)).resolves.toBeUndefined();
     await expect(generateRecurringInvoiceNow(8, 4))
       .resolves.toEqual({ invoice_number: 'INV-00010' });
+
+    expect(createRecurringInvoiceViaGraphql).toHaveBeenCalledWith(createInput, 4);
+    expect(updateRecurringInvoiceViaGraphql)
+      .toHaveBeenCalledWith(8, { notes: 'Updated' }, 4);
+    expect(deleteRecurringInvoiceViaGraphql).toHaveBeenCalledWith(8, 4);
+    expect(pauseRecurringInvoiceViaGraphql).toHaveBeenCalledWith(8, 4);
+    expect(resumeRecurringInvoiceViaGraphql).toHaveBeenCalledWith(8, 4);
     expect(generateRecurringInvoiceNowViaGraphql).toHaveBeenCalledWith(8, 4);
-    expect(api.post).not.toHaveBeenCalled();
   });
 });

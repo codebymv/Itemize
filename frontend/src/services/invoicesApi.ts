@@ -5,9 +5,6 @@
 import api from '@/lib/api';
 import type { JsonRecord } from '@/types';
 import {
-    isRecurringInvoiceGraphqlCloneEnabled,
-} from './graphqlClient';
-import {
     createInvoiceBusinessViaGraphql,
     deleteInvoiceBusinessViaGraphql,
     removeInvoiceBusinessLogoViaGraphql,
@@ -378,26 +375,11 @@ export const createRecurringTemplateFromInvoice = async (
     },
     organizationId?: number
 ): Promise<{ recurring_template_id: number }> => {
-    if (isRecurringInvoiceGraphqlCloneEnabled()) {
-        return createRecurringInvoiceFromInvoiceViaGraphql(
-            invoiceId,
-            data,
-            organizationId
-        );
-    }
-    const response = await api.post(`/api/invoices/recurring/from-invoice/${invoiceId}`, data, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    const payload = unwrapResponse<{
-        recurring_template_id?: number;
-        template?: { id: number };
-    }>(response.data);
-    const recurringTemplateId =
-        payload.recurring_template_id ?? payload.template?.id;
-    if (!recurringTemplateId) {
-        throw new Error('Recurring template response did not include an ID');
-    }
-    return { recurring_template_id: recurringTemplateId };
+    return createRecurringInvoiceFromInvoiceViaGraphql(
+        invoiceId,
+        data,
+        organizationId
+    );
 };
 
 // ======================

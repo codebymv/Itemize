@@ -2,9 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getInvoiceEmailPreview } from './invoicesApi';
 import { previewInvoiceEmailViaGraphql } from './invoiceEmailPreviewGraphql';
 
-vi.mock('./graphqlClient', () => ({
-  isRecurringInvoiceGraphqlCloneEnabled: vi.fn(() => false),
-}));
 vi.mock('./invoiceEmailPreviewGraphql', () => ({
   previewInvoiceEmailViaGraphql: vi.fn(),
 }));

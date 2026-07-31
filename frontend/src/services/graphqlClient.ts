@@ -32,21 +32,6 @@ export class GraphqlRequestError extends Error {
   }
 }
 
-export const isRecurringInvoiceGraphqlReadsEnabled = (): boolean =>
-  import.meta.env.VITE_RECURRING_INVOICE_READS_GRAPHQL === 'true';
-
-export const isRecurringInvoiceGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_RECURRING_INVOICE_MUTATIONS_GRAPHQL === 'true';
-
-export const isRecurringInvoiceGraphqlLifecycleEnabled = (): boolean =>
-  import.meta.env.VITE_RECURRING_INVOICE_LIFECYCLE_GRAPHQL === 'true';
-
-export const isRecurringInvoiceGraphqlCloneEnabled = (): boolean =>
-  import.meta.env.VITE_RECURRING_INVOICE_CLONE_GRAPHQL === 'true';
-
-export const isRecurringInvoiceGraphqlGenerationEnabled = (): boolean =>
-  import.meta.env.VITE_RECURRING_INVOICE_GENERATION_GRAPHQL === 'true';
-
 export const isWorkflowGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_WORKFLOW_READS_GRAPHQL === 'true';
 
