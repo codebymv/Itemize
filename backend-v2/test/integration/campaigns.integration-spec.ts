@@ -1,8 +1,6 @@
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
-import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -16,7 +14,6 @@ import { PG_POOL } from '../../src/database/database.module';
 
 describe('Campaign management GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   let memberId: number;
   let outsiderId: number;
@@ -82,12 +79,6 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
     configureApp(app);
     await app.init();
 
-    const createCampaignRouter = require('../../../backend/src/routes/campaigns.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use('/api/campaigns', createCampaignRouter(pool, authenticateJWT));
   });
 
   afterAll(async () => {
@@ -121,12 +112,6 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
     return call.send({ query: document, variables });
   };
 
-  const legacy = (path: string, token = memberToken, orgId = organizationId) =>
-    request(legacyApp)
-      .get(`/api/campaigns${path}`)
-      .set('Cookie', `itemize_auth=${token}`)
-      .set('x-organization-id', String(orgId));
-
   const fields = `
     id organizationId name subject fromName templateId contentHtml segmentType segmentId
     segmentFilter tagIds excludedTagIds status scheduledAt sendImmediately timezone
@@ -134,7 +119,7 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
     links { id campaignId originalUrl }
   `;
 
-  it('creates, filters, pages, and reads through the retained REST route', async () => {
+  it('creates, filters, pages, and reads through GraphQL', async () => {
     const created = await graphql(
       memberToken,
       organizationId,
@@ -151,11 +136,6 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
       organizationId, name: 'Launch', status: 'draft', segmentType: 'all', totalRecipients: 0,
     });
     const id = Number(created.body.data.createCampaign.id);
-
-    const retained = await legacy(`/${id}`).expect(200);
-    expect(retained.body.data).toMatchObject({
-      id, organization_id: organizationId, content_html: '<p>Hello</p>',
-    });
 
     const listed = await graphql(
       memberToken,
@@ -429,15 +409,16 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
       campaignId: id, filter: { status: 'opened' }, page: { page: 1, pageSize: 50 },
     }, false).expect(200);
     expect(opened.body.data.campaignRecipients.pageInfo.total).toBe(1);
-    const retained = await legacy(`/${id}/recipients?status=opened&page=1&limit=50`).expect(200);
-    expect(retained.body.data.recipients).toHaveLength(1);
-    expect(retained.body.data.recipients[0]).toMatchObject({
-      id: opened.body.data.campaignRecipients.nodes[0].id,
-      campaign_id: id, contact_id: contactA, status: 'opened',
-      first_name: 'Snapshot A', contact_first_name: 'Current A', open_count: 2,
+    expect(opened.body.data.campaignRecipients.nodes[0]).toMatchObject({
+      campaignId: id,
+      contactId: contactA,
+      status: 'opened',
+      firstName: 'Snapshot A',
+      contactFirstName: 'Current A',
+      openCount: 2,
     });
-    expect(retained.body.data.pagination).toEqual({
-      page: 1, limit: 50, total: 1, totalPages: 1,
+    expect(opened.body.data.campaignRecipients.pageInfo).toMatchObject({
+      page: 1, pageSize: 50, total: 1, totalPages: 1,
     });
 
     await pool.query(
@@ -762,9 +743,6 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
       recipientCount: 1, segmentType: 'tag', segmentId: null,
       tagIds: [includeTagId], excludedTagIds: [excludeTagId],
     });
-    const retained = await legacy(`/${id}/preview`).expect(200);
-    expect(retained.body.data).toEqual(tagPreview.body.data.campaignAudiencePreview);
-
     await pool.query(
       `UPDATE email_campaigns SET segment_type='all', segment_id=NULL, segment_filter='{}',
          tag_ids='{}', excluded_tag_ids='{}' WHERE id=$1`, [id],

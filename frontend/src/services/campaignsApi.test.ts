@@ -1,151 +1,86 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import api from '@/lib/api';
 import {
-    createCampaign,
-    getCampaignRecipients,
-    getCampaigns,
-    pauseCampaign,
-    previewCampaign,
-    resumeCampaign,
-    sendCampaign,
-    sendTestEmail,
+  createCampaign,
+  deleteCampaign,
+  duplicateCampaign,
+  getCampaign,
+  getCampaignRecipients,
+  getCampaigns,
+  pauseCampaign,
+  previewCampaign,
+  resumeCampaign,
+  scheduleCampaign,
+  sendCampaign,
+  sendTestEmail,
+  unscheduleCampaign,
+  updateCampaign,
 } from './campaignsApi';
-import {
-    pauseCampaignViaGraphql,
-    resumeCampaignViaGraphql,
-    sendCampaignTestViaGraphql,
-    sendCampaignViaGraphql,
-} from './campaignsGraphql';
-
-vi.mock('@/lib/api', () => ({
-    default: {
-        get: vi.fn(),
-        post: vi.fn(),
-    },
-}));
+import * as graphql from './campaignsGraphql';
 
 vi.mock('./campaignsGraphql', () => ({
-    createCampaignViaGraphql: vi.fn(),
-    deleteCampaignViaGraphql: vi.fn(),
-    duplicateCampaignViaGraphql: vi.fn(),
-    getCampaignViaGraphql: vi.fn(),
-    getCampaignsViaGraphql: vi.fn(),
-    getCampaignRecipientsViaGraphql: vi.fn(),
-    pauseCampaignViaGraphql: vi.fn(),
-    previewCampaignViaGraphql: vi.fn(),
-    resumeCampaignViaGraphql: vi.fn(),
-    scheduleCampaignViaGraphql: vi.fn(),
-    sendCampaignTestViaGraphql: vi.fn(),
-    sendCampaignViaGraphql: vi.fn(),
-    unscheduleCampaignViaGraphql: vi.fn(),
-    updateCampaignViaGraphql: vi.fn(),
+  createCampaignViaGraphql: vi.fn(),
+  deleteCampaignViaGraphql: vi.fn(),
+  duplicateCampaignViaGraphql: vi.fn(),
+  getCampaignViaGraphql: vi.fn(),
+  getCampaignsViaGraphql: vi.fn(),
+  getCampaignRecipientsViaGraphql: vi.fn(),
+  pauseCampaignViaGraphql: vi.fn(),
+  previewCampaignViaGraphql: vi.fn(),
+  resumeCampaignViaGraphql: vi.fn(),
+  scheduleCampaignViaGraphql: vi.fn(),
+  sendCampaignTestViaGraphql: vi.fn(),
+  sendCampaignViaGraphql: vi.fn(),
+  unscheduleCampaignViaGraphql: vi.fn(),
+  updateCampaignViaGraphql: vi.fn(),
 }));
 
-describe('campaigns API', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        vi.stubEnv('VITE_CAMPAIGN_AUDIENCE_PREVIEW_GRAPHQL', 'false');
-        vi.stubEnv('VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL', 'false');
-    });
+describe('campaign API GraphQL dispatch', () => {
+  beforeEach(() => vi.clearAllMocks());
 
-    it('maps the shared REST pagination envelope to the campaign consumer contract', async () => {
-        vi.mocked(api.get).mockResolvedValue({
-            data: {
-                success: true,
-                data: [{ id: 42, name: 'Launch', status: 'draft' }],
-                pagination: { page: 2, limit: 25, total: 26, totalPages: 2 },
-            },
-        });
+  it('routes every campaign read and mutation through GraphQL', async () => {
+    const draft = { name: 'Launch', segment_type: 'all' as const };
+    const update = { subject: 'Updated' };
 
-        const result = await getCampaigns({ page: 2, limit: 25 }, 7);
+    await getCampaigns({ page: 2, limit: 25, search: 'launch' }, 7);
+    await getCampaign(43, 7);
+    await createCampaign(draft, 7);
+    await updateCampaign(43, update, 7);
+    await deleteCampaign(43, 7);
+    await duplicateCampaign(43, 7);
+    await scheduleCampaign(43, '2026-08-01T12:00:00Z', 'America/Phoenix', 7);
+    await unscheduleCampaign(43, 7);
+    await getCampaignRecipients(43, { status: 'opened', page: 2, limit: 25 }, 7);
+    await previewCampaign(43, 7);
 
-        expect(result.campaigns).toEqual([
-            expect.objectContaining({ id: 42, name: 'Launch' }),
-        ]);
-        expect(result.pagination).toEqual({ page: 2, limit: 25, total: 26, totalPages: 2 });
-        expect(api.get).toHaveBeenCalledWith('/api/campaigns', {
-            params: { page: 2, limit: 25 },
-            headers: { 'x-organization-id': '7' },
-        });
-    });
+    expect(graphql.getCampaignsViaGraphql).toHaveBeenCalledWith(
+      { page: 2, limit: 25, search: 'launch' }, 7,
+    );
+    expect(graphql.getCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
+    expect(graphql.createCampaignViaGraphql).toHaveBeenCalledWith(draft, 7);
+    expect(graphql.updateCampaignViaGraphql).toHaveBeenCalledWith(43, update, 7);
+    expect(graphql.deleteCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
+    expect(graphql.duplicateCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
+    expect(graphql.scheduleCampaignViaGraphql).toHaveBeenCalledWith(
+      43, '2026-08-01T12:00:00Z', 'America/Phoenix', 7,
+    );
+    expect(graphql.unscheduleCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
+    expect(graphql.getCampaignRecipientsViaGraphql).toHaveBeenCalledWith(
+      43, { status: 'opened', page: 2, limit: 25 }, 7,
+    );
+    expect(graphql.previewCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
+  });
 
-    it('persists a saved segment identifier when creating a campaign', async () => {
-        vi.mocked(api.post).mockResolvedValue({
-            data: { success: true, data: { id: 43, segment_type: 'segment', segment_id: 91 } },
-        });
+  it('routes campaign delivery controls through GraphQL', async () => {
+    await sendCampaign(43, 7);
+    await pauseCampaign(43, 7);
+    await resumeCampaign(43, 7);
+    await sendTestEmail(43, 'recipient@test.itemize', 7);
 
-        const result = await createCampaign({ segment_type: 'segment', segment_id: 91 }, 7);
-
-        expect(result.segment_id).toBe(91);
-        expect(api.post).toHaveBeenCalledWith(
-            '/api/campaigns',
-            { segment_type: 'segment', segment_id: 91 },
-            { headers: { 'x-organization-id': '7' } }
-        );
-    });
-
-    it('exposes the saved segment used by campaign audience preview', async () => {
-        vi.mocked(api.get).mockResolvedValue({
-            data: { success: true, data: { recipientCount: 3, segmentType: 'segment', segmentId: 91 } },
-        });
-
-        await expect(previewCampaign(43, 7)).resolves.toMatchObject({
-            recipientCount: 3,
-            segmentType: 'segment',
-            segmentId: 91,
-        });
-    });
-
-    it('keeps campaign recipient inspection on REST by default', async () => {
-        vi.mocked(api.get).mockResolvedValue({
-            data: { success: true, data: {
-                recipients: [{ id: 17, status: 'opened' }],
-                pagination: { page: 2, limit: 25, total: 26, totalPages: 2 },
-            } },
-        });
-
-        await expect(getCampaignRecipients(43, { status: 'opened', page: 2, limit: 25 }, 7))
-            .resolves.toMatchObject({ recipients: [{ id: 17, status: 'opened' }] });
-        expect(api.get).toHaveBeenCalledWith('/api/campaigns/43/recipients', {
-            params: { status: 'opened', page: 2, limit: 25 },
-            headers: { 'x-organization-id': '7' },
-        });
-    });
-
-    it('routes campaign execution directly through GraphQL without REST fallbacks', async () => {
-        vi.mocked(sendCampaignViaGraphql).mockResolvedValue({
-            campaign: { id: 43, status: 'sending' } as never,
-            recipientCount: 2,
-            message: 'Campaign is now sending',
-        });
-        vi.mocked(pauseCampaignViaGraphql).mockResolvedValue({
-            id: 43,
-            status: 'paused',
-        } as never);
-        vi.mocked(resumeCampaignViaGraphql).mockResolvedValue({
-            message: 'Campaign resumed',
-            pendingRecipients: 2,
-        });
-        vi.mocked(sendCampaignTestViaGraphql).mockResolvedValue({
-            success: true,
-            message: 'Test email queued',
-            emailId: 'delivery-1',
-        });
-
-        await expect(sendCampaign(43, 7)).resolves.toMatchObject({ recipientCount: 2 });
-        await expect(pauseCampaign(43, 7)).resolves.toMatchObject({ status: 'paused' });
-        await expect(resumeCampaign(43, 7)).resolves.toMatchObject({ pendingRecipients: 2 });
-        await expect(sendTestEmail(43, 'recipient@test.itemize', 7)).resolves.toMatchObject({
-            success: true, emailId: 'delivery-1',
-        });
-        expect(sendCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
-        expect(pauseCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
-        expect(resumeCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
-        expect(sendCampaignTestViaGraphql).toHaveBeenCalledWith(
-            43,
-            'recipient@test.itemize',
-            7
-        );
-        expect(api.post).not.toHaveBeenCalled();
-    });
+    expect(graphql.sendCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
+    expect(graphql.pauseCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
+    expect(graphql.resumeCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
+    expect(graphql.sendCampaignTestViaGraphql).toHaveBeenCalledWith(
+      43, 'recipient@test.itemize', 7,
+    );
+  });
 });

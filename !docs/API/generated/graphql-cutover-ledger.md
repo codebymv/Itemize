@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 147
-- API operations under `/api`: 140
+- Registered method/path operations: 123
+- API operations under `/api`: 116
 - Non-API registered operations: 7
-- Static frontend callsites: 89
-- Operations with frontend consumers: 82
-- Operations referenced by backend tests: 86
-- Recommended GraphQL queries: 20
-- Recommended GraphQL mutations: 65
+- Static frontend callsites: 68
+- Operations with frontend consumers: 61
+- Operations referenced by backend tests: 63
+- Recommended GraphQL queries: 13
+- Recommended GraphQL mutations: 48
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 113
+- High-risk operations: 107
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -50,16 +50,6 @@
 | GET | `/api/calendar-integrations/google/auth` | 1 | 1 | retain-http | high | scheduling-integrations / CalendarOAuthModule / beginGoogleCalendarConnection |
 | GET | `/api/calendar-integrations/google/calendars/:connectionId` | 1 | 0 | retain-http | high | scheduling-integrations / CalendarProviderHttpModule / providerCalendars |
 | GET | `/api/calendar-integrations/google/callback` | 0 | 3 | retain-http | high | scheduling-integrations / CalendarOAuthModule / googleCalendarCallback |
-| GET | `/api/campaigns` | 1 | 6 | graphql-query | medium | growth / CampaignsModule / campaigns |
-| POST | `/api/campaigns` | 1 | 10 | graphql-mutation | medium | growth / CampaignsModule / createCampaign |
-| DELETE | `/api/campaigns/:id` | 1 | 4 | graphql-mutation | medium | growth / CampaignsModule / deleteCampaign |
-| GET | `/api/campaigns/:id` | 1 | 2 | graphql-query | medium | growth / CampaignsModule / campaign |
-| PUT | `/api/campaigns/:id` | 1 | 3 | graphql-mutation | medium | growth / CampaignsModule / updateCampaign |
-| POST | `/api/campaigns/:id/duplicate` | 1 | 2 | graphql-mutation | medium | growth / CampaignsModule / duplicateCampaign |
-| GET | `/api/campaigns/:id/preview` | 1 | 1 | graphql-query | high | growth / CampaignsModule / campaignAudiencePreview |
-| GET | `/api/campaigns/:id/recipients` | 1 | 0 | graphql-query | high | growth / CampaignDeliveryModule / campaignRecipients |
-| POST | `/api/campaigns/:id/schedule` | 1 | 3 | graphql-mutation | medium | growth / CampaignsModule / scheduleCampaign |
-| POST | `/api/campaigns/:id/unschedule` | 1 | 1 | graphql-mutation | medium | growth / CampaignsModule / unscheduleCampaign |
 | PUT | `/api/canvas/positions` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / batchCanvasPositions |
 | GET | `/api/chat-widget/public/config/:widgetKey` | 1 | 0 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / getPublicChatWidgetConfig |
 | POST | `/api/chat-widget/public/end-session` | 1 | 1 | retain-http | medium | chat-widget / PublicChatWidgetHttpModule / endPublicChatSession |
@@ -157,20 +147,6 @@
 | PUT | `/api/wireframes/:wireframeId` | 0 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceWireframe |
 | DELETE | `/api/wireframes/:wireframeId/share` | 0 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / disableWireframeSharing |
 | POST | `/api/wireframes/:wireframeId/share` | 0 | 3 | graphql-mutation | high | workspace-content / WorkspaceContentModule / enableWireframeSharing |
-| GET | `/api/workflows` | 1 | 3 | graphql-query | medium | automation / WorkflowsModule / workflows |
-| POST | `/api/workflows` | 1 | 17 | graphql-mutation | medium | automation / WorkflowsModule / createWorkflow |
-| DELETE | `/api/workflows/:id` | 1 | 5 | graphql-mutation | medium | automation / WorkflowsModule / deleteWorkflow |
-| GET | `/api/workflows/:id` | 1 | 2 | graphql-query | medium | automation / WorkflowsModule / workflow |
-| PUT | `/api/workflows/:id` | 1 | 5 | graphql-mutation | medium | automation / WorkflowsModule / updateWorkflow |
-| POST | `/api/workflows/:id/activate` | 1 | 8 | graphql-mutation | medium | automation / WorkflowsModule / activateWorkflow |
-| POST | `/api/workflows/:id/deactivate` | 1 | 2 | graphql-mutation | medium | automation / WorkflowsModule / deactivateWorkflow |
-| POST | `/api/workflows/:id/duplicate` | 1 | 2 | graphql-mutation | medium | automation / WorkflowsModule / duplicateWorkflow |
-| POST | `/api/workflows/:id/enroll` | 1 | 5 | graphql-mutation | medium | automation / WorkflowEnrollmentsModule / enrollContactInWorkflow |
-| GET | `/api/workflows/:id/enrollments` | 1 | 1 | graphql-query | medium | automation / WorkflowEnrollmentsModule / workflowEnrollments |
-| DELETE | `/api/workflows/:id/enrollments/:enrollmentId` | 1 | 2 | graphql-mutation | high | automation / WorkflowEnrollmentsModule / cancelWorkflowEnrollment |
-| POST | `/api/workflows/:id/enrollments/:enrollmentId/pause` | 0 | 1 | graphql-mutation | high | automation / WorkflowEnrollmentsModule / pauseWorkflowEnrollment |
-| POST | `/api/workflows/:id/enrollments/:enrollmentId/resume` | 0 | 2 | graphql-mutation | high | automation / WorkflowEnrollmentsModule / resumeWorkflowEnrollment |
-| POST | `/api/workflows/:id/enrollments/:enrollmentId/retry` | 0 | 1 | graphql-mutation | high | automation / WorkflowEnrollmentsModule / retryWorkflowEnrollment |
 | GET | `/docs/content` | 1 | 0 | non-api | low | _unassigned_ |
 | GET | `/docs/search` | 1 | 0 | non-api | low | _unassigned_ |
 | GET | `/docs/structure` | 1 | 0 | non-api | low | _unassigned_ |
@@ -183,8 +159,8 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 51
-- Orphaned manual overrides: 203
+- Unmatched backend test calls: 45
+- Orphaned manual overrides: 227
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls
@@ -219,7 +195,6 @@
 | GET | `/api/analytics/conversion-rates` | `backend-v2/test/integration/analytics.integration-spec.ts:290` |
 | GET | `/api/analytics/revenue-trends` | `backend-v2/test/integration/analytics.integration-spec.ts:291` |
 | GET | `/api/analytics/pipeline-velocity` | `backend-v2/test/integration/analytics.integration-spec.ts:292` |
-| GET | `/api/campaigns:path` | `backend-v2/test/integration/campaigns.integration-spec.ts:126` |
 | GET | `/api/tags` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:378` |
 | GET | `/api/tags/suggestions` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:379` |
 | POST | `/api/tags` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:380` |
@@ -241,7 +216,6 @@
 | POST | `/api/pipelines/deals/1/reopen` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:467` |
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:990` |
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1012` |
-| POST | `/api/campaigns/1/:action` | `backend/src/__tests__/integration/campaigns.integration.test.js:504` |
 | POST | `/api/chat-widget/sessions/:id/messages` | `backend/src/__tests__/integration/realtime.integration.test.js:265` |
 | POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:168` |
 | DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:169` |
@@ -250,10 +224,6 @@
 | POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:210` |
 | DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:211` |
 | POST | `/api/signatures/documents/:id/reminders` | `backend/src/__tests__/integration/signatures.integration.test.js:372` |
-| GET | `/api/workflows/:wfId/execution-summary` | `backend/src/__tests__/integration/workflows.integration.test.js:706` |
-| GET | `/api/workflows/:wfId/side-effects` | `backend/src/__tests__/integration/workflows.integration.test.js:710` |
-| POST | `/api/workflows/:wfId/side-effects/:id/retry` | `backend/src/__tests__/integration/workflows.integration.test.js:714` |
-| POST | `/api/workflows/:wfId/side-effects/:id/reconcile` | `backend/src/__tests__/integration/workflows.integration.test.js:718` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:32` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:128` |
 | POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:133` |

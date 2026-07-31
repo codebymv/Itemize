@@ -16,12 +16,6 @@ import {
   unscheduleCampaignViaGraphql,
   updateCampaignViaGraphql,
 } from './campaignsGraphql';
-import {
-  isCampaignAudiencePreviewGraphqlEnabled,
-  isCampaignRecipientReadsGraphqlEnabled,
-  isCampaignGraphqlMutationsEnabled,
-  isCampaignGraphqlReadsEnabled,
-} from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(),
@@ -60,22 +54,6 @@ describe('campaign GraphQL consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('keeps read and mutation rollout independent and default-off', () => {
-    vi.stubEnv('VITE_CAMPAIGN_READS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_CAMPAIGN_MUTATIONS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_CAMPAIGN_AUDIENCE_PREVIEW_GRAPHQL', 'false');
-    vi.stubEnv('VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL', 'false');
-    expect(isCampaignGraphqlReadsEnabled()).toBe(false);
-    expect(isCampaignGraphqlMutationsEnabled()).toBe(false);
-    expect(isCampaignAudiencePreviewGraphqlEnabled()).toBe(false);
-    expect(isCampaignRecipientReadsGraphqlEnabled()).toBe(false);
-    vi.stubEnv('VITE_CAMPAIGN_READS_GRAPHQL', 'true');
-    expect(isCampaignGraphqlReadsEnabled()).toBe(true);
-    expect(isCampaignGraphqlMutationsEnabled()).toBe(false);
-    expect(isCampaignAudiencePreviewGraphqlEnabled()).toBe(false);
-    expect(isCampaignRecipientReadsGraphqlEnabled()).toBe(false);
   });
 
   it('accepts a bulk campaign into the durable delivery queue', async () => {

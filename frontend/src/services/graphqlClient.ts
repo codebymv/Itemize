@@ -32,27 +32,6 @@ export class GraphqlRequestError extends Error {
   }
 }
 
-export const isWorkflowGraphqlReadsEnabled = (): boolean =>
-  import.meta.env.VITE_WORKFLOW_READS_GRAPHQL === 'true';
-
-export const isWorkflowGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_WORKFLOW_MUTATIONS_GRAPHQL === 'true';
-
-export const isWorkflowEnrollmentsGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_WORKFLOW_ENROLLMENTS_GRAPHQL === 'true';
-
-export const isCampaignGraphqlReadsEnabled = (): boolean =>
-  import.meta.env.VITE_CAMPAIGN_READS_GRAPHQL === 'true';
-
-export const isCampaignGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_CAMPAIGN_MUTATIONS_GRAPHQL === 'true';
-
-export const isCampaignAudiencePreviewGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_CAMPAIGN_AUDIENCE_PREVIEW_GRAPHQL === 'true';
-
-export const isCampaignRecipientReadsGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL === 'true';
-
 export const isSignatureDocumentGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_SIGNATURE_DOCUMENT_READS_GRAPHQL === 'true';
 

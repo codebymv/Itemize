@@ -8,13 +8,6 @@ describe('Environment Validation', () => {
     expect(env.VITE_AUTH_SESSION_GRAPHQL).toBe('false');
     expect(env.VITE_AUTH_IDENTITY_GRAPHQL).toBe('false');
     expect(env.VITE_AUTH_RECOVERY_GRAPHQL).toBe('false');
-    expect(env.VITE_WORKFLOW_READS_GRAPHQL).toBe('false');
-    expect(env.VITE_WORKFLOW_MUTATIONS_GRAPHQL).toBe('false');
-    expect(env.VITE_WORKFLOW_ENROLLMENTS_GRAPHQL).toBe('false');
-    expect(env.VITE_CAMPAIGN_READS_GRAPHQL).toBe('false');
-    expect(env.VITE_CAMPAIGN_MUTATIONS_GRAPHQL).toBe('false');
-    expect(env.VITE_CAMPAIGN_AUDIENCE_PREVIEW_GRAPHQL).toBe('false');
-    expect(env.VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL).toBe('false');
     expect(env.VITE_SIGNATURE_DOCUMENT_READS_GRAPHQL).toBe('false');
     expect(env.VITE_SIGNATURE_TEMPLATE_READS_GRAPHQL).toBe('false');
     expect(env.VITE_SIGNATURE_DOCUMENT_MUTATIONS_GRAPHQL).toBe('false');

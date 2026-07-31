@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 147,
-    "apiOperationCount": 140,
+    "operationCount": 123,
+    "apiOperationCount": 116,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 89,
-    "operationsWithFrontendConsumers": 82,
-    "operationsWithBackendTests": 86,
+    "frontendCallsiteCount": 68,
+    "operationsWithFrontendConsumers": 61,
+    "operationsWithBackendTests": 63,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 51,
+    "unmatchedBackendTestCallCount": 45,
     "retainHttpCount": 55,
-    "graphqlQueryCount": 20,
-    "graphqlMutationCount": 65,
-    "highRiskCount": 113,
+    "graphqlQueryCount": 13,
+    "graphqlMutationCount": 48,
+    "highRiskCount": 107,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -962,547 +962,6 @@
       "risk": "high"
     },
     {
-      "id": "GET /api/campaigns",
-      "key": "GET /api/campaigns",
-      "method": "GET",
-      "path": "/api/campaigns",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/campaigns/crud.routes.js",
-          "line": 19
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/campaigns",
-          "rawPath": "/api/campaigns",
-          "source": "frontend/src/services/campaignsApi.ts",
-          "line": 189,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/campaigns",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 111
-        },
-        {
-          "method": "GET",
-          "path": "/api/campaigns",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 123
-        },
-        {
-          "method": "GET",
-          "path": "/api/campaigns",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 418
-        },
-        {
-          "method": "GET",
-          "path": "/api/campaigns",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 429
-        },
-        {
-          "method": "GET",
-          "path": "/api/campaigns",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 439
-        },
-        {
-          "method": "GET",
-          "path": "/api/campaigns",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 518
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "growth",
-      "targetOperation": "campaigns",
-      "targetModule": "CampaignsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CampaignsModule now provides organization-scoped status/search filtering, literal escaped search, stable created-at/id ordering, bounded shared paging, safe numeric mapping, and a default-off frontend read rollback flag.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/campaigns",
-      "key": "POST /api/campaigns",
-      "method": "POST",
-      "path": "/api/campaigns",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/campaigns/crud.routes.js",
-          "line": 109
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/campaigns",
-          "rawPath": "/api/campaigns",
-          "source": "frontend/src/services/campaignsApi.ts",
-          "line": 229,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/campaigns",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 74
-        },
-        {
-          "method": "POST",
-          "path": "/api/campaigns",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 91
-        },
-        {
-          "method": "POST",
-          "path": "/api/campaigns",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 101
-        },
-        {
-          "method": "POST",
-          "path": "/api/campaigns",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 201
-        },
-        {
-          "method": "POST",
-          "path": "/api/campaigns",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 247
-        },
-        {
-          "method": "POST",
-          "path": "/api/campaigns",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 281
-        },
-        {
-          "method": "POST",
-          "path": "/api/campaigns",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 325
-        },
-        {
-          "method": "POST",
-          "path": "/api/campaigns",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 390
-        },
-        {
-          "method": "POST",
-          "path": "/api/campaigns",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 395
-        },
-        {
-          "method": "POST",
-          "path": "/api/campaigns",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 462
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetOperation": "createCampaign",
-      "targetModule": "CampaignsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected creation requires nonblank content, validates tenant-owned template/tag/saved-segment references, rejects unsupported custom targeting, clears irrelevant audience fields, and retains REST behind the default-off mutation flag.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "DELETE /api/campaigns/:id",
-      "key": "DELETE /api/campaigns/:*",
-      "method": "DELETE",
-      "path": "/api/campaigns/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/campaigns/crud.routes.js",
-          "line": 279
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/campaigns/:campaignId",
-          "rawPath": "/api/campaigns/${campaignId}",
-          "source": "frontend/src/services/campaignsApi.ts",
-          "line": 262,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/campaigns/:campaignId",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 177
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/campaigns/:campaignId",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 186
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/campaigns/:sentCampaignId",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 231
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/campaigns/:sendingId",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 265
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetOperation": "deleteCampaign",
-      "targetModule": "CampaignsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The mutation locks and conceals the organization-owned campaign, rejects deletion while sending, returns verified stable identity, and permits every other retained state.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "GET /api/campaigns/:id",
-      "key": "GET /api/campaigns/:*",
-      "method": "GET",
-      "path": "/api/campaigns/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/campaigns/crud.routes.js",
-          "line": 70
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/campaigns/:campaignId",
-          "rawPath": "/api/campaigns/${campaignId}",
-          "source": "frontend/src/services/campaignsApi.ts",
-          "line": 213,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/campaigns/:campaignId",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 134
-        },
-        {
-          "method": "GET",
-          "path": "/api/campaigns/:campaignId",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 146
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "growth",
-      "targetOperation": "campaign",
-      "targetModule": "CampaignsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The query conceals foreign IDs and returns tenant-owned campaign, template/user metadata, and tracked links in stable position/id order behind the read rollback flag.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "PUT /api/campaigns/:id",
-      "key": "PUT /api/campaigns/:*",
-      "method": "PUT",
-      "path": "/api/campaigns/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/campaigns/crud.routes.js",
-          "line": 179
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/campaigns/:campaignId",
-          "rawPath": "/api/campaigns/${campaignId}",
-          "source": "frontend/src/services/campaignsApi.ts",
-          "line": 246,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/campaigns/:campaignId",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 155
-        },
-        {
-          "method": "PUT",
-          "path": "/api/campaigns/:campaignId",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 167
-        },
-        {
-          "method": "PUT",
-          "path": "/api/campaigns/:sentCampaignId",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 220
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetOperation": "updateCampaign",
-      "targetModule": "CampaignsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The mutation locks draft/scheduled rows, serializes concurrent partial updates, distinguishes omission from nullable clearing, and revalidates tenant-owned audience/template references.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/campaigns/:id/duplicate",
-      "key": "POST /api/campaigns/:*/duplicate",
-      "method": "POST",
-      "path": "/api/campaigns/:id/duplicate",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/campaigns/crud.routes.js",
-          "line": 321
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/campaigns/:campaignId/duplicate",
-          "rawPath": "/api/campaigns/${campaignId}/duplicate",
-          "source": "frontend/src/services/campaignsApi.ts",
-          "line": 278,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/campaigns/:sourceId/duplicate",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 297
-        },
-        {
-          "method": "POST",
-          "path": "/api/campaigns/:sourceId/duplicate",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 310
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetOperation": "duplicateCampaign",
-      "targetModule": "CampaignsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The mutation atomically copies tenant-owned configuration into a bounded-name draft, preserves saved-segment targeting, and does not copy schedule, delivery state, statistics, recipients, or tracked links.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "GET /api/campaigns/:id/preview",
-      "key": "GET /api/campaigns/:*/preview",
-      "method": "GET",
-      "path": "/api/campaigns/:id/preview",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/campaigns/insights.routes.js",
-          "line": 86
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/campaigns/:campaignId/preview",
-          "rawPath": "/api/campaigns/${campaignId}/preview",
-          "source": "frontend/src/services/campaignsApi.ts",
-          "line": 383,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/campaigns/:id/preview",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 479
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "growth",
-      "targetOperation": "campaignAudiencePreview",
-      "targetModule": "CampaignsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CampaignsModule uses the shared fail-closed, parameterized audience compiler to count distinct organization-owned deliverable emails across all/tag/status/dynamic/static saved-segment modes. PostgreSQL proves include/exclude, unsubscribe, bounce, empty-email, hostile custom-key, tenant-concealment, and retained-REST parity behavior behind an independent default-off frontend flag.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/campaigns/:id/recipients",
-      "key": "GET /api/campaigns/:*/recipients",
-      "method": "GET",
-      "path": "/api/campaigns/:id/recipients",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/campaigns/insights.routes.js",
-          "line": 15
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/campaigns/:campaignId/recipients",
-          "rawPath": "/api/campaigns/${campaignId}/recipients",
-          "source": "frontend/src/services/campaignsApi.ts",
-          "line": 366,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "growth",
-      "targetOperation": "campaignRecipients",
-      "targetModule": "CampaignDeliveryModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CampaignDeliveryModule verifies the organization-owned parent, qualifies every child and current-contact join by organization, supports strict status filtering and bounded shared paging, and orders by sent_at then id with nulls last. It preserves recipient snapshots, safe current-contact names, engagement/provider fields, and excludes inconsistent cross-tenant child rows. Fresh PostgreSQL proves retained-REST parity, paging, filters, private misses, invalid-input failure, and corrupt-row exclusion behind an independent default-off frontend flag.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/campaigns/:id/schedule",
-      "key": "POST /api/campaigns/:*/schedule",
-      "method": "POST",
-      "path": "/api/campaigns/:id/schedule",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/campaigns/actions.routes.js",
-          "line": 13
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/campaigns/:campaignId/schedule",
-          "rawPath": "/api/campaigns/${campaignId}/schedule",
-          "source": "frontend/src/services/campaignsApi.ts",
-          "line": 296,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/campaigns/:campaignId/schedule",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 338
-        },
-        {
-          "method": "POST",
-          "path": "/api/campaigns/:campaignId/schedule",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 349
-        },
-        {
-          "method": "POST",
-          "path": "/api/campaigns/:campaignId/schedule",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 360
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetOperation": "scheduleCampaign",
-      "targetModule": "CampaignsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The mutation requires a future absolute timestamp, treats bounded timezone as metadata, and locks draft/scheduled rows before the scheduled transition.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/campaigns/:id/unschedule",
-      "key": "POST /api/campaigns/:*/unschedule",
-      "method": "POST",
-      "path": "/api/campaigns/:id/unschedule",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/campaigns/actions.routes.js",
-          "line": 72
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/campaigns/:campaignId/unschedule",
-          "rawPath": "/api/campaigns/${campaignId}/unschedule",
-          "source": "frontend/src/services/campaignsApi.ts",
-          "line": 315,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/campaigns/:campaignId/unschedule",
-          "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-          "line": 372
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetOperation": "unscheduleCampaign",
-      "targetModule": "CampaignsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The mutation locks and conceals the row, allows only scheduled-to-draft, clears the instant atomically, and returns stable BAD_USER_INPUT state evidence for invalid transitions.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
       "id": "PUT /api/canvas/positions",
       "key": "PUT /api/canvas/positions",
       "method": "PUT",
@@ -1510,7 +969,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 38
+          "line": 36
         },
         {
           "source": "backend/src/routes/canvas.routes.js",
@@ -1753,7 +1212,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 152
+          "line": 150
         }
       ],
       "consumerCallsites": [
@@ -1812,7 +1271,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 153
+          "line": 151
         }
       ],
       "consumerCallsites": [
@@ -2044,7 +1503,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 182
+          "line": 178
         },
         {
           "source": "backend/src/routes/invoices/pdf.routes.js",
@@ -2155,7 +1614,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 174
+          "line": 170
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -2248,7 +1707,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 178
+          "line": 174
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -2286,7 +1745,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 170
+          "line": 166
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -3128,7 +2587,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 234
+          "line": 230
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -3215,7 +2674,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 254
+          "line": 250
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -3284,7 +2743,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 250
+          "line": 246
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -3329,7 +2788,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 242
+          "line": 238
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -3357,7 +2816,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 238
+          "line": 234
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -3392,7 +2851,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 246
+          "line": 242
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -4153,7 +3612,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 220
+          "line": 216
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -4224,7 +3683,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 216
+          "line": 212
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -4381,7 +3840,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 202
+          "line": 198
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -4702,7 +4161,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 224
+          "line": 220
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -4771,7 +4230,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 209
+          "line": 205
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -5045,7 +4504,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 65
+          "line": 63
         }
       ],
       "consumerCallsites": [
@@ -5079,7 +4538,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 37
+          "line": 35
         }
       ],
       "consumerCallsites": [],
@@ -5287,7 +4746,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 36
+          "line": 34
         },
         {
           "source": "backend/src/routes/wireframes.routes.js",
@@ -5439,802 +4898,6 @@
       "targetModule": "WorkspaceContentModule",
       "parityStatus": "consumer-cutover-complete",
       "notes": "The active Canvas share action now uses owner-scoped GraphQL issuance. Repeated enable preserves the active capability; re-enable after revoke rotates it; the returned frontend URL resolves to the shipped read-only public viewer. There is no REST fallback.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/workflows",
-      "key": "GET /api/workflows",
-      "method": "GET",
-      "path": "/api/workflows",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/workflows.routes.js",
-          "line": 119
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/workflows",
-          "rawPath": "/api/workflows",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 145,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 281
-        },
-        {
-          "method": "GET",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 293
-        },
-        {
-          "method": "GET",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 921
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "automation",
-      "targetOperation": "workflows",
-      "targetModule": "WorkflowsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Preserve organization scope, trigger/active/search filters, updated-at ordering, step counts, and active enrollment counts.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/workflows",
-      "key": "POST /api/workflows",
-      "method": "POST",
-      "path": "/api/workflows",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/workflows.routes.js",
-          "line": 244
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/workflows",
-          "rawPath": "/api/workflows",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 172,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 75
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 94
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 104
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 114
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 124
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 149
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 166
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 189
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 245
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 259
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 381
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 409
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 424
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 488
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 851
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 901
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 908
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetOperation": "createWorkflow",
-      "targetModule": "WorkflowsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Validate trigger and step enums, enforce plan limits, and create workflow plus ordered steps atomically.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "DELETE /api/workflows/:id",
-      "key": "DELETE /api/workflows/:*",
-      "method": "DELETE",
-      "path": "/api/workflows/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/workflows.routes.js",
-          "line": 509
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/workflows/:id",
-          "rawPath": "/api/workflows/${id}",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 202,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/workflows/:id",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 142
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/workflows/:workflowId",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 362
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/workflows/:workflowId",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 372
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/workflows/:freshId",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 388
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/workflows/:freshId",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 396
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetOperation": "deleteWorkflow",
-      "targetModule": "WorkflowsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Delete only an organization-owned workflow and characterize cascade/audit behavior for enrollments and execution logs.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "GET /api/workflows/:id",
-      "key": "GET /api/workflows/:*",
-      "method": "GET",
-      "path": "/api/workflows/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/workflows.routes.js",
-          "line": 184
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/workflows/:id",
-          "rawPath": "/api/workflows/${id}",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 155,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/workflows/:workflowId",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 304
-        },
-        {
-          "method": "GET",
-          "path": "/api/workflows/:workflowId",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 317
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "automation",
-      "targetOperation": "workflow",
-      "targetModule": "WorkflowsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Return the organization-owned workflow, ordered steps, and enrollment statistics without existence leakage.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "PUT /api/workflows/:id",
-      "key": "PUT /api/workflows/:*",
-      "method": "PUT",
-      "path": "/api/workflows/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/workflows.routes.js",
-          "line": 358
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/workflows/:id",
-          "rawPath": "/api/workflows/${id}",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 194,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/workflows/:id",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 133
-        },
-        {
-          "method": "PUT",
-          "path": "/api/workflows/:id",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 221
-        },
-        {
-          "method": "PUT",
-          "path": "/api/workflows/:workflowId",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 326
-        },
-        {
-          "method": "PUT",
-          "path": "/api/workflows/:workflowId",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 341
-        },
-        {
-          "method": "PUT",
-          "path": "/api/workflows/:workflowId",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 352
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetOperation": "updateWorkflow",
-      "targetModule": "WorkflowsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Validate enums and atomically replace steps when supplied; omitted steps leave the current sequence intact.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/workflows/:id/activate",
-      "key": "POST /api/workflows/:*/activate",
-      "method": "POST",
-      "path": "/api/workflows/:id/activate",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/workflows.routes.js",
-          "line": 535
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/workflows/:id/activate",
-          "rawPath": "/api/workflows/${id}/activate",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 211,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/workflows/:id/activate",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 209
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows/:noStepId/activate",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 431
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows/:noStepId/activate",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 438
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows/:wfId/activate",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 449
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows/:wfId/activate",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 469
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows/:wfId/activate",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 494
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows/:wfId/activate",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 590
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows/:wfId/activate",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 641
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetOperation": "activateWorkflow",
-      "targetModule": "WorkflowsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Require organization ownership and at least one step. Reactivation resumes only enrollments paused by workflow deactivation; explicit manual pauses remain paused.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/workflows/:id/deactivate",
-      "key": "POST /api/workflows/:*/deactivate",
-      "method": "POST",
-      "path": "/api/workflows/:id/deactivate",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/workflows.routes.js",
-          "line": 630
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/workflows/:id/deactivate",
-          "rawPath": "/api/workflows/${id}/deactivate",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 221,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/workflows/:wfId/deactivate",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 459
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows/:wfId/deactivate",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 617
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetOperation": "deactivateWorkflow",
-      "targetModule": "WorkflowsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Organization-scoped deactivation atomically pauses active enrollments with a distinct reason and clears their live execution claims.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/workflows/:id/duplicate",
-      "key": "POST /api/workflows/:*/duplicate",
-      "method": "POST",
-      "path": "/api/workflows/:id/duplicate",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/workflows.routes.js",
-          "line": 1032
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/workflows/:id/duplicate",
-          "rawPath": "/api/workflows/${id}/duplicate",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 310,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/workflows/:sourceId/duplicate",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 865
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows/:sourceId/duplicate",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 879
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetOperation": "duplicateWorkflow",
-      "targetModule": "WorkflowsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Enforce plan limits and atomically copy an organization-owned definition and ordered steps into an inactive workflow.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/workflows/:id/enroll",
-      "key": "POST /api/workflows/:*/enroll",
-      "method": "POST",
-      "path": "/api/workflows/:id/enroll",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/workflows.routes.js",
-          "line": 680
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/workflows/:workflowId/enroll",
-          "rawPath": "/api/workflows/${workflowId}/enroll",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 236,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/workflows/:wfId/enroll",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 523
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows/:wfId/enroll",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 533
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows/:wfId/enroll",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 547
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows/:wfId/enroll",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 558
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows/:wfId/enroll",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 822
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetOperation": "enrollContactInWorkflow",
-      "targetModule": "WorkflowEnrollmentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Lock the organization-owned workflow, require a same-organization contact, and serialize the unique workflow/contact enrollment transition.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "GET /api/workflows/:id/enrollments",
-      "key": "GET /api/workflows/:*/enrollments",
-      "method": "GET",
-      "path": "/api/workflows/:id/enrollments",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/workflows.routes.js",
-          "line": 775
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/workflows/:workflowId/enrollments",
-          "rawPath": "/api/workflows/${workflowId}/enrollments",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 259,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/workflows/:wfId/enrollments",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 569
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "automation",
-      "targetOperation": "workflowEnrollments",
-      "targetModule": "WorkflowEnrollmentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Use the shared page contract, organization-scope through the workflow, and support explicit status filtering.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "DELETE /api/workflows/:id/enrollments/:enrollmentId",
-      "key": "DELETE /api/workflows/:*/enrollments/:*",
-      "method": "DELETE",
-      "path": "/api/workflows/:id/enrollments/:enrollmentId",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/workflows.routes.js",
-          "line": 960
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/workflows/:workflowId/enrollments/:enrollmentId",
-          "rawPath": "/api/workflows/${workflowId}/enrollments/${enrollmentId}",
-          "source": "frontend/src/services/automationsApi.ts",
-          "line": 276,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/workflows/:wfId/enrollments/:enrollmentId",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 738
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/workflows/:wfId/enrollments/:enrollmentId",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 776
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetOperation": "cancelWorkflowEnrollment",
-      "targetModule": "WorkflowEnrollmentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Scope through an organization-owned workflow, clear execution claims and future scheduling, and cancel queued/retrying/dead-letter provider work. An accepted in-flight call may finish sent; failed or expired cancelled work must not retry.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/workflows/:id/enrollments/:enrollmentId/pause",
-      "key": "POST /api/workflows/:*/enrollments/:*/pause",
-      "method": "POST",
-      "path": "/api/workflows/:id/enrollments/:enrollmentId/pause",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/workflows.routes.js",
-          "line": 841
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/workflows/:wfId/enrollments/:enrollmentId/pause",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 580
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetOperation": "pauseWorkflowEnrollment",
-      "targetModule": "WorkflowEnrollmentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The active frontend always uses GraphQL without REST fallback. Pause accepts only an active tenant-scoped enrollment, records the manual reason, and clears its live execution claim; workflow activation does not resume this pause.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/workflows/:id/enrollments/:enrollmentId/resume",
-      "key": "POST /api/workflows/:*/enrollments/:*/resume",
-      "method": "POST",
-      "path": "/api/workflows/:id/enrollments/:enrollmentId/resume",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/workflows.routes.js",
-          "line": 875
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/workflows/:wfId/enrollments/:enrollmentId/resume",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 597
-        },
-        {
-          "method": "POST",
-          "path": "/api/workflows/:wfId/enrollments/:enrollmentId/resume",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 635
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetOperation": "resumeWorkflowEnrollment",
-      "targetModule": "WorkflowEnrollmentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The active frontend always uses GraphQL without REST fallback. Resume accepts only an explicitly paused enrollment while its organization-owned workflow is active; deactivation pauses resume through workflow activation instead.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/workflows/:id/enrollments/:enrollmentId/retry",
-      "key": "POST /api/workflows/:*/enrollments/:*/retry",
-      "method": "POST",
-      "path": "/api/workflows/:id/enrollments/:enrollmentId/retry",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/workflows.routes.js",
-          "line": 918
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/workflows/:wfId/enrollments/:enrollmentId/retry",
-          "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-          "line": 659
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetOperation": "retryWorkflowEnrollment",
-      "targetModule": "WorkflowEnrollmentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The active frontend always uses GraphQL without REST fallback. Retry accepts only a failed enrollment under an active tenant-owned workflow and preserves current_step so completed steps are not replayed.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -6490,12 +5153,6 @@
     },
     {
       "method": "GET",
-      "path": "/api/campaigns:path",
-      "source": "backend-v2/test/integration/campaigns.integration-spec.ts",
-      "line": 126
-    },
-    {
-      "method": "GET",
       "path": "/api/tags",
       "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
       "line": 378
@@ -6622,12 +5279,6 @@
     },
     {
       "method": "POST",
-      "path": "/api/campaigns/1/:action",
-      "source": "backend/src/__tests__/integration/campaigns.integration.test.js",
-      "line": 504
-    },
-    {
-      "method": "POST",
       "path": "/api/chat-widget/sessions/:id/messages",
       "source": "backend/src/__tests__/integration/realtime.integration.test.js",
       "line": 265
@@ -6673,30 +5324,6 @@
       "path": "/api/signatures/documents/:id/reminders",
       "source": "backend/src/__tests__/integration/signatures.integration.test.js",
       "line": 372
-    },
-    {
-      "method": "GET",
-      "path": "/api/workflows/:wfId/execution-summary",
-      "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-      "line": 706
-    },
-    {
-      "method": "GET",
-      "path": "/api/workflows/:wfId/side-effects",
-      "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-      "line": 710
-    },
-    {
-      "method": "POST",
-      "path": "/api/workflows/:wfId/side-effects/:id/retry",
-      "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-      "line": 714
-    },
-    {
-      "method": "POST",
-      "path": "/api/workflows/:wfId/side-effects/:id/reconcile",
-      "source": "backend/src/__tests__/integration/workflows.integration.test.js",
-      "line": 718
     },
     {
       "method": "POST",
@@ -6745,6 +5372,7 @@
     "DELETE /api/calendar-integrations/connections/:id",
     "DELETE /api/calendars/:id",
     "DELETE /api/calendars/:id/date-override/:overrideId",
+    "DELETE /api/campaigns/:id",
     "DELETE /api/categories/:id",
     "DELETE /api/contacts/:id",
     "DELETE /api/email-templates/:id",
@@ -6772,6 +5400,8 @@
     "DELETE /api/vaults/:vaultId/items/:itemId",
     "DELETE /api/vaults/:vaultId/share",
     "DELETE /api/whiteboards/:whiteboardId",
+    "DELETE /api/workflows/:id",
+    "DELETE /api/workflows/:id/enrollments/:enrollmentId",
     "GET /api/admin/email/logs",
     "GET /api/admin/email/logs/:id",
     "GET /api/admin/email/templates",
@@ -6789,6 +5419,10 @@
     "GET /api/calendar-integrations/sync-status/:connectionId",
     "GET /api/calendars",
     "GET /api/calendars/:id",
+    "GET /api/campaigns",
+    "GET /api/campaigns/:id",
+    "GET /api/campaigns/:id/preview",
+    "GET /api/campaigns/:id/recipients",
     "GET /api/canvas/lists",
     "GET /api/categories",
     "GET /api/contacts",
@@ -6839,6 +5473,9 @@
     "GET /api/vaults",
     "GET /api/vaults/:vaultId",
     "GET /api/whiteboards",
+    "GET /api/workflows",
+    "GET /api/workflows/:id",
+    "GET /api/workflows/:id/enrollments",
     "PATCH /api/admin/me/plan",
     "PATCH /api/bookings/:id/cancel",
     "PATCH /api/bookings/:id/reschedule",
@@ -6852,10 +5489,14 @@
     "POST /api/calendar-integrations/sync/:connectionId",
     "POST /api/calendars",
     "POST /api/calendars/:id/date-override",
+    "POST /api/campaigns",
+    "POST /api/campaigns/:id/duplicate",
     "POST /api/campaigns/:id/pause",
     "POST /api/campaigns/:id/resume",
+    "POST /api/campaigns/:id/schedule",
     "POST /api/campaigns/:id/send",
     "POST /api/campaigns/:id/send-test",
+    "POST /api/campaigns/:id/unschedule",
     "POST /api/categories",
     "POST /api/contacts",
     "POST /api/contacts/:id/activities",
@@ -6914,8 +5555,17 @@
     "POST /api/vaults/:vaultId/share",
     "POST /api/vaults/:vaultId/unlock",
     "POST /api/whiteboards",
+    "POST /api/workflows",
+    "POST /api/workflows/:id/activate",
+    "POST /api/workflows/:id/deactivate",
+    "POST /api/workflows/:id/duplicate",
+    "POST /api/workflows/:id/enroll",
+    "POST /api/workflows/:id/enrollments/:enrollmentId/pause",
+    "POST /api/workflows/:id/enrollments/:enrollmentId/resume",
+    "POST /api/workflows/:id/enrollments/:enrollmentId/retry",
     "PUT /api/calendars/:id",
     "PUT /api/calendars/:id/availability",
+    "PUT /api/campaigns/:id",
     "PUT /api/categories/:id",
     "PUT /api/contacts/:id",
     "PUT /api/email-templates/:id",
@@ -6944,7 +5594,8 @@
     "PUT /api/vaults/:vaultId/items/:itemId",
     "PUT /api/vaults/:vaultId/items/reorder",
     "PUT /api/whiteboards/:id/position",
-    "PUT /api/whiteboards/:whiteboardId"
+    "PUT /api/whiteboards/:whiteboardId",
+    "PUT /api/workflows/:id"
   ],
   "orphanedRuntimeExpressionOverrides": []
 }

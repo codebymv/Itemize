@@ -2,7 +2,6 @@
  * Email Campaigns API Service
  * Handles campaign CRUD, scheduling, and sending
  */
-import api from '@/lib/api';
 import {
     createCampaignViaGraphql,
     deleteCampaignViaGraphql,
@@ -19,21 +18,8 @@ import {
     unscheduleCampaignViaGraphql,
     updateCampaignViaGraphql,
 } from './campaignsGraphql';
-import {
-    isCampaignGraphqlMutationsEnabled,
-    isCampaignGraphqlReadsEnabled,
-    isCampaignAudiencePreviewGraphqlEnabled,
-    isCampaignRecipientReadsGraphqlEnabled,
-} from './graphqlClient';
 
 type CampaignJson = Record<string, unknown>;
-
-const unwrapResponse = <T>(payload: unknown): T => {
-    if (payload && typeof payload === 'object' && 'data' in payload) {
-        return payload.data as T;
-    }
-    return payload as T;
-};
 
 // ======================
 // Types
@@ -183,21 +169,7 @@ export const getCampaigns = async (
     } = {},
     organizationId?: number
 ): Promise<{ campaigns: EmailCampaign[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
-    if (isCampaignGraphqlReadsEnabled()) {
-        return getCampaignsViaGraphql(params, organizationId);
-    }
-    const response = await api.get('/api/campaigns', {
-        params,
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    const payload = response.data as {
-        data?: EmailCampaign[];
-        pagination?: { page: number; limit: number; total: number; totalPages: number };
-    };
-    return {
-        campaigns: Array.isArray(payload?.data) ? payload.data : [],
-        pagination: payload?.pagination || { page: 1, limit: 50, total: 0, totalPages: 0 },
-    };
+    return getCampaignsViaGraphql(params, organizationId);
 };
 
 /**
@@ -207,13 +179,7 @@ export const getCampaign = async (
     campaignId: number,
     organizationId?: number
 ): Promise<EmailCampaign> => {
-    if (isCampaignGraphqlReadsEnabled()) {
-        return getCampaignViaGraphql(campaignId, organizationId);
-    }
-    const response = await api.get(`/api/campaigns/${campaignId}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<EmailCampaign>(response.data);
+    return getCampaignViaGraphql(campaignId, organizationId);
 };
 
 /**
@@ -223,13 +189,7 @@ export const createCampaign = async (
     campaign: Partial<EmailCampaign>,
     organizationId?: number
 ): Promise<EmailCampaign> => {
-    if (isCampaignGraphqlMutationsEnabled()) {
-        return createCampaignViaGraphql(campaign, organizationId);
-    }
-    const response = await api.post('/api/campaigns', campaign, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<EmailCampaign>(response.data);
+    return createCampaignViaGraphql(campaign, organizationId);
 };
 
 /**
@@ -240,13 +200,7 @@ export const updateCampaign = async (
     campaign: Partial<EmailCampaign>,
     organizationId?: number
 ): Promise<EmailCampaign> => {
-    if (isCampaignGraphqlMutationsEnabled()) {
-        return updateCampaignViaGraphql(campaignId, campaign, organizationId);
-    }
-    const response = await api.put(`/api/campaigns/${campaignId}`, campaign, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<EmailCampaign>(response.data);
+    return updateCampaignViaGraphql(campaignId, campaign, organizationId);
 };
 
 /**
@@ -256,13 +210,7 @@ export const deleteCampaign = async (
     campaignId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
-    if (isCampaignGraphqlMutationsEnabled()) {
-        return deleteCampaignViaGraphql(campaignId, organizationId);
-    }
-    const response = await api.delete(`/api/campaigns/${campaignId}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<{ success: boolean }>(response.data);
+    return deleteCampaignViaGraphql(campaignId, organizationId);
 };
 
 /**
@@ -272,13 +220,7 @@ export const duplicateCampaign = async (
     campaignId: number,
     organizationId?: number
 ): Promise<EmailCampaign> => {
-    if (isCampaignGraphqlMutationsEnabled()) {
-        return duplicateCampaignViaGraphql(campaignId, organizationId);
-    }
-    const response = await api.post(`/api/campaigns/${campaignId}/duplicate`, {}, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<EmailCampaign>(response.data);
+    return duplicateCampaignViaGraphql(campaignId, organizationId);
 };
 
 /**
@@ -290,16 +232,7 @@ export const scheduleCampaign = async (
     timezone?: string,
     organizationId?: number
 ): Promise<EmailCampaign> => {
-    if (isCampaignGraphqlMutationsEnabled()) {
-        return scheduleCampaignViaGraphql(campaignId, scheduledAt, timezone, organizationId);
-    }
-    const response = await api.post(`/api/campaigns/${campaignId}/schedule`, {
-        scheduled_at: scheduledAt,
-        timezone
-    }, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<EmailCampaign>(response.data);
+    return scheduleCampaignViaGraphql(campaignId, scheduledAt, timezone, organizationId);
 };
 
 /**
@@ -309,13 +242,7 @@ export const unscheduleCampaign = async (
     campaignId: number,
     organizationId?: number
 ): Promise<EmailCampaign> => {
-    if (isCampaignGraphqlMutationsEnabled()) {
-        return unscheduleCampaignViaGraphql(campaignId, organizationId);
-    }
-    const response = await api.post(`/api/campaigns/${campaignId}/unschedule`, {}, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<EmailCampaign>(response.data);
+    return unscheduleCampaignViaGraphql(campaignId, organizationId);
 };
 
 /**
@@ -360,14 +287,7 @@ export const getCampaignRecipients = async (
     } = {},
     organizationId?: number
 ): Promise<{ recipients: CampaignRecipient[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
-    if (isCampaignRecipientReadsGraphqlEnabled()) {
-        return getCampaignRecipientsViaGraphql(campaignId, params, organizationId);
-    }
-    const response = await api.get(`/api/campaigns/${campaignId}/recipients`, {
-        params,
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<{ recipients: CampaignRecipient[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(response.data);
+    return getCampaignRecipientsViaGraphql(campaignId, params, organizationId);
 };
 
 /**
@@ -377,13 +297,7 @@ export const previewCampaign = async (
     campaignId: number,
     organizationId?: number
 ): Promise<CampaignPreview> => {
-    if (isCampaignAudiencePreviewGraphqlEnabled()) {
-        return previewCampaignViaGraphql(campaignId, organizationId);
-    }
-    const response = await api.get(`/api/campaigns/${campaignId}/preview`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return unwrapResponse<CampaignPreview>(response.data);
+    return previewCampaignViaGraphql(campaignId, organizationId);
 };
 
 /**

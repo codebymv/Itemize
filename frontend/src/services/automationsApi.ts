@@ -3,7 +3,6 @@
  * Handles workflows and email templates API calls
  */
 
-import api from '@/lib/api';
 import { sendEmailTemplateTestViaGraphql } from './messageDeliveryGraphql';
 import {
   createEmailTemplateViaGraphql,
@@ -14,11 +13,6 @@ import {
   getEmailTemplatesViaGraphql,
   updateEmailTemplateViaGraphql,
 } from './emailTemplatesGraphql';
-import {
-  isWorkflowGraphqlMutationsEnabled,
-  isWorkflowGraphqlReadsEnabled,
-  isWorkflowEnrollmentsGraphqlEnabled,
-} from './graphqlClient';
 import {
   activateWorkflowViaGraphql,
   createWorkflowViaGraphql,
@@ -41,13 +35,6 @@ import type {
 } from '@/domain/workflowRegistry';
 
 type WorkflowConfig = Record<string, unknown>;
-
-const unwrapResponse = <T>(payload: unknown): T => {
-  if (payload && typeof payload === 'object' && 'data' in payload) {
-    return payload.data as T;
-  }
-  return payload as T;
-};
 
 // ===================
 // Types
@@ -139,23 +126,11 @@ export const getWorkflows = async (organizationId: number, params?: {
   is_active?: boolean;
   search?: string;
 }): Promise<{ workflows: Workflow[]; total: number }> => {
-  if (isWorkflowGraphqlReadsEnabled()) {
-    return getWorkflowsViaGraphql(organizationId, params);
-  }
-  const response = await api.get('/api/workflows', {
-    params: { organization_id: organizationId, ...params },
-  });
-  return unwrapResponse<{ workflows: Workflow[]; total: number }>(response.data);
+  return getWorkflowsViaGraphql(organizationId, params);
 };
 
 export const getWorkflow = async (id: number, organizationId: number): Promise<Workflow> => {
-  if (isWorkflowGraphqlReadsEnabled()) {
-    return getWorkflowViaGraphql(id, organizationId);
-  }
-  const response = await api.get(`/api/workflows/${id}`, {
-    params: { organization_id: organizationId },
-  });
-  return unwrapResponse<Workflow>(response.data);
+  return getWorkflowViaGraphql(id, organizationId);
 };
 
 export const createWorkflow = async (data: {
@@ -166,11 +141,7 @@ export const createWorkflow = async (data: {
   trigger_config?: WorkflowConfig;
   steps?: Omit<WorkflowStep, 'id' | 'workflow_id'>[];
 }): Promise<Workflow> => {
-  if (isWorkflowGraphqlMutationsEnabled()) {
-    return createWorkflowViaGraphql(data);
-  }
-  const response = await api.post('/api/workflows', data);
-  return unwrapResponse<Workflow>(response.data);
+  return createWorkflowViaGraphql(data);
 };
 
 export const updateWorkflow = async (
@@ -184,44 +155,23 @@ export const updateWorkflow = async (
     steps: Omit<WorkflowStep, 'id' | 'workflow_id'>[];
   }>
 ): Promise<Workflow> => {
-  if (isWorkflowGraphqlMutationsEnabled()) {
-    if (!data.organization_id) {
-      throw new Error('organization_id is required for GraphQL workflow updates');
-    }
-    const { organization_id: organizationId, ...input } = data;
-    return updateWorkflowViaGraphql(id, input, organizationId);
+  if (!data.organization_id) {
+    throw new Error('organization_id is required for GraphQL workflow updates');
   }
-  const response = await api.put(`/api/workflows/${id}`, data);
-  return unwrapResponse<Workflow>(response.data);
+  const { organization_id: organizationId, ...input } = data;
+  return updateWorkflowViaGraphql(id, input, organizationId);
 };
 
 export const deleteWorkflow = async (id: number, organizationId: number): Promise<void> => {
-  if (isWorkflowGraphqlMutationsEnabled()) {
-    return deleteWorkflowViaGraphql(id, organizationId);
-  }
-  await api.delete(`/api/workflows/${id}`, {
-    params: { organization_id: organizationId },
-  });
+  return deleteWorkflowViaGraphql(id, organizationId);
 };
 
 export const activateWorkflow = async (id: number, organizationId: number): Promise<Workflow> => {
-  if (isWorkflowGraphqlMutationsEnabled()) {
-    return activateWorkflowViaGraphql(id, organizationId);
-  }
-  const response = await api.post(`/api/workflows/${id}/activate`, {
-    organization_id: organizationId,
-  });
-  return unwrapResponse<Workflow>(response.data);
+  return activateWorkflowViaGraphql(id, organizationId);
 };
 
 export const deactivateWorkflow = async (id: number, organizationId: number): Promise<Workflow> => {
-  if (isWorkflowGraphqlMutationsEnabled()) {
-    return deactivateWorkflowViaGraphql(id, organizationId);
-  }
-  const response = await api.post(`/api/workflows/${id}/deactivate`, {
-    organization_id: organizationId,
-  });
-  return unwrapResponse<Workflow>(response.data);
+  return deactivateWorkflowViaGraphql(id, organizationId);
 };
 
 export const enrollContact = async (
@@ -230,15 +180,7 @@ export const enrollContact = async (
   organizationId: number,
   triggerData?: WorkflowConfig
 ): Promise<WorkflowEnrollment> => {
-  if (isWorkflowEnrollmentsGraphqlEnabled()) {
-    return enrollContactInWorkflowViaGraphql(workflowId, contactId, organizationId, triggerData);
-  }
-  const response = await api.post(`/api/workflows/${workflowId}/enroll`, {
-    organization_id: organizationId,
-    contact_id: contactId,
-    trigger_data: triggerData,
-  });
-  return unwrapResponse<WorkflowEnrollment>(response.data);
+  return enrollContactInWorkflowViaGraphql(workflowId, contactId, organizationId, triggerData);
 };
 
 export const getWorkflowEnrollments = async (
@@ -253,16 +195,7 @@ export const getWorkflowEnrollments = async (
   enrollments: WorkflowEnrollment[];
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }> => {
-  if (isWorkflowEnrollmentsGraphqlEnabled()) {
-    return getWorkflowEnrollmentsViaGraphql(workflowId, organizationId, params);
-  }
-  const response = await api.get(`/api/workflows/${workflowId}/enrollments`, {
-    params: { organization_id: organizationId, ...params },
-  });
-  return unwrapResponse<{
-    enrollments: WorkflowEnrollment[];
-    pagination: { page: number; limit: number; total: number; totalPages: number };
-  }>(response.data);
+  return getWorkflowEnrollmentsViaGraphql(workflowId, organizationId, params);
 };
 
 export const cancelEnrollment = async (
@@ -270,13 +203,7 @@ export const cancelEnrollment = async (
   enrollmentId: number,
   organizationId: number
 ): Promise<WorkflowEnrollment> => {
-  if (isWorkflowEnrollmentsGraphqlEnabled()) {
-    return cancelWorkflowEnrollmentViaGraphql(workflowId, enrollmentId, organizationId);
-  }
-  const response = await api.delete(`/api/workflows/${workflowId}/enrollments/${enrollmentId}`, {
-    params: { organization_id: organizationId },
-  });
-  return unwrapResponse<WorkflowEnrollment>(response.data);
+  return cancelWorkflowEnrollmentViaGraphql(workflowId, enrollmentId, organizationId);
 };
 
 const changeEnrollmentState = async (
@@ -304,13 +231,7 @@ export const retryEnrollment = (workflowId: number, enrollmentId: number, organi
   changeEnrollmentState('retry', workflowId, enrollmentId, organizationId);
 
 export const duplicateWorkflow = async (id: number, organizationId: number): Promise<Workflow> => {
-  if (isWorkflowGraphqlMutationsEnabled()) {
-    return duplicateWorkflowViaGraphql(id, organizationId);
-  }
-  const response = await api.post(`/api/workflows/${id}/duplicate`, {
-    organization_id: organizationId,
-  });
-  return unwrapResponse<Workflow>(response.data);
+  return duplicateWorkflowViaGraphql(id, organizationId);
 };
 
 // ===================

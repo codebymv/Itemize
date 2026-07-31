@@ -11,9 +11,6 @@ import {
   retryWorkflowEnrollmentViaGraphql,
   updateWorkflowViaGraphql,
 } from './workflowsGraphql';
-import {
-  isWorkflowEnrollmentsGraphqlEnabled, isWorkflowGraphqlMutationsEnabled, isWorkflowGraphqlReadsEnabled,
-} from './graphqlClient';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(), getApiUrl: vi.fn(() => 'https://api.test.itemize'),
@@ -51,20 +48,6 @@ describe('workflow GraphQL consumer', () => {
     vi.mocked(fetchCsrfToken).mockResolvedValue('workflow-csrf');
   });
   afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
-
-  it('keeps workflow reads and mutations independently default-off', () => {
-    vi.stubEnv('VITE_WORKFLOW_READS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_WORKFLOW_MUTATIONS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_WORKFLOW_ENROLLMENTS_GRAPHQL', 'false');
-    expect(isWorkflowGraphqlReadsEnabled()).toBe(false);
-    expect(isWorkflowGraphqlMutationsEnabled()).toBe(false);
-    expect(isWorkflowEnrollmentsGraphqlEnabled()).toBe(false);
-    vi.stubEnv('VITE_WORKFLOW_READS_GRAPHQL', 'true');
-    vi.stubEnv('VITE_WORKFLOW_ENROLLMENTS_GRAPHQL', 'true');
-    expect(isWorkflowGraphqlReadsEnabled()).toBe(true);
-    expect(isWorkflowGraphqlMutationsEnabled()).toBe(false);
-    expect(isWorkflowEnrollmentsGraphqlEnabled()).toBe(true);
-  });
 
   it('walks every page and maps filters, steps, and enrollment counts to the REST contract', async () => {
     vi.mocked(fetch)

@@ -3,10 +3,8 @@ const wireframesRoutes = require('../routes/wireframes.routes');
 const vaultsRoutes = require('../routes/vaults.routes');
 const { createContactTransferProxy } = require('../contact-transfer-proxy');
 const emailWebhooksRoutes = require('../routes/email-webhooks.routes');
-const workflowsRoutes = require('../routes/workflows.routes');
 const smsWebhooksRoutes = require('../routes/sms-webhooks.routes');
 const chatWidgetRoutes = require('../routes/chat-widget.routes');
-const campaignsRoutes = require('../routes/campaigns.routes');
 const invoicesRoutes = require('../routes/invoices.routes');
 const { createInvoicePdfProxy } = require('../invoice-pdf-proxy');
 const { createInvoiceLogoUploadProxy } = require('../invoice-logo-upload-proxy');
@@ -153,7 +151,6 @@ function registerApiRoutes({
     app.post('/api/contacts/import/csv', contactTransferProxy);
     app.use('/api/email', emailWebhooksRoutes(pool, publicRateLimit));
     logger.info('Email Webhook routes initialized');
-    app.use('/api/workflows', workflowsRoutes(pool, authenticateJWT));
     logger.info('Workflows routes initialized');
     app.use('/api/sms-templates', smsWebhooksRoutes(pool, publicRateLimit));
     logger.info('SMS webhook routes initialized');
@@ -165,7 +162,6 @@ function registerApiRoutes({
         broadcast
     ));
     logger.info('Chat Widget routes initialized');
-    app.use('/api/campaigns', campaignsRoutes(pool, authenticateJWT));
     logger.info('Email Campaigns routes initialized');
     app.post(
         '/api/invoices/webhook/stripe',
