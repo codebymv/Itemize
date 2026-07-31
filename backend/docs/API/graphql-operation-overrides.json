@@ -422,7 +422,7 @@
       "targetOperation": "convertEstimateToInvoice",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "The CSRF-protected mutation locks and conceals the tenant-owned estimate, replays its existing tenant-qualified invoice, and atomically allocates one number, copies header/items with qualified references, and links the accepted source. Fresh PostgreSQL proves exact values, REST readback, tenant isolation, rollback, fail-closed corrupt links, and repeat/concurrent-repeat convergence on one invoice and one allocation."
+      "notes": "The frontend permanently uses this CSRF-protected mutation. It locks and conceals the tenant-owned estimate, replays its existing tenant-qualified invoice, and atomically allocates one number, copies header/items with qualified references, and links the accepted source. Fresh PostgreSQL proves exact persisted values, tenant isolation, rollback, fail-closed corrupt links, and repeat/concurrent-repeat convergence on one invoice and one allocation; the rollout flag and retired Express path are removed, and the old URL returns 404."
     },
     "POST /api/invoices/estimates/:id/send": {
       "disposition": "graphql-mutation",

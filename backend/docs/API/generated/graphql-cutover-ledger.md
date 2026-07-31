@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 181
-- API operations under `/api`: 174
+- Registered method/path operations: 180
+- API operations under `/api`: 173
 - Non-API registered operations: 7
-- Static frontend callsites: 123
-- Operations with frontend consumers: 116
+- Static frontend callsites: 122
+- Operations with frontend consumers: 115
 - Operations referenced by backend tests: 96
 - Recommended GraphQL queries: 32
-- Recommended GraphQL mutations: 87
+- Recommended GraphQL mutations: 86
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 146
+- High-risk operations: 145
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -75,8 +75,7 @@
 | GET | `/api/health` | 0 | 0 | retain-http | low | platform-operations / HealthBoundary / readiness |
 | GET | `/api/invoices/:id/pdf` | 1 | 12 | retain-http | high | billing / InvoicesModule / invoicePdf |
 | POST | `/api/invoices/businesses/:id/logo` | 1 | 9 | retain-http | high | billing / InvoiceBusinessesModule / uploadInvoiceBusinessLogo |
-| POST | `/api/invoices/estimates/:id/convert-to-invoice` | 1 | 1 | graphql-mutation | high | billing / EstimatesModule / convertEstimateToInvoice |
-| POST | `/api/invoices/estimates/:id/send` | 1 | 0 | graphql-mutation | high | billing / EstimatesModule / sendEstimate |
+| POST | `/api/invoices/estimates/:id/send` | 1 | 2 | graphql-mutation | high | billing / EstimatesModule / sendEstimate |
 | GET | `/api/invoices/recurring` | 1 | 0 | graphql-query | high | billing / RecurringInvoicesModule / recurringInvoices |
 | POST | `/api/invoices/recurring` | 1 | 0 | graphql-mutation | high | billing / RecurringInvoicesModule / createRecurringInvoice |
 | DELETE | `/api/invoices/recurring/:id` | 1 | 0 | graphql-mutation | high | billing / RecurringInvoicesModule / deleteRecurringInvoice |
@@ -218,7 +217,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 51
-- Orphaned manual overrides: 169
+- Orphaned manual overrides: 170
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

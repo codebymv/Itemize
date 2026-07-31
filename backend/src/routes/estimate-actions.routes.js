@@ -1,27 +1,22 @@
 /**
  * Retained estimate action routes.
  *
- * Estimate CRUD is permanently GraphQL-owned. These two action boundaries
- * remain temporarily available for independent send and conversion cutover.
+ * Estimate CRUD and conversion are permanently GraphQL-owned. Sending remains
+ * temporarily available as the final provider-backed rollback boundary.
  */
 
 const express = require('express');
 const { logger } = require('../utils/logger');
-const { withDbClient, withTransaction } = require('../utils/db');
+const { withDbClient } = require('../utils/db');
 const {
     sendSuccess,
-    sendBadRequest,
-    sendNotFound,
     sendError,
 } = require('../utils/response');
 const emailService = require('../services/emailService');
 const { sendEstimateEmail } = require('../services/invoice-email.service');
-const { allocateInvoiceNumber } = require('../services/invoice-number.service');
 const {
-    INVOICE_ITEM_UNNEST_COLUMNS,
     estimateColumns,
     estimateItemColumns,
-    invoiceColumns,
     paymentSettingsColumns,
 } = require('./estimates.columns');
 
@@ -198,170 +193,6 @@ module.exports = (pool, authenticateJWT) => {
             return sendError(res, 'Failed to send estimate');
         }
     });
-
-    router.post(
-        '/:id/convert-to-invoice',
-        authenticateJWT,
-        requireOrganization,
-        async (req, res) => {
-            try {
-                const { id } = req.params;
-                const result = await withTransaction(pool, async (client) => {
-                    const estimateResult = await client.query(`
-                        SELECT ${estimateColumns()} FROM estimates WHERE
-                            id = $1 AND organization_id = $2
-                        FOR UPDATE
-                    `, [id, req.organizationId]);
-
-                    if (estimateResult.rows.length === 0) {
-                        return { status: 'not_found' };
-                    }
-
-                    const estimate = estimateResult.rows[0];
-                    if (estimate.converted_invoice_id) {
-                        return { status: 'already_converted' };
-                    }
-
-                    const itemsResult = await client.query(`
-                        SELECT ${estimateItemColumns()} FROM estimate_items
-                        WHERE estimate_id = $1 AND organization_id = $2
-                        ORDER BY sort_order
-                    `, [id, req.organizationId]);
-
-                    const invoiceNumber = await allocateInvoiceNumber(
-                        client,
-                        req.organizationId,
-                    );
-                    const dueDate = new Date();
-                    dueDate.setDate(dueDate.getDate() + 30);
-
-                    const invoiceResult = await client.query(`
-                        INSERT INTO invoices (
-                            organization_id, invoice_number, contact_id,
-                            customer_name, customer_email, customer_phone,
-                            customer_address, due_date, subtotal, tax_amount,
-                            discount_amount, discount_type, discount_value,
-                            total, amount_due, notes, terms_and_conditions,
-                            created_by
-                        ) VALUES (
-                            $1, $2, $3, $4, $5, $6, $7, $8, $9,
-                            $10, $11, $12, $13, $14, $15, $16, $17, $18
-                        )
-                        RETURNING ${invoiceColumns()}
-                    `, [
-                        req.organizationId,
-                        invoiceNumber,
-                        estimate.contact_id,
-                        estimate.customer_name,
-                        estimate.customer_email,
-                        estimate.customer_phone,
-                        estimate.customer_address,
-                        dueDate.toISOString().split('T')[0],
-                        estimate.subtotal,
-                        estimate.tax_amount,
-                        estimate.discount_amount,
-                        estimate.discount_type,
-                        estimate.discount_value,
-                        estimate.total,
-                        estimate.total,
-                        estimate.notes,
-                        estimate.terms_and_conditions,
-                        req.user.id,
-                    ]);
-
-                    const invoiceId = invoiceResult.rows[0].id;
-                    if (itemsResult.rows.length > 0) {
-                        const invoiceIds = [];
-                        const organizationIds = [];
-                        const productIds = [];
-                        const names = [];
-                        const descriptions = [];
-                        const quantities = [];
-                        const unitPrices = [];
-                        const taxRates = [];
-                        const taxAmounts = [];
-                        const totals = [];
-                        const sortOrders = [];
-
-                        for (const item of itemsResult.rows) {
-                            invoiceIds.push(invoiceId);
-                            organizationIds.push(req.organizationId);
-                            productIds.push(item.product_id);
-                            names.push(item.name);
-                            descriptions.push(item.description);
-                            quantities.push(item.quantity);
-                            unitPrices.push(item.unit_price);
-                            taxRates.push(item.tax_rate);
-                            taxAmounts.push(item.tax_amount);
-                            totals.push(item.total);
-                            sortOrders.push(item.sort_order);
-                        }
-
-                        await client.query(`
-                            INSERT INTO invoice_items (
-                                invoice_id, organization_id, product_id, name,
-                                description, quantity, unit_price, tax_rate,
-                                tax_amount, total, sort_order
-                            ) SELECT ${INVOICE_ITEM_UNNEST_COLUMNS} FROM UNNEST(
-                                $1::int[], $2::int[], $3::int[], $4::text[],
-                                $5::text[], $6::numeric[], $7::numeric[],
-                                $8::numeric[], $9::numeric[], $10::numeric[],
-                                $11::int[]
-                            ) AS items(
-                                invoice_id, organization_id, product_id, name,
-                                description, quantity, unit_price, tax_rate,
-                                tax_amount, total, sort_order
-                            )
-                        `, [
-                            invoiceIds,
-                            organizationIds,
-                            productIds,
-                            names,
-                            descriptions,
-                            quantities,
-                            unitPrices,
-                            taxRates,
-                            taxAmounts,
-                            totals,
-                            sortOrders,
-                        ]);
-                    }
-
-                    await client.query(`
-                        UPDATE estimates SET
-                            converted_invoice_id = $1,
-                            status = 'accepted',
-                            updated_at = CURRENT_TIMESTAMP
-                        WHERE id = $2 AND organization_id = $3
-                    `, [invoiceId, id, req.organizationId]);
-
-                    return {
-                        status: 'ok',
-                        invoiceId,
-                        invoiceNumber,
-                    };
-                });
-
-                if (result.status === 'not_found') {
-                    return sendNotFound(res, 'Estimate');
-                }
-                if (result.status === 'already_converted') {
-                    return sendBadRequest(
-                        res,
-                        'Estimate already converted to invoice',
-                    );
-                }
-                return sendSuccess(res, {
-                    success: true,
-                    invoice_id: result.invoiceId,
-                    invoice_number: result.invoiceNumber,
-                });
-            } catch (error) {
-                console.error('Error converting estimate to invoice:', error);
-                return sendError(res, 'Failed to convert estimate to invoice');
-            }
-        },
-    );
 
     return router;
 };

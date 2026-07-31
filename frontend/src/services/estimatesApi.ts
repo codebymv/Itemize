@@ -1,6 +1,5 @@
 import api from '@/lib/api';
 import {
-  isEstimateGraphqlConversionEnabled,
   isEstimateGraphqlSendEnabled,
 } from './graphqlClient';
 import {
@@ -153,13 +152,5 @@ export const convertEstimateToInvoice = async (
   id: number,
   organizationId?: number,
 ): Promise<{ invoice_id: number; invoice_number?: string }> => {
-  if (isEstimateGraphqlConversionEnabled()) {
-    return convertEstimateToInvoiceViaGraphql(id, organizationId);
-  }
-  const response = await api.post(
-    `/api/invoices/estimates/${id}/convert-to-invoice`,
-    {},
-    { headers: headers(organizationId) },
-  );
-  return response.data as { invoice_id: number; invoice_number?: string };
+  return convertEstimateToInvoiceViaGraphql(id, organizationId);
 };

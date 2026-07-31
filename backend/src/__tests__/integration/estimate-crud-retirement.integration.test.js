@@ -40,7 +40,7 @@ function createApp(pool) {
     return app;
 }
 
-describe('Estimate CRUD Express retirement contract', () => {
+describe('Estimate Express retirement contract', () => {
     let dbHelper;
     let app;
     let user;
@@ -65,6 +65,7 @@ describe('Estimate CRUD Express retirement contract', () => {
         ['get', '/api/invoices/estimates/1'],
         ['put', '/api/invoices/estimates/1'],
         ['delete', '/api/invoices/estimates/1'],
+        ['post', '/api/invoices/estimates/1/convert-to-invoice'],
     ])('%s %s stays retired after full route composition', async (method, path) => {
         const response = request(app)[method](path)
             .set('Cookie', [`itemize_auth=${user.token}`])
@@ -73,10 +74,10 @@ describe('Estimate CRUD Express retirement contract', () => {
         await response.expect(404);
     });
 
-    test.each([
-        '/api/invoices/estimates/1/send',
-        '/api/invoices/estimates/1/convert-to-invoice',
-    ])('retains the authenticated POST action at %s', async (path) => {
-        await request(app).post(path).send({}).expect(401);
+    test('retains authenticated estimate sending', async () => {
+        await request(app)
+            .post('/api/invoices/estimates/1/send')
+            .send({})
+            .expect(401);
     });
 });

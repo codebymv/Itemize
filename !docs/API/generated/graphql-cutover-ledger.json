@@ -6,11 +6,11 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 181,
-    "apiOperationCount": 174,
+    "operationCount": 180,
+    "apiOperationCount": 173,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 123,
-    "operationsWithFrontendConsumers": 116,
+    "frontendCallsiteCount": 122,
+    "operationsWithFrontendConsumers": 115,
     "operationsWithBackendTests": 96,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
@@ -18,8 +18,8 @@
     "unmatchedBackendTestCallCount": 51,
     "retainHttpCount": 55,
     "graphqlQueryCount": 32,
-    "graphqlMutationCount": 87,
-    "highRiskCount": 146,
+    "graphqlMutationCount": 86,
+    "highRiskCount": 145,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -2241,47 +2241,6 @@
       "risk": "high"
     },
     {
-      "id": "POST /api/invoices/estimates/:id/convert-to-invoice",
-      "key": "POST /api/invoices/estimates/:*/convert-to-invoice",
-      "method": "POST",
-      "path": "/api/invoices/estimates/:id/convert-to-invoice",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/estimate-actions.routes.js",
-          "line": 202
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/estimates/:id/convert-to-invoice",
-          "rawPath": "/api/invoices/estimates/${id}/convert-to-invoice",
-          "source": "frontend/src/services/estimatesApi.ts",
-          "line": 159,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/estimates/15/convert-to-invoice",
-          "source": "backend/src/__tests__/routes/estimate-conversion.routes.test.js",
-          "line": 103
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetOperation": "convertEstimateToInvoice",
-      "targetModule": "EstimatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "The CSRF-protected mutation locks and conceals the tenant-owned estimate, replays its existing tenant-qualified invoice, and atomically allocates one number, copies header/items with qualified references, and links the accepted source. Fresh PostgreSQL proves exact values, REST readback, tenant isolation, rollback, fail-closed corrupt links, and repeat/concurrent-repeat convergence on one invoice and one allocation.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "POST /api/invoices/estimates/:id/send",
       "key": "POST /api/invoices/estimates/:*/send",
       "method": "POST",
@@ -2289,7 +2248,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/estimate-actions.routes.js",
-          "line": 32
+          "line": 27
         }
       ],
       "consumerCallsites": [
@@ -2298,12 +2257,25 @@
           "path": "/api/invoices/estimates/:id/send",
           "rawPath": "/api/invoices/estimates/${id}/send",
           "source": "frontend/src/services/estimatesApi.ts",
-          "line": 147,
+          "line": 146,
           "client": "api",
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/invoices/estimates/1/send",
+          "source": "backend/src/__tests__/integration/estimate-crud-retirement.integration.test.js",
+          "line": 79
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/estimates/1/send",
+          "source": "backend/src/__tests__/routes/estimate-actions.routes.test.js",
+          "line": 39
+        }
+      ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "graphql-mutation",
@@ -8113,6 +8085,7 @@
     "POST /api/invoices/businesses",
     "POST /api/invoices/email/preview",
     "POST /api/invoices/estimates",
+    "POST /api/invoices/estimates/:id/convert-to-invoice",
     "POST /api/invoices/payments",
     "POST /api/invoices/products",
     "POST /api/lists",

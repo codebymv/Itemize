@@ -3,10 +3,10 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 198,
-    "resolvedDeclarationCount": 198,
+    "declarationCount": 197,
+    "resolvedDeclarationCount": 197,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 181,
+    "uniqueResolvedOperationCount": 180,
     "sourceFileCount": 45
   },
   "caveats": [
@@ -499,21 +499,11 @@
     {
       "method": "POST",
       "publicPaths": [
-        "/api/invoices/estimates/:id/convert-to-invoice"
-      ],
-      "declaredPath": "/:id/convert-to-invoice",
-      "source": "backend/src/routes/estimate-actions.routes.js",
-      "line": 202,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
         "/api/invoices/estimates/:id/send"
       ],
       "declaredPath": "/:id/send",
       "source": "backend/src/routes/estimate-actions.routes.js",
-      "line": 32,
+      "line": 27,
       "dynamic": false
     },
     {
