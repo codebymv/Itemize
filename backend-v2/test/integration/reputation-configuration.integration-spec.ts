@@ -141,7 +141,7 @@ describe('Reputation configuration GraphQL PostgreSQL contract', () => {
     expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
   });
 
-  it('serializes null-place platform upserts, preserves REST parity, and omits OAuth secrets', async () => {
+  it('serializes null-place platform upserts and omits OAuth secrets', async () => {
     const mutation = `mutation Save($input:UpsertReputationPlatformInput!){
       upsertReputationPlatform(input:$input){ ${platformFields} }
     }`;
@@ -178,11 +178,6 @@ describe('Reputation configuration GraphQL PostgreSQL contract', () => {
     const secretField = await graphql('{ reputationPlatforms { id accessToken } }').expect(400);
     expect(secretField.body.errors[0].message).toContain('Cannot query field');
 
-    const legacy = await request(legacyApp).get('/api/reputation/platforms')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId)).expect(200);
-    expect(legacy.body).toEqual([expect.objectContaining({ id: platformId, platform_name: 'Updated listing' })]);
-
     const privateMiss = await graphql(
       'mutation Delete($id:Int!){deleteReputationPlatform(id:$id){deletedId}}',
       { id: platformId }, { token: outsiderToken, orgId: outsiderOrganizationId },
@@ -212,10 +207,11 @@ describe('Reputation configuration GraphQL PostgreSQL contract', () => {
       emailTemplateId: templateId, negativeThreshold: 2,
       defaultReviewUrl: 'https://reviews.example.test/default',
     });
-    const legacy = await request(legacyApp).get('/api/reputation/settings')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId)).expect(200);
-    expect(legacy.body).toMatchObject({ auto_request_enabled: true, email_template_id: templateId });
+    const persisted = await graphql(`{ reputationSettings { ${settingsFields} } }`).expect(200);
+    expect(persisted.body.data.reputationSettings).toMatchObject({
+      autoRequestEnabled: true,
+      emailTemplateId: templateId,
+    });
 
     const rejected = await graphql(mutation, { input: {
       autoRequestDelayDays: 9, emailTemplateId: outsiderTemplateId,

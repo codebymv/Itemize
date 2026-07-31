@@ -1,10 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   graphqlMutationRequest,
   graphqlRequest,
-  isReputationPlatformsGraphqlEnabled,
-  isReputationSettingsGraphqlEnabled,
-  isReputationWidgetsGraphqlEnabled,
 } from './graphqlClient';
 import {
   createWidgetViaGraphql,
@@ -52,22 +49,6 @@ const settings = {
 
 describe('reputation configuration GraphQL adapters', () => {
   beforeEach(() => vi.clearAllMocks());
-  afterEach(() => vi.unstubAllEnvs());
-
-  it('keeps platforms, settings, and widgets on independent default-off boundaries', () => {
-    vi.stubEnv('VITE_REPUTATION_PLATFORMS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_REPUTATION_SETTINGS_GRAPHQL', 'false');
-    vi.stubEnv('VITE_REPUTATION_WIDGETS_GRAPHQL', 'false');
-    expect(isReputationPlatformsGraphqlEnabled()).toBe(false);
-    expect(isReputationSettingsGraphqlEnabled()).toBe(false);
-    expect(isReputationWidgetsGraphqlEnabled()).toBe(false);
-    vi.stubEnv('VITE_REPUTATION_PLATFORMS_GRAPHQL', 'true');
-    vi.stubEnv('VITE_REPUTATION_SETTINGS_GRAPHQL', 'true');
-    vi.stubEnv('VITE_REPUTATION_WIDGETS_GRAPHQL', 'true');
-    expect(isReputationPlatformsGraphqlEnabled()).toBe(true);
-    expect(isReputationSettingsGraphqlEnabled()).toBe(true);
-    expect(isReputationWidgetsGraphqlEnabled()).toBe(true);
-  });
 
   it('maps platform reads, upserts, and exact deletes without credential fields', async () => {
     vi.mocked(graphqlRequest).mockResolvedValueOnce({ reputationPlatforms: [platform] });

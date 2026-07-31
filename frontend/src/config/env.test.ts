@@ -15,13 +15,6 @@ describe('Environment Validation', () => {
     expect(env.VITE_CAMPAIGN_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_CAMPAIGN_AUDIENCE_PREVIEW_GRAPHQL).toBe('false');
     expect(env.VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL).toBe('false');
-    expect(env.VITE_REPUTATION_REVIEWS_GRAPHQL).toBe('false');
-    expect(env.VITE_REPUTATION_ANALYTICS_GRAPHQL).toBe('false');
-    expect(env.VITE_REPUTATION_REQUEST_MANAGEMENT_GRAPHQL).toBe('false');
-    expect(env.VITE_REPUTATION_REQUEST_DELIVERY_GRAPHQL).toBe('false');
-    expect(env.VITE_REPUTATION_PLATFORMS_GRAPHQL).toBe('false');
-    expect(env.VITE_REPUTATION_SETTINGS_GRAPHQL).toBe('false');
-    expect(env.VITE_REPUTATION_WIDGETS_GRAPHQL).toBe('false');
     expect(env.VITE_SIGNATURE_DOCUMENT_READS_GRAPHQL).toBe('false');
     expect(env.VITE_SIGNATURE_TEMPLATE_READS_GRAPHQL).toBe('false');
     expect(env.VITE_SIGNATURE_DOCUMENT_MUTATIONS_GRAPHQL).toBe('false');

@@ -1,12 +1,12 @@
 # Reputation configuration GraphQL cutover contract
 
-**Status:** Production consumer cutover complete
+**Status:** Permanent GraphQL cutover; authenticated REST retired
 
-**Evidence date:** 2026-07-22
+**Evidence date:** 2026-07-31
 
 ## Decision
 
-Authenticated review-platform, reputation-settings, and review-widget management move to `ReputationConfigurationModule`. The frontend uses three independent rollback boundaries: `VITE_REPUTATION_PLATFORMS_GRAPHQL`, `VITE_REPUTATION_SETTINGS_GRAPHQL`, and `VITE_REPUTATION_WIDGETS_GRAPHQL`.
+Authenticated review-platform, reputation-settings, and review-widget management are owned exclusively by `ReputationConfigurationModule`. The frontend calls the GraphQL adapters unconditionally; the former platform, settings, and widget rollout variables and REST fallbacks no longer exist.
 
 The public widget-data capability remains credential-free, rate-limited HTTP. It is not a GraphQL operation and never accepts an authenticated organization selector. The public review submission capability also remains HTTP. Both can be revoked immediately and use `Cache-Control: no-store`.
 
@@ -28,11 +28,13 @@ The prior embed response referenced `/widget/reviews.js`, but no such asset exis
 
 The retained public endpoint accepts only exact 32-hex keys, returns only active widget configuration, clamps persisted limits, excludes hidden and flagged reviews, qualifies review selection by the capability owner's organization, and is the only API path allowed credential-free `Access-Control-Allow-Origin: *`. The rest of the application retains its authenticated CORS allowlist.
 
-## Evidence and rollback
+## Permanent-cutover evidence and rollback
 
-Fresh PostgreSQL coverage proves authorization and CSRF, null-place upsert serialization, OAuth-field schema omission, REST interoperability, tenant concealment, virtual settings defaults, tenant-qualified template validation with atomic rollback, complete widget create/update mapping, embed origins, hidden-review exclusion, input rejection without mutation, capability revocation, exact delete identity, and repeated private misses. Frontend adapter and dispatch tests prove all three flags are independently default-off, casing/input mapping, CSRF mutation routing, exact delete verification, embed/settings projections, retained REST rollback, and that platform routing cannot intercept review deletion. A focused CORS unit test freezes the single public wildcard boundary. The complete checkpoint passes 365/365 legacy unit cases, 341/341 focused Nest cases, 489/489 legacy PostgreSQL cases, 202/202 Nest PostgreSQL cases, and 328/328 frontend cases.
+Fresh PostgreSQL coverage proves authorization and CSRF, null-place upsert serialization, OAuth-field schema omission, tenant concealment, virtual settings defaults, tenant-qualified template validation with atomic rollback, complete widget create/update mapping, embed origins, hidden-review exclusion, input rejection without mutation, capability revocation, exact delete identity, and repeated private misses. Frontend adapter tests prove casing/input mapping, CSRF mutation routing, exact delete verification, and embed/settings projections. Permanent-dispatch coverage proves every authenticated configuration operation reaches GraphQL without an HTTP call. A focused CORS unit test freezes the single public wildcard boundary.
 
-Rollback is data-neutral: set only the affected frontend flag to `false` and rebuild. The retained REST adapters use the same rows. Public widget retrieval and public review submission do not change transport during rollback.
+The Express platform, settings, and widget subrouters are deleted. Full route composition requires all ten former authenticated methods and paths to return `404`. The only reputation routes left in Express are the three documented anonymous capability endpoints. Verification on 2026-07-31 passed all 347 frontend tests, 412 Express unit tests, 492 Nest unit/HTTP tests, and the clean-schema gate: 344 Express/PostgreSQL plus 269 Nest/PostgreSQL tests.
+
+Rollback now means redeploying the preceding application commit; there is no runtime or build-time flag rollback. This is data-neutral because GraphQL did not change the underlying rows. The public widget and public review capabilities remain HTTP and do not change transport during rollback.
 
 ## Production gate
 

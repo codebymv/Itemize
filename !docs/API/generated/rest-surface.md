@@ -6,11 +6,11 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 185
-- Resolved declarations: 185
+- Route declarations: 164
+- Resolved declarations: 164
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 168
-- Files containing declarations: 43
+- Unique resolved method/path operations: 147
+- Files containing declarations: 37
 
 ## Interpretation limits
 
@@ -113,30 +113,9 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/public/sign/:token/file` | `/public/sign/:token/file` | `backend/src/routes/signatures.routes.js:660` |
 | POST | `/api/public/sign/:token/verify` | `/api/public/sign/:token/verify` | `backend/src/bootstrap/register-api-routes.js:246` |
 | POST | `/api/public/sign/:token/verify` | `/public/sign/:token/verify` | `backend/src/routes/signatures.routes.js:589` |
-| GET | `/api/reputation/analytics` | `/analytics` | `backend/src/routes/reputation/analytics.routes.js:14` |
-| GET | `/api/reputation/platforms` | `/platforms` | `backend/src/routes/reputation/platforms.routes.js:15` |
-| POST | `/api/reputation/platforms` | `/platforms` | `backend/src/routes/reputation/platforms.routes.js:33` |
-| DELETE | `/api/reputation/platforms/:id` | `/platforms/:id` | `backend/src/routes/reputation/platforms.routes.js:73` |
 | GET | `/api/reputation/public/review/:token` | `/public/review/:token` | `backend/src/routes/reputation/public.routes.js:102` |
 | POST | `/api/reputation/public/review/:token` | `/public/review/:token` | `backend/src/routes/reputation/public.routes.js:156` |
 | GET | `/api/reputation/public/widget/:widgetKey` | `/public/widget/:widgetKey` | `backend/src/routes/reputation/public.routes.js:20` |
-| GET | `/api/reputation/requests` | `/requests` | `backend/src/routes/reputation/requests.routes.js:18` |
-| POST | `/api/reputation/requests` | `/requests` | `backend/src/routes/reputation/requests.routes.js:93` |
-| DELETE | `/api/reputation/requests/:id` | `/requests/:id` | `backend/src/routes/reputation/requests.routes.js:71` |
-| POST | `/api/reputation/requests/:id/resend` | `/requests/:id/resend` | `backend/src/routes/reputation/requests.routes.js:246` |
-| POST | `/api/reputation/requests/bulk` | `/requests/bulk` | `backend/src/routes/reputation/requests.routes.js:325` |
-| GET | `/api/reputation/reviews` | `/reviews` | `backend/src/routes/reputation/reviews.routes.js:15` |
-| POST | `/api/reputation/reviews` | `/reviews` | `backend/src/routes/reputation/reviews.routes.js:120` |
-| DELETE | `/api/reputation/reviews/:id` | `/reviews/:id` | `backend/src/routes/reputation/reviews.routes.js:227` |
-| GET | `/api/reputation/reviews/:id` | `/reviews/:id` | `backend/src/routes/reputation/reviews.routes.js:93` |
-| PUT | `/api/reputation/reviews/:id` | `/reviews/:id` | `backend/src/routes/reputation/reviews.routes.js:168` |
-| GET | `/api/reputation/settings` | `/settings` | `backend/src/routes/reputation/settings.routes.js:15` |
-| PUT | `/api/reputation/settings` | `/settings` | `backend/src/routes/reputation/settings.routes.js:43` |
-| GET | `/api/reputation/widgets` | `/widgets` | `backend/src/routes/reputation/widgets.routes.js:16` |
-| POST | `/api/reputation/widgets` | `/widgets` | `backend/src/routes/reputation/widgets.routes.js:32` |
-| DELETE | `/api/reputation/widgets/:id` | `/widgets/:id` | `backend/src/routes/reputation/widgets.routes.js:141` |
-| PUT | `/api/reputation/widgets/:id` | `/widgets/:id` | `backend/src/routes/reputation/widgets.routes.js:95` |
-| GET | `/api/reputation/widgets/:id/embed-code` | `/widgets/:id/embed-code` | `backend/src/routes/reputation/widgets.routes.js:163` |
 | GET | `/api/shared/list/:token` | `/shared/list/:token` | `backend/src/routes/sharing.routes.js:234` |
 | GET | `/api/shared/note/:token` | `/shared/note/:token` | `backend/src/routes/sharing.routes.js:279` |
 | GET | `/api/shared/vault/:token` | `/shared/vault/:token` | `backend/src/routes/vaults/sharing.routes.js:14` |

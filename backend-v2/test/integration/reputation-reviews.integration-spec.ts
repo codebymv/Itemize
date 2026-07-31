@@ -163,7 +163,7 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
     expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
   });
 
-  it('creates a tenant-qualified manual review and preserves retained REST interoperability', async () => {
+  it('creates a tenant-qualified manual review and exposes it through GraphQL detail', async () => {
     const created = await graphql(
       `mutation Create($input: CreateReputationReviewInput!) {
         createReputationReview(input: $input) { ${fields} }
@@ -180,12 +180,13 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
     });
     reviewId = Number(created.body.data.createReputationReview.id);
 
-    const legacy = await request(legacyApp).get(`/api/reputation/reviews/${reviewId}`)
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId)).expect(200);
-    expect(legacy.body).toMatchObject({
-      id: reviewId, organization_id: organizationId, review_text: 'Excellent',
-      platform_name: 'Google Primary', contact_first_name: 'Ada',
+    const detail = await graphql(
+      `query Detail($id:Int!){ reputationReview(id:$id){ ${fields} } }`,
+      { id: reviewId }, { csrf: false },
+    ).expect(200);
+    expect(detail.body.data.reputationReview).toMatchObject({
+      id: reviewId, organizationId, reviewText: 'Excellent',
+      platformName: 'Google Primary', contactFirstName: 'Ada',
     });
   });
 
@@ -217,7 +218,7 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
     expect(foreign.body.errors[0].extensions.code).toBe('NOT_FOUND');
   });
 
-  it('returns one tenant-isolated reputation snapshot with retained REST semantics', async () => {
+  it('returns one tenant-isolated reputation snapshot', async () => {
     await pool.query(
       `UPDATE reviews
        SET review_date = NOW() - INTERVAL '1 day'
@@ -272,17 +273,6 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
     expect(result.reviewsOverTime).toHaveLength(1);
     expect(result.reviewsOverTime[0]).toMatchObject({ count: 2, averageRating: 4 });
 
-    const legacy = await request(legacyApp).get('/api/reputation/analytics?period=30')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId)).expect(200);
-    expect(result.overall).toEqual({
-      totalReviews: Number(legacy.body.overall.total_reviews),
-      averageRating: Number(legacy.body.overall.average_rating),
-      positiveReviews: Number(legacy.body.overall.positive_reviews),
-      negativeReviews: Number(legacy.body.overall.negative_reviews),
-      newReviews: Number(legacy.body.overall.new_reviews),
-      respondedReviews: Number(legacy.body.overall.responded_reviews),
-    });
   });
 
   it('rejects unbounded reputation periods before querying metrics', async () => {
@@ -365,11 +355,11 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
       { id: requestManagementId },
     ).expect(200);
     expect(deleted.body.data.deleteReputationRequest).toEqual({ deletedId: requestManagementId });
-    const legacy = await request(legacyApp).get('/api/reputation/requests?status=pending')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId)).expect(200);
-    expect(legacy.body.requests.some((value: { id: number }) => Number(value.id) === requestManagementId))
-      .toBe(false);
+    const absent = await pool.query(
+      'SELECT id FROM review_requests WHERE id=$1 AND organization_id=$2',
+      [requestManagementId, organizationId],
+    );
+    expect(absent.rowCount).toBe(0);
   });
 
   it('sends once, replays exactly, and rejects conflicting idempotency reuse', async () => {
@@ -483,10 +473,11 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
     expect(blockedDelete.body.errors[0].extensions).toMatchObject({
       code: 'CONFLICT', reason: 'REVIEW_REQUEST_DELIVERY_ACTIVE',
     });
-    const legacyBlocked = await request(legacyApp).delete(`/api/reputation/requests/${requestId}`)
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId)).expect(409);
-    expect(legacyBlocked.body.error).toContain('unresolved delivery');
+    const retained = await pool.query(
+      'SELECT id FROM review_requests WHERE id=$1 AND organization_id=$2',
+      [requestId, organizationId],
+    );
+    expect(retained.rowCount).toBe(1);
 
     await expect(deliveryService.runDue()).resolves.toMatchObject({ attempted: 1, sent: 1 });
     expect(emailProvider.send).toHaveBeenCalledTimes(before + 1);

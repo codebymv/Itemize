@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { graphqlRequest, isReputationAnalyticsGraphqlEnabled } from './graphqlClient';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { graphqlRequest } from './graphqlClient';
 import { getReputationAnalyticsViaGraphql } from './reputationAnalyticsGraphql';
 
 vi.mock('./graphqlClient', async (importOriginal) => ({
@@ -9,13 +9,8 @@ vi.mock('./graphqlClient', async (importOriginal) => ({
 
 describe('reputation analytics GraphQL adapter', () => {
   beforeEach(() => vi.clearAllMocks());
-  afterEach(() => vi.unstubAllEnvs());
 
   it('passes the bounded period and selected organization', async () => {
-    vi.stubEnv('VITE_REPUTATION_ANALYTICS_GRAPHQL', 'false');
-    expect(isReputationAnalyticsGraphqlEnabled()).toBe(false);
-    vi.stubEnv('VITE_REPUTATION_ANALYTICS_GRAPHQL', 'true');
-    expect(isReputationAnalyticsGraphqlEnabled()).toBe(true);
     vi.mocked(graphqlRequest).mockResolvedValue({
       reputationAnalytics: {
         overall: {

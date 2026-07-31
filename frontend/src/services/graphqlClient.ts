@@ -53,27 +53,6 @@ export const isCampaignAudiencePreviewGraphqlEnabled = (): boolean =>
 export const isCampaignRecipientReadsGraphqlEnabled = (): boolean =>
   import.meta.env.VITE_CAMPAIGN_RECIPIENT_READS_GRAPHQL === 'true';
 
-export const isReputationReviewsGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_REPUTATION_REVIEWS_GRAPHQL === 'true';
-
-export const isReputationAnalyticsGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_REPUTATION_ANALYTICS_GRAPHQL === 'true';
-
-export const isReputationRequestManagementGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_REPUTATION_REQUEST_MANAGEMENT_GRAPHQL === 'true';
-
-export const isReputationRequestDeliveryGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_REPUTATION_REQUEST_DELIVERY_GRAPHQL === 'true';
-
-export const isReputationPlatformsGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_REPUTATION_PLATFORMS_GRAPHQL === 'true';
-
-export const isReputationSettingsGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_REPUTATION_SETTINGS_GRAPHQL === 'true';
-
-export const isReputationWidgetsGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_REPUTATION_WIDGETS_GRAPHQL === 'true';
-
 export const isSignatureDocumentGraphqlReadsEnabled = (): boolean =>
   import.meta.env.VITE_SIGNATURE_DOCUMENT_READS_GRAPHQL === 'true';
 

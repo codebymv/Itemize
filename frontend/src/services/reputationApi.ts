@@ -4,15 +4,6 @@
  */
 import api from '@/lib/api';
 import {
-    isReputationAnalyticsGraphqlEnabled,
-    isReputationRequestDeliveryGraphqlEnabled,
-    isReputationRequestManagementGraphqlEnabled,
-    isReputationReviewsGraphqlEnabled,
-    isReputationPlatformsGraphqlEnabled,
-    isReputationSettingsGraphqlEnabled,
-    isReputationWidgetsGraphqlEnabled,
-} from './graphqlClient';
-import {
     createWidgetViaGraphql,
     deletePlatformViaGraphql,
     deleteWidgetViaGraphql,
@@ -251,11 +242,7 @@ export interface ReputationAnalytics {
 // ======================
 
 export const getPlatforms = async (organizationId?: number): Promise<ReviewPlatform[]> => {
-    if (isReputationPlatformsGraphqlEnabled()) return getPlatformsViaGraphql(organizationId);
-    const response = await api.get('/api/reputation/platforms', {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return getPlatformsViaGraphql(organizationId);
 };
 
 export const resendReviewRequest = async (
@@ -263,42 +250,21 @@ export const resendReviewRequest = async (
     organizationId?: number,
     idempotencyKey?: string
 ): Promise<ReviewRequestDeliveryAcceptance> => {
-    if (isReputationRequestDeliveryGraphqlEnabled()) {
-        return resendReviewRequestViaGraphql(requestId, organizationId, idempotencyKey);
-    }
-    const response = await api.post(`/api/reputation/requests/${requestId}/resend`, {}, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    const request = unwrapResponse<ReviewRequest>(response.data);
-    return {
-        status: request.status === 'failed' ? 'failed' : 'sent',
-        replayed: false,
-        accepted: 1,
-        sent: request.status === 'failed' ? 0 : 1,
-        requests: [request],
-    };
+    return resendReviewRequestViaGraphql(requestId, organizationId, idempotencyKey);
 };
 
 export const addPlatform = async (
     platform: Partial<ReviewPlatform>,
     organizationId?: number
 ): Promise<ReviewPlatform> => {
-    if (isReputationPlatformsGraphqlEnabled()) return upsertPlatformViaGraphql(platform, organizationId);
-    const response = await api.post('/api/reputation/platforms', platform, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return upsertPlatformViaGraphql(platform, organizationId);
 };
 
 export const removePlatform = async (
     platformId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
-    if (isReputationPlatformsGraphqlEnabled()) return deletePlatformViaGraphql(platformId, organizationId);
-    const response = await api.delete(`/api/reputation/platforms/${platformId}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return deletePlatformViaGraphql(platformId, organizationId);
 };
 
 // ======================
@@ -317,34 +283,21 @@ export const getReviews = async (
     } = {},
     organizationId?: number
 ): Promise<{ reviews: Review[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
-    if (isReputationReviewsGraphqlEnabled()) return getReviewsViaGraphql(params, organizationId);
-    const response = await api.get('/api/reputation/reviews', {
-        params,
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return getReviewsViaGraphql(params, organizationId);
 };
 
 export const getReview = async (
     reviewId: number,
     organizationId?: number
 ): Promise<Review> => {
-    if (isReputationReviewsGraphqlEnabled()) return getReviewViaGraphql(reviewId, organizationId);
-    const response = await api.get(`/api/reputation/reviews/${reviewId}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return getReviewViaGraphql(reviewId, organizationId);
 };
 
 export const createReview = async (
     review: Partial<Review>,
     organizationId?: number
 ): Promise<Review> => {
-    if (isReputationReviewsGraphqlEnabled()) return createReviewViaGraphql(review, organizationId);
-    const response = await api.post('/api/reputation/reviews', review, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return createReviewViaGraphql(review, organizationId);
 };
 
 export const updateReview = async (
@@ -352,22 +305,14 @@ export const updateReview = async (
     update: Partial<Pick<Review, 'status' | 'response_text' | 'internal_notes' | 'contact_id'>>,
     organizationId?: number
 ): Promise<Review> => {
-    if (isReputationReviewsGraphqlEnabled()) return updateReviewViaGraphql(reviewId, update, organizationId);
-    const response = await api.put(`/api/reputation/reviews/${reviewId}`, update, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return updateReviewViaGraphql(reviewId, update, organizationId);
 };
 
 export const deleteReview = async (
     reviewId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
-    if (isReputationReviewsGraphqlEnabled()) return deleteReviewViaGraphql(reviewId, organizationId);
-    const response = await api.delete(`/api/reputation/reviews/${reviewId}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return deleteReviewViaGraphql(reviewId, organizationId);
 };
 
 // ======================
@@ -378,14 +323,7 @@ export const getReviewRequests = async (
     params: { status?: ReviewRequest['status'] | 'all'; page?: number; limit?: number } = {},
     organizationId?: number
 ): Promise<{ requests: ReviewRequest[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
-    if (isReputationRequestManagementGraphqlEnabled()) {
-        return getReviewRequestsViaGraphql(params, organizationId);
-    }
-    const response = await api.get('/api/reputation/requests', {
-        params,
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return getReviewRequestsViaGraphql(params, organizationId);
 };
 
 export const sendReviewRequest = async (
@@ -393,20 +331,7 @@ export const sendReviewRequest = async (
     organizationId?: number,
     idempotencyKey?: string
 ): Promise<ReviewRequestDeliveryAcceptance> => {
-    if (isReputationRequestDeliveryGraphqlEnabled()) {
-        return sendReviewRequestViaGraphql(request, organizationId, idempotencyKey);
-    }
-    const response = await api.post('/api/reputation/requests', request, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    const created = unwrapResponse<ReviewRequest>(response.data);
-    return {
-        status: created.status === 'failed' ? 'failed' : created.status === 'pending' ? 'queued' : 'sent',
-        replayed: false,
-        accepted: 1,
-        sent: created.status === 'sent' ? 1 : 0,
-        requests: [created],
-    };
+    return sendReviewRequestViaGraphql(request, organizationId, idempotencyKey);
 };
 
 export const sendBulkReviewRequests = async (
@@ -414,30 +339,14 @@ export const sendBulkReviewRequests = async (
     organizationId?: number,
     idempotencyKey?: string
 ): Promise<ReviewRequestDeliveryAcceptance> => {
-    if (isReputationRequestDeliveryGraphqlEnabled()) {
-        return sendBulkReviewRequestsViaGraphql(data, organizationId, idempotencyKey);
-    }
-    const response = await api.post('/api/reputation/requests/bulk', data, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    const result = unwrapResponse<{ sent: number; requests: ReviewRequest[] }>(response.data);
-    return {
-        status: 'sent', replayed: false, accepted: result.sent, sent: result.sent,
-        requests: result.requests,
-    };
+    return sendBulkReviewRequestsViaGraphql(data, organizationId, idempotencyKey);
 };
 
 export const deleteReviewRequest = async (
     requestId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
-    if (isReputationRequestManagementGraphqlEnabled()) {
-        return deleteReviewRequestViaGraphql(requestId, organizationId);
-    }
-    const response = await api.delete(`/api/reputation/requests/${requestId}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return deleteReviewRequestViaGraphql(requestId, organizationId);
 };
 
 export const getPublicReviewRequest = async (token: string): Promise<PublicReviewRequest> => {
@@ -461,22 +370,14 @@ export const submitPublicReview = async (
 // ======================
 
 export const getWidgets = async (organizationId?: number): Promise<ReviewWidget[]> => {
-    if (isReputationWidgetsGraphqlEnabled()) return getWidgetsViaGraphql(organizationId);
-    const response = await api.get('/api/reputation/widgets', {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return getWidgetsViaGraphql(organizationId);
 };
 
 export const createWidget = async (
     widget: Partial<ReviewWidget>,
     organizationId?: number
 ): Promise<ReviewWidget> => {
-    if (isReputationWidgetsGraphqlEnabled()) return createWidgetViaGraphql(widget, organizationId);
-    const response = await api.post('/api/reputation/widgets', widget, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return createWidgetViaGraphql(widget, organizationId);
 };
 
 export const updateWidget = async (
@@ -484,33 +385,21 @@ export const updateWidget = async (
     widget: Partial<ReviewWidget>,
     organizationId?: number
 ): Promise<ReviewWidget> => {
-    if (isReputationWidgetsGraphqlEnabled()) return updateWidgetViaGraphql(widgetId, widget, organizationId);
-    const response = await api.put(`/api/reputation/widgets/${widgetId}`, widget, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return updateWidgetViaGraphql(widgetId, widget, organizationId);
 };
 
 export const deleteWidget = async (
     widgetId: number,
     organizationId?: number
 ): Promise<{ success: boolean }> => {
-    if (isReputationWidgetsGraphqlEnabled()) return deleteWidgetViaGraphql(widgetId, organizationId);
-    const response = await api.delete(`/api/reputation/widgets/${widgetId}`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return deleteWidgetViaGraphql(widgetId, organizationId);
 };
 
 export const getWidgetEmbedCode = async (
     widgetId: number,
     organizationId?: number
 ): Promise<{ embed_code: string; widget_key: string }> => {
-    if (isReputationWidgetsGraphqlEnabled()) return getWidgetEmbedCodeViaGraphql(widgetId, organizationId);
-    const response = await api.get(`/api/reputation/widgets/${widgetId}/embed-code`, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return getWidgetEmbedCodeViaGraphql(widgetId, organizationId);
 };
 
 // ======================
@@ -518,22 +407,14 @@ export const getWidgetEmbedCode = async (
 // ======================
 
 export const getReputationSettings = async (organizationId?: number): Promise<ReputationSettings> => {
-    if (isReputationSettingsGraphqlEnabled()) return getReputationSettingsViaGraphql(organizationId);
-    const response = await api.get('/api/reputation/settings', {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return getReputationSettingsViaGraphql(organizationId);
 };
 
 export const updateReputationSettings = async (
     settings: Partial<ReputationSettings>,
     organizationId?: number
 ): Promise<ReputationSettings> => {
-    if (isReputationSettingsGraphqlEnabled()) return updateReputationSettingsViaGraphql(settings, organizationId);
-    const response = await api.put('/api/reputation/settings', settings, {
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return updateReputationSettingsViaGraphql(settings, organizationId);
 };
 
 // ======================
@@ -544,14 +425,7 @@ export const getReputationAnalytics = async (
     period: number = 30,
     organizationId?: number
 ): Promise<ReputationAnalytics> => {
-    if (isReputationAnalyticsGraphqlEnabled()) {
-        return getReputationAnalyticsViaGraphql(period, organizationId);
-    }
-    const response = await api.get('/api/reputation/analytics', {
-        params: { period },
-        headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-    });
-    return response.data;
+    return getReputationAnalyticsViaGraphql(period, organizationId);
 };
 
 // Aliases for backward compatibility

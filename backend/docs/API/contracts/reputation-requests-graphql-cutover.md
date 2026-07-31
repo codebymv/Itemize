@@ -1,14 +1,14 @@
 # Reputation request management GraphQL cutover contract
 
-**Status:** Management and durable delivery production cutover complete
+**Status:** Permanent GraphQL cutover; authenticated REST retired
 
-**Evidence date:** 2026-07-21
+**Evidence date:** 2026-07-31
 
 ## Decision
 
-The authenticated management read `GET /api/reputation/requests` and delete `DELETE /api/reputation/requests/:id` move to `reputationRequests` and `deleteReputationRequest` in `ReputationRequestsModule`. `VITE_REPUTATION_REQUEST_MANAGEMENT_GRAPHQL` controls those two operations.
+The authenticated management read and delete are owned exclusively by `reputationRequests` and `deleteReputationRequest` in `ReputationRequestsModule`.
 
-Request creation, bulk creation, and resend use `sendReputationRequest`, `sendBulkReputationRequests`, and `resendReputationRequest` behind the independent `VITE_REPUTATION_REQUEST_DELIVERY_GRAPHQL` flag. Provider work persists as an idempotent delivery intent before I/O, records only confirmed email/SMS acceptance, retries bounded known rejections, and sends ambiguous SMS outcomes to operator reconciliation. An in-process scheduler on the existing GraphQL service owns due delivery. Public collection remains a separate retained HTTP capability.
+Request creation, bulk creation, and resend use `sendReputationRequest`, `sendBulkReputationRequests`, and `resendReputationRequest` unconditionally. Provider work persists as an idempotent delivery intent before I/O, records only confirmed email/SMS acceptance, retries bounded known rejections, and sends ambiguous SMS outcomes to operator reconciliation. An in-process scheduler on the existing GraphQL service owns due delivery. Public collection remains a separate retained HTTP capability.
 
 ## Read contract
 
@@ -18,13 +18,13 @@ The GraphQL projection preserves the active page's retained shape through a casi
 
 ## Delete contract
 
-Deletion requires CSRF and verified organization context, qualifies the row by request and organization, returns the exact deleted ID, and exposes foreign or repeated misses only as `NOT_FOUND`. Deleting through GraphQL is immediately visible through the retained REST list without repair.
+Deletion requires CSRF and verified organization context, qualifies the row by request and organization, returns the exact deleted ID, and exposes foreign or repeated misses only as `NOT_FOUND`.
 
-## Evidence and rollback
+## Evidence and permanent retirement
 
-Repository and service tests prove snapshot reuse, parameterized filtering, deterministic ordering, tenant-qualified joins, token omission, page/status validation, rollback, exact deletion, and private misses. Fresh PostgreSQL proves stable same-timestamp paging, foreign-contact concealment, status filtering, CSRF denial, tenant isolation, exact deletion, REST interoperability, durable delivery idempotency, bulk atomicity, retry, provider confirmation, and ambiguous-SMS reconciliation. Frontend tests prove both flags are independently default-off, retained-shape paging, organization forwarding, CSRF, delete-identity verification, stable idempotency keys, bulk mapping, and resend identity.
+Repository and service tests prove snapshot reuse, parameterized filtering, deterministic ordering, tenant-qualified joins, token omission, page/status validation, rollback, exact deletion, and private misses. Fresh PostgreSQL proves stable same-timestamp paging, foreign-contact concealment, status filtering, CSRF denial, tenant isolation, exact deletion, durable delivery idempotency, bulk atomicity, retry, provider confirmation, and ambiguous-SMS reconciliation. Frontend tests prove retained-shape paging, organization forwarding, CSRF, delete-identity verification, stable idempotency keys, bulk mapping, resend identity, and unconditional GraphQL dispatch.
 
-Setting only `VITE_REPUTATION_REQUEST_MANAGEMENT_GRAPHQL=false` and rebuilding restores list/delete to REST against the same rows. Setting only `VITE_REPUTATION_REQUEST_DELIVERY_GRAPHQL=false` restores send/bulk/resend to their retained adapters. Scheduler rollback is independently controlled by `REPUTATION_REQUEST_DELIVERY_SCHEDULER_ENABLED`.
+Permanent retirement on 2026-07-31 removed both rollout variables, all five frontend REST branches, and the Express request subrouter. Full route composition requires the five former methods and paths to return `404`. Verification passed 347 frontend, 412 Express unit, 492 Nest unit/HTTP, 344 Express/PostgreSQL, and 269 Nest/PostgreSQL tests. Consumer rollback requires redeploying the preceding application commit. Scheduler ownership remains independently controlled by `REPUTATION_REQUEST_DELIVERY_SCHEDULER_ENABLED`.
 
 Production cutover completed from commit `19c1fa1a` with GraphQL deployment `18d3dc88-643a-4403-b6dc-06cf8b2427ad` and flag-enabled frontend deployment `a7c274eb-f66b-4b57-9127-7be49aa3485c`. Safe anonymous query and delete probes reached the registered operations through the public proxy and returned `UNAUTHENTICATED` without touching data. Railway confirmed `VITE_REPUTATION_REQUEST_MANAGEMENT_GRAPHQL=true`; an authenticated `/review-requests` navigation rendered the authoritative empty state while Nest recorded successful zero-error `ReputationRequests` request `705fa2f4-bd2d-4c44-99fa-17e537f1c47e`.
 

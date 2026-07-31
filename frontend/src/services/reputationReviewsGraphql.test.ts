@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCsrfToken } from '@/lib/api';
-import { isReputationReviewsGraphqlEnabled } from './graphqlClient';
 import {
   createReviewViaGraphql,
   deleteReviewViaGraphql,
@@ -43,13 +42,6 @@ describe('reputation reviews GraphQL consumer', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
-  });
-
-  it('is default-off and enables as one rollback boundary', () => {
-    vi.stubEnv('VITE_REPUTATION_REVIEWS_GRAPHQL', 'false');
-    expect(isReputationReviewsGraphqlEnabled()).toBe(false);
-    vi.stubEnv('VITE_REPUTATION_REVIEWS_GRAPHQL', 'true');
-    expect(isReputationReviewsGraphqlEnabled()).toBe(true);
   });
 
   it('maps filters, paging, organization context, and retained casing', async () => {

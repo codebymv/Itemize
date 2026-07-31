@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 168
-- API operations under `/api`: 161
+- Registered method/path operations: 147
+- API operations under `/api`: 140
 - Non-API registered operations: 7
-- Static frontend callsites: 110
-- Operations with frontend consumers: 103
-- Operations referenced by backend tests: 92
-- Recommended GraphQL queries: 28
-- Recommended GraphQL mutations: 78
+- Static frontend callsites: 89
+- Operations with frontend consumers: 82
+- Operations referenced by backend tests: 86
+- Recommended GraphQL queries: 20
+- Recommended GraphQL mutations: 65
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 134
+- High-risk operations: 113
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -109,30 +109,9 @@
 | GET | `/api/public/sign/:token/download` | 0 | 0 | retain-http | high | esignatures / SignatureFilesModule / downloadSigningPdf |
 | GET | `/api/public/sign/:token/file` | 0 | 1 | retain-http | high | esignatures / SignatureFilesModule / streamSigningPdf |
 | POST | `/api/public/sign/:token/verify` | 0 | 0 | retain-http | high | esignatures / PublicSigningModule / verifySigner |
-| GET | `/api/reputation/analytics` | 1 | 1 | graphql-query | high | reputation / AnalyticsModule / reputationAnalytics |
-| GET | `/api/reputation/platforms` | 1 | 1 | graphql-query | high | reputation / ReputationConfigurationModule / reputationPlatforms |
-| POST | `/api/reputation/platforms` | 1 | 0 | graphql-mutation | high | reputation / ReputationConfigurationModule / upsertReputationPlatform |
-| DELETE | `/api/reputation/platforms/:id` | 1 | 0 | graphql-mutation | high | reputation / ReputationConfigurationModule / deleteReputationPlatform |
 | GET | `/api/reputation/public/review/:token` | 1 | 2 | retain-http | high | reputation / PublicReputationReviewModule / getPublicReviewRequest |
 | POST | `/api/reputation/public/review/:token` | 1 | 2 | retain-http | high | reputation / PublicReputationReviewModule / submitPublicReview |
 | GET | `/api/reputation/public/widget/:widgetKey` | 0 | 3 | retain-http | high | reputation / PublicReputationWidgetModule / getPublicReputationWidget |
-| GET | `/api/reputation/requests` | 1 | 1 | graphql-query | high | reputation / ReputationRequestsModule / reputationRequests |
-| POST | `/api/reputation/requests` | 1 | 0 | graphql-mutation | high | reputation / ReputationRequestsModule / sendReputationRequest |
-| DELETE | `/api/reputation/requests/:id` | 1 | 3 | graphql-mutation | high | reputation / ReputationRequestsModule / deleteReputationRequest |
-| POST | `/api/reputation/requests/:id/resend` | 1 | 0 | graphql-mutation | high | reputation / ReputationRequestsModule / resendReputationRequest |
-| POST | `/api/reputation/requests/bulk` | 1 | 0 | graphql-mutation | high | reputation / ReputationRequestsModule / sendBulkReputationRequests |
-| GET | `/api/reputation/reviews` | 1 | 0 | graphql-query | high | reputation / ReputationReviewsModule / reputationReviews |
-| POST | `/api/reputation/reviews` | 1 | 0 | graphql-mutation | high | reputation / ReputationReviewsModule / createReputationReview |
-| DELETE | `/api/reputation/reviews/:id` | 1 | 0 | graphql-mutation | high | reputation / ReputationReviewsModule / deleteReputationReview |
-| GET | `/api/reputation/reviews/:id` | 1 | 1 | graphql-query | high | reputation / ReputationReviewsModule / reputationReview |
-| PUT | `/api/reputation/reviews/:id` | 1 | 0 | graphql-mutation | high | reputation / ReputationReviewsModule / updateReputationReview |
-| GET | `/api/reputation/settings` | 1 | 1 | graphql-query | high | reputation / ReputationConfigurationModule / reputationSettings |
-| PUT | `/api/reputation/settings` | 1 | 0 | graphql-mutation | high | reputation / ReputationConfigurationModule / updateReputationSettings |
-| GET | `/api/reputation/widgets` | 1 | 0 | graphql-query | high | reputation / ReputationConfigurationModule / reputationWidgets |
-| POST | `/api/reputation/widgets` | 1 | 0 | graphql-mutation | high | reputation / ReputationConfigurationModule / createReputationWidget |
-| DELETE | `/api/reputation/widgets/:id` | 1 | 0 | graphql-mutation | high | reputation / ReputationConfigurationModule / deleteReputationWidget |
-| PUT | `/api/reputation/widgets/:id` | 1 | 0 | graphql-mutation | high | reputation / ReputationConfigurationModule / updateReputationWidget |
-| GET | `/api/reputation/widgets/:id/embed-code` | 1 | 0 | graphql-query | high | reputation / ReputationConfigurationModule / reputationWidgetEmbedCode |
 | GET | `/api/shared/list/:token` | 2 | 4 | retain-http | high | sharing / PublicSharingModule / getSharedList |
 | GET | `/api/shared/note/:token` | 2 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedNote |
 | GET | `/api/shared/vault/:token` | 1 | 3 | retain-http | high | sharing / VaultModule / getSharedVault |
@@ -205,7 +184,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 51
-- Orphaned manual overrides: 182
+- Orphaned manual overrides: 203
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

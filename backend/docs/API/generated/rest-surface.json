@@ -3,11 +3,11 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 185,
-    "resolvedDeclarationCount": 185,
+    "declarationCount": 164,
+    "resolvedDeclarationCount": 164,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 168,
-    "sourceFileCount": 43
+    "uniqueResolvedOperationCount": 147,
+    "sourceFileCount": 37
   },
   "caveats": [
     "This is static source analysis; it does not execute application modules.",
@@ -919,46 +919,6 @@
     {
       "method": "GET",
       "publicPaths": [
-        "/api/reputation/analytics"
-      ],
-      "declaredPath": "/analytics",
-      "source": "backend/src/routes/reputation/analytics.routes.js",
-      "line": 14,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/reputation/platforms"
-      ],
-      "declaredPath": "/platforms",
-      "source": "backend/src/routes/reputation/platforms.routes.js",
-      "line": 15,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/reputation/platforms"
-      ],
-      "declaredPath": "/platforms",
-      "source": "backend/src/routes/reputation/platforms.routes.js",
-      "line": 33,
-      "dynamic": false
-    },
-    {
-      "method": "DELETE",
-      "publicPaths": [
-        "/api/reputation/platforms/:id"
-      ],
-      "declaredPath": "/platforms/:id",
-      "source": "backend/src/routes/reputation/platforms.routes.js",
-      "line": 73,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
         "/api/reputation/public/review/:token"
       ],
       "declaredPath": "/public/review/:token",
@@ -984,176 +944,6 @@
       "declaredPath": "/public/widget/:widgetKey",
       "source": "backend/src/routes/reputation/public.routes.js",
       "line": 20,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/reputation/requests"
-      ],
-      "declaredPath": "/requests",
-      "source": "backend/src/routes/reputation/requests.routes.js",
-      "line": 18,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/reputation/requests"
-      ],
-      "declaredPath": "/requests",
-      "source": "backend/src/routes/reputation/requests.routes.js",
-      "line": 93,
-      "dynamic": false
-    },
-    {
-      "method": "DELETE",
-      "publicPaths": [
-        "/api/reputation/requests/:id"
-      ],
-      "declaredPath": "/requests/:id",
-      "source": "backend/src/routes/reputation/requests.routes.js",
-      "line": 71,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/reputation/requests/:id/resend"
-      ],
-      "declaredPath": "/requests/:id/resend",
-      "source": "backend/src/routes/reputation/requests.routes.js",
-      "line": 246,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/reputation/requests/bulk"
-      ],
-      "declaredPath": "/requests/bulk",
-      "source": "backend/src/routes/reputation/requests.routes.js",
-      "line": 325,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/reputation/reviews"
-      ],
-      "declaredPath": "/reviews",
-      "source": "backend/src/routes/reputation/reviews.routes.js",
-      "line": 15,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/reputation/reviews"
-      ],
-      "declaredPath": "/reviews",
-      "source": "backend/src/routes/reputation/reviews.routes.js",
-      "line": 120,
-      "dynamic": false
-    },
-    {
-      "method": "DELETE",
-      "publicPaths": [
-        "/api/reputation/reviews/:id"
-      ],
-      "declaredPath": "/reviews/:id",
-      "source": "backend/src/routes/reputation/reviews.routes.js",
-      "line": 227,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/reputation/reviews/:id"
-      ],
-      "declaredPath": "/reviews/:id",
-      "source": "backend/src/routes/reputation/reviews.routes.js",
-      "line": 93,
-      "dynamic": false
-    },
-    {
-      "method": "PUT",
-      "publicPaths": [
-        "/api/reputation/reviews/:id"
-      ],
-      "declaredPath": "/reviews/:id",
-      "source": "backend/src/routes/reputation/reviews.routes.js",
-      "line": 168,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/reputation/settings"
-      ],
-      "declaredPath": "/settings",
-      "source": "backend/src/routes/reputation/settings.routes.js",
-      "line": 15,
-      "dynamic": false
-    },
-    {
-      "method": "PUT",
-      "publicPaths": [
-        "/api/reputation/settings"
-      ],
-      "declaredPath": "/settings",
-      "source": "backend/src/routes/reputation/settings.routes.js",
-      "line": 43,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/reputation/widgets"
-      ],
-      "declaredPath": "/widgets",
-      "source": "backend/src/routes/reputation/widgets.routes.js",
-      "line": 16,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/reputation/widgets"
-      ],
-      "declaredPath": "/widgets",
-      "source": "backend/src/routes/reputation/widgets.routes.js",
-      "line": 32,
-      "dynamic": false
-    },
-    {
-      "method": "DELETE",
-      "publicPaths": [
-        "/api/reputation/widgets/:id"
-      ],
-      "declaredPath": "/widgets/:id",
-      "source": "backend/src/routes/reputation/widgets.routes.js",
-      "line": 141,
-      "dynamic": false
-    },
-    {
-      "method": "PUT",
-      "publicPaths": [
-        "/api/reputation/widgets/:id"
-      ],
-      "declaredPath": "/widgets/:id",
-      "source": "backend/src/routes/reputation/widgets.routes.js",
-      "line": 95,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/reputation/widgets/:id/embed-code"
-      ],
-      "declaredPath": "/widgets/:id/embed-code",
-      "source": "backend/src/routes/reputation/widgets.routes.js",
-      "line": 163,
       "dynamic": false
     },
     {

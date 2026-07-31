@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 168,
-    "apiOperationCount": 161,
+    "operationCount": 147,
+    "apiOperationCount": 140,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 110,
-    "operationsWithFrontendConsumers": 103,
-    "operationsWithBackendTests": 92,
+    "frontendCallsiteCount": 89,
+    "operationsWithFrontendConsumers": 82,
+    "operationsWithBackendTests": 86,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 51,
     "retainHttpCount": 55,
-    "graphqlQueryCount": 28,
-    "graphqlMutationCount": 78,
-    "highRiskCount": 134,
+    "graphqlQueryCount": 20,
+    "graphqlMutationCount": 65,
+    "highRiskCount": 113,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -3413,156 +3413,6 @@
       "risk": "high"
     },
     {
-      "id": "GET /api/reputation/analytics",
-      "key": "GET /api/reputation/analytics",
-      "method": "GET",
-      "path": "/api/reputation/analytics",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/analytics.routes.js",
-          "line": 14
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/reputation/analytics",
-          "rawPath": "/api/reputation/analytics",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 550,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/reputation/analytics",
-          "source": "backend-v2/test/integration/reputation-reviews.integration-spec.ts",
-          "line": 275
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "reputation",
-      "targetOperation": "reputationAnalytics",
-      "targetModule": "AnalyticsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "One tenant-scoped repeatable-read snapshot for overall, period, distribution, UTC timeline, and request metrics with a bounded parameterized day window.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/reputation/platforms",
-      "key": "GET /api/reputation/platforms",
-      "method": "GET",
-      "path": "/api/reputation/platforms",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/platforms.routes.js",
-          "line": 15
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/reputation/platforms",
-          "rawPath": "/api/reputation/platforms",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 255,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/reputation/platforms",
-          "source": "backend-v2/test/integration/reputation-configuration.integration-spec.ts",
-          "line": 181
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "reputation",
-      "targetOperation": "reputationPlatforms",
-      "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Deterministic organization-scoped platform list deliberately omits access tokens, refresh tokens, and token expiry from the GraphQL schema.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/reputation/platforms",
-      "key": "POST /api/reputation/platforms",
-      "method": "POST",
-      "path": "/api/reputation/platforms",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/platforms.routes.js",
-          "line": 33
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/reputation/platforms",
-          "rawPath": "/api/reputation/platforms",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 287,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "reputation",
-      "targetOperation": "upsertReputationPlatform",
-      "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected validated upsert serializes the organization/platform/place identity and treats a null place ID as one deterministic identity.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/reputation/platforms/:id",
-      "key": "DELETE /api/reputation/platforms/:*",
-      "method": "DELETE",
-      "path": "/api/reputation/platforms/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/platforms.routes.js",
-          "line": 73
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/reputation/platforms/:platformId",
-          "rawPath": "/api/reputation/platforms/${platformId}",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 298,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "reputation",
-      "targetOperation": "deleteReputationPlatform",
-      "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Organization-qualified exact-identity delete with foreign and repeated misses concealed as NOT_FOUND.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
       "id": "GET /api/reputation/public/review/:token",
       "key": "GET /api/reputation/public/review/:*",
       "method": "GET",
@@ -3579,7 +3429,7 @@
           "path": "/api/reputation/public/review/:token",
           "rawPath": "/api/reputation/public/review/${encodeURIComponent(token)}",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 444,
+          "line": 353,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3589,13 +3439,13 @@
           "method": "GET",
           "path": "/api/reputation/public/review/:deliveryRequestToken",
           "source": "backend-v2/test/integration/reputation-reviews.integration-spec.ts",
-          "line": 520
+          "line": 511
         },
         {
           "method": "GET",
           "path": "/api/reputation/public/review/not-a-token",
           "source": "backend-v2/test/integration/reputation-reviews.integration-spec.ts",
-          "line": 541
+          "line": 532
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -3626,7 +3476,7 @@
           "path": "/api/reputation/public/review/:token",
           "rawPath": "/api/reputation/public/review/${encodeURIComponent(token)}",
           "source": "frontend/src/services/reputationApi.ts",
-          "line": 452,
+          "line": 361,
           "client": "api",
           "literalInterpolation": false
         }
@@ -3636,13 +3486,13 @@
           "method": "POST",
           "path": "/api/reputation/public/review/:deliveryRequestToken",
           "source": "backend-v2/test/integration/reputation-reviews.integration-spec.ts",
-          "line": 528
+          "line": 519
         },
         {
           "method": "POST",
           "path": "/api/reputation/public/review/:deliveryRequestToken",
           "source": "backend-v2/test/integration/reputation-reviews.integration-spec.ts",
-          "line": 530
+          "line": 521
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -3673,19 +3523,19 @@
           "method": "GET",
           "path": "/api/reputation/public/widget/:widgetKey",
           "source": "backend-v2/test/integration/reputation-configuration.integration-spec.ts",
-          "line": 278
+          "line": 274
         },
         {
           "method": "GET",
           "path": "/api/reputation/public/widget/not-a-capability",
           "source": "backend-v2/test/integration/reputation-configuration.integration-spec.ts",
-          "line": 285
+          "line": 281
         },
         {
           "method": "GET",
           "path": "/api/reputation/public/widget/:widgetKey",
           "source": "backend-v2/test/integration/reputation-configuration.integration-spec.ts",
-          "line": 311
+          "line": 307
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -3696,624 +3546,6 @@
       "targetModule": "PublicReputationWidgetModule",
       "parityStatus": "characterized",
       "notes": "Retain credential-free rate-limited HTTP for third-party embedding. Exact 128-bit keys, no-store revocation, active-only configuration, tenant isolation, bounded review selection, and hidden/flagged exclusion are required.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/reputation/requests",
-      "key": "GET /api/reputation/requests",
-      "method": "GET",
-      "path": "/api/reputation/requests",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/requests.routes.js",
-          "line": 18
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/reputation/requests",
-          "rawPath": "/api/reputation/requests",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 384,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/reputation/requests",
-          "source": "backend-v2/test/integration/reputation-reviews.integration-spec.ts",
-          "line": 368
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "reputation",
-      "targetOperation": "reputationRequests",
-      "targetModule": "ReputationRequestsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Bounded organization-scoped management list with stable created-at/ID ordering, one repeatable-read count/page snapshot, tenant-qualified contact projection, and no public capability token.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/reputation/requests",
-      "key": "POST /api/reputation/requests",
-      "method": "POST",
-      "path": "/api/reputation/requests",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/requests.routes.js",
-          "line": 93
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/reputation/requests",
-          "rawPath": "/api/reputation/requests",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 399,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "reputation",
-      "targetOperation": "sendReputationRequest",
-      "targetModule": "ReputationRequestsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Idempotent durable email/SMS delivery intent with confirmed provider postconditions, bounded retry, ambiguous-SMS reconciliation, and a scheduler-owned due queue.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/reputation/requests/:id",
-      "key": "DELETE /api/reputation/requests/:*",
-      "method": "DELETE",
-      "path": "/api/reputation/requests/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/requests.routes.js",
-          "line": 71
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/reputation/requests/:requestId",
-          "rawPath": "/api/reputation/requests/${requestId}",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 437,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/reputation/requests/:requestId",
-          "source": "backend-v2/test/integration/reputation-reviews.integration-spec.ts",
-          "line": 486
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/reputation/requests/12",
-          "source": "backend/src/__tests__/routes/reputation-requests.routes.test.js",
-          "line": 27
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/reputation/requests/99",
-          "source": "backend/src/__tests__/routes/reputation-requests.routes.test.js",
-          "line": 39
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "reputation",
-      "targetOperation": "deleteReputationRequest",
-      "targetModule": "ReputationRequestsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected organization-qualified delete returning exact stable identity with private foreign and repeated misses; active durable deliveries fail closed.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/reputation/requests/:id/resend",
-      "key": "POST /api/reputation/requests/:*/resend",
-      "method": "POST",
-      "path": "/api/reputation/requests/:id/resend",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/requests.routes.js",
-          "line": 246
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/reputation/requests/:requestId/resend",
-          "rawPath": "/api/reputation/requests/${requestId}/resend",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 269,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "reputation",
-      "targetOperation": "resendReputationRequest",
-      "targetModule": "ReputationRequestsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Tenant-private resend creates a new stable delivery intent without mutating the prior provider attempt and rejects unresolved active work.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/reputation/requests/bulk",
-      "key": "POST /api/reputation/requests/bulk",
-      "method": "POST",
-      "path": "/api/reputation/requests/bulk",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/requests.routes.js",
-          "line": 325
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/reputation/requests/bulk",
-          "rawPath": "/api/reputation/requests/bulk",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 420,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "reputation",
-      "targetOperation": "sendBulkReputationRequests",
-      "targetModule": "ReputationRequestsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Atomically validates tenant-owned contacts and persists one idempotent batch before any provider delivery; scheduled work uses the same durable queue.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/reputation/reviews",
-      "key": "GET /api/reputation/reviews",
-      "method": "GET",
-      "path": "/api/reputation/reviews",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/reviews.routes.js",
-          "line": 15
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/reputation/reviews",
-          "rawPath": "/api/reputation/reviews",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 321,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "reputation",
-      "targetOperation": "reputationReviews",
-      "targetModule": "ReputationReviewsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Bounded organization-scoped connection with platform/rating/status/sentiment/search filters, stable review-date/ID ordering, and one repeatable-read count/page snapshot.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/reputation/reviews",
-      "key": "POST /api/reputation/reviews",
-      "method": "POST",
-      "path": "/api/reputation/reviews",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/reviews.routes.js",
-          "line": 120
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/reputation/reviews",
-          "rawPath": "/api/reputation/reviews",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 344,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "reputation",
-      "targetOperation": "createReputationReview",
-      "targetModule": "ReputationReviewsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected manual create with bounded content, deterministic sentiment, and locked tenant-platform/contact validation in one transaction.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/reputation/reviews/:id",
-      "key": "DELETE /api/reputation/reviews/:*",
-      "method": "DELETE",
-      "path": "/api/reputation/reviews/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/reviews.routes.js",
-          "line": 227
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/reputation/reviews/:reviewId",
-          "rawPath": "/api/reputation/reviews/${reviewId}",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 367,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "reputation",
-      "targetOperation": "deleteReputationReview",
-      "targetModule": "ReputationReviewsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected organization-qualified delete returning exact stable identity with private foreign and repeated misses.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/reputation/reviews/:id",
-      "key": "GET /api/reputation/reviews/:*",
-      "method": "GET",
-      "path": "/api/reputation/reviews/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/reviews.routes.js",
-          "line": 93
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/reputation/reviews/:reviewId",
-          "rawPath": "/api/reputation/reviews/${reviewId}",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 333,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/reputation/reviews/:reviewId",
-          "source": "backend-v2/test/integration/reputation-reviews.integration-spec.ts",
-          "line": 183
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "reputation",
-      "targetOperation": "reputationReview",
-      "targetModule": "ReputationReviewsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Private organization-owned detail with platform and contact joins independently qualified by organization.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/reputation/reviews/:id",
-      "key": "PUT /api/reputation/reviews/:*",
-      "method": "PUT",
-      "path": "/api/reputation/reviews/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/reviews.routes.js",
-          "line": 168
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/reputation/reviews/:reviewId",
-          "rawPath": "/api/reputation/reviews/${reviewId}",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 356,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "reputation",
-      "targetOperation": "updateReputationReview",
-      "targetModule": "ReputationReviewsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected row-locked partial update; concurrent patches compose and response text, status, responder, and timestamp remain coherent.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/reputation/settings",
-      "key": "GET /api/reputation/settings",
-      "method": "GET",
-      "path": "/api/reputation/settings",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/settings.routes.js",
-          "line": 15
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/reputation/settings",
-          "rawPath": "/api/reputation/settings",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 522,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/reputation/settings",
-          "source": "backend-v2/test/integration/reputation-configuration.integration-spec.ts",
-          "line": 215
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "reputation",
-      "targetOperation": "reputationSettings",
-      "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Returns complete virtual defaults without writing a row, and normalizes nullable legacy rows into the stable frontend contract.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/reputation/settings",
-      "key": "PUT /api/reputation/settings",
-      "method": "PUT",
-      "path": "/api/reputation/settings",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/settings.routes.js",
-          "line": 43
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/reputation/settings",
-          "rawPath": "/api/reputation/settings",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 533,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "reputation",
-      "targetOperation": "updateReputationSettings",
-      "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Row-locked partial update merges complete validated state, tenant-validates the optional email template, and commits atomically.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/reputation/widgets",
-      "key": "GET /api/reputation/widgets",
-      "method": "GET",
-      "path": "/api/reputation/widgets",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/widgets.routes.js",
-          "line": 16
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/reputation/widgets",
-          "rawPath": "/api/reputation/widgets",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 465,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "reputation",
-      "targetOperation": "reputationWidgets",
-      "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Deterministic organization-scoped widget configuration list with complete styling, filter, refresh, and activation state.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/reputation/widgets",
-      "key": "POST /api/reputation/widgets",
-      "method": "POST",
-      "path": "/api/reputation/widgets",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/widgets.routes.js",
-          "line": 32
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/reputation/widgets",
-          "rawPath": "/api/reputation/widgets",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 476,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "reputation",
-      "targetOperation": "createReputationWidget",
-      "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected bounded configuration create issues a random 128-bit public capability key and returns no tenant data beyond the owning widget.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "DELETE /api/reputation/widgets/:id",
-      "key": "DELETE /api/reputation/widgets/:*",
-      "method": "DELETE",
-      "path": "/api/reputation/widgets/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/widgets.routes.js",
-          "line": 141
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/reputation/widgets/:widgetId",
-          "rawPath": "/api/reputation/widgets/${widgetId}",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 499,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "reputation",
-      "targetOperation": "deleteReputationWidget",
-      "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Organization-qualified exact-identity delete revokes the associated public capability immediately.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "PUT /api/reputation/widgets/:id",
-      "key": "PUT /api/reputation/widgets/:*",
-      "method": "PUT",
-      "path": "/api/reputation/widgets/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/widgets.routes.js",
-          "line": 95
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/reputation/widgets/:widgetId",
-          "rawPath": "/api/reputation/widgets/${widgetId}",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 488,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "reputation",
-      "targetOperation": "updateReputationWidget",
-      "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Row-locked partial update composes concurrent changes and validates enums, colors, rating/platform filters, counts, refresh intervals, and activation.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "GET /api/reputation/widgets/:id/embed-code",
-      "key": "GET /api/reputation/widgets/:*/embed-code",
-      "method": "GET",
-      "path": "/api/reputation/widgets/:id/embed-code",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/reputation/widgets.routes.js",
-          "line": 163
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/reputation/widgets/:widgetId/embed-code",
-          "rawPath": "/api/reputation/widgets/${widgetId}/embed-code",
-          "source": "frontend/src/services/reputationApi.ts",
-          "line": 510,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "reputation",
-      "targetOperation": "reputationWidgetEmbedCode",
-      "targetModule": "ReputationConfigurationModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Tenant-private query emits the existing capability key plus a deployable script tag with separately configured public asset and API origins.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -7530,6 +6762,10 @@
     "DELETE /api/onboarding/reset",
     "DELETE /api/organizations/:organizationId",
     "DELETE /api/organizations/:organizationId/members/:memberId",
+    "DELETE /api/reputation/platforms/:id",
+    "DELETE /api/reputation/requests/:id",
+    "DELETE /api/reputation/reviews/:id",
+    "DELETE /api/reputation/widgets/:id",
     "DELETE /api/segments/:id",
     "DELETE /api/sms-templates/:id",
     "DELETE /api/vaults/:vaultId",
@@ -7585,6 +6821,14 @@
     "GET /api/organizations",
     "GET /api/organizations/:organizationId",
     "GET /api/organizations/:organizationId/members",
+    "GET /api/reputation/analytics",
+    "GET /api/reputation/platforms",
+    "GET /api/reputation/requests",
+    "GET /api/reputation/reviews",
+    "GET /api/reputation/reviews/:id",
+    "GET /api/reputation/settings",
+    "GET /api/reputation/widgets",
+    "GET /api/reputation/widgets/:id/embed-code",
     "GET /api/segments",
     "GET /api/segments/:id",
     "GET /api/segments/:id/contacts",
@@ -7649,6 +6893,12 @@
     "POST /api/organizations/:organizationId/members",
     "POST /api/organizations/:organizationId/select",
     "POST /api/organizations/ensure-default",
+    "POST /api/reputation/platforms",
+    "POST /api/reputation/requests",
+    "POST /api/reputation/requests/:id/resend",
+    "POST /api/reputation/requests/bulk",
+    "POST /api/reputation/reviews",
+    "POST /api/reputation/widgets",
     "POST /api/segments",
     "POST /api/segments/:id/calculate",
     "POST /api/segments/preview",
@@ -7685,6 +6935,9 @@
     "PUT /api/notes/:noteId/title",
     "PUT /api/organizations/:organizationId",
     "PUT /api/organizations/:organizationId/members/:memberId",
+    "PUT /api/reputation/reviews/:id",
+    "PUT /api/reputation/settings",
+    "PUT /api/reputation/widgets/:id",
     "PUT /api/segments/:id",
     "PUT /api/sms-templates/:id",
     "PUT /api/vaults/:vaultId",

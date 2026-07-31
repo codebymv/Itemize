@@ -1,9 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   graphqlMutationRequest,
   graphqlRequest,
-  isReputationRequestDeliveryGraphqlEnabled,
-  isReputationRequestManagementGraphqlEnabled,
 } from './graphqlClient';
 import {
   deleteReviewRequestViaGraphql,
@@ -35,13 +33,8 @@ const request = {
 
 describe('reputation request management GraphQL adapter', () => {
   beforeEach(() => vi.clearAllMocks());
-  afterEach(() => vi.unstubAllEnvs());
 
-  it('is independently default-off and maps bounded pages to the retained shape', async () => {
-    vi.stubEnv('VITE_REPUTATION_REQUEST_MANAGEMENT_GRAPHQL', 'false');
-    expect(isReputationRequestManagementGraphqlEnabled()).toBe(false);
-    vi.stubEnv('VITE_REPUTATION_REQUEST_MANAGEMENT_GRAPHQL', 'true');
-    expect(isReputationRequestManagementGraphqlEnabled()).toBe(true);
+  it('maps bounded pages to the retained shape', async () => {
     vi.mocked(graphqlRequest).mockResolvedValue({
       reputationRequests: {
         nodes: [request], pageInfo: { page: 2, pageSize: 10, total: 11, totalPages: 2 },
@@ -72,13 +65,6 @@ describe('reputation request management GraphQL adapter', () => {
     expect(graphqlMutationRequest).toHaveBeenCalledWith(
       expect.stringContaining('mutation DeleteReputationRequest'), { id: 8 }, 3,
     );
-  });
-
-  it('keeps delivery on an independent default-off rollback boundary', () => {
-    vi.stubEnv('VITE_REPUTATION_REQUEST_DELIVERY_GRAPHQL', 'false');
-    expect(isReputationRequestDeliveryGraphqlEnabled()).toBe(false);
-    vi.stubEnv('VITE_REPUTATION_REQUEST_DELIVERY_GRAPHQL', 'true');
-    expect(isReputationRequestDeliveryGraphqlEnabled()).toBe(true);
   });
 
   it('sends one request with a caller-stable idempotency key and maps the confirmed result', async () => {
