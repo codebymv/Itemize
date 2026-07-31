@@ -1,9 +1,8 @@
 /**
  * Sharing Routes - Extracted from index.js
- * Handles share/unshare operations and public shared content endpoints
+ * Handles public shared-content capability reads.
  */
 const express = require('express');
-const crypto = require('crypto');
 const DOMPurify = require('dompurify');
 const { JSDOM } = require('jsdom');
 const router = express.Router();
@@ -43,192 +42,12 @@ const setCapabilityResponseHeaders = (res) => {
     res.set('X-Robots-Tag', 'noindex, nofollow');
 };
 
-const enableSharing = async (pool, table, id, userId) => {
-    const newToken = crypto.randomUUID();
-    return withDbClient(pool, async (client) => {
-        const result = await client.query(
-            `UPDATE ${table}
-             SET share_token = CASE
-                   WHEN is_public = TRUE AND share_token IS NOT NULL THEN share_token
-                   ELSE $1
-                 END,
-                 is_public = TRUE,
-                 shared_at = CASE
-                   WHEN is_public = TRUE AND share_token IS NOT NULL THEN shared_at
-                   ELSE CURRENT_TIMESTAMP
-                 END
-             WHERE id = $2 AND user_id = $3
-             RETURNING share_token`,
-            [newToken, id, userId]
-        );
-        return result.rows[0]?.share_token || null;
-    });
-};
-
-const disableSharing = (pool, table, id, userId) => withDbClient(
-    pool,
-    async (client) => client.query(
-        `WITH target AS (
-             SELECT id, share_token
-             FROM ${table}
-             WHERE id = $1 AND user_id = $2
-             FOR UPDATE
-         ),
-         updated AS (
-             UPDATE ${table} AS item
-             SET is_public = FALSE, share_token = NULL, shared_at = NULL
-             FROM target
-             WHERE item.id = target.id
-             RETURNING item.id
-         )
-         SELECT updated.id, target.share_token
-         FROM updated
-         JOIN target ON target.id = updated.id`,
-        [id, userId]
-    )
-);
-
 /**
- * Create sharing routes with injected dependencies
+ * Create public sharing routes with injected dependencies
  * @param {Object} pool - Database connection pool
- * @param {Function} authenticateJWT - JWT authentication middleware
  * @param {Function} publicRateLimit - Rate limiting middleware for public endpoints
- * @param {Object} broadcast - Realtime broadcast and revocation functions
  */
-module.exports = (pool, authenticateJWT, publicRateLimit, broadcast = {}) => {
-
-    // --- Share/Unshare Operations (Authenticated) ---
-
-    // Share a list
-    router.post('/lists/:listId/share', authenticateJWT, async (req, res) => {
-        try {
-            const { listId } = req.params;
-            const shareToken = await enableSharing(pool, 'lists', listId, req.user.id);
-            if (!shareToken) {
-                return res.status(404).json({ error: 'List not found or access denied' });
-            }
-
-            const frontendHost = process.env.NODE_ENV === 'production'
-                ? 'itemize.cloud'
-                : 'localhost:5173';
-
-            res.json({
-                shareToken,
-                shareUrl: `${req.protocol}://${frontendHost}/shared/list/${shareToken}`
-            });
-        } catch (error) {
-            console.error('Error sharing list:', error);
-            return sendError(res, 'Internal server error while sharing list');
-        }
-    });
-
-    // Unshare a list
-    router.delete('/lists/:listId/share', authenticateJWT, async (req, res) => {
-        try {
-            const { listId } = req.params;
-            const result = await disableSharing(pool, 'lists', listId, req.user.id);
-
-            if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'List not found or access denied' });
-            }
-
-            if (result.rows[0].share_token && broadcast.revokeShared) {
-                await broadcast.revokeShared('list', result.rows[0].share_token);
-            }
-            res.json({ message: 'List sharing revoked successfully' });
-        } catch (error) {
-            console.error('Error unsharing list:', error);
-            return sendError(res, 'Internal server error while unsharing list');
-        }
-    });
-
-    // Share a note
-    router.post('/notes/:noteId/share', authenticateJWT, async (req, res) => {
-        try {
-            const { noteId } = req.params;
-            const shareToken = await enableSharing(pool, 'notes', noteId, req.user.id);
-            if (!shareToken) {
-                return res.status(404).json({ error: 'Note not found or access denied' });
-            }
-
-            const frontendHost = process.env.NODE_ENV === 'production'
-                ? 'itemize.cloud'
-                : 'localhost:5173';
-
-            res.json({
-                shareToken,
-                shareUrl: `${req.protocol}://${frontendHost}/shared/note/${shareToken}`
-            });
-        } catch (error) {
-            console.error('Error sharing note:', error);
-            return sendError(res, 'Internal server error while sharing note');
-        }
-    });
-
-    // Unshare a note
-    router.delete('/notes/:noteId/share', authenticateJWT, async (req, res) => {
-        try {
-            const { noteId } = req.params;
-            const result = await disableSharing(pool, 'notes', noteId, req.user.id);
-
-            if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'Note not found or access denied' });
-            }
-
-            if (result.rows[0].share_token && broadcast.revokeShared) {
-                await broadcast.revokeShared('note', result.rows[0].share_token);
-            }
-            res.json({ message: 'Note sharing revoked successfully' });
-        } catch (error) {
-            console.error('Error unsharing note:', error);
-            return sendError(res, 'Internal server error while unsharing note');
-        }
-    });
-
-    // Share a whiteboard
-    router.post('/whiteboards/:whiteboardId/share', authenticateJWT, async (req, res) => {
-        try {
-            const { whiteboardId } = req.params;
-            const shareToken = await enableSharing(pool, 'whiteboards', whiteboardId, req.user.id);
-            if (!shareToken) {
-                return res.status(404).json({ error: 'Whiteboard not found or access denied' });
-            }
-
-            const frontendHost = process.env.NODE_ENV === 'production'
-                ? 'itemize.cloud'
-                : 'localhost:5173';
-
-            res.json({
-                shareToken,
-                shareUrl: `${req.protocol}://${frontendHost}/shared/whiteboard/${shareToken}`
-            });
-        } catch (error) {
-            console.error('Error sharing whiteboard:', error);
-            return sendError(res, 'Internal server error while sharing whiteboard');
-        }
-    });
-
-    // Unshare a whiteboard
-    router.delete('/whiteboards/:whiteboardId/share', authenticateJWT, async (req, res) => {
-        try {
-            const { whiteboardId } = req.params;
-            const result = await disableSharing(pool, 'whiteboards', whiteboardId, req.user.id);
-
-            if (result.rows.length === 0) {
-                return res.status(404).json({ error: 'Whiteboard not found or access denied' });
-            }
-
-            if (result.rows[0].share_token && broadcast.revokeShared) {
-                await broadcast.revokeShared('whiteboard', result.rows[0].share_token);
-            }
-            res.json({ message: 'Whiteboard sharing revoked successfully' });
-        } catch (error) {
-            console.error('Error unsharing whiteboard:', error);
-            return sendError(res, 'Internal server error while unsharing whiteboard');
-        }
-    });
-
-    // --- Public Shared Content Endpoints ---
+module.exports = (pool, _authenticateJWT, publicRateLimit, _broadcast = {}) => {
 
     // Get shared list (public)
     router.get('/shared/list/:token', publicRateLimit, async (req, res) => {

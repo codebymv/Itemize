@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 95
-- API operations under `/api`: 88
+- Registered method/path operations: 60
+- API operations under `/api`: 53
 - Non-API registered operations: 7
 - Static frontend callsites: 42
 - Operations with frontend consumers: 37
-- Operations referenced by backend tests: 51
-- Recommended GraphQL queries: 6
-- Recommended GraphQL mutations: 29
+- Operations referenced by backend tests: 37
+- Recommended GraphQL queries: 0
+- Recommended GraphQL mutations: 0
 - Recommended retained HTTP endpoints: 53
-- High-risk operations: 84
+- High-risk operations: 49
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -39,7 +39,6 @@
 | GET | `/api/calendar-integrations/google/auth` | 1 | 1 | retain-http | high | scheduling-integrations / CalendarOAuthModule / beginGoogleCalendarConnection |
 | GET | `/api/calendar-integrations/google/calendars/:connectionId` | 1 | 0 | retain-http | high | scheduling-integrations / CalendarProviderHttpModule / providerCalendars |
 | GET | `/api/calendar-integrations/google/callback` | 0 | 3 | retain-http | high | scheduling-integrations / CalendarOAuthModule / googleCalendarCallback |
-| PUT | `/api/canvas/positions` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / batchCanvasPositions |
 | GET | `/api/chat-widget/public/config/:widgetKey` | 1 | 0 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / getPublicChatWidgetConfig |
 | POST | `/api/chat-widget/public/end-session` | 1 | 1 | retain-http | medium | chat-widget / PublicChatWidgetHttpModule / endPublicChatSession |
 | POST | `/api/chat-widget/public/messages` | 1 | 0 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / sendPublicChatMessage |
@@ -56,30 +55,6 @@
 | POST | `/api/invoices/businesses/:id/logo` | 1 | 9 | retain-http | high | billing / InvoiceBusinessesModule / uploadInvoiceBusinessLogo |
 | POST | `/api/invoices/settings/logo` | 1 | 0 | retain-http | high | billing / InvoiceSettingsModule / uploadInvoiceSettingsLogo |
 | POST | `/api/invoices/webhook/stripe` | 0 | 13 | retain-http | medium | billing / InvoiceWebhooksModule / stripeInvoiceWebhook |
-| DELETE | `/api/lists/:listId/share` | 0 | 2 | graphql-mutation | high | sharing / WorkspaceContentModule / disableListSharing |
-| POST | `/api/lists/:listId/share` | 0 | 5 | graphql-mutation | high | sharing / WorkspaceContentModule / enableListSharing |
-| DELETE | `/api/notes/:noteId/share` | 0 | 1 | graphql-mutation | high | sharing / WorkspaceContentModule / disableNoteSharing |
-| POST | `/api/notes/:noteId/share` | 0 | 2 | graphql-mutation | high | sharing / WorkspaceContentModule / enableNoteSharing |
-| GET | `/api/pages` | 0 | 1 | graphql-query | high | growth / LandingPagesModule / landingPages |
-| POST | `/api/pages` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / createLandingPage |
-| DELETE | `/api/pages/:id` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / deleteLandingPage |
-| GET | `/api/pages/:id` | 0 | 0 | graphql-query | high | growth / LandingPagesModule / landingPage |
-| PUT | `/api/pages/:id` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / updateLandingPage |
-| GET | `/api/pages/:id/analytics` | 0 | 0 | graphql-query | high | growth / LandingPagesModule / landingPageAnalytics |
-| POST | `/api/pages/:id/duplicate` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / duplicateLandingPage |
-| DELETE | `/api/pages/:id/password` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / removeLandingPagePassword |
-| POST | `/api/pages/:id/password` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / setLandingPagePassword |
-| POST | `/api/pages/:id/sections` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / addLandingPageSection |
-| PUT | `/api/pages/:id/sections` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / replaceLandingPageSections |
-| DELETE | `/api/pages/:id/sections/:sectionId` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / deleteLandingPageSection |
-| PUT | `/api/pages/:id/sections/:sectionId` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / updateLandingPageSection |
-| POST | `/api/pages/:id/sections/reorder` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / reorderLandingPageSections |
-| GET | `/api/pages/:id/versions` | 0 | 1 | graphql-query | high | growth / LandingPagesModule / landingPageVersions |
-| POST | `/api/pages/:id/versions` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / createLandingPageVersion |
-| DELETE | `/api/pages/:id/versions/:versionId` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / deleteLandingPageVersion |
-| GET | `/api/pages/:id/versions/:versionId` | 0 | 0 | graphql-query | high | growth / LandingPagesModule / landingPageVersion |
-| POST | `/api/pages/:id/versions/:versionId/publish` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / publishLandingPageVersion |
-| POST | `/api/pages/:id/versions/:versionId/restore` | 0 | 0 | graphql-mutation | high | growth / LandingPagesModule / restoreLandingPageVersion |
 | GET | `/api/pages/public/page/:slug` | 1 | 2 | retain-http | high | growth / PublicLandingPagesModule / getPublicLandingPage |
 | POST | `/api/pages/public/page/:slug/analytics` | 1 | 0 | retain-http | high | growth / PublicLandingPagesModule / recordPublicLandingPageAnalytics |
 | GET | `/api/public/sign/:token` | 1 | 7 | retain-http | high | esignatures / PublicSigningModule / getSigningSession |
@@ -91,10 +66,10 @@
 | GET | `/api/reputation/public/review/:token` | 1 | 2 | retain-http | high | reputation / PublicReputationReviewModule / getPublicReviewRequest |
 | POST | `/api/reputation/public/review/:token` | 1 | 2 | retain-http | high | reputation / PublicReputationReviewModule / submitPublicReview |
 | GET | `/api/reputation/public/widget/:widgetKey` | 0 | 3 | retain-http | high | reputation / PublicReputationWidgetModule / getPublicReputationWidget |
-| GET | `/api/shared/list/:token` | 2 | 4 | retain-http | high | sharing / PublicSharingModule / getSharedList |
-| GET | `/api/shared/note/:token` | 2 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedNote |
-| GET | `/api/shared/vault/:token` | 1 | 3 | retain-http | high | sharing / VaultModule / getSharedVault |
-| GET | `/api/shared/whiteboard/:token` | 3 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedWhiteboard |
+| GET | `/api/shared/list/:token` | 2 | 0 | retain-http | high | sharing / PublicSharingModule / getSharedList |
+| GET | `/api/shared/note/:token` | 2 | 0 | retain-http | high | sharing / PublicSharingModule / getSharedNote |
+| GET | `/api/shared/vault/:token` | 1 | 1 | retain-http | high | sharing / VaultModule / getSharedVault |
+| GET | `/api/shared/whiteboard/:token` | 3 | 1 | retain-http | high | sharing / PublicSharingModule / getSharedWhiteboard |
 | GET | `/api/shared/wireframe/:token` | 2 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedWireframe |
 | GET | `/api/signatures/documents/:id/download` | 0 | 2 | retain-http | high | esignatures / SignatureFilesModule / downloadCompletedSignaturePdf |
 | GET | `/api/signatures/documents/:id/file` | 0 | 2 | retain-http | high | esignatures / SignatureFilesModule / streamSignatureDraftPdf |
@@ -108,17 +83,7 @@
 | GET | `/api/social/webhook` | 0 | 2 | retain-http | high | social-integrations / SocialWebhooksModule / verifyMetaWebhook |
 | POST | `/api/social/webhook` | 0 | 1 | retain-http | high | social-integrations / SocialWebhooksModule / processMetaMessagingWebhook |
 | GET | `/api/status` | 1 | 0 | retain-http | high | _unassigned_ |
-| PUT | `/api/vaults/:vaultId/position` | 0 | 0 | graphql-mutation | high | workspace-content / VaultModule / updateWorkspaceVault |
 | POST | `/api/webhooks/:workflowId` | 0 | 6 | retain-http | high | automation / WorkflowWebhooksModule / processWorkflowWebhook |
-| DELETE | `/api/whiteboards/:whiteboardId/share` | 0 | 1 | graphql-mutation | high | sharing / WorkspaceContentModule / disableWhiteboardSharing |
-| POST | `/api/whiteboards/:whiteboardId/share` | 0 | 2 | graphql-mutation | high | sharing / WorkspaceContentModule / enableWhiteboardSharing |
-| GET | `/api/wireframes` | 0 | 1 | graphql-query | high | workspace-content / WorkspaceContentModule / workspaceWireframes |
-| POST | `/api/wireframes` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / createWorkspaceWireframe |
-| PUT | `/api/wireframes/:id/position` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / batchCanvasPositions |
-| DELETE | `/api/wireframes/:wireframeId` | 0 | 0 | graphql-mutation | high | workspace-content / WorkspaceContentModule / deleteWorkspaceWireframe |
-| PUT | `/api/wireframes/:wireframeId` | 0 | 1 | graphql-mutation | high | workspace-content / WorkspaceContentModule / updateWorkspaceWireframe |
-| DELETE | `/api/wireframes/:wireframeId/share` | 0 | 2 | graphql-mutation | high | workspace-content / WorkspaceContentModule / disableWireframeSharing |
-| POST | `/api/wireframes/:wireframeId/share` | 0 | 3 | graphql-mutation | high | workspace-content / WorkspaceContentModule / enableWireframeSharing |
 | GET | `/docs/content` | 1 | 0 | non-api | low | _unassigned_ |
 | GET | `/docs/search` | 1 | 0 | non-api | low | _unassigned_ |
 | GET | `/docs/structure` | 1 | 0 | non-api | low | _unassigned_ |
@@ -131,8 +96,8 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 38
-- Orphaned manual overrides: 244
+- Unmatched backend test calls: 36
+- Orphaned manual overrides: 279
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls
@@ -186,13 +151,11 @@
 | POST | `/api/pipelines/deals/1/won` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:465` |
 | POST | `/api/pipelines/deals/1/lost` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:466` |
 | POST | `/api/pipelines/deals/1/reopen` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:467` |
-| GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:990` |
-| GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1012` |
+| GET | `/api/pages` | `backend-v2/test/integration/landing-pages.integration-spec.ts:207` |
+| GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:983` |
+| GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1005` |
+| PUT | `/api/wireframes/:mutationWireframeId` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1370` |
 | POST | `/api/chat-widget/sessions/:id/messages` | `backend/src/__tests__/integration/realtime.integration.test.js:265` |
-| POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:167` |
-| DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:168` |
-| POST | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:187` |
-| DELETE | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:193` |
-| POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:209` |
-| DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:210` |
+| GET | `/api/shared/:kind/:kind` | `backend/src/__tests__/integration/sharing.integration.test.js:110` |
+| GET | `/api/shared/:kind/not-a-token` | `backend/src/__tests__/integration/sharing.integration.test.js:144` |
 | POST | `/api/invoices/email/preview` | `backend/src/__tests__/routes/invoice-email-preview-retirement.routes.test.js:18` |

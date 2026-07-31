@@ -19,7 +19,7 @@ outbox atomically. The legacy socket host delivers those rows after commit.
 | `GET /api/canvas/lists` (retired) | repeated bounded `workspaceLists` pages |
 | `GET /api/notes` (retired) | `workspaceNotes(filter, page)` |
 | `GET /api/whiteboards` (retired) | `workspaceWhiteboards(filter, page)` |
-| `GET /api/wireframes` (retained protocol) | `workspaceWireframes(filter, page)` |
+| `GET /api/wireframes` (retired) | `workspaceWireframes(filter, page)` |
 
 | Legacy note write | GraphQL mutation |
 | --- | --- |
@@ -431,5 +431,12 @@ remain default-off, and production was untouched.
   canvas multi-page reads, list/note/whiteboard mutation mapping,
   granular-update reuse, and revision preservation/serialization.
 - A production canary proving the GraphQL operations remain healthy while all
-  16 retired list, note, and whiteboard REST handlers return `404`. The earlier
+  30 retired list, note, whiteboard, wireframe, sharing, and canvas-position
+  REST handlers return `404`. The earlier
   staged rollback rehearsals passed on 2026-07-18.
+
+The final Express retirement on 2026-07-31 removed the remaining authenticated
+wireframe CRUD/share/position router, mixed canvas-position handler, and
+list/note/whiteboard share handlers. The generated ledger now contains zero
+GraphQL-disposition REST operations; only explicit HTTP protocol boundaries
+remain.

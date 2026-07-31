@@ -1,5 +1,3 @@
-const canvasRoutes = require('../routes/canvas.routes');
-const wireframesRoutes = require('../routes/wireframes.routes');
 const vaultsRoutes = require('../routes/vaults.routes');
 const { createContactTransferProxy } = require('../contact-transfer-proxy');
 const emailWebhooksRoutes = require('../routes/email-webhooks.routes');
@@ -13,7 +11,6 @@ const billingRoutes = require('../routes/billing.routes');
 const reputationRoutes = require('../routes/reputation.routes');
 const socialRoutes = require('../routes/social.routes');
 const pagesRoutes = require('../routes/pages.routes');
-const pageVersionsRoutes = require('../routes/pageVersions.routes');
 const bookingsRoutes = require('../routes/bookings.routes');
 const formsRoutes = require('../routes/forms.routes');
 const {
@@ -28,12 +25,6 @@ const {
 const webhooksRoutes = require('../routes/webhooks.routes');
 const calendarIntegrationsRoutes = require('../routes/calendar-integrations.routes');
 const sharingRoutes = require('../routes/sharing.routes');
-
-function registerPositionLimiters(app, positionLimiter) {
-    app.put('/api/wireframes/:id/position', positionLimiter);
-    app.put('/api/vaults/:vaultId/position', positionLimiter);
-    app.put('/api/canvas/positions', positionLimiter);
-}
 
 function collectRoutes(stack, basePath = '') {
     const routes = [];
@@ -129,7 +120,6 @@ function registerApiRoutes({
     pool,
     authenticateJWT,
     publicRateLimit,
-    positionLimiter,
     broadcast,
     io,
     port,
@@ -137,12 +127,6 @@ function registerApiRoutes({
 }) {
     logger.info('Mounting route modules...');
 
-    registerPositionLimiters(app, positionLimiter);
-
-    app.use('/api', canvasRoutes(pool, authenticateJWT, broadcast));
-    logger.info('Canvas routes initialized');
-    app.use('/api', wireframesRoutes(pool, authenticateJWT, broadcast));
-    logger.info('Wireframes routes initialized');
     app.use('/api', vaultsRoutes(pool, authenticateJWT, broadcast, publicRateLimit));
     logger.info('Vaults routes initialized');
     const contactTransferProxy = createContactTransferProxy({ logger });
@@ -185,10 +169,6 @@ function registerApiRoutes({
     logger.info('Social Media Integration routes initialized');
     app.use('/api/pages', pagesRoutes(pool, authenticateJWT, publicRateLimit));
     logger.info('Landing Pages routes initialized');
-
-    const { requireOrganization } = require('../middleware/organization')(pool);
-    app.use('/api/pages', pageVersionsRoutes(pool, authenticateJWT, requireOrganization));
-    logger.info('Page Versions routes initialized');
 
     app.use('/api/bookings', bookingsRoutes(pool, publicRateLimit));
     logger.info('Bookings routes initialized');

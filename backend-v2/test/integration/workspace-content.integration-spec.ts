@@ -136,9 +136,6 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     configureApp(app);
     await app.init();
 
-    const createWireframesRouter = require(
-      '../../../backend/src/routes/wireframes.routes',
-    );
     const createSharingRouter = require(
       '../../../backend/src/routes/sharing.routes',
     );
@@ -147,10 +144,6 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     legacyApp = express();
     legacyApp.use(cookieParser());
     legacyApp.use(express.json());
-    legacyApp.use(
-      '/api',
-      createWireframesRouter(pool, authenticateJWT, broadcast),
-    );
     legacyApp.use(
       '/api',
       createSharingRouter(
@@ -372,7 +365,7 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     ]);
   });
 
-  it('creates a canonical list that remains readable through REST', async () => {
+  it('creates a canonical list with a stable GraphQL projection', async () => {
     const result = await mutation(
       memberToken,
       `mutation Create($input: CreateWorkspaceListInput!) {
@@ -557,7 +550,7 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     ]);
   });
 
-  it('creates a canonical note that remains readable through REST', async () => {
+  it('creates a canonical note with a stable GraphQL projection', async () => {
     const result = await mutation(
       memberToken,
       `mutation Create($input: CreateWorkspaceNoteInput!) {
@@ -1039,7 +1032,7 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     }
   });
 
-  it('covers wireframe CRUD, revisions, tenant isolation, REST parity, and realtime delivery', async () => {
+  it('covers wireframe CRUD, revisions, tenant isolation, public projection, and realtime delivery', async () => {
     const page = await query(
       memberToken,
       `query Wireframes(
@@ -1117,20 +1110,6 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     });
     mutationWireframeId =
       created.body.data.createWorkspaceWireframe.id;
-
-    const rest = await request(legacyApp)
-      .get('/api/wireframes')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .expect(200);
-    expect(rest.body.data.wireframes).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: mutationWireframeId,
-          title: 'GraphQL flow',
-          category: 'Work',
-        }),
-      ]),
-    );
 
     const shareDocument = `mutation Share($id: Int!) {
       enableWireframeSharing(id: $id) { shareToken shareUrl }

@@ -2,11 +2,11 @@
 
 **Status:** Authenticated sharing consumer cutover complete for all five workspace object kinds; public capability reads intentionally remain HTTP
 
-**Evidence date:** 2026-07-23
+**Evidence date:** 2026-07-31
 
 ## Decision
 
-Authenticated enable/disable operations move to GraphQL. Public capability reads remain rate-limited HTTP because they are link-oriented, unauthenticated protocols and must work without a GraphQL client or session. The 15 registered list, note, whiteboard, wireframe, and vault sharing operations are assigned in `graphql-operation-overrides.json`.
+Authenticated enable/disable operations are GraphQL-only. Public capability reads remain rate-limited HTTP because they are link-oriented, unauthenticated protocols and must work without a GraphQL client or session. The ten authenticated list, note, whiteboard, wireframe, and vault sharing REST operations are no longer registered; the five public capability reads remain explicit HTTP boundaries.
 
 `WorkspaceContentModule` owns the shipped list, note, whiteboard, and wireframe enable/disable mutations. `VaultModule` owns vault issuance/revocation. The retained legacy public router owns the vault capability read until public-link protocols are consolidated; `PublicSharingModule` owns retained list, note, whiteboard, and wireframe reads. Active Canvas and Contents consumers use GraphQL without REST fallback, while `/shared/:kind/:token` remains the intentional read-only public-link HTTP boundary.
 
@@ -20,7 +20,7 @@ Public requests derive all authority from the path token. They never accept a us
 
 Enable is an atomic database mutation. If an object is already public, repeated or simultaneous calls return the one active token and do not move `shared_at`. If the object is private, enable creates a new token and timestamps issuance. The former select-then-update implementation could return two different tokens during a race; it is now a single locked PostgreSQL update and has concurrent coverage.
 
-Disable atomically sets `is_public = false`, clears `share_token`, and clears `shared_at`. Re-enabling always issues a different token. The former implementation retained the token and resurrected a revoked URL on re-share; legacy list, note, whiteboard, wireframe, and vault routes now clear it.
+Disable atomically sets `is_public = false`, clears `share_token`, and clears `shared_at`. Re-enabling always issues a different token. The former implementation retained the token and resurrected a revoked URL on re-share; the GraphQL mutations now clear it.
 
 The target stores only a keyed hash of a cryptographically random capability with at least 128 random bits. Raw tokens appear only in the one issuance response and user-facing URL. They are redacted from logs, traces, analytics, errors, GraphQL results after issuance, database exports, and realtime event payloads. Token rotation and revocation are security events with owner, object, correlation ID, and server timestamp, but never the raw token.
 
@@ -72,7 +72,7 @@ The target freezes room authorization, event names, payload projections, reconne
 
 `enableWorkspaceVaultSharing` and `disableWorkspaceVaultSharing` are authenticated, CSRF-protected, owner-scoped mutations. Enable requires `confirmDecryptedSharing: true`, serializes on the owned row, refuses locked vaults, preserves the active token and timestamp under repeated or concurrent requests, retries UUID collisions, and rotates after revocation. Disable is idempotent and clears all public state. Setting or changing the master password performs the same revocation in its password transaction.
 
-`GET /api/shared/vault/:token` intentionally remains HTTP. It accepts only UUID-shaped active capabilities, rejects locked vaults, emits private/no-store, no-referrer, and noindex/nofollow headers, returns only the public vault projection, and fails the complete response closed if any stored item cannot decrypt. Authenticated `POST` and `DELETE /api/vaults/:id/share` now return 404.
+`GET /api/shared/vault/:token` intentionally remains HTTP. It accepts only UUID-shaped active capabilities, rejects locked vaults, emits private/no-store, no-referrer, and noindex/nofollow headers, returns only the public vault projection, and fails the complete response closed if any stored item cannot decrypt. All ten former authenticated share/unshare methods now return 404.
 
 ## Required parity scenarios
 
@@ -91,7 +91,7 @@ The target freezes room authorization, event names, payload projections, reconne
 
 ## Current evidence and exit gate
 
-Fresh PostgreSQL coverage proves stable concurrent issuance, owner-only mutation across all five object types, immediate revocation, token clearing and rotation, malformed-token handling, nested whiteboard sanitization, note markup sanitization, and no-store privacy headers. The workspace and vault integration suites additionally prove the live GraphQL enable/reuse/foreign-concealment/disable/re-enable lifecycle for all five kinds, locked-vault refusal, password-triggered vault revocation, retained public projections, vault decrypt-failure closure, durable non-vault outbox delivery to `revokeShared`, old-token denial, and rotation. Live Socket.IO coverage proves two active viewers receive a redacted revocation event and are evicted. Focused frontend tests prove every authenticated sharing transport and mutation identity with no application-data REST fallback.
+Fresh PostgreSQL coverage proves the retained public reads for all five object types, malformed-token denial, nested whiteboard sanitization, note/list markup sanitization, privacy headers, and complete vault decrypt-failure closure. Nest workspace and vault coverage proves stable concurrent issuance, owner-only mutation, enable/reuse/disable/re-enable lifecycles, token clearing and rotation, locked-vault refusal, password-triggered vault revocation, and durable non-vault revocation outbox delivery. The full Express composition separately proves all former authenticated share/unshare methods return 404. Live Socket.IO coverage proves two active viewers receive a redacted revocation event and are evicted. Focused frontend tests prove every authenticated sharing transport and mutation identity with no application-data REST fallback.
 
 The authenticated application-data transport cutover for workspace sharing is complete. Broader public-capability security hardening remains incomplete until:
 

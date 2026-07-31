@@ -67,6 +67,12 @@ Those endpoints are anonymous browser-navigation and telemetry protocols. The pa
 
 `frontend/src/services/pagesApi.ts` and `pageVersionsApi.ts` remain the stable legacy-shaped TypeScript facades used by the page list, editor, and version-history dialog. Their authenticated functions—including password assignment/removal and version preview—delegate directly to `landingPagesGraphql.ts` and `landingPageVersionsGraphql.ts`, which map GraphQL camelCase fields back to the existing snake_case UI model. Only public page delivery and analytics use HTTP.
 
+The 20 authenticated Express page, section, password, analytics, and version
+operations were unregistered on 2026-07-31. Their obsolete route modules were
+removed, while the two public slug-based HTTP operations remain mounted. A
+full-composition integration gate requires all 20 former methods to return
+404.
+
 No landing-page rollout flag was added. This repository has no active customer data, the operations have clean-database parity coverage, and retaining an unused authenticated REST branch would weaken cutover evidence.
 
 ## Evidence gate
@@ -76,5 +82,5 @@ The slice is complete only when all of the following pass:
 - NestJS build and landing-page/page-version service unit coverage.
 - Frontend typecheck, targeted lint, and landing-page/page-version GraphQL mapping and transport tests.
 - Disposable PostgreSQL integration coverage for REST/read parity, tenant isolation, CSRF, generated and explicit slugs, plan limits, page lifecycle, complete section lifecycle, exact-set reordering, zero-based ordering, analytics, duplication, password hashing/redaction/public verification/removal, version snapshot completeness, full publication, restoration, current-version protection, and delete concealment.
-- Generated API surface and cutover ledger checks with all 20 authenticated operations at `consumer-cutover-complete`.
+- Generated API surface and cutover ledger checks with no authenticated landing-page REST operations remaining.
 - Production schema canaries resolve the new query and mutation fields and reject anonymous access with `UNAUTHENTICATED`.

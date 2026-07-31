@@ -1,13 +1,14 @@
 # Vaults GraphQL cutover contract
 
-**Status:** Shell, item, and password lifecycle consumer cutover complete; sharing remains
+**Status:** Authenticated consumer cutover and REST retirement complete; public capability read retained
 
 ## Shipped boundary
 
 `VaultModule` owns authenticated user-scoped vault list, detail, create,
 partial update, position update, and deletion. Canvas and Contents consumers
-call GraphQL directly with no REST fallback. The six replaced Express routes
-are no longer registered.
+call GraphQL directly with no REST fallback. All replaced Express routes,
+including the former standalone position-limiter registration, are no longer
+registered.
 
 The detail query accepts an optional master password in the GraphQL request
 body instead of an HTTP query string. A locked vault without a password returns
@@ -66,11 +67,11 @@ so password rotation/removal does not rewrite ciphertext. This preserves the
 existing storage contract while avoiding a false client-side or zero-knowledge
 encryption claim.
 
-## Remaining slices
+## Retained public boundary
 
-1. The explicit-consent vault-sharing model documented in
-   `sharing-graphql-cutover.md`; its anonymous bearer-link read remains an HTTP
-   protocol.
+The explicit-consent vault-sharing model documented in
+`sharing-graphql-cutover.md` is implemented through authenticated GraphQL
+mutations. Its anonymous bearer-link read remains an intentional HTTP protocol.
 
 ## Verification
 

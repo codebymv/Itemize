@@ -1,26 +1,15 @@
 /**
  * Landing Pages Routes
- * CRUD operations, section management, and public page serving
+ * Public landing-page serving and analytics collection.
  */
 
 const express = require('express');
-const crudRoutes = require('./pages/crud.routes');
-const sectionsRoutes = require('./pages/sections.routes');
-const analyticsRoutes = require('./pages/analytics.routes');
-const passwordRoutes = require('./pages/password.routes');
 const publicRoutes = require('./pages/public.routes');
 
-module.exports = (pool, authenticateJWT, publicRateLimit) => {
+module.exports = (pool, _authenticateJWT, publicRateLimit) => {
     const router = express.Router();
-    const { requireOrganization } = require('../middleware/organization')(pool);
-
-    const protectedContext = { pool, authenticateJWT, requireOrganization };
 
     router.use(publicRoutes({ pool, publicRateLimit }));
-    router.use(passwordRoutes(protectedContext));
-    router.use(sectionsRoutes(protectedContext));
-    router.use(analyticsRoutes(protectedContext));
-    router.use(crudRoutes(protectedContext));
 
     return router;
 };

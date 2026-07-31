@@ -1,8 +1,6 @@
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
-import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -11,7 +9,6 @@ import { PG_POOL } from '../../src/database/database.module';
 
 describe('Landing-page version GraphQL PostgreSQL coverage', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   let organizationId: number;
   let outsiderOrganizationId: number;
@@ -116,23 +113,6 @@ describe('Landing-page version GraphQL PostgreSQL coverage', () => {
     configureApp(app);
     await app.init();
 
-    const createVersionsRouter = require('../../../backend/src/routes/pageVersions.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    const { requireOrganization } =
-      require('../../../backend/src/middleware/organization')(pool);
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use(
-      '/api/pages',
-      authenticateJWT,
-      requireOrganization,
-      createVersionsRouter(
-        pool,
-        authenticateJWT,
-        requireOrganization,
-      ),
-    );
   });
 
   afterAll(async () => {
@@ -177,7 +157,7 @@ describe('Landing-page version GraphQL PostgreSQL coverage', () => {
     publishedAt isCurrent createdAt
   `;
 
-  it('creates complete snapshots and matches the retained list projection', async () => {
+  it('creates complete snapshots and returns them through both version queries', async () => {
     const created = await mutation(
       `mutation Create($pageId: Int!, $description: String) {
         createLandingPageVersion(pageId: $pageId, description: $description) {
@@ -211,11 +191,6 @@ describe('Landing-page version GraphQL PostgreSQL coverage', () => {
     });
     const versionId = created.body.data.createLandingPageVersion.id;
 
-    const legacy = await request(legacyApp)
-      .get(`/api/pages/${pageId}/versions`)
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
     const target = await graphql(
       memberToken,
       organizationId,
@@ -229,14 +204,13 @@ describe('Landing-page version GraphQL PostgreSQL coverage', () => {
       }`,
     ).expect(200);
     expect(target.body.errors).toBeUndefined();
-    const legacyBody = legacy.body.data ?? legacy.body;
     expect(target.body.data.landingPageVersions).toMatchObject({
-      currentVersionId: legacyBody.currentVersionId ?? null,
+      currentVersionId: null,
       versions: [
         expect.objectContaining({
-          id: legacyBody.versions[0].id,
-          pageId: legacyBody.versions[0].page_id,
-          versionNumber: legacyBody.versions[0].version_number,
+          id: versionId,
+          pageId,
+          versionNumber: 1,
         }),
       ],
     });
