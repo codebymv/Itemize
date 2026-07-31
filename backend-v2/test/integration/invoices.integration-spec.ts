@@ -150,8 +150,6 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
 
     const createCrudRouter =
       require('../../../backend/src/routes/invoices/crud.routes');
-    const createEmailPreviewRouter =
-      require('../../../backend/src/routes/invoices/email-preview.routes');
     const { authenticateJWT } = require('../../../backend/src/auth/middleware');
     const { requireOrganization } =
       require('../../../backend/src/middleware/organization')(pool);
@@ -169,10 +167,6 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     legacyApp.use(
       '/api/invoices/recurring',
       createRecurringRouter(pool, authenticateJWT),
-    );
-    legacyApp.use(
-      '/api/invoices',
-      createEmailPreviewRouter({ pool, authenticateJWT, requireOrganization }),
     );
     legacyApp.use(
       '/api/invoices',
@@ -1125,16 +1119,6 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       subject: 'Invoice SET-00950',
       includePaymentLink: true,
     };
-    const retained = await request(legacyApp)
-      .post('/api/invoices/email/preview')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .send({ ...input, baseUrl: 'https://frontend.test.itemize' })
-      .expect(200);
-    expect(retained.body.data.html).toContain('Hello Ada,\nYour invoice is attached.');
-    expect(retained.body.data.html).toContain('Pay Now');
-    expect(retained.body.data.html).not.toContain('Unsubscribe');
-
     const noCsrf = await graphql(
       memberToken,
       organizationId,
@@ -1150,6 +1134,19 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       { input },
     ).expect(200);
     expect(foreignOrganization.body.errors[0].extensions.code).toBe('FORBIDDEN');
+
+    const preview = await graphql(
+      memberToken,
+      organizationId,
+      mutation,
+      { input },
+    ).expect(200);
+    expect(preview.body.errors).toBeUndefined();
+    expect(preview.body.data.previewInvoiceEmail.html)
+      .toContain('Hello Ada,\nYour invoice is attached.');
+    expect(preview.body.data.previewInvoiceEmail.html).toContain('Pay Now');
+    expect(preview.body.data.previewInvoiceEmail.html)
+      .not.toContain('Unsubscribe');
 
     const hostile = await graphql(
       memberToken,

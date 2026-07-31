@@ -3,11 +3,11 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 214,
-    "resolvedDeclarationCount": 214,
+    "declarationCount": 213,
+    "resolvedDeclarationCount": 213,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 197,
-    "sourceFileCount": 48
+    "uniqueResolvedOperationCount": 196,
+    "sourceFileCount": 47
   },
   "caveats": [
     "This is static source analysis; it does not execute application modules.",
@@ -574,16 +574,6 @@
       "declaredPath": "/businesses/:id/logo",
       "source": "backend/src/routes/invoices/businesses.routes.js",
       "line": 17,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/invoices/email/preview"
-      ],
-      "declaredPath": "/email/preview",
-      "source": "backend/src/routes/invoices/email-preview.routes.js",
-      "line": 16,
       "dynamic": false
     },
     {

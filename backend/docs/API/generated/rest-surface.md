@@ -6,11 +6,11 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 214
-- Resolved declarations: 214
+- Route declarations: 213
+- Resolved declarations: 213
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 197
-- Files containing declarations: 48
+- Unique resolved method/path operations: 196
+- Files containing declarations: 47
 
 ## Interpretation limits
 
@@ -79,7 +79,6 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/invoices/:id/send` | `/:id/send` | `backend/src/routes/invoices/actions.routes.js:27` |
 | POST | `/api/invoices/businesses/:id/logo` | `/api/invoices/businesses/:id/logo` | `backend/src/bootstrap/register-api-routes.js:180` |
 | POST | `/api/invoices/businesses/:id/logo` | `/businesses/:id/logo` | `backend/src/routes/invoices/businesses.routes.js:17` |
-| POST | `/api/invoices/email/preview` | `/email/preview` | `backend/src/routes/invoices/email-preview.routes.js:16` |
 | GET | `/api/invoices/estimates` | `/` | `backend/src/routes/estimates.routes.js:29` |
 | POST | `/api/invoices/estimates` | `/` | `backend/src/routes/estimates.routes.js:130` |
 | DELETE | `/api/invoices/estimates/:id` | `/:id` | `backend/src/routes/estimates.routes.js:497` |

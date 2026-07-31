@@ -6,7 +6,6 @@ const express = require('express');
 const router = express.Router();
 const { logger } = require('../utils/logger');
 
-const createEmailPreviewRoutes = require('./invoices/email-preview.routes');
 const createPaymentsRoutes = require('./invoices/payments.routes');
 const createBusinessesRoutes = require('./invoices/businesses.routes');
 const createSettingsRoutes = require('./invoices/settings.routes');
@@ -31,7 +30,8 @@ module.exports = (pool, authenticateJWT, _publicRateLimit) => {
     // Product catalog management is permanently GraphQL-owned. Exit this
     // router before the generic invoice /:id handlers can capture /products.
     router.use('/products', (_req, _res, next) => next('router'));
-    router.use(createEmailPreviewRoutes({ pool, authenticateJWT, requireOrganization }));
+    // Invoice email preview is permanently GraphQL-owned.
+    router.use('/email', (_req, _res, next) => next('router'));
     router.use(createPaymentsRoutes({ pool, authenticateJWT, requireOrganization }));
     router.use(createBusinessesRoutes({ pool, authenticateJWT, requireOrganization }));
     // Multipart logo upload above remains HTTP. Every other business-profile

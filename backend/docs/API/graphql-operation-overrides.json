@@ -368,7 +368,7 @@
       "targetOperation": "previewInvoiceEmail",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "CSRF-protected selected-organization mutation returns bounded branded HTML, treats message and subject as plain text, uses only the server-configured frontend origin, and is displayed in a script-disabled browser sandbox."
+      "notes": "The frontend permanently uses this CSRF-protected selected-organization mutation. It returns bounded branded HTML, treats message and subject as plain text, uses only the server-configured frontend origin, is displayed in a script-disabled browser sandbox, and the retired Express path returns 404."
     },
     "GET /api/invoices/estimates": {
       "disposition": "graphql-query",

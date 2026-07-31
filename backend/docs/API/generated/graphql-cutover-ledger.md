@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 197
-- API operations under `/api`: 190
+- Registered method/path operations: 196
+- API operations under `/api`: 189
 - Non-API registered operations: 7
-- Static frontend callsites: 139
-- Operations with frontend consumers: 132
-- Operations referenced by backend tests: 110
+- Static frontend callsites: 138
+- Operations with frontend consumers: 131
+- Operations referenced by backend tests: 109
 - Recommended GraphQL queries: 37
-- Recommended GraphQL mutations: 98
+- Recommended GraphQL mutations: 97
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 148
+- High-risk operations: 147
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -83,7 +83,6 @@
 | POST | `/api/invoices/:id/record-payment` | 1 | 11 | graphql-mutation | medium | billing / PaymentsModule / recordInvoicePayment |
 | POST | `/api/invoices/:id/send` | 1 | 6 | graphql-mutation | medium | billing / InvoicesModule / sendInvoice |
 | POST | `/api/invoices/businesses/:id/logo` | 1 | 9 | retain-http | high | billing / InvoiceBusinessesModule / uploadInvoiceBusinessLogo |
-| POST | `/api/invoices/email/preview` | 1 | 1 | graphql-mutation | high | billing / InvoicesModule / previewInvoiceEmail |
 | GET | `/api/invoices/estimates` | 1 | 6 | graphql-query | medium | billing / EstimatesModule / estimates |
 | POST | `/api/invoices/estimates` | 1 | 9 | graphql-mutation | medium | billing / EstimatesModule / createEstimate |
 | DELETE | `/api/invoices/estimates/:id` | 1 | 2 | graphql-mutation | medium | billing / EstimatesModule / deleteEstimate |
@@ -233,8 +232,8 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 50
-- Orphaned manual overrides: 153
+- Unmatched backend test calls: 51
+- Orphaned manual overrides: 154
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls
@@ -310,3 +309,4 @@
 | PUT | `/api/auth/me` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:265` |
 | POST | `/api/auth/change-password` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:270` |
 | POST | `/api/auth/google-credential` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:284` |
+| POST | `/api/invoices/email/preview` | `backend/src/__tests__/routes/invoice-email-preview-retirement.routes.test.js:18` |
