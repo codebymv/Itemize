@@ -10,168 +10,6 @@
       "risk": "low",
       "notes": "Retain as the Railway liveness/readiness protocol. It must remain cheap, unauthenticated, and independent of GraphQL execution."
     },
-    "GET /api/organizations": {
-      "disposition": "graphql-query",
-      "owner": "workspace",
-      "targetModule": "OrganizationsModule",
-      "targetOperation": "organizations",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The active workspace selector lists only current database memberships, includes the caller's current role and selected default, and maps directly into the retained frontend shape. The authenticated REST route is retired."
-    },
-    "POST /api/organizations": {
-      "disposition": "graphql-mutation",
-      "owner": "workspace",
-      "targetModule": "OrganizationsModule",
-      "targetOperation": "createOrganization",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "CSRF-protected creation commits the organization, owner membership, and initial default assignment under one user-row-serialized transaction. The frontend calls GraphQL directly and the REST route is retired."
-    },
-    "DELETE /api/organizations/:organizationId": {
-      "disposition": "graphql-mutation",
-      "owner": "workspace",
-      "targetModule": "OrganizationsModule",
-      "targetOperation": "deleteOrganization",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "Owner-only deletion locks signature evidence, refuses any non-draft document, durably queues every draft/template artifact before cascade, and relies on the database foreign key to clear defaults. The frontend calls GraphQL directly and the REST route is retired."
-    },
-    "GET /api/organizations/:organizationId": {
-      "disposition": "graphql-query",
-      "owner": "workspace",
-      "targetModule": "OrganizationsModule",
-      "targetOperation": "organization",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Current-membership detail returns the caller's database role and conceals organization existence from outsiders. The frontend calls GraphQL directly and the REST route is retired."
-    },
-    "PUT /api/organizations/:organizationId": {
-      "disposition": "graphql-mutation",
-      "owner": "workspace",
-      "targetModule": "OrganizationsModule",
-      "targetOperation": "updateOrganization",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Owner/admin-only updates lock and re-read membership, bound name/settings/logo inputs, and support explicit logo clearing. The frontend calls GraphQL directly and the REST route is retired."
-    },
-    "POST /api/organizations/:organizationId/leave": {
-      "disposition": "graphql-mutation",
-      "owner": "workspace",
-      "targetModule": "OrganizationsModule",
-      "targetOperation": "leaveOrganization",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Owners cannot leave; the mutation removes only the authenticated member and atomically repairs a selected default. The frontend calls GraphQL directly and the REST route is retired."
-    },
-    "POST /api/organizations/:organizationId/select": {
-      "disposition": "graphql-mutation",
-      "owner": "workspace",
-      "targetModule": "OrganizationsModule",
-      "targetOperation": "selectOrganization",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The active workspace selector re-reads current membership without existence disclosure, persists the selected default under a user lock, requires CSRF, and clears tenant-scoped client caches. The frontend calls GraphQL directly and the REST route is retired."
-    },
-    "GET /api/organizations/:organizationId/members": {
-      "disposition": "graphql-query",
-      "owner": "workspace",
-      "targetModule": "OrganizationsModule",
-      "targetOperation": "organizationMembers",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Any current member may list members; authorization and the member snapshot share one transaction so a concurrent removal cannot leak a post-revocation list. The frontend calls GraphQL directly and the REST route is retired."
-    },
-    "POST /api/organizations/:organizationId/members": {
-      "disposition": "graphql-mutation",
-      "owner": "workspace",
-      "targetModule": "OrganizationsModule",
-      "targetOperation": "addOrganizationMember",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Owner/admin-only addition accepts admin/member/viewer, rejects duplicate or unknown users, and records inviter attribution atomically. The frontend calls GraphQL directly and the REST route is retired."
-    },
-    "DELETE /api/organizations/:organizationId/members/:memberId": {
-      "disposition": "graphql-mutation",
-      "owner": "workspace",
-      "targetModule": "OrganizationsModule",
-      "targetOperation": "removeOrganizationMember",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Owner memberships are immutable, admins cannot remove admins, member identity is organization-scoped, and selected defaults are repaired atomically. The frontend calls GraphQL directly and the REST route is retired."
-    },
-    "PUT /api/organizations/:organizationId/members/:memberId": {
-      "disposition": "graphql-mutation",
-      "owner": "workspace",
-      "targetModule": "OrganizationsModule",
-      "targetOperation": "updateOrganizationMemberRole",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Owner memberships are immutable, admins cannot modify admins, roles are limited to admin/member/viewer, and both lookup and update are organization-scoped. The frontend calls GraphQL directly and the REST route is retired."
-    },
-    "POST /api/organizations/ensure-default": {
-      "disposition": "graphql-mutation",
-      "owner": "workspace",
-      "targetModule": "OrganizationsModule",
-      "targetOperation": "ensureDefaultOrganization",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The active workspace selector idempotently selects an existing membership or atomically creates one personal organization, owner membership, and default assignment; concurrent first-workspace requests serialize on the user row. The frontend calls GraphQL directly and the REST route is retired."
-    },
-    "GET /api/invoices": {
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetModule": "InvoicesModule",
-      "targetOperation": "invoices",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The frontend permanently uses this GraphQL query. Organization-scoped status/contact/search filters use the shared page contract, literal search, deterministic created/id ordering, cross-tenant-safe counts, and decimal strings; the retired Express path returns 404."
-    },
-    "POST /api/invoices": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "InvoicesModule",
-      "targetOperation": "createInvoice",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The frontend permanently uses this CSRF-protected GraphQL mutation. It validates tenant-owned contact, business, and product references, allocates the invoice number atomically, commits line items plus PostgreSQL-calculated totals in one transaction, and the retired Express path returns 404."
-    },
-    "DELETE /api/invoices/:id": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "InvoicesModule",
-      "targetOperation": "deleteInvoice",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The frontend permanently uses this CSRF-protected organization-scoped GraphQL deletion. It returns a stable deleted ID and number, conceals foreign rows, and the retired Express path returns 404."
-    },
-    "GET /api/invoices/:id": {
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetModule": "InvoicesModule",
-      "targetOperation": "invoice",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The frontend permanently uses this GraphQL detail query. Organization-qualified reads return line items, payments, contact, and business projections with decimal strings, conceal foreign invoice IDs, and the retired Express path returns 404."
-    },
-    "PUT /api/invoices/:id": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "InvoicesModule",
-      "targetOperation": "updateInvoice",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The frontend permanently uses this CSRF-protected GraphQL mutation. Updates lock the tenant-owned invoice, allow only draft/sent edits, validate effective references and dates, atomically replace line items with PostgreSQL decimal recalculation, and the retired Express path returns 404."
-    },
-    "POST /api/invoices/:id/create-payment-link": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "InvoicesModule",
-      "targetOperation": "createInvoicePaymentLink",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The frontend permanently uses this CSRF-protected mutation. It snapshots the exact tenant-owned payable balance in a durable intent before Stripe; intent-derived provider idempotency, exact replay, conflicting stale-key rejection, unresolved ambiguous-outcome fencing, and a post-provider balance/state recheck prevent duplicate or stale links. Definite rejection permits a fresh request; ambiguous and raced outcomes expose no URL and require reconciliation. The rollout flag and Express handler are removed, and the retired path returns 404."
-    },
     "GET /api/invoices/:id/pdf": {
       "disposition": "retain-http",
       "owner": "billing",
@@ -181,78 +19,6 @@
       "risk": "high",
       "notes": "NestJS owns the retained cookie-authenticated binary route with selected-organization concealment, the legacy renderer's tenant snapshot, validated PDF output, safe attachment naming, and private/no-store, nosniff, sandbox headers. The existing origin proxies this exact URL behind a default-off server flag; the active frontend controls download the blob without selecting a transport."
     },
-    "POST /api/invoices/:id/record-payment": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "PaymentsModule",
-      "targetOperation": "recordInvoicePayment",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The frontend permanently uses this GraphQL mutation. It inserts the payment, locks the tenant-owned invoice, performs decimal balance/status arithmetic in PostgreSQL, and enqueues invoice_paid exactly once in the same transaction. Concurrent final payments, CSRF, validation, and tenant-hidden misses pass fresh PostgreSQL. The former Express handler is removed and the retired path returns 404."
-    },
-    "POST /api/invoices/:id/send": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "InvoicesModule",
-      "targetOperation": "sendInvoice",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The frontend permanently uses this CSRF-protected mutation. It snapshots the tenant-owned invoice, recipient, custom message, CC list, resend intent, PDF inputs, and optional payment-link request into a durable delivery row. Stripe and Resend receive intent-derived idempotency keys; the PDF attachment and requested payment link are required, and only confirmed email delivery marks a draft sent. Definite failures retry through a leased worker, ambiguous provider outcomes require reconciliation, conflicting key reuse fails, one unresolved intent prevents bypass with a new key, and exact replay cannot duplicate delivery. The rollout flag and Express handler are removed, and the retired path returns 404."
-    },
-    "GET /api/invoices/businesses": {
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetModule": "InvoiceBusinessesModule",
-      "targetOperation": "invoiceBusinesses",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this GraphQL query for active profiles in last-used/newest order. Fresh PostgreSQL proves tenant-scoped ordering and counts; the retired Express path returns 404."
-    },
-    "POST /api/invoices/businesses": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "InvoiceBusinessesModule",
-      "targetOperation": "createInvoiceBusiness",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this CSRF-protected GraphQL mutation. It accepts bounded profile fields but never a client-selected logo URL; the retired JSON Express path returns 404 while multipart upload remains HTTP."
-    },
-    "DELETE /api/invoices/businesses/:id": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "InvoiceBusinessesModule",
-      "targetOperation": "deleteInvoiceBusiness",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this organization-scoped GraphQL soft deletion, which preserves historical invoice references while removing the profile from active lists; the retired Express path returns 404."
-    },
-    "GET /api/invoices/businesses/:id": {
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetModule": "InvoiceBusinessesModule",
-      "targetOperation": "invoiceBusiness",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this GraphQL detail query. Inactive historical profiles remain readable, absent and foreign rows share NOT_FOUND, and the retired Express path returns 404."
-    },
-    "PUT /api/invoices/businesses/:id": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "InvoiceBusinessesModule",
-      "targetOperation": "updateInvoiceBusiness",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this CSRF-protected GraphQL mutation. Partial writes preserve omitted fields, normalize blank optional values to null, retain server-owned logo URLs, and the retired Express path returns 404."
-    },
-    "DELETE /api/invoices/businesses/:id/logo": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "InvoiceBusinessesModule",
-      "targetOperation": "removeInvoiceBusinessLogo",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this CSRF-protected GraphQL mutation. Tenant-scoped removal clears the server-owned URL and enqueues its exact prior value in one transaction; a leased worker retries safe local or exact configured-S3 deletion, foreign URLs dead-letter without storage access, the retired Express DELETE returns 404, and multipart upload remains HTTP."
-    },
     "POST /api/invoices/businesses/:id/logo": {
       "disposition": "retain-http",
       "owner": "billing",
@@ -261,258 +27,6 @@
       "parityStatus": "implemented",
       "risk": "high",
       "notes": "NestJS retains tenant-authorized multipart HTTP with a 2 MiB limit, bounded parts, structural PNG/JPEG/GIF/WebP checks, server-owned names, store-first replacement, durable old-logo cleanup, and compensating cleanup on database failure. A default-off legacy-origin proxy preserves rollback."
-    },
-    "POST /api/invoices/email/preview": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "InvoicesModule",
-      "targetOperation": "previewInvoiceEmail",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this CSRF-protected selected-organization mutation. It returns bounded branded HTML, treats message and subject as plain text, uses only the server-configured frontend origin, is displayed in a script-disabled browser sandbox, and the retired Express path returns 404."
-    },
-    "GET /api/invoices/estimates": {
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetModule": "EstimatesModule",
-      "targetOperation": "estimates",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The frontend permanently uses this organization-scoped GraphQL query. It preserves filters, literal search, deterministic paging, decimal precision, and the retained frontend list shape; the rollout flag and retired Express path are removed, and the old URL returns 404."
-    },
-    "POST /api/invoices/estimates": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "EstimatesModule",
-      "targetOperation": "createEstimate",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The frontend permanently uses this CSRF-protected mutation. Creation validates tenant-owned contacts/products, serializes estimate numbering, and commits line items plus PostgreSQL-calculated tax, discount, and total values atomically; the rollout flag and retired Express path are removed, and the old URL returns 404."
-    },
-    "DELETE /api/invoices/estimates/:id": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "EstimatesModule",
-      "targetOperation": "deleteEstimate",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The frontend permanently uses this tenant-scoped GraphQL mutation. Deletion conceals foreign rows and returns stable deleted identity through the retained-shape adapter; the rollout flag and retired Express path are removed, and the old URL returns 404."
-    },
-    "GET /api/invoices/estimates/:id": {
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetModule": "EstimatesModule",
-      "targetOperation": "estimate",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The frontend permanently uses this GraphQL query. Detail reads qualify contact, product, and item projections by organization and preserve decimal strings until the frontend boundary; the rollout flag and retired Express path are removed, and the old URL returns 404."
-    },
-    "PUT /api/invoices/estimates/:id": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "EstimatesModule",
-      "targetOperation": "updateEstimate",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The frontend permanently uses this CSRF-protected mutation. Updates lock the estimate, permit only draft/sent edits, validate effective references and dates, and replace items plus derived totals atomically; the rollout flag and retired Express path are removed, and the old URL returns 404."
-    },
-    "POST /api/invoices/estimates/:id/convert-to-invoice": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "EstimatesModule",
-      "targetOperation": "convertEstimateToInvoice",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this CSRF-protected mutation. It locks and conceals the tenant-owned estimate, replays its existing tenant-qualified invoice, and atomically allocates one number, copies header/items with qualified references, and links the accepted source. Fresh PostgreSQL proves exact persisted values, tenant isolation, rollback, fail-closed corrupt links, and repeat/concurrent-repeat convergence on one invoice and one allocation; the rollout flag and retired Express path are removed, and the old URL returns 404."
-    },
-    "POST /api/invoices/estimates/:id/send": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "EstimatesModule",
-      "targetOperation": "sendEstimate",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this CSRF-protected mutation. It locks and conceals the tenant-owned estimate, requires a bounded idempotency key and recipient, and persists a delivery snapshot before provider work. Resend receives an intent-derived idempotency key; only confirmed delivery atomically marks the intent and draft estimate sent. Definite failures retry through a leased one-shot worker, ambiguous failures require reconciliation, and exact request replay cannot duplicate delivery. Fresh PostgreSQL proves success evidence, replay, provider failure and worker recovery, ambiguous quarantine, CSRF, tenant isolation, recipient/key validation, and terminal-state denial; direct provider tests verify Resend configuration, request headers/body, provider rejection, and ambiguous transport failure. The rollout flag, frontend REST fallback, final Express estimate router, and orphan estimate email/PDF helpers are removed, and the old URL returns 404."
-    },
-    "GET /api/invoices/payments": {
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetModule": "PaymentsModule",
-      "targetOperation": "payments",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this bounded GraphQL payment-history query with typed status/method filters, deterministic newest ordering, decimal strings, organization-qualified invoice/contact joins, and selected-tenant isolation. The rollout flag and retired Express GET route are removed; an explicit canary requires the old URL to return 404."
-    },
-    "POST /api/invoices/payments": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "PaymentsModule",
-      "targetOperation": "recordPayment",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The frontend permanently uses this CSRF-protected mutation for standalone or optionally invoice-linked manual payments. It validates bounded decimal/currency/method/status/date inputs, organization-qualifies optional contact/invoice references, and shares the locked invoice balance/event transaction. Pending/failed payments do not mutate invoice balances. The rollout flag and retired Express POST route are removed; an explicit canary requires the old URL to return 404."
-    },
-    "GET /api/invoices/products": {
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetModule": "ProductsModule",
-      "targetOperation": "products",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this deterministic organization-scoped GraphQL query. Fresh PostgreSQL proves active and literal-search filters, tenant isolation, and decimal-string output; the retired Express path returns 404."
-    },
-    "POST /api/invoices/products": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "ProductsModule",
-      "targetOperation": "createProduct",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this CSRF-protected GraphQL mutation. NestJS validates product type, recurring period, currency, bounded decimal strings, and normalized optional fields; the retired Express path returns 404."
-    },
-    "DELETE /api/invoices/products/:id": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "ProductsModule",
-      "targetOperation": "deleteProduct",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this GraphQL mutation. Organization-scoped deletion returns a stable identity, foreign and absent rows are indistinguishable, and the retired Express path returns 404."
-    },
-    "PUT /api/invoices/products/:id": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "ProductsModule",
-      "targetOperation": "updateProduct",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this GraphQL mutation. Partial updates preserve omitted fields, clear nullable text explicitly, enforce recurring-period invariants from stored state, and keep one-time billing periods null; the retired Express path returns 404."
-    },
-    "GET /api/invoices/recurring": {
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetModule": "RecurringInvoicesModule",
-      "targetOperation": "recurringInvoices",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this tenant-scoped query. Status filtering and deterministic paging map decimal strings and generated counts into the retained frontend shape; the read flag and Express route are removed, and the old URL returns 404."
-    },
-    "POST /api/invoices/recurring": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "RecurringInvoicesModule",
-      "targetOperation": "createRecurringInvoice",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this CSRF-protected mutation. Creation validates tenant contacts/products, frequency and date bounds, stores legacy-compatible JSON items, and calculates totals transactionally; the mutation flag and Express route are removed, and the old URL returns 404."
-    },
-    "DELETE /api/invoices/recurring/:id": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "RecurringInvoicesModule",
-      "targetOperation": "deleteRecurringInvoice",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this CSRF-protected mutation. Tenant-scoped deletion returns stable identity and conceals foreign or absent templates; the mutation flag and Express route are removed, and the old URL returns 404."
-    },
-    "GET /api/invoices/recurring/:id": {
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetModule": "RecurringInvoicesModule",
-      "targetOperation": "recurringInvoice",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this query. Detail reads qualify contact, source-invoice, and generated-invoice projections through the active organization and conceal foreign templates; the read flag and Express route are removed, and the old URL returns 404."
-    },
-    "PUT /api/invoices/recurring/:id": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "RecurringInvoicesModule",
-      "targetOperation": "updateRecurringInvoice",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this CSRF-protected mutation. Partial updates lock the template, validate effective tenant references and dates, replace items when supplied, and recalculate totals from stored legacy JSON when discounts change; the mutation flag and Express route are removed, and the old URL returns 404."
-    },
-    "POST /api/invoices/recurring/:id/generate-now": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "RecurringInvoicesModule",
-      "targetOperation": "generateRecurringInvoiceNow",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this CSRF-protected mutation. It locks the tenant-owned template, validates generation data and qualified references before allocation, atomically creates the invoice/items and advances the schedule, and persists a namespaced request receipt. Concurrent requests with the same explicit idempotency key return one stable invoice and consume one number; the generation flag and Express route are removed, and the old URL returns 404."
-    },
-    "GET /api/invoices/recurring/:id/history": {
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetModule": "RecurringInvoicesModule",
-      "targetOperation": "recurringInvoiceHistory",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The frontend permanently uses this query. Tenant-private history uses bounded stable paging, decimal-string totals, and a parent ownership check so missing and foreign templates are indistinguishable; the read flag and Express route are removed, and the old URL returns 404."
-    },
-    "POST /api/invoices/recurring/:id/pause": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "RecurringInvoicesModule",
-      "targetOperation": "pauseRecurringInvoice",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this CSRF-protected mutation. It row-locks the tenant-owned template, permits only active-to-paused transitions, and reports replay or wrong-state attempts as a stable conflict; the lifecycle flag and Express route are removed, and the old URL returns 404."
-    },
-    "POST /api/invoices/recurring/:id/resume": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "RecurringInvoicesModule",
-      "targetOperation": "resumeRecurringInvoice",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this CSRF-protected mutation. It row-locks the tenant-owned template, permits only paused-to-active transitions, and advances a stale date-only schedule beyond the database current date before commit; the lifecycle flag and Express route are removed, and the old URL returns 404."
-    },
-    "POST /api/invoices/recurring/from-invoice/:invoiceId": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "RecurringInvoicesModule",
-      "targetOperation": "createRecurringInvoiceFromInvoice",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this CSRF-protected mutation. It row-locks the tenant-owned source invoice, rejects terminal sources, clones tenant-qualified item snapshots into legacy-compatible JSON, recalculates exact recurring totals in PostgreSQL, marks the preserved source, and commits all effects atomically; the clone flag and Express route are removed, and the old URL returns 404."
-    },
-    "GET /api/invoices/recurring/preview-invoice-number": {
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetModule": "RecurringInvoicesModule",
-      "targetOperation": "previewRecurringInvoiceNumber",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this tenant-scoped query. It returns the configured prefix and current next number without reserving or incrementing it; invoice creation remains the atomic allocation authority. The read flag and Express route are removed, and the old URL returns 404."
-    },
-    "GET /api/invoices/settings": {
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetModule": "InvoiceSettingsModule",
-      "targetOperation": "invoiceSettings",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this GraphQL query. It returns selected-organization settings or virtual retained defaults without creating a row; provider-owned Stripe fields and the server-owned logo URL are read-only, and the retired Express path returns 404."
-    },
-    "PUT /api/invoices/settings": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "InvoiceSettingsModule",
-      "targetOperation": "updateInvoiceSettings",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this CSRF-protected GraphQL mutation. Partial writes validate bounded settings, preserve omitted fields, serialize on the shared invoice-number row, reject counter regression and exact-number collision, never accept Stripe or logo fields, and the retired Express path returns 404."
-    },
-    "DELETE /api/invoices/settings/logo": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "InvoiceSettingsModule",
-      "targetOperation": "removeInvoiceSettingsLogo",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend permanently uses this CSRF-protected GraphQL mutation. Selected-organization removal clears the server-owned URL and enqueues its exact prior value in one transaction; a leased worker retries safe local or exact configured-S3 deletion, foreign URLs dead-letter without storage access, the retired Express DELETE returns 404, and multipart upload remains HTTP."
     },
     "POST /api/invoices/settings/logo": {
       "disposition": "retain-http",
@@ -532,60 +46,6 @@
       "risk": "medium",
       "notes": "NestJS retains the signed webhook over HTTP, verifies the exact raw bytes with Stripe's SDK, fails closed without its secret, and commits the event claim, payment, PostgreSQL balance update, and one paid-workflow trigger transactionally. A default-off legacy-origin proxy preserves rollback."
     },
-    "GET /api/billing": {
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetModule": "BillingModule",
-      "targetOperation": "billingStatus",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "Returns the verified selected organization's persisted subscription, limits, usage counters, trial, and cancellation state. A bounded best-effort Stripe reconciliation may repair locally stale state but provider failure never hides the persisted snapshot."
-    },
-    "POST /api/billing/acknowledge-trial-end": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "BillingModule",
-      "targetOperation": "acknowledgeBillingTrialEnd",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "low",
-      "notes": "CSRF-protected and organization-scoped. Repeated acknowledgement is idempotent and stores the latest acknowledgement timestamp."
-    },
-    "POST /api/billing/checkout": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "BillingModule",
-      "targetOperation": "createBillingCheckoutSession",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "CSRF-protected subscription checkout accepts only the three published plans and configured monthly/yearly price allowlist. Redirect origins are bounded to configured application origins, organization locking and provider idempotency prevent duplicate customers, caller idempotency protects session retries, and an existing active subscription returns a portal session."
-    },
-    "GET /api/billing/plans": {
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetModule": "BillingModule",
-      "targetOperation": "billingPlans",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "low",
-      "notes": "Public metadata query returns only the three complete purchasable plans. Unlimited limits use the existing application sentinel -1 instead of the legacy JSON null produced by Infinity."
-    },
-    "POST /api/billing/portal": {
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetModule": "BillingModule",
-      "targetOperation": "createBillingPortalSession",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "CSRF-protected and organization-scoped. It requires a persisted tenant billing customer, validates the configured application return origin, uses provider idempotency, and returns a provider-hosted portal URL without exposing credentials."
-    },
-    "GET /api/billing/usage": {
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetModule": "BillingModule",
-      "targetOperation": "billingUsage",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Returns selected-organization counters and resource counts from one tenant-qualified PostgreSQL statement. GraphQL carries -1 as the unlimited sentinel and the frontend facade preserves the retained unlimited string."
-    },
     "POST /api/billing/webhook": {
       "disposition": "retain-http",
       "owner": "billing",
@@ -594,258 +54,6 @@
       "parityStatus": "characterized",
       "risk": "high",
       "notes": "Retain the exact raw-body Stripe signature protocol. The callback claims event IDs transactionally, locks tenant mappings, persists minimal replay snapshots, and atomically updates organization/subscription/audit state. Provider time plus event ID gives deterministic same-second ordering. Leased workers reconcile unmatched/ambiguous mappings and deliver upgrade notifications with retry, provider idempotency, and redacted dead letters. Operator dashboards and manual dead-letter controls remain platform work."
-    },
-    "GET /api/campaigns": {
-      "disposition": "graphql-query",
-      "owner": "growth",
-      "targetModule": "CampaignsModule",
-      "targetOperation": "campaigns",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "CampaignsModule now provides organization-scoped status/search filtering, literal escaped search, stable created-at/id ordering, bounded shared paging, safe numeric mapping, and a default-off frontend read rollback flag."
-    },
-    "POST /api/campaigns": {
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetModule": "CampaignsModule",
-      "targetOperation": "createCampaign",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "CSRF-protected creation requires nonblank content, validates tenant-owned template/tag/saved-segment references, rejects unsupported custom targeting, clears irrelevant audience fields, and retains REST behind the default-off mutation flag."
-    },
-    "DELETE /api/campaigns/:id": {
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetModule": "CampaignsModule",
-      "targetOperation": "deleteCampaign",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The mutation locks and conceals the organization-owned campaign, rejects deletion while sending, returns verified stable identity, and permits every other retained state."
-    },
-    "GET /api/campaigns/:id": {
-      "disposition": "graphql-query",
-      "owner": "growth",
-      "targetModule": "CampaignsModule",
-      "targetOperation": "campaign",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The query conceals foreign IDs and returns tenant-owned campaign, template/user metadata, and tracked links in stable position/id order behind the read rollback flag."
-    },
-    "PUT /api/campaigns/:id": {
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetModule": "CampaignsModule",
-      "targetOperation": "updateCampaign",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The mutation locks draft/scheduled rows, serializes concurrent partial updates, distinguishes omission from nullable clearing, and revalidates tenant-owned audience/template references."
-    },
-    "POST /api/campaigns/:id/duplicate": {
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetModule": "CampaignsModule",
-      "targetOperation": "duplicateCampaign",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The mutation atomically copies tenant-owned configuration into a bounded-name draft, preserves saved-segment targeting, and does not copy schedule, delivery state, statistics, recipients, or tracked links."
-    },
-    "POST /api/campaigns/:id/pause": {
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetModule": "CampaignDeliveryModule",
-      "targetOperation": "pauseCampaign",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend now calls the CSRF-protected GraphQL mutation directly and the Express route is removed. The mutation locks the campaign and durable delivery job, changes only sending to paused, and worker discovery and claim predicates exclude paused work so an in-flight worker cannot overwrite the authoritative state."
-    },
-    "GET /api/campaigns/:id/preview": {
-      "disposition": "graphql-query",
-      "owner": "growth",
-      "targetModule": "CampaignsModule",
-      "targetOperation": "campaignAudiencePreview",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "CampaignsModule uses the shared fail-closed, parameterized audience compiler to count distinct organization-owned deliverable emails across all/tag/status/dynamic/static saved-segment modes. PostgreSQL proves include/exclude, unsubscribe, bounce, empty-email, hostile custom-key, tenant-concealment, and retained-REST parity behavior behind an independent default-off frontend flag."
-    },
-    "GET /api/campaigns/:id/recipients": {
-      "disposition": "graphql-query",
-      "owner": "growth",
-      "targetModule": "CampaignDeliveryModule",
-      "targetOperation": "campaignRecipients",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "CampaignDeliveryModule verifies the organization-owned parent, qualifies every child and current-contact join by organization, supports strict status filtering and bounded shared paging, and orders by sent_at then id with nulls last. It preserves recipient snapshots, safe current-contact names, engagement/provider fields, and excludes inconsistent cross-tenant child rows. Fresh PostgreSQL proves retained-REST parity, paging, filters, private misses, invalid-input failure, and corrupt-row exclusion behind an independent default-off frontend flag."
-    },
-    "POST /api/campaigns/:id/resume": {
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetModule": "CampaignDeliveryModule",
-      "targetOperation": "resumeCampaign",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend now calls the CSRF-protected GraphQL mutation directly and the Express route is removed. Resume locks the paused campaign and its durable job, processes only queued, retrying, or leased recipient intents without rebuilding the audience, preserves cumulative counts, and derives terminal state when no active intents remain."
-    },
-    "POST /api/campaigns/:id/schedule": {
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetModule": "CampaignsModule",
-      "targetOperation": "scheduleCampaign",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The mutation requires a future absolute timestamp, treats bounded timezone as metadata, and locks draft/scheduled rows before the scheduled transition."
-    },
-    "POST /api/campaigns/:id/send": {
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetModule": "CampaignDeliveryModule",
-      "targetOperation": "sendCampaign",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend now calls the CSRF-protected GraphQL mutation directly and the Express route is removed. The mutation locks the campaign, validates and snapshots a canonical distinct-email audience, atomically reserves usage, and enqueues one tenant-scoped idempotent durable delivery job before provider I/O."
-    },
-    "POST /api/campaigns/:id/send-test": {
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetModule": "CampaignDeliveryModule",
-      "targetOperation": "sendCampaignTest",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The frontend now calls the CSRF-protected GraphQL mutation directly and the Express route is removed. The mutation locks and conceals the organization-owned campaign, validates the destination and bounded idempotency key, snapshots rendered test content with a prefixed subject, and commits a tenant-enforced durable intent before provider I/O. Leased attempts use a stable Resend idempotency key; definite failures retry, ambiguous outcomes require reconciliation, conflicting key reuse fails, and exact replay returns stored evidence without campaign, recipient, or usage mutation."
-    },
-    "POST /api/campaigns/:id/unschedule": {
-      "disposition": "graphql-mutation",
-      "owner": "growth",
-      "targetModule": "CampaignsModule",
-      "targetOperation": "unscheduleCampaign",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "The mutation locks and conceals the row, allows only scheduled-to-draft, clears the instant atomically, and returns stable BAD_USER_INPUT state evidence for invalid transitions."
-    },
-    "GET /api/workflows": {
-      "disposition": "graphql-query",
-      "owner": "automation",
-      "targetModule": "WorkflowsModule",
-      "targetOperation": "workflows",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Preserve organization scope, trigger/active/search filters, updated-at ordering, step counts, and active enrollment counts."
-    },
-    "POST /api/workflows": {
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetModule": "WorkflowsModule",
-      "targetOperation": "createWorkflow",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Validate trigger and step enums, enforce plan limits, and create workflow plus ordered steps atomically."
-    },
-    "DELETE /api/workflows/:id": {
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetModule": "WorkflowsModule",
-      "targetOperation": "deleteWorkflow",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Delete only an organization-owned workflow and characterize cascade/audit behavior for enrollments and execution logs."
-    },
-    "GET /api/workflows/:id": {
-      "disposition": "graphql-query",
-      "owner": "automation",
-      "targetModule": "WorkflowsModule",
-      "targetOperation": "workflow",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Return the organization-owned workflow, ordered steps, and enrollment statistics without existence leakage."
-    },
-    "PUT /api/workflows/:id": {
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetModule": "WorkflowsModule",
-      "targetOperation": "updateWorkflow",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Validate enums and atomically replace steps when supplied; omitted steps leave the current sequence intact."
-    },
-    "POST /api/workflows/:id/activate": {
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetModule": "WorkflowsModule",
-      "targetOperation": "activateWorkflow",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Require organization ownership and at least one step. Reactivation resumes only enrollments paused by workflow deactivation; explicit manual pauses remain paused."
-    },
-    "POST /api/workflows/:id/deactivate": {
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetModule": "WorkflowsModule",
-      "targetOperation": "deactivateWorkflow",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Organization-scoped deactivation atomically pauses active enrollments with a distinct reason and clears their live execution claims."
-    },
-    "POST /api/workflows/:id/duplicate": {
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetModule": "WorkflowsModule",
-      "targetOperation": "duplicateWorkflow",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Enforce plan limits and atomically copy an organization-owned definition and ordered steps into an inactive workflow."
-    },
-    "POST /api/workflows/:id/enroll": {
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetModule": "WorkflowEnrollmentsModule",
-      "targetOperation": "enrollContactInWorkflow",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Lock the organization-owned workflow, require a same-organization contact, and serialize the unique workflow/contact enrollment transition."
-    },
-    "GET /api/workflows/:id/enrollments": {
-      "disposition": "graphql-query",
-      "owner": "automation",
-      "targetModule": "WorkflowEnrollmentsModule",
-      "targetOperation": "workflowEnrollments",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Use the shared page contract, organization-scope through the workflow, and support explicit status filtering."
-    },
-    "DELETE /api/workflows/:id/enrollments/:enrollmentId": {
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetModule": "WorkflowEnrollmentsModule",
-      "targetOperation": "cancelWorkflowEnrollment",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "Scope through an organization-owned workflow, clear execution claims and future scheduling, and cancel queued/retrying/dead-letter provider work. An accepted in-flight call may finish sent; failed or expired cancelled work must not retry."
-    },
-    "POST /api/workflows/:id/enrollments/:enrollmentId/pause": {
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetModule": "WorkflowEnrollmentsModule",
-      "targetOperation": "pauseWorkflowEnrollment",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The active frontend always uses GraphQL without REST fallback. Pause accepts only an active tenant-scoped enrollment, records the manual reason, and clears its live execution claim; workflow activation does not resume this pause."
-    },
-    "POST /api/workflows/:id/enrollments/:enrollmentId/resume": {
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetModule": "WorkflowEnrollmentsModule",
-      "targetOperation": "resumeWorkflowEnrollment",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The active frontend always uses GraphQL without REST fallback. Resume accepts only an explicitly paused enrollment while its organization-owned workflow is active; deactivation pauses resume through workflow activation instead."
-    },
-    "POST /api/workflows/:id/enrollments/:enrollmentId/retry": {
-      "disposition": "graphql-mutation",
-      "owner": "automation",
-      "targetModule": "WorkflowEnrollmentsModule",
-      "targetOperation": "retryWorkflowEnrollment",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "The active frontend always uses GraphQL without REST fallback. Retry accepts only a failed enrollment under an active tenant-owned workflow and preserves current_step so completed steps are not replayed."
     },
     "POST /api/webhooks/:workflowId": {
       "disposition": "retain-http",
@@ -856,132 +64,6 @@
       "risk": "high",
       "notes": "Retain raw-body HMAC HTTP delivery with timestamp tolerance, canonical trigger matching, and durable replay claims. The adapter returns execution=durably_queued and feeds the same leased trigger matcher as first-party producers."
     },
-    "GET /api/admin/email/logs": {
-      "disposition": "graphql-query",
-      "owner": "platform-operations",
-      "targetModule": "AdminMessagingModule",
-      "targetOperation": "adminEmailLogs",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "Administrator-only global audit page with validated status filters and bounded cursor pagination."
-    },
-    "GET /api/admin/email/logs/:id": {
-      "disposition": "graphql-query",
-      "owner": "platform-operations",
-      "targetModule": "AdminMessagingModule",
-      "targetOperation": "adminEmailLog",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "Administrator-only global log detail; preserve stored rendered content while applying audit-data retention rules."
-    },
-    "POST /api/admin/email/preview": {
-      "disposition": "graphql-mutation",
-      "owner": "platform-operations",
-      "targetModule": "AdminMessagingModule",
-      "targetOperation": "previewAdminEmail",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Pure rendering operation with bounded input; never fetch arbitrary URLs or perform provider delivery."
-    },
-    "POST /api/admin/email/send": {
-      "disposition": "graphql-mutation",
-      "owner": "platform-operations",
-      "targetModule": "MessagingDeliveryModule",
-      "targetOperation": "enqueueAdminEmailBatch",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "Validate and cap recipients, persist one durable batch plus recipient jobs, and never perform a synchronous provider loop in the resolver."
-    },
-    "GET /api/admin/email/templates": {
-      "disposition": "graphql-query",
-      "owner": "platform-operations",
-      "targetModule": "AdminMessagingModule",
-      "targetOperation": "adminEmailTemplates",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "Administrator-only cross-organization template search with cursor pagination and explicit system-template handling."
-    },
-    "GET /api/email-templates": {
-      "disposition": "graphql-query",
-      "owner": "messaging",
-      "targetModule": "EmailTemplatesModule",
-      "targetOperation": "emailTemplates",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Default-off GraphQL reads page organization-scoped templates with deterministic updated-at/id ordering, escaped search, category and active filters, safe numeric counts, and retained response mapping."
-    },
-    "POST /api/email-templates": {
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetModule": "EmailTemplatesModule",
-      "targetOperation": "createEmailTemplate",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "CSRF-protected GraphQL creation validates required content and derives a deterministic unique variable set from the complete email body."
-    },
-    "DELETE /api/email-templates/:id": {
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetModule": "EmailTemplatesModule",
-      "targetOperation": "deleteEmailTemplate",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "CSRF-protected GraphQL deletion conceals foreign templates and preserves nullable historical log references through the existing database contract."
-    },
-    "GET /api/email-templates/:id": {
-      "disposition": "graphql-query",
-      "owner": "messaging",
-      "targetModule": "EmailTemplatesModule",
-      "targetOperation": "emailTemplate",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Default-off GraphQL detail reads return an organization-owned template with retained-shape mapping and tenant-private misses."
-    },
-    "PUT /api/email-templates/:id": {
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetModule": "EmailTemplatesModule",
-      "targetOperation": "updateEmailTemplate",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "CSRF-protected GraphQL partial updates lock the organization-owned row, preserve omitted fields, and re-extract variables from the complete resulting content without lost concurrent writes."
-    },
-    "POST /api/email-templates/:id/duplicate": {
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetModule": "EmailTemplatesModule",
-      "targetOperation": "duplicateEmailTemplate",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "CSRF-protected GraphQL duplication copies only an organization-owned template, bounds the suffixed name, and always creates the copy inactive."
-    },
-    "POST /api/email-templates/:id/send-test": {
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetModule": "MessagingDeliveryModule",
-      "targetOperation": "sendEmailTemplateTest",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "Direct GraphQL delivery persists a tenant-scoped, replay-safe test-email job with an explicit validated destination, bounded sample data, visible test labeling, immutable rendered content, and no contact activity. The retired REST route returns 404."
-    },
-    "GET /api/email-templates/categories/list": {
-      "disposition": "graphql-query",
-      "owner": "messaging",
-      "targetModule": "EmailTemplatesModule",
-      "targetOperation": "emailTemplateCategories",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Default-off GraphQL category aggregates are organization-scoped, deterministically ordered, case-preserving, and expose safe integer counts."
-    },
-    "POST /api/email-templates/send-to-contact": {
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetModule": "MessagingDeliveryModule",
-      "targetOperation": "enqueueContactEmail",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "Direct GraphQL delivery conceals foreign contacts/templates, rejects suppressed destinations, snapshots rendered content, atomically reserves usage, and persists tenant-scoped request idempotency before provider I/O. A leased worker uses Resend idempotency and writes the email log/contact activity only after provider acceptance. The retired REST route returns 404."
-    },
     "POST /api/email/webhook/resend": {
       "disposition": "retain-http",
       "owner": "messaging",
@@ -990,96 +72,6 @@
       "parityStatus": "characterized",
       "risk": "high",
       "notes": "Retain raw-body Svix verification and fail closed without the signing secret. Durable svix-id claims deduplicate delivery, provider occurrence timestamps prevent status regression, and matched logs/campaign recipients update engagement and contact suppression. Unmatched or cross-tenant ambiguous events are leased and retried from bounded claim fields until exactly one organization mapping exists; exhausted attempts become redacted dead letters."
-    },
-    "GET /api/sms-templates": {
-      "disposition": "graphql-query",
-      "owner": "messaging",
-      "targetModule": "SmsTemplatesModule",
-      "targetOperation": "smsTemplates",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "Default-off GraphQL reads page organization-scoped templates with deterministic updated-at/id ordering, escaped filters, integer counts, and retained response mapping."
-    },
-    "POST /api/sms-templates": {
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetModule": "SmsTemplatesModule",
-      "targetOperation": "createSmsTemplate",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "CSRF-protected GraphQL creation validates the 1600-character bound, extracts deterministic variables, and returns standards-aware encoding and segment information."
-    },
-    "DELETE /api/sms-templates/:id": {
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetModule": "SmsTemplatesModule",
-      "targetOperation": "deleteSmsTemplate",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "CSRF-protected GraphQL deletion conceals foreign templates while retaining nullable historical log references."
-    },
-    "GET /api/sms-templates/:id": {
-      "disposition": "graphql-query",
-      "owner": "messaging",
-      "targetModule": "SmsTemplatesModule",
-      "targetOperation": "smsTemplate",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "Default-off GraphQL detail returns an organization-owned SMS template without cross-tenant existence leakage."
-    },
-    "PUT /api/sms-templates/:id": {
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetModule": "SmsTemplatesModule",
-      "targetOperation": "updateSmsTemplate",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "CSRF-protected GraphQL partial updates lock the tenant row, prevent lost concurrent changes, and recompute variables plus message information."
-    },
-    "POST /api/sms-templates/:id/duplicate": {
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetModule": "SmsTemplatesModule",
-      "targetOperation": "duplicateSmsTemplate",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "CSRF-protected GraphQL duplication bounds the copy suffix, conceals foreign rows, and creates the copy inactive."
-    },
-    "POST /api/sms-templates/:id/send-test": {
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetModule": "MessagingDeliveryModule",
-      "targetOperation": "sendSmsTemplateTest",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "Direct GraphQL delivery validates and normalizes an explicit E.164 destination, bounds sample data, snapshots visibly labeled test content, and creates no contact activity. The retired REST route returns 404."
-    },
-    "GET /api/sms-templates/categories/list": {
-      "disposition": "graphql-query",
-      "owner": "messaging",
-      "targetModule": "SmsTemplatesModule",
-      "targetOperation": "smsTemplateCategories",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "Default-off GraphQL category aggregates preserve category case, deterministic ordering, tenant scope, and safe integer counts."
-    },
-    "POST /api/sms-templates/message-info": {
-      "disposition": "graphql-query",
-      "owner": "messaging",
-      "targetModule": "SmsTemplatesModule",
-      "targetOperation": "smsMessageInfo",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Default-off authenticated GraphQL calculation counts GSM-7 extension characters as two septets and Unicode as UTF-16 units across single and concatenated segment boundaries."
-    },
-    "POST /api/sms-templates/send-to-contact": {
-      "disposition": "graphql-mutation",
-      "owner": "messaging",
-      "targetModule": "MessagingDeliveryModule",
-      "targetOperation": "enqueueContactSms",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "Direct GraphQL delivery conceals foreign contacts/templates, normalizes E.164, snapshots the rendered SMS, atomically reserves usage, and persists tenant-scoped request idempotency. A leased worker logs provider acceptance; ambiguous Twilio outcomes become reconciliation_required and are never blindly retried. The retired REST route returns 404."
     },
     "POST /api/sms-templates/webhook/inbound": {
       "disposition": "retain-http",
@@ -1099,465 +91,248 @@
       "risk": "high",
       "notes": "Retain Twilio-signed form HTTP with durable MessageSid/status claims and an explicit provider-to-domain status map."
     },
-    "GET /api/contacts": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "contacts", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Preserve organization scope, search/filter semantics, deterministic ordering, strict pagination, and safe assignee projection."
-    },
-    "POST /api/contacts": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "createContact", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Plan limit is serialized per organization; assignee must be an active-organization member and automation intent must use the durable event boundary."
-    },
-    "GET /api/contacts/:id": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "contact", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Outside-organization IDs are not found and related user projections must not expose invalid legacy references."
-    },
-    "PUT /api/contacts/:id": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "updateContact", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Preserve omitted-versus-null behavior explicitly, validate assignee membership, and emit status changes transactionally through the event boundary."
-    },
-    "DELETE /api/contacts/:id": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "deleteContact", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Organization-scoped deletion with an explicit policy for dependent deals, submissions, activities, and content."
-    },
-    "GET /api/contacts/:id/activities": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "contactActivities", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "GraphQL returns a bounded page ordered by created time and ID descending, supports the full database activity enum as a filter, and scopes every row through an organization-owned parent contact."
-    },
-    "POST /api/contacts/:id/activities": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "addContactActivity", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "GraphQL validates the full database activity enum, bounded title, and object-shaped content/metadata; CSRF is required and the organization-owned contact lock plus insert share one transaction."
-    },
-    "GET /api/contacts/:id/content": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "ContactProfilesModule", "targetOperation": "contactContent", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Related lists, notes, and whiteboards use a tenant-private parent lookup, stable newest-first ordering, a 100-row collection bound, and explicit total/truncation metadata; GraphQL and REST rollback passed staging."
-    },
-    "POST /api/contacts/bulk-update": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "bulkUpdateContacts", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "GraphQL caps requests at 100 IDs, deduplicates in request order, validates status/tag mode/assignee membership, applies set-like tags, commits workflow triggers and status activities atomically, and returns requested/matched/changed/rejected IDs without distinguishing foreign from absent rows."
-    },
-    "POST /api/contacts/bulk-delete": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "ContactsModule", "targetOperation": "bulkDeleteContacts", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "GraphQL caps requests at 100 IDs, deduplicates in request order, deletes only active-organization rows, returns requested/matched/changed/rejected IDs, and relies on the verified database cascade policy for dependent activities."
-    },
     "GET /api/contacts/export/csv": {
-      "disposition": "retain-http", "owner": "crm", "targetModule": "ContactTransfersModule", "targetOperation": "exportContactsCsv", "parityStatus": "characterized", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "crm",
+      "targetModule": "ContactTransfersModule",
+      "targetOperation": "exportContactsCsv",
+      "parityStatus": "characterized",
+      "risk": "high",
       "notes": "Retain authenticated CSV HTTP with organization filters, private/no-store delivery, RFC-style quoting, spreadsheet-formula neutralization, and a 50,000-row rejection boundary."
     },
     "POST /api/contacts/import/csv": {
-      "disposition": "retain-http", "owner": "crm", "targetModule": "ContactTransfersModule", "targetOperation": "importContactsCsv", "parityStatus": "characterized", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "crm",
+      "targetModule": "ContactTransfersModule",
+      "targetOperation": "importContactsCsv",
+      "parityStatus": "characterized",
+      "risk": "high",
       "notes": "Despite the legacy path, this accepts JSON contact rows rather than multipart CSV. Retain HTTP during cutover with an exact object envelope, strict boolean duplicate policy, a 10,000-row limit, bounded 500-row inserts, and serialized plan-limit enforcement."
     },
-    "GET /api/forms": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "forms", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Organization-scoped form list is now a direct GraphQL consumer with explicit status enum, deterministic ordering, and counts."
-    },
-    "POST /api/forms": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "createForm", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Form plus ordered fields commit atomically and the per-organization form limit is concurrency-safe."
-    },
-    "GET /api/forms/:id": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "form", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Organization-owned definition with ordered fields and explicit null/default semantics."
-    },
-    "PUT /api/forms/:id": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "updateForm", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Validate lifecycle enums, redirect URL, notification recipients, contact mappings, and omitted-versus-null settings."
-    },
-    "DELETE /api/forms/:id": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "deleteForm", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Organization-scoped deletion with explicit submission retention/export policy."
-    },
-    "POST /api/forms/:id/duplicate": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "duplicateForm", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Atomically copy definition and ordered fields as a draft while enforcing the form plan limit."
-    },
-    "PUT /api/forms/:id/fields": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormsModule", "targetOperation": "replaceFormFields", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Atomic ordered replacement with field-type, option, validation, condition, width, and contact-mapping validation."
-    },
-    "GET /api/forms/:id/submissions": {
-      "disposition": "graphql-query", "owner": "crm", "targetModule": "FormSubmissionsModule", "targetOperation": "formSubmissions", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Scope through the organization-owned form and return a deterministic paginated connection."
-    },
-    "DELETE /api/forms/:id/submissions/:subId": {
-      "disposition": "graphql-mutation", "owner": "crm", "targetModule": "FormSubmissionsModule", "targetOperation": "deleteFormSubmission", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Both form and submission organization boundaries must match; define audit and retention behavior."
-    },
     "GET /api/forms/public/form/:identifier": {
-      "disposition": "retain-http", "owner": "crm", "targetModule": "PublicFormsModule", "targetOperation": "getPublicForm", "parityStatus": "implemented", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "crm",
+      "targetModule": "PublicFormsModule",
+      "targetOperation": "getPublicForm",
+      "parityStatus": "implemented",
+      "risk": "high",
       "notes": "Retained anonymous rate-limited HTTP for embeds uses the global public identifier, with ambiguous legacy slugs failing closed."
     },
     "POST /api/forms/public/form/:identifier": {
-      "disposition": "retain-http", "owner": "crm", "targetModule": "PublicFormsModule", "targetOperation": "submitPublicForm", "parityStatus": "implemented", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "crm",
+      "targetModule": "PublicFormsModule",
+      "targetOperation": "submitPublicForm",
+      "parityStatus": "implemented",
+      "risk": "high",
       "notes": "Retained anonymous rate-limited HTTP commits contact reuse and submission transactionally with same-email serialization, complete field validation, and durable notification/event delivery."
     },
-    "GET /api/calendars": {
-      "disposition": "graphql-query", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "calendars", "parityStatus": "consumer-cutover-complete", "risk": "medium",
-      "notes": "Default-off GraphQL list with verified organization context, deterministic newest-first ordering, current-member assignee projection, confirmed-booking aggregates, and retained response mapping. Fresh PostgreSQL and the real browser prove a nonempty GraphQL reload, retained REST write interoperability, and flag-off REST rollback without data repair."
-    },
-    "POST /api/calendars": {
-      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "createCalendar", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Default-off GraphQL create validates timezone, duration, buffers, plan limits, assignment membership, and availability windows in one transaction. Fresh PostgreSQL plus the real browser prove GraphQL creation, GraphQL readback, and independent flag-off REST rollback without data repair."
-    },
-    "GET /api/calendars/:id": {
-      "disposition": "graphql-query", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "calendar", "parityStatus": "consumer-cutover-complete", "risk": "medium",
-      "notes": "Default-off GraphQL detail with tenant-private misses, retained response mapping, ordered recurring availability, current/future overrides, and fresh-PostgreSQL foreign-calendar concealment. The registered /calendars/:id settings consumer passed GraphQL and flag-off REST browser reloads around retained REST settings and availability writes without data repair."
-    },
-    "PUT /api/calendars/:id": {
-      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "updateCalendar", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Omitted fields preserve values, explicit nullable assignment clears only when authorized, and settings are fully validated. The same staged calendar passed GraphQL update followed by independent flag-off REST update and GraphQL readback without data repair."
-    },
-    "DELETE /api/calendars/:id": {
-      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "deleteCalendar", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Behind the default-off calendar definition-mutation flag, delete and retained booking writes acquire the shared booking-namespace advisory lock before row locks or inserts, booking creation rechecks the calendar after that lock, and delete rejects pending or confirmed future bookings before cascade. Fresh PostgreSQL proves the concurrent retained-create-versus-GraphQL-delete race plus blocked, foreign, no-CSRF, allowed-cancelled-history, cascade, and REST-readback cases. The real browser passed a successful GraphQL delete, stable upcoming-booking rejection, and independent flag-off REST delete without data repair."
-    },
-    "PUT /api/calendars/:id/availability": {
-      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "replaceCalendarAvailability", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "The active settings writer passed a real-browser GraphQL replacement, persisted GraphQL readback, and independent flag-off REST replacement on the same staged calendar without repair. Atomic replacement, bounded weekdays/windows, overlap rejection, tenant concealment, and CSRF remain covered in fresh PostgreSQL."
-    },
-    "POST /api/calendars/:id/date-override": {
-      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "upsertCalendarDateOverride", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Implemented behind the availability-mutation flag as an organization-owned upsert; available overrides require a valid local-time window while unavailable overrides reject one, with REST interoperability coverage. The shipped settings page currently has no active override writer control, so browser parity is not claimed."
-    },
-    "DELETE /api/calendars/:id/date-override/:overrideId": {
-      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "CalendarsModule", "targetOperation": "deleteCalendarDateOverride", "parityStatus": "consumer-cutover-complete", "risk": "medium",
-      "notes": "Implemented behind the availability-mutation flag and scopes deletion through the organization-owned parent calendar, closing the legacy child-ID-only tenant boundary. The shipped settings page currently has no active override writer control, so browser parity is not claimed."
-    },
-    "GET /api/bookings": {
-      "disposition": "graphql-query", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "bookings", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Staging-gated behind the independent default-off booking-read flag with strict organization-scoped filters, bounded pagination, DateTime-range validation, stable start-time/ID ordering, tenant-qualified relations, retained-shape mapping, fresh-PostgreSQL interoperability, real-browser list/status-filter coverage, and same-session REST rollback."
-    },
-    "POST /api/bookings": {
-      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "createBooking", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Implemented behind an independent default-off scheduling-mutation flag with CSRF, organization-owned calendar/contact/assignee validation, canonical advisory-lock-first serialization, shared authoritative windows/override/buffer/notice/horizon/activity/DST/external-busy policy, retained-shape mapping, one version-1 durable event, REST interoperability, and a fresh-PostgreSQL simultaneous-slot race. The shipped interface has no create control, so browser parity is not claimed."
-    },
-    "GET /api/bookings/:id": {
-      "disposition": "graphql-query", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "booking", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Staging-gated behind the independent default-off booking-read flag with organization-owned detail, tenant-safe contact/calendar/assignee projections, foreign-ID concealment, cancellation-capability exclusion, retained-shape mapping, fresh-PostgreSQL interoperability, and authenticated direct comparison with retained REST. The shipped app has no booking-detail route."
-    },
-    "PATCH /api/bookings/:id/cancel": {
-      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "cancelBooking", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Browser-gated behind an independent default-off frontend flag: CSRF and tenant context required; pending/confirmed only; status, timestamp, normalized reason, public-capability revocation, and one versioned durable booking_cancelled event commit transactionally; replay is rejected without another write. Authenticated staging mutation and independent retained-REST rollback both passed with exactly one event."
-    },
-    "PATCH /api/bookings/:id/reschedule": {
-      "disposition": "graphql-mutation", "owner": "scheduling", "targetModule": "BookingsModule", "targetOperation": "rescheduleBooking", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Implemented behind the independent default-off scheduling-mutation flag with CSRF, tenant concealment, pending/confirmed enforcement, advisory-lock-first authoritative policy checks excluding itself, optional timezone preservation, public-capability expiry realignment to the new end plus one day, one version-1 durable event, retained-shape mapping, and REST interoperability. The shipped interface has no reschedule control, so browser parity is not claimed."
-    },
     "GET /api/bookings/public/book/:slug": {
-      "disposition": "retain-http", "owner": "scheduling", "targetModule": "PublicBookingsModule", "targetOperation": "getPublicBookingPage", "parityStatus": "characterized", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "scheduling",
+      "targetModule": "PublicBookingsModule",
+      "targetOperation": "getPublicBookingPage",
+      "parityStatus": "characterized",
+      "risk": "high",
       "notes": "Anonymous rate-limited embed protocol resolves a globally unique cal_ public ID first and retains slug compatibility only when exactly one active calendar matches. Authenticated REST/GraphQL projections and the calendar link UI expose the stable public ID."
     },
     "GET /api/bookings/public/book/:slug/slots": {
-      "disposition": "retain-http", "owner": "scheduling", "targetModule": "PublicBookingsModule", "targetOperation": "getPublicBookingSlots", "parityStatus": "characterized", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "scheduling",
+      "targetModule": "PublicBookingsModule",
+      "targetOperation": "getPublicBookingSlots",
+      "parityStatus": "characterized",
+      "risk": "high",
       "notes": "Resolves the global public ID with an exactly-one-match legacy slug fallback and returns only concrete timezone-aware slots for a bounded 31-day range. Generation and every booking write share one PostgreSQL policy for effective windows, overrides, activity, duration, buffers, notice, horizon, DST, booking collisions, and normalized external busy intervals."
     },
     "POST /api/bookings/public/book/:slug": {
-      "disposition": "retain-http", "owner": "scheduling", "targetModule": "PublicBookingsModule", "targetOperation": "createPublicBooking", "parityStatus": "characterized", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "scheduling",
+      "targetModule": "PublicBookingsModule",
+      "targetOperation": "createPublicBooking",
+      "parityStatus": "characterized",
+      "risk": "high",
       "notes": "Anonymous rate-limited booking resolves the global public ID, transactionally rechecks the shared authoritative slot policy after the calendar lock, serializes case-insensitive contact reuse, returns a 256-bit cancellation capability once, and stores only its SHA-256 hash with end-plus-one-day expiry."
     },
     "POST /api/bookings/public/book/:slug/cancel/:token": {
-      "disposition": "retain-http", "owner": "scheduling", "targetModule": "PublicBookingsModule", "targetOperation": "cancelPublicBooking", "parityStatus": "characterized", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "scheduling",
+      "targetModule": "PublicBookingsModule",
+      "targetOperation": "cancelPublicBooking",
+      "parityStatus": "characterized",
+      "risk": "high",
       "notes": "Hashes the supplied 256-bit capability, binds it to the resolved calendar and confirmed booking, requires unexpired end-plus-one-day capability state, and clears hash/expiry on success. Malformed, wrong-calendar, expired, and replay attempts share a non-enumerating miss; raw tokens are forbidden in PostgreSQL and excluded from authenticated REST/GraphQL projections."
     },
-    "GET /api/calendar-integrations/connections": {
-      "disposition": "graphql-query", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "calendarConnections", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Permanent GraphQL consumer; the retired Express route returns 404. Returns only the current user's connections in the verified organization; provider account IDs, tokens, cursors, and job internals are absent from the schema."
-    },
-    "DELETE /api/calendar-integrations/connections/:id": {
-      "disposition": "graphql-mutation", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "disconnectCalendar", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Permanent CSRF-protected GraphQL consumer; the retired Express route returns 404. Disconnect is user-and-organization scoped, remote provider events are retained to match the shipped UI warning, and foreign or peer-user IDs return NOT_FOUND."
-    },
-    "PATCH /api/calendar-integrations/connections/:id": {
-      "disposition": "graphql-mutation", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "updateCalendarConnection", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Permanent CSRF-protected GraphQL consumer; the retired Express route returns 404. It rejects null settings, validates push/pull/both direction and at most 100 unique non-empty 255-character provider calendar IDs, then updates only the current user's organization-qualified connection."
-    },
     "GET /api/calendar-integrations/google/auth": {
-      "disposition": "retain-http", "owner": "scheduling-integrations", "targetModule": "CalendarOAuthModule", "targetOperation": "beginGoogleCalendarConnection", "parityStatus": "characterized", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "scheduling-integrations",
+      "targetModule": "CalendarOAuthModule",
+      "targetOperation": "beginGoogleCalendarConnection",
+      "parityStatus": "characterized",
+      "risk": "high",
       "notes": "Currently retained on HTTP by the integration adapter because it begins a browser/provider redirect protocol. It returns a provider URL with short-lived signed user, organization, nonce, and safe return-path state."
     },
     "GET /api/calendar-integrations/google/callback": {
-      "disposition": "retain-http", "owner": "scheduling-integrations", "targetModule": "CalendarOAuthModule", "targetOperation": "googleCalendarCallback", "parityStatus": "characterized", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "scheduling-integrations",
+      "targetModule": "CalendarOAuthModule",
+      "targetOperation": "googleCalendarCallback",
+      "parityStatus": "characterized",
+      "risk": "high",
       "notes": "Provider redirect protocol; verifies signed expiring state and current organization membership before token exchange, then stores access/refresh credentials only as versioned AES-256-GCM envelopes under the active rotation key."
     },
     "GET /api/calendar-integrations/google/calendars/:connectionId": {
-      "disposition": "retain-http", "owner": "scheduling-integrations", "targetModule": "CalendarProviderHttpModule", "targetOperation": "providerCalendars", "parityStatus": "characterizing", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "scheduling-integrations",
+      "targetModule": "CalendarProviderHttpModule",
+      "targetOperation": "providerCalendars",
+      "parityStatus": "characterizing",
+      "risk": "high",
       "notes": "Currently retained on HTTP because it performs live provider I/O. The boundary is user-and-organization scoped with PostgreSQL row-locked token refresh, active-key rewrap, encrypted winning-generation persistence, and redacted provider errors. Fresh PostgreSQL proves concurrent callers issue one provider refresh."
     },
-    "POST /api/calendar-integrations/sync/:connectionId": {
-      "disposition": "graphql-mutation", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "requestCalendarSync", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Permanent CSRF-protected GraphQL consumer; the retired Express route returns 404. It returns immediately after idempotent durable enqueue and never performs provider I/O inline. Migration 033 enforces one active connection job and durable coalesced request aliases; leased workers fence completion, retry with redacted errors, dead-letter, and execute snapshotted push/pull/both policy."
-    },
-    "GET /api/calendar-integrations/sync-status/:connectionId": {
-      "disposition": "graphql-query", "owner": "scheduling-integrations", "targetModule": "CalendarIntegrationsModule", "targetOperation": "calendarSyncStatus", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Permanent GraphQL consumer; the retired Express route returns 404. It returns user-and-organization scoped connection status, bounded sync aggregates, and the ten newest safe durable-job projections including retry/dead-letter state and redacted diagnostics."
-    },
-    "GET /api/signatures/documents": {
-      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "signatureDocuments", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Production consumer enabled through the independent document-read flag with organization-scoped strict enum filtering, bounded stable pagination, REST-shape mapping, fresh-PostgreSQL interoperability, and authenticated browser/log evidence."
-    },
-    "POST /api/signatures/documents": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "createSignatureDocument", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Production consumer enabled through the independent document-mutation flag; creates one tenant-owned draft aggregate with serialized monthly plan quota, template/contact validation, bounded recipients/fields, atomic rollback, and authenticated browser/log evidence."
-    },
-    "GET /api/signatures/documents/:id": {
-      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "signatureDocument", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Production consumer enabled through the independent document-read flag as one repeatable-read tenant-owned aggregate of document, recipients, fields, and ordered audit projection; token hashes, IP/user-agent, audit metadata, storage locations, and file hashes are excluded from the schema."
-    },
-    "PUT /api/signatures/documents/:id": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "updateSignatureDraft", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Production consumer enabled through the independent document-mutation flag as one row-locked metadata, recipient, and field transaction; invalid tenant references or role mappings roll back the complete aggregate, and authenticated production create/edit cleanup passed."
-    },
-    "DELETE /api/signatures/documents/:id": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "deleteSignatureDraft", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Production consumer enabled through the independent document-mutation flag; the tenant-owned row is locked and only drafts can be deleted, every non-draft lifecycle state fails with a conflict, and both disposable production drafts were removed successfully."
-    },
-    "POST /api/signatures/documents/:id/send": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDeliveryModule", "targetOperation": "sendSignatureDocument", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "The active frontend always uses GraphQL without REST fallback. One document-row-locked transaction moves the draft to sent, derives hash-only recipient capabilities, and appends immutable delivery intents; a leased worker uses stable provider idempotency keys with retry/dead-letter state, and PostgreSQL proves one winner and one provider call under concurrent mutation/worker races."
-    },
-    "POST /api/signatures/documents/:id/cancel": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "cancelSignatureDocument", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Production consumer enabled through the independent cancellation flag. One row-locked transaction idempotently cancels non-completed documents, revokes active capability tokens, locks routing, cancels pending reminders, and writes exactly one audit event; an authenticated disposable production fixture proved every postcondition and was removed."
-    },
-    "POST /api/signatures/documents/:id/remind": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDeliveryModule", "targetOperation": "sendSignatureReminder", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "The active frontend always uses GraphQL without REST fallback. Active unsigned recipients receive new hash-only capabilities and durable reminder intents; queued/retry work is superseded, processing work fails closed with a conflict, and signed/declined recipients remain terminal."
-    },
-    "GET /api/signatures/documents/:id/audit": {
-      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "signatureAuditTrail", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Production consumer enabled through the independent document-read flag as a repeatable-read tenant-owned ordered safe projection; IP, user-agent, and structured metadata remain deliberately absent."
-    },
     "POST /api/signatures/documents/upload": {
-      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "uploadSignatureDraftPdf", "parityStatus": "implemented", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetModule": "SignatureFilesModule",
+      "targetOperation": "uploadSignatureDraftPdf",
+      "parityStatus": "implemented",
+      "risk": "high",
       "notes": "NestJS owns the unchanged authenticated URL behind a default-off upload proxy. Bounded multipart parsing, CSRF, tenant/draft preflight plus row-lock recheck, PDF magic validation, private unguessable storage, SHA-256 metadata, version-1 convergence, replacement cleanup, and failed-commit compensation are covered by PostgreSQL tests. Malware scanning and structural/page validation remain production cutover blockers."
     },
     "GET /api/signatures/documents/:id/file": {
-      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "streamSignatureDraftPdf", "parityStatus": "implemented", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetModule": "SignatureFilesModule",
+      "targetOperation": "streamSignatureDraftPdf",
+      "parityStatus": "implemented",
+      "risk": "high",
       "notes": "NestJS owns the unchanged authenticated URL behind a default-off read proxy. Tenant lookup precedes an allowlisted local/S3 read; successful responses use private no-store/nosniff/sandbox headers and a safe inline filename without exposing a permanent storage URL."
     },
-    "DELETE /api/signatures/documents/:id/file": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureDocumentsModule", "targetOperation": "removeSignatureDraftPdf", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "The active frontend always uses GraphQL without REST fallback. Draft-only metadata removal atomically enqueues exact server-owned storage cleanup; sent/completed source and signed artifacts are immutable."
-    },
     "GET /api/signatures/documents/:id/download": {
-      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "downloadCompletedSignaturePdf", "parityStatus": "implemented", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetModule": "SignatureFilesModule",
+      "targetOperation": "downloadCompletedSignaturePdf",
+      "parityStatus": "implemented",
+      "risk": "high",
       "notes": "NestJS owns the unchanged authenticated URL behind a default-off read proxy. A tenant-owned signed locator is required; delivery accepts only exact private local/S3 storage and returns an attachment with private no-store/nosniff/sandbox headers and a safe filename."
     },
-    "POST /api/signatures/email/preview": {
-      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureDeliveryModule", "targetOperation": "previewSignatureEmail", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Production consumer enabled through the independent preview flag as a pure bounded query; all user content is HTML-escaped, the server controls links/assets, output is not a delivery receipt, and an authenticated production editor rendered the server preview with zero GraphQL or browser errors."
-    },
-    "GET /api/signatures/templates": {
-      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "signatureTemplates", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Production consumer enabled through the independent template-read flag with organization scope, deterministic ordering, safe file-presence metadata, REST-shape mapping, fresh-PostgreSQL interoperability, and authenticated browser/log evidence."
-    },
-    "POST /api/signatures/templates": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "createSignatureTemplate", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Production consumer enabled through the independent template-mutation flag as one organization-owned metadata, unique-role, and bounded-field transaction, with authenticated browser/log evidence."
-    },
-    "GET /api/signatures/templates/:id": {
-      "disposition": "graphql-query", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "signatureTemplate", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Production consumer enabled through the independent template-read flag as one repeatable-read tenant-owned aggregate with ordered roles and fields; storage locations and source hashes are excluded."
-    },
     "GET /api/signatures/templates/:id/file": {
-      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "streamSignatureTemplatePdf", "parityStatus": "implemented", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetModule": "SignatureFilesModule",
+      "targetOperation": "streamSignatureTemplatePdf",
+      "parityStatus": "implemented",
+      "risk": "high",
       "notes": "NestJS owns the unchanged authenticated URL behind a default-off read proxy. Tenant lookup precedes the exact private local/S3 allowlist; the response uses hardened headers and a safe inline filename."
     },
-    "PUT /api/signatures/templates/:id": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "updateSignatureTemplate", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Production consumer enabled through the independent template-mutation flag; row-locked metadata, role, and field changes commit together, role changes cannot orphan existing role-bound fields, and authenticated production editing passed."
-    },
-    "DELETE /api/signatures/templates/:id": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "deleteSignatureTemplate", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Production consumer enabled through the independent template-mutation flag as a row-locked tenant-owned delete; any private template PDF is atomically enqueued for leased cleanup, while already-instantiated documents retain their immutable snapshot and advisory template ID."
-    },
-    "POST /api/signatures/templates/:id/instantiate": {
-      "disposition": "graphql-mutation", "owner": "esignatures", "targetModule": "SignatureTemplatesModule", "targetOperation": "instantiateSignatureTemplate", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Production consumer enabled through the independent template-mutation flag as an atomic tenant-owned file/metadata/role/field snapshot with serialized monthly quota, validated recipient contacts, and authenticated browser/log evidence."
-    },
     "POST /api/signatures/templates/upload": {
-      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "uploadSignatureTemplatePdf", "parityStatus": "implemented", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetModule": "SignatureFilesModule",
+      "targetOperation": "uploadSignatureTemplatePdf",
+      "parityStatus": "implemented",
+      "risk": "high",
       "notes": "NestJS owns the unchanged authenticated URL behind a default-off upload proxy. Bounded multipart parsing, CSRF, tenant preflight plus row-lock recheck, PDF magic validation, private unguessable storage, SHA-256 metadata, replacement cleanup, and failed-commit compensation are covered by PostgreSQL tests. Malware scanning and structural/page validation remain production cutover blockers."
     },
     "GET /api/public/sign/:token": {
-      "disposition": "retain-http", "owner": "esignatures", "targetModule": "PublicSigningModule", "targetOperation": "getSigningSession", "parityStatus": "characterized", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetModule": "PublicSigningModule",
+      "targetOperation": "getSigningSession",
+      "parityStatus": "characterized",
+      "risk": "high",
       "notes": "Rate-limited hashed capability protocol; active unexpired recipient/document only, with minimal sanitized public data."
     },
     "POST /api/public/sign/:token": {
-      "disposition": "retain-http", "owner": "esignatures", "targetModule": "PublicSigningModule", "targetOperation": "submitSignature", "parityStatus": "characterizing", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetModule": "PublicSigningModule",
+      "targetOperation": "submitSignature",
+      "parityStatus": "characterizing",
+      "risk": "high",
       "notes": "Atomic one-time capability claim, exact field allowlist and validation, immutable audit event, and durable completion work."
     },
     "POST /api/public/sign/:token/decline": {
-      "disposition": "retain-http", "owner": "esignatures", "targetModule": "PublicSigningModule", "targetOperation": "declineSignature", "parityStatus": "characterizing", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetModule": "PublicSigningModule",
+      "targetOperation": "declineSignature",
+      "parityStatus": "characterizing",
+      "risk": "high",
       "notes": "Atomic active-recipient decline, bounded reason, token revocation, lifecycle transition, and durable notification intent."
     },
     "POST /api/public/sign/:token/verify": {
-      "disposition": "retain-http", "owner": "esignatures", "targetModule": "PublicSigningModule", "targetOperation": "verifySigner", "parityStatus": "blocked", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetModule": "PublicSigningModule",
+      "targetOperation": "verifySigner",
+      "parityStatus": "blocked",
+      "risk": "high",
       "notes": "Currently returns 410. Legacy draft configuration now rejects email/SMS verification so unsupported assurance cannot be advertised."
     },
     "GET /api/public/sign/:token/file": {
-      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "streamSigningPdf", "parityStatus": "characterized", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetModule": "SignatureFilesModule",
+      "targetOperation": "streamSigningPdf",
+      "parityStatus": "characterized",
+      "risk": "high",
       "notes": "Capability-authorized private PDF stream with no arbitrary URL proxying and no view-state mutation."
     },
     "GET /api/public/sign/:token/download": {
-      "disposition": "retain-http", "owner": "esignatures", "targetModule": "SignatureFilesModule", "targetOperation": "downloadSigningPdf", "parityStatus": "characterized", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetModule": "SignatureFilesModule",
+      "targetOperation": "downloadSigningPdf",
+      "parityStatus": "characterized",
+      "risk": "high",
       "notes": "Active signing capabilities receive the source PDF as a private attachment; completed-artifact delivery remains a separate product/lifecycle decision."
     },
-    "GET /api/canvas/lists": {
-      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceLists", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "User-scoped canvas list read implemented as repeated strict bounded pages with deterministic ordering; Canvas and Contents passed independent GraphQL read selection plus GraphQL-list-write and REST-write rollback in staging. The personalized rollback response is private/no-store and returns a complete HTTP 200 even when a retained ETag is replayed."
-    },
-    "PUT /api/canvas/positions": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "batchCanvasPositions", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "The active debounced Canvas drag path now uses one bounded mixed-aggregate GraphQL mutation for list, note, whiteboard, wireframe, and vault positions. It enforces per-kind user ownership, deterministic duplicate handling, last-write-wins coordinates, wireframe rounding, optional supported dimensions, partial not-found results, CSRF, and transaction-bound shared/owner realtime publication. The frontend has no REST fallback for this path."
-    },
-    "GET /api/lists": {
-      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceLists", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "User-scoped paginated list read with typed items, canonical category resolution, search, and deterministic ordering. Its personalized rollback response is private/no-store and ignores conditional validators. The static callsite belongs to the retained UserHome adapter, but the active App router does not mount the legacy /lists page; shipped Canvas and Contents use GET /api/canvas/lists instead."
-    },
-    "POST /api/lists": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceList", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Implemented with bounded typed items, canonical category ID/name dual-write, CSRF, user scope, and REST-readable persistence behind an independent default-off mutation flag. Canvas/Contents creation and REST rollback passed the staging browser gate."
-    },
-    "PUT /api/lists/:id": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceList", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Implemented for the reachable whole-list UI adapter with row locking, required updatedAt optimistic concurrency, stable CONFLICT details, canonical category dual-write, and atomic owner/public realtime outbox rows. Staging proved stale-write rejection, sent owner/shared projections, an open anonymous viewer update, and REST rollback without later GraphQL traffic."
-    },
-    "DELETE /api/lists/:id": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "deleteWorkspaceList", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Implemented with user concealment, CSRF, stable mutation IDs, and atomic owner-canvas plus active public-viewer deletion projections through the cross-service outbox. The staging browser gate proved GraphQL deletion and flag-off REST deletion reach the shipped owner and anonymous-viewer surfaces."
-    },
-    "PUT /api/lists/:id/position": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "batchCanvasPositions", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "The unused dedicated frontend adapter and REST route were removed. Active list drag persistence is covered by the CSRF-protected GraphQL batch, which validates ownership and atomically enqueues shared-viewer projections."
-    },
-    "POST /api/lists/:listId/share": {
-      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceContentModule", "targetOperation": "enableListSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Atomic issuance reuses one active token, and re-enable after revoke rotates it."
-    },
-    "DELETE /api/lists/:listId/share": {
-      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceContentModule", "targetOperation": "disableListSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Revocation atomically clears the capability and enqueues durable token-free viewer eviction."
-    },
     "GET /api/shared/list/:token": {
-      "disposition": "retain-http", "owner": "sharing", "targetModule": "PublicSharingModule", "targetOperation": "getSharedList", "parityStatus": "characterized", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "sharing",
+      "targetModule": "PublicSharingModule",
+      "targetOperation": "getSharedList",
+      "parityStatus": "characterized",
+      "risk": "high",
       "notes": "Rate-limited non-enumerating capability read with recursive sanitization and no-store/noindex headers."
     },
-    "GET /api/notes": {
-      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceNotes", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "User-scoped paginated note read with title/content search, canonical category resolution, and deterministic ordering; the shipped Canvas and Contents surfaces passed independent GraphQL selection and REST rollback in staging. The personalized rollback response is private/no-store and returns a complete HTTP 200 when a retained ETag is replayed."
-    },
-    "POST /api/notes": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceNote", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "User-scoped create validates bounded fields, resolves a canonical category, and writes its ID/name projection atomically."
-    },
-    "PUT /api/notes/:noteId": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNote", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Row-locked user-scoped update preserves omitted fields and atomically enqueues shared-viewer realtime projection."
-    },
-    "DELETE /api/notes/:noteId": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "deleteWorkspaceNote", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "User-scoped delete atomically enqueues the shared-viewer deletion event with a stable mutation key."
-    },
-    "PUT /api/notes/:noteId/category": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNote", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "The shared partial-update mutation verifies the user-owned category and atomically writes ID/name plus realtime projection."
-    },
-    "PUT /api/notes/:noteId/content": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNote", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "The shared row-locked partial-update mutation validates bounded content and preserves granular realtime event semantics."
-    },
-    "PUT /api/notes/:noteId/title": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceNote", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "The shared row-locked partial-update mutation validates title and preserves granular realtime event semantics."
-    },
-    "POST /api/notes/:noteId/share": {
-      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceContentModule", "targetOperation": "enableNoteSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Atomic issuance reuses one active token, and re-enable after revoke rotates it."
-    },
-    "DELETE /api/notes/:noteId/share": {
-      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceContentModule", "targetOperation": "disableNoteSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Revocation atomically clears the capability and enqueues durable token-free viewer eviction."
-    },
     "GET /api/shared/note/:token": {
-      "disposition": "retain-http", "owner": "sharing", "targetModule": "PublicSharingModule", "targetOperation": "getSharedNote", "parityStatus": "characterized", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "sharing",
+      "targetModule": "PublicSharingModule",
+      "targetOperation": "getSharedNote",
+      "parityStatus": "characterized",
+      "risk": "high",
       "notes": "Rate-limited non-enumerating capability read; executable markup is sanitized and the response cannot be cached or indexed."
     },
-    "GET /api/whiteboards": {
-      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceWhiteboards", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "User-scoped paginated whiteboard read with title search, canonical category resolution, deterministic ordering, and JSON/casing adaptation for Canvas, Contents, and Global Search. The personalized REST rollback response is private/no-store and returns a complete HTTP 200 when a retained ETag is replayed. Staging browser rehearsal remains required."
-    },
-    "POST /api/whiteboards": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceWhiteboard", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "User-scoped CSRF-protected create validates bounded canvas JSON, geometry, colors, and canonical category identity; REST can read the committed row. The independent mutation flag remains default-off pending staging."
-    },
-    "PUT /api/whiteboards/:whiteboardId": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceWhiteboard", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Row-locked update requires the preceding updatedAt revision, rejects stale snapshots with stable conflict details, serializes rapid frontend saves, and atomically enqueues a bounded shared-viewer refetch projection rather than oversized canvas JSON."
-    },
-    "DELETE /api/whiteboards/:whiteboardId": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "deleteWorkspaceWhiteboard", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "User-scoped CSRF-protected delete uses a stable mutation ID and atomically enqueues the active public-viewer terminal projection. PostgreSQL proves REST miss and worker delivery; staging remains required."
-    },
-    "PUT /api/whiteboards/:id/position": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "batchCanvasPositions", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "The unused dedicated frontend adapter and REST route were removed. Active whiteboard drag persistence is covered by the CSRF-protected GraphQL batch, which validates ownership and atomically enqueues shared-viewer projections."
-    },
-    "POST /api/whiteboards/:whiteboardId/share": {
-      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceContentModule", "targetOperation": "enableWhiteboardSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Atomic issuance reuses one active token, and re-enable after revoke rotates it."
-    },
-    "DELETE /api/whiteboards/:whiteboardId/share": {
-      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "WorkspaceContentModule", "targetOperation": "disableWhiteboardSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "The active frontend uses the owner-only CSRF-protected GraphQL mutation without REST fallback. Revocation atomically clears the capability and enqueues durable token-free viewer eviction."
-    },
     "GET /api/shared/whiteboard/:token": {
-      "disposition": "retain-http", "owner": "sharing", "targetModule": "PublicSharingModule", "targetOperation": "getSharedWhiteboard", "parityStatus": "characterizing", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "sharing",
+      "targetModule": "PublicSharingModule",
+      "targetOperation": "getSharedWhiteboard",
+      "parityStatus": "characterizing",
+      "risk": "high",
       "notes": "Rate-limited capability read with recursive sanitization; canvas node and external-resource schemas still need an exact allowlist."
     },
     "GET /api/shared/wireframe/:token": {
-      "disposition": "retain-http", "owner": "sharing", "targetModule": "PublicSharingModule", "targetOperation": "getSharedWireframe", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "sharing",
+      "targetModule": "PublicSharingModule",
+      "targetOperation": "getSharedWireframe",
+      "parityStatus": "consumer-cutover-complete",
+      "risk": "high",
       "notes": "Intentional public-link protocol boundary. The rate-limited non-enumerating capability read returns an allowlisted recursively sanitized projection with no-store/noindex/no-referrer headers; the shipped read-only viewer handles live updates, deletion, and durable revocation."
     },
-    "POST /api/vaults/:vaultId/share": {
-      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "VaultModule", "targetOperation": "enableWorkspaceVaultSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected owner-only GraphQL issuance requires confirmDecryptedSharing=true, is serialized, preserves one active token and shared_at, retries capability collisions, refuses locked vaults, and is reached only after an explicit decrypted-secret warning. Both authenticated REST handlers are retired."
-    },
-    "DELETE /api/vaults/:vaultId/share": {
-      "disposition": "graphql-mutation", "owner": "sharing", "targetModule": "VaultModule", "targetOperation": "disableWorkspaceVaultSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected owner-only GraphQL revocation idempotently clears the capability, public state, and timestamp. Applying a vault password also revokes any active link so later unlock cannot resurrect prior consent."
-    },
     "GET /api/shared/vault/:token": {
-      "disposition": "retain-http", "owner": "sharing", "targetModule": "VaultModule", "targetOperation": "getSharedVault", "parityStatus": "consumer-cutover-complete", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "sharing",
+      "targetModule": "VaultModule",
+      "targetOperation": "getSharedVault",
+      "parityStatus": "consumer-cutover-complete",
+      "risk": "high",
       "notes": "Intentional rate-limited no-store public-link boundary. It rejects malformed, unknown, revoked, and locked capabilities; returns an allowlisted decrypted projection; and fails the complete response closed on any item decryption error. Hash-at-rest and browser telemetry verification remain security hardening."
-    },
-    "GET /api/wireframes": {
-      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "workspaceWireframes", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "All Canvas, Contents, Shared workspace, and Global Search consumers now use a tenant-scoped paginated GraphQL query with title/category filtering, deterministic ordering, canonical category identity, safe flow JSON mapping, and no REST fallback."
-    },
-    "POST /api/wireframes": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "createWorkspaceWireframe", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected user-scoped creation validates bounded object JSON, geometry, dimensions, colors, and canonical category identity. Coordinates preserve the legacy integer rounding contract and the frontend has no REST fallback."
-    },
-    "PUT /api/wireframes/:wireframeId": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "updateWorkspaceWireframe", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Row-locked updates require the preceding updatedAt revision, serialize rapid same-wireframe frontend saves, conceal foreign rows, and atomically enqueue both public-viewer and owner-canvas realtime projections. PostgreSQL proves stale-write rejection and retained REST visibility."
-    },
-    "DELETE /api/wireframes/:wireframeId": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "deleteWorkspaceWireframe", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected user-scoped deletion uses a stable mutation ID and commits the public-viewer terminal projection in the same transaction. PostgreSQL proves worker delivery, tenant concealment, and the retained REST miss."
-    },
-    "PUT /api/wireframes/:id/position": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "batchCanvasPositions", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "The exported compatibility adapter and active debounced Canvas drag path both use the bounded mixed-aggregate GraphQL mutation. There is no wireframe position REST fallback."
-    },
-    "POST /api/wireframes/:wireframeId/share": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "enableWireframeSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "The active Canvas share action now uses owner-scoped GraphQL issuance. Repeated enable preserves the active capability; re-enable after revoke rotates it; the returned frontend URL resolves to the shipped read-only public viewer. There is no REST fallback."
-    },
-    "DELETE /api/wireframes/:wireframeId/share": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "WorkspaceContentModule", "targetOperation": "disableWireframeSharing", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "The active Canvas unshare action now uses a CSRF-protected GraphQL mutation that atomically clears public state and enqueues capability revocation for the retained Socket.IO worker. The old URL fails immediately and a later re-share uses a new token. There is no REST fallback."
     },
     "GET /api/chat-widget/public/config/:widgetKey": {
       "disposition": "retain-http",
@@ -1649,340 +424,49 @@
       "risk": "high",
       "notes": "Retain exact-body X-Hub-Signature-256 verification and fail closed without the app secret. One normalized durable batch claim precedes bounded inline processing; leased workers drain overflow and reconcile unmatched or ambiguous page/account mappings only when exactly one active organization remains. Durable message IDs prevent replay, Facebook and Instagram identities route separately, and socket delivery occurs only after commit."
     },
-    "GET /api/segments": {
-      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segments", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Implemented as a bounded organization-scoped connection with active/search filters and deterministic name/ID ordering; retained REST remains the default-off rollback path."
-    },
-    "POST /api/segments": {
-      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "createSegment", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Atomically validates the exact dynamic/static definition and tenant references, creates it, calculates membership, and records initial history."
-    },
-    "GET /api/segments/:id": {
-      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segment", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Organization-owned definition with a bounded, newest-first calculation history projection."
-    },
-    "PUT /api/segments/:id": {
-      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "updateSegment", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Locked atomic partial update; omitted metadata is preserved and targeting changes recalculate membership in the same transaction."
-    },
-    "DELETE /api/segments/:id": {
-      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "deleteSegment", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Organization-owned delete; conflicts while any campaign references the saved audience so historical targeting is not orphaned."
-    },
-    "POST /api/segments/:id/calculate": {
-      "disposition": "graphql-mutation", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "recalculateSegment", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Serializes concurrent recalculation, fails closed on invalid definitions, updates the cached count, and appends one accurate history delta."
-    },
-    "GET /api/segments/:id/contacts": {
-      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segmentContacts", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Evaluates the saved definition inside its organization with strict bounded pagination and deterministic ordering."
-    },
-    "POST /api/segments/preview": {
-      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "previewSegment", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Pure query despite the legacy POST; count and sample share one validated parameterized evaluator and never persist a definition."
-    },
-    "GET /api/segments/filter-options": {
-      "disposition": "graphql-query", "owner": "audiences", "targetModule": "SegmentsModule", "targetOperation": "segmentFilterOptions", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Tenant-scoped tags, members, and pipeline stages plus the authoritative filter/operator/status vocabulary."
-    },
-    "GET /api/categories": {
-      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "categories", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Authenticated user-scoped categories with deterministic ordering and no synthetic fallback data."
-    },
-    "GET /api/reputation/reviews": {
-      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationReviewsModule", "targetOperation": "reputationReviews", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Bounded organization-scoped connection with platform/rating/status/sentiment/search filters, stable review-date/ID ordering, and one repeatable-read count/page snapshot."
-    },
-    "GET /api/reputation/reviews/:id": {
-      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationReviewsModule", "targetOperation": "reputationReview", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Private organization-owned detail with platform and contact joins independently qualified by organization."
-    },
-    "POST /api/reputation/reviews": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationReviewsModule", "targetOperation": "createReputationReview", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected manual create with bounded content, deterministic sentiment, and locked tenant-platform/contact validation in one transaction."
-    },
-    "PUT /api/reputation/reviews/:id": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationReviewsModule", "targetOperation": "updateReputationReview", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected row-locked partial update; concurrent patches compose and response text, status, responder, and timestamp remain coherent."
-    },
-    "DELETE /api/reputation/reviews/:id": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationReviewsModule", "targetOperation": "deleteReputationReview", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected organization-qualified delete returning exact stable identity with private foreign and repeated misses."
-    },
-    "GET /api/reputation/analytics": {
-      "disposition": "graphql-query", "owner": "reputation", "targetModule": "AnalyticsModule", "targetOperation": "reputationAnalytics", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "One tenant-scoped repeatable-read snapshot for overall, period, distribution, UTC timeline, and request metrics with a bounded parameterized day window."
-    },
-    "GET /api/reputation/requests": {
-      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationRequestsModule", "targetOperation": "reputationRequests", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Bounded organization-scoped management list with stable created-at/ID ordering, one repeatable-read count/page snapshot, tenant-qualified contact projection, and no public capability token."
-    },
-    "DELETE /api/reputation/requests/:id": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationRequestsModule", "targetOperation": "deleteReputationRequest", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected organization-qualified delete returning exact stable identity with private foreign and repeated misses; active durable deliveries fail closed."
-    },
-    "POST /api/reputation/requests": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationRequestsModule", "targetOperation": "sendReputationRequest", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Idempotent durable email/SMS delivery intent with confirmed provider postconditions, bounded retry, ambiguous-SMS reconciliation, and a scheduler-owned due queue."
-    },
-    "POST /api/reputation/requests/bulk": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationRequestsModule", "targetOperation": "sendBulkReputationRequests", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Atomically validates tenant-owned contacts and persists one idempotent batch before any provider delivery; scheduled work uses the same durable queue."
-    },
-    "POST /api/reputation/requests/:id/resend": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationRequestsModule", "targetOperation": "resendReputationRequest", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Tenant-private resend creates a new stable delivery intent without mutating the prior provider attempt and rejects unresolved active work."
-    },
-    "GET /api/reputation/platforms": {
-      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "reputationPlatforms", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Deterministic organization-scoped platform list deliberately omits access tokens, refresh tokens, and token expiry from the GraphQL schema."
-    },
-    "POST /api/reputation/platforms": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "upsertReputationPlatform", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected validated upsert serializes the organization/platform/place identity and treats a null place ID as one deterministic identity."
-    },
-    "DELETE /api/reputation/platforms/:id": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "deleteReputationPlatform", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Organization-qualified exact-identity delete with foreign and repeated misses concealed as NOT_FOUND."
-    },
-    "GET /api/reputation/settings": {
-      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "reputationSettings", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Returns complete virtual defaults without writing a row, and normalizes nullable legacy rows into the stable frontend contract."
-    },
-    "PUT /api/reputation/settings": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "updateReputationSettings", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Row-locked partial update merges complete validated state, tenant-validates the optional email template, and commits atomically."
-    },
-    "GET /api/reputation/widgets": {
-      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "reputationWidgets", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Deterministic organization-scoped widget configuration list with complete styling, filter, refresh, and activation state."
-    },
-    "POST /api/reputation/widgets": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "createReputationWidget", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected bounded configuration create issues a random 128-bit public capability key and returns no tenant data beyond the owning widget."
-    },
-    "PUT /api/reputation/widgets/:id": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "updateReputationWidget", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Row-locked partial update composes concurrent changes and validates enums, colors, rating/platform filters, counts, refresh intervals, and activation."
-    },
-    "DELETE /api/reputation/widgets/:id": {
-      "disposition": "graphql-mutation", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "deleteReputationWidget", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Organization-qualified exact-identity delete revokes the associated public capability immediately."
-    },
-    "GET /api/reputation/widgets/:id/embed-code": {
-      "disposition": "graphql-query", "owner": "reputation", "targetModule": "ReputationConfigurationModule", "targetOperation": "reputationWidgetEmbedCode", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Tenant-private query emits the existing capability key plus a deployable script tag with separately configured public asset and API origins."
-    },
     "GET /api/reputation/public/widget/:widgetKey": {
-      "disposition": "retain-http", "owner": "reputation", "targetModule": "PublicReputationWidgetModule", "targetOperation": "getPublicReputationWidget", "parityStatus": "characterized", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "reputation",
+      "targetModule": "PublicReputationWidgetModule",
+      "targetOperation": "getPublicReputationWidget",
+      "parityStatus": "characterized",
+      "risk": "high",
       "notes": "Retain credential-free rate-limited HTTP for third-party embedding. Exact 128-bit keys, no-store revocation, active-only configuration, tenant isolation, bounded review selection, and hidden/flagged exclusion are required."
     },
     "GET /api/reputation/public/review/:token": {
-      "disposition": "retain-http", "owner": "reputation", "targetModule": "PublicReputationReviewModule", "targetOperation": "getPublicReviewRequest", "parityStatus": "characterized", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "reputation",
+      "targetModule": "PublicReputationReviewModule",
+      "targetOperation": "getPublicReviewRequest",
+      "parityStatus": "characterized",
+      "risk": "high",
       "notes": "Retain anonymous no-store capability HTTP with an exact 256-bit token, expiry, and minimal token-free projection."
     },
     "POST /api/reputation/public/review/:token": {
-      "disposition": "retain-http", "owner": "reputation", "targetModule": "PublicReputationReviewModule", "targetOperation": "submitPublicReview", "parityStatus": "characterized", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "reputation",
+      "targetModule": "PublicReputationReviewModule",
+      "targetOperation": "submitPublicReview",
+      "parityStatus": "characterized",
+      "risk": "high",
       "notes": "Retain anonymous rate-limited capability HTTP; row locking makes submission one-time and rating, text, platform, and redirect behavior are validated server-side."
     },
-    "PATCH /api/admin/me/plan": {
-      "disposition": "graphql-mutation", "owner": "platform-operations", "targetModule": "AdminOperationsModule", "targetOperation": "updateAdminOwnPlan", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Database-authorized administrator-only, CSRF-protected plan change atomically updates the subscription and organization plan authorities."
-    },
-    "GET /api/admin/stats": {
-      "disposition": "graphql-query", "owner": "platform-operations", "targetModule": "AdminOperationsModule", "targetOperation": "adminSystemStats", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Database-authorized administrator-only global user, contact, and invoice counts from one statement snapshot."
-    },
-    "GET /api/admin/users/by-ids": {
-      "disposition": "graphql-query", "owner": "platform-operations", "targetModule": "AdminOperationsModule", "targetOperation": "adminUsersByIds", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Database-authorized administrator-only bounded batch lookup; positive IDs are deduplicated and output preserves requested order."
-    },
-    "GET /api/admin/users/count": {
-      "disposition": "graphql-query", "owner": "platform-operations", "targetModule": "AdminOperationsModule", "targetOperation": "adminUserCount", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Database-authorized administrator-only global user count independent of selected organization."
-    },
-    "GET /api/admin/users/ids": {
-      "disposition": "graphql-query", "owner": "platform-operations", "targetModule": "AdminOperationsModule", "targetOperation": "adminUserIds", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Database-authorized administrator-only matching ID query shares search and plan filters with the paged directory; REST rollback received the same plan-filter repair."
-    },
-    "GET /api/admin/users/search": {
-      "disposition": "graphql-query", "owner": "platform-operations", "targetModule": "AdminOperationsModule", "targetOperation": "adminUsers", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Database-authorized administrator-only global directory with bounded search, validated plan filter, stable ordering, pagination, and repeatable-read total parity."
-    },
-    "POST /api/categories": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "createCategory", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected normalized create; the General invariant is seeded for every existing and newly inserted user."
-    },
-    "PUT /api/categories/:id": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "updateCategory", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "User-owned partial update; General cannot be renamed and name changes propagate transactionally across all personal content stores."
-    },
-    "DELETE /api/categories/:id": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "CategoriesModule", "targetOperation": "deleteCategory", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "User-owned transactional delete; all personal content is reassigned to General and the invariant category cannot be removed."
-    },
-    "GET /api/vaults": {
-      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "workspaceVaults", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Authenticated user-scoped bounded list with escaped category/search filters, deterministic ordering, exact item counts, and no password material."
-    },
-    "GET /api/vaults/:vaultId": {
-      "disposition": "graphql-query", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "workspaceVault", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "User-qualified detail moves the optional master password out of the URL, returns locked metadata without items until verified, and never returns hashes or ciphertext."
-    },
-    "POST /api/vaults": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "createWorkspaceVault", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected user-owned create validates dimensions and color, rejects bcrypt-truncated passwords, and preserves the legacy AES key plus optional bcrypt lock model."
-    },
-    "PUT /api/vaults/:vaultId": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "updateWorkspaceVault", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected user-qualified partial update preserves omitted values and validates all mutable shell fields."
-    },
-    "PUT /api/vaults/:vaultId/position": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "updateWorkspaceVault", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Canvas position writes use the same user-qualified CSRF-protected partial update mutation without a parallel REST contract."
-    },
-    "DELETE /api/vaults/:vaultId": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "deleteWorkspaceVault", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected exact user-owned deletion cascades stored items and conceals foreign identifiers as NOT_FOUND."
-    },
-    "POST /api/vaults/:vaultId/items": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "addWorkspaceVaultItem", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected vault-row-locked create validates type and bounded plaintext, encrypts with authenticated AES-256-GCM, and allocates a race-free contiguous order."
-    },
-    "POST /api/vaults/:vaultId/items/bulk": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "addWorkspaceVaultItems", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Atomic bulk import validates every item before mutation, caps the batch at 500, encrypts every value, and inserts one contiguous ordered set without silently dropping invalid entries."
-    },
-    "PUT /api/vaults/:vaultId/items/:itemId": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "updateWorkspaceVaultItem", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "User-, vault-, and item-qualified row-locked update preserves omitted fields and rotates authenticated ciphertext whenever plaintext changes."
-    },
-    "DELETE /api/vaults/:vaultId/items/:itemId": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "deleteWorkspaceVaultItem", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Exact owned-item delete atomically compacts later order indices and touches the parent vault."
-    },
-    "PUT /api/vaults/:vaultId/items/reorder": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "reorderWorkspaceVaultItems", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Vault-row-locked exact-set reorder rejects missing, foreign, duplicate, or extra IDs and atomically installs contiguous zero-based order."
-    },
-    "POST /api/vaults/:vaultId/lock": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "setWorkspaceVaultPassword", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Direct CSRF-protected consumer sets or rotates the bcrypt master-password gate under an owned vault row lock. Rotation requires current-password proof, rejects bcrypt-truncated inputs, refreshes compatibility salt metadata, and never returns password material."
-    },
-    "POST /api/vaults/:vaultId/unlock": {
-      "disposition": "graphql-mutation", "owner": "workspace-content", "targetModule": "VaultModule", "targetOperation": "removeWorkspaceVaultPassword", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Direct CSRF-protected consumer removes the password gate only after row-locked current-password proof; foreign, already-unlocked, invalid-password, and malformed-lock states fail closed."
-    },
-    "GET /api/onboarding/progress": {
-      "disposition": "graphql-query", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "onboardingProgress", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Authenticated user-scoped progress, independent of selected organization, with deterministic typed feature projections."
-    },
-    "GET /api/onboarding/progress/:featureKey": {
-      "disposition": "graphql-query", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "onboardingFeatureProgress", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Validated feature key with an explicit unseen projection when no entry is stored."
-    },
-    "POST /api/onboarding/mark-seen": {
-      "disposition": "graphql-mutation", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "markOnboardingSeen", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected row-locked user update with the viewed event committed in the same transaction."
-    },
-    "POST /api/onboarding/dismiss": {
-      "disposition": "graphql-mutation", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "dismissOnboarding", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected user-scoped dismissal that preserves existing feature fields and commits its event atomically."
-    },
-    "POST /api/onboarding/complete-step": {
-      "disposition": "graphql-mutation", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "completeOnboardingStep", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected non-negative integer step update with an atomic durable analytics event."
-    },
-    "DELETE /api/onboarding/reset": {
-      "disposition": "graphql-mutation", "owner": "onboarding", "targetModule": "OnboardingModule", "targetOperation": "resetOnboarding", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected feature or full user reset; historical onboarding events are retained."
-    },
-    "GET /api/pages": {
-      "disposition": "graphql-query", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "landingPages", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Organization-scoped bounded list with validated status/search filters, deterministic ordering, exact totals, and a direct GraphQL frontend consumer."
-    },
-    "GET /api/pages/:id": {
-      "disposition": "graphql-query", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "landingPage", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Organization-qualified detail returns the complete ordered section aggregate and conceals foreign identifiers as NOT_FOUND."
-    },
-    "POST /api/pages": {
-      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "createLandingPage", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected transactional create serializes the organization plan limit, validates bounded page and section content, allocates unique generated slugs, and rejects conflicting explicit slugs."
-    },
-    "PUT /api/pages/:id": {
-      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "updateLandingPage", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Organization-qualified partial update preserves omitted fields, clears explicit nullable values, validates status and slug constraints, and stamps first publication."
-    },
-    "DELETE /api/pages/:id": {
-      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "deleteLandingPage", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected organization-qualified exact-identity delete relies on the characterized page cascade and conceals foreign identifiers."
-    },
-    "POST /api/pages/:id/duplicate": {
-      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "duplicateLandingPage", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Transactional draft duplication copies the complete ordered section aggregate, allocates a unique slug, and serializes the organization plan limit."
-    },
-    "PUT /api/pages/:id/sections": {
-      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "replaceLandingPageSections", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected organization-qualified full replacement validates every bounded section and atomically installs contiguous zero-based order."
-    },
-    "POST /api/pages/:id/sections": {
-      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "addLandingPageSection", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Row-locked insert clamps the optional position, shifts later sections, and keeps the page timestamp authoritative."
-    },
-    "PUT /api/pages/:id/sections/:sectionId": {
-      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "updateLandingPageSection", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Organization- and page-qualified partial section update validates the type and bounded JSON payload while preserving omitted values."
-    },
-    "DELETE /api/pages/:id/sections/:sectionId": {
-      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "deleteLandingPageSection", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Organization- and page-qualified delete transactionally compacts later zero-based positions and updates the parent page."
-    },
-    "POST /api/pages/:id/sections/reorder": {
-      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "reorderLandingPageSections", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Row-locked reorder requires the exact authoritative section-ID set and atomically assigns contiguous zero-based positions."
-    },
-    "GET /api/pages/:id/analytics": {
-      "disposition": "graphql-query", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "landingPageAnalytics", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Organization-qualified analytics bounds the period to 1-365 days and returns views, visitors, engagement, conversions, devices, referrers, and UTM aggregates."
-    },
-    "POST /api/pages/:id/password": {
-      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "setLandingPagePassword", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected organization-qualified bcrypt update rejects truncation-prone inputs, atomically preserves unrelated JSON settings, and returns only protection state."
-    },
-    "DELETE /api/pages/:id/password": {
-      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "removeLandingPagePassword", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected organization-qualified JSONB key removal preserves unrelated settings and returns only protection state."
-    },
-    "GET /api/pages/:id/versions": {
-      "disposition": "graphql-query", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "landingPageVersions", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Organization-qualified deterministic version history returns the authoritative current-version pointer and creator projection through a direct GraphQL frontend consumer."
-    },
-    "POST /api/pages/:id/versions": {
-      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "createLandingPageVersion", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected page-row-locked snapshot creation stores the complete page configuration and ordered sections with race-free monotonic numbering."
-    },
-    "GET /api/pages/:id/versions/:versionId": {
-      "disposition": "graphql-query", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "landingPageVersion", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Organization-, page-, and version-qualified detail conceals foreign and mismatched identifiers as NOT_FOUND."
-    },
-    "POST /api/pages/:id/versions/:versionId/publish": {
-      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "publishLandingPageVersion", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected transaction validates the snapshot, restores the complete page configuration and ordered sections, moves the authoritative current pointer, and stamps publication."
-    },
-    "DELETE /api/pages/:id/versions/:versionId": {
-      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "deleteLandingPageVersion", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "Page-row-locked organization-qualified delete rejects the current published version and returns exact deleted identity."
-    },
-    "POST /api/pages/:id/versions/:versionId/restore": {
-      "disposition": "graphql-mutation", "owner": "growth", "targetModule": "LandingPagesModule", "targetOperation": "restoreLandingPageVersion", "parityStatus": "consumer-cutover-complete", "risk": "high",
-      "notes": "CSRF-protected restore clones the selected snapshot as a new non-current version, preserves the documented restoration numbering gap, and attributes the action to the verified actor."
-    },
     "GET /api/pages/public/page/:slug": {
-      "disposition": "retain-http", "owner": "growth", "targetModule": "PublicLandingPagesModule", "targetOperation": "getPublicLandingPage", "parityStatus": "characterized", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "growth",
+      "targetModule": "PublicLandingPagesModule",
+      "targetOperation": "getPublicLandingPage",
+      "parityStatus": "characterized",
+      "risk": "high",
       "notes": "Retain anonymous page delivery over HTTP for browser navigation, password capability checks, expiry enforcement, cache policy, and public rendering."
     },
     "POST /api/pages/public/page/:slug/analytics": {
-      "disposition": "retain-http", "owner": "growth", "targetModule": "PublicLandingPagesModule", "targetOperation": "recordPublicLandingPageAnalytics", "parityStatus": "characterized", "risk": "high",
+      "disposition": "retain-http",
+      "owner": "growth",
+      "targetModule": "PublicLandingPagesModule",
+      "targetOperation": "recordPublicLandingPageAnalytics",
+      "parityStatus": "characterized",
+      "risk": "high",
       "notes": "Retain the anonymous rate-limited analytics beacon over HTTP; it validates the published page and records request-derived device and attribution evidence."
     }
   },

@@ -1,6 +1,6 @@
 # GraphQL production consumer cutover
 
-**Status:** 85 domain consumers plus authentication session, identity lifecycle, and password recovery enabled
+**Status:** Authenticated application-data cutover and REST retirement complete
 
 **Cutover date:** 2026-07-21
 
@@ -8,7 +8,10 @@
 
 The browser uses the production `VITE_API_URL` (`https://itemize-backend-production-92ad.up.railway.app`) for REST and `/graphql`. That backend forwards GraphQL to `itemize.cloud GraphQL Production` over Railway's private network. The proxy has an explicit response allowlist for the three authentication cookies and cache/CSRF headers, allowing NestJS to own browser sessions through the existing API origin. The frontend custom domain itself serves the SPA shell and is not the direct `/graphql` endpoint.
 
-The 85 domain switches represented by the frontend environment contract are enabled in production. `VITE_AUTH_SESSION_GRAPHQL`, `VITE_AUTH_IDENTITY_GRAPHQL`, and `VITE_AUTH_RECOVERY_GRAPHQL` independently control the enabled session, registration/verification, and forgot/reset-password protocols. A frontend rebuild is required because Vite embeds these values at build time.
+Authenticated application-data consumers call GraphQL permanently. The
+historical `VITE_*_GRAPHQL` switches and their REST rollback branches were
+removed after the final Express retirement on 2026-07-31; they are no longer
+part of the frontend environment contract.
 
 The enabled families are:
 
@@ -22,9 +25,14 @@ The enabled families are:
 
 ## Intentionally retained transports
 
-Enabling every implemented GraphQL consumer does not turn non-GraphQL protocols into GraphQL. Unused OAuth callbacks, public booking/form/signing/review capabilities, provider webhooks, CSV/file/PDF HTTP responses, and Socket.IO realtime delivery remain on their documented HTTP or socket boundaries. Authenticated password/profile mutations exist in GraphQL but have no retained frontend callsite to replace. Where an HTTP route is already owned by NestJS, the legacy backend may continue to act as the same-origin private proxy.
+Completing the GraphQL consumer cutover does not turn non-GraphQL protocols
+into GraphQL. OAuth callbacks, public booking/form/signing/review
+capabilities, provider webhooks, CSV/file/PDF HTTP responses, and Socket.IO
+realtime delivery remain on their documented HTTP or socket boundaries. Where
+an HTTP route is already owned by NestJS, the legacy backend may continue to
+act as the same-origin private proxy.
 
-## Verification
+## Historical rollout evidence
 
 Before the bulk switch, all 73 client keys matched the frontend environment schema, the focused environment/onboarding/category/GraphQL-client tests passed, the complete NestJS suite passed 301 tests, and the production GraphQL schema was healthy behind the same-origin proxy. Production had no users or meaningful application data, so the implemented consumer set was enabled in one build rather than as a user canary.
 
@@ -84,15 +92,21 @@ The retained runtime upgrade completed from commit `7e932a6d` through deployment
 
 Non-draft signature evidence has no automated purge. Until an approved organization/document-class schedule exists, retain sent, in-progress, completed, declined, and cancelled records indefinitely and keep the organization-deletion guard enabled. Export the authenticated original PDF, completed certificate PDF when present, ordered GraphQL audit trail, and their strong SHA-256 ETags. Recompute both file digests, compare them with the ETags, and compare the source digest with the certificate. A future purge requires a legal-hold-aware schedule, advance export, dry run, authorization audit, and durable cleanup; it must not reuse the draft cleanup scheduler.
 
-After deployment, verify:
+After a current deployment, verify:
 
 1. `https://itemize.cloud` returns HTTP `200`;
 2. production `/api/health` returns HTTP `200`;
 3. a proxied GraphQL `__typename` query returns HTTP `200`;
-4. all approved consumer `VITE_*_GRAPHQL` variables are `true`, and any still-staged switch is explicitly named in its domain contract;
+4. the frontend service has no historical `VITE_*_GRAPHQL` variables;
 5. the frontend and backend deployments resolve to the Git commit containing this document;
 6. GraphQL logs contain no internal-error spike after the frontend replacement.
 
 ## Rollback
 
-Consumer rollback is data-neutral. Set only the affected domain variables to `false` and rebuild the frontend; the retained REST adapters read the same PostgreSQL rows. Authentication session rolls back as one unit with `VITE_AUTH_SESSION_GRAPHQL=false`; registration/verification/resend use `VITE_AUTH_IDENTITY_GRAPHQL=false`; forgot/reset password use `VITE_AUTH_RECOVERY_GRAPHQL=false`. Rebuild after any change, and do not split the coordinated session operations. Scheduler rollback is separate and must follow the mutually exclusive ownership procedure in [workflow-rollout-runbook.md](workflow-rollout-runbook.md).
+There is no variable-based application-data rollback after REST retirement.
+Rollback requires deploying a reviewed earlier Git revision and its compatible
+frontend/backend pair; do not recreate removed switches or partially restore
+individual Express routers. Database migrations remain forward-compatible and
+must not be reversed merely to roll back application code. Scheduler ownership
+is separate and must follow the mutually exclusive procedure in
+[workflow-rollout-runbook.md](workflow-rollout-runbook.md).

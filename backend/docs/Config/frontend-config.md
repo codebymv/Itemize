@@ -176,54 +176,14 @@ export default {
 # Google OAuth Configuration
 VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 
-# Legacy/backend API URL
+# Same-origin API and retained HTTP protocol URL
 VITE_API_URL=http://localhost:3001
 
-# Full side-by-side NestJS GraphQL endpoint.
+# Full NestJS GraphQL endpoint for local side-by-side work.
 VITE_GRAPHQL_URL=http://localhost:3100/graphql
 
-# Contact list/detail reads default to REST. Enable only in a tested environment;
-# setting this back to false is the consumer rollback.
-
-# Contact create/update/delete independently default to REST. Enable only after
-# the write-side CSRF and semantic-parity gates pass in the target environment.
-
-# Contact bulk update/delete have a separate rollback boundary from single-row
-# mutations. Keep disabled until the bulk staging browser gate passes.
-
-# Contact timeline reads/writes have their own rollback boundary. Keep disabled
-# until the activity staging browser gate passes.
-
-# Contact related-content reads have their own rollback boundary.
-
-# Pipeline definition/list/detail reads and definition mutations are independent
-# rollback boundaries.
-VITE_PIPELINE_READS_GRAPHQL=false
-VITE_PIPELINE_MUTATIONS_GRAPHQL=false
-
-# Deal list/detail reads and all deal writes have independent rollback boundaries.
-VITE_DEAL_READS_GRAPHQL=false
-VITE_DEAL_MUTATIONS_GRAPHQL=false
-
-# Authenticated form list/detail, definition mutations, and submission
-# management are three independent rollback boundaries. Anonymous public form
-# retrieval/submission always remains on the retained HTTP endpoints.
-VITE_FORM_READS_GRAPHQL=false
-VITE_FORM_MUTATIONS_GRAPHQL=false
-VITE_FORM_SUBMISSIONS_GRAPHQL=false
-
-# Workspace selector membership reads and selection/default-repair writes have
-# independent rollback boundaries. Organization management remains on REST.
-VITE_ORGANIZATION_READS_GRAPHQL=false
-VITE_ORGANIZATION_MUTATIONS_GRAPHQL=false
-
-# Personal workspace category reads and writes have independent rollback
-# boundaries. Both remain disabled until the browser gate passes.
-
-# Personal list, note, and whiteboard reads/writes have independent rollback
-# boundaries.
-# Keep mutation flags disabled until the realtime outbox worker and each
-# staging browser gate are enabled.
+# Authenticated application data is permanently GraphQL-owned. The historical
+# VITE_*_GRAPHQL switches are no longer part of the environment contract.
 
 # Development-only authenticated staging harness. Authentication is still required.
 VITE_DEV_AUTH_PROBE_WITHOUT_HINT=false
@@ -245,7 +205,7 @@ $env:DEV_GRAPHQL_PROXY_TARGET = 'http://127.0.0.1:3100'
 npm run dev
 ```
 
-`VITE_DEV_AUTH_PROBE_WITHOUT_HINT=true` is also development-only. It permits the frontend to call `/api/auth/me` before its browser-storage session hint exists, but does not bypass cookie authentication or authorize a user.
+`VITE_DEV_AUTH_PROBE_WITHOUT_HINT=true` is also development-only. It permits the frontend to perform its development authentication probe before its browser-storage session hint exists, but does not bypass cookie authentication or authorize a user.
 
 ## Package.json Scripts
 
