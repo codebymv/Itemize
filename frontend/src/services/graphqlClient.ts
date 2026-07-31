@@ -32,12 +32,6 @@ export class GraphqlRequestError extends Error {
   }
 }
 
-export const isEstimateGraphqlReadsEnabled = (): boolean =>
-  import.meta.env.VITE_ESTIMATE_READS_GRAPHQL === 'true';
-
-export const isEstimateGraphqlMutationsEnabled = (): boolean =>
-  import.meta.env.VITE_ESTIMATE_MUTATIONS_GRAPHQL === 'true';
-
 export const isEstimateGraphqlConversionEnabled = (): boolean =>
   import.meta.env.VITE_ESTIMATE_CONVERSION_GRAPHQL === 'true';
 

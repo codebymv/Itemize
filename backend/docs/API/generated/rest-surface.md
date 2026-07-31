@@ -6,10 +6,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 203
-- Resolved declarations: 203
+- Route declarations: 198
+- Resolved declarations: 198
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 186
+- Unique resolved method/path operations: 181
 - Files containing declarations: 45
 
 ## Interpretation limits
@@ -67,17 +67,12 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:88` |
 | POST | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:123` |
 | GET | `/api/health` | `/api/health` | `backend/src/index.js:246` |
-| GET | `/api/invoices/:id/pdf` | `/api/invoices/:id/pdf` | `backend/src/bootstrap/register-api-routes.js:188` |
+| GET | `/api/invoices/:id/pdf` | `/api/invoices/:id/pdf` | `backend/src/bootstrap/register-api-routes.js:191` |
 | GET | `/api/invoices/:id/pdf` | `/:id/pdf` | `backend/src/routes/invoices/pdf.routes.js:17` |
-| POST | `/api/invoices/businesses/:id/logo` | `/api/invoices/businesses/:id/logo` | `backend/src/bootstrap/register-api-routes.js:180` |
+| POST | `/api/invoices/businesses/:id/logo` | `/api/invoices/businesses/:id/logo` | `backend/src/bootstrap/register-api-routes.js:183` |
 | POST | `/api/invoices/businesses/:id/logo` | `/businesses/:id/logo` | `backend/src/routes/invoices/businesses.routes.js:17` |
-| GET | `/api/invoices/estimates` | `/` | `backend/src/routes/estimates.routes.js:29` |
-| POST | `/api/invoices/estimates` | `/` | `backend/src/routes/estimates.routes.js:130` |
-| DELETE | `/api/invoices/estimates/:id` | `/:id` | `backend/src/routes/estimates.routes.js:497` |
-| GET | `/api/invoices/estimates/:id` | `/:id` | `backend/src/routes/estimates.routes.js:92` |
-| PUT | `/api/invoices/estimates/:id` | `/:id` | `backend/src/routes/estimates.routes.js:296` |
-| POST | `/api/invoices/estimates/:id/convert-to-invoice` | `/:id/convert-to-invoice` | `backend/src/routes/estimates.routes.js:679` |
-| POST | `/api/invoices/estimates/:id/send` | `/:id/send` | `backend/src/routes/estimates.routes.js:521` |
+| POST | `/api/invoices/estimates/:id/convert-to-invoice` | `/:id/convert-to-invoice` | `backend/src/routes/estimate-actions.routes.js:202` |
+| POST | `/api/invoices/estimates/:id/send` | `/:id/send` | `backend/src/routes/estimate-actions.routes.js:32` |
 | GET | `/api/invoices/recurring` | `/` | `backend/src/routes/recurring.routes.js:73` |
 | POST | `/api/invoices/recurring` | `/` | `backend/src/routes/recurring.routes.js:139` |
 | DELETE | `/api/invoices/recurring/:id` | `/:id` | `backend/src/routes/recurring.routes.js:363` |
@@ -89,9 +84,9 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/invoices/recurring/:id/resume` | `/:id/resume` | `backend/src/routes/recurring.routes.js:413` |
 | POST | `/api/invoices/recurring/from-invoice/:invoiceId` | `/from-invoice/:invoiceId` | `backend/src/routes/recurring.routes.js:639` |
 | GET | `/api/invoices/recurring/preview-invoice-number` | `/preview-invoice-number` | `backend/src/routes/recurring.routes.js:44` |
-| POST | `/api/invoices/settings/logo` | `/api/invoices/settings/logo` | `backend/src/bootstrap/register-api-routes.js:184` |
+| POST | `/api/invoices/settings/logo` | `/api/invoices/settings/logo` | `backend/src/bootstrap/register-api-routes.js:187` |
 | POST | `/api/invoices/settings/logo` | `/settings/logo` | `backend/src/routes/invoices/settings.routes.js:15` |
-| POST | `/api/invoices/webhook/stripe` | `/api/invoices/webhook/stripe` | `backend/src/bootstrap/register-api-routes.js:176` |
+| POST | `/api/invoices/webhook/stripe` | `/api/invoices/webhook/stripe` | `backend/src/bootstrap/register-api-routes.js:179` |
 | POST | `/api/invoices/webhook/stripe` | `/webhook/stripe` | `backend/src/routes/invoices/stripe-webhook.routes.js:18` |
 | DELETE | `/api/lists/:listId/share` | `/lists/:listId/share` | `backend/src/routes/sharing.routes.js:126` |
 | POST | `/api/lists/:listId/share` | `/lists/:listId/share` | `backend/src/routes/sharing.routes.js:103` |
@@ -119,17 +114,17 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/pages/:id/versions/:versionId/restore` | `/:id/versions/:versionId/restore` | `backend/src/routes/pageVersions.routes.js:348` |
 | GET | `/api/pages/public/page/:slug` | `/public/page/:slug` | `backend/src/routes/pages/public.routes.js:18` |
 | POST | `/api/pages/public/page/:slug/analytics` | `/public/page/:slug/analytics` | `backend/src/routes/pages/public.routes.js:141` |
-| GET | `/api/public/sign/:token` | `/api/public/sign/:token` | `backend/src/bootstrap/register-api-routes.js:240` |
+| GET | `/api/public/sign/:token` | `/api/public/sign/:token` | `backend/src/bootstrap/register-api-routes.js:243` |
 | GET | `/api/public/sign/:token` | `/public/sign/:token` | `backend/src/routes/signatures.routes.js:566` |
-| POST | `/api/public/sign/:token` | `/api/public/sign/:token` | `backend/src/bootstrap/register-api-routes.js:260` |
+| POST | `/api/public/sign/:token` | `/api/public/sign/:token` | `backend/src/bootstrap/register-api-routes.js:263` |
 | POST | `/api/public/sign/:token` | `/public/sign/:token` | `backend/src/routes/signatures.routes.js:593` |
-| POST | `/api/public/sign/:token/decline` | `/api/public/sign/:token/decline` | `backend/src/bootstrap/register-api-routes.js:256` |
+| POST | `/api/public/sign/:token/decline` | `/api/public/sign/:token/decline` | `backend/src/bootstrap/register-api-routes.js:259` |
 | POST | `/api/public/sign/:token/decline` | `/public/sign/:token/decline` | `backend/src/routes/signatures.routes.js:624` |
-| GET | `/api/public/sign/:token/download` | `/api/public/sign/:token/download` | `backend/src/bootstrap/register-api-routes.js:248` |
+| GET | `/api/public/sign/:token/download` | `/api/public/sign/:token/download` | `backend/src/bootstrap/register-api-routes.js:251` |
 | GET | `/api/public/sign/:token/download` | `/public/sign/:token/download` | `backend/src/routes/signatures.routes.js:638` |
-| GET | `/api/public/sign/:token/file` | `/api/public/sign/:token/file` | `backend/src/bootstrap/register-api-routes.js:244` |
+| GET | `/api/public/sign/:token/file` | `/api/public/sign/:token/file` | `backend/src/bootstrap/register-api-routes.js:247` |
 | GET | `/api/public/sign/:token/file` | `/public/sign/:token/file` | `backend/src/routes/signatures.routes.js:660` |
-| POST | `/api/public/sign/:token/verify` | `/api/public/sign/:token/verify` | `backend/src/bootstrap/register-api-routes.js:252` |
+| POST | `/api/public/sign/:token/verify` | `/api/public/sign/:token/verify` | `backend/src/bootstrap/register-api-routes.js:255` |
 | POST | `/api/public/sign/:token/verify` | `/public/sign/:token/verify` | `backend/src/routes/signatures.routes.js:589` |
 | GET | `/api/reputation/analytics` | `/analytics` | `backend/src/routes/reputation/analytics.routes.js:14` |
 | GET | `/api/reputation/platforms` | `/platforms` | `backend/src/routes/reputation/platforms.routes.js:15` |
@@ -167,14 +162,14 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | PUT | `/api/signatures/documents/:id` | `/signatures/documents/:id` | `backend/src/routes/signatures.routes.js:312` |
 | GET | `/api/signatures/documents/:id/audit` | `/signatures/documents/:id/audit` | `backend/src/routes/signatures.routes.js:555` |
 | POST | `/api/signatures/documents/:id/cancel` | `/signatures/documents/:id/cancel` | `backend/src/routes/signatures.routes.js:485` |
-| GET | `/api/signatures/documents/:id/download` | `/api/signatures/documents/:id/download` | `backend/src/bootstrap/register-api-routes.js:226` |
+| GET | `/api/signatures/documents/:id/download` | `/api/signatures/documents/:id/download` | `backend/src/bootstrap/register-api-routes.js:229` |
 | GET | `/api/signatures/documents/:id/download` | `/signatures/documents/:id/download` | `backend/src/routes/signatures.routes.js:517` |
 | DELETE | `/api/signatures/documents/:id/file` | `/signatures/documents/:id/file` | `backend/src/routes/signatures.routes.js:423` |
-| GET | `/api/signatures/documents/:id/file` | `/api/signatures/documents/:id/file` | `backend/src/bootstrap/register-api-routes.js:222` |
+| GET | `/api/signatures/documents/:id/file` | `/api/signatures/documents/:id/file` | `backend/src/bootstrap/register-api-routes.js:225` |
 | GET | `/api/signatures/documents/:id/file` | `/signatures/documents/:id/file` | `backend/src/routes/signatures.routes.js:538` |
 | POST | `/api/signatures/documents/:id/remind` | `/signatures/documents/:id/remind` | `backend/src/routes/signatures.routes.js:497` |
 | POST | `/api/signatures/documents/:id/send` | `/signatures/documents/:id/send` | `backend/src/routes/signatures.routes.js:463` |
-| POST | `/api/signatures/documents/upload` | `/api/signatures/documents/upload` | `backend/src/bootstrap/register-api-routes.js:208` |
+| POST | `/api/signatures/documents/upload` | `/api/signatures/documents/upload` | `backend/src/bootstrap/register-api-routes.js:211` |
 | POST | `/api/signatures/documents/upload` | `/signatures/documents/upload` | `backend/src/routes/signatures.routes.js:355` |
 | POST | `/api/signatures/email/preview` | `/signatures/email/preview` | `backend/src/routes/signatures.routes.js:400` |
 | GET | `/api/signatures/templates` | `/signatures/templates` | `backend/src/routes/signatures.routes.js:245` |
@@ -182,10 +177,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | DELETE | `/api/signatures/templates/:id` | `/signatures/templates/:id` | `backend/src/routes/signatures.routes.js:193` |
 | GET | `/api/signatures/templates/:id` | `/signatures/templates/:id` | `backend/src/routes/signatures.routes.js:250` |
 | PUT | `/api/signatures/templates/:id` | `/signatures/templates/:id` | `backend/src/routes/signatures.routes.js:167` |
-| GET | `/api/signatures/templates/:id/file` | `/api/signatures/templates/:id/file` | `backend/src/bootstrap/register-api-routes.js:230` |
+| GET | `/api/signatures/templates/:id/file` | `/api/signatures/templates/:id/file` | `backend/src/bootstrap/register-api-routes.js:233` |
 | GET | `/api/signatures/templates/:id/file` | `/signatures/templates/:id/file` | `backend/src/routes/signatures.routes.js:257` |
 | POST | `/api/signatures/templates/:id/instantiate` | `/signatures/templates/:id/instantiate` | `backend/src/routes/signatures.routes.js:274` |
-| POST | `/api/signatures/templates/upload` | `/api/signatures/templates/upload` | `backend/src/bootstrap/register-api-routes.js:215` |
+| POST | `/api/signatures/templates/upload` | `/api/signatures/templates/upload` | `backend/src/bootstrap/register-api-routes.js:218` |
 | POST | `/api/signatures/templates/upload` | `/signatures/templates/upload` | `backend/src/routes/signatures.routes.js:205` |
 | POST | `/api/sms-templates/webhook/inbound` | `/webhook/inbound` | `backend/src/routes/sms-webhooks.routes.js:121` |
 | POST | `/api/sms-templates/webhook/status` | `/webhook/status` | `backend/src/routes/sms-webhooks.routes.js:51` |

@@ -6,19 +6,19 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 186,
-    "apiOperationCount": 179,
+    "operationCount": 181,
+    "apiOperationCount": 174,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 128,
-    "operationsWithFrontendConsumers": 121,
-    "operationsWithBackendTests": 101,
+    "frontendCallsiteCount": 123,
+    "operationsWithFrontendConsumers": 116,
+    "operationsWithBackendTests": 96,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 51,
     "retainHttpCount": 55,
-    "graphqlQueryCount": 34,
-    "graphqlMutationCount": 90,
+    "graphqlQueryCount": 32,
+    "graphqlMutationCount": 87,
     "highRiskCount": 146,
     "literalInterpolationRiskCount": 0
   },
@@ -2044,7 +2044,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 188
+          "line": 191
         },
         {
           "source": "backend/src/routes/invoices/pdf.routes.js",
@@ -2067,37 +2067,37 @@
           "method": "GET",
           "path": "/api/invoices/:id/pdf",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 390
+          "line": 382
         },
         {
           "method": "GET",
           "path": "/api/invoices/not-an-id/pdf",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 396
+          "line": 388
         },
         {
           "method": "GET",
           "path": "/api/invoices/:id/pdf",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 403
+          "line": 395
         },
         {
           "method": "GET",
           "path": "/api/invoices/:id/pdf",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 413
+          "line": 405
         },
         {
           "method": "GET",
           "path": "/api/invoices/:id/pdf",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 444
+          "line": 436
         },
         {
           "method": "GET",
           "path": "/api/invoices/:id/pdf",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 454
+          "line": 446
         },
         {
           "method": "GET",
@@ -2155,7 +2155,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 180
+          "line": 183
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -2241,327 +2241,14 @@
       "risk": "high"
     },
     {
-      "id": "GET /api/invoices/estimates",
-      "key": "GET /api/invoices/estimates",
-      "method": "GET",
-      "path": "/api/invoices/estimates",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/estimates.routes.js",
-          "line": 29
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/invoices/estimates",
-          "rawPath": "/api/invoices/estimates",
-          "source": "frontend/src/services/estimatesApi.ts",
-          "line": 113,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/invoices/estimates",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 121
-        },
-        {
-          "method": "GET",
-          "path": "/api/invoices/estimates",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 133
-        },
-        {
-          "method": "GET",
-          "path": "/api/invoices/estimates",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 384
-        },
-        {
-          "method": "GET",
-          "path": "/api/invoices/estimates",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 395
-        },
-        {
-          "method": "GET",
-          "path": "/api/invoices/estimates",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 405
-        },
-        {
-          "method": "GET",
-          "path": "/api/invoices/estimates",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 420
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetOperation": "estimates",
-      "targetModule": "EstimatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Default-off GraphQL reads preserve organization-scoped filters, literal search, deterministic paging, decimal precision, and the retained frontend list shape.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/invoices/estimates",
-      "key": "POST /api/invoices/estimates",
-      "method": "POST",
-      "path": "/api/invoices/estimates",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/estimates.routes.js",
-          "line": 130
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/estimates",
-          "rawPath": "/api/invoices/estimates",
-          "source": "frontend/src/services/estimatesApi.ts",
-          "line": 140,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/estimates",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 74
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/estimates",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 101
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/estimates",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 111
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/estimates",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 216
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/estimates",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 271
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/estimates",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 276
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/estimates",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 300
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/estimates",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 336
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/estimates",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 368
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetOperation": "createEstimate",
-      "targetModule": "EstimatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected creation validates tenant-owned contacts/products, serializes estimate numbering, and commits line items plus PostgreSQL-calculated tax, discount, and total values atomically.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "DELETE /api/invoices/estimates/:id",
-      "key": "DELETE /api/invoices/estimates/:*",
-      "method": "DELETE",
-      "path": "/api/invoices/estimates/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/estimates.routes.js",
-          "line": 497
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/invoices/estimates/:id",
-          "rawPath": "/api/invoices/estimates/${id}",
-          "source": "frontend/src/services/estimatesApi.ts",
-          "line": 167,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "DELETE",
-          "path": "/api/invoices/estimates/:estimateId",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 194
-        },
-        {
-          "method": "DELETE",
-          "path": "/api/invoices/estimates/:estimateId",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 203
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetOperation": "deleteEstimate",
-      "targetModule": "EstimatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Tenant-scoped deletion conceals foreign rows and returns stable deleted identity through the retained-shape adapter.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "GET /api/invoices/estimates/:id",
-      "key": "GET /api/invoices/estimates/:*",
-      "method": "GET",
-      "path": "/api/invoices/estimates/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/estimates.routes.js",
-          "line": 92
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/invoices/estimates/:id",
-          "rawPath": "/api/invoices/estimates/${id}",
-          "source": "frontend/src/services/estimatesApi.ts",
-          "line": 127,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/invoices/estimates/:id",
-          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 1229
-        },
-        {
-          "method": "GET",
-          "path": "/api/invoices/estimates/:estimateId",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 144
-        },
-        {
-          "method": "GET",
-          "path": "/api/invoices/estimates/:estimateId",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 157
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetOperation": "estimate",
-      "targetModule": "EstimatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Detail reads qualify contact, product, and item projections by organization and preserve decimal strings until the frontend boundary.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "PUT /api/invoices/estimates/:id",
-      "key": "PUT /api/invoices/estimates/:*",
-      "method": "PUT",
-      "path": "/api/invoices/estimates/:id",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/estimates.routes.js",
-          "line": 296
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/invoices/estimates/:id",
-          "rawPath": "/api/invoices/estimates/${id}",
-          "source": "frontend/src/services/estimatesApi.ts",
-          "line": 154,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "PUT",
-          "path": "/api/invoices/estimates/:estimateId",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 166
-        },
-        {
-          "method": "PUT",
-          "path": "/api/invoices/estimates/:estimateId",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 184
-        },
-        {
-          "method": "PUT",
-          "path": "/api/invoices/estimates/:id",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 348
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetOperation": "updateEstimate",
-      "targetModule": "EstimatesModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "CSRF-protected updates lock the estimate, permit only draft/sent edits, validate effective references and dates, and replace items plus derived totals atomically.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
       "id": "POST /api/invoices/estimates/:id/convert-to-invoice",
       "key": "POST /api/invoices/estimates/:*/convert-to-invoice",
       "method": "POST",
       "path": "/api/invoices/estimates/:id/convert-to-invoice",
       "routeSources": [
         {
-          "source": "backend/src/routes/estimates.routes.js",
-          "line": 679
+          "source": "backend/src/routes/estimate-actions.routes.js",
+          "line": 202
         }
       ],
       "consumerCallsites": [
@@ -2570,7 +2257,7 @@
           "path": "/api/invoices/estimates/:id/convert-to-invoice",
           "rawPath": "/api/invoices/estimates/${id}/convert-to-invoice",
           "source": "frontend/src/services/estimatesApi.ts",
-          "line": 192,
+          "line": 159,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2578,15 +2265,9 @@
       "testCallsites": [
         {
           "method": "POST",
-          "path": "/api/invoices/estimates/:estimateId/convert-to-invoice",
-          "source": "backend/src/__tests__/integration/estimates.integration.test.js",
-          "line": 307
-        },
-        {
-          "method": "POST",
           "path": "/api/invoices/estimates/15/convert-to-invoice",
           "source": "backend/src/__tests__/routes/estimate-conversion.routes.test.js",
-          "line": 76
+          "line": 103
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -2607,8 +2288,8 @@
       "path": "/api/invoices/estimates/:id/send",
       "routeSources": [
         {
-          "source": "backend/src/routes/estimates.routes.js",
-          "line": 521
+          "source": "backend/src/routes/estimate-actions.routes.js",
+          "line": 32
         }
       ],
       "consumerCallsites": [
@@ -2617,7 +2298,7 @@
           "path": "/api/invoices/estimates/:id/send",
           "rawPath": "/api/invoices/estimates/${id}/send",
           "source": "frontend/src/services/estimatesApi.ts",
-          "line": 180,
+          "line": 147,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2763,19 +2444,19 @@
           "method": "GET",
           "path": "/api/invoices/recurring/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 1856
+          "line": 1859
         },
         {
           "method": "GET",
           "path": "/api/invoices/recurring/:id",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 2034
+          "line": 2037
         },
         {
           "method": "GET",
           "path": "/api/invoices/recurring/:templateId",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 2204
+          "line": 2207
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -2931,7 +2612,7 @@
           "method": "POST",
           "path": "/api/invoices/recurring/:id/pause",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 1890
+          "line": 1893
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -3055,7 +2736,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 184
+          "line": 187
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -3093,7 +2774,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 176
+          "line": 179
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -3935,7 +3616,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 240
+          "line": 243
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -4022,7 +3703,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 260
+          "line": 263
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -4091,7 +3772,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 256
+          "line": 259
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -4136,7 +3817,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 248
+          "line": 251
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -4164,7 +3845,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 244
+          "line": 247
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -4199,7 +3880,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 252
+          "line": 255
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -5728,7 +5409,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 226
+          "line": 229
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -5799,7 +5480,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 222
+          "line": 225
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -5956,7 +5637,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 208
+          "line": 211
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -6277,7 +5958,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 230
+          "line": 233
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -6346,7 +6027,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 215
+          "line": 218
         },
         {
           "source": "backend/src/routes/signatures.routes.js",
@@ -8328,6 +8009,7 @@
     "DELETE /api/invoices/:id",
     "DELETE /api/invoices/businesses/:id",
     "DELETE /api/invoices/businesses/:id/logo",
+    "DELETE /api/invoices/estimates/:id",
     "DELETE /api/invoices/products/:id",
     "DELETE /api/invoices/settings/logo",
     "DELETE /api/lists/:id",
@@ -8374,6 +8056,8 @@
     "GET /api/invoices/:id",
     "GET /api/invoices/businesses",
     "GET /api/invoices/businesses/:id",
+    "GET /api/invoices/estimates",
+    "GET /api/invoices/estimates/:id",
     "GET /api/invoices/payments",
     "GET /api/invoices/products",
     "GET /api/invoices/settings",
@@ -8428,6 +8112,7 @@
     "POST /api/invoices/:id/send",
     "POST /api/invoices/businesses",
     "POST /api/invoices/email/preview",
+    "POST /api/invoices/estimates",
     "POST /api/invoices/payments",
     "POST /api/invoices/products",
     "POST /api/lists",
@@ -8464,6 +8149,7 @@
     "PUT /api/forms/:id/fields",
     "PUT /api/invoices/:id",
     "PUT /api/invoices/businesses/:id",
+    "PUT /api/invoices/estimates/:id",
     "PUT /api/invoices/products/:id",
     "PUT /api/invoices/settings",
     "PUT /api/lists/:id",

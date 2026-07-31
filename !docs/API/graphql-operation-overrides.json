@@ -377,7 +377,7 @@
       "targetOperation": "estimates",
       "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "Default-off GraphQL reads preserve organization-scoped filters, literal search, deterministic paging, decimal precision, and the retained frontend list shape."
+      "notes": "The frontend permanently uses this organization-scoped GraphQL query. It preserves filters, literal search, deterministic paging, decimal precision, and the retained frontend list shape; the rollout flag and retired Express path are removed, and the old URL returns 404."
     },
     "POST /api/invoices/estimates": {
       "disposition": "graphql-mutation",
@@ -386,7 +386,7 @@
       "targetOperation": "createEstimate",
       "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "CSRF-protected creation validates tenant-owned contacts/products, serializes estimate numbering, and commits line items plus PostgreSQL-calculated tax, discount, and total values atomically."
+      "notes": "The frontend permanently uses this CSRF-protected mutation. Creation validates tenant-owned contacts/products, serializes estimate numbering, and commits line items plus PostgreSQL-calculated tax, discount, and total values atomically; the rollout flag and retired Express path are removed, and the old URL returns 404."
     },
     "DELETE /api/invoices/estimates/:id": {
       "disposition": "graphql-mutation",
@@ -395,7 +395,7 @@
       "targetOperation": "deleteEstimate",
       "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "Tenant-scoped deletion conceals foreign rows and returns stable deleted identity through the retained-shape adapter."
+      "notes": "The frontend permanently uses this tenant-scoped GraphQL mutation. Deletion conceals foreign rows and returns stable deleted identity through the retained-shape adapter; the rollout flag and retired Express path are removed, and the old URL returns 404."
     },
     "GET /api/invoices/estimates/:id": {
       "disposition": "graphql-query",
@@ -404,7 +404,7 @@
       "targetOperation": "estimate",
       "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "Detail reads qualify contact, product, and item projections by organization and preserve decimal strings until the frontend boundary."
+      "notes": "The frontend permanently uses this GraphQL query. Detail reads qualify contact, product, and item projections by organization and preserve decimal strings until the frontend boundary; the rollout flag and retired Express path are removed, and the old URL returns 404."
     },
     "PUT /api/invoices/estimates/:id": {
       "disposition": "graphql-mutation",
@@ -413,7 +413,7 @@
       "targetOperation": "updateEstimate",
       "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "CSRF-protected updates lock the estimate, permit only draft/sent edits, validate effective references and dates, and replace items plus derived totals atomically."
+      "notes": "The frontend permanently uses this CSRF-protected mutation. Updates lock the estimate, permit only draft/sent edits, validate effective references and dates, and replace items plus derived totals atomically; the rollout flag and retired Express path are removed, and the old URL returns 404."
     },
     "POST /api/invoices/estimates/:id/convert-to-invoice": {
       "disposition": "graphql-mutation",

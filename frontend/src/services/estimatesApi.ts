@@ -1,8 +1,6 @@
 import api from '@/lib/api';
 import {
-  isEstimateGraphqlMutationsEnabled,
   isEstimateGraphqlConversionEnabled,
-  isEstimateGraphqlReadsEnabled,
   isEstimateGraphqlSendEnabled,
 } from './graphqlClient';
 import {
@@ -107,40 +105,21 @@ export const getEstimates = async (
   params: EstimateListParams = {},
   organizationId?: number,
 ): Promise<EstimateListResponse> => {
-  if (isEstimateGraphqlReadsEnabled()) {
-    return getEstimatesViaGraphql(params, organizationId);
-  }
-  const response = await api.get('/api/invoices/estimates', {
-    params,
-    headers: headers(organizationId),
-  });
-  return response.data as EstimateListResponse;
+  return getEstimatesViaGraphql(params, organizationId);
 };
 
 export const getEstimate = async (
   id: number,
   organizationId?: number,
 ): Promise<Estimate> => {
-  if (isEstimateGraphqlReadsEnabled()) {
-    return getEstimateViaGraphql(id, organizationId);
-  }
-  const response = await api.get(`/api/invoices/estimates/${id}`, {
-    headers: headers(organizationId),
-  });
-  return response.data as Estimate;
+  return getEstimateViaGraphql(id, organizationId);
 };
 
 export const createEstimate = async (
   input: EstimateWriteInput & { items: EstimateItem[] },
   organizationId?: number,
 ): Promise<Estimate> => {
-  if (isEstimateGraphqlMutationsEnabled()) {
-    return createEstimateViaGraphql(input, organizationId);
-  }
-  const response = await api.post('/api/invoices/estimates', input, {
-    headers: headers(organizationId),
-  });
-  return response.data as Estimate;
+  return createEstimateViaGraphql(input, organizationId);
 };
 
 export const updateEstimate = async (
@@ -148,26 +127,14 @@ export const updateEstimate = async (
   input: EstimateWriteInput,
   organizationId?: number,
 ): Promise<Estimate> => {
-  if (isEstimateGraphqlMutationsEnabled()) {
-    return updateEstimateViaGraphql(id, input, organizationId);
-  }
-  const response = await api.put(`/api/invoices/estimates/${id}`, input, {
-    headers: headers(organizationId),
-  });
-  return response.data as Estimate;
+  return updateEstimateViaGraphql(id, input, organizationId);
 };
 
 export const deleteEstimate = async (
   id: number,
   organizationId?: number,
 ): Promise<{ success: boolean }> => {
-  if (isEstimateGraphqlMutationsEnabled()) {
-    return deleteEstimateViaGraphql(id, organizationId);
-  }
-  const response = await api.delete(`/api/invoices/estimates/${id}`, {
-    headers: headers(organizationId),
-  });
-  return response.data as { success: boolean };
+  return deleteEstimateViaGraphql(id, organizationId);
 };
 
 export const sendEstimate = async (

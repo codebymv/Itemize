@@ -8,8 +8,6 @@ describe('Environment Validation', () => {
     expect(env.VITE_AUTH_SESSION_GRAPHQL).toBe('false');
     expect(env.VITE_AUTH_IDENTITY_GRAPHQL).toBe('false');
     expect(env.VITE_AUTH_RECOVERY_GRAPHQL).toBe('false');
-    expect(env.VITE_ESTIMATE_READS_GRAPHQL).toBe('false');
-    expect(env.VITE_ESTIMATE_MUTATIONS_GRAPHQL).toBe('false');
     expect(env.VITE_ESTIMATE_CONVERSION_GRAPHQL).toBe('false');
     expect(env.VITE_RECURRING_INVOICE_READS_GRAPHQL).toBe('false');
     expect(env.VITE_RECURRING_INVOICE_MUTATIONS_GRAPHQL).toBe('false');

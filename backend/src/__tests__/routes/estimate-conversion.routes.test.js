@@ -5,9 +5,36 @@ jest.mock('../../middleware/organization', () => () => ({
     requireOrganization: (_req, _res, next) => next(),
 }));
 
-const createEstimateRoutes = require('../../routes/estimates.routes');
+const createEstimateRoutes = require('../../routes/estimate-actions.routes');
 
 const pass = (_req, _res, next) => next();
+
+describe('retired estimate CRUD routes', () => {
+    const authenticateJWT = jest.fn((_req, res) => res.status(401).end());
+    const app = express();
+
+    app.use(express.json());
+    app.use(
+        '/api/invoices/estimates',
+        createEstimateRoutes({}, authenticateJWT),
+    );
+
+    beforeEach(() => {
+        authenticateJWT.mockClear();
+    });
+
+    test.each([
+        ['get', '/api/invoices/estimates'],
+        ['post', '/api/invoices/estimates'],
+        ['get', '/api/invoices/estimates/1'],
+        ['put', '/api/invoices/estimates/1'],
+        ['delete', '/api/invoices/estimates/1'],
+    ])('returns 404 for retired %s %s', async (method, path) => {
+        const response = await request(app)[method](path).send({});
+        expect(response.status).toBe(404);
+        expect(authenticateJWT).not.toHaveBeenCalled();
+    });
+});
 
 function createClient() {
     return {

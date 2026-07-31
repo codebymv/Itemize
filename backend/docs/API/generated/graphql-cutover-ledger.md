@@ -4,14 +4,14 @@
 
 ## Summary
 
-- Registered method/path operations: 186
-- API operations under `/api`: 179
+- Registered method/path operations: 181
+- API operations under `/api`: 174
 - Non-API registered operations: 7
-- Static frontend callsites: 128
-- Operations with frontend consumers: 121
-- Operations referenced by backend tests: 101
-- Recommended GraphQL queries: 34
-- Recommended GraphQL mutations: 90
+- Static frontend callsites: 123
+- Operations with frontend consumers: 116
+- Operations referenced by backend tests: 96
+- Recommended GraphQL queries: 32
+- Recommended GraphQL mutations: 87
 - Recommended retained HTTP endpoints: 55
 - High-risk operations: 146
 - Unmatched frontend calls: 0
@@ -75,12 +75,7 @@
 | GET | `/api/health` | 0 | 0 | retain-http | low | platform-operations / HealthBoundary / readiness |
 | GET | `/api/invoices/:id/pdf` | 1 | 12 | retain-http | high | billing / InvoicesModule / invoicePdf |
 | POST | `/api/invoices/businesses/:id/logo` | 1 | 9 | retain-http | high | billing / InvoiceBusinessesModule / uploadInvoiceBusinessLogo |
-| GET | `/api/invoices/estimates` | 1 | 6 | graphql-query | medium | billing / EstimatesModule / estimates |
-| POST | `/api/invoices/estimates` | 1 | 9 | graphql-mutation | medium | billing / EstimatesModule / createEstimate |
-| DELETE | `/api/invoices/estimates/:id` | 1 | 2 | graphql-mutation | medium | billing / EstimatesModule / deleteEstimate |
-| GET | `/api/invoices/estimates/:id` | 1 | 3 | graphql-query | medium | billing / EstimatesModule / estimate |
-| PUT | `/api/invoices/estimates/:id` | 1 | 3 | graphql-mutation | medium | billing / EstimatesModule / updateEstimate |
-| POST | `/api/invoices/estimates/:id/convert-to-invoice` | 1 | 2 | graphql-mutation | high | billing / EstimatesModule / convertEstimateToInvoice |
+| POST | `/api/invoices/estimates/:id/convert-to-invoice` | 1 | 1 | graphql-mutation | high | billing / EstimatesModule / convertEstimateToInvoice |
 | POST | `/api/invoices/estimates/:id/send` | 1 | 0 | graphql-mutation | high | billing / EstimatesModule / sendEstimate |
 | GET | `/api/invoices/recurring` | 1 | 0 | graphql-query | high | billing / RecurringInvoicesModule / recurringInvoices |
 | POST | `/api/invoices/recurring` | 1 | 0 | graphql-mutation | high | billing / RecurringInvoicesModule / createRecurringInvoice |
@@ -223,7 +218,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 51
-- Orphaned manual overrides: 164
+- Orphaned manual overrides: 169
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

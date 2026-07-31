@@ -149,17 +149,9 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     await app.init();
 
     const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    const { requireOrganization } =
-      require('../../../backend/src/middleware/organization')(pool);
     legacyApp = express();
     legacyApp.use(cookieParser());
     legacyApp.use(express.json());
-    const createEstimateRouter =
-      require('../../../backend/src/routes/estimates.routes');
-    legacyApp.use(
-      '/api/invoices/estimates',
-      createEstimateRouter(pool, authenticateJWT),
-    );
     const createRecurringRouter =
       require('../../../backend/src/routes/recurring.routes');
     legacyApp.use(
@@ -1206,7 +1198,7 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     }],
   });
 
-  it('supports estimate CRUD with exact per-line tax and REST interoperability', async () => {
+  it('supports estimate CRUD with exact per-line tax and GraphQL detail parity', async () => {
     const created = await graphql(
       memberToken,
       organizationId,
@@ -1225,13 +1217,24 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       items: [{ productId, taxAmount: '2.00', total: '27.00' }],
     });
     const id = Number(created.body.data.createEstimate.id);
-    const rest = await request(legacyApp)
-      .get(`/api/invoices/estimates/${id}`)
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
-    expect(rest.body.data.estimate_number)
-      .toBe(created.body.data.createEstimate.estimateNumber);
+    const detail = await graphql(
+      memberToken,
+      organizationId,
+      `query Estimate($id: Int!) {
+        estimate(id: $id) {
+          estimateNumber total
+          items { productId taxAmount total sortOrder }
+        }
+      }`,
+      { id },
+      false,
+    ).expect(200);
+    expect(detail.body.errors).toBeUndefined();
+    expect(detail.body.data.estimate).toMatchObject({
+      estimateNumber: created.body.data.createEstimate.estimateNumber,
+      total: '26.00',
+      items: [{ productId, taxAmount: '2.00', total: '27.00' }],
+    });
     const updated = await graphql(
       memberToken,
       organizationId,
