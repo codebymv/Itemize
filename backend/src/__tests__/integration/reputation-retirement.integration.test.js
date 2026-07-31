@@ -14,7 +14,6 @@ function createApp(pool) {
         req.dbPool = pool;
         next();
     });
-    app.use('/api/auth', require('../../auth').router);
 
     const noop = (_req, _res, next) => next();
     registerApiRoutes({

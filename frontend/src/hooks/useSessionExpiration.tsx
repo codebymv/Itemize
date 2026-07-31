@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast, useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import api, { markAuthenticatedSession } from '@/lib/api';
+import { refreshAuthenticatedSession } from '@/lib/api';
 
 /**
  * Hook to handle session expiration events
@@ -49,21 +49,15 @@ export const useSessionWarning = () => {
             variant="primary"
             onClick={async () => {
               try {
-                const res = await api.post('/api/auth/refresh');
-                if (res.data?.success) {
-                  markAuthenticatedSession();
-                  if (typeof window !== 'undefined') {
-                    window.dispatchEvent(new CustomEvent('auth:session-refreshed'));
-                  }
-                  if (expiringToastIdRef.current) {
-                    dismiss(expiringToastIdRef.current);
-                    expiringToastIdRef.current = null;
-                  }
-                  toastFn({
-                    title: "You're signed in",
-                    description: 'Your session has been extended.',
-                  });
+                await refreshAuthenticatedSession();
+                if (expiringToastIdRef.current) {
+                  dismiss(expiringToastIdRef.current);
+                  expiringToastIdRef.current = null;
                 }
+                toastFn({
+                  title: "You're signed in",
+                  description: 'Your session has been extended.',
+                });
               } catch {
                 toastFn({
                   title: 'Could not extend session',

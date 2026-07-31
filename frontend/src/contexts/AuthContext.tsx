@@ -1,14 +1,11 @@
 import React, { createContext, useState, useContext, useEffect, useMemo, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import api, { markAuthenticatedSession, clearAuthenticatedSession, isLoggedOut, setLoggedOut, hasSessionHint } from '@/lib/api';
+import { markAuthenticatedSession, clearAuthenticatedSession, isLoggedOut, setLoggedOut, hasSessionHint } from '@/lib/api';
 import { storage } from '@/lib/storage';
-import axios from 'axios';
 import { toast } from '@/components/ui/use-toast';
 import logger from '@/lib/logger';
 import {
   getCurrentUserViaGraphql,
-  isAuthIdentityGraphqlEnabled,
-  isAuthSessionGraphqlEnabled,
   loginViaGraphql,
   logoutViaGraphql,
   registerViaGraphql,
@@ -50,48 +47,7 @@ export class AuthError extends Error {
   }
 }
 
-interface ApiErrorPayload {
-  error?: string | {
-    message?: string;
-    code?: string;
-  };
-  message?: string;
-  code?: string;
-}
-
-const getAuthErrorDetails = (payload: unknown, fallbackMessage: string): { message: string; code: string } => {
-  if (payload && typeof payload === 'object') {
-    const data = payload as ApiErrorPayload;
-
-    if (typeof data.error === 'string') {
-      return {
-        message: data.error,
-        code: data.code || 'UNKNOWN',
-      };
-    }
-
-    if (data.error && typeof data.error === 'object') {
-      return {
-        message: data.error.message || fallbackMessage,
-        code: data.error.code || data.code || 'UNKNOWN',
-      };
-    }
-
-    if (typeof data.message === 'string') {
-      return {
-        message: data.message,
-        code: data.code || 'UNKNOWN',
-      };
-    }
-  }
-
-  return {
-    message: fallbackMessage,
-    code: 'UNKNOWN',
-  };
-};
-
-/** Public/marketing paths where guests must not trigger /api/auth/me or refresh. */
+/** Public/marketing paths where guests must not trigger session hydration or refresh. */
 export const isPublicAuthSkipPath = (pathname: string): boolean => {
   const exact = [
     '/home',
@@ -101,7 +57,6 @@ export const isPublicAuthSkipPath = (pathname: string): boolean => {
     '/verify-email',
     '/forgot-password',
     '/reset-password',
-    '/auth/callback',
   ];
   if (exact.includes(pathname)) return true;
   if (pathname.startsWith('/help')) return true;
@@ -186,7 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           import.meta.env.DEV &&
           import.meta.env.VITE_DEV_AUTH_PROBE_WITHOUT_HINT === 'true';
 
-        // Guests: never call /api/auth/me (avoids 401 → /refresh Best Practices noise)
+        // Guests: never hydrate a session (avoids expected 401/refresh noise).
         if (!sessionHint && !allowHintlessDevProbe) {
           setToken(null);
           setCurrentUser(null);
@@ -208,9 +163,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        const responseData = isAuthSessionGraphqlEnabled()
-          ? await getCurrentUserViaGraphql()
-          : (await api.get('/api/auth/me')).data;
+        const responseData = await getCurrentUserViaGraphql();
 
         if (responseData && (responseData.id || responseData.uid)) {
           const user = normalizeUser(responseData as unknown as Record<string, unknown>);
@@ -231,7 +184,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentUser(null);
         setToken(null);
 
-        if (axios.isAxiosError(error) && error.response?.status === 401) {
+        if (
+          error instanceof GraphqlRequestError
+          && error.code === 'UNAUTHENTICATED'
+        ) {
           logger.debug('Not authenticated (user not logged in)');
         } else {
           console.error('Auth Error:', error);
@@ -255,20 +211,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithEmail = useCallback(async (email: string, password: string): Promise<void> => {
     try {
-      if (isAuthSessionGraphqlEnabled()) {
-        const response = await loginViaGraphql(email, password);
-        establishSession(response.user);
-        return;
-      }
-      const response = await api.post('/api/auth/login', { email, password });
-
-      if (response.data.success || response.data.user) {
-        const userData = response.data.user;
-        establishSession(userData);
-      } else {
-        const { message, code } = getAuthErrorDetails(response.data, 'Login failed');
-        throw new AuthError(message, code);
-      }
+      const response = await loginViaGraphql(email, password);
+      establishSession(response.user);
     } catch (error) {
       if (
         error instanceof GraphqlRequestError ||
@@ -279,10 +223,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           graphqlError.message,
           graphqlError.reason || graphqlError.code || 'UNKNOWN',
         );
-      }
-      if (axios.isAxiosError(error) && error.response?.data) {
-        const { message, code } = getAuthErrorDetails(error.response.data, 'Login failed');
-        throw new AuthError(message, code);
       }
       throw error;
     }
@@ -290,14 +230,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = useCallback(async (email: string, password: string, name?: string): Promise<void> => {
     try {
-      // Axios rejects non-2xx responses. Successful response envelopes are
-      // unwrapped by the shared interceptor, so a 201 resolves with `{ email }`
-      // rather than the original `{ success, data }` object.
-      if (isAuthIdentityGraphqlEnabled()) {
-        await registerViaGraphql(email, password, name);
-      } else {
-        await api.post('/api/auth/register', { email, password, name });
-      }
+      await registerViaGraphql(email, password, name);
     } catch (error) {
       if (
         error instanceof GraphqlRequestError ||
@@ -308,10 +241,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           graphqlError.message,
           graphqlError.reason || graphqlError.code || 'UNKNOWN',
         );
-      }
-      if (axios.isAxiosError(error) && error.response?.data) {
-        const { message, code } = getAuthErrorDetails(error.response.data, 'Registration failed');
-        throw new AuthError(message, code);
       }
       throw error;
     }
@@ -340,10 +269,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
     try {
-      const request = isAuthSessionGraphqlEnabled()
-        ? logoutViaGraphql()
-        : api.post('/api/auth/logout');
-      request.catch((error) => {
+      logoutViaGraphql().catch((error) => {
         logger.error('Backend logout failed:', error);
       });
     } catch (error) {

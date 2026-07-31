@@ -8,11 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { useToast } from '@/hooks/use-toast';
 import { Lock, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
-import api from '@/lib/api';
-import {
-  isAuthRecoveryGraphqlEnabled,
-  resetPasswordViaGraphql,
-} from '@/services/authGraphql';
+import { resetPasswordViaGraphql } from '@/services/authGraphql';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
   const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
@@ -75,11 +71,7 @@ export default function ResetPassword() {
     setError(null);
 
     try {
-      if (isAuthRecoveryGraphqlEnabled()) {
-        await resetPasswordViaGraphql(token, password);
-      } else {
-        await api.post('/api/auth/reset-password', { token, password });
-      }
+      await resetPasswordViaGraphql(token, password);
       setSuccess(true);
       toast({
         title: 'Password reset!',

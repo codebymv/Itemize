@@ -1,12 +1,8 @@
 import type { ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react';
-import { AxiosError, AxiosHeaders } from 'axios';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import api from '@/lib/api';
 import {
-  isAuthIdentityGraphqlEnabled,
-  isAuthSessionGraphqlEnabled,
   loginViaGraphql,
   registerViaGraphql,
 } from '@/services/authGraphql';
@@ -14,10 +10,6 @@ import { GraphqlRequestError } from '@/services/graphqlClient';
 import { AuthProvider, useAuthActions } from './AuthContext';
 
 vi.mock('@/lib/api', () => ({
-  default: {
-    get: vi.fn(),
-    post: vi.fn(),
-  },
   markAuthenticatedSession: vi.fn(),
   clearAuthenticatedSession: vi.fn(),
   isLoggedOut: vi.fn(() => true),
@@ -27,8 +19,6 @@ vi.mock('@/lib/api', () => ({
 
 vi.mock('@/services/authGraphql', () => ({
   getCurrentUserViaGraphql: vi.fn(),
-  isAuthSessionGraphqlEnabled: vi.fn(() => false),
-  isAuthIdentityGraphqlEnabled: vi.fn(() => false),
   loginViaGraphql: vi.fn(),
   logoutViaGraphql: vi.fn(),
   registerViaGraphql: vi.fn(),
@@ -40,15 +30,10 @@ const wrapper = ({ children }: { children: ReactNode }) => (
   </MemoryRouter>
 );
 
-describe('AuthProvider registration', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(isAuthSessionGraphqlEnabled).mockReturnValue(false);
-    vi.mocked(isAuthIdentityGraphqlEnabled).mockReturnValue(false);
-  });
+describe('AuthProvider GraphQL authentication', () => {
+  beforeEach(() => vi.clearAllMocks());
 
-  it('routes registration through GraphQL when the identity flag is enabled', async () => {
-    vi.mocked(isAuthIdentityGraphqlEnabled).mockReturnValue(true);
+  it('routes registration directly through GraphQL', async () => {
     vi.mocked(registerViaGraphql).mockResolvedValue({
       success: true,
       message: 'Account created',
@@ -65,11 +50,9 @@ describe('AuthProvider registration', () => {
       'StrongPass1',
       'New User',
     );
-    expect(api.post).not.toHaveBeenCalledWith('/api/auth/register', expect.anything());
   });
 
   it('preserves GraphQL registration conflict reasons', async () => {
-    vi.mocked(isAuthIdentityGraphqlEnabled).mockReturnValue(true);
     vi.mocked(registerViaGraphql).mockRejectedValue(
       new GraphqlRequestError(
         'This email is already registered with Google.',
@@ -88,57 +71,7 @@ describe('AuthProvider registration', () => {
     });
   });
 
-  it('accepts the data-only body produced by the shared response interceptor', async () => {
-    vi.mocked(api.post).mockResolvedValue({
-      data: { email: 'new-user@example.com' },
-    } as never);
-
-    const { result } = renderHook(() => useAuthActions(), { wrapper });
-
-    await act(async () => {
-      await expect(result.current.register(
-        'new-user@example.com',
-        'correct-horse-battery-staple',
-        'New User',
-      )).resolves.toBeUndefined();
-    });
-
-    expect(api.post).toHaveBeenCalledWith('/api/auth/register', {
-      email: 'new-user@example.com',
-      password: 'correct-horse-battery-staple',
-      name: 'New User',
-    });
-  });
-
-  it('preserves structured registration errors from non-2xx responses', async () => {
-    const error = new AxiosError('Request failed with status code 400');
-    error.response = {
-      status: 400,
-      statusText: 'Bad Request',
-      headers: {},
-      config: { headers: new AxiosHeaders() },
-      data: {
-        error: 'This email is already registered with Google.',
-        code: 'GOOGLE_ACCOUNT_EXISTS',
-      },
-    };
-    vi.mocked(api.post).mockRejectedValue(error);
-
-    const { result } = renderHook(() => useAuthActions(), { wrapper });
-
-    await act(async () => {
-      await expect(result.current.register(
-        'google-user@example.com',
-        'correct-horse-battery-staple',
-      )).rejects.toMatchObject({
-        message: 'This email is already registered with Google.',
-        code: 'GOOGLE_ACCOUNT_EXISTS',
-      });
-    });
-  });
-
-  it('routes email login through GraphQL when the session flag is enabled', async () => {
-    vi.mocked(isAuthSessionGraphqlEnabled).mockReturnValue(true);
+  it('routes email login directly through GraphQL', async () => {
     vi.mocked(loginViaGraphql).mockResolvedValue({
       success: true,
       user: {
@@ -156,11 +89,9 @@ describe('AuthProvider registration', () => {
     });
 
     expect(loginViaGraphql).toHaveBeenCalledWith('member@example.com', 'password');
-    expect(api.post).not.toHaveBeenCalledWith('/api/auth/login', expect.anything());
   });
 
   it('preserves the stable GraphQL auth reason for login-page behavior', async () => {
-    vi.mocked(isAuthSessionGraphqlEnabled).mockReturnValue(true);
     vi.mocked(loginViaGraphql).mockRejectedValue(
       new GraphqlRequestError(
         'Email not verified',

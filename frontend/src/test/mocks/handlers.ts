@@ -272,14 +272,6 @@ export const handlers = [
     });
   }),
 
-  // Auth
-  http.get(`${API_BASE}/auth/me`, () => {
-    return HttpResponse.json({
-      id: 1,
-      email: 'test@example.com',
-      name: 'Test User',
-    });
-  }),
 ];
 
 export { mockLists, mockNotes, mockWhiteboards, mockCategories };

@@ -6,11 +6,11 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 112
-- Resolved declarations: 112
+- Route declarations: 101
+- Resolved declarations: 101
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 106
-- Files containing declarations: 32
+- Unique resolved method/path operations: 95
+- Files containing declarations: 28
 
 ## Interpretation limits
 
@@ -23,18 +23,7 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 | Method | Public path candidate | Declared path | Source |
 | --- | --- | --- | --- |
-| GET | `/*` | `*` | `backend/src/index.js:567` |
-| GET | `/api/auth/csrf` | `/api/auth/csrf` | `backend/src/index.js:166` |
-| POST | `/api/auth/forgot-password` | `/forgot-password` | `backend/src/auth/credentials.routes.js:336` |
-| POST | `/api/auth/google-login` | `/google-login` | `backend/src/auth/google.routes.js:18` |
-| POST | `/api/auth/login` | `/login` | `backend/src/auth/credentials.routes.js:117` |
-| POST | `/api/auth/logout` | `/logout` | `backend/src/auth/session.routes.js:17` |
-| GET | `/api/auth/me` | `/me` | `backend/src/auth/profile.routes.js:16` |
-| POST | `/api/auth/refresh` | `/refresh` | `backend/src/auth/session.routes.js:33` |
-| POST | `/api/auth/register` | `/register` | `backend/src/auth/credentials.routes.js:34` |
-| POST | `/api/auth/resend-verification` | `/resend-verification` | `backend/src/auth/credentials.routes.js:270` |
-| POST | `/api/auth/reset-password` | `/reset-password` | `backend/src/auth/credentials.routes.js:401` |
-| POST | `/api/auth/verify-email` | `/verify-email` | `backend/src/auth/credentials.routes.js:192` |
+| GET | `/*` | `*` | `backend/src/index.js:561` |
 | POST | `/api/billing/webhook` | `/webhook` | `backend/src/routes/billing.routes.js:28` |
 | GET | `/api/bookings/public/book/:slug` | `/public/book/:slug` | `backend/src/routes/bookings.routes.js:106` |
 | POST | `/api/bookings/public/book/:slug` | `/public/book/:slug` | `backend/src/routes/bookings.routes.js:225` |
@@ -56,7 +45,7 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | POST | `/api/email/webhook/resend` | `/webhook/resend` | `backend/src/routes/email-webhooks.routes.js:35` |
 | GET | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:88` |
 | POST | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:123` |
-| GET | `/api/health` | `/api/health` | `backend/src/index.js:246` |
+| GET | `/api/health` | `/api/health` | `backend/src/index.js:245` |
 | GET | `/api/invoices/:id/pdf` | `/api/invoices/:id/pdf` | `backend/src/bootstrap/register-api-routes.js:177` |
 | GET | `/api/invoices/:id/pdf` | `/:id/pdf` | `backend/src/routes/invoices/pdf.routes.js:17` |
 | POST | `/api/invoices/businesses/:id/logo` | `/api/invoices/businesses/:id/logo` | `backend/src/bootstrap/register-api-routes.js:169` |
@@ -132,6 +121,6 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/docs/content` | `/content` | `backend/src/routes/docs.js:48` |
 | GET | `/docs/search` | `/search` | `backend/src/routes/docs.js:138` |
 | GET | `/docs/structure` | `/structure` | `backend/src/routes/docs.js:121` |
-| ALL | `/graphql` | `/graphql` | `backend/src/index.js:234` |
-| POST | `/graphql` | `/graphql` | `backend/src/index.js:233` |
-| GET | `/health` | `/health` | `backend/src/index.js:366` |
+| ALL | `/graphql` | `/graphql` | `backend/src/index.js:233` |
+| POST | `/graphql` | `/graphql` | `backend/src/index.js:232` |
+| GET | `/health` | `/health` | `backend/src/index.js:365` |

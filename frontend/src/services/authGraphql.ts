@@ -22,15 +22,6 @@ export type CurrentGraphqlUser = {
   createdAt: string;
 };
 
-export const isAuthSessionGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_AUTH_SESSION_GRAPHQL === 'true';
-
-export const isAuthIdentityGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_AUTH_IDENTITY_GRAPHQL === 'true';
-
-export const isAuthRecoveryGraphqlEnabled = (): boolean =>
-  import.meta.env.VITE_AUTH_RECOVERY_GRAPHQL === 'true';
-
 const SESSION_FIELDS = `
   success
   user { uid email name role photoURL }

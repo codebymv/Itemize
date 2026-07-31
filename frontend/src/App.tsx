@@ -20,7 +20,6 @@ import AppShell from "@/components/AppShell";
 
 // Pages - Static imports for critical pages only
 import NotFound from "./pages/NotFound";
-import AuthCallback from "./pages/AuthCallback";
 // Marketing home is eager: lazy Home added a JS waterfall on /home (MixFade/FlashCore).
 import Home from "./pages/Home";
 
@@ -250,7 +249,7 @@ const AppContent = () => {
   }, [location.pathname]);
 
   // Determine if this is a public route (no sidebar)
-  const publicRoutes = ['/home', '/auth/callback', '/status', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
+  const publicRoutes = ['/home', '/status', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
   const isPublicRoute = publicRoutes.includes(location.pathname) ||
     location.pathname.startsWith('/shared/') ||
     location.pathname.startsWith('/form/') ||
@@ -270,7 +269,6 @@ const AppContent = () => {
 
       {/* Public routes with navbar/footer layout */}
       <Route path="/home" element={<Home />} />
-      <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/status" element={<PublicLayout><StatusPage /></PublicLayout>} />
       <Route path="/help/*" element={<PublicLayout><DocsPage /></PublicLayout>} />
 

@@ -50,22 +50,6 @@ function csrfProtection(req, res, next) {
         return next();
     }
 
-    // Login, registration, password recovery, and OAuth callbacks establish
-    // sessions. They are rate limited and do not rely on an existing session.
-    const sessionBootstrapPaths = [
-        '/api/auth/login',
-        '/api/auth/register',
-        '/api/auth/verify-email',
-        '/api/auth/resend-verification',
-        '/api/auth/forgot-password',
-        '/api/auth/reset-password',
-        '/api/auth/google-login',
-    ];
-
-    if (sessionBootstrapPaths.includes(req.path)) {
-        return next();
-    }
-
     // CSRF protects browser cookie-authenticated writes. Public endpoints
     // without an Itemize session cookie rely on their own token/signature model.
     if (!req.cookies?.itemize_auth && !req.cookies?.itemize_refresh) {

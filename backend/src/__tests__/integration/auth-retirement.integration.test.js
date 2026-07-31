@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const TestDbHelper = require('./test-db-helper');
 const registerApiRoutes = require('../../bootstrap/register-api-routes');
 const { authenticateJWT, requireAdmin } = require('../../auth');
+const { csrfProtection } = require('../../middleware/csrf');
 
 function createApp(pool) {
     const app = express();
@@ -14,6 +15,7 @@ function createApp(pool) {
         req.dbPool = pool;
         next();
     });
+    app.use('/api', csrfProtection);
 
     const noop = (_req, _res, next) => next();
     registerApiRoutes({
@@ -39,7 +41,7 @@ function createApp(pool) {
     return app;
 }
 
-describe('Recurring invoice Express retirement contract', () => {
+describe('Authentication Express retirement contract', () => {
     let dbHelper;
     let app;
     let user;
@@ -49,8 +51,8 @@ describe('Recurring invoice Express retirement contract', () => {
         await dbHelper.setup();
         app = createApp(dbHelper.pool);
         user = await dbHelper.seedUser(
-            `recurring-retirement-${Date.now()}@test.itemize`,
-            'Recurring Retirement User',
+            `auth-retirement-${Date.now()}@test.itemize`,
+            'Auth Retirement User',
         );
     }, 30000);
 
@@ -59,22 +61,29 @@ describe('Recurring invoice Express retirement contract', () => {
     }, 30000);
 
     test.each([
-        ['get', '/api/invoices/recurring'],
-        ['post', '/api/invoices/recurring'],
-        ['get', '/api/invoices/recurring/1'],
-        ['put', '/api/invoices/recurring/1'],
-        ['delete', '/api/invoices/recurring/1'],
-        ['post', '/api/invoices/recurring/1/generate-now'],
-        ['get', '/api/invoices/recurring/1/history'],
-        ['post', '/api/invoices/recurring/1/pause'],
-        ['post', '/api/invoices/recurring/1/resume'],
-        ['post', '/api/invoices/recurring/from-invoice/1'],
-        ['get', '/api/invoices/recurring/preview-invoice-number'],
+        ['get', '/api/auth/csrf'],
+        ['post', '/api/auth/forgot-password'],
+        ['post', '/api/auth/google-login'],
+        ['post', '/api/auth/login'],
+        ['post', '/api/auth/logout'],
+        ['get', '/api/auth/me'],
+        ['put', '/api/auth/me'],
+        ['post', '/api/auth/refresh'],
+        ['post', '/api/auth/register'],
+        ['post', '/api/auth/resend-verification'],
+        ['post', '/api/auth/reset-password'],
+        ['post', '/api/auth/verify-email'],
+        ['post', '/api/auth/change-password'],
+        ['post', '/api/auth/google-credential'],
     ])('%s %s stays retired after full route composition', async (method, path) => {
+        const csrf = 'auth-retirement-csrf';
         const response = request(app)[method](path)
-            .set('Cookie', [`itemize_auth=${user.token}`])
-            .set('x-organization-id', String(user.org.id));
-        if (method === 'post' || method === 'put') response.send({});
+            .set('Cookie', [
+                `itemize_auth=${user.token}`,
+                `csrf-token=${csrf}`,
+            ])
+            .set('x-csrf-token', csrf);
+        if (method !== 'get') response.send({});
         await response.expect(404);
     });
 });

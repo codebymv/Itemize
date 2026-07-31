@@ -6,9 +6,6 @@ import {
 } from '@/services/graphqlClient';
 import {
   getCurrentUserViaGraphql,
-  isAuthIdentityGraphqlEnabled,
-  isAuthRecoveryGraphqlEnabled,
-  isAuthSessionGraphqlEnabled,
   changePasswordViaGraphql,
   loginViaGraphql,
   logoutViaGraphql,
@@ -29,27 +26,6 @@ vi.mock('@/services/graphqlClient', () => ({
 describe('authentication GraphQL adapter', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.unstubAllEnvs());
-
-  it('keeps the complete session path behind one rollback flag', () => {
-    vi.stubEnv('VITE_AUTH_SESSION_GRAPHQL', 'false');
-    expect(isAuthSessionGraphqlEnabled()).toBe(false);
-    vi.stubEnv('VITE_AUTH_SESSION_GRAPHQL', 'true');
-    expect(isAuthSessionGraphqlEnabled()).toBe(true);
-  });
-
-  it('keeps registration and verification behind an independent rollback flag', () => {
-    vi.stubEnv('VITE_AUTH_IDENTITY_GRAPHQL', 'false');
-    expect(isAuthIdentityGraphqlEnabled()).toBe(false);
-    vi.stubEnv('VITE_AUTH_IDENTITY_GRAPHQL', 'true');
-    expect(isAuthIdentityGraphqlEnabled()).toBe(true);
-  });
-
-  it('keeps password recovery behind an independent rollback flag', () => {
-    vi.stubEnv('VITE_AUTH_RECOVERY_GRAPHQL', 'false');
-    expect(isAuthRecoveryGraphqlEnabled()).toBe(false);
-    vi.stubEnv('VITE_AUTH_RECOVERY_GRAPHQL', 'true');
-    expect(isAuthRecoveryGraphqlEnabled()).toBe(true);
-  });
 
   it('maps login, current-user, and logout operations', async () => {
     vi.mocked(graphqlPublicRequest).mockResolvedValue({

@@ -161,9 +161,8 @@ const allowedOrigins = [...new Set([
 // GETs; every other route retains the authenticated origin allowlist.
 app.use(cors(createCorsOptionsDelegate(allowedOrigins, process.env.NODE_ENV)));
 
-// CSRF token endpoint and protection for cookie-authenticated writes
-const { csrfProtection, issueCsrfToken } = require('./middleware/csrf');
-app.get('/api/auth/csrf', issueCsrfToken);
+// CSRF protection for retained cookie-authenticated HTTP writes
+const { csrfProtection } = require('./middleware/csrf');
 app.use('/api', csrfProtection);
 
 // Only validated public logo assets are served statically. Signature documents
@@ -501,18 +500,13 @@ app.use(dbMonitor(pool));
             }
         }
 
-        // Initialize auth routes
-        logger.info('Initializing auth routes...');
-        const { router: authRouter, authenticateJWT } = require('./auth');
+        const { authenticateJWT } = require('./auth');
 
-        // Make dbPool available to auth routes
+        // Make dbPool available to authentication middleware and retained routes.
         app.use((req, res, next) => {
             req.dbPool = pool;
             next();
         });
-
-        app.use('/api/auth', authRouter);
-        logger.info('Auth routes initialized');
 
         // Initialize WebSocket functionality
         logger.info('Initializing WebSocket functionality...');

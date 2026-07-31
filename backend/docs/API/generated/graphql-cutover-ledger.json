@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 106,
-    "apiOperationCount": 99,
+    "operationCount": 95,
+    "apiOperationCount": 88,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 53,
-    "operationsWithFrontendConsumers": 47,
-    "operationsWithBackendTests": 57,
+    "frontendCallsiteCount": 42,
+    "operationsWithFrontendConsumers": 37,
+    "operationsWithBackendTests": 51,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 44,
-    "retainHttpCount": 55,
-    "graphqlQueryCount": 7,
-    "graphqlMutationCount": 37,
-    "highRiskCount": 90,
+    "unmatchedBackendTestCallCount": 38,
+    "retainHttpCount": 53,
+    "graphqlQueryCount": 6,
+    "graphqlMutationCount": 29,
+    "highRiskCount": 84,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -37,7 +37,7 @@
       "routeSources": [
         {
           "source": "backend/src/index.js",
-          "line": 567
+          "line": 561
         }
       ],
       "consumerCallsites": [],
@@ -52,505 +52,6 @@
       "notes": null,
       "literalInterpolationRisk": false,
       "risk": "low"
-    },
-    {
-      "id": "GET /api/auth/csrf",
-      "key": "GET /api/auth/csrf",
-      "method": "GET",
-      "path": "/api/auth/csrf",
-      "routeSources": [
-        {
-          "source": "backend/src/index.js",
-          "line": 166
-        }
-      ],
-      "consumerCallsites": [],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/auth/csrf",
-          "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-          "line": 29
-        },
-        {
-          "method": "GET",
-          "path": "/api/auth/csrf",
-          "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-          "line": 130
-        },
-        {
-          "method": "GET",
-          "path": "/api/auth/csrf",
-          "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-          "line": 172
-        },
-        {
-          "method": "GET",
-          "path": "/api/auth/csrf",
-          "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-          "line": 214
-        },
-        {
-          "method": "GET",
-          "path": "/api/auth/csrf",
-          "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-          "line": 263
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "retain-http",
-      "owner": "platform-security",
-      "targetOperation": "issueCsrfToken",
-      "targetModule": "AuthModule",
-      "parityStatus": "characterized",
-      "notes": "Retain as the browser double-submit token bootstrap while cookie-authenticated GraphQL mutations are introduced.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/auth/forgot-password",
-      "key": "POST /api/auth/forgot-password",
-      "method": "POST",
-      "path": "/api/auth/forgot-password",
-      "routeSources": [
-        {
-          "source": "backend/src/auth/credentials.routes.js",
-          "line": 336
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/auth/forgot-password",
-          "rawPath": "/api/auth/forgot-password",
-          "source": "frontend/src/pages/ForgotPassword.tsx",
-          "line": 38,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetOperation": "requestPasswordReset",
-      "targetModule": "AuthModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "NestJS preserves the generic response and strict throttle, rotates a random token stored only as a hash with one-hour expiry for eligible local accounts, and starts delivery after persistence without awaiting provider latency in the public response.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/auth/google-login",
-      "key": "POST /api/auth/google-login",
-      "method": "POST",
-      "path": "/api/auth/google-login",
-      "routeSources": [
-        {
-          "source": "backend/src/auth/google.routes.js",
-          "line": 18
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/auth/google-login",
-          "rawPath": "${apiUrl}/api/auth/google-login",
-          "source": "frontend/src/hooks/useGoogleSignIn.ts",
-          "line": 34,
-          "client": "axios",
-          "literalInterpolation": false
-        },
-        {
-          "method": "POST",
-          "path": "/api/auth/google-login",
-          "rawPath": "${apiUrl}/api/auth/google-login",
-          "source": "frontend/src/pages/AuthCallback.tsx",
-          "line": 64,
-          "client": "fetch",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/auth/google-login",
-          "source": "backend/src/__tests__/routes/google-auth.routes.test.js",
-          "line": 55
-        },
-        {
-          "method": "POST",
-          "path": "/api/auth/google-login",
-          "source": "backend/src/__tests__/routes/google-auth.routes.test.js",
-          "line": 71
-        },
-        {
-          "method": "POST",
-          "path": "/api/auth/google-login",
-          "source": "backend/src/__tests__/routes/google-auth.routes.test.js",
-          "line": 91
-        },
-        {
-          "method": "POST",
-          "path": "/api/auth/google-login",
-          "source": "backend/src/__tests__/routes/google-auth.routes.test.js",
-          "line": 111
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetOperation": "loginWithGoogle",
-      "targetModule": "AuthModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Backend now verifies access-token audience and derives the verified identity from Google before issuing httpOnly cookies.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/auth/login",
-      "key": "POST /api/auth/login",
-      "method": "POST",
-      "path": "/api/auth/login",
-      "routeSources": [
-        {
-          "source": "backend/src/auth/credentials.routes.js",
-          "line": 117
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/auth/login",
-          "rawPath": "/api/auth/login",
-          "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 263,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/auth/login",
-          "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-          "line": 54
-        },
-        {
-          "method": "POST",
-          "path": "/api/auth/login",
-          "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-          "line": 98
-        },
-        {
-          "method": "POST",
-          "path": "/api/auth/login",
-          "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-          "line": 124
-        },
-        {
-          "method": "POST",
-          "path": "/api/auth/login",
-          "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-          "line": 168
-        },
-        {
-          "method": "POST",
-          "path": "/api/auth/login",
-          "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-          "line": 211
-        },
-        {
-          "method": "POST",
-          "path": "/api/auth/login",
-          "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-          "line": 260
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetOperation": "login",
-      "targetModule": "AuthModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Cookie-only session establishment; GraphQL payload must never expose access or refresh tokens.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/auth/logout",
-      "key": "POST /api/auth/logout",
-      "method": "POST",
-      "path": "/api/auth/logout",
-      "routeSources": [
-        {
-          "source": "backend/src/auth/session.routes.js",
-          "line": 17
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/auth/logout",
-          "rawPath": "/api/auth/logout",
-          "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 345,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/auth/logout",
-          "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-          "line": 216
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetOperation": "logout",
-      "targetModule": "AuthModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Requires CSRF and must expire both authentication cookies even when the server-side session is otherwise invalid.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "GET /api/auth/me",
-      "key": "GET /api/auth/me",
-      "method": "GET",
-      "path": "/api/auth/me",
-      "routeSources": [
-        {
-          "source": "backend/src/auth/profile.routes.js",
-          "line": 16
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/auth/me",
-          "rawPath": "/api/auth/me",
-          "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 213,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/auth/me",
-          "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-          "line": 102
-        },
-        {
-          "method": "GET",
-          "path": "/api/auth/me",
-          "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-          "line": 231
-        }
-      ],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "identity",
-      "targetOperation": "viewer",
-      "targetModule": "AuthModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Resolve identity from the signed httpOnly access cookie; preserve no-store behavior and normalized user fields.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/auth/refresh",
-      "key": "POST /api/auth/refresh",
-      "method": "POST",
-      "path": "/api/auth/refresh",
-      "routeSources": [
-        {
-          "source": "backend/src/auth/session.routes.js",
-          "line": 33
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/auth/refresh",
-          "rawPath": "/api/auth/refresh",
-          "source": "frontend/src/hooks/useSessionExpiration.tsx",
-          "line": 52,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/auth/refresh",
-          "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-          "line": 174
-        },
-        {
-          "method": "POST",
-          "path": "/api/auth/refresh",
-          "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-          "line": 187
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "retain-http",
-      "owner": "platform-security",
-      "targetOperation": "refreshSession",
-      "targetModule": "AuthModule",
-      "parityStatus": "characterizing",
-      "notes": "Retain as an out-of-band interceptor endpoint during cutover; accepts only a refresh cookie and returns only a renewed access cookie.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
-    },
-    {
-      "id": "POST /api/auth/register",
-      "key": "POST /api/auth/register",
-      "method": "POST",
-      "path": "/api/auth/register",
-      "routeSources": [
-        {
-          "source": "backend/src/auth/credentials.routes.js",
-          "line": 34
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/auth/register",
-          "rawPath": "/api/auth/register",
-          "source": "frontend/src/contexts/AuthContext.tsx",
-          "line": 299,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetOperation": "register",
-      "targetModule": "AuthModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "NestJS creates the user, personal organization, owner membership, and default-organization assignment in one transaction; the default-off identity flag preserves REST rollback.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/auth/resend-verification",
-      "key": "POST /api/auth/resend-verification",
-      "method": "POST",
-      "path": "/api/auth/resend-verification",
-      "routeSources": [
-        {
-          "source": "backend/src/auth/credentials.routes.js",
-          "line": 270
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/auth/resend-verification",
-          "rawPath": "/api/auth/resend-verification",
-          "source": "frontend/src/pages/VerifyEmail.tsx",
-          "line": 103,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetOperation": "resendVerificationEmail",
-      "targetModule": "AuthModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "NestJS preserves a non-enumerating response, an independent strict rate-limit bucket, hashed tokens, 24-hour expiry, and post-commit email delivery.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/auth/reset-password",
-      "key": "POST /api/auth/reset-password",
-      "method": "POST",
-      "path": "/api/auth/reset-password",
-      "routeSources": [
-        {
-          "source": "backend/src/auth/credentials.routes.js",
-          "line": 401
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/auth/reset-password",
-          "rawPath": "/api/auth/reset-password",
-          "source": "frontend/src/pages/ResetPassword.tsx",
-          "line": 81,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetOperation": "resetPassword",
-      "targetModule": "AuthModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "NestJS enforces password policy and atomically consumes a valid hashed reset token while replacing the bcrypt hash and clearing reset state; concurrent reuse has one winner.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/auth/verify-email",
-      "key": "POST /api/auth/verify-email",
-      "method": "POST",
-      "path": "/api/auth/verify-email",
-      "routeSources": [
-        {
-          "source": "backend/src/auth/credentials.routes.js",
-          "line": 192
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/auth/verify-email",
-          "rawPath": "/api/auth/verify-email",
-          "source": "frontend/src/pages/VerifyEmail.tsx",
-          "line": 69,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetOperation": "verifyEmail",
-      "targetModule": "AuthModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "NestJS conditionally consumes a valid hashed token once, marks the email verified, issues cookie-only session credentials, and attempts the welcome notification after commit.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
     },
     {
       "id": "POST /api/billing/webhook",
@@ -622,31 +123,31 @@
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 157
+          "line": 156
         },
         {
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 167
+          "line": 166
         },
         {
           "method": "GET",
           "path": "/api/bookings/public/book/no-such-calendar-slug-xyz",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 175
+          "line": 174
         },
         {
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 612
+          "line": 611
         },
         {
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 615
+          "line": 614
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -687,43 +188,43 @@
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 183
+          "line": 182
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 224
+          "line": 223
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 244
+          "line": 243
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 279
+          "line": 278
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 325
+          "line": 324
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 465
+          "line": 464
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 476
+          "line": 475
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -764,25 +265,25 @@
           "method": "POST",
           "path": "/api/bookings/public/book/not-:calendarSlug/cancel/:token",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 297
+          "line": 296
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId/cancel/:token",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 302
+          "line": 301
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId/cancel/:token",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 318
+          "line": 317
         },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId/cancel/:token",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 336
+          "line": 335
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -823,13 +324,13 @@
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarSlug/slots",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 432
+          "line": 431
         },
         {
           "method": "GET",
           "path": "/api/bookings/public/book/:calendarSlug/slots",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
-          "line": 451
+          "line": 450
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -1479,7 +980,7 @@
       "routeSources": [
         {
           "source": "backend/src/index.js",
-          "line": 246
+          "line": 245
         }
       ],
       "consumerCallsites": [],
@@ -1861,13 +1362,13 @@
           "method": "DELETE",
           "path": "/api/lists/:listId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 129
+          "line": 128
         },
         {
           "method": "DELETE",
           "path": "/api/lists/:listId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 153
+          "line": 152
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -1898,31 +1399,31 @@
           "method": "POST",
           "path": "/api/lists/:listId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
+          "line": 103
+        },
+        {
+          "method": "POST",
+          "path": "/api/lists/:listId/share",
+          "source": "backend/src/__tests__/integration/sharing.integration.test.js",
           "line": 104
         },
         {
           "method": "POST",
           "path": "/api/lists/:listId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 105
+          "line": 123
         },
         {
           "method": "POST",
           "path": "/api/lists/:listId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 124
+          "line": 141
         },
         {
           "method": "POST",
           "path": "/api/lists/:listId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 142
-        },
-        {
-          "method": "POST",
-          "path": "/api/lists/:listId/share",
-          "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 152
+          "line": 151
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -1953,7 +1454,7 @@
           "method": "DELETE",
           "path": "/api/notes/:noteId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 157
+          "line": 156
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -1984,13 +1485,13 @@
           "method": "POST",
           "path": "/api/notes/:noteId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 156
+          "line": 155
         },
         {
           "method": "POST",
           "path": "/api/notes/:noteId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 273
+          "line": 272
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -3002,25 +2503,25 @@
           "method": "GET",
           "path": "/api/shared/list/:oldToken",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 139
+          "line": 138
         },
         {
           "method": "GET",
           "path": "/api/shared/list/:oldToken",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 146
+          "line": 145
         },
         {
           "method": "GET",
           "path": "/api/shared/list/:shareToken",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 147
+          "line": 146
         },
         {
           "method": "GET",
           "path": "/api/shared/list/not-a-token",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 304
+          "line": 303
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -3070,13 +2571,13 @@
           "method": "GET",
           "path": "/api/shared/note/:shareToken",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 277
+          "line": 276
         },
         {
           "method": "GET",
           "path": "/api/shared/note/not-a-token",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 305
+          "line": 304
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -3117,19 +2618,19 @@
           "method": "GET",
           "path": "/api/shared/vault/:shareToken",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 215
+          "line": 214
         },
         {
           "method": "GET",
           "path": "/api/shared/vault/:shareToken",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 240
+          "line": 239
         },
         {
           "method": "GET",
           "path": "/api/shared/vault/not-a-token",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 307
+          "line": 306
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -3188,13 +2689,13 @@
           "method": "GET",
           "path": "/api/shared/whiteboard/:shareToken",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 295
+          "line": 294
         },
         {
           "method": "GET",
           "path": "/api/shared/whiteboard/not-a-token",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 306
+          "line": 305
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -3508,31 +3009,31 @@
           "method": "POST",
           "path": "/api/sms-templates/webhook/inbound",
           "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
+          "line": 122
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/inbound",
+          "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
           "line": 123
         },
         {
           "method": "POST",
           "path": "/api/sms-templates/webhook/inbound",
           "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 124
+          "line": 165
         },
         {
           "method": "POST",
           "path": "/api/sms-templates/webhook/inbound",
           "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 166
+          "line": 182
         },
         {
           "method": "POST",
           "path": "/api/sms-templates/webhook/inbound",
           "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 183
-        },
-        {
-          "method": "POST",
-          "path": "/api/sms-templates/webhook/inbound",
-          "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 226
+          "line": 225
         },
         {
           "method": "POST",
@@ -3569,19 +3070,19 @@
           "method": "POST",
           "path": "/api/sms-templates/webhook/status",
           "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 255
+          "line": 254
         },
         {
           "method": "POST",
           "path": "/api/sms-templates/webhook/status",
           "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 258
+          "line": 257
         },
         {
           "method": "POST",
           "path": "/api/sms-templates/webhook/status",
           "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
-          "line": 261
+          "line": 260
         },
         {
           "method": "POST",
@@ -3863,7 +3364,7 @@
           "method": "DELETE",
           "path": "/api/whiteboards/:whiteboardId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 161
+          "line": 160
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -3894,13 +3395,13 @@
           "method": "POST",
           "path": "/api/whiteboards/:whiteboardId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 160
+          "line": 159
         },
         {
           "method": "POST",
           "path": "/api/whiteboards/:whiteboardId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 291
+          "line": 290
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -4069,13 +3570,13 @@
           "method": "DELETE",
           "path": "/api/wireframes/:wireframeId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 165
+          "line": 164
         },
         {
           "method": "DELETE",
           "path": "/api/wireframes/:wireframeId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 258
+          "line": 257
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -4106,19 +3607,19 @@
           "method": "POST",
           "path": "/api/wireframes/:wireframeId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 164
+          "line": 163
+        },
+        {
+          "method": "POST",
+          "path": "/api/wireframes/:wireframeId/share",
+          "source": "backend/src/__tests__/integration/sharing.integration.test.js",
+          "line": 247
         },
         {
           "method": "POST",
           "path": "/api/wireframes/:wireframeId/share",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
           "line": 248
-        },
-        {
-          "method": "POST",
-          "path": "/api/wireframes/:wireframeId/share",
-          "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-          "line": 249
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -4242,7 +3743,7 @@
       "routeSources": [
         {
           "source": "backend/src/index.js",
-          "line": 234
+          "line": 233
         }
       ],
       "consumerCallsites": [],
@@ -4266,7 +3767,7 @@
       "routeSources": [
         {
           "source": "backend/src/index.js",
-          "line": 233
+          "line": 232
         }
       ],
       "consumerCallsites": [],
@@ -4290,7 +3791,7 @@
       "routeSources": [
         {
           "source": "backend/src/index.js",
-          "line": 366
+          "line": 365
         }
       ],
       "consumerCallsites": [],
@@ -4518,73 +4019,37 @@
       "method": "POST",
       "path": "/api/vaults/:vaultId/share",
       "source": "backend/src/__tests__/integration/sharing.integration.test.js",
+      "line": 167
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/vaults/:vaultId/share",
+      "source": "backend/src/__tests__/integration/sharing.integration.test.js",
       "line": 168
     },
     {
+      "method": "POST",
+      "path": "/api/:kinds/:id/share",
+      "source": "backend/src/__tests__/integration/sharing.integration.test.js",
+      "line": 187
+    },
+    {
       "method": "DELETE",
+      "path": "/api/:kinds/:id/share",
+      "source": "backend/src/__tests__/integration/sharing.integration.test.js",
+      "line": 193
+    },
+    {
+      "method": "POST",
       "path": "/api/vaults/:vaultId/share",
       "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-      "line": 169
-    },
-    {
-      "method": "POST",
-      "path": "/api/:kinds/:id/share",
-      "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-      "line": 188
+      "line": 209
     },
     {
       "method": "DELETE",
-      "path": "/api/:kinds/:id/share",
-      "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-      "line": 194
-    },
-    {
-      "method": "POST",
       "path": "/api/vaults/:vaultId/share",
       "source": "backend/src/__tests__/integration/sharing.integration.test.js",
       "line": 210
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/vaults/:vaultId/share",
-      "source": "backend/src/__tests__/integration/sharing.integration.test.js",
-      "line": 211
-    },
-    {
-      "method": "POST",
-      "path": "/api/protected-write",
-      "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-      "line": 32
-    },
-    {
-      "method": "POST",
-      "path": "/api/protected-write",
-      "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-      "line": 128
-    },
-    {
-      "method": "POST",
-      "path": "/api/protected-write",
-      "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-      "line": 133
-    },
-    {
-      "method": "PUT",
-      "path": "/api/auth/me",
-      "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-      "line": 265
-    },
-    {
-      "method": "POST",
-      "path": "/api/auth/change-password",
-      "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-      "line": 270
-    },
-    {
-      "method": "POST",
-      "path": "/api/auth/google-credential",
-      "source": "backend/src/__tests__/routes/auth-csrf.integration.test.js",
-      "line": 284
     },
     {
       "method": "POST",

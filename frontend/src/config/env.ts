@@ -9,9 +9,6 @@ const envSchema = z.object({
   // API
   VITE_API_URL: z.string().url().optional().default('http://localhost:3001'),
   VITE_GRAPHQL_URL: z.string().url().optional(),
-  VITE_AUTH_SESSION_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
-  VITE_AUTH_IDENTITY_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
-  VITE_AUTH_RECOVERY_GRAPHQL: z.enum(['true', 'false']).optional().default('false'),
   VITE_DEV_AUTH_PROBE_WITHOUT_HINT: z.enum(['true', 'false']).optional().default('false'),
   
   // OAuth
@@ -40,9 +37,6 @@ if (import.meta.env.DEV) {
     mode: env.MODE,
     apiUrl: env.VITE_API_URL,
     graphqlUrl: env.VITE_GRAPHQL_URL || undefined,
-    authSessionGraphql: env.VITE_AUTH_SESSION_GRAPHQL === 'true',
-    authIdentityGraphql: env.VITE_AUTH_IDENTITY_GRAPHQL === 'true',
-    authRecoveryGraphql: env.VITE_AUTH_RECOVERY_GRAPHQL === 'true',
     devAuthProbeWithoutHint: env.VITE_DEV_AUTH_PROBE_WITHOUT_HINT === 'true',
     hasClientId: !!env.VITE_GOOGLE_CLIENT_ID,
     productionDomain: env.VITE_PRODUCTION_DOMAIN || undefined,

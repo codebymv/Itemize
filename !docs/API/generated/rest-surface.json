@@ -3,11 +3,11 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 112,
-    "resolvedDeclarationCount": 112,
+    "declarationCount": 101,
+    "resolvedDeclarationCount": 101,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 106,
-    "sourceFileCount": 32
+    "uniqueResolvedOperationCount": 95,
+    "sourceFileCount": 28
   },
   "caveats": [
     "This is static source analysis; it does not execute application modules.",
@@ -23,117 +23,7 @@
       ],
       "declaredPath": "*",
       "source": "backend/src/index.js",
-      "line": 567,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/auth/csrf"
-      ],
-      "declaredPath": "/api/auth/csrf",
-      "source": "backend/src/index.js",
-      "line": 166,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/auth/forgot-password"
-      ],
-      "declaredPath": "/forgot-password",
-      "source": "backend/src/auth/credentials.routes.js",
-      "line": 336,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/auth/google-login"
-      ],
-      "declaredPath": "/google-login",
-      "source": "backend/src/auth/google.routes.js",
-      "line": 18,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/auth/login"
-      ],
-      "declaredPath": "/login",
-      "source": "backend/src/auth/credentials.routes.js",
-      "line": 117,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/auth/logout"
-      ],
-      "declaredPath": "/logout",
-      "source": "backend/src/auth/session.routes.js",
-      "line": 17,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/auth/me"
-      ],
-      "declaredPath": "/me",
-      "source": "backend/src/auth/profile.routes.js",
-      "line": 16,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/auth/refresh"
-      ],
-      "declaredPath": "/refresh",
-      "source": "backend/src/auth/session.routes.js",
-      "line": 33,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/auth/register"
-      ],
-      "declaredPath": "/register",
-      "source": "backend/src/auth/credentials.routes.js",
-      "line": 34,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/auth/resend-verification"
-      ],
-      "declaredPath": "/resend-verification",
-      "source": "backend/src/auth/credentials.routes.js",
-      "line": 270,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/auth/reset-password"
-      ],
-      "declaredPath": "/reset-password",
-      "source": "backend/src/auth/credentials.routes.js",
-      "line": 401,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/auth/verify-email"
-      ],
-      "declaredPath": "/verify-email",
-      "source": "backend/src/auth/credentials.routes.js",
-      "line": 192,
+      "line": 561,
       "dynamic": false
     },
     {
@@ -353,7 +243,7 @@
       ],
       "declaredPath": "/api/health",
       "source": "backend/src/index.js",
-      "line": 246,
+      "line": 245,
       "dynamic": false
     },
     {
@@ -1113,7 +1003,7 @@
       ],
       "declaredPath": "/graphql",
       "source": "backend/src/index.js",
-      "line": 234,
+      "line": 233,
       "dynamic": false
     },
     {
@@ -1123,7 +1013,7 @@
       ],
       "declaredPath": "/graphql",
       "source": "backend/src/index.js",
-      "line": 233,
+      "line": 232,
       "dynamic": false
     },
     {
@@ -1133,7 +1023,7 @@
       ],
       "declaredPath": "/health",
       "source": "backend/src/index.js",
-      "line": 366,
+      "line": 365,
       "dynamic": false
     }
   ]

@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 106
-- API operations under `/api`: 99
+- Registered method/path operations: 95
+- API operations under `/api`: 88
 - Non-API registered operations: 7
-- Static frontend callsites: 53
-- Operations with frontend consumers: 47
-- Operations referenced by backend tests: 57
-- Recommended GraphQL queries: 7
-- Recommended GraphQL mutations: 37
-- Recommended retained HTTP endpoints: 55
-- High-risk operations: 90
+- Static frontend callsites: 42
+- Operations with frontend consumers: 37
+- Operations referenced by backend tests: 51
+- Recommended GraphQL queries: 6
+- Recommended GraphQL mutations: 29
+- Recommended retained HTTP endpoints: 53
+- High-risk operations: 84
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -31,17 +31,6 @@
 | Method | REST path | Consumers | Tests | Disposition | Risk | Owner / target |
 | --- | --- | ---: | ---: | --- | --- | --- |
 | GET | `/*` | 0 | 0 | non-api | low | _unassigned_ |
-| GET | `/api/auth/csrf` | 0 | 5 | retain-http | medium | platform-security / AuthModule / issueCsrfToken |
-| POST | `/api/auth/forgot-password` | 1 | 0 | graphql-mutation | high | identity / AuthModule / requestPasswordReset |
-| POST | `/api/auth/google-login` | 2 | 4 | graphql-mutation | high | identity / AuthModule / loginWithGoogle |
-| POST | `/api/auth/login` | 1 | 6 | graphql-mutation | medium | identity / AuthModule / login |
-| POST | `/api/auth/logout` | 1 | 1 | graphql-mutation | medium | identity / AuthModule / logout |
-| GET | `/api/auth/me` | 1 | 2 | graphql-query | medium | identity / AuthModule / viewer |
-| POST | `/api/auth/refresh` | 1 | 2 | retain-http | medium | platform-security / AuthModule / refreshSession |
-| POST | `/api/auth/register` | 1 | 0 | graphql-mutation | high | identity / AuthModule / register |
-| POST | `/api/auth/resend-verification` | 1 | 0 | graphql-mutation | high | identity / AuthModule / resendVerificationEmail |
-| POST | `/api/auth/reset-password` | 1 | 0 | graphql-mutation | high | identity / AuthModule / resetPassword |
-| POST | `/api/auth/verify-email` | 1 | 0 | graphql-mutation | high | identity / AuthModule / verifyEmail |
 | POST | `/api/billing/webhook` | 0 | 3 | retain-http | high | billing / SubscriptionWebhooksModule / processStripeSubscriptionEvent |
 | GET | `/api/bookings/public/book/:slug` | 1 | 5 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingPage |
 | POST | `/api/bookings/public/book/:slug` | 1 | 7 | retain-http | high | scheduling / PublicBookingsModule / createPublicBooking |
@@ -142,7 +131,7 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 44
+- Unmatched backend test calls: 38
 - Orphaned manual overrides: 244
 - Orphaned runtime-expression overrides: 0
 
@@ -200,16 +189,10 @@
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:990` |
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1012` |
 | POST | `/api/chat-widget/sessions/:id/messages` | `backend/src/__tests__/integration/realtime.integration.test.js:265` |
-| POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:168` |
-| DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:169` |
-| POST | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:188` |
-| DELETE | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:194` |
-| POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:210` |
-| DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:211` |
-| POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:32` |
-| POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:128` |
-| POST | `/api/protected-write` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:133` |
-| PUT | `/api/auth/me` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:265` |
-| POST | `/api/auth/change-password` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:270` |
-| POST | `/api/auth/google-credential` | `backend/src/__tests__/routes/auth-csrf.integration.test.js:284` |
+| POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:167` |
+| DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:168` |
+| POST | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:187` |
+| DELETE | `/api/:kinds/:id/share` | `backend/src/__tests__/integration/sharing.integration.test.js:193` |
+| POST | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:209` |
+| DELETE | `/api/vaults/:vaultId/share` | `backend/src/__tests__/integration/sharing.integration.test.js:210` |
 | POST | `/api/invoices/email/preview` | `backend/src/__tests__/routes/invoice-email-preview-retirement.routes.test.js:18` |

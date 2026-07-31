@@ -8,9 +8,7 @@ import { useAuthActions } from '@/contexts/AuthContext';
 import { Mail, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
-import api from '@/lib/api';
 import {
-  isAuthIdentityGraphqlEnabled,
   resendVerificationViaGraphql,
   verifyEmailViaGraphql,
 } from '@/services/authGraphql';
@@ -64,9 +62,7 @@ export default function VerifyEmail() {
     setError(null);
 
     try {
-      const response = isAuthIdentityGraphqlEnabled()
-        ? await verifyEmailViaGraphql(token)
-        : (await api.post('/api/auth/verify-email', { token })).data;
+      const response = await verifyEmailViaGraphql(token);
       
       if (response.success) {
         setVerified(true);
@@ -97,11 +93,7 @@ export default function VerifyEmail() {
     setResending(true);
 
     try {
-      if (isAuthIdentityGraphqlEnabled()) {
-        await resendVerificationViaGraphql(email);
-      } else {
-        await api.post('/api/auth/resend-verification', { email });
-      }
+      await resendVerificationViaGraphql(email);
       toast({
         title: 'Verification email sent',
         description: 'Please check your inbox.',

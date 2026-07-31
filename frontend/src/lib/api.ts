@@ -181,38 +181,26 @@ export const fetchCsrfToken = async (): Promise<string> => {
   if (csrfRequest) return csrfRequest;
 
   csrfRequest = (async () => {
-    if (import.meta.env.VITE_AUTH_SESSION_GRAPHQL === 'true') {
-      const baseURL = getApiUrl();
-      const graphqlUrl = import.meta.env.VITE_GRAPHQL_URL?.trim()
-        || `${baseURL.replace(/\/$/, '')}/graphql`;
-      const response = await fetch(graphqlUrl, {
-        method: 'POST',
-        credentials: 'include',
-        signal: AbortSignal.timeout(10_000),
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          query: 'query CsrfToken { csrfToken { token } }',
-          variables: {},
-        }),
-      });
-      const payload = await response.json() as {
-        data?: { csrfToken?: { token?: string } };
-        errors?: Array<{ message?: string }>;
-      };
-      const token = payload.data?.csrfToken?.token;
-      if (!response.ok || !token) {
-        throw new Error(payload.errors?.[0]?.message || 'CSRF token not returned by GraphQL service');
-      }
-      return token;
-    }
-    const response = await axios.create({
-      baseURL: getApiUrl(),
-      withCredentials: true,
-      timeout: 10000,
-    }).get('/api/auth/csrf');
-    const token = response.data?.csrfToken || response.headers?.['x-csrf-token'];
-    if (!token) {
-      throw new Error('CSRF token not returned by server');
+    const baseURL = getApiUrl();
+    const graphqlUrl = import.meta.env.VITE_GRAPHQL_URL?.trim()
+      || `${baseURL.replace(/\/$/, '')}/graphql`;
+    const response = await fetch(graphqlUrl, {
+      method: 'POST',
+      credentials: 'include',
+      signal: AbortSignal.timeout(10_000),
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        query: 'query CsrfToken { csrfToken { token } }',
+        variables: {},
+      }),
+    });
+    const payload = await response.json() as {
+      data?: { csrfToken?: { token?: string } };
+      errors?: Array<{ message?: string }>;
+    };
+    const token = payload.data?.csrfToken?.token;
+    if (!response.ok || !token) {
+      throw new Error(payload.errors?.[0]?.message || 'CSRF token not returned by GraphQL service');
     }
     return token;
   })().then((token) => {
@@ -248,7 +236,7 @@ api.interceptors.request.use(
       source.cancel(`Request to ${requestPath} was blocked by interceptor`);
     }
 
-    if (isMutatingMethod(config.method) && !requestPath.includes('/auth/csrf')) {
+    if (isMutatingMethod(config.method)) {
       const token = await fetchCsrfToken();
       if (!config.headers) {
         config.headers = new AxiosHeaders();
@@ -296,41 +284,28 @@ export const refreshAuthenticatedSession = (
   sessionRefreshPromise = (async () => {
     console.log('[Auth] Attempting token refresh...');
     const csrf = await fetchCsrfToken();
-    let success = false;
-    let refreshedUser: unknown;
-    if (import.meta.env.VITE_AUTH_SESSION_GRAPHQL === 'true') {
-      const configuredGraphqlUrl = import.meta.env.VITE_GRAPHQL_URL?.trim();
-      const graphqlUrl = configuredGraphqlUrl || `${baseURL.replace(/\/$/, '')}/graphql`;
-      const response = await fetch(graphqlUrl, {
-        method: 'POST',
-        credentials: 'include',
-        signal: AbortSignal.timeout(10_000),
-        headers: {
-          'content-type': 'application/json',
-          [CSRF_HEADER]: csrf,
-        },
-        body: JSON.stringify({
-          query: 'mutation RefreshSession { refreshSession { success } }',
-          variables: {},
-        }),
-      });
-      const payload = await response.json() as {
-        data?: { refreshSession?: { success?: boolean } };
-        errors?: Array<{ message?: string }>;
-      };
-      success = response.ok && payload.data?.refreshSession?.success === true;
-      if (!success && payload.errors?.[0]?.message) {
-        throw new Error(payload.errors[0].message);
-      }
-    } else {
-      const refreshResponse = await axios.create({
-        baseURL,
-        withCredentials: true,
-        timeout: 10000,
-        headers: { [CSRF_HEADER]: csrf },
-      }).post('/api/auth/refresh');
-      success = refreshResponse.data?.success === true;
-      refreshedUser = refreshResponse.data?.user;
+    const configuredGraphqlUrl = import.meta.env.VITE_GRAPHQL_URL?.trim();
+    const graphqlUrl = configuredGraphqlUrl || `${baseURL.replace(/\/$/, '')}/graphql`;
+    const response = await fetch(graphqlUrl, {
+      method: 'POST',
+      credentials: 'include',
+      signal: AbortSignal.timeout(10_000),
+      headers: {
+        'content-type': 'application/json',
+        [CSRF_HEADER]: csrf,
+      },
+      body: JSON.stringify({
+        query: 'mutation RefreshSession { refreshSession { success } }',
+        variables: {},
+      }),
+    });
+    const payload = await response.json() as {
+      data?: { refreshSession?: { success?: boolean } };
+      errors?: Array<{ message?: string }>;
+    };
+    const success = response.ok && payload.data?.refreshSession?.success === true;
+    if (!success && payload.errors?.[0]?.message) {
+      throw new Error(payload.errors[0].message);
     }
 
     if (!success) {
@@ -339,9 +314,6 @@ export const refreshAuthenticatedSession = (
 
     console.log('[Auth] Token refreshed successfully');
     markAuthenticatedSession();
-    if (refreshedUser && typeof window !== 'undefined' && window.sessionStorage) {
-      window.sessionStorage.setItem('itemize_user', JSON.stringify(refreshedUser));
-    }
     refreshAttempts = 0;
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('auth:session-refreshed'));
@@ -398,8 +370,8 @@ api.interceptors.response.use(
     (error as UserFriendlyAxiosError).userFriendlyError = userError;
     
     // Handle 401 unauthorized - attempt token refresh
-    if (error.response?.status === 401 && config && !config.url?.includes('/auth/refresh') && !config.url?.includes('/auth/login')) {
-      // Guests / marketing: never hit /api/auth/refresh (Best Practices + third-party cookie noise)
+    if (error.response?.status === 401 && config) {
+      // Guests / marketing: never attempt a session refresh.
       if (isLoggedOut() || !hasSessionHint()) {
         return Promise.reject(error);
       }

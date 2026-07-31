@@ -12,7 +12,6 @@ function createApp(pool) {
     app.use(express.urlencoded({ extended: false }));
     app.use(express.json());
     app.use((req, _res, next) => { req.dbPool = pool; next(); });
-    app.use('/api/auth', require('../../auth').router);
 
     const noop = (_req, _res, next) => next();
     const mockBroadcast = {

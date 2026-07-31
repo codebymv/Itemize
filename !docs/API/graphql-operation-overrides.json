@@ -1,15 +1,6 @@
 {
   "schemaVersion": 1,
   "operations": {
-    "GET /api/auth/csrf": {
-      "disposition": "retain-http",
-      "owner": "platform-security",
-      "targetModule": "AuthModule",
-      "targetOperation": "issueCsrfToken",
-      "parityStatus": "characterized",
-      "risk": "medium",
-      "notes": "Retain as the browser double-submit token bootstrap while cookie-authenticated GraphQL mutations are introduced."
-    },
     "GET /api/health": {
       "disposition": "retain-http",
       "owner": "platform-operations",
@@ -18,96 +9,6 @@
       "parityStatus": "characterized",
       "risk": "low",
       "notes": "Retain as the Railway liveness/readiness protocol. It must remain cheap, unauthenticated, and independent of GraphQL execution."
-    },
-    "POST /api/auth/forgot-password": {
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetModule": "AuthModule",
-      "targetOperation": "requestPasswordReset",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "NestJS preserves the generic response and strict throttle, rotates a random token stored only as a hash with one-hour expiry for eligible local accounts, and starts delivery after persistence without awaiting provider latency in the public response."
-    },
-    "POST /api/auth/google-login": {
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetModule": "AuthModule",
-      "targetOperation": "loginWithGoogle",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "Backend now verifies access-token audience and derives the verified identity from Google before issuing httpOnly cookies."
-    },
-    "POST /api/auth/login": {
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetModule": "AuthModule",
-      "targetOperation": "login",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Cookie-only session establishment; GraphQL payload must never expose access or refresh tokens."
-    },
-    "POST /api/auth/logout": {
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetModule": "AuthModule",
-      "targetOperation": "logout",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Requires CSRF and must expire both authentication cookies even when the server-side session is otherwise invalid."
-    },
-    "GET /api/auth/me": {
-      "disposition": "graphql-query",
-      "owner": "identity",
-      "targetModule": "AuthModule",
-      "targetOperation": "viewer",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "medium",
-      "notes": "Resolve identity from the signed httpOnly access cookie; preserve no-store behavior and normalized user fields."
-    },
-    "POST /api/auth/refresh": {
-      "disposition": "retain-http",
-      "owner": "platform-security",
-      "targetModule": "AuthModule",
-      "targetOperation": "refreshSession",
-      "parityStatus": "characterizing",
-      "risk": "medium",
-      "notes": "Retain as an out-of-band interceptor endpoint during cutover; accepts only a refresh cookie and returns only a renewed access cookie."
-    },
-    "POST /api/auth/register": {
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetModule": "AuthModule",
-      "targetOperation": "register",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "NestJS creates the user, personal organization, owner membership, and default-organization assignment in one transaction; the default-off identity flag preserves REST rollback."
-    },
-    "POST /api/auth/resend-verification": {
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetModule": "AuthModule",
-      "targetOperation": "resendVerificationEmail",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "NestJS preserves a non-enumerating response, an independent strict rate-limit bucket, hashed tokens, 24-hour expiry, and post-commit email delivery."
-    },
-    "POST /api/auth/reset-password": {
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetModule": "AuthModule",
-      "targetOperation": "resetPassword",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "NestJS enforces password policy and atomically consumes a valid hashed reset token while replacing the bcrypt hash and clearing reset state; concurrent reuse has one winner."
-    },
-    "POST /api/auth/verify-email": {
-      "disposition": "graphql-mutation",
-      "owner": "identity",
-      "targetModule": "AuthModule",
-      "targetOperation": "verifyEmail",
-      "parityStatus": "consumer-cutover-complete",
-      "risk": "high",
-      "notes": "NestJS conditionally consumes a valid hashed token once, marks the email verified, issues cookie-only session credentials, and attempts the welcome notification after commit."
     },
     "GET /api/organizations": {
       "disposition": "graphql-query",
