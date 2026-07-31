@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 188,
-    "apiOperationCount": 181,
+    "operationCount": 186,
+    "apiOperationCount": 179,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 130,
-    "operationsWithFrontendConsumers": 123,
-    "operationsWithBackendTests": 102,
+    "frontendCallsiteCount": 128,
+    "operationsWithFrontendConsumers": 121,
+    "operationsWithBackendTests": 101,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 51,
     "retainHttpCount": 55,
-    "graphqlQueryCount": 35,
-    "graphqlMutationCount": 91,
-    "highRiskCount": 147,
+    "graphqlQueryCount": 34,
+    "graphqlMutationCount": 90,
+    "highRiskCount": 146,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -2133,7 +2133,7 @@
           "method": "GET",
           "path": "/api/invoices/1/pdf",
           "source": "backend/src/__tests__/routes/invoice-core-retirement.routes.test.js",
-          "line": 32
+          "line": 34
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -2633,93 +2633,6 @@
       "notes": "The CSRF-protected mutation locks and conceals the tenant-owned estimate, requires a bounded idempotency key and recipient, and persists a delivery snapshot before provider work. Resend receives an intent-derived idempotency key; only confirmed delivery atomically marks the intent and draft estimate sent. Definite failures retry through a leased one-shot worker, ambiguous failures require reconciliation, and exact request replay cannot duplicate delivery. Fresh PostgreSQL proves success evidence, replay, provider failure and worker recovery, ambiguous quarantine, CSRF, tenant isolation, recipient/key validation, and terminal-state denial. The frontend adapter is independently default-off.",
       "literalInterpolationRisk": false,
       "risk": "high"
-    },
-    {
-      "id": "GET /api/invoices/payments",
-      "key": "GET /api/invoices/payments",
-      "method": "GET",
-      "path": "/api/invoices/payments",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/invoices/payments.routes.js",
-          "line": 148
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "GET",
-          "path": "/api/invoices/payments",
-          "rawPath": "/api/invoices/payments",
-          "source": "frontend/src/services/invoicePaymentsApi.ts",
-          "line": 109,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [],
-      "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": "billing",
-      "targetOperation": "payments",
-      "targetModule": "PaymentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Default-off GraphQL payment history preserves bounded paging, typed status/method filters, deterministic newest ordering, decimal strings, organization-qualified invoice/contact joins, and selected-tenant isolation. Manual payment writes remain on the retained transactional REST route.",
-      "literalInterpolationRisk": false,
-      "risk": "high"
-    },
-    {
-      "id": "POST /api/invoices/payments",
-      "key": "POST /api/invoices/payments",
-      "method": "POST",
-      "path": "/api/invoices/payments",
-      "routeSources": [
-        {
-          "source": "backend/src/routes/invoices/payments.routes.js",
-          "line": 22
-        }
-      ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/payments",
-          "rawPath": "/api/invoices/payments",
-          "source": "frontend/src/services/invoicePaymentsApi.ts",
-          "line": 179,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
-      "testCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoices/payments",
-          "source": "backend/src/__tests__/routes/invoice-payments.routes.test.js",
-          "line": 45
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/payments",
-          "source": "backend/src/__tests__/routes/invoice-payments.routes.test.js",
-          "line": 68
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/payments",
-          "source": "backend/src/__tests__/routes/invoice-payments.routes.test.js",
-          "line": 89
-        }
-      ],
-      "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
-      "disposition": "graphql-mutation",
-      "owner": "billing",
-      "targetOperation": "recordPayment",
-      "targetModule": "PaymentsModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Default-off GraphQL mutation validates bounded decimal/currency/method/status/date inputs, organization-qualifies optional contact/invoice references, and shares the locked invoice balance/event transaction. Pending/failed payments do not mutate invoice balances.",
-      "literalInterpolationRisk": false,
-      "risk": "medium"
     },
     {
       "id": "GET /api/invoices/recurring",
@@ -8461,6 +8374,7 @@
     "GET /api/invoices/:id",
     "GET /api/invoices/businesses",
     "GET /api/invoices/businesses/:id",
+    "GET /api/invoices/payments",
     "GET /api/invoices/products",
     "GET /api/invoices/settings",
     "GET /api/lists",
@@ -8514,6 +8428,7 @@
     "POST /api/invoices/:id/send",
     "POST /api/invoices/businesses",
     "POST /api/invoices/email/preview",
+    "POST /api/invoices/payments",
     "POST /api/invoices/products",
     "POST /api/lists",
     "POST /api/notes",

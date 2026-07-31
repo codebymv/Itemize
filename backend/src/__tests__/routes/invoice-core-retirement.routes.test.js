@@ -22,6 +22,8 @@ describe('retired invoice state and JSON-action HTTP routes', () => {
         ['post', '/api/invoices/1/send'],
         ['post', '/api/invoices/1/create-payment-link'],
         ['post', '/api/invoices/1/record-payment'],
+        ['get', '/api/invoices/payments'],
+        ['post', '/api/invoices/payments'],
     ])('returns 404 for retired %s %s', async (method, path) => {
         const response = await request(app)[method](path).send({});
         expect(response.status).toBe(404);

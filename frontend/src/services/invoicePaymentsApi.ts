@@ -1,9 +1,6 @@
-import api from '@/lib/api';
 import {
   graphqlMutationRequest,
   graphqlRequest,
-  isPaymentGraphqlMutationsEnabled,
-  isPaymentGraphqlReadsEnabled,
 } from './graphqlClient';
 
 export interface InvoicePayment {
@@ -105,14 +102,6 @@ export const getInvoicePayments = async (
   organizationId: number,
   filters: PaymentFilters = {},
 ): Promise<InvoicePayment[]> => {
-  if (!isPaymentGraphqlReadsEnabled()) {
-    const response = await api.get('/api/invoices/payments', {
-      params: filters,
-      headers: { 'x-organization-id': organizationId.toString() },
-    });
-    const payments = response.data.payments || response.data || [];
-    return Array.isArray(payments) ? payments : [];
-  }
   const data = await graphqlRequest<
     { payments: { nodes: GraphqlPayment[] } },
     {
@@ -146,40 +135,32 @@ export const createInvoicePayment = async (
   organizationId: number,
   payment: ManualPaymentInput,
 ): Promise<void> => {
-  if (isPaymentGraphqlMutationsEnabled()) {
-    await graphqlMutationRequest(
-      `mutation RecordPayment($input: RecordPaymentInput!) {
-        recordPayment(input: $input) {
-          payment { id }
-          invoice { amountPaid amountDue status }
-        }
-      }`,
-      {
-        input: {
-          ...(payment.invoice_id === undefined
-            ? {}
-            : { invoiceId: payment.invoice_id }),
-          ...(payment.contact_id === undefined
-            ? {}
-            : { contactId: payment.contact_id }),
-          amount: String(payment.amount),
-          currency: payment.currency ?? 'USD',
-          paymentMethod: enumValue(payment.payment_method ?? 'other'),
-          status: enumValue(payment.status ?? 'succeeded'),
-          ...(payment.payment_date === undefined
-            ? {}
-            : { paymentDate: payment.payment_date }),
-          ...(payment.notes === undefined ? {} : { notes: payment.notes }),
-        },
+  await graphqlMutationRequest(
+    `mutation RecordPayment($input: RecordPaymentInput!) {
+      recordPayment(input: $input) {
+        payment { id }
+        invoice { amountPaid amountDue status }
+      }
+    }`,
+    {
+      input: {
+        ...(payment.invoice_id === undefined
+          ? {}
+          : { invoiceId: payment.invoice_id }),
+        ...(payment.contact_id === undefined
+          ? {}
+          : { contactId: payment.contact_id }),
+        amount: String(payment.amount),
+        currency: payment.currency ?? 'USD',
+        paymentMethod: enumValue(payment.payment_method ?? 'other'),
+        status: enumValue(payment.status ?? 'succeeded'),
+        ...(payment.payment_date === undefined
+          ? {}
+          : { paymentDate: payment.payment_date }),
+        ...(payment.notes === undefined ? {} : { notes: payment.notes }),
       },
-      organizationId,
-    );
-    return;
-  }
-  await api.post(
-    '/api/invoices/payments',
-    payment,
-    { headers: { 'x-organization-id': organizationId.toString() } },
+    },
+    organizationId,
   );
 };
 

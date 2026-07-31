@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 188
-- API operations under `/api`: 181
+- Registered method/path operations: 186
+- API operations under `/api`: 179
 - Non-API registered operations: 7
-- Static frontend callsites: 130
-- Operations with frontend consumers: 123
-- Operations referenced by backend tests: 102
-- Recommended GraphQL queries: 35
-- Recommended GraphQL mutations: 91
+- Static frontend callsites: 128
+- Operations with frontend consumers: 121
+- Operations referenced by backend tests: 101
+- Recommended GraphQL queries: 34
+- Recommended GraphQL mutations: 90
 - Recommended retained HTTP endpoints: 55
-- High-risk operations: 147
+- High-risk operations: 146
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -82,8 +82,6 @@
 | PUT | `/api/invoices/estimates/:id` | 1 | 3 | graphql-mutation | medium | billing / EstimatesModule / updateEstimate |
 | POST | `/api/invoices/estimates/:id/convert-to-invoice` | 1 | 2 | graphql-mutation | high | billing / EstimatesModule / convertEstimateToInvoice |
 | POST | `/api/invoices/estimates/:id/send` | 1 | 0 | graphql-mutation | high | billing / EstimatesModule / sendEstimate |
-| GET | `/api/invoices/payments` | 1 | 0 | graphql-query | high | billing / PaymentsModule / payments |
-| POST | `/api/invoices/payments` | 1 | 3 | graphql-mutation | medium | billing / PaymentsModule / recordPayment |
 | GET | `/api/invoices/recurring` | 1 | 0 | graphql-query | high | billing / RecurringInvoicesModule / recurringInvoices |
 | POST | `/api/invoices/recurring` | 1 | 0 | graphql-mutation | high | billing / RecurringInvoicesModule / createRecurringInvoice |
 | DELETE | `/api/invoices/recurring/:id` | 1 | 0 | graphql-mutation | high | billing / RecurringInvoicesModule / deleteRecurringInvoice |
@@ -225,7 +223,7 @@
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
 - Unmatched backend test calls: 51
-- Orphaned manual overrides: 162
+- Orphaned manual overrides: 164
 - Orphaned runtime-expression overrides: 0
 
 ### Unmatched frontend calls

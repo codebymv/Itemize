@@ -3,11 +3,11 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 205,
-    "resolvedDeclarationCount": 205,
+    "declarationCount": 203,
+    "resolvedDeclarationCount": 203,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 188,
-    "sourceFileCount": 46
+    "uniqueResolvedOperationCount": 186,
+    "sourceFileCount": 45
   },
   "caveats": [
     "This is static source analysis; it does not execute application modules.",
@@ -564,26 +564,6 @@
       "declaredPath": "/:id/send",
       "source": "backend/src/routes/estimates.routes.js",
       "line": 521,
-      "dynamic": false
-    },
-    {
-      "method": "GET",
-      "publicPaths": [
-        "/api/invoices/payments"
-      ],
-      "declaredPath": "/payments",
-      "source": "backend/src/routes/invoices/payments.routes.js",
-      "line": 148,
-      "dynamic": false
-    },
-    {
-      "method": "POST",
-      "publicPaths": [
-        "/api/invoices/payments"
-      ],
-      "declaredPath": "/payments",
-      "source": "backend/src/routes/invoices/payments.routes.js",
-      "line": 22,
       "dynamic": false
     },
     {

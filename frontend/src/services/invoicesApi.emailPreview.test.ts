@@ -3,7 +3,6 @@ import { getInvoiceEmailPreview } from './invoicesApi';
 import { previewInvoiceEmailViaGraphql } from './invoiceEmailPreviewGraphql';
 
 vi.mock('./graphqlClient', () => ({
-  isPaymentGraphqlMutationsEnabled: vi.fn(() => false),
   isRecurringInvoiceGraphqlCloneEnabled: vi.fn(() => false),
 }));
 vi.mock('./invoiceEmailPreviewGraphql', () => ({

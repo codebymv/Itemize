@@ -6,11 +6,11 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 205
-- Resolved declarations: 205
+- Route declarations: 203
+- Resolved declarations: 203
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 188
-- Files containing declarations: 46
+- Unique resolved method/path operations: 186
+- Files containing declarations: 45
 
 ## Interpretation limits
 
@@ -78,8 +78,6 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | PUT | `/api/invoices/estimates/:id` | `/:id` | `backend/src/routes/estimates.routes.js:296` |
 | POST | `/api/invoices/estimates/:id/convert-to-invoice` | `/:id/convert-to-invoice` | `backend/src/routes/estimates.routes.js:679` |
 | POST | `/api/invoices/estimates/:id/send` | `/:id/send` | `backend/src/routes/estimates.routes.js:521` |
-| GET | `/api/invoices/payments` | `/payments` | `backend/src/routes/invoices/payments.routes.js:148` |
-| POST | `/api/invoices/payments` | `/payments` | `backend/src/routes/invoices/payments.routes.js:22` |
 | GET | `/api/invoices/recurring` | `/` | `backend/src/routes/recurring.routes.js:73` |
 | POST | `/api/invoices/recurring` | `/` | `backend/src/routes/recurring.routes.js:139` |
 | DELETE | `/api/invoices/recurring/:id` | `/:id` | `backend/src/routes/recurring.routes.js:363` |

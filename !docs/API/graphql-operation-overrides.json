@@ -440,7 +440,7 @@
       "targetOperation": "payments",
       "parityStatus": "consumer-cutover-complete",
       "risk": "high",
-      "notes": "Default-off GraphQL payment history preserves bounded paging, typed status/method filters, deterministic newest ordering, decimal strings, organization-qualified invoice/contact joins, and selected-tenant isolation. Manual payment writes remain on the retained transactional REST route."
+      "notes": "The frontend permanently uses this bounded GraphQL payment-history query with typed status/method filters, deterministic newest ordering, decimal strings, organization-qualified invoice/contact joins, and selected-tenant isolation. The rollout flag and retired Express GET route are removed; an explicit canary requires the old URL to return 404."
     },
     "POST /api/invoices/payments": {
       "disposition": "graphql-mutation",
@@ -449,7 +449,7 @@
       "targetOperation": "recordPayment",
       "parityStatus": "consumer-cutover-complete",
       "risk": "medium",
-      "notes": "Default-off GraphQL mutation validates bounded decimal/currency/method/status/date inputs, organization-qualifies optional contact/invoice references, and shares the locked invoice balance/event transaction. Pending/failed payments do not mutate invoice balances."
+      "notes": "The frontend permanently uses this CSRF-protected mutation for standalone or optionally invoice-linked manual payments. It validates bounded decimal/currency/method/status/date inputs, organization-qualifies optional contact/invoice references, and shares the locked invoice balance/event transaction. Pending/failed payments do not mutate invoice balances. The rollout flag and retired Express POST route are removed; an explicit canary requires the old URL to return 404."
     },
     "GET /api/invoices/products": {
       "disposition": "graphql-query",

@@ -1,10 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import api from '@/lib/api';
 import {
   graphqlMutationRequest,
   graphqlRequest,
-  isPaymentGraphqlMutationsEnabled,
-  isPaymentGraphqlReadsEnabled,
 } from './graphqlClient';
 import {
   createInvoicePayment,
@@ -12,46 +9,17 @@ import {
   recordInvoicePaymentViaGraphql,
 } from './invoicePaymentsApi';
 
-vi.mock('@/lib/api', () => ({
-  default: { get: vi.fn(), post: vi.fn() },
-}));
 vi.mock('./graphqlClient', () => ({
   graphqlMutationRequest: vi.fn(),
   graphqlRequest: vi.fn(),
-  isPaymentGraphqlMutationsEnabled: vi.fn(),
-  isPaymentGraphqlReadsEnabled: vi.fn(),
 }));
 
-describe('invoice payment transport selection', () => {
+describe('invoice payment GraphQL transport', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(isPaymentGraphqlReadsEnabled).mockReturnValue(false);
-    vi.mocked(isPaymentGraphqlMutationsEnabled).mockReturnValue(false);
   });
 
-  it('retains payment reads and writes on REST by default', async () => {
-    vi.mocked(api.get).mockResolvedValue({
-      data: { payments: [{ id: 2, amount: '10.00' }] },
-    });
-    vi.mocked(api.post).mockResolvedValue({ data: {} });
-    await expect(
-      getInvoicePayments(4, { status: 'succeeded' }),
-    ).resolves.toHaveLength(1);
-    await createInvoicePayment(4, { amount: 10 });
-    expect(api.get).toHaveBeenCalledWith(
-      '/api/invoices/payments',
-      expect.objectContaining({
-        params: { status: 'succeeded' },
-        headers: { 'x-organization-id': '4' },
-      }),
-    );
-    expect(api.post).toHaveBeenCalledTimes(1);
-    expect(graphqlRequest).not.toHaveBeenCalled();
-    expect(graphqlMutationRequest).not.toHaveBeenCalled();
-  });
-
-  it('switches filtered history to GraphQL while retaining writes on REST', async () => {
-    vi.mocked(isPaymentGraphqlReadsEnabled).mockReturnValue(true);
+  it('reads filtered payment history through GraphQL', async () => {
     vi.mocked(graphqlRequest).mockResolvedValue({
       payments: {
         nodes: [{
@@ -95,11 +63,9 @@ describe('invoice payment transport selection', () => {
       }),
       4,
     );
-    expect(api.get).not.toHaveBeenCalled();
   });
 
-  it('switches both manual payment shapes to protected GraphQL mutations', async () => {
-    vi.mocked(isPaymentGraphqlMutationsEnabled).mockReturnValue(true);
+  it('records both manual payment shapes through protected GraphQL mutations', async () => {
     vi.mocked(graphqlMutationRequest)
       .mockResolvedValueOnce({
         recordPayment: {
@@ -176,6 +142,5 @@ describe('invoice payment transport selection', () => {
       }),
       4,
     );
-    expect(api.post).not.toHaveBeenCalled();
   });
 });
