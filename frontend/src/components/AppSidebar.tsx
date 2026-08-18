@@ -257,6 +257,10 @@ const secondaryNavItems: NavItem[] = [
                 title: 'Payments',
                 path: '/payment-settings',
             },
+            {
+                title: 'Integrations',
+                path: '/calendar-integrations',
+            },
         ],
     },
     {

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import {
     Plus,
     Search,
@@ -131,10 +130,7 @@ const getApiErrorMessage = (error: unknown, fallback: string): string => {
 export function RecurringInvoicesPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
-    const { theme } = useTheme();
-
-    // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
+    const { setHeaderContent } = useHeader();    // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
     const {
         showModal: showOnboarding,
         handleComplete: handleOnboardingComplete,
@@ -452,8 +448,7 @@ export function RecurringInvoicesPage() {
                 <div className="flex items-center gap-2 ml-2 min-w-0">
                     <RefreshCw className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate"
-                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                        className="text-xl font-semibold italic truncate font-raleway text-foreground"
                     >
                         RECURRING INVOICES
                     </h1>
@@ -497,7 +492,7 @@ export function RecurringInvoicesPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [searchQuery, theme, setHeaderContent, activeTab, recurringInvoices, stats]);
+    }, [searchQuery, setHeaderContent, activeTab, recurringInvoices, stats]);
 
     const filteredRecurring = useMemo(() => {
         let filtered = recurringInvoices;

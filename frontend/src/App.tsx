@@ -234,6 +234,11 @@ const AppContent = () => {
     return <Navigate to={token ? `/review/${token}` : '/home'} replace />;
   };
 
+  const IntegrationsAliasRedirect = () => {
+    const { search, hash } = useLocation();
+    return <Navigate to={`/calendar-integrations${search}${hash}`} replace />;
+  };
+
   // Handle session expiration notifications
   useSessionExpiration();
 
@@ -331,6 +336,7 @@ const AppContent = () => {
 
         {/* Calendar Integrations */}
         <Route path="/calendar-integrations" element={<AuthenticatedLayout><CalendarIntegrationsPage /></AuthenticatedLayout>} />
+        <Route path="/settings/integrations" element={<AuthenticatedLayout><IntegrationsAliasRedirect /></AuthenticatedLayout>} />
 
         {/* Campaigns & Templates */}
         <Route path="/campaigns" element={<AuthenticatedLayout><CampaignsPage /></AuthenticatedLayout>} />

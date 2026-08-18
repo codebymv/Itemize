@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import {
     ArrowLeft,
     Save,
@@ -135,10 +134,7 @@ export function PageEditorPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
-    const { theme } = useTheme();
-
-    const [page, setPage] = useState<Page | null>(null);
+    const { setHeaderContent } = useHeader();    const [page, setPage] = useState<Page | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const { organizationId } = useOrganization({
@@ -204,8 +200,7 @@ export function PageEditorPage() {
                     </Button>
                     <Layout className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate min-w-0"
-                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                        className="text-xl font-semibold italic truncate min-w-0 font-raleway text-foreground"
                     >
                         {(loading ? 'Loading...' : editedName || 'Page Editor').toUpperCase()}
                     </h1>
@@ -236,7 +231,7 @@ export function PageEditorPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [theme, loading, editedName, page, saving, setHeaderContent, navigate]);
+    }, [loading, editedName, page, saving, setHeaderContent, navigate]);
 
     // Save page changes
     const handleSave = async () => {

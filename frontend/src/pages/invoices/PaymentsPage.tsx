@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import {
     Search,
     Plus,
@@ -90,10 +89,7 @@ const STATUS_STYLES: Record<string, string> = {
 export function PaymentsPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
-    const { theme } = useTheme();
-
-    // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
+    const { setHeaderContent } = useHeader();    // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
     const {
         showModal: showOnboarding,
         handleComplete: handleOnboardingComplete,
@@ -130,7 +126,7 @@ const [payments, setPayments] = useState<Payment[]>([]);
                 <div className="flex items-center gap-2 ml-2 min-w-0">
                     <DollarSign className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className={`text-xl font-semibold italic truncate font-raleway ${theme === 'dark' ? 'text-white' : 'text-black'}`}
+                        className="text-xl font-semibold italic truncate font-raleway text-foreground"
                     >
                         PAYMENTS
                     </h1>
@@ -178,7 +174,7 @@ const [payments, setPayments] = useState<Payment[]>([]);
             </div>
         );
         return () => setHeaderContent(null);
-    }, [searchQuery, methodFilter, statusFilter, theme, setHeaderContent]);
+    }, [searchQuery, methodFilter, statusFilter, setHeaderContent]);
 
     useEffect(() => {
         if (!initError) return;

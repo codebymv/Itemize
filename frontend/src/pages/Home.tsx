@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, lazy, Suspense } from 'react';
+import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { Button } from "@/components/ui/button";
 import { useAuthState } from '@/contexts/AuthContext';
 import { LandingNav } from '@/components/LandingNav';
@@ -63,23 +63,14 @@ const Home: React.FC = () => {
   const navigate = useNavigate();
   const navigatedRef = React.useRef(false);
   const [belowFoldReady, setBelowFoldReady] = useState(false);
-
-  // Theme-aware base colors - memoized to prevent recalculation
-  const themeColors = useMemo(() => {
-    const isLight = theme !== 'dark';
-    return {
-      isLight,
-      textColor: isLight ? 'text-gray-900' : 'text-slate-100',
-      secondaryTextColor: isLight ? 'text-gray-700' : 'text-slate-300',
-      mutedTextColor: isLight ? 'text-gray-600' : 'text-slate-400',
-      cardBgColor: isLight ? 'bg-white' : 'bg-slate-800',
-      cardBorderColor: isLight ? 'border-gray-200' : 'border-slate-700',
-      accentGradient: 'bg-gradient-to-r from-blue-600 to-indigo-600',
-      accentGradientHover: 'hover:from-blue-700 hover:to-indigo-700',
-    };
-  }, [theme]);
-
-  const { isLight, textColor, secondaryTextColor, mutedTextColor, cardBgColor, cardBorderColor, accentGradient, accentGradientHover } = themeColors;
+  const isLight = theme !== 'dark';
+  const textColor = 'text-foreground';
+  const secondaryTextColor = 'text-muted-foreground';
+  const mutedTextColor = 'text-muted-foreground';
+  const cardBgColor = 'bg-card';
+  const cardBorderColor = 'border-border';
+  const accentGradient = 'bg-gradient-to-r from-blue-600 to-indigo-600';
+  const accentGradientHover = 'hover:from-blue-700 hover:to-indigo-700';
 
   // Auth redirect
   useEffect(() => {
@@ -122,9 +113,9 @@ const Home: React.FC = () => {
 
       {/* Ambient gradient orbs - fixed positions, no Math.random */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className={`absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full ${isLight ? 'bg-blue-400' : 'bg-blue-600'} opacity-[0.04] blur-[100px]`} />
-        <div className={`absolute top-[40%] -left-40 w-[500px] h-[500px] rounded-full ${isLight ? 'bg-indigo-400' : 'bg-indigo-600'} opacity-[0.04] blur-[100px]`} />
-        <div className={`absolute bottom-20 right-[20%] w-[400px] h-[400px] rounded-full ${isLight ? 'bg-violet-300' : 'bg-violet-600'} opacity-[0.03] blur-[100px]`} />
+        <div className="absolute -top-40 -right-40 w-[600px] h-[600px] rounded-full bg-blue-400 dark:bg-blue-600 opacity-[0.04] blur-[100px]" />
+        <div className="absolute top-[40%] -left-40 w-[500px] h-[500px] rounded-full bg-indigo-400 dark:bg-indigo-600 opacity-[0.04] blur-[100px]" />
+        <div className="absolute bottom-20 right-[20%] w-[400px] h-[400px] rounded-full bg-violet-300 dark:bg-violet-600 opacity-[0.03] blur-[100px]" />
       </div>
 
       {/* Noise texture */}
@@ -152,7 +143,7 @@ const Home: React.FC = () => {
                 }}
               >
                 The CRM that works{' '}
-                <span className="lh-accent" style={{ color: isLight ? '#2563eb' : '#60a5fa' }}>
+                <span className="lh-accent text-blue-600 dark:text-blue-400">
                   for you
                 </span>
                 <br />
@@ -215,7 +206,7 @@ const Home: React.FC = () => {
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <RevealSection>
               <div className="text-center mb-16">
-                <p className={`text-sm font-bold uppercase tracking-widest ${isLight ? 'text-red-500' : 'text-red-400'} mb-4`}>
+                <p className="text-sm font-bold uppercase tracking-widest text-red-500 dark:text-red-400 mb-4">
                   Sound familiar?
                 </p>
                 <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor}`}>
@@ -283,7 +274,7 @@ const Home: React.FC = () => {
                         loading="lazy"
                       />
                       <div className="absolute inset-0 bg-slate-500/30 mix-blend-multiply pointer-events-none" />
-                      <div className={`absolute inset-0 bg-gradient-to-t ${isLight ? 'from-white via-white/40 to-transparent' : 'from-slate-800 via-slate-800/40 to-transparent'}`} />
+                      <div className="absolute inset-0 bg-gradient-to-t from-white via-white/40 to-transparent dark:from-slate-800 dark:via-slate-800/40" />
                     </div>
                     <div className="p-8 pt-6 flex-1 relative z-10 flex flex-col">
                       <div className={`w-12 h-1 rounded-full bg-gradient-to-r ${pain.gradient} mb-6`} />
@@ -305,12 +296,12 @@ const Home: React.FC = () => {
                       if (el) el.scrollTo({ left: i * el.offsetWidth * 0.82, behavior: 'smooth' });
                     }}
                     className={`min-h-6 min-w-6 p-2 flex items-center justify-center rounded-full transition-all duration-300 ${
-                      isLight ? 'hover:bg-blue-500/10' : 'hover:bg-blue-400/10'
+                      'hover:bg-blue-500/10 dark:hover:bg-blue-400/10'
                     }`}
                   >
                     <span
                       className={`block w-2 h-2 rounded-full ${
-                        isLight ? 'bg-gray-300 hover:bg-blue-500' : 'bg-slate-600 hover:bg-blue-400'
+                        'bg-gray-300 hover:bg-blue-500 dark:bg-slate-600 dark:hover:bg-blue-400'
                       }`}
                     />
                   </button>
@@ -333,7 +324,7 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 4: WORKSPACES DIFFERENTIATOR                           */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="workspaces" className={`py-20 md:py-32 ${isLight ? 'bg-gradient-to-br from-blue-50/80 to-indigo-50/80' : 'bg-gradient-to-br from-blue-950/30 to-slate-900'}`} style={{ contain: 'layout style' }}>
+        <section id="workspaces" className="py-20 md:py-32 bg-gradient-to-br from-blue-50/80 to-indigo-50/80 dark:from-blue-950/30 dark:to-slate-900" style={{ contain: 'layout style' }}>
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
               {/* Screenshot */}
@@ -382,8 +373,8 @@ const Home: React.FC = () => {
                       { icon: Sparkles, text: 'Everything synced and searchable' },
                     ].map((item, i) => (
                       <li key={i} className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-xl ${isLight ? 'bg-blue-50' : 'bg-blue-900/30'} flex items-center justify-center flex-shrink-0`}>
-                          <item.icon className={`h-5 w-5 ${isLight ? 'text-blue-600' : 'text-blue-400'}`} />
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                          <item.icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <span className={`${textColor} font-medium`}>{item.text}</span>
                       </li>
@@ -410,7 +401,7 @@ const Home: React.FC = () => {
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <RevealSection>
               <div className="text-center mb-20">
-                <p className={`text-sm font-bold uppercase tracking-widest ${isLight ? 'text-blue-600' : 'text-blue-400'} mb-4`}>
+                <p className="text-sm font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-4">
                   Features
                 </p>
                 <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor} mb-5`}>
@@ -480,11 +471,11 @@ const Home: React.FC = () => {
         {/* SECTION 6: INTEGRATIONS                                        */}
         {/* Real brand logos in a grid                                     */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="integrations" className={`pt-20 md:pt-32 pb-10 md:pb-16 ${isLight ? 'bg-white/60' : 'bg-slate-800/40'}`} style={{ contain: 'layout style', contentVisibility: 'auto' }}>
+        <section id="integrations" className="pt-20 md:pt-32 pb-10 md:pb-16 bg-card/60" style={{ contain: 'layout style', contentVisibility: 'auto' }}>
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <RevealSection>
               <div className="text-center mb-16">
-                <p className={`text-sm font-bold uppercase tracking-widest ${isLight ? 'text-blue-600' : 'text-blue-400'} mb-4`}>
+                <p className="text-sm font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-4">
                   Integrations
                 </p>
                 <h2 className={`landing-heading text-3xl md:text-4xl font-extrabold ${textColor} mb-5`}>
@@ -532,8 +523,8 @@ const Home: React.FC = () => {
                 ].map((item, i) => (
                   <RevealSection key={i} variant="fade-up" delay={i * 80}>
                     <div className={`text-center p-6 rounded-2xl ${cardBgColor} border ${cardBorderColor} transition-shadow duration-300 hover:shadow-md`}>
-                      <div className={`w-14 h-14 rounded-2xl ${isLight ? 'bg-emerald-50' : 'bg-emerald-900/20'} flex items-center justify-center mx-auto mb-4`}>
-                        <item.icon className={`h-7 w-7 ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`} />
+                      <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center mx-auto mb-4">
+                        <item.icon className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
                       </div>
                       <h3 className={`font-bold ${textColor} mb-1`}>{item.label}</h3>
                       <p className={`text-sm ${mutedTextColor}`}>{item.desc}</p>
@@ -548,11 +539,11 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 8: PRICING                                             */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="pricing" className={`pt-10 md:pt-16 pb-20 md:pb-32 ${isLight ? 'bg-white/60' : 'bg-slate-800/40'}`} style={{ contain: 'layout style', contentVisibility: 'auto' }}>
+        <section id="pricing" className="pt-10 md:pt-16 pb-20 md:pb-32 bg-card/60" style={{ contain: 'layout style', contentVisibility: 'auto' }}>
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <RevealSection>
               <div className="text-center mb-14">
-                <p className={`text-sm font-bold uppercase tracking-widest ${isLight ? 'text-blue-600' : 'text-blue-400'} mb-4`}>
+                <p className="text-sm font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-4">
                   Pricing
                 </p>
                 <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor} mb-5`}>
@@ -588,12 +579,12 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         <section id="cta" className="py-24 md:py-36 relative overflow-hidden" style={{ contain: 'layout style' }}>
           {/* Gradient background accent */}
-          <div className={`absolute inset-0 ${isLight ? 'bg-gradient-to-br from-blue-50 via-indigo-50 to-violet-50' : 'bg-gradient-to-br from-blue-950/50 via-indigo-950/50 to-violet-950/50'}`} />
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-violet-50 dark:from-blue-950/50 dark:via-indigo-950/50 dark:to-violet-950/50" />
 
           <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <RevealSection>
               <h2 className={`landing-heading text-3xl md:text-4xl lg:text-5xl font-extrabold ${textColor} mb-6 leading-tight md:whitespace-nowrap`}>
-                Ready to simplify <br className="block md:hidden" /><span className={isLight ? 'text-blue-600' : 'text-blue-400'}>your business?</span>
+                Ready to simplify <br className="block md:hidden" /><span className="text-blue-600 dark:text-blue-400">your business?</span>
               </h2>
               <p className={`text-lg md:text-xl ${secondaryTextColor} mb-10 max-w-2xl mx-auto leading-relaxed`}>
                 Join Itemize to organize, automate, and grow.

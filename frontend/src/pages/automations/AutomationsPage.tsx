@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import { 
   Plus, Search, Zap, Play, Pause, MoreHorizontal, Copy, Trash2, 
   Mail, Tag, Clock, Users, TrendingUp, CheckCircle, XCircle, AlertCircle
@@ -61,10 +60,7 @@ const TRIGGER_TYPE_ICONS: Record<string, React.ReactNode> = {
 
 export function AutomationsPage() {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { theme } = useTheme();
-
-  // Onboarding
+  const { toast } = useToast();  // Onboarding
   const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('automations');
 
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
@@ -126,9 +122,8 @@ export function AutomationsPage() {
           </Button>
         </>
       ),
-      theme
     },
-    [searchQuery, triggerFilter, statusFilter, theme, navigate]
+    [searchQuery, triggerFilter, statusFilter, navigate]
   );
 
   useEffect(() => {

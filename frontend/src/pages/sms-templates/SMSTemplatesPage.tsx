@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useTheme } from 'next-themes';
 import { Plus, Search, MessageSquare, MoreHorizontal, Trash2, Copy, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,10 +37,7 @@ interface SMSTemplate {
 
 export function SMSTemplatesPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
-    const { theme } = useTheme();
-
-    // Route-aware onboarding (will show 'campaigns' onboarding for all Marketing routes)
+    const { setHeaderContent } = useHeader();    // Route-aware onboarding (will show 'campaigns' onboarding for all Marketing routes)
     const {
         showModal: showOnboarding,
         handleComplete: handleOnboardingComplete,
@@ -62,8 +58,7 @@ export function SMSTemplatesPage() {
                 <div className="flex items-center gap-2 ml-2 min-w-0">
                     <MessageSquare className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate"
-                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                        className="text-xl font-semibold italic truncate font-raleway text-foreground"
                     >
                         SMS TEMPLATES
                     </h1>
@@ -91,7 +86,7 @@ export function SMSTemplatesPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [searchQuery, theme, setHeaderContent]);
+    }, [searchQuery, setHeaderContent]);
 
     useEffect(() => {
         if (!initError) return;

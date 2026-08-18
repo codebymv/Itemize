@@ -1,6 +1,15 @@
 # Production Postgres restore drill
 
-Perform this drill against a **copy** of production, never against the live primary, unless you are executing a real incident restore. Last planned drill: 18 Aug 2026.
+Perform this drill against a **copy** of production, never against the live primary, unless you are executing a real incident restore.
+
+## Last drill: 18 Aug 2026
+
+Verified from this repo with Railway CLI (production environment `0e0d56e7-6c8a-4a66-9445-505b9ecf2f1c`):
+
+- Live volume `postgres-volume` on `itemize.cloud Postgres` was **Ready** (~234 MB / 5000 MB).
+- Live `schema_migrations` had **53/53** applied, including `053_chat_widget_graphql` (2026-07-26).
+- Railway CLI has **no backup/restore command**. Snapshot restore remains a dashboard action: Postgres service → **Backups**.
+- A throwaway empty Postgres was provisioned to prove we can stand up a replacement (`postgres.railway.internal`), then **deleted**. Local `railway run` cannot apply migrations to a brand-new private hostname (`ENOTFOUND`). Use the dashboard restore-into-new-service flow, or `railway ssh` from a service already on the private network.
 
 ## Goal
 

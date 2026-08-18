@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useTheme } from 'next-themes';
 import { Plus, Settings, MoreHorizontal, DollarSign, TrendingUp, Kanban, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,10 +36,7 @@ const getApiStatus = (error: unknown): number | undefined =>
 
 export function PipelinesPage() {
   const { toast } = useToast();
-  const { setHeaderContent } = useHeader();
-  const { theme } = useTheme();
-
-  // Onboarding
+  const { setHeaderContent } = useHeader();  // Onboarding
   const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('pipelines');
 
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
@@ -66,8 +62,7 @@ export function PipelinesPage() {
         <div className="flex items-center gap-2 ml-2 min-w-0">
           <Kanban className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <h1
-            className="text-xl font-semibold italic truncate"
-            style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+            className="text-xl font-semibold italic truncate font-raleway text-foreground"
           >
             PIPELINES
           </h1>
@@ -129,7 +124,7 @@ export function PipelinesPage() {
       </div>
     );
     return () => setHeaderContent(null);
-  }, [pipelines, selectedPipelineId, searchQuery, theme, setHeaderContent]);
+  }, [pipelines, selectedPipelineId, searchQuery, setHeaderContent]);
 
   useEffect(() => {
     if (orgLoading) {

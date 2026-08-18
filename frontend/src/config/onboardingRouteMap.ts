@@ -31,7 +31,7 @@ const SIDEBAR_GROUPS: Record<string, { onboardingKey: string; routes: string[] }
   },
   scheduling: {
     onboardingKey: 'calendars',
-    routes: ['/calendars', '/bookings', '/calendar-integrations'],
+    routes: ['/calendars', '/bookings', '/calendar-integrations', '/settings/integrations'],
   },
   reputation: {
     onboardingKey: 'reputation',

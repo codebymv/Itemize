@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import {
     Plus,
     Search,
@@ -48,10 +47,7 @@ import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 export function EstimatesPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
-    const { theme } = useTheme();
-
-    // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
+    const { setHeaderContent } = useHeader();    // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
     const {
         showModal: showOnboarding,
         handleComplete: handleOnboardingComplete,
@@ -159,7 +155,7 @@ export function EstimatesPage() {
                 <div className="flex items-center gap-2 ml-2 min-w-0">
                     <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className={`text-xl font-semibold italic truncate font-raleway ${theme === 'dark' ? 'text-white' : 'text-black'}`}
+                        className="text-xl font-semibold italic truncate font-raleway text-foreground"
                     >
                         ESTIMATES
                     </h1>
@@ -207,7 +203,7 @@ export function EstimatesPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [searchQuery, theme, setHeaderContent, navigate, activeTab, estimates, stats]);
+    }, [searchQuery, setHeaderContent, navigate, activeTab, estimates, stats]);
 
     const filteredEstimates = useMemo(() => {
         let filtered = estimates;

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useTheme } from 'next-themes';
 import { Plus, Search, MoreHorizontal, Trash2, Tag, UserPlus, Download, Upload, Users, CheckCircle, AlertCircle, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,9 +48,7 @@ const getApiStatus = (error: unknown): number | undefined =>
 
 export function ContactsPage() {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { theme } = useTheme();
-  const isMobile = useIsMobile();
+  const { toast } = useToast();  const isMobile = useIsMobile();
 
   // Onboarding
   const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('contacts');
@@ -207,9 +204,8 @@ export function ContactsPage() {
           </Button>
         </>
       ),
-      theme
     },
-    [searchQuery, statusFilter, theme, organizationId]
+    [searchQuery, statusFilter, organizationId]
   );
 
   // Handle search with debounce

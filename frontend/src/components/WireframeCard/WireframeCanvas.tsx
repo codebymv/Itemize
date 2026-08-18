@@ -21,7 +21,6 @@ import {
   SelectionMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useTheme } from 'next-themes';
 import { 
   Square, 
   Diamond, 
@@ -81,8 +80,6 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
   readOnly = false,
   height = 400,
 }) => {
-  const { theme } = useTheme();
-  const isLight = theme === 'light';
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { fitView, getNodes, setNodes: setFlowNodes } = useReactFlow();
   
@@ -339,14 +336,14 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
   }, [handleCopy, handlePaste, readOnly]);
 
   // Theme-aware colors
-  const bgColor = isLight ? '#f8fafc' : '#1e293b';
-  const gridColor = isLight ? '#e2e8f0' : '#334155';
-  const minimapMaskColor = isLight ? 'rgba(248, 250, 252, 0.8)' : 'rgba(30, 41, 59, 0.8)';
-  const toolbarBg = isLight ? '#f9fafb' : '#334155';
-  const toolbarBorder = isLight ? '#e5e7eb' : '#475569';
-  const buttonBg = isLight ? 'white' : '#475569';
-  const buttonBorder = isLight ? '#d1d5db' : '#64748b';
-  const textColor = isLight ? '#374151' : '#e5e7eb';
+  const bgColor = 'hsl(var(--background))';
+  const gridColor = 'hsl(var(--border))';
+  const minimapMaskColor = 'hsl(var(--background) / 0.8)';
+  const toolbarBg = 'hsl(var(--muted))';
+  const toolbarBorder = 'hsl(var(--border))';
+  const buttonBg = 'hsl(var(--card))';
+  const buttonBorder = 'hsl(var(--border))';
+  const textColor = 'hsl(var(--foreground))';
 
   return (
     <div
@@ -568,7 +565,7 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
               if (node.type === 'stickyNote') {
                 return '#FCD34D';
               }
-              return isLight ? '#374151' : '#9ca3af';
+              return 'hsl(var(--muted-foreground))';
             }}
             maskColor={minimapMaskColor}
           />

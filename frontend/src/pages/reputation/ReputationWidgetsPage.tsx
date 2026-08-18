@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useTheme } from 'next-themes';
 import { Plus, Search, Code, MoreHorizontal, Trash2, Copy, Eye, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,10 +44,7 @@ interface ReviewWidget {
 
 export function ReputationWidgetsPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
-    const { theme } = useTheme();
-
-    // Route-aware onboarding (will show 'reputation' onboarding for Reputation group)
+    const { setHeaderContent } = useHeader();    // Route-aware onboarding (will show 'reputation' onboarding for Reputation group)
     const {
         showModal: showOnboarding,
         handleComplete: handleOnboardingComplete,
@@ -69,8 +65,7 @@ export function ReputationWidgetsPage() {
                 <div className="flex items-center gap-2 ml-2">
                     <Code className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate"
-                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                        className="text-xl font-semibold italic truncate font-raleway text-foreground"
                     >
                         WIDGETS
                     </h1>
@@ -111,7 +106,7 @@ export function ReputationWidgetsPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [searchQuery, typeFilter, theme, setHeaderContent]);
+    }, [searchQuery, typeFilter, setHeaderContent]);
 
     useEffect(() => {
         if (!organizationId && initError) {

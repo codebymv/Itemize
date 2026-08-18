@@ -4,7 +4,6 @@
  */
 import React, { memo, useState, useCallback, useEffect, useRef } from 'react';
 import { NodeProps, useReactFlow, Node } from '@xyflow/react';
-import { useTheme } from 'next-themes';
 
 interface ArrowNodeData {
   // End point position relative to node position (start point)
@@ -25,8 +24,6 @@ const HITBOX_STROKE_WIDTH = 14;
 const HANDLE_HITBOX = 28;
 
 const ArrowNode: React.FC<NodeProps> = ({ id, data, selected }) => {
-  const { theme } = useTheme();
-  const isLight = theme === 'light';
   const { setNodes, getNode, getNodes } = useReactFlow();
   
   const nodeData = data as unknown as ArrowNodeData;
@@ -87,7 +84,7 @@ const ArrowNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   // Calculate arrowhead position (tip at end point)
   const arrowLength = Math.sqrt(endOffset.x * endOffset.x + endOffset.y * endOffset.y);
   
-  const arrowColor = isLight ? '#374151' : '#9ca3af';
+  const arrowColor = 'hsl(var(--foreground) / 0.65)';
   const handleColor = '#3b82f6';
   
   // Handle pointer down on endpoint handles - PRIMARY BUTTON ONLY

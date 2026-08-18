@@ -4,7 +4,6 @@
  */
 import React, { memo, useState, useCallback, useEffect } from 'react';
 import { NodeProps, useReactFlow } from '@xyflow/react';
-import { useTheme } from 'next-themes';
 
 interface TextBoxNodeData {
   label: string;
@@ -12,8 +11,6 @@ interface TextBoxNodeData {
 }
 
 const TextBoxNode: React.FC<NodeProps> = ({ id, data, selected }) => {
-  const { theme } = useTheme();
-  const isLight = theme === 'light';
   const { setNodes } = useReactFlow();
   const [isEditing, setIsEditing] = useState(false);
   const [label, setLabel] = useState((data as unknown as TextBoxNodeData).label || 'Text');
@@ -59,7 +56,7 @@ const TextBoxNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     lg: 'text-lg',
   }[fontSize];
 
-  const borderColor = isLight ? '#d1d5db' : '#4b5563';
+  const borderColor = 'hsl(var(--border))';
 
   return (
     <div
@@ -69,9 +66,9 @@ const TextBoxNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         ${selected ? 'ring-2 ring-blue-600 ring-offset-1' : ''}
       `}
       style={{
-        backgroundColor: isLight ? '#fafafa' : '#1e293b',
+        backgroundColor: 'hsl(var(--muted))',
         borderColor: borderColor,
-        color: isLight ? '#374151' : '#e5e7eb',
+        color: 'hsl(var(--foreground))',
       }}
       onDoubleClick={handleDoubleClick}
     >
@@ -83,17 +80,15 @@ const TextBoxNode: React.FC<NodeProps> = ({ id, data, selected }) => {
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           className={`
-            w-full min-w-[100px] bg-transparent outline-none resize-none
+            w-full min-w-[100px] bg-transparent outline-none resize-none text-foreground
             ${fontSizeClass}
           `}
-          style={{ color: isLight ? '#1f2937' : '#f3f4f6' }}
           rows={2}
           autoFocus
         />
       ) : (
         <span 
-          className={`${fontSizeClass} whitespace-pre-wrap`}
-          style={{ color: isLight ? '#1f2937' : '#f3f4f6' }}
+          className={`${fontSizeClass} whitespace-pre-wrap text-foreground`}
         >
           {label}
         </span>

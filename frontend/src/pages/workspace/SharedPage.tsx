@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import {
   Share2,
   Filter,
@@ -87,9 +86,7 @@ interface SharedContent {
 export function SharedPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setHeaderContent } = useHeader();
-  const { theme } = useTheme();
-  const { token } = useAuthState();
+  const { setHeaderContent } = useHeader();  const { token } = useAuthState();
 
   // Route-aware onboarding (will show 'canvas' onboarding for Workspace group)
   const {
@@ -400,7 +397,7 @@ export function SharedPage() {
         <div className="flex items-center gap-2 ml-2">
           <Share2 className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <h1
-            className={`text-xl font-semibold italic truncate font-raleway ${theme === 'dark' ? 'text-white' : 'text-black'}`}
+            className="text-xl font-semibold italic truncate font-raleway text-foreground"
           >
             SHARED ITEMS
           </h1>
@@ -458,7 +455,7 @@ export function SharedPage() {
       </div>
     );
     return () => setHeaderContent(null);
-  }, [theme, navigate, setHeaderContent, typeFilter, searchQuery, sortBy]);
+  }, [navigate, setHeaderContent, typeFilter, searchQuery, sortBy]);
 
   return (
     <>

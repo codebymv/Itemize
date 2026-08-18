@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Menu, X, FileText, Folder, ArrowLeft } from 'lucide-react';
@@ -9,7 +8,6 @@ import { docsService, DocStructure } from '../services/docsService';
 
 const DocsPage: React.FC = () => {
   const { '*': docPath } = useParams<{ '*': string }>();
-  const { theme } = useTheme();
   const navigate = useNavigate();
   const [markdownContent, setMarkdownContent] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
@@ -22,15 +20,15 @@ const DocsPage: React.FC = () => {
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Theme-aware color classes - matching canvas slate colors
-  const bgColor = theme === 'dark' ? 'bg-slate-800' : 'bg-gray-50';
-  const sidebarBg = theme === 'dark' ? 'bg-slate-700' : 'bg-white';
-  const textColor = theme === 'dark' ? 'text-slate-100' : 'text-gray-900';
-  const mutedTextColor = theme === 'dark' ? 'text-slate-400' : 'text-gray-500';
-  const borderColor = theme === 'dark' ? 'border-slate-600' : 'border-gray-200';
-  const hoverBg = theme === 'dark' ? 'hover:bg-slate-600' : 'hover:bg-gray-100';
-  const activeBg = theme === 'dark' ? 'bg-blue-900 text-blue-300' : 'bg-blue-200 text-blue-800';
-  const buttonBg = theme === 'dark' ? 'bg-slate-600 hover:bg-slate-500' : 'bg-gray-200 hover:bg-gray-300';
-  const shadowClass = theme === 'dark' ? 'shadow-slate-900/50' : 'shadow-md';
+  const bgColor = 'bg-background';
+  const sidebarBg = 'bg-card';
+  const textColor = 'text-foreground';
+  const mutedTextColor = 'text-muted-foreground';
+  const borderColor = 'border-border';
+  const hoverBg = 'hover:bg-accent';
+  const activeBg = 'bg-blue-200 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+  const buttonBg = 'bg-muted hover:bg-muted/80';
+  const shadowClass = 'shadow-md';
 
 
 
@@ -95,17 +93,9 @@ const DocsPage: React.FC = () => {
           onClick={() => setIsSidebarOpen(false)}
         >
           {item.type === 'folder' ? (
-            <Folder className={`h-4 w-4 mr-3 flex-shrink-0 ${
-              docPath === item.path || (docPath === undefined && item.path === 'getting-started') 
-                ? (theme === 'dark' ? 'text-blue-300' : 'text-blue-600')
-                : (theme === 'dark' ? 'text-blue-400' : 'text-blue-600')
-            }`} />
+            <Folder className="h-4 w-4 mr-3 flex-shrink-0 text-blue-600 dark:text-blue-400" />
           ) : (
-            <FileText className={`h-4 w-4 mr-3 flex-shrink-0 ${
-              docPath === item.path || (docPath === undefined && item.path === 'getting-started') 
-                ? (theme === 'dark' ? 'text-blue-300' : 'text-blue-600')
-                : (theme === 'dark' ? 'text-blue-400' : 'text-blue-600')
-            }`} />
+            <FileText className="h-4 w-4 mr-3 flex-shrink-0 text-blue-600 dark:text-blue-400" />
           )}
           <span className="truncate font-medium">{formatName(item.name)}</span>
         </Link>
@@ -251,7 +241,7 @@ const DocsPage: React.FC = () => {
     return (
       <div className={`min-h-screen flex items-center justify-center ${bgColor}`} style={{ fontFamily: '"Raleway", sans-serif' }}>
         <div className={`max-w-md mx-auto p-8 text-center rounded-lg border ${borderColor} ${sidebarBg} ${shadowClass}`}>
-          <div className={`text-lg font-medium mb-2 ${theme === 'dark' ? 'text-red-400' : 'text-red-600'}`}>
+          <div className="text-lg font-medium mb-2 text-red-600 dark:text-red-400">
             Documentation Error
           </div>
           <div className={mutedTextColor}>
@@ -283,7 +273,7 @@ const DocsPage: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search documentation... (Press / to focus)"
-                className={`w-full pl-10 pr-4 py-2 rounded-lg border ${borderColor} ${theme === 'dark' ? 'bg-slate-700 text-slate-100 placeholder-slate-400' : 'bg-gray-50 text-gray-900 placeholder-gray-500'} text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors`}
+                className={`w-full pl-10 pr-4 py-2 rounded-lg border ${borderColor} bg-background text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors`}
                 style={{ fontFamily: '"Raleway", sans-serif' }}
               />
               {searchQuery && (
@@ -332,7 +322,7 @@ const DocsPage: React.FC = () => {
                     <div className="text-sm">No results found for "{searchQuery}"</div>
                     <button
                       onClick={() => setSearchQuery('')}
-                      className={`text-xs mt-2 ${theme === 'dark' ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'} transition-colors`}
+                      className="text-xs mt-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                     >
                       Clear search
                     </button>
@@ -408,11 +398,7 @@ const DocsPage: React.FC = () => {
             </div>
           ) : (
             <div 
-              className={`prose lg:prose-xl max-w-none ${
-                theme === 'dark' 
-                  ? 'prose-invert prose-headings:text-slate-100 prose-p:text-slate-300 prose-strong:text-slate-200 prose-code:text-slate-200 prose-pre:bg-slate-700 prose-blockquote:text-slate-300'
-                  : 'prose-headings:text-gray-900 prose-p:text-gray-700'
-              }`}
+              className="prose lg:prose-xl max-w-none dark:prose-invert"
               style={{ 
                 fontFamily: '"Raleway", sans-serif',
                 '--tw-prose-body': '"Raleway", sans-serif',
@@ -432,11 +418,7 @@ const DocsPage: React.FC = () => {
                 '--tw-prose-th-borders': '"Raleway", sans-serif'
               } as React.CSSProperties}
             >
-              <div className={`prose prose-lg max-w-none ${
-                theme === 'dark'
-                  ? 'prose-invert prose-headings:text-white prose-p:text-gray-200 prose-li:text-gray-200 prose-strong:text-white'
-                  : 'prose-gray'
-              }`}>
+              <div className="prose prose-lg max-w-none dark:prose-invert">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {markdownContent}
                 </ReactMarkdown>

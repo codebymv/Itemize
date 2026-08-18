@@ -124,9 +124,9 @@ export const LandingNav: React.FC = () => {
     ? 'bg-background/90 backdrop-blur-xl shadow-sm border-b border-border/50'
     : 'bg-background/0';
 
-  const textColor = isLight ? 'text-gray-700' : 'text-slate-300';
-  const textColorHover = isLight ? 'hover:text-gray-900' : 'hover:text-white';
-  const activeTextColor = isLight ? 'text-blue-600' : 'text-blue-400';
+  const textColor = 'text-muted-foreground';
+  const textColorHover = 'hover:text-foreground';
+  const activeTextColor = 'text-blue-600 dark:text-blue-400';
 
   return (
     <header className={cn('fixed top-0 left-0 right-0 z-50 transition-colors duration-300', navBg)}>
@@ -168,17 +168,14 @@ export const LandingNav: React.FC = () => {
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <div className={cn(
-                      'w-[480px] p-4',
-                      isLight ? 'bg-white' : 'bg-slate-800'
+                      'w-[480px] p-4 bg-popover'
                     )}>
                       <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-200 dark:border-slate-700">
                         <Users className={cn(
-                          'h-5 w-5',
-                          isLight ? 'text-blue-600' : 'text-blue-400'
+                          'h-5 w-5 text-blue-600 dark:text-blue-400'
                         )} />
                         <span className={cn(
-                          'font-semibold',
-                          isLight ? 'text-gray-900' : 'text-slate-100'
+                          'font-semibold text-foreground'
                         )}>
                           Core CRM Features
                         </span>
@@ -189,29 +186,24 @@ export const LandingNav: React.FC = () => {
                             key={item.title}
                             onClick={() => handleNavClick(item.sectionId)}
                             className={cn(
-                              'flex items-start gap-3 p-3 rounded-lg transition-colors text-left',
-                              isLight ? 'hover:bg-gray-50' : 'hover:bg-slate-700'
+                              'flex items-start gap-3 p-3 rounded-lg transition-colors text-left hover:bg-accent'
                             )}
                           >
                             <div className={cn(
-                              'flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center',
-                              isLight ? 'bg-blue-50' : 'bg-blue-900/30'
+                              'flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center bg-blue-50 dark:bg-blue-900/30'
                             )}>
                               <item.icon className={cn(
-                                'h-5 w-5',
-                                isLight ? 'text-blue-600' : 'text-blue-400'
+                                'h-5 w-5 text-blue-600 dark:text-blue-400'
                               )} />
                             </div>
                             <div>
                               <div className={cn(
-                                'font-medium text-sm',
-                                isLight ? 'text-gray-900' : 'text-slate-100'
+                                'font-medium text-sm text-foreground'
                               )}>
                                 {item.title}
                               </div>
                               <div className={cn(
-                                'text-xs mt-0.5',
-                                isLight ? 'text-gray-600' : 'text-slate-400'
+                                'text-xs mt-0.5 text-muted-foreground'
                               )}>
                                 {item.description}
                               </div>
@@ -222,8 +214,7 @@ export const LandingNav: React.FC = () => {
                       <button
                         onClick={() => handleNavClick('features')}
                         className={cn(
-                          'flex items-center gap-1 mt-4 pt-4 border-t w-full text-sm font-medium transition-colors',
-                          isLight ? 'border-gray-200 text-blue-600 hover:text-blue-700' : 'border-slate-700 text-blue-400 hover:text-blue-300'
+                          'flex items-center gap-1 mt-4 pt-4 border-t w-full text-sm font-medium transition-colors border-border text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300'
                         )}
                       >
                         Explore all features
@@ -246,18 +237,11 @@ export const LandingNav: React.FC = () => {
                     Workspaces
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <div className={cn(
-                      'w-[320px] p-4',
-                      isLight ? 'bg-white' : 'bg-slate-800'
-                    )}>
-                      <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-200 dark:border-slate-700">
-                        <Layers className={cn(
-                          'h-5 w-5',
-                          isLight ? 'text-indigo-600' : 'text-indigo-400'
-                        )} />
+                    <div className="w-[320px] p-4 bg-popover">
+                      <div className="flex items-center gap-2 mb-3 pb-3 border-b border-border">
+                        <Layers className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                         <span className={cn(
-                          'font-semibold',
-                          isLight ? 'text-gray-900' : 'text-slate-100'
+                          'font-semibold text-foreground'
                         )}>
                           Built-in Productivity
                         </span>
@@ -267,30 +251,19 @@ export const LandingNav: React.FC = () => {
                           <button
                             key={item.title}
                             onClick={() => handleNavClick('workspaces')}
-                            className={cn(
-                              'flex items-start gap-3 w-full p-3 rounded-lg transition-colors text-left',
-                              isLight ? 'hover:bg-gray-50' : 'hover:bg-slate-700'
-                            )}
+                            className="flex items-start gap-3 w-full p-3 rounded-lg transition-colors text-left hover:bg-accent"
                           >
-                            <div className={cn(
-                              'flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center',
-                              isLight ? 'bg-indigo-50' : 'bg-indigo-900/30'
-                            )}>
-                              <item.icon className={cn(
-                                'h-5 w-5',
-                                isLight ? 'text-indigo-600' : 'text-indigo-400'
-                              )} />
+                            <div className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center bg-indigo-50 dark:bg-indigo-900/30">
+                              <item.icon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                             </div>
                             <div>
                               <div className={cn(
-                                'font-medium text-sm',
-                                isLight ? 'text-gray-900' : 'text-slate-100'
+                                'font-medium text-sm text-foreground'
                               )}>
                                 {item.title}
                               </div>
                               <div className={cn(
-                                'text-xs mt-0.5',
-                                isLight ? 'text-gray-600' : 'text-slate-400'
+                                'text-xs mt-0.5 text-muted-foreground'
                               )}>
                                 {item.description}
                               </div>
@@ -300,10 +273,7 @@ export const LandingNav: React.FC = () => {
                       </div>
                       <button
                         onClick={() => handleNavClick('workspaces')}
-                        className={cn(
-                          'flex items-center gap-1 mt-4 pt-4 border-t w-full text-sm font-medium transition-colors',
-                          isLight ? 'border-gray-200 text-indigo-600 hover:text-indigo-700' : 'border-slate-700 text-indigo-400 hover:text-indigo-300'
-                        )}
+                        className="flex items-center gap-1 mt-4 pt-4 border-t w-full text-sm font-medium transition-colors border-border text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
                       >
                         Explore workspaces
                         <ArrowRight className="h-4 w-4" />
@@ -381,10 +351,7 @@ export const LandingNav: React.FC = () => {
               </SheetTrigger>
               <SheetContent 
                 side="right" 
-                className={cn(
-                  'w-[300px] sm:w-[350px] flex flex-col',
-                  isLight ? 'bg-white' : 'bg-slate-900'
-                )}
+                className="w-[300px] sm:w-[350px] flex flex-col bg-background"
               >
                 {/* Mobile Header */}
                 <div className="flex items-center justify-between pb-4 border-b border-gray-200 dark:border-slate-700">
@@ -415,12 +382,8 @@ export const LandingNav: React.FC = () => {
                       className={cn(
                         'w-full flex items-center px-3 py-3 rounded-lg text-left font-medium transition-colors',
                         activeSection === item.id
-                          ? isLight
-                            ? 'bg-blue-50 text-blue-600'
-                            : 'bg-blue-900/30 text-blue-400'
-                          : isLight
-                            ? 'text-gray-700 hover:bg-gray-50'
-                            : 'text-slate-300 hover:bg-slate-800'
+                          ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                          : 'text-muted-foreground hover:bg-accent'
                       )}
                     >
                       {item.label}
@@ -436,12 +399,7 @@ export const LandingNav: React.FC = () => {
                       setIsMobileMenuOpen(false);
                       handleSignIn();
                     }}
-                    className={cn(
-                      'w-full',
-                      isLight 
-                        ? 'border-gray-300' 
-                        : 'border-slate-600'
-                    )}
+                    className="w-full border-border"
                   >
                     Sign In
                   </Button>

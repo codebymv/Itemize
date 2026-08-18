@@ -64,11 +64,11 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
 
             if (error) {
                 console.error('Facebook OAuth error:', error, error_description);
-                return res.redirect(`${process.env.FRONTEND_URL}/settings/integrations?error=${encodeURIComponent(error_description || error)}`);
+                return res.redirect(`${process.env.FRONTEND_URL}/calendar-integrations?error=${encodeURIComponent(error_description || error)}`);
             }
 
             if (!code || !state) {
-                return res.redirect(`${process.env.FRONTEND_URL}/settings/integrations?error=missing_params`);
+                return res.redirect(`${process.env.FRONTEND_URL}/calendar-integrations?error=missing_params`);
             }
 
             const stateData = await withDbClient(pool, async (client) => {
@@ -91,7 +91,7 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
             });
 
             if (stateData.error) {
-                return res.redirect(`${process.env.FRONTEND_URL}/settings/integrations?error=invalid_state`);
+                return res.redirect(`${process.env.FRONTEND_URL}/calendar-integrations?error=invalid_state`);
             }
 
             const { organization_id, user_id } = stateData;
@@ -106,7 +106,7 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
 
             if (tokenData.error) {
                 console.error('Facebook token error:', tokenData.error);
-                return res.redirect(`${process.env.FRONTEND_URL}/settings/integrations?error=token_exchange_failed`);
+                return res.redirect(`${process.env.FRONTEND_URL}/calendar-integrations?error=token_exchange_failed`);
             }
 
             const userAccessToken = tokenData.access_token;
@@ -117,7 +117,7 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
 
             if (pagesData.error) {
                 console.error('Facebook pages error:', pagesData.error);
-                return res.redirect(`${process.env.FRONTEND_URL}/settings/integrations?error=pages_fetch_failed`);
+                return res.redirect(`${process.env.FRONTEND_URL}/calendar-integrations?error=pages_fetch_failed`);
             }
 
             // Get user ID for token refresh
@@ -290,10 +290,10 @@ module.exports = (pool, authenticateJWT, requireOrganization) => {
                 }
             });
 
-            res.redirect(`${process.env.FRONTEND_URL}/settings/integrations?success=facebook_connected`);
+            res.redirect(`${process.env.FRONTEND_URL}/calendar-integrations?success=facebook_connected`);
         } catch (error) {
             console.error('Error in Facebook callback:', error);
-            res.redirect(`${process.env.FRONTEND_URL}/settings/integrations?error=callback_failed`);
+            res.redirect(`${process.env.FRONTEND_URL}/calendar-integrations?error=callback_failed`);
         }
     });
 

@@ -42,6 +42,7 @@ import {
   CreditCard,
   Building,
   Loader2,
+  Plug,
 } from 'lucide-react';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 
@@ -229,6 +230,7 @@ function AccountInfo({ currentPlan }: { currentPlan?: Plan }) {
 
 function AccountSettings() {
   const { planName } = useSubscriptionState();
+  const navigate = useNavigate();
 
   return (
     <div className="space-y-6">
@@ -240,6 +242,20 @@ function AccountSettings() {
       </div>
       <Separator />
       <AccountInfo currentPlan={planName as Plan | undefined} />
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Integrations</CardTitle>
+          <CardDescription>
+            Connect Google Calendar, Facebook, and other tools from one place.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" onClick={() => navigate('/calendar-integrations')}>
+            <Plug className="mr-2 h-4 w-4" />
+            Manage integrations
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -266,8 +282,8 @@ function PreferencesSettings() {
         <CardContent>
           <div className="flex gap-4">
             <Button
-              variant={theme === 'light' ? 'default' : 'outline'}
-              className={`flex-1 ${theme === 'light' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
+              variant={theme !== 'dark' ? 'default' : 'outline'}
+              className={`flex-1 ${theme !== 'dark' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
               onClick={() => setTheme('light')}
             >
               <Sun className="mr-2 h-4 w-4" />
@@ -315,6 +331,7 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
   showCheckoutSuccess?: boolean;
   onCloseCheckoutSuccess?: () => void;
 }) {
+  const { toast } = useToast();
   const {
     loading,
     initialLoad,
@@ -403,6 +420,14 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
           taxRateInput={taxRateInput}
           updateField={updateField}
           setTaxRateInput={setTaxRateInput}
+          onConnectStripe={() => {
+            toast({
+              title: settings.stripe_connected ? 'Stripe account on file' : 'Stripe Connect coming soon',
+              description: settings.stripe_connected
+                ? 'This organization already has a Stripe account recorded. Full Connect management is not available yet.'
+                : 'You can still send invoices and record payments manually.',
+            });
+          }}
         />
       )}
 
@@ -443,7 +468,6 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
 
 export function SettingsPage() {
   const { setHeaderContent } = useHeader();
-  const { theme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -473,8 +497,7 @@ export function SettingsPage() {
         <div className="flex items-center gap-2 ml-2 min-w-0 flex-1">
           <Settings className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <h1
-            className="text-base sm:text-xl font-semibold italic truncate"
-            style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+            className="text-base sm:text-xl font-semibold italic truncate font-raleway text-foreground"
           >
             {activeNavItem.title.toUpperCase()}
           </h1>
@@ -483,7 +506,7 @@ export function SettingsPage() {
       </div>
     );
     return () => setHeaderContent(null);
-  }, [theme, setHeaderContent, activeNavItem.title, saveButton]);
+  }, [setHeaderContent, activeNavItem.title, saveButton]);
 
   return (
     <>

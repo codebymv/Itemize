@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useTheme } from 'next-themes';
 import { Star, Search, MoreHorizontal, MessageSquare, ThumbsUp, ThumbsDown, ExternalLink, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,10 +51,7 @@ interface Analytics {
 }
 
 export function ReputationPage() {
-    const { toast } = useToast();
-    const { theme } = useTheme();
-
-    // Onboarding
+    const { toast } = useToast();    // Onboarding
     const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('reputation');
 
     const [reviews, setReviews] = useState<Review[]>([]);
@@ -95,9 +91,8 @@ export function ReputationPage() {
                     </Select>
                 </>
             ),
-            theme
         },
-        [searchQuery, ratingFilter, theme]
+        [searchQuery, ratingFilter]
     );
 
     useEffect(() => {

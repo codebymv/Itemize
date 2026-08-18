@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import { Plus, Search, Filter, MoreHorizontal, Trash2, Copy, Users, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,10 +30,7 @@ import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 
 export function SegmentsPage() {
     const navigate = useNavigate();
-    const { toast } = useToast();
-    const { theme } = useTheme();
-
-    // Route-aware onboarding (will show 'campaigns' onboarding for all Marketing routes)
+    const { toast } = useToast();    // Route-aware onboarding (will show 'campaigns' onboarding for all Marketing routes)
     const {
         showModal: showOnboarding,
         handleComplete: handleOnboardingComplete,
@@ -81,8 +77,7 @@ export function SegmentsPage() {
                 </Button>
             </>
         ),
-        theme
-    }, [searchQuery, theme]);
+    }, [searchQuery]);
 
     useEffect(() => {
         if (orgLoading) {

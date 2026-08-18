@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthState } from '@/contexts/AuthContext';
-import { useTheme } from 'next-themes';
 import { useHeader } from '@/contexts/HeaderContext';
 import { Loader2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
@@ -16,7 +15,6 @@ import {
 export function AdminPage() {
     const { currentUser } = useAuthState();
     const { setHeaderContent } = useHeader();
-    const { theme } = useTheme();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -38,8 +36,7 @@ export function AdminPage() {
                 <div className="flex items-center gap-2 ml-2">
                     <Loader2 className="h-5 w-5 text-blue-600 flex-shrink-0 animate-spin" />
                     <h1
-                        className="text-base sm:text-xl font-semibold italic truncate font-raleway"
-                        style={{ color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                        className="text-base sm:text-xl font-semibold italic truncate font-raleway text-foreground"
                     >
                         {activeNavItem.title.toUpperCase()}
                     </h1>
@@ -47,7 +44,7 @@ export function AdminPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [theme, setHeaderContent, activeNavItem.title]);
+    }, [setHeaderContent, activeNavItem.title]);
 
     if (!currentUser) {
         return (

@@ -6,7 +6,6 @@ interface UsePageHeaderOptions {
     title?: React.ReactNode;
     icon?: React.ReactNode;
     rightContent?: React.ReactNode;
-    theme?: string;
     content?: React.ReactNode;
     className?: string;
     leftClassName?: string;
@@ -27,10 +26,7 @@ export const usePageHeader = (
                     {options.icon}
                     {options.title ? (
                         <h1
-                            className={cn('text-xl font-semibold italic truncate font-raleway', options.titleClassName)}
-                            style={{
-                                color: options.theme === 'dark' ? '#ffffff' : '#000000'
-                            }}
+                            className={cn('text-xl font-semibold italic truncate font-raleway text-foreground', options.titleClassName)}
                         >
                             {options.title}
                         </h1>

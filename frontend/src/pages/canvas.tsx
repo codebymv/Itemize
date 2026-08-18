@@ -321,7 +321,7 @@ const { currentUser } = useAuthState();
       <div className="flex items-center justify-between w-full min-w-0">
         <div className="flex items-center gap-2 ml-2">
           <MapIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <h1 className="text-xl font-semibold italic truncate" style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}>
+          <h1 className="text-xl font-semibold italic truncate font-raleway text-foreground">
             CANVAS
           </h1>
         </div>

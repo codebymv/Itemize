@@ -4,15 +4,12 @@
  */
 import React, { memo, useState, useCallback, useEffect } from 'react';
 import { NodeProps, useReactFlow } from '@xyflow/react';
-import { useTheme } from 'next-themes';
 
 interface RectangleNodeData {
   label: string;
 }
 
 const RectangleNode: React.FC<NodeProps> = ({ id, data, selected }) => {
-  const { theme } = useTheme();
-  const isLight = theme === 'light';
   const { setNodes } = useReactFlow();
   const [isEditing, setIsEditing] = useState(false);
   const [label, setLabel] = useState((data as unknown as RectangleNodeData).label || 'Rectangle');
@@ -50,7 +47,7 @@ const RectangleNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     }
   }, [commitLabel, label]);
 
-  const borderColor = isLight ? '#374151' : '#9ca3af';
+  const borderColor = 'hsl(var(--foreground) / 0.45)';
 
   return (
     <div
@@ -61,7 +58,7 @@ const RectangleNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         ${selected ? 'ring-2 ring-blue-600 ring-offset-2' : ''}
       `}
       style={{
-        backgroundColor: isLight ? '#ffffff' : '#1e293b',
+        backgroundColor: 'hsl(var(--card))',
         borderColor: borderColor,
       }}
       onDoubleClick={handleDoubleClick}
@@ -74,14 +71,12 @@ const RectangleNode: React.FC<NodeProps> = ({ id, data, selected }) => {
           onChange={(e) => setLabel(e.target.value)}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          className="w-full text-center text-sm font-medium bg-transparent outline-none"
-          style={{ color: isLight ? '#1f2937' : '#f3f4f6' }}
+          className="w-full text-center text-sm font-medium bg-transparent outline-none text-foreground"
           autoFocus
         />
       ) : (
         <span 
-          className="text-sm font-medium"
-          style={{ color: isLight ? '#1f2937' : '#f3f4f6' }}
+          className="text-sm font-medium text-foreground"
         >
           {label}
         </span>

@@ -4,15 +4,12 @@
  */
 import React, { memo, useState, useCallback, useEffect } from 'react';
 import { NodeProps, useReactFlow } from '@xyflow/react';
-import { useTheme } from 'next-themes';
 
 interface DiamondNodeData {
   label: string;
 }
 
 const DiamondNode: React.FC<NodeProps> = ({ id, data, selected }) => {
-  const { theme } = useTheme();
-  const isLight = theme === 'light';
   const { setNodes } = useReactFlow();
   const [isEditing, setIsEditing] = useState(false);
   const [label, setLabel] = useState((data as unknown as DiamondNodeData).label || 'Diamond');
@@ -50,7 +47,7 @@ const DiamondNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     }
   }, [commitLabel, label]);
 
-  const borderColor = isLight ? '#374151' : '#9ca3af';
+  const borderColor = 'hsl(var(--foreground) / 0.45)';
 
   return (
     <div
@@ -78,7 +75,7 @@ const DiamondNode: React.FC<NodeProps> = ({ id, data, selected }) => {
           height: '70px',
           left: '15px',
           top: '15px',
-          backgroundColor: isLight ? '#ffffff' : '#1e293b',
+          backgroundColor: 'hsl(var(--card))',
           borderColor: borderColor,
         }}
       />
@@ -92,14 +89,12 @@ const DiamondNode: React.FC<NodeProps> = ({ id, data, selected }) => {
             onChange={(e) => setLabel(e.target.value)}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
-            className="w-full text-center text-xs font-medium bg-transparent outline-none"
-            style={{ color: isLight ? '#1f2937' : '#f3f4f6' }}
+            className="w-full text-center text-xs font-medium bg-transparent outline-none text-foreground"
             autoFocus
           />
         ) : (
           <span 
-            className="text-xs font-medium"
-            style={{ color: isLight ? '#1f2937' : '#f3f4f6' }}
+            className="text-xs font-medium text-foreground"
           >
             {label}
           </span>

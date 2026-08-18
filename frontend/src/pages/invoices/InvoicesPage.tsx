@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import {
     Plus,
     Search,
@@ -124,10 +123,7 @@ interface Stats {
 export function InvoicesPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
-    const { theme } = useTheme();
-
-    // Onboarding
+    const { setHeaderContent } = useHeader();    // Onboarding
     const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('invoices');
 
     const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -570,7 +566,7 @@ export function InvoicesPage() {
                 <div className="flex items-center gap-2 ml-2 min-w-0">
                     <Receipt className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className={`text-xl font-semibold italic truncate font-raleway ${theme === 'dark' ? 'text-white' : 'text-black'}`}
+                        className="text-xl font-semibold italic truncate font-raleway text-foreground"
                     >
                         INVOICES
                     </h1>
@@ -620,7 +616,7 @@ export function InvoicesPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [searchQuery, theme, setHeaderContent, activeTab, invoices, stats]);
+    }, [searchQuery, setHeaderContent, activeTab, invoices, stats]);
 
     // Filter invoices based on tab and search
     const filteredInvoices = useMemo(() => {

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useTheme } from 'next-themes';
 import {
     Settings,
     Building,
@@ -108,10 +107,7 @@ function SettingsNav({ activeTab, setActiveTab }: { activeTab: string; setActive
 
 export function PaymentSettingsPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
-    const { theme } = useTheme();
-
-    const [loading, setLoading] = useState(true);
+    const { setHeaderContent } = useHeader();    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [activeTab, setActiveTab] = useState('business');
@@ -155,8 +151,7 @@ export function PaymentSettingsPage() {
                 <div className="flex items-center gap-2 ml-2">
                     <Settings className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate"
-                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                        className="text-xl font-semibold italic truncate font-raleway text-foreground"
                     >
                         PAYMENT SETTINGS
                     </h1>
@@ -176,7 +171,7 @@ export function PaymentSettingsPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [theme, setHeaderContent, saving]);
+    }, [setHeaderContent, saving]);
 
     useEffect(() => {
         if (!initError) return;

@@ -28,10 +28,7 @@ function RegisterForm() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  const isLight = theme === 'light';
-  const bgGradient = isLight
-    ? 'bg-gradient-to-br from-blue-50 to-indigo-100'
-    : 'bg-gradient-to-br from-slate-900 to-slate-800';
+  const isLight = theme !== 'dark';
 
   const passwordsMatch = !password || !confirmPassword || password === confirmPassword;
   const passwordValid = password.length >= 8 && 
@@ -105,10 +102,10 @@ function RegisterForm() {
   };
 
   return (
-    <div className={`min-h-[100svh] flex items-start justify-center ${bgGradient} px-4 pt-4 pb-6 sm:items-center sm:pt-6 sm:pb-6 relative overflow-hidden`}>
+    <div className="min-h-[100svh] flex items-start justify-center bg-background px-4 pt-4 pb-6 sm:items-center sm:pt-6 sm:pb-6 relative overflow-hidden">
       <BackgroundClouds opacity={isLight ? 0.15 : 0.1} cloudCount={8} isLight={isLight} />
       
-      <Card className={`w-full max-w-md relative z-10 ${isLight ? 'bg-white' : 'bg-slate-800 border-slate-700'}`}>
+      <Card className="w-full max-w-md relative z-10">
         <CardHeader className="text-center pb-2">
           <Link to="/home">
             <div className="mb-3 flex justify-center items-center bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-lg py-4 hover:from-blue-700 hover:to-indigo-700 transition-colors -mx-6 -mt-6">
@@ -119,10 +116,10 @@ function RegisterForm() {
               />
             </div>
           </Link>
-          <CardTitle className={`text-2xl ${isLight ? 'text-gray-700' : 'text-slate-200'}`}>
+          <CardTitle className="text-2xl text-foreground">
             Create your account
           </CardTitle>
-          <CardDescription className={isLight ? '' : 'text-slate-400'}>
+          <CardDescription className="text-muted-foreground">
             Start organizing your business today
           </CardDescription>
         </CardHeader>
@@ -130,28 +127,28 @@ function RegisterForm() {
         <form onSubmit={handleRegister}>
           <CardContent className="space-y-3 pt-4">
             <div className="space-y-2">
-              <Label htmlFor="name" className={isLight ? 'text-gray-700' : 'text-slate-300'}>
+              <Label htmlFor="name" className="text-foreground">
                 Name
               </Label>
               <div className="relative">
-                <User className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${isLight ? 'text-gray-400' : 'text-slate-500'}`} />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="name"
                   type="text"
                   placeholder="John Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className={`pl-10 ${isLight ? '' : 'bg-slate-700 border-slate-600'}`}
+                  className="pl-10"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email" className={isLight ? 'text-gray-700' : 'text-slate-300'}>
+              <Label htmlFor="email" className="text-foreground">
                 Email
               </Label>
               <div className="relative">
-                <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${isLight ? 'text-gray-400' : 'text-slate-500'}`} />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="email"
                   type="email"
@@ -159,17 +156,17 @@ function RegisterForm() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className={`pl-10 ${isLight ? '' : 'bg-slate-700 border-slate-600'}`}
+                  className="pl-10"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className={isLight ? 'text-gray-700' : 'text-slate-300'}>
+              <Label htmlFor="password" className="text-foreground">
                 Password
               </Label>
               <div className="relative">
-                <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${isLight ? 'text-gray-400' : 'text-slate-500'}`} />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
                   type="password"
@@ -178,10 +175,10 @@ function RegisterForm() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={8}
-                  className={`pl-10 ${isLight ? '' : 'bg-slate-700 border-slate-600'}`}
+                  className="pl-10"
                 />
               </div>
-              <p className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+              <p className="text-xs text-muted-foreground">
                 At least 8 characters with uppercase, lowercase, and number
               </p>
             </div>
@@ -189,12 +186,12 @@ function RegisterForm() {
             <div className="space-y-2">
               <Label 
                 htmlFor="confirmPassword" 
-                className={!passwordsMatch ? 'text-red-500' : isLight ? 'text-gray-700' : 'text-slate-300'}
+                className={!passwordsMatch ? 'text-red-500' : 'text-foreground'}
               >
                 Confirm Password
               </Label>
               <div className="relative">
-                <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${isLight ? 'text-gray-400' : 'text-slate-500'}`} />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="confirmPassword"
                   type="password"
@@ -202,7 +199,7 @@ function RegisterForm() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className={`pl-10 ${!passwordsMatch ? 'border-red-500 focus-visible:ring-red-500' : ''} ${isLight ? '' : 'bg-slate-700 border-slate-600'}`}
+                  className={`pl-10 ${!passwordsMatch ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                 />
               </div>
               {!passwordsMatch && (
@@ -219,7 +216,7 @@ function RegisterForm() {
               />
               <label 
                 htmlFor="terms" 
-                className={`text-sm leading-relaxed cursor-pointer ${isLight ? 'text-gray-600' : 'text-slate-400'}`}
+                className="text-sm leading-relaxed cursor-pointer text-muted-foreground"
               >
                 I agree to the{' '}
                 <Link to="/legal/terms" className="text-blue-600 underline hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300" target="_blank">
@@ -251,10 +248,10 @@ function RegisterForm() {
 
             <div className="relative w-full">
               <div className="absolute inset-0 flex items-center">
-                <span className={`w-full border-t ${isLight ? 'border-gray-200' : 'border-slate-600'}`} />
+                <span className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className={`px-2 ${isLight ? 'bg-white text-gray-500' : 'bg-slate-800 text-slate-400'}`}>
+                <span className="px-2 bg-card text-muted-foreground">
                   Or continue with
                 </span>
               </div>
@@ -263,7 +260,7 @@ function RegisterForm() {
             <Button
               type="button"
               variant="outline"
-              className={`w-full ${isLight ? '' : 'bg-slate-700 border-slate-600 hover:bg-slate-600'}`}
+              className="w-full"
               onClick={handleGoogleLogin}
               disabled={googleLoading}
             >
@@ -292,7 +289,7 @@ function RegisterForm() {
               Continue with Google
             </Button>
 
-            <p className={`text-sm text-center ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+            <p className="text-sm text-center text-muted-foreground">
               Already have an account?{' '}
               <Link to="/login" className="text-blue-600 underline hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
                 Sign in

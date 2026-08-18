@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import { Plus, Search, Layout, MoreHorizontal, Trash2, Copy, Eye, EyeOff, BarChart3, Pencil, Monitor, Smartphone, Tablet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,10 +55,7 @@ const isLandingPageStatus = (value: string): value is LandingPageStatus =>
 export function LandingPagesPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
-    const { theme } = useTheme();
-
-    // Onboarding
+    const { setHeaderContent } = useHeader();    // Onboarding
     const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('pages');
 
     const [pages, setPages] = useState<LandingPage[]>([]);
@@ -74,7 +70,7 @@ export function LandingPagesPage() {
                 <div className="flex items-center gap-2 ml-2 min-w-0 flex-1">
                     <Layout className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className={`text-xl font-semibold italic truncate min-w-0 font-raleway ${theme === 'dark' ? 'text-white' : 'text-black'}`}
+                        className="text-xl font-semibold italic truncate min-w-0 font-raleway text-foreground"
                     >
                         LANDING PAGES
                     </h1>
@@ -114,7 +110,7 @@ export function LandingPagesPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [searchQuery, statusFilter, theme, setHeaderContent]);
+    }, [searchQuery, statusFilter, setHeaderContent]);
 
     useEffect(() => {
         if (orgLoading) {

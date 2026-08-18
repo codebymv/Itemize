@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import { Plus, Search, FileText, MoreHorizontal, Trash2, Copy, ExternalLink, Eye, EyeOff, BarChart3, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +37,6 @@ export function FormsPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
     const { setHeaderContent } = useHeader();
-    const { theme } = useTheme();
 
     // Route-aware onboarding (will show 'pages' onboarding for Pages & Forms group)
     const {
@@ -71,7 +69,7 @@ export function FormsPage() {
                 <div className="flex items-center gap-2 ml-2 min-w-0">
                     <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className={`text-xl font-semibold italic truncate font-raleway ${theme === 'dark' ? 'text-white' : 'text-black'}`}
+                        className="text-xl font-semibold italic truncate font-raleway text-foreground"
                     >
                         FORMS
                     </h1>
@@ -110,7 +108,7 @@ export function FormsPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [handleCreateForm, searchQuery, statusFilter, theme, setHeaderContent]);
+    }, [handleCreateForm, searchQuery, statusFilter, setHeaderContent]);
 
     useEffect(() => {
         if (orgLoading) {

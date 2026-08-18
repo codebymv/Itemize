@@ -35,10 +35,7 @@ export default function VerifyEmail() {
   const token = searchParams.get('token');
   const email = searchParams.get('email');
 
-  const isLight = theme === 'light';
-  const bgGradient = isLight
-    ? 'bg-gradient-to-br from-blue-50 to-indigo-100'
-    : 'bg-gradient-to-br from-slate-900 to-slate-800';
+  const isLight = theme !== 'dark';
 
   // Auto-verify if token is present
   useEffect(() => {
@@ -111,10 +108,10 @@ export default function VerifyEmail() {
   };
 
   return (
-    <div className={`min-h-screen flex items-center justify-center ${bgGradient} px-4 relative overflow-hidden`}>
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
       <BackgroundClouds opacity={isLight ? 0.15 : 0.1} cloudCount={8} isLight={isLight} />
       
-      <Card className={`w-full max-w-md relative z-10 ${isLight ? 'bg-white' : 'bg-slate-800 border-slate-700'}`}>
+      <Card className="w-full max-w-md relative z-10">
         <CardHeader className="text-center p-0">
           <Link to="/home">
             <div className="mb-4 flex justify-center items-center bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-lg py-6 hover:from-blue-700 hover:to-indigo-700 transition-colors">
@@ -125,10 +122,10 @@ export default function VerifyEmail() {
               />
             </div>
           </Link>
-          <CardTitle className={`text-2xl ${isLight ? 'text-gray-700' : 'text-slate-200'}`}>
+          <CardTitle className="text-2xl text-foreground">
             {verified ? 'Email Verified!' : verifying ? 'Verifying...' : 'Verify Your Email'}
           </CardTitle>
-          <CardDescription className={isLight ? '' : 'text-slate-400'}>
+          <CardDescription className="text-muted-foreground">
             {verified 
               ? 'Your account is now active' 
               : token 
@@ -142,7 +139,7 @@ export default function VerifyEmail() {
           {verifying ? (
             <div className="flex flex-col items-center py-8">
               <Spinner size="xl" variant="brand" />
-              <p className={`mt-4 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+              <p className="mt-4 text-muted-foreground">
                 Verifying your email...
               </p>
             </div>
@@ -151,7 +148,7 @@ export default function VerifyEmail() {
               <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
                 <CheckCircle className="h-10 w-10 text-green-600 dark:text-green-400" />
               </div>
-              <p className={`${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+              <p className="text-muted-foreground">
                 Redirecting you to the dashboard...
               </p>
             </div>
@@ -160,13 +157,13 @@ export default function VerifyEmail() {
               <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
                 <AlertCircle className="h-10 w-10 text-red-600 dark:text-red-400" />
               </div>
-              <p className={`text-red-600 dark:text-red-400 mb-4`}>{error}</p>
+              <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
               {email && (
                 <Button
                   onClick={handleResend}
                   disabled={resending || resendCooldown > 0}
                   variant="outline"
-                  className={isLight ? '' : 'bg-slate-700 border-slate-600'}
+                  
                 >
                   {resending ? (
                     <>
@@ -186,13 +183,13 @@ export default function VerifyEmail() {
               <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-4">
                 <Mail className="h-10 w-10 text-blue-600 dark:text-blue-400" />
               </div>
-              <p className={`mb-2 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+              <p className="mb-2 text-muted-foreground">
                 We sent a verification link to:
               </p>
-              <p className={`font-medium mb-6 ${isLight ? 'text-gray-900' : 'text-white'}`}>
+              <p className="font-medium mb-6 text-foreground">
                 {email || 'your email'}
               </p>
-              <p className={`text-sm mb-4 ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
+              <p className="text-sm mb-4 text-muted-foreground">
                 Click the link in the email to verify your account.
               </p>
               {email && (
@@ -200,7 +197,7 @@ export default function VerifyEmail() {
                   onClick={handleResend}
                   disabled={resending || resendCooldown > 0}
                   variant="outline"
-                  className={isLight ? '' : 'bg-slate-700 border-slate-600'}
+                  
                 >
                   {resending ? (
                     <>
@@ -219,7 +216,7 @@ export default function VerifyEmail() {
         </CardContent>
 
         <CardFooter className="flex justify-center">
-          <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+          <p className="text-sm text-muted-foreground">
             <Link to="/login" className="text-blue-600 hover:underline dark:text-blue-400">
               Back to login
             </Link>

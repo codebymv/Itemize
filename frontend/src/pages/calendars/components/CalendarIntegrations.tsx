@@ -20,6 +20,7 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 import {
     RefreshCw,
     Trash2,
@@ -76,6 +77,7 @@ interface CalendarIntegrationsProps {
 
 export function CalendarIntegrations({ organizationId }: CalendarIntegrationsProps) {
     const { toast } = useToast();
+    const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [disconnectingId, setDisconnectingId] = useState<number | null>(null);
     const [syncingId, setSyncingId] = useState<number | null>(null);
@@ -223,7 +225,14 @@ export function CalendarIntegrations({ organizationId }: CalendarIntegrationsPro
             <CardHeader>
                 <CardTitle className="text-base">Calendar Integrations</CardTitle>
                 <CardDescription>
-                    Connect external calendars to sync your bookings
+                    Connect external calendars to sync your bookings.{' '}
+                    <button
+                        type="button"
+                        className="text-blue-600 hover:underline"
+                        onClick={() => navigate('/calendar-integrations')}
+                    >
+                        Manage all integrations
+                    </button>
                 </CardDescription>
             </CardHeader>
             <CardContent>

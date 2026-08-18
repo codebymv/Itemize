@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import {
     ArrowLeft,
     Save,
@@ -73,9 +72,7 @@ export function EstimateEditorPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
-    const { theme } = useTheme();
-    const isNew = id === 'new' || !id;
+    const { setHeaderContent } = useHeader();    const isNew = id === 'new' || !id;
 
     const [loading, setLoading] = useState(!isNew);
     const [saving, setSaving] = useState(false);
@@ -117,8 +114,7 @@ export function EstimateEditorPage() {
                     </Button>
                     <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate min-w-0 font-raleway"
-                        style={{ color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                        className="text-xl font-semibold italic truncate min-w-0 font-raleway text-foreground"
                     >
                         {(isNew ? 'New Estimate' : 'Estimate').toUpperCase()}
                     </h1>
@@ -160,7 +156,7 @@ export function EstimateEditorPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [theme, setHeaderContent, isNew, saving, lineItems, navigate, status]);
+    }, [setHeaderContent, isNew, saving, lineItems, navigate, status]);
 
     // Initialize
     useEffect(() => {

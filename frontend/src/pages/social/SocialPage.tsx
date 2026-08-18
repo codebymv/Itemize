@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useTheme } from 'next-themes';
 import { Plus, Search, Share2, MoreHorizontal, Trash2, MessageCircle, Facebook, Instagram, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,10 +48,7 @@ interface SocialConversation {
 
 export function SocialPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
-    const { theme } = useTheme();
-
-    // Route-aware onboarding (will show 'inbox' onboarding for Communications group)
+    const { setHeaderContent } = useHeader();    // Route-aware onboarding (will show 'inbox' onboarding for Communications group)
     const {
         showModal: showOnboarding,
         handleComplete: completeOnboarding,
@@ -74,8 +70,7 @@ export function SocialPage() {
                 <div className="flex items-center gap-2 ml-2">
                     <Share2 className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate"
-                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                        className="text-xl font-semibold italic truncate font-raleway text-foreground"
                     >
                         SOCIAL
                     </h1>
@@ -103,7 +98,7 @@ export function SocialPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [searchQuery, theme, setHeaderContent]);
+    }, [searchQuery, setHeaderContent]);
 
     useEffect(() => {
         if (!initError) return;

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useTheme } from 'next-themes';
 import { Plus, Search, FileText, MoreHorizontal, Trash2, Copy, Send, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,10 +45,7 @@ interface EmailTemplate {
 export function EmailTemplatesPage() {
     const { toast } = useToast();
     const { currentUser } = useAuthState();
-    const { setHeaderContent } = useHeader();
-    const { theme } = useTheme();
-
-    // Route-aware onboarding (will show 'campaigns' onboarding for all Marketing routes)
+    const { setHeaderContent } = useHeader();    // Route-aware onboarding (will show 'campaigns' onboarding for all Marketing routes)
     const {
         showModal: showOnboarding,
         handleComplete: handleOnboardingComplete,
@@ -71,8 +67,7 @@ export function EmailTemplatesPage() {
                 <div className="flex items-center gap-2 ml-2 min-w-0">
                     <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate"
-                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                        className="text-xl font-semibold italic truncate font-raleway text-foreground"
                     >
                         EMAIL TEMPLATES
                     </h1>
@@ -112,7 +107,7 @@ export function EmailTemplatesPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [searchQuery, categoryFilter, theme, setHeaderContent]);
+    }, [searchQuery, categoryFilter, setHeaderContent]);
 
     useEffect(() => {
         if (!initError) return;

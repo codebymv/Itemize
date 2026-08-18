@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import { useAuthState } from '@/contexts/AuthContext';
 import { useHeader } from '@/contexts/HeaderContext';
 import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
@@ -131,9 +130,7 @@ export function DashboardPage() {
         });
     };
     const navigate = useNavigate();
-    const { setHeaderContent } = useHeader();
-    const { theme } = useTheme();
-    const { organizationId } = useOrganization();
+    const { setHeaderContent } = useHeader();    const { organizationId } = useOrganization();
     
     // Onboarding
     const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('dashboard');
@@ -163,7 +160,7 @@ export function DashboardPage() {
                 <div className="flex items-center gap-2 ml-2 min-w-0">
                     <LayoutDashboard className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                     <h1
-                        className={`text-xl font-semibold italic truncate font-raleway ${theme === 'dark' ? 'text-white' : 'text-black'}`}
+                        className="text-xl font-semibold italic truncate font-raleway text-foreground"
                     >
                         DASHBOARD
                     </h1>
@@ -195,7 +192,7 @@ export function DashboardPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [theme, navigate, setHeaderContent, period]);
+    }, [navigate, setHeaderContent, period]);
 
     const firstName = currentUser?.name?.split(' ')[0] || 'there';
 

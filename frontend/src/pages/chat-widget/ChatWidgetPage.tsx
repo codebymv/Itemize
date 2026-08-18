@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useTheme } from 'next-themes';
 import { MessageCircle, Settings, Code, Eye, Save, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,10 +32,7 @@ interface LocalChatWidgetConfig {
 
 export function ChatWidgetPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
-    const { theme } = useTheme();
-
-    // Route-aware onboarding (will show 'inbox' onboarding for Communications group)
+    const { setHeaderContent } = useHeader();    // Route-aware onboarding (will show 'inbox' onboarding for Communications group)
     const {
         showModal: showOnboarding,
         handleComplete: completeOnboarding,
@@ -58,8 +54,7 @@ export function ChatWidgetPage() {
                 <div className="flex items-center gap-2 ml-2">
                     <MessageCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate"
-                        style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                        className="text-xl font-semibold italic truncate font-raleway text-foreground"
                     >
                         CHAT WIDGET
                     </h1>
@@ -95,7 +90,7 @@ export function ChatWidgetPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [theme, saving, setHeaderContent, activeTab]);
+    }, [saving, setHeaderContent, activeTab]);
 
     useEffect(() => {
         if (!organizationId && initError) {

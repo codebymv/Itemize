@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import {
     ArrowLeft,
     Save,
@@ -82,9 +81,7 @@ export function InvoiceEditorPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
-    const { theme } = useTheme();
-    const isNew = id === 'new' || !id;
+    const { setHeaderContent } = useHeader();    const isNew = id === 'new' || !id;
 
     const [loading, setLoading] = useState(!isNew);
     const { organizationId } = useOrganization();
@@ -235,8 +232,7 @@ export function InvoiceEditorPage() {
                     </Button>
                     <Receipt className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate min-w-0 font-raleway"
-                        style={{ color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                        className="text-xl font-semibold italic truncate min-w-0 font-raleway text-foreground"
                     >
                         {(isNew ? 'New Invoice' : 'Invoice').toUpperCase()}
                     </h1>
@@ -287,7 +283,7 @@ export function InvoiceEditorPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [theme, setHeaderContent, isNew, id, saving, lineItems, navigate]);
+    }, [setHeaderContent, isNew, id, saving, lineItems, navigate]);
 
     // Initialize
     useEffect(() => {

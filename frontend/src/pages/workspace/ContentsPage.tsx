@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import {
   LayoutGrid,
   List as ListIcon,
@@ -84,9 +83,7 @@ type ViewMode = 'grid' | 'list';
 export function ContentsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setHeaderContent } = useHeader();
-  const { theme } = useTheme();
-  const { token } = useAuthState();
+  const { setHeaderContent } = useHeader();  const { token } = useAuthState();
   const isMobile = useIsMobile();
 
   const {
@@ -594,7 +591,7 @@ export function ContentsPage() {
       <div className="flex items-center justify-between w-full min-w-0">
         <div className="flex items-center gap-2 ml-2">
           <LayoutGrid className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <h1 className="text-xl font-semibold italic truncate" style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}>
+          <h1 className="text-xl font-semibold italic truncate font-raleway text-foreground">
             CONTENTS
           </h1>
         </div>
@@ -645,7 +642,7 @@ export function ContentsPage() {
       </div>
     );
     return () => setHeaderContent(null);
-  }, [theme, navigate, setHeaderContent, viewMode, typeFilter, categoryFilter, searchQuery, sortBy, uniqueCategories]);
+  }, [navigate, setHeaderContent, viewMode, typeFilter, categoryFilter, searchQuery, sortBy, uniqueCategories]);
 
   const totalItems = filteredAndSortedLists.length + filteredAndSortedNotes.length + filteredAndSortedWhiteboards.length + filteredAndSortedWireframes.length + filteredAndSortedVaults.length;
 

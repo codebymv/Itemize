@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import { Plus, Search, Mail, MoreHorizontal, Trash2, Copy, Play, Pause, Send, BarChart3, Clock, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,10 +39,7 @@ import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 
 export function CampaignsPage() {
     const navigate = useNavigate();
-    const { toast } = useToast();
-    const { theme } = useTheme();
-
-    // Onboarding
+    const { toast } = useToast();    // Onboarding
     const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('campaigns');
 
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -111,8 +107,7 @@ export function CampaignsPage() {
                 </Button>
             </>
         ),
-        theme
-    }, [searchQuery, statusFilter, theme]);
+    }, [searchQuery, statusFilter]);
 
     useEffect(() => {
         if (orgLoading) {

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useTheme } from 'next-themes';
 import { useNavigate } from 'react-router-dom';
 import api from '@/lib/api';
 import {
@@ -75,7 +74,6 @@ interface StatusData {
 }
 
 const StatusPage: React.FC = () => {
-  const { theme } = useTheme();
   const navigate = useNavigate();
   const headerContext = React.useContext(HeaderContext);
   const [statusData, setStatusData] = useState<StatusData | null>(null);
@@ -84,8 +82,6 @@ const StatusPage: React.FC = () => {
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['status']));
-
-  const isDark = theme === 'dark';
 
   const fetchStatus = async () => {
     try {

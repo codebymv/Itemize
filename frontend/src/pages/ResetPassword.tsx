@@ -30,10 +30,7 @@ export default function ResetPassword() {
 
   const token = searchParams.get('token');
 
-  const isLight = theme === 'light';
-  const bgGradient = isLight
-    ? 'bg-gradient-to-br from-blue-50 to-indigo-100'
-    : 'bg-gradient-to-br from-slate-900 to-slate-800';
+  const isLight = theme !== 'dark';
 
   const passwordsMatch = !password || !confirmPassword || password === confirmPassword;
   const passwordValid = password.length >= 8 && 
@@ -90,17 +87,17 @@ export default function ResetPassword() {
   // No token - show error
   if (!token) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${bgGradient} px-4 relative overflow-hidden`}>
+      <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
         <BackgroundClouds opacity={isLight ? 0.15 : 0.1} cloudCount={8} isLight={isLight} />
         
-        <Card className={`w-full max-w-md relative z-10 ${isLight ? 'bg-white' : 'bg-slate-800 border-slate-700'}`}>
+        <Card className="w-full max-w-md relative z-10">
           <CardHeader className="text-center p-0">
             <Link to="/home">
               <div className="mb-4 flex justify-center items-center bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-lg py-6">
                 <img src={"/textwhite.png"} alt="Itemize" className="h-10 w-auto" />
               </div>
             </Link>
-            <CardTitle className={`text-2xl ${isLight ? 'text-gray-700' : 'text-slate-200'}`}>
+            <CardTitle className="text-2xl text-foreground">
               Invalid Link
             </CardTitle>
           </CardHeader>
@@ -109,7 +106,7 @@ export default function ResetPassword() {
               <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
                 <AlertCircle className="h-10 w-10 text-red-600 dark:text-red-400" />
               </div>
-              <p className={`mb-4 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+              <p className="mb-4 text-muted-foreground">
                 This password reset link is invalid or has expired.
               </p>
               <Link to="/forgot-password">
@@ -125,10 +122,10 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className={`min-h-screen flex items-center justify-center ${bgGradient} px-4 relative overflow-hidden`}>
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
       <BackgroundClouds opacity={isLight ? 0.15 : 0.1} cloudCount={8} isLight={isLight} />
       
-      <Card className={`w-full max-w-md relative z-10 ${isLight ? 'bg-white' : 'bg-slate-800 border-slate-700'}`}>
+      <Card className="w-full max-w-md relative z-10">
         <CardHeader className="text-center p-0">
           <Link to="/home">
             <div className="mb-4 flex justify-center items-center bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-lg py-6 hover:from-blue-700 hover:to-indigo-700 transition-colors">
@@ -139,10 +136,10 @@ export default function ResetPassword() {
               />
             </div>
           </Link>
-          <CardTitle className={`text-2xl ${isLight ? 'text-gray-700' : 'text-slate-200'}`}>
+          <CardTitle className="text-2xl text-foreground">
             {success ? 'Password Reset!' : 'Set new password'}
           </CardTitle>
-          <CardDescription className={isLight ? '' : 'text-slate-400'}>
+          <CardDescription className="text-muted-foreground">
             {success 
               ? 'You can now log in with your new password'
               : 'Your new password must be different from previous ones'
@@ -156,7 +153,7 @@ export default function ResetPassword() {
               <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
                 <CheckCircle className="h-10 w-10 text-green-600 dark:text-green-400" />
               </div>
-              <p className={`${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+              <p className="text-muted-foreground">
                 Redirecting you to login...
               </p>
             </div>
@@ -167,9 +164,9 @@ export default function ResetPassword() {
               <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
                 <AlertCircle className="h-10 w-10 text-red-600 dark:text-red-400" />
               </div>
-              <p className={`text-red-600 dark:text-red-400 mb-4`}>{error}</p>
+              <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
               <Link to="/forgot-password">
-                <Button variant="outline" className={isLight ? '' : 'bg-slate-700 border-slate-600'}>
+                <Button variant="outline" >
                   Request New Link
                 </Button>
               </Link>
@@ -179,11 +176,11 @@ export default function ResetPassword() {
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4 pt-6">
               <div className="space-y-2">
-                <Label htmlFor="password" className={isLight ? 'text-gray-700' : 'text-slate-300'}>
+                <Label htmlFor="password" className="text-foreground">
                   New Password
                 </Label>
                 <div className="relative">
-                  <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${isLight ? 'text-gray-400' : 'text-slate-500'}`} />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
                     type="password"
@@ -192,10 +189,10 @@ export default function ResetPassword() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={8}
-                    className={`pl-10 ${isLight ? '' : 'bg-slate-700 border-slate-600'}`}
+                    className="pl-10"
                   />
                 </div>
-                <p className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                <p className="text-xs text-muted-foreground">
                   At least 8 characters with uppercase, lowercase, and number
                 </p>
               </div>
@@ -203,12 +200,12 @@ export default function ResetPassword() {
               <div className="space-y-2">
                 <Label 
                   htmlFor="confirmPassword" 
-                  className={!passwordsMatch ? 'text-red-500' : isLight ? 'text-gray-700' : 'text-slate-300'}
+                  className={!passwordsMatch ? 'text-red-500' : 'text-foreground'}
                 >
                   Confirm Password
                 </Label>
                 <div className="relative">
-                  <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${isLight ? 'text-gray-400' : 'text-slate-500'}`} />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="confirmPassword"
                     type="password"
@@ -216,7 +213,7 @@ export default function ResetPassword() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
-                    className={`pl-10 ${!passwordsMatch ? 'border-red-500 focus-visible:ring-red-500' : ''} ${isLight ? '' : 'bg-slate-700 border-slate-600'}`}
+                    className={`pl-10 ${!passwordsMatch ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                   />
                 </div>
                 {!passwordsMatch && (
@@ -247,7 +244,7 @@ export default function ResetPassword() {
         <CardFooter className="flex justify-center pt-0">
           <Link 
             to="/login" 
-            className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'} hover:underline`}
+            className="text-sm text-muted-foreground hover:underline"
           >
             Back to login
           </Link>

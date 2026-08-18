@@ -212,7 +212,7 @@ const Navbar: React.FC = () => {
                       <button
                         onClick={() => setTheme('light')}
                         className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                          theme === 'light' 
+                          theme !== 'dark' 
                             ? 'bg-accent text-accent-foreground' 
                             : 'hover:bg-accent/80 hover:text-accent-foreground'
                         }`}

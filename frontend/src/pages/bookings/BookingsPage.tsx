@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useTheme } from 'next-themes';
 import { format, parseISO } from 'date-fns';
 import { Search, Calendar as CalendarIcon, CalendarCheck, Clock, User, MoreHorizontal, X, Check, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -47,10 +46,7 @@ const isBookingStatus = (value: string): value is NonNullable<BookingsQueryParam
 
 export function BookingsPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
-    const { theme } = useTheme();
-
-    // Route-aware onboarding (will show 'calendars' onboarding for Scheduling group)
+    const { setHeaderContent } = useHeader();    // Route-aware onboarding (will show 'calendars' onboarding for Scheduling group)
     const {
         showModal: showOnboarding,
         handleComplete: completeOnboarding,
@@ -79,7 +75,7 @@ export function BookingsPage() {
                 <div className="flex items-center gap-2 ml-2 min-w-0">
                     <CalendarCheck className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className={`text-xl font-semibold italic truncate font-raleway ${theme === 'dark' ? 'text-white' : 'text-black'}`}
+                        className="text-xl font-semibold italic truncate font-raleway text-foreground"
                     >
                         BOOKINGS
                     </h1>
@@ -113,7 +109,7 @@ export function BookingsPage() {
             </div>
         );
         return () => setHeaderContent(null);
-    }, [searchQuery, statusFilter, theme, setHeaderContent]);
+    }, [searchQuery, statusFilter, setHeaderContent]);
 
     useEffect(() => {
         if (!organizationId && initError) {

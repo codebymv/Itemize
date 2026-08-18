@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import ReactFlow, {
   Node,
   Edge,
@@ -159,10 +158,7 @@ export function WorkflowBuilderPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setHeaderContent } = useHeader();
-  const { theme } = useTheme();
-
-  const { organizationId } = useOrganization({
+  const { setHeaderContent } = useHeader();  const { organizationId } = useOrganization({
     onError: () => {
       toast({
         title: 'Error',
@@ -296,8 +292,7 @@ export function WorkflowBuilderPage() {
           </Button>
           <Zap className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <h1 
-            className="text-xl font-semibold italic truncate min-w-0" 
-            style={{ fontFamily: '"Raleway", sans-serif', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+            className="text-xl font-semibold italic truncate min-w-0 font-raleway text-foreground"
           >
             {(isNewWorkflow ? 'New Workflow' : name || 'Workflow').toUpperCase()}
           </h1>
@@ -338,7 +333,7 @@ export function WorkflowBuilderPage() {
       </div>
     );
     return () => setHeaderContent(null);
-  }, [name, isActive, saving, isNewWorkflow, theme, navigate, setHeaderContent, handleSave, handleToggleActive]);
+  }, [name, isActive, saving, isNewWorkflow, navigate, setHeaderContent, handleSave, handleToggleActive]);
 
   // Fetch workflow and email templates
   useEffect(() => {
