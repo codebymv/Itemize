@@ -4,19 +4,16 @@ import { Plus, RefreshCw, Eye, Send, FileSignature, ChevronDown, MoreVertical, T
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
 import { SignatureTemplate, listSignatureTemplates, createSignatureTemplate, instantiateSignatureTemplate, deleteSignatureTemplate } from '@/services/signaturesApi';
 
 export default function SignatureTemplatesPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setHeaderContent } = useHeader();
   const [templates, setTemplates] = useState<SignatureTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedTemplateId, setExpandedTemplateId] = useState<number | null>(null);
@@ -84,24 +81,15 @@ export default function SignatureTemplatesPage() {
   ), [fetchTemplates, handleCreate]);
 
   useEffect(() => {
-    setHeaderContent(
-      <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex items-center gap-2 ml-2 min-w-0">
-          <FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <h1 className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground">
-            SIGNATURE TEMPLATES
-          </h1>
-        </div>
-        <div className="hidden md:flex">{headerActions}</div>
-      </div>
-    );
     fetchTemplates();
-    return () => setHeaderContent(null);
-  }, [setHeaderContent, headerActions, fetchTemplates]);
+  }, [fetchTemplates]);
 
   return (
-    <>
-      <MobileControlsBar>
+    <PageLayout
+      title="SIGNATURE TEMPLATES"
+      icon={<FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      headerActions={headerActions}
+      mobileActions={
         <div className="flex items-center gap-2 w-full">
           <Button size="icon" variant="outline" onClick={() => fetchTemplates()}>
             <RefreshCw className="h-4 w-4" />
@@ -111,9 +99,8 @@ export default function SignatureTemplatesPage() {
             New Template
           </Button>
         </div>
-      </MobileControlsBar>
-      <PageContainer>
-        <PageSurface>
+      }
+    >
           <Card>
             <CardContent className="p-0">
               {loading ? (
@@ -246,8 +233,6 @@ export default function SignatureTemplatesPage() {
               )}
             </CardContent>
           </Card>
-        </PageSurface>
-      </PageContainer>
 
       <DeleteDialog
         open={deleteTemplateId !== null}
@@ -256,6 +241,6 @@ export default function SignatureTemplatesPage() {
         itemType="template"
         itemTitle={templates.find(t => t.id === deleteTemplateId)?.title}
       />
-    </>
+    </PageLayout>
   );
 }

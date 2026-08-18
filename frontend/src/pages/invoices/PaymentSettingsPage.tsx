@@ -49,7 +49,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
+import { PageLayout } from '@/components/layout/PageLayout';
+import { ErrorState } from '@/components/ErrorState';
+import { EmptyState } from '@/components/EmptyState';
 import { getAssetUrl } from '@/lib/api';
 import { useOrganization } from '@/hooks/useOrganization';
 import { 
@@ -64,7 +66,6 @@ import {
     uploadBusinessLogo,
     deleteBusinessLogo,
 } from '@/services/invoicesApi';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
 
 // Settings navigation items
 const settingsNav = [
@@ -107,7 +108,7 @@ function SettingsNav({ activeTab, setActiveTab }: { activeTab: string; setActive
 
 export function PaymentSettingsPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [activeTab, setActiveTab] = useState('business');
@@ -143,35 +144,6 @@ export function PaymentSettingsPage() {
     const [taxRateInput, setTaxRateInput] = useState<string>('');
     const taxRateInputRef = useRef<HTMLInputElement>(null);
     const isEditingTaxRate = useRef(false);
-
-    // Set header content with icon, title, and Save button (no tabs - those are in sidebar)
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full min-w-0 gap-3 md:gap-2">
-                <div className="flex items-center gap-2 ml-2">
-                    <Settings className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
-                    >
-                        PAYMENT SETTINGS
-                    </h1>
-                </div>
-                {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={handleSaveSettings}
-                        disabled={saving}
-                    >
-                        <Save className="h-4 w-4 mr-2" />
-                        {saving ? 'Saving...' : 'Save Settings'}
-                    </Button>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [setHeaderContent, saving]);
 
     useEffect(() => {
         if (!initError) return;
@@ -416,20 +388,13 @@ export function PaymentSettingsPage() {
                         <Card>
                             <CardContent className="pt-6">
                                 {businesses.length === 0 ? (
-                                    <div className="text-center py-8 border-2 border-dashed rounded-lg">
-                                        <Building className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                                        <p className="text-muted-foreground">No businesses yet</p>
-                                        <p className="text-sm text-muted-foreground mb-4">
-                                            Add your first business to start creating invoices
-                                        </p>
-                                        <Button
-                                            onClick={() => openBusinessDialog()}
-                                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                                        >
-                                            <Plus className="h-4 w-4 mr-2" />
-                                            Add Business
-                                        </Button>
-                                    </div>
+                                    <EmptyState
+                                        icon={Building}
+                                        title="No businesses yet"
+                                        description="Add your first business to start creating invoices"
+                                        actionLabel="Add Business"
+                                        onAction={() => openBusinessDialog()}
+                                    />
                                 ) : (
                                     <div className="grid gap-4">
                                         {businesses.map(business => (
@@ -732,47 +697,54 @@ export function PaymentSettingsPage() {
         }
     };
 
+    if (initError) {
+        return (
+            <PageLayout
+                title="PAYMENT SETTINGS"
+                icon={<Settings className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            >
+                <ErrorState
+                    title="Unable to load settings"
+                    description={initError}
+                    onAction={() => window.location.reload()}
+                />
+            </PageLayout>
+        );
+    }
+
+    const saveButton = (
+        <Button
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+            onClick={handleSaveSettings}
+            disabled={saving}
+        >
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? 'Saving...' : 'Save Settings'}
+        </Button>
+    );
+
     if (loading) {
         return (
-            <div className="container mx-auto p-6 max-w-8xl">
-                <div className="grid gap-8 md:grid-cols-[200px_1fr]">
-                    <div className="space-y-2">
-                        <Skeleton className="h-10 w-full" />
-                        <Skeleton className="h-10 w-full" />
-                        <Skeleton className="h-10 w-full" />
-                        <Skeleton className="h-10 w-full" />
-                    </div>
-                    <div>
-                        <Skeleton className="h-48" />
-                    </div>
-                </div>
-            </div>
+            <PageLayout
+                title="PAYMENT SETTINGS"
+                icon={<Settings className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+                nav={<SettingsNav activeTab={activeTab} setActiveTab={setActiveTab} />}
+            >
+                <Skeleton className="h-48" />
+            </PageLayout>
         );
     }
 
     return (
-        <>
-            <MobileControlsBar>
-                <Button
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
-                    onClick={handleSaveSettings}
-                    disabled={saving}
-                >
-                    <Save className="h-4 w-4 mr-2" />
-                    {saving ? 'Saving...' : 'Save Settings'}
-                </Button>
-            </MobileControlsBar>
-            <div className="container mx-auto p-6 max-w-8xl">
-                <div className="grid gap-8 md:grid-cols-[200px_1fr]">
-                    {/* Sidebar Navigation */}
-                    <SettingsNav activeTab={activeTab} setActiveTab={setActiveTab} />
-
-                {/* Content Area */}
-                <div className="min-w-0">
+        <PageLayout
+            title="PAYMENT SETTINGS"
+            icon={<Settings className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            headerActions={saveButton}
+            mobileActions={<div className="flex-1">{saveButton}</div>}
+            nav={<SettingsNav activeTab={activeTab} setActiveTab={setActiveTab} />}
+        >
                     {renderTabContent()}
-                </div>
-            </div>
 
             {/* Business Add/Edit Dialog */}
             <Dialog open={businessDialogOpen} onOpenChange={(open) => {
@@ -967,8 +939,7 @@ export function PaymentSettingsPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </div>
-        </>
+    </PageLayout>
     );
 }
 

@@ -48,7 +48,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
-import { useHeader } from '@/contexts/HeaderContext';
 import { useAuthState } from '@/contexts/AuthContext';
 import {
   fetchCanvasLists,
@@ -62,8 +61,7 @@ import {
   unshareVault as apiUnshareVault,
 } from '@/services/api';
 import { List, Note, Whiteboard, Wireframe, Vault } from '@/types';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
@@ -87,7 +85,6 @@ interface SharedContent {
 export function SharedPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setHeaderContent } = useHeader();
   const { token } = useAuthState();
 
   // Route-aware onboarding (will show 'canvas' onboarding for Workspace group)
@@ -392,21 +389,13 @@ export function SharedPage() {
     }
   };
 
-  // Set header content
-  useEffect(() => {
-    setHeaderContent(
-      <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex items-center gap-2 ml-2">
-          <Share2 className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <h1
-            className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
-          >
-            SHARED
-          </h1>
-        </div>
-        {/* Desktop-only controls */}
-        <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-          {/* Sort dropdown */}
+  return (
+    <PageLayout
+      title="SHARED"
+      icon={<Share2 className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      mobileClassName="flex-col items-stretch gap-3"
+      headerActions={
+        <>
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as 'recent' | 'title')}>
             <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
               <SelectValue placeholder="Sort by" />
@@ -416,8 +405,6 @@ export function SharedPage() {
               <SelectItem value="title">Title A-Z</SelectItem>
             </SelectContent>
           </Select>
-
-          {/* Type filter */}
           <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
             <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
               <Filter className="h-4 w-4 mr-2" />
@@ -432,8 +419,6 @@ export function SharedPage() {
               <SelectItem value="vault">Vaults</SelectItem>
             </SelectContent>
           </Select>
-
-          {/* Search */}
           <div className="relative w-full max-w-xs">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
@@ -443,8 +428,6 @@ export function SharedPage() {
               className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background font-raleway"
             />
           </div>
-
-          {/* Canvas button */}
           <Button
             size="sm"
             className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
@@ -453,15 +436,10 @@ export function SharedPage() {
             <Map className="h-4 w-4 mr-2" />
             Canvas
           </Button>
-        </div>
-      </div>
-    );
-    return () => setHeaderContent(null);
-  }, [navigate, setHeaderContent, typeFilter, searchQuery, sortBy]);
-
-  return (
-    <>
-      <MobileControlsBar className="flex-col items-stretch gap-3">
+        </>
+      }
+      mobileActions={
+        <>
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -496,9 +474,9 @@ export function SharedPage() {
             </SelectContent>
           </Select>
         </div>
-      </MobileControlsBar>
-      <PageContainer>
-        <PageSurface>
+        </>
+      }
+    >
           {/* Summary */}
           <div className="flex items-center justify-end mb-6">
             <span className="text-sm text-muted-foreground">
@@ -653,10 +631,6 @@ export function SharedPage() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        </PageSurface>
-      </PageContainer>
-
-      {/* Route-aware onboarding modal */}
       {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
         <OnboardingModal
           isOpen={showOnboarding}
@@ -666,7 +640,7 @@ export function SharedPage() {
           content={ONBOARDING_CONTENT[onboardingFeatureKey]}
         />
       )}
-    </>
+    </PageLayout>
   );
 }
 

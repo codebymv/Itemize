@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthState } from '@/contexts/AuthContext';
-import { useHeader } from '@/contexts/HeaderContext';
 import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -17,8 +16,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import {
     Users,
     TrendingUp,
@@ -130,7 +128,6 @@ export function DashboardPage() {
         });
     };
     const navigate = useNavigate();
-    const { setHeaderContent } = useHeader();
     const { organizationId } = useOrganization();
     
     // Onboarding
@@ -152,48 +149,6 @@ export function DashboardPage() {
         isLoadingPipelineDealAge,
         isLoadingRevenue: revenueLoading,
     } = useDashboardData({ organizationId, period });
-
-
-    // Set header content following workspace pattern
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2 min-w-0">
-                    <LayoutDashboard className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
-                    >
-                        DASHBOARD
-                    </h1>
-                </div>
-                {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    {/* Date Range Selector */}
-                    <Select value={period} onValueChange={(value) => setPeriod(value as PeriodOption)}>
-                        <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50">
-                            <SelectValue placeholder="Select period" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {Object.entries(periodLabels).map(([value, label]) => (
-                                <SelectItem key={value} value={value}>
-                                    {label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
-                        onClick={() => navigate('/canvas')}
-                    >
-                        <Map className="h-4 w-4 mr-2" />
-                        Canvas
-                    </Button>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [navigate, setHeaderContent, period]);
 
     const firstName = currentUser?.name?.split(' ')[0] || 'there';
 
@@ -225,8 +180,58 @@ export function DashboardPage() {
     ];
 
     return (
-        <>
-            {/* Onboarding Modal */}
+        <PageLayout
+            title="DASHBOARD"
+            icon={<LayoutDashboard className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
+            headerActions={
+                <>
+                    <Select value={period} onValueChange={(value) => setPeriod(value as PeriodOption)}>
+                        <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50">
+                            <SelectValue placeholder="Select period" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {Object.entries(periodLabels).map(([value, label]) => (
+                                <SelectItem key={value} value={value}>
+                                    {label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
+                        onClick={() => navigate('/canvas')}
+                    >
+                        <Map className="h-4 w-4 mr-2" />
+                        Canvas
+                    </Button>
+                </>
+            }
+            mobileActions={
+                <>
+                    <Select value={period} onValueChange={(value) => setPeriod(value as PeriodOption)}>
+                        <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50">
+                            <SelectValue placeholder="Select period" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {Object.entries(periodLabels).map(([value, label]) => (
+                                <SelectItem key={value} value={value}>
+                                    {label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light flex-1"
+                        onClick={() => navigate('/canvas')}
+                    >
+                        <Map className="h-4 w-4 mr-2" />
+                        Canvas
+                    </Button>
+                </>
+            }
+        >
             <OnboardingModal
                 isOpen={showOnboarding}
                 onClose={closeOnboarding}
@@ -235,37 +240,11 @@ export function DashboardPage() {
                 content={ONBOARDING_CONTENT.dashboard}
             />
 
-            {/* Mobile Controls Bar */}
-            <MobileControlsBar>
-                <Select value={period} onValueChange={(value) => setPeriod(value as PeriodOption)}>
-                    <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50">
-                        <SelectValue placeholder="Select period" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {Object.entries(periodLabels).map(([value, label]) => (
-                            <SelectItem key={value} value={value}>
-                                {label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                <Button
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light flex-1"
-                    onClick={() => navigate('/canvas')}
-                >
-                    <Map className="h-4 w-4 mr-2" />
-                    Canvas
-                </Button>
-            </MobileControlsBar>
-            
-            <PageContainer>
-                <PageSurface>
                     {/* Welcome Section */}
                     <div className="mb-8">
-                        <h1 className="text-2xl font-light tracking-tight mb-2">
+                        <h2 className="text-2xl font-light tracking-tight mb-2">
                             Welcome back, <span className="font-medium">{firstName}</span>
-                        </h1>
+                        </h2>
                         <p className="text-muted-foreground">
                             Here's an overview of your CRM performance
                         </p>
@@ -692,9 +671,7 @@ export function DashboardPage() {
                             </CardContent>
                         </Card>
                     )}
-                </PageSurface>
-            </PageContainer>
-        </>
+        </PageLayout>
     );
 }
 

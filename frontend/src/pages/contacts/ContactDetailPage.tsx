@@ -46,7 +46,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
-import { useHeader } from '@/contexts/HeaderContext';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { Contact, ContactActivity } from '@/types';
 import {
   getContact,
@@ -58,15 +58,12 @@ import {
 import { ActivityTimeline } from './components/ActivityTimeline';
 import { EditContactModal } from './components/EditContactModal';
 import { ComposeEmailModal } from './components/ComposeEmailModal';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { useOrganization } from '@/hooks/useOrganization';
 
 export function ContactDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setHeaderContent } = useHeader();  const isMobile = useIsMobile();
 
   const [contact, setContact] = useState<Contact | null>(null);
   const [activities, setActivities] = useState<ContactActivity[]>([]);
@@ -93,73 +90,6 @@ export function ContactDetailPage() {
     }
     return c.email || c.company || 'Contact';
   };
-
-  // Set header content following workspace pattern
-  useEffect(() => {
-    setHeaderContent(
-      <div className="flex items-center justify-between w-full min-w-0 gap-2">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9"
-            onClick={() => navigate('/contacts')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <Users className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <h1
-            className="text-xl font-semibold italic truncate italic-safe min-w-0 font-raleway text-foreground"
-          >
-            {getContactDisplayName(contact).toUpperCase()}
-          </h1>
-        </div>
-        <div className="flex items-center gap-2 mr-4 flex-shrink-0">
-          {/* Desktop Tabs - in header */}
-          <div className="hidden md:flex items-center">
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="h-9">
-                <TabsTrigger value="activity" className="text-xs">Activity</TabsTrigger>
-                <TabsTrigger value="content" className="text-xs">Related Content</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-          {/* More options */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-9 w-9">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowEditModal(true)} className="group/menu">
-                <Edit className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
-                Edit Contact
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => setShowDeleteDialog(true)}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Contact
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {/* Edit Button */}
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
-            onClick={() => setShowEditModal(true)}
-          >
-            <Edit className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Edit</span>
-          </Button>
-        </div>
-      </div>
-    );
-    return () => setHeaderContent(null);
-  }, [contact, navigate, setHeaderContent, activeTab, isMobile]);
 
   useEffect(() => {
     if (!organizationId) {
@@ -312,9 +242,24 @@ export function ContactDetailPage() {
     return parts.length > 0 ? parts.join(', ') : null;
   };
 
+  const backButton = (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-9 w-9"
+      onClick={() => navigate('/contacts')}
+    >
+      <ArrowLeft className="h-4 w-4" />
+    </Button>
+  );
+
   if (loading) {
     return (
-      <div className="container mx-auto p-6 max-w-5xl">
+      <PageLayout
+        title="CONTACT"
+        icon={<Users className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+        leading={backButton}
+      >
         <div className="flex items-center gap-4 mb-6">
           <Skeleton className="h-10 w-10 rounded-full" />
           <div className="space-y-2">
@@ -329,7 +274,7 @@ export function ContactDetailPage() {
           </div>
           <Skeleton className="h-96 w-full" />
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
@@ -338,16 +283,58 @@ export function ContactDetailPage() {
   }
 
   return (
-    <>
-      <MobileControlsBar>
+    <PageLayout
+      title={getContactDisplayName(contact).toUpperCase()}
+      icon={<Users className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      leading={backButton}
+      headerActions={
+        <>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="h-9">
+              <TabsTrigger value="activity" className="text-xs">Activity</TabsTrigger>
+              <TabsTrigger value="content" className="text-xs">Related Content</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="h-9 w-9">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setShowEditModal(true)} className="group/menu">
+                <Edit className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+                Edit Contact
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => setShowDeleteDialog(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Contact
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
+            onClick={() => setShowEditModal(true)}
+          >
+            <Edit className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Edit</span>
+          </Button>
+        </>
+      }
+      mobileActions={
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full">
             <TabsTrigger value="activity" className="flex-1">Activity</TabsTrigger>
             <TabsTrigger value="content" className="flex-1">Related Content</TabsTrigger>
           </TabsList>
         </Tabs>
-      </MobileControlsBar>
-      <div className="container mx-auto p-6 max-w-5xl">
+      }
+    >
         {/* Contact profile card */}
       <div className="flex items-center gap-4 mb-6">
         <div className="h-16 w-16 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-xl font-medium text-blue-700 dark:text-blue-300">
@@ -706,8 +693,7 @@ export function ContactDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-    </>
+    </PageLayout>
   );
 }
 

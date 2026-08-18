@@ -3,6 +3,7 @@ import { Plus, Building, Clock, Edit, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/EmptyState';
 import type { Business } from '@/services/invoicesApi';
 
 interface BusinessProfileCardProps {
@@ -57,20 +58,13 @@ export const BusinessProfileCard: React.FC<BusinessProfileCardProps> = ({
       </CardHeader>
       <CardContent>
         {businesses.length === 0 ? (
-          <div className="text-center py-8 border-2 border-dashed rounded-lg">
-            <Building className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-            <p className="text-muted-foreground">No businesses yet</p>
-            <p className="text-sm text-muted-foreground mb-4">
-              Add your first business to start creating invoices
-            </p>
-            <Button
-              onClick={onAddBusiness}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Business
-            </Button>
-          </div>
+          <EmptyState
+            icon={Building}
+            title="No businesses yet"
+            description="Add your first business to start creating invoices"
+            actionLabel="Add Business"
+            onAction={onAddBusiness}
+          />
         ) : (
           <div className="space-y-2">
             {businesses.map(business => (

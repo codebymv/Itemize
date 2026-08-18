@@ -12,11 +12,13 @@ import { AuthProvider, useAuthState } from "@/contexts/AuthContext";
 import { AISuggestProvider } from "@/context/AISuggestContext";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
+import { HeaderProvider } from '@/contexts/HeaderContext';
 
 // Layout components
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import AppShell from "@/components/AppShell";
+import { PublicPageHeader } from "@/components/layout/PublicPageHeader";
 
 // Pages - Static imports for critical pages only
 import NotFound from "./pages/NotFound";
@@ -181,13 +183,16 @@ const RootRedirect = () => {
 // Public layout with navbar and footer
 const PublicLayout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Navbar />
-      <main className="flex-grow flex flex-col">
-        {children}
-      </main>
-      <Footer />
-    </div>
+    <HeaderProvider>
+      <div className="min-h-screen flex flex-col bg-background">
+        <Navbar />
+        <PublicPageHeader />
+        <main className="flex-grow flex flex-col">
+          {children}
+        </main>
+        <Footer />
+      </div>
+    </HeaderProvider>
   );
 };
 
@@ -322,6 +327,7 @@ const AppContent = () => {
         
         {/* Workspace (Canvas, Contents, Shared) */}
         <Route path="/canvas" element={<AuthenticatedLayout><CanvasPage /></AuthenticatedLayout>} />
+        <Route path="/lists" element={<AuthenticatedLayout><UserHome /></AuthenticatedLayout>} />
         <Route path="/contents" element={<AuthenticatedLayout><ContentsPage /></AuthenticatedLayout>} />
         <Route path="/shared-items" element={<AuthenticatedLayout><SharedPage /></AuthenticatedLayout>} />
         

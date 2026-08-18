@@ -20,12 +20,11 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { CardGridSkeleton } from '@/components/ui/loading-skeletons';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import { getReviewWidgets, deleteReviewWidget, createReviewWidget, getWidgetEmbedCode } from '@/services/reputationApi';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { getWidgetTypeBadgeClass } from '@/lib/badge-utils';
@@ -45,7 +44,6 @@ interface ReviewWidget {
 
 export function ReputationWidgetsPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
     // Route-aware onboarding (will show 'reputation' onboarding for Reputation group)
     const {
         showModal: showOnboarding,
@@ -60,55 +58,6 @@ export function ReputationWidgetsPage() {
     const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [typeFilter, setTypeFilter] = useState<string>('all');
-
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2">
-                    <Code className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
-                    >
-                        WIDGETS
-                    </h1>
-                </div>
-                {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search widgets..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
-                        />
-                    </div>
-                    <Select value={typeFilter} onValueChange={setTypeFilter}>
-                        <SelectTrigger className="w-[120px] h-9 bg-muted/20 border-border/50">
-                            <SelectValue placeholder="Type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Types</SelectItem>
-                            <SelectItem value="carousel">Carousel</SelectItem>
-                            <SelectItem value="grid">Grid</SelectItem>
-                            <SelectItem value="list">List</SelectItem>
-                            <SelectItem value="badge">Badge</SelectItem>
-                            <SelectItem value="floating">Floating</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={handleCreateWidget}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Widget
-                    </Button>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [searchQuery, typeFilter, setHeaderContent]);
 
     useEffect(() => {
         if (!organizationId && initError) {
@@ -177,52 +126,91 @@ export function ReputationWidgetsPage() {
 
     if (initError) {
         return (
-            <PageContainer>
-                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
-                    <p className="text-muted-foreground">{initError}</p>
-                    <Button onClick={() => window.location.reload()} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white">Retry</Button>
-                </PageSurface>
-            </PageContainer>
+            <PageLayout
+                title="WIDGETS"
+                icon={<Code className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            >
+                <ErrorState
+                    title="Unable to load widgets"
+                    description={initError}
+                    onAction={() => window.location.reload()}
+                />
+            </PageLayout>
         );
     }
 
     return (
-        <>
-            <MobileControlsBar>
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Search widgets..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-9 w-full bg-muted/20 border-border/50"
-                    />
-                </div>
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                    <SelectTrigger className="w-[100px] h-9">
-                        <SelectValue placeholder="Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        <SelectItem value="carousel">Carousel</SelectItem>
-                        <SelectItem value="grid">Grid</SelectItem>
-                        <SelectItem value="list">List</SelectItem>
-                        <SelectItem value="badge">Badge</SelectItem>
-                        <SelectItem value="floating">Floating</SelectItem>
-                    </SelectContent>
-                </Select>
-                <Button
-                    size="icon"
-                    className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
-                    onClick={handleCreateWidget}
-                >
-                    <Plus className="h-4 w-4" />
-                </Button>
-            </MobileControlsBar>
-            <PageContainer>
-                <PageSurface>
-                <Card>
-                <CardContent className="p-0">
+        <PageLayout
+            title="WIDGETS"
+            icon={<Code className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            headerActions={
+                <>
+                    <div className="relative w-full max-w-xs">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search widgets..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
+                        />
+                    </div>
+                    <Select value={typeFilter} onValueChange={setTypeFilter}>
+                        <SelectTrigger className="w-[120px] h-9 bg-muted/20 border-border/50">
+                            <SelectValue placeholder="Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Types</SelectItem>
+                            <SelectItem value="carousel">Carousel</SelectItem>
+                            <SelectItem value="grid">Grid</SelectItem>
+                            <SelectItem value="list">List</SelectItem>
+                            <SelectItem value="badge">Badge</SelectItem>
+                            <SelectItem value="floating">Floating</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        onClick={handleCreateWidget}
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Widget
+                    </Button>
+                </>
+            }
+            mobileActions={
+                <>
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search widgets..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 w-full bg-muted/20 border-border/50"
+                        />
+                    </div>
+                    <Select value={typeFilter} onValueChange={setTypeFilter}>
+                        <SelectTrigger className="w-[100px] h-9">
+                            <SelectValue placeholder="Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="carousel">Carousel</SelectItem>
+                            <SelectItem value="grid">Grid</SelectItem>
+                            <SelectItem value="list">List</SelectItem>
+                            <SelectItem value="badge">Badge</SelectItem>
+                            <SelectItem value="floating">Floating</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Button
+                        size="icon"
+                        className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
+                        onClick={handleCreateWidget}
+                    >
+                        <Plus className="h-4 w-4" />
+                    </Button>
+                </>
+            }
+        >
                     {loading ? (
                         <div className="p-6">
                             <CardGridSkeleton count={3} height="h-40" />
@@ -289,22 +277,17 @@ export function ReputationWidgetsPage() {
                             ))}
                         </div>
                     )}
-                </CardContent>
-            </Card>
-        </PageSurface>
-        </PageContainer>
 
-        {/* Route-aware onboarding modal */}
-        {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
-            <OnboardingModal
-                isOpen={showOnboarding}
-                onClose={handleOnboardingClose}
-                onComplete={handleOnboardingComplete}
-                onDismiss={handleOnboardingDismiss}
-                content={ONBOARDING_CONTENT[onboardingFeatureKey]}
-            />
-        )}
-        </>
+            {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
+                <OnboardingModal
+                    isOpen={showOnboarding}
+                    onClose={handleOnboardingClose}
+                    onComplete={handleOnboardingComplete}
+                    onDismiss={handleOnboardingDismiss}
+                    content={ONBOARDING_CONTENT[onboardingFeatureKey]}
+                />
+            )}
+        </PageLayout>
     );
 }
 

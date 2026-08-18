@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Send, MoreHorizontal, Trash2, Users, Mail, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -21,13 +20,12 @@ import { Badge } from '@/components/ui/badge';
 import { getStatusBadgeClass } from '@/lib/badge-utils';
 import { ListRowSkeleton } from '@/components/ui/loading-skeletons';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import { getReviewRequests, deleteReviewRequest, resendReviewRequest } from '@/services/reputationApi';
 import { SendReviewRequestModal } from './SendReviewRequestModal';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -63,7 +61,6 @@ const isReviewRequestStatus = (value: string): value is ApiReviewRequest['status
 
 export function ReputationRequestsPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
     // Route-aware onboarding (will show 'reputation' onboarding for Reputation group)
     const {
         showModal: showOnboarding,
@@ -79,54 +76,6 @@ export function ReputationRequestsPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [showSendModal, setShowSendModal] = useState(false);
-
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2">
-                    <Send className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
-                    >
-                        REQUESTS
-                    </h1>
-                </div>
-                {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search requests..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
-                    </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[120px] h-9">
-                            <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="sent">Sent</SelectItem>
-                            <SelectItem value="clicked">Clicked</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={() => setShowSendModal(true)}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Send Request
-                    </Button>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [searchQuery, statusFilter, setHeaderContent]);
 
     useEffect(() => {
         if (!initError) return;
@@ -208,51 +157,89 @@ export function ReputationRequestsPage() {
 
     if (initError) {
         return (
-            <PageContainer>
-                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
-                    <p className="text-muted-foreground">{initError}</p>
-                    <Button onClick={() => window.location.reload()} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white">Retry</Button>
-                </PageSurface>
-            </PageContainer>
+            <PageLayout
+                title="REQUESTS"
+                icon={<Send className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            >
+                <ErrorState
+                    title="Unable to load requests"
+                    description={initError}
+                    onAction={() => window.location.reload()}
+                />
+            </PageLayout>
         );
     }
 
     return (
-        <>
-            <MobileControlsBar>
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                        placeholder="Search requests..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-9 bg-muted/20 border-border/50"
-                    />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[100px] h-9">
-                        <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="sent">Sent</SelectItem>
-                        <SelectItem value="clicked">Clicked</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                </Select>
-                <Button
-                    size="icon"
-                    className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
-                    onClick={() => setShowSendModal(true)}
-                >
-                    <Plus className="h-4 w-4" />
-                </Button>
-            </MobileControlsBar>
-            <PageContainer>
-                <PageSurface>
-                <Card>
-                <CardContent className="p-0">
+        <PageLayout
+            title="REQUESTS"
+            icon={<Send className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            headerActions={
+                <>
+                    <div className="relative w-full max-w-xs">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search requests..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50"
+                        />
+                    </div>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-[120px] h-9">
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="sent">Sent</SelectItem>
+                            <SelectItem value="clicked">Clicked</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        onClick={() => setShowSendModal(true)}
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Send Request
+                    </Button>
+                </>
+            }
+            mobileActions={
+                <>
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search requests..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50"
+                        />
+                    </div>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-[100px] h-9">
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="sent">Sent</SelectItem>
+                            <SelectItem value="clicked">Clicked</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Button
+                        size="icon"
+                        className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
+                        onClick={() => setShowSendModal(true)}
+                    >
+                        <Plus className="h-4 w-4" />
+                    </Button>
+                </>
+            }
+        >
                     {loading ? (
                         <div className="p-6">
                             <ListRowSkeleton count={3} height="h-20" />
@@ -317,9 +304,6 @@ export function ReputationRequestsPage() {
                             ))}
                         </div>
                     )}
-                </CardContent>
-            </Card>
-            </PageSurface>
 
             {showSendModal && organizationId && (
                 <SendReviewRequestModal
@@ -331,19 +315,17 @@ export function ReputationRequestsPage() {
                     }}
                 />
             )}
-        </PageContainer>
 
-        {/* Route-aware onboarding modal */}
-        {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
-            <OnboardingModal
-                isOpen={showOnboarding}
-                onClose={handleOnboardingClose}
-                onComplete={handleOnboardingComplete}
-                onDismiss={handleOnboardingDismiss}
-                content={ONBOARDING_CONTENT[onboardingFeatureKey]}
-            />
-        )}
-        </>
+            {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
+                <OnboardingModal
+                    isOpen={showOnboarding}
+                    onClose={handleOnboardingClose}
+                    onComplete={handleOnboardingComplete}
+                    onDismiss={handleOnboardingDismiss}
+                    content={ONBOARDING_CONTENT[onboardingFeatureKey]}
+                />
+            )}
+        </PageLayout>
     );
 }
 

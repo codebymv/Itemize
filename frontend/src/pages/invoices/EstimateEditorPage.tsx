@@ -28,7 +28,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
-import { useHeader } from '@/contexts/HeaderContext';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { getContacts } from '@/services/contactsApi';
 import { useOrganization } from '@/hooks/useOrganization';
 import { getProducts, Product } from '@/services/invoicesApi';
@@ -40,7 +40,6 @@ import {
     sendEstimate,
     updateEstimate,
 } from '@/services/estimatesApi';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
 import type { JsonRecord } from '@/types';
 
 interface LineItem {
@@ -72,7 +71,7 @@ export function EstimateEditorPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();    const isNew = id === 'new' || !id;
+    const isNew = id === 'new' || !id;
 
     const [loading, setLoading] = useState(!isNew);
     const [saving, setSaving] = useState(false);
@@ -103,60 +102,6 @@ export function EstimateEditorPage() {
             setValidUntil(date.toISOString().split('T')[0]);
         }
     }, [isNew, validUntil]);
-
-    // Setup header
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2 min-w-0 flex-1">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/estimates')}>
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                    <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate italic-safe min-w-0 font-raleway text-foreground"
-                    >
-                        {(isNew ? 'New Estimate' : 'Estimate').toUpperCase()}
-                    </h1>
-                </div>
-                {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 mr-4 flex-shrink-0">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleSave}
-                        disabled={saving || lineItems.filter(i => i.name).length === 0}
-                    >
-                        <Save className="h-4 w-4 mr-2" />
-                        {saving ? 'Saving...' : 'Save Draft'}
-                    </Button>
-                    {!isNew && status === 'draft' && (
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={handleSendEstimate}
-                            disabled={saving}
-                        >
-                            <Send className="h-4 w-4 mr-2" />
-                            Send
-                        </Button>
-                    )}
-                    {!isNew && ['sent', 'accepted'].includes(status) && (
-                        <Button
-                            size="sm"
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                            onClick={handleConvertToInvoice}
-                            disabled={saving}
-                        >
-                            <ArrowRight className="h-4 w-4 mr-2" />
-                            Convert to Invoice
-                        </Button>
-                    )}
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [setHeaderContent, isNew, saving, lineItems, navigate, status]);
 
     // Initialize
     useEffect(() => {
@@ -368,54 +313,106 @@ export function EstimateEditorPage() {
 
     if (loading) {
         return (
-            <div className="container mx-auto p-6 max-w-4xl">
+            <PageLayout
+                title={(isNew ? 'New Estimate' : 'Estimate').toUpperCase()}
+                icon={<FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+                leading={
+                    <Button variant="ghost" size="icon" onClick={() => navigate('/estimates')}>
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                }
+            >
                 <div className="space-y-6">
                     <Skeleton className="h-32" />
                     <Skeleton className="h-64" />
                     <Skeleton className="h-32" />
                 </div>
-            </div>
+            </PageLayout>
         );
     }
 
     return (
-        <>
-            <MobileControlsBar>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSave}
-                    disabled={saving || lineItems.filter(i => i.name).length === 0}
-                    className="flex-1"
-                >
-                    <Save className="h-4 w-4 mr-2" />
-                    {saving ? 'Saving...' : 'Save'}
+        <PageLayout
+            title={(isNew ? 'New Estimate' : 'Estimate').toUpperCase()}
+            icon={<FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            leading={
+                <Button variant="ghost" size="icon" onClick={() => navigate('/estimates')}>
+                    <ArrowLeft className="h-5 w-5" />
                 </Button>
-                {!isNew && status === 'draft' && (
+            }
+            headerActions={
+                <>
                     <Button
-                        size="sm"
                         variant="outline"
-                        onClick={handleSendEstimate}
-                        disabled={saving}
+                        size="sm"
+                        onClick={handleSave}
+                        disabled={saving || lineItems.filter(i => i.name).length === 0}
+                    >
+                        <Save className="h-4 w-4 mr-2" />
+                        {saving ? 'Saving...' : 'Save Draft'}
+                    </Button>
+                    {!isNew && status === 'draft' && (
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleSendEstimate}
+                            disabled={saving}
+                        >
+                            <Send className="h-4 w-4 mr-2" />
+                            Send
+                        </Button>
+                    )}
+                    {!isNew && ['sent', 'accepted'].includes(status) && (
+                        <Button
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            onClick={handleConvertToInvoice}
+                            disabled={saving}
+                        >
+                            <ArrowRight className="h-4 w-4 mr-2" />
+                            Convert to Invoice
+                        </Button>
+                    )}
+                </>
+            }
+            mobileActions={
+                <>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSave}
+                        disabled={saving || lineItems.filter(i => i.name).length === 0}
                         className="flex-1"
                     >
-                        <Send className="h-4 w-4 mr-2" />
-                        Send
+                        <Save className="h-4 w-4 mr-2" />
+                        {saving ? 'Saving...' : 'Save'}
                     </Button>
-                )}
-                {!isNew && ['sent', 'accepted'].includes(status) && (
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
-                        onClick={handleConvertToInvoice}
-                        disabled={saving}
-                    >
-                        <ArrowRight className="h-4 w-4 mr-2" />
-                        Convert
-                    </Button>
-                )}
-            </MobileControlsBar>
-            <div className="container mx-auto p-6 max-w-4xl">
+                    {!isNew && status === 'draft' && (
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleSendEstimate}
+                            disabled={saving}
+                            className="flex-1"
+                        >
+                            <Send className="h-4 w-4 mr-2" />
+                            Send
+                        </Button>
+                    )}
+                    {!isNew && ['sent', 'accepted'].includes(status) && (
+                        <Button
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+                            onClick={handleConvertToInvoice}
+                            disabled={saving}
+                        >
+                            <ArrowRight className="h-4 w-4 mr-2" />
+                            Convert
+                        </Button>
+                    )}
+                </>
+            }
+        >
                 <div className="space-y-6">
                     {/* Customer Details */}
                 <Card>
@@ -691,8 +688,7 @@ export function EstimateEditorPage() {
                     </Button>
                 </div>
             </div>
-        </div>
-        </>
+    </PageLayout>
     );
 }
 

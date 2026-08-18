@@ -20,15 +20,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { usePageHeader } from '@/hooks/usePageHeader';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { getReviews, getReputationAnalytics } from '@/services/reputationApi';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { getStatBadgeClass, getStatIconBgClass, getStatValueClass, getStatIconClass, StatTheme } from '@/hooks/useStatStyles';
 import { getSentimentBadgeClass } from '@/lib/badge-utils';
 
@@ -64,40 +63,6 @@ export function ReputationPage() {
     const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [ratingFilter, setRatingFilter] = useState<string>('all');
-
-    usePageHeader(
-        {
-            title: 'REVIEWS',
-            icon: <Star className="h-5 w-5 text-blue-600 flex-shrink-0" />,
-            rightContent: (
-                <>
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search reviews..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
-                    </div>
-                    <Select value={ratingFilter} onValueChange={setRatingFilter}>
-                        <SelectTrigger className="w-[120px] h-9">
-                            <SelectValue placeholder="Rating" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Ratings</SelectItem>
-                            <SelectItem value="5">5 Stars</SelectItem>
-                            <SelectItem value="4">4 Stars</SelectItem>
-                            <SelectItem value="3">3 Stars</SelectItem>
-                            <SelectItem value="2">2 Stars</SelectItem>
-                            <SelectItem value="1">1 Star</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </>
-            ),
-        },
-        [searchQuery, ratingFilter]
-    );
 
     useEffect(() => {
         if (!initError) return;
@@ -173,18 +138,76 @@ export function ReputationPage() {
 
     if (initError) {
         return (
-            <PageContainer>
-                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
-                    <p className="text-muted-foreground">{initError}</p>
-                    <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
-                </PageSurface>
-            </PageContainer>
+            <PageLayout
+                title="REVIEWS"
+                icon={<Star className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            >
+                <ErrorState
+                    title="Unable to load reviews"
+                    description={initError}
+                    onAction={() => window.location.reload()}
+                />
+            </PageLayout>
         );
     }
 
     return (
-        <>
-            {/* Onboarding Modal */}
+        <PageLayout
+            title="REVIEWS"
+            icon={<Star className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            headerActions={
+                <>
+                    <div className="relative w-full max-w-xs">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search reviews..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50"
+                        />
+                    </div>
+                    <Select value={ratingFilter} onValueChange={setRatingFilter}>
+                        <SelectTrigger className="w-[120px] h-9">
+                            <SelectValue placeholder="Rating" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Ratings</SelectItem>
+                            <SelectItem value="5">5 Stars</SelectItem>
+                            <SelectItem value="4">4 Stars</SelectItem>
+                            <SelectItem value="3">3 Stars</SelectItem>
+                            <SelectItem value="2">2 Stars</SelectItem>
+                            <SelectItem value="1">1 Star</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </>
+            }
+            mobileActions={
+                <>
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search reviews..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50"
+                        />
+                    </div>
+                    <Select value={ratingFilter} onValueChange={setRatingFilter}>
+                        <SelectTrigger className="w-[120px] h-9">
+                            <SelectValue placeholder="Rating" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Ratings</SelectItem>
+                            <SelectItem value="5">5 Stars</SelectItem>
+                            <SelectItem value="4">4 Stars</SelectItem>
+                            <SelectItem value="3">3 Stars</SelectItem>
+                            <SelectItem value="2">2 Stars</SelectItem>
+                            <SelectItem value="1">1 Star</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </>
+            }
+        >
             <OnboardingModal
                 isOpen={showOnboarding}
                 onClose={closeOnboarding}
@@ -193,32 +216,6 @@ export function ReputationPage() {
                 content={ONBOARDING_CONTENT.reputation}
             />
 
-            <MobileControlsBar>
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                        placeholder="Search reviews..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-9 bg-muted/20 border-border/50"
-                    />
-                </div>
-                <Select value={ratingFilter} onValueChange={setRatingFilter}>
-                    <SelectTrigger className="w-[120px] h-9">
-                        <SelectValue placeholder="Rating" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Ratings</SelectItem>
-                        <SelectItem value="5">5 Stars</SelectItem>
-                        <SelectItem value="4">4 Stars</SelectItem>
-                        <SelectItem value="3">3 Stars</SelectItem>
-                        <SelectItem value="2">2 Stars</SelectItem>
-                        <SelectItem value="1">1 Star</SelectItem>
-                    </SelectContent>
-                </Select>
-            </MobileControlsBar>
-            <PageContainer>
-                <PageSurface>
                 {/* Analytics Summary */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
                 {loading ? (
@@ -383,9 +380,7 @@ export function ReputationPage() {
                     )}
                 </CardContent>
             </Card>
-        </PageSurface>
-        </PageContainer>
-        </>
+        </PageLayout>
     );
 }
 

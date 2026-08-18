@@ -17,9 +17,8 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { Skeleton } from '@/components/ui/skeleton';
-import { HeaderContext } from '@/contexts/HeaderContext';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import { cn } from '@/lib/utils';
 
@@ -75,7 +74,6 @@ interface StatusData {
 
 const StatusPage: React.FC = () => {
   const navigate = useNavigate();
-  const headerContext = React.useContext(HeaderContext);
   const [statusData, setStatusData] = useState<StatusData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -108,32 +106,17 @@ const StatusPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const headerNode = (
-    <div className={headerContext ? "flex items-center justify-between w-full min-w-0" : "flex items-center justify-between w-full mb-6"}>
-      <div className="flex items-center gap-2 min-w-0">
-        <Server className="h-5 w-5 text-blue-600 flex-shrink-0" />
-        <h1 className="text-xl font-semibold italic truncate italic-safe font-raleway text-black dark:text-white">
-          STATUS
-        </h1>
-      </div>
-      <Button
-        onClick={fetchStatus}
-        disabled={isRefreshing}
-        size="sm"
-        className="bg-blue-600 hover:bg-blue-700 text-white font-light whitespace-nowrap"
-      >
-        <RefreshCw className={cn("h-4 w-4 mr-2", isRefreshing && "animate-spin")} />
-        Refresh
-      </Button>
-    </div>
+  const renderRefreshButton = () => (
+    <Button
+      onClick={fetchStatus}
+      disabled={isRefreshing}
+      size="sm"
+      className="bg-blue-600 hover:bg-blue-700 text-white font-light whitespace-nowrap"
+    >
+      <RefreshCw className={cn("h-4 w-4 mr-2", isRefreshing && "animate-spin")} />
+      Refresh
+    </Button>
   );
-
-  useEffect(() => {
-    if (headerContext?.setHeaderContent) {
-      headerContext.setHeaderContent(headerNode);
-      return () => headerContext.setHeaderContent(null);
-    }
-  }, [isRefreshing, headerContext]);
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => {
@@ -260,35 +243,45 @@ const StatusPage: React.FC = () => {
     );
   };
 
+  const backButton = (
+    <Button
+      onClick={() => navigate(-1)}
+      size="sm"
+      variant="ghost"
+      className="text-foreground"
+    >
+      <ArrowLeft className="h-4 w-4 mr-1" />
+      Back
+    </Button>
+  );
+
   if (loading && !statusData) {
     return (
-      <PageContainer>
-        <PageSurface>
-          <div className="p-6 space-y-4">
-            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20" />)}
-          </div>
-        </PageSurface>
-      </PageContainer>
+      <PageLayout
+        title="STATUS"
+        icon={<Server className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+        leading={backButton}
+        headerActions={renderRefreshButton()}
+        mobileActions={renderRefreshButton()}
+        className="max-w-5xl mx-auto"
+      >
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20" />)}
+        </div>
+      </PageLayout>
     );
   }
 
   return (
-    <PageContainer className="max-w-5xl mx-auto">
+    <PageLayout
+      title="STATUS"
+      icon={<Server className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      leading={backButton}
+      headerActions={renderRefreshButton()}
+      mobileActions={renderRefreshButton()}
+      className="max-w-5xl mx-auto"
+    >
       <BackgroundClouds />
-      {!headerContext && (
-        <div className="mb-4">
-          <Button
-            onClick={() => navigate(-1)}
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-normal"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-        </div>
-      )}
-      <PageSurface>
-        {!headerContext && headerNode}
         <div className="space-y-3">
           {error && (
             <Card className="border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20">
@@ -383,8 +376,7 @@ const StatusPage: React.FC = () => {
             </>
           )}
         </div>
-      </PageSurface>
-    </PageContainer>
+    </PageLayout>
   );
 };
 

@@ -15,18 +15,17 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
 import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { Calendar } from '@/types';
 import { getCalendars, updateCalendar, deleteCalendar } from '@/services/calendarsApi';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { useOrganization } from '@/hooks/useOrganization';
 import { CreateCalendarModal } from './components/CreateCalendarModal';
 import { CalendarIntegrations } from './components/CalendarIntegrations';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
     const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
@@ -36,7 +35,6 @@ const getApiErrorMessage = (error: unknown, fallback: string): string => {
 export function CalendarsPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
     // Onboarding
     const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('calendars');
 
@@ -48,44 +46,6 @@ export function CalendarsPage() {
     });
     const [searchQuery, setSearchQuery] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
-
-    // Set header content
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2 min-w-0">
-                    <CalendarIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
-                    >
-                        CALENDARS
-                    </h1>
-                </div>
-                {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search calendars..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
-                            style={{ fontFamily: '"Raleway", sans-serif' }}
-                        />
-                    </div>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
-                        onClick={() => setShowCreateModal(true)}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Calendar
-                    </Button>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [searchQuery, setHeaderContent]);
 
     useEffect(() => {
         if (!organizationId && initError) {
@@ -191,22 +151,67 @@ export function CalendarsPage() {
     // Error state
     if (initError) {
         return (
-            <PageContainer>
-                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
-                    <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-                        <CalendarIcon className="h-6 w-6 text-destructive" />
-                    </div>
-                    <h3 className="text-lg font-medium mb-2">Calendars Not Ready</h3>
-                    <p className="text-muted-foreground mb-4">{initError}</p>
-                    <Button onClick={() => window.location.reload()}>Retry</Button>
-                </PageSurface>
-            </PageContainer>
+            <PageLayout
+                title="CALENDARS"
+                icon={<CalendarIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            >
+                <ErrorState
+                    title="Calendars Not Ready"
+                    description={initError}
+                    icon={CalendarIcon}
+                    onAction={() => window.location.reload()}
+                />
+            </PageLayout>
         );
     }
 
     return (
-        <>
-            {/* Onboarding Modal */}
+        <PageLayout
+            title="CALENDARS"
+            icon={<CalendarIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            headerActions={
+                <>
+                    <div className="relative w-full max-w-xs">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search calendars..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
+                            style={{ fontFamily: '"Raleway", sans-serif' }}
+                        />
+                    </div>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
+                        onClick={() => setShowCreateModal(true)}
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Calendar
+                    </Button>
+                </>
+            }
+            mobileActions={
+                <>
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search calendars..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-9 h-9 w-full"
+                        />
+                    </div>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        onClick={() => setShowCreateModal(true)}
+                    >
+                        <Plus className="h-4 w-4" />
+                    </Button>
+                </>
+            }
+        >
             <OnboardingModal
                 isOpen={showOnboarding}
                 onClose={closeOnboarding}
@@ -215,34 +220,10 @@ export function CalendarsPage() {
                 content={ONBOARDING_CONTENT.calendars}
             />
 
-            {/* Mobile Controls Bar */}
-            <MobileControlsBar>
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Search calendars..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9 h-9 w-full"
-                    />
-                </div>
-                <Button
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                    onClick={() => setShowCreateModal(true)}
-                >
-                    <Plus className="h-4 w-4" />
-                </Button>
-            </MobileControlsBar>
-
-            <PageContainer>
-                <PageSurface>
                 {/* Calendar Integrations */}
                 {organizationId && <CalendarIntegrations organizationId={organizationId} />}
 
                 {/* Calendars content */}
-                <Card>
-                <CardContent className="p-0">
                     {loading ? (
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {[...Array(3)].map((_, i) => (
@@ -349,20 +330,15 @@ export function CalendarsPage() {
                             ))}
                         </div>
                     )}
-                </CardContent>
-            </Card>
-            </PageSurface>
 
-            {/* Create calendar modal */}
             {showCreateModal && organizationId && (
                 <CreateCalendarModal
                     organizationId={organizationId}
                     onClose={() => setShowCreateModal(false)}
                     onCreated={handleCalendarCreated}
                 />
-                )}
-            </PageContainer>
-        </>
+            )}
+        </PageLayout>
     );
 }
 

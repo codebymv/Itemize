@@ -1,6 +1,8 @@
 import React from 'react'
+import { DollarSign, Calendar, CheckCircle2 } from 'lucide-react'
+import { StatCard } from '@/components/StatCard'
+import { EmptyState } from '@/components/EmptyState'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { DollarSign, Calendar, CheckCircle2, Clock } from 'lucide-react'
 import type { ClientPayment } from '../../design-system/types/client.types'
 
 interface ClientPaymentsTabProps {
@@ -13,59 +15,37 @@ export function ClientPaymentsTab({ payments }: ClientPaymentsTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Summary Stats */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-muted/10">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/30">
-                <DollarSign className="h-6 w-6 text-green-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold">${totalPayments.toLocaleString()}</div>
-                <div className="text-sm text-muted-foreground">Total Paid</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-muted/10">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30">
-                <CheckCircle2 className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold">{totalInvoicesPaid}</div>
-                <div className="text-sm text-muted-foreground">Invoices Paid</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-muted/10">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900/30">
-                <Calendar className="h-6 w-6 text-purple-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold">{payments.length}</div>
-                <div className="text-sm text-muted-foreground">Transactions</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total Paid"
+          badgeText="Total Paid"
+          value={`$${totalPayments.toLocaleString()}`}
+          icon={DollarSign}
+          colorTheme="green"
+        />
+        <StatCard
+          title="Invoices Paid"
+          badgeText="Invoices Paid"
+          value={totalInvoicesPaid}
+          icon={CheckCircle2}
+          colorTheme="blue"
+        />
+        <StatCard
+          title="Transactions"
+          badgeText="Transactions"
+          value={payments.length}
+          icon={Calendar}
+          colorTheme="gray"
+        />
       </div>
 
-      {/* Payment History */}
       <Card className="bg-muted/10">
         <CardHeader>
           <CardTitle className="text-base">Payment History</CardTitle>
         </CardHeader>
         <CardContent>
           {payments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No payments yet</p>
+            <EmptyState icon={DollarSign} title="No payments yet" size="compact" />
           ) : (
             <div className="space-y-2">
               {payments.map((payment) => (

@@ -1,18 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Send, XCircle, Download, Eye, FileSignature, CheckCircle, Clock, ChevronDown, MoreVertical, Trash2, Search, RefreshCw } from 'lucide-react';
+import { Plus, Send, XCircle, Download, Eye, FileSignature, FileText, CheckCircle, Clock, ChevronDown, MoreVertical, Trash2, Search, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { Card, CardContent } from '@/components/ui/card';
+import { StatCard } from '@/components/StatCard';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
 import { getStatusBadgeClass } from '@/lib/badge-utils';
 import { ListRowSkeleton } from '@/components/ui/loading-skeletons';
 import FieldPlacementCanvas from './components/FieldPlacementCanvas';
@@ -31,7 +30,6 @@ import {
 export function SignaturesPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setHeaderContent } = useHeader();
   const [documents, setDocuments] = useState<SignatureDocument[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedDocumentId, setExpandedDocumentId] = useState<number | null>(null);
@@ -123,20 +121,8 @@ export function SignaturesPage() {
   ), [activeTab, documents.length, navigate, searchQuery, stats.activeCount, stats.completedCount, stats.draftCount]);
 
   useEffect(() => {
-    setHeaderContent(
-      <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex items-center gap-2 ml-2 min-w-0">
-          <FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <h1 className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground">
-            DOCUMENTS
-          </h1>
-        </div>
-        <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">{headerActions}</div>
-      </div>
-    );
     fetchDocuments();
-    return () => setHeaderContent(null);
-  }, [setHeaderContent, headerActions, fetchDocuments]);
+  }, [fetchDocuments]);
 
   const filteredDocuments = useMemo(() => {
     let filtered = documents;
@@ -245,102 +231,87 @@ export function SignaturesPage() {
   };
 
   return (
-    <>
-      <MobileControlsBar className="flex-col items-stretch">
-        <div className="flex items-center gap-2 w-full">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search documents..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
-            />
+    <PageLayout
+      title="DOCUMENTS"
+      icon={<FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      mobileClassName="flex-col items-stretch"
+      headerActions={headerActions}
+      mobileActions={
+        <>
+          <div className="flex items-center gap-2 w-full">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search documents..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
+              />
+            </div>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white h-9" onClick={() => navigate('/documents/new')}>
+              <Plus className="h-4 w-4" />
+            </Button>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white h-9" onClick={() => navigate('/documents/new')}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full h-9">
-            <TabsTrigger value="all" className="flex-1 text-xs">
-              All
-              <Badge variant="secondary" className="ml-1">{documents.length}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="active" className="flex-1 text-xs">
-              Active
-              <Badge variant="secondary" className="ml-1">{stats.activeCount}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="draft" className="flex-1 text-xs">
-              Draft
-              <Badge variant="secondary" className="ml-1">{stats.draftCount}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="completed" className="flex-1 text-xs">
-              Done
-              <Badge variant="secondary" className="ml-1">{stats.completedCount}</Badge>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </MobileControlsBar>
-      <PageContainer>
-        <PageSurface>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="w-full h-9">
+              <TabsTrigger value="all" className="flex-1 text-xs">
+                All
+                <Badge variant="secondary" className="ml-1">{documents.length}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="active" className="flex-1 text-xs">
+                Active
+                <Badge variant="secondary" className="ml-1">{stats.activeCount}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="draft" className="flex-1 text-xs">
+                Draft
+                <Badge variant="secondary" className="ml-1">{stats.draftCount}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="completed" className="flex-1 text-xs">
+                Done
+                <Badge variant="secondary" className="ml-1">{stats.completedCount}</Badge>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </>
+      }
+    >
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Badge className={`text-xs mb-2 ${getStatusBadgeClass('draft')}`}>Drafts</Badge>
-                    <p className="text-2xl font-bold text-sky-600">{stats.draftCount}</p>
-                    <p className="text-xs text-muted-foreground">document{stats.draftCount !== 1 ? 's' : ''}</p>
-                  </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatusIconBg('draft')}`}>
-                    {getStatusIcon('draft')}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Badge className={`text-xs mb-2 ${getStatusBadgeClass('sent')}`}>Sent</Badge>
-                    <p className="text-2xl font-bold text-orange-600">{stats.sentCount}</p>
-                    <p className="text-xs text-muted-foreground">document{stats.sentCount !== 1 ? 's' : ''}</p>
-                  </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatusIconBg('sent')}`}>
-                    {getStatusIcon('sent')}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Badge className={`text-xs mb-2 ${getStatusBadgeClass('in_progress')}`}>In Progress</Badge>
-                    <p className="text-2xl font-bold text-orange-600">{stats.inProgressCount}</p>
-                    <p className="text-xs text-muted-foreground">document{stats.inProgressCount !== 1 ? 's' : ''}</p>
-                  </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatusIconBg('in_progress')}`}>
-                    {getStatusIcon('in_progress')}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Badge className={`text-xs mb-2 ${getStatusBadgeClass('completed')}`}>Completed</Badge>
-                    <p className="text-2xl font-bold text-green-600">{stats.completedCount}</p>
-                    <p className="text-xs text-muted-foreground">document{stats.completedCount !== 1 ? 's' : ''}</p>
-                  </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatusIconBg('completed')}`}>
-                    {getStatusIcon('completed')}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <StatCard
+              title="Drafts"
+              badgeText="Drafts"
+              value={stats.draftCount}
+              icon={FileText}
+              description={`document${stats.draftCount !== 1 ? 's' : ''}`}
+              colorTheme="gray"
+              isLoading={loading}
+            />
+            <StatCard
+              title="Sent"
+              badgeText="Sent"
+              value={stats.sentCount}
+              icon={Send}
+              description={`document${stats.sentCount !== 1 ? 's' : ''}`}
+              colorTheme="orange"
+              isLoading={loading}
+            />
+            <StatCard
+              title="In Progress"
+              badgeText="In Progress"
+              value={stats.inProgressCount}
+              icon={Clock}
+              description={`document${stats.inProgressCount !== 1 ? 's' : ''}`}
+              colorTheme="orange"
+              isLoading={loading}
+            />
+            <StatCard
+              title="Completed"
+              badgeText="Completed"
+              value={stats.completedCount}
+              icon={CheckCircle}
+              description={`document${stats.completedCount !== 1 ? 's' : ''}`}
+              colorTheme="green"
+              isLoading={loading}
+            />
           </div>
 
           <Card>
@@ -587,8 +558,6 @@ export function SignaturesPage() {
               )}
             </CardContent>
           </Card>
-        </PageSurface>
-      </PageContainer>
 
       <DeleteDialog
         open={deleteDocumentId !== null}
@@ -597,7 +566,7 @@ export function SignaturesPage() {
         itemType="document"
         itemTitle={documents.find(d => d.id === deleteDocumentId)?.title}
       />
-    </>
+    </PageLayout>
   );
 }
 

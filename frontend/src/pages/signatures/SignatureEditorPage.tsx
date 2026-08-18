@@ -8,10 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
+import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthState } from '@/contexts/AuthContext';
-import { useHeader } from '@/contexts/HeaderContext';
 import {
   SignatureDocument,
   SignatureRecipient,
@@ -31,7 +31,6 @@ export default function SignatureEditorPage() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const { setHeaderContent } = useHeader();
   const { currentUser } = useAuthState();
 
   const [document, setDocument] = useState<SignatureDocument | null>(null);
@@ -52,23 +51,6 @@ export default function SignatureEditorPage() {
   );
 
   const isEditing = Boolean(id);
-
-  useEffect(() => {
-    setHeaderContent(
-      <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex items-center gap-2 ml-2 min-w-0">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/documents')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <h1 className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground">
-            {isEditing ? 'EDIT SIGNATURE DOCUMENT' : 'NEW SIGNATURE DOCUMENT'}
-          </h1>
-        </div>
-      </div>
-    );
-    return () => setHeaderContent(null);
-  }, [setHeaderContent, isEditing]);
 
   useEffect(() => {
     if (!id) return;
@@ -240,22 +222,39 @@ export default function SignatureEditorPage() {
   };
 
   return (
-    <PageContainer>
-      <PageSurface>
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-semibold">{isEditing ? 'Edit Document' : 'New Document'}</h1>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleCreateOrSave} disabled={loading}>
-              <Save className="h-4 w-4 mr-2" />
-              Save
-            </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setShowSendModal(true)} disabled={loading || !document}>
-              <Send className="h-4 w-4 mr-2" />
-              Send
-            </Button>
-          </div>
-        </div>
-
+    <PageLayout
+      title={isEditing ? 'EDIT SIGNATURE DOCUMENT' : 'NEW SIGNATURE DOCUMENT'}
+      icon={<FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      leading={
+        <Button variant="ghost" size="icon" onClick={() => navigate('/documents')}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+      }
+      headerActions={
+        <>
+          <Button variant="outline" onClick={handleCreateOrSave} disabled={loading}>
+            <Save className="h-4 w-4 mr-2" />
+            Save
+          </Button>
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setShowSendModal(true)} disabled={loading || !document}>
+            <Send className="h-4 w-4 mr-2" />
+            Send
+          </Button>
+        </>
+      }
+      mobileActions={
+        <>
+          <Button variant="outline" onClick={handleCreateOrSave} disabled={loading} className="flex-1">
+            <Save className="h-4 w-4 mr-2" />
+            Save
+          </Button>
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white flex-1" onClick={() => setShowSendModal(true)} disabled={loading || !document}>
+            <Send className="h-4 w-4 mr-2" />
+            Send
+          </Button>
+        </>
+      }
+    >
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -327,7 +326,9 @@ export default function SignatureEditorPage() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
-              {recipients.length === 0 && <p className="text-sm text-muted-foreground">No recipients yet.</p>}
+              {recipients.length === 0 && (
+                <EmptyState icon={FileSignature} title="No recipients yet" size="compact" />
+              )}
               {recipients.map((recipient, index) => (
                 <div key={recipient.id} className="grid grid-cols-1 gap-2 border rounded-md p-3">
                   <Input
@@ -411,7 +412,6 @@ export default function SignatureEditorPage() {
           routingMode={routingMode}
           onRoutingModeChange={setRoutingMode}
         />
-      </PageSurface>
-    </PageContainer>
+    </PageLayout>
   );
 }

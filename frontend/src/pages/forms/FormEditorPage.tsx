@@ -38,8 +38,9 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
-import { useHeader } from '@/contexts/HeaderContext';
+import { PageLayout } from '@/components/layout/PageLayout';
+import { ErrorState } from '@/components/ErrorState';
+import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
 import {
@@ -162,7 +163,6 @@ export default function FormEditorPage() {
     const { id } = useParams<{ id: string }>();
     const formId = Number(id);
     const navigate = useNavigate();
-    const { setHeaderContent } = useHeader();
     const { toast } = useToast();
     const {
         organizationId,
@@ -186,26 +186,6 @@ export default function FormEditorPage() {
     const [loadingSubmissions, setLoadingSubmissions] = useState(false);
     const [submissionToDelete, setSubmissionToDelete] = useState<FormSubmission | null>(null);
     const [deletingSubmission, setDeletingSubmission] = useState(false);
-
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center gap-3 min-w-0">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Back to forms"
-                    onClick={() => navigate('/forms')}
-                >
-                    <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <FileText className="h-5 w-5 text-blue-600 shrink-0" />
-                <h1 className="text-lg font-semibold truncate">
-                    {form?.name || 'Form editor'}
-                </h1>
-            </div>,
-        );
-        return () => setHeaderContent(null);
-    }, [form?.name, navigate, setHeaderContent]);
 
     const loadForm = useCallback(async () => {
         if (organizationLoading) return;
@@ -463,72 +443,88 @@ export default function FormEditorPage() {
         }
     };
 
+    const backButton = (
+        <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Back to forms"
+            onClick={() => navigate('/forms')}
+        >
+            <ArrowLeft className="h-4 w-4" />
+        </Button>
+    );
+
+    const formActions = !form ? null : (
+        <>
+            <Button variant="outline" onClick={() => void copyPublicLink()}>
+                <Copy className="h-4 w-4 mr-2" />
+                Copy link
+            </Button>
+            {form.status === 'published' && (
+                <Button variant="outline" asChild>
+                    <a href={publicPath} target="_blank" rel="noreferrer">
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Preview
+                    </a>
+                </Button>
+            )}
+            <Button
+                variant={form.status === 'published' ? 'outline' : 'default'}
+                onClick={() => void changeStatus()}
+                disabled={changingStatus}
+            >
+                {changingStatus && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {form.status === 'published' ? 'Unpublish' : 'Publish'}
+            </Button>
+        </>
+    );
+
     if (loading || organizationLoading) {
         return (
-            <PageContainer>
-                <PageSurface>
-                    <div className="space-y-4">
-                        <Skeleton className="h-10 w-64" />
-                        <Skeleton className="h-12 w-full" />
-                        <Skeleton className="h-72 w-full" />
-                    </div>
-                </PageSurface>
-            </PageContainer>
+            <PageLayout
+                title="Form editor"
+                icon={<FileText className="h-5 w-5 text-blue-600 shrink-0" />}
+                leading={backButton}
+            >
+                <div className="space-y-4">
+                    <Skeleton className="h-10 w-64" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-72 w-full" />
+                </div>
+            </PageLayout>
         );
     }
 
     if (error || !form || !settings) {
         return (
-            <PageContainer>
-                <PageSurface className="max-w-xl mx-auto" contentClassName="text-center py-12">
-                    <h2 className="text-lg font-semibold mb-2">Form unavailable</h2>
-                    <p className="text-muted-foreground mb-5">{error || 'Unable to load this form.'}</p>
-                    <div className="flex justify-center gap-2">
-                        <Button variant="outline" onClick={() => navigate('/forms')}>Back to forms</Button>
-                        <Button onClick={() => void loadForm()}>Retry</Button>
-                    </div>
-                </PageSurface>
-            </PageContainer>
+            <PageLayout
+                title="Form editor"
+                icon={<FileText className="h-5 w-5 text-blue-600 shrink-0" />}
+                leading={backButton}
+            >
+                <ErrorState
+                    title="Form unavailable"
+                    description={error || 'Unable to load this form.'}
+                    onAction={() => void loadForm()}
+                />
+            </PageLayout>
         );
     }
 
     return (
-        <>
-            <PageContainer>
-                <PageSurface>
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-6">
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                                <h2 className="text-2xl font-semibold truncate">{form.name}</h2>
-                                <Badge variant={form.status === 'published' ? 'default' : 'secondary'}>
-                                    {form.status}
-                                </Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground truncate">{publicPath}</p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            <Button variant="outline" onClick={() => void copyPublicLink()}>
-                                <Copy className="h-4 w-4 mr-2" />
-                                Copy link
-                            </Button>
-                            {form.status === 'published' && (
-                                <Button variant="outline" asChild>
-                                    <a href={publicPath} target="_blank" rel="noreferrer">
-                                        <ExternalLink className="h-4 w-4 mr-2" />
-                                        Preview
-                                    </a>
-                                </Button>
-                            )}
-                            <Button
-                                variant={form.status === 'published' ? 'outline' : 'default'}
-                                onClick={() => void changeStatus()}
-                                disabled={changingStatus}
-                            >
-                                {changingStatus && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                                {form.status === 'published' ? 'Unpublish' : 'Publish'}
-                            </Button>
-                        </div>
+        <PageLayout
+            title={form.name || 'Form editor'}
+            icon={<FileText className="h-5 w-5 text-blue-600 shrink-0" />}
+            leading={backButton}
+            headerActions={formActions}
+            mobileActions={formActions}
+        >
+                    <div className="flex items-center gap-2 mb-1">
+                        <Badge variant={form.status === 'published' ? 'default' : 'secondary'}>
+                            {form.status}
+                        </Badge>
                     </div>
+                    <p className="text-sm text-muted-foreground truncate mb-6">{publicPath}</p>
 
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
                         <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-grid">
@@ -867,12 +863,11 @@ export default function FormEditorPage() {
                                             <Skeleton className="h-16 w-full" />
                                         </div>
                                     ) : submissions.length === 0 ? (
-                                        <div className="py-12 text-center">
-                                            <p className="font-medium">No submissions yet</p>
-                                            <p className="text-sm text-muted-foreground mt-1">
-                                                Published responses will appear here.
-                                            </p>
-                                        </div>
+                                        <EmptyState
+                                            icon={FileText}
+                                            title="No submissions yet"
+                                            description="Published responses will appear here."
+                                        />
                                     ) : (
                                         <div className="divide-y">
                                             {submissions.map(submission => (
@@ -938,9 +933,6 @@ export default function FormEditorPage() {
                             </Card>
                         </TabsContent>
                     </Tabs>
-                </PageSurface>
-            </PageContainer>
-
             <AlertDialog
                 open={Boolean(submissionToDelete)}
                 onOpenChange={open => {
@@ -970,6 +962,6 @@ export default function FormEditorPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </>
+        </PageLayout>
     );
 }

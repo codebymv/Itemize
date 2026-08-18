@@ -4,7 +4,6 @@ import { format, parseISO } from 'date-fns';
 import { Search, Calendar as CalendarIcon, CalendarCheck, Clock, User, MoreHorizontal, X, Check, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -24,16 +23,15 @@ import { getStatusBadgeClass } from '@/lib/badge-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
-import { useHeader } from '@/contexts/HeaderContext';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { Booking } from '@/types';
 import { getBookings, cancelBooking, BookingsQueryParams } from '@/services/calendarsApi';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { useOrganization } from '@/hooks/useOrganization';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 
 const BOOKING_STATUSES: Array<NonNullable<BookingsQueryParams['status']>> = [
     'pending',
@@ -49,7 +47,6 @@ const isBookingStatus = (value: string): value is NonNullable<BookingsQueryParam
 export function BookingsPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
     // Route-aware onboarding (will show 'calendars' onboarding for Scheduling group)
     const {
         showModal: showOnboarding,
@@ -71,49 +68,6 @@ export function BookingsPage() {
         total: 0,
         totalPages: 0,
     });
-
-    // Set header content
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2 min-w-0">
-                    <CalendarCheck className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
-                    >
-                        BOOKINGS
-                    </h1>
-                </div>
-                {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search bookings..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
-                            aria-label="Search bookings"
-                        />
-                    </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50">
-                            <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Status</SelectItem>
-                            <SelectItem value="confirmed">Confirmed</SelectItem>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                            <SelectItem value="no_show">No Show</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [searchQuery, statusFilter, setHeaderContent]);
 
     useEffect(() => {
         if (!organizationId && initError) {
@@ -185,18 +139,77 @@ export function BookingsPage() {
     // Error state
     if (initError) {
         return (
-            <PageContainer>
-                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
-                    <p className="text-muted-foreground">{initError}</p>
-                    <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
-                </PageSurface>
-            </PageContainer>
+            <PageLayout
+                title="BOOKINGS"
+                icon={<CalendarCheck className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            >
+                <ErrorState
+                    description={initError}
+                    icon={CalendarCheck}
+                    onAction={() => window.location.reload()}
+                />
+            </PageLayout>
         );
     }
 
     return (
-        <>
-            {/* Route-aware onboarding modal */}
+        <PageLayout
+            title="BOOKINGS"
+            icon={<CalendarCheck className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            headerActions={
+                <>
+                    <div className="relative w-full max-w-xs">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search bookings..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
+                            aria-label="Search bookings"
+                        />
+                    </div>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50">
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Status</SelectItem>
+                            <SelectItem value="confirmed">Confirmed</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                            <SelectItem value="no_show">No Show</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </>
+            }
+            mobileActions={
+                <>
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search bookings..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 w-full bg-muted/20 border-border/50"
+                        />
+                    </div>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-[120px] h-9">
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="confirmed">Confirmed</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                            <SelectItem value="no_show">No Show</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </>
+            }
+        >
             {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
                 <OnboardingModal
                     isOpen={showOnboarding}
@@ -207,37 +220,7 @@ export function BookingsPage() {
                 />
             )}
 
-            {/* Mobile Controls Bar */}
-            <MobileControlsBar>
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Search bookings..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-9 w-full bg-muted/20 border-border/50"
-                    />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[120px] h-9">
-                        <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="no_show">No Show</SelectItem>
-                    </SelectContent>
-                </Select>
-            </MobileControlsBar>
-
-            <PageContainer>
-                <PageSurface>
                 {/* Bookings list */}
-                <Card>
-                <CardContent className="p-0">
                     {loading ? (
                         <div className="p-6 space-y-4">
                             {[...Array(5)].map((_, i) => (
@@ -321,8 +304,6 @@ export function BookingsPage() {
                             ))}
                         </div>
                     )}
-                </CardContent>
-            </Card>
 
             {/* Pagination */}
             {pagination.totalPages > 1 && (
@@ -352,9 +333,7 @@ export function BookingsPage() {
                     </div>
                 </div>
                 )}
-            </PageSurface>
-            </PageContainer>
-        </>
+        </PageLayout>
     );
 }
 

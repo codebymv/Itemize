@@ -25,5 +25,30 @@ export default tseslint.config(
       ],
       "@typescript-eslint/no-unused-vars": "off",
     },
+  },
+  {
+    files: ["src/pages/**/*.{ts,tsx}"],
+    ignores: ["src/pages/**/*.test.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/contexts/HeaderContext",
+              message:
+                "Use PageLayout (or usePageHeader). Pages must not import HeaderContext.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["**/contexts/HeaderContext"],
+              message:
+                "Use PageLayout (or usePageHeader). Pages must not import HeaderContext.",
+            },
+          ],
+        },
+      ],
+    },
   }
 );

@@ -1,7 +1,8 @@
 import React from 'react';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Building, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/EmptyState';
 import type { Business } from '@/services/invoicesApi';
 
 interface BusinessListProps {
@@ -31,11 +32,11 @@ export const BusinessList: React.FC<BusinessListProps> = ({
 
   if (empty || businesses.length === 0) {
     return (
-      <Card>
-        <CardContent className="text-center py-12">
-          <p className="text-muted-foreground">No businesses yet. Add your first business to get started.</p>
-        </CardContent>
-      </Card>
+      <EmptyState
+        icon={Building}
+        title="No businesses yet"
+        description="Add your first business to get started."
+      />
     );
   }
 

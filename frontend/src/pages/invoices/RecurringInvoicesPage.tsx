@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -64,7 +64,6 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
 import { getContacts } from '@/services/contactsApi';
 import { getProducts, Product, getBusinesses, Business } from '@/services/invoicesApi';
 import {
@@ -81,9 +80,9 @@ import {
 } from '@/services/recurringInvoicesApi';
 import { useOrganization } from '@/hooks/useOrganization';
 import { InvoicePreviewCard } from './components/InvoicePreviewCard';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
+import { StatCard } from '@/components/StatCard';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -131,7 +130,6 @@ const getApiErrorMessage = (error: unknown, fallback: string): string => {
 export function RecurringInvoicesPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
     // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
     const {
         showModal: showOnboarding,
@@ -443,59 +441,6 @@ export function RecurringInvoicesPage() {
         };
     }, [recurringInvoices]);
 
-    // Set header content (after stats is defined)
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2 min-w-0">
-                    <RefreshCw className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
-                    >
-                        RECURRING INVOICES
-                    </h1>
-                </div>
-                {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="h-9">
-                            <TabsTrigger value="all" className="text-xs">
-                                All
-                                <Badge variant="secondary" className="ml-2">{recurringInvoices.length}</Badge>
-                            </TabsTrigger>
-                            <TabsTrigger value="active" className="text-xs">
-                                Active
-                                <Badge variant="secondary" className="ml-2">{stats.active}</Badge>
-                            </TabsTrigger>
-                            <TabsTrigger value="paused" className="text-xs">
-                                Paused
-                                <Badge variant="secondary" className="ml-2">{stats.paused}</Badge>
-                            </TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search recurring..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
-                    </div>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={openCreateDialog}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Recurring
-                    </Button>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [searchQuery, setHeaderContent, activeTab, recurringInvoices, stats]);
-
     const filteredRecurring = useMemo(() => {
         let filtered = recurringInvoices;
 
@@ -542,9 +487,49 @@ export function RecurringInvoicesPage() {
     }, 0);
 
     return (
-        <>
-            {/* Mobile Controls Bar */}
-            <MobileControlsBar className="flex-col items-stretch">
+        <PageLayout
+            title="RECURRING INVOICES"
+            icon={<RefreshCw className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            mobileClassName="flex-col items-stretch"
+            headerActions={
+                <>
+                    <Tabs value={activeTab} onValueChange={setActiveTab}>
+                        <TabsList className="h-9">
+                            <TabsTrigger value="all" className="text-xs">
+                                All
+                                <Badge variant="secondary" className="ml-2">{recurringInvoices.length}</Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="active" className="text-xs">
+                                Active
+                                <Badge variant="secondary" className="ml-2">{stats.active}</Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="paused" className="text-xs">
+                                Paused
+                                <Badge variant="secondary" className="ml-2">{stats.paused}</Badge>
+                            </TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                    <div className="relative w-full max-w-xs">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search recurring..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50"
+                        />
+                    </div>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        onClick={openCreateDialog}
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Recurring
+                    </Button>
+                </>
+            }
+            mobileActions={
+                <>
                 <div className="flex items-center gap-2 w-full">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -573,54 +558,38 @@ export function RecurringInvoicesPage() {
                         <TabsTrigger value="paused" className="flex-1 text-xs">Paused</TabsTrigger>
                     </TabsList>
                 </Tabs>
-            </MobileControlsBar>
-
-            <PageContainer>
-                <PageSurface>
+                </>
+            }
+        >
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('active')}`}>Active</Badge>
-                                <p className="text-2xl font-bold text-blue-600">{stats.active}</p>
-                                <p className="text-xs text-muted-foreground">{stats.active} recurring{stats.active !== 1 ? 's' : ''}</p>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                                <Play className="h-5 w-5 text-blue-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('paused')}`}>Paused</Badge>
-                                <p className="text-2xl font-bold text-orange-600">{stats.paused}</p>
-                                <p className="text-xs text-muted-foreground">{stats.paused} recurring{stats.paused !== 1 ? 's' : ''}</p>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
-                                <Pause className="h-5 w-5 text-orange-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('completed')}`}>Completed</Badge>
-                                <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
-                                <p className="text-xs text-muted-foreground">{stats.completed} recurring{stats.completed !== 1 ? 's' : ''}</p>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                                <CheckCircle className="h-5 w-5 text-green-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <StatCard
+                    title="Active"
+                    badgeText="Active"
+                    value={stats.active}
+                    icon={Play}
+                    description={`${stats.active} recurring${stats.active !== 1 ? 's' : ''}`}
+                    colorTheme="green"
+                    isLoading={loading}
+                />
+                <StatCard
+                    title="Paused"
+                    badgeText="Paused"
+                    value={stats.paused}
+                    icon={Pause}
+                    description={`${stats.paused} recurring${stats.paused !== 1 ? 's' : ''}`}
+                    colorTheme="orange"
+                    isLoading={loading}
+                />
+                <StatCard
+                    title="Completed"
+                    badgeText="Completed"
+                    value={stats.completed}
+                    icon={CheckCircle}
+                    description={`${stats.completed} recurring${stats.completed !== 1 ? 's' : ''}`}
+                    colorTheme="green"
+                    isLoading={loading}
+                />
             </div>
 
             {/* Recurring List */}
@@ -1128,10 +1097,6 @@ export function RecurringInvoicesPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
-        </PageSurface>
-        </PageContainer>
-
-        {/* Route-aware onboarding modal */}
         {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
             <OnboardingModal
                 isOpen={showOnboarding}
@@ -1141,7 +1106,7 @@ export function RecurringInvoicesPage() {
                 content={ONBOARDING_CONTENT[onboardingFeatureKey]}
             />
         )}
-        </>
+        </PageLayout>
     );
 }
 

@@ -14,23 +14,22 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { usePageHeader } from '@/hooks/usePageHeader';
 import { useOrganization } from '@/hooks/useOrganization';
 import { getSegments, deleteSegment, calculateSegment } from '@/services/segmentsApi';
 import { CreateSegmentModal } from './CreateSegmentModal';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Segment } from '@/types/segments';
 import { StatCard } from '@/components/StatCard';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 
 export function SegmentsPage() {
     const navigate = useNavigate();
-    const { toast } = useToast();    // Route-aware onboarding (will show 'campaigns' onboarding for all Marketing routes)
+    const { toast } = useToast();
+    // Route-aware onboarding (will show 'campaigns' onboarding for all Marketing routes)
     const {
         showModal: showOnboarding,
         handleComplete: handleOnboardingComplete,
@@ -52,32 +51,6 @@ export function SegmentsPage() {
         const contacts = segments.reduce((sum, s) => sum + (s.contact_count || 0), 0);
         return { total, dynamic, staticCount, contacts };
     }, [segments]);
-
-    usePageHeader({
-        title: 'SEGMENTS',
-        icon: <Filter className="h-5 w-5 text-blue-600 flex-shrink-0" />,
-        rightContent: (
-            <>
-                <div className="relative w-full max-w-xs">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                        placeholder="Search segments..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-9 bg-muted/20 border-border/50"
-                    />
-                </div>
-                <Button
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                    onClick={() => setShowCreateModal(true)}
-                >
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Segment
-                </Button>
-            </>
-        ),
-    }, [searchQuery]);
 
     useEffect(() => {
         if (orgLoading) {
@@ -141,42 +114,65 @@ export function SegmentsPage() {
 
     if (initError) {
         return (
-            <PageContainer>
-                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6">
-                    <ErrorState
-                        title="Unable to load segments"
-                        description={initError}
-                        onAction={() => window.location.reload()}
-                    />
-                </PageSurface>
-            </PageContainer>
+            <PageLayout
+                title="SEGMENTS"
+                icon={<Filter className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            >
+                <ErrorState
+                    title="Unable to load segments"
+                    description={initError}
+                    onAction={() => window.location.reload()}
+                />
+            </PageLayout>
         );
     }
 
     return (
-        <>
-            {/* Mobile Controls Bar */}
-            <MobileControlsBar>
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                        placeholder="Search segments..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
-                    />
-                </div>
-                <Button
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                    onClick={() => setShowCreateModal(true)}
-                >
-                    <Plus className="h-4 w-4" />
-                </Button>
-            </MobileControlsBar>
-
-            <PageContainer>
-                <PageSurface>
+        <PageLayout
+            title="SEGMENTS"
+            icon={<Filter className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            headerActions={
+                <>
+                    <div className="relative w-full max-w-xs">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search segments..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50"
+                        />
+                    </div>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        onClick={() => setShowCreateModal(true)}
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Segment
+                    </Button>
+                </>
+            }
+            mobileActions={
+                <>
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search segments..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
+                        />
+                    </div>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        onClick={() => setShowCreateModal(true)}
+                    >
+                        <Plus className="h-4 w-4" />
+                    </Button>
+                </>
+            }
+        >
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <StatCard
                             title="Total Segments"
@@ -211,8 +207,6 @@ export function SegmentsPage() {
                             isLoading={loading}
                         />
                     </div>
-                    <Card>
-                    <CardContent className="p-0">
                         {loading ? (
                             <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40" />)}
@@ -269,9 +263,6 @@ export function SegmentsPage() {
                                 ))}
                             </div>
                         )}
-                    </CardContent>
-                </Card>
-                </PageSurface>
 
                 {showCreateModal && organizationId && (
                     <CreateSegmentModal
@@ -283,9 +274,7 @@ export function SegmentsPage() {
                         }}
                     />
                 )}
-            </PageContainer>
 
-            {/* Route-aware onboarding modal */}
             {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
                 <OnboardingModal
                     isOpen={showOnboarding}
@@ -295,7 +284,7 @@ export function SegmentsPage() {
                     content={ONBOARDING_CONTENT[onboardingFeatureKey]}
                 />
             )}
-        </>
+        </PageLayout>
     );
 }
 

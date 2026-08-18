@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
     Select,
     SelectContent,
@@ -35,16 +35,15 @@ import { getStatusBadgeClass } from '@/lib/badge-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import {
     createInvoicePayment,
     getInvoicePayments,
     type InvoicePayment,
 } from '@/services/invoicePaymentsApi';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
+import { StatCard } from '@/components/StatCard';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -90,7 +89,6 @@ const STATUS_STYLES: Record<string, string> = {
 export function PaymentsPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
     // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
     const {
         showModal: showOnboarding,
@@ -121,62 +119,6 @@ const [payments, setPayments] = useState<Payment[]>([]);
         pending: 0,
         thisMonth: 0,
     });
-
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2 min-w-0">
-                    <DollarSign className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
-                    >
-                        PAYMENTS
-                    </h1>
-                </div>
-{/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <Select value={methodFilter} onValueChange={setMethodFilter}>
-                        <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
-                            <SelectValue placeholder="Method" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Methods</SelectItem>
-                            <SelectItem value="card">Card</SelectItem>
-                            <SelectItem value="bank_transfer">Bank</SelectItem>
-                            <SelectItem value="cash">Cash</SelectItem>
-                            <SelectItem value="check">Check</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[120px] h-9 bg-muted/20 border-border/50">
-                            <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Status</SelectItem>
-                            <SelectItem value="succeeded">Succeeded</SelectItem>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="failed">Failed</SelectItem>
-                            <SelectItem value="refunded">Refunded</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search payments..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
-                        />
-                    </div>
-                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-light whitespace-nowrap" onClick={() => setShowCreateModal(true)}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Payment
-                    </Button>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [searchQuery, methodFilter, statusFilter, setHeaderContent]);
 
     useEffect(() => {
         if (!initError) return;
@@ -326,10 +268,53 @@ const filteredPayments = payments.filter(p => {
     };
 
     return (
-        <>
-{/* Mobile Controls Bar */}
-            <MobileControlsBar className="flex-col items-stretch gap-2">
-                {/* Row 1: Primary Actions */}
+        <PageLayout
+            title="PAYMENTS"
+            icon={<DollarSign className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            mobileClassName="flex-col items-stretch gap-2"
+            headerActions={
+                <>
+                    <Select value={methodFilter} onValueChange={setMethodFilter}>
+                        <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
+                            <SelectValue placeholder="Method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Methods</SelectItem>
+                            <SelectItem value="card">Card</SelectItem>
+                            <SelectItem value="bank_transfer">Bank</SelectItem>
+                            <SelectItem value="cash">Cash</SelectItem>
+                            <SelectItem value="check">Check</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-[120px] h-9 bg-muted/20 border-border/50">
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Status</SelectItem>
+                            <SelectItem value="succeeded">Succeeded</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="failed">Failed</SelectItem>
+                            <SelectItem value="refunded">Refunded</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <div className="relative w-full max-w-xs">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search payments..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
+                        />
+                    </div>
+                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-light whitespace-nowrap" onClick={() => setShowCreateModal(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Payment
+                    </Button>
+                </>
+            }
+            mobileActions={
+                <>
                 <div className="flex items-center gap-2 w-full">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -344,7 +329,6 @@ const filteredPayments = payments.filter(p => {
                         <Plus className="h-4 w-4" />
                     </Button>
                 </div>
-                {/* Row 2: Filters */}
                 <div className="flex items-center gap-2 w-full">
                     <Select value={methodFilter} onValueChange={setMethodFilter}>
                         <SelectTrigger className="flex-1 h-9">
@@ -371,69 +355,48 @@ const filteredPayments = payments.filter(p => {
                         </SelectContent>
                     </Select>
                 </div>
-            </MobileControlsBar>
-
-            <PageContainer>
-                <PageSurface>
+                </>
+            }
+        >
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <Card>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <Badge className="text-xs mb-2 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">This Month</Badge>
-                                <p className="text-2xl font-bold text-blue-600">{formatCurrency(stats.thisMonth)}</p>
-                                <p className="text-xs text-muted-foreground">Received this month</p>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                                <Calendar className="h-5 w-5 text-blue-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('pending')}`}>Pending</Badge>
-                                <p className="text-2xl font-bold text-orange-600">{stats.pending}</p>
-                                <p className="text-xs text-muted-foreground">{stats.pending} payment{stats.pending !== 1 ? 's' : ''}</p>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
-                                <Clock className="h-5 w-5 text-orange-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('succeeded')}`}>Succeeded</Badge>
-                                <p className="text-2xl font-bold text-green-600">{stats.succeeded}</p>
-                                <p className="text-xs text-muted-foreground">{stats.succeeded} payment{stats.succeeded !== 1 ? 's' : ''}</p>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                                <CheckCircle className="h-5 w-5 text-green-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('succeeded')}`}>Total Received</Badge>
-                                <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.total)}</p>
-                                <p className="text-xs text-muted-foreground">{stats.succeeded} payment{stats.succeeded !== 1 ? 's' : ''}</p>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                                <DollarSign className="h-5 w-5 text-green-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+                    <StatCard
+                        title="This Month"
+                        badgeText="This Month"
+                        value={formatCurrency(stats.thisMonth)}
+                        icon={Calendar}
+                        description="Received this month"
+                        colorTheme="blue"
+                        isLoading={loading}
+                    />
+                    <StatCard
+                        title="Pending"
+                        badgeText="Pending"
+                        value={stats.pending}
+                        icon={Clock}
+                        description={`${stats.pending} payment${stats.pending !== 1 ? 's' : ''}`}
+                        colorTheme="orange"
+                        isLoading={loading}
+                    />
+                    <StatCard
+                        title="Succeeded"
+                        badgeText="Succeeded"
+                        value={stats.succeeded}
+                        icon={CheckCircle}
+                        description={`${stats.succeeded} payment${stats.succeeded !== 1 ? 's' : ''}`}
+                        colorTheme="green"
+                        isLoading={loading}
+                    />
+                    <StatCard
+                        title="Total Received"
+                        badgeText="Total Received"
+                        value={formatCurrency(stats.total)}
+                        icon={DollarSign}
+                        description={`${stats.succeeded} payment${stats.succeeded !== 1 ? 's' : ''}`}
+                        colorTheme="green"
+                        isLoading={loading}
+                    />
+                </div>
 
             {/* Payments List */}
             <Card>
@@ -726,10 +689,6 @@ const filteredPayments = payments.filter(p => {
                     )}
                 </CardContent>
                 </Card>
-            </PageSurface>
-            </PageContainer>
-
-        {/* Route-aware onboarding modal */}
         {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
             <OnboardingModal
                 isOpen={showOnboarding}
@@ -740,14 +699,13 @@ onDismiss={handleOnboardingDismiss}
             />
         )}
         
-        {/* Create Payment Modal */}
         <CreatePaymentModal
             open={showCreateModal}
             onOpenChange={setShowCreateModal}
             onConfirm={handleCreatePayment}
             creating={creating}
         />
-        </>
+        </PageLayout>
     );
 }
 

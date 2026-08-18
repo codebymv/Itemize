@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Mail, MoreHorizontal, Trash2, Copy, Play, Pause, Send, BarChart3, Clock, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -22,24 +21,23 @@ import { Badge } from '@/components/ui/badge';
 import { getStatusBadgeClass } from '@/lib/badge-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { usePageHeader } from '@/hooks/usePageHeader';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { getCampaigns, deleteCampaign, duplicateCampaign, sendCampaign, pauseCampaign, resumeCampaign } from '@/services/campaignsApi';
 import { CreateCampaignModal } from './CreateCampaignModal';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Campaign } from '@/types/campaigns';
 import type { EmailCampaign } from '@/services/campaignsApi';
 import { StatCard } from '@/components/StatCard';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 
 export function CampaignsPage() {
     const navigate = useNavigate();
-    const { toast } = useToast();    // Onboarding
+    const { toast } = useToast();
+    // Onboarding
     const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('campaigns');
 
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -70,44 +68,6 @@ export function CampaignsPage() {
         const sent = campaigns.filter(c => c.status === 'sent').length;
         return { total, draft, scheduled, sent };
     }, [campaigns]);
-
-    usePageHeader({
-        title: 'CAMPAIGNS',
-        icon: <Mail className="h-5 w-5 text-blue-600 flex-shrink-0" />,
-        rightContent: (
-            <>
-                <div className="relative w-full max-w-xs">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                        placeholder="Search campaigns..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-9 bg-muted/20 border-border/50"
-                    />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[120px] h-9">
-                        <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="scheduled">Scheduled</SelectItem>
-                        <SelectItem value="sending">Sending</SelectItem>
-                        <SelectItem value="sent">Sent</SelectItem>
-                    </SelectContent>
-                </Select>
-                <Button
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                    onClick={() => setShowCreateModal(true)}
-                >
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Campaign
-                </Button>
-            </>
-        ),
-    }, [searchQuery, statusFilter]);
 
     useEffect(() => {
         if (orgLoading) {
@@ -199,21 +159,89 @@ export function CampaignsPage() {
 
     if (initError) {
         return (
-            <PageContainer>
-                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6">
-                    <ErrorState
-                        title="Unable to load campaigns"
-                        description={initError}
-                        onAction={() => window.location.reload()}
-                    />
-                </PageSurface>
-            </PageContainer>
+            <PageLayout
+                title="CAMPAIGNS"
+                icon={<Mail className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            >
+                <ErrorState
+                    title="Unable to load campaigns"
+                    description={initError}
+                    onAction={() => window.location.reload()}
+                />
+            </PageLayout>
         );
     }
 
     return (
-        <>
-            {/* Onboarding Modal */}
+        <PageLayout
+            title="CAMPAIGNS"
+            icon={<Mail className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            headerActions={
+                <>
+                    <div className="relative w-full max-w-xs">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search campaigns..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50"
+                        />
+                    </div>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-[120px] h-9">
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="draft">Draft</SelectItem>
+                            <SelectItem value="scheduled">Scheduled</SelectItem>
+                            <SelectItem value="sending">Sending</SelectItem>
+                            <SelectItem value="sent">Sent</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        onClick={() => setShowCreateModal(true)}
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Campaign
+                    </Button>
+                </>
+            }
+            mobileActions={
+                <>
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search campaigns..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
+                        />
+                    </div>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-[100px] h-9">
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All</SelectItem>
+                            <SelectItem value="draft">Draft</SelectItem>
+                            <SelectItem value="scheduled">Scheduled</SelectItem>
+                            <SelectItem value="sending">Sending</SelectItem>
+                            <SelectItem value="sent">Sent</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        onClick={() => setShowCreateModal(true)}
+                    >
+                        <Plus className="h-4 w-4" />
+                    </Button>
+                </>
+            }
+        >
             <OnboardingModal
                 isOpen={showOnboarding}
                 onClose={closeOnboarding}
@@ -222,40 +250,6 @@ export function CampaignsPage() {
                 content={ONBOARDING_CONTENT.campaigns}
             />
 
-            {/* Mobile Controls Bar */}
-            <MobileControlsBar>
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                        placeholder="Search campaigns..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
-                    />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[100px] h-9">
-                        <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="scheduled">Scheduled</SelectItem>
-                        <SelectItem value="sending">Sending</SelectItem>
-                        <SelectItem value="sent">Sent</SelectItem>
-                    </SelectContent>
-                </Select>
-                <Button
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                    onClick={() => setShowCreateModal(true)}
-                >
-                    <Plus className="h-4 w-4" />
-                </Button>
-            </MobileControlsBar>
-
-            <PageContainer>
-                <PageSurface>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                     <StatCard
                         title="Total Campaigns"
@@ -290,8 +284,6 @@ export function CampaignsPage() {
                         isLoading={loading}
                     />
                 </div>
-                <Card>
-                <CardContent className="p-0">
                     {loading ? (
                         <div className="p-6 space-y-4">
                             {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24" />)}
@@ -361,9 +353,6 @@ export function CampaignsPage() {
                             ))}
                         </div>
                     )}
-                </CardContent>
-            </Card>
-                </PageSurface>
 
             {showCreateModal && organizationId && (
                 <CreateCampaignModal
@@ -375,8 +364,7 @@ export function CampaignsPage() {
                     }}
                 />
             )}
-            </PageContainer>
-        </>
+        </PageLayout>
     );
 }
 

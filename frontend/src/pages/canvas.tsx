@@ -22,8 +22,8 @@ import { ShareModal } from '../components/ShareModal';
 import { useDatabaseCategories } from '../hooks/useDatabaseCategories';
 import { useIsMobile } from '../hooks/use-mobile';
 import { logger } from '../lib/logger';
-import { useHeader } from '../contexts/HeaderContext';
-import { MobileControlsBar } from '../components/MobileControlsBar';
+import { ErrorState } from '@/components/ErrorState';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { useOnboardingTrigger } from '../hooks/useOnboardingTrigger';
 import { OnboardingModal } from '../components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '../config/onboardingContent';
@@ -41,8 +41,6 @@ import { CANVAS_CENTER, BASE_SPREAD_RADIUS, ITEM_WIDTH, ITEM_HEIGHT, MIN_DISTANC
 
 const CanvasPage: React.FC = () => {
   const { theme } = useTheme();
-  // Use the header context to set the header content
-  const { setHeaderContent } = useHeader();
 
   // Onboarding
   const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('canvas');
@@ -317,44 +315,6 @@ const { currentUser } = useAuthState();
     }
   }, [isMobileView, navigate]);
 
-  // Header content effect - Pushes search bar and controls to the AppShell header
-  useEffect(() => {
-    setHeaderContent(
-      <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex items-center gap-2 ml-2">
-          <MapIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <h1 className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground">
-            CANVAS
-          </h1>
-        </div>
-
-        <CanvasToolbar
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          typeFilter={typeFilter}
-          setTypeFilter={setTypeFilter}
-          categoryFilter={categoryFilter}
-          setCategoryFilter={setCategoryFilter}
-          getUniqueCategories={getUniqueCategories}
-          getCategoryCounts={getCategoryCounts}
-          onAddClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-
-            if (showButtonContextMenu) {
-              handleCloseMenu();
-            } else {
-              handleOpenMenu('new-canvas-button');
-            }
-          }}
-          theme={theme === 'dark' ? 'dark' : 'light'}
-        />
-      </div>
-    );
-
-    return () => setHeaderContent(null);
-  }, [searchQuery, typeFilter, categoryFilter, theme, showButtonContextMenu, setHeaderContent, getUniqueCategories, getCategoryCounts]);
-
   // Note: Race condition prevention refs removed since WebSocket creation events are disabled
 
   // Utility function for intelligent positioning of mobile-created items
@@ -486,35 +446,34 @@ const { currentUser } = useAuthState();
 
   // Main render
   return (
-    <>
-      {/* Onboarding Modal */}
-      <OnboardingModal
-        isOpen={showOnboarding}
-        onClose={closeOnboarding}
-        onComplete={completeOnboarding}
-        onDismiss={dismissOnboarding}
-        content={ONBOARDING_CONTENT.canvas}
-      />
+    <PageLayout
+      title="CANVAS"
+      icon={<MapIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      headerActions={
+        <CanvasToolbar
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          typeFilter={typeFilter}
+          setTypeFilter={setTypeFilter}
+          categoryFilter={categoryFilter}
+          setCategoryFilter={setCategoryFilter}
+          getUniqueCategories={getUniqueCategories}
+          getCategoryCounts={getCategoryCounts}
+          onAddClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
 
-      {/* Prevent body scrolling only for desktop canvas */}
-      <style>{`
-        ${!isMobileView ? `
-          body { overflow: hidden !important; }
-          html { overflow: hidden !important; }
-        ` : ''}
-        
-        /* Hide scrollbar for horizontal category scrolling */
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
-      <div className={`w-full flex flex-col ${isMobileView ? 'min-h-screen' : 'h-[calc(100vh-4rem)] overflow-hidden'}`}>
-        {/* Mobile Controls */}
-        <MobileControlsBar className="flex-col items-stretch gap-2 sticky top-0 z-10">
+            if (showButtonContextMenu) {
+              handleCloseMenu();
+            } else {
+              handleOpenMenu('new-canvas-button');
+            }
+          }}
+          theme={theme === 'dark' ? 'dark' : 'light'}
+        />
+      }
+      mobileActions={
+        <>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
@@ -565,20 +524,45 @@ const { currentUser } = useAuthState();
               <Plus className="h-4 w-4" />
             </Button>
           </div>
-        </MobileControlsBar>
+        </>
+      }
+      mobileClassName="flex-col items-stretch gap-2 sticky top-0 z-10"
+      frame="flush"
+    >
+      {/* Onboarding Modal */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={closeOnboarding}
+        onComplete={completeOnboarding}
+        onDismiss={dismissOnboarding}
+        content={ONBOARDING_CONTENT.canvas}
+      />
 
+      {/* Prevent body scrolling only for desktop canvas */}
+      <style>{`
+        ${!isMobileView ? `
+          body { overflow: hidden !important; }
+          html { overflow: hidden !important; }
+        ` : ''}
+        
+        /* Hide scrollbar for horizontal category scrolling */
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
+      <div className={`w-full flex flex-col ${isMobileView ? 'min-h-screen' : 'h-[calc(100vh-4rem)] overflow-hidden'}`}>
         {isLoading ? (
           <PageLoading message="Loading Canvas..." />
         ) : error ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-            <div className="text-destructive text-lg mb-4">⚠️ {error}</div>
-            <button
-              onClick={() => window.location.reload()}
-              className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary-hover"
-            >
-              Retry
-            </button>
-          </div>
+          <ErrorState
+            title="Unable to load canvas"
+            description={error}
+            onAction={() => window.location.reload()}
+          />
         ) : (
           // Conditional Rendering based on viewport size
           isMobileView ? (
@@ -832,7 +816,7 @@ const { currentUser } = useAuthState();
           </div>
         )}
       </div>
-    </>
+    </PageLayout>
   );
 };
 

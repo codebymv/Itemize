@@ -76,7 +76,9 @@ import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
+import { ErrorState } from '@/components/ErrorState';
+import { EmptyState } from '@/components/EmptyState';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { useOrganization } from '@/hooks/useOrganization';
 import {
     getPage,
@@ -91,8 +93,6 @@ import {
     SectionType,
     SECTION_TEMPLATES,
 } from '@/services/pagesApi';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { PagePreviewDialog } from '@/components/PagePreviewDialog';
 import { PageVersionHistory } from '@/components/PageVersionHistory';
 import { formatStatus, formatSectionType, titleCase } from '@/utils/textUtils';
@@ -134,7 +134,7 @@ export function PageEditorPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();    const [page, setPage] = useState<Page | null>(null);
+    const [page, setPage] = useState<Page | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const { organizationId } = useOrganization({
@@ -189,49 +189,6 @@ export function PageEditorPage() {
     useEffect(() => {
         loadPage();
     }, [loadPage]);
-
-    // Set header content
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2 min-w-0 flex-1">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/pages')}>
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                    <Layout className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate italic-safe min-w-0 font-raleway text-foreground"
-                    >
-                        {(loading ? 'Loading...' : editedName || 'Page Editor').toUpperCase()}
-                    </h1>
-{page && (
-                        <Badge className={page.status === 'published' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-yellow-100 text-yellow-800 border-yellow-200'}>
-                            {formatStatus(page.status)}
-                        </Badge>
-                    )}
-                </div>
-                {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 mr-4 flex-shrink-0">
-{page?.status === 'published' && (
-                        <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            Preview
-                        </Button>
-                    )}
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                        onClick={handleSave}
-                        disabled={saving}
-                    >
-                        <Save className="h-4 w-4 mr-2" />
-                        {saving ? 'Saving...' : 'Save'}
-                    </Button>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [loading, editedName, page, saving, setHeaderContent, navigate]);
 
     // Save page changes
     const handleSave = async () => {
@@ -334,57 +291,94 @@ export function PageEditorPage() {
         }
     };
 
+    const backButton = (
+        <Button variant="ghost" size="icon" onClick={() => navigate('/pages')}>
+            <ArrowLeft className="h-5 w-5" />
+        </Button>
+    );
+
     if (loading) {
         return (
-            <PageContainer>
-                <PageSurface>
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-2 space-y-4">
-                            <Skeleton className="h-48" />
-                            <Skeleton className="h-32" />
-                            <Skeleton className="h-32" />
-                        </div>
-                        <div>
-                            <Skeleton className="h-96" />
-                        </div>
+            <PageLayout
+                title="LOADING..."
+                icon={<Layout className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+                leading={backButton}
+            >
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 space-y-4">
+                        <Skeleton className="h-48" />
+                        <Skeleton className="h-32" />
+                        <Skeleton className="h-32" />
                     </div>
-                </PageSurface>
-            </PageContainer>
+                    <div>
+                        <Skeleton className="h-96" />
+                    </div>
+                </div>
+            </PageLayout>
         );
     }
 
     if (!page) {
         return (
-            <PageContainer>
-                <PageSurface contentClassName="pt-6 text-center">
-                    <p className="text-muted-foreground">Page not found</p>
-                    <Button onClick={() => navigate('/pages')} className="mt-4">Back to Pages</Button>
-                </PageSurface>
-            </PageContainer>
+            <PageLayout
+                title="PAGE EDITOR"
+                icon={<Layout className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+                leading={backButton}
+            >
+                <ErrorState
+                    title="Page not found"
+                    description="This page could not be loaded."
+                    actionLabel="Back to Pages"
+                    onAction={() => navigate('/pages')}
+                />
+            </PageLayout>
         );
     }
 
     return (
-        <>
-            <MobileControlsBar>
-{page?.status === 'published' && (
-                    <Button variant="outline" size="sm" onClick={() => setShowPreview(true)} className="flex-1">
-                        <Eye className="h-4 w-4 mr-2" />
-                        Preview
+        <PageLayout
+            title={(editedName || 'Page Editor').toUpperCase()}
+            icon={<Layout className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            leading={backButton}
+            headerActions={
+                <>
+                    {page.status === 'published' && (
+                        <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Preview
+                        </Button>
+                    )}
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        onClick={handleSave}
+                        disabled={saving}
+                    >
+                        <Save className="h-4 w-4 mr-2" />
+                        {saving ? 'Saving...' : 'Save'}
                     </Button>
-                )}
-                <Button
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
-                    onClick={handleSave}
-                    disabled={saving}
-                >
-                    <Save className="h-4 w-4 mr-2" />
-                    {saving ? 'Saving...' : 'Save'}
-                </Button>
-            </MobileControlsBar>
-            <PageContainer>
-                <PageSurface>
+                </>
+            }
+            mobileActions={
+                <>
+                    {page.status === 'published' && (
+                        <Button variant="outline" size="sm" onClick={() => setShowPreview(true)} className="flex-1">
+                            <Eye className="h-4 w-4 mr-2" />
+                            Preview
+                        </Button>
+                    )}
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+                        onClick={handleSave}
+                        disabled={saving}
+                    >
+                        <Save className="h-4 w-4 mr-2" />
+                        {saving ? 'Saving...' : 'Save'}
+                    </Button>
+                </>
+            }
+        >
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Main Content - Sections */}
                 <div className="lg:col-span-2 space-y-4">
@@ -405,14 +399,13 @@ export function PageEditorPage() {
                         </CardHeader>
                         <CardContent>
                             {(!page.sections || page.sections.length === 0) ? (
-                                <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                                    <Layout className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                                    <p className="text-muted-foreground mb-4">No sections yet</p>
-                                    <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setShowAddSection(true)}>
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Add Your First Section
-                                    </Button>
-                                </div>
+                                <EmptyState
+                                    icon={Layout}
+                                    title="No sections yet"
+                                    description="Add a section to start building this page."
+                                    actionLabel="Add Your First Section"
+                                    onAction={() => setShowAddSection(true)}
+                                />
                             ) : (
                                 <div className="space-y-2">
                                     {page.sections.map((section, index) => (
@@ -662,9 +655,7 @@ export function PageEditorPage() {
                     }}
                 />
             )}
-        </PageSurface>
-        </PageContainer>
-        </>
+    </PageLayout>
     );
 }
 

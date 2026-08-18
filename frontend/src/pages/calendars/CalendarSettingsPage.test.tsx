@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CalendarSettingsPage from './CalendarSettingsPage';
+import { HeaderProvider } from '@/contexts/HeaderContext';
 
 const apiMocks = vi.hoisted(() => ({
     getCalendar: vi.fn(),
@@ -24,9 +25,6 @@ vi.mock('@/hooks/useOrganization', () => ({
 }));
 vi.mock('@/hooks/use-toast', () => ({
     useToast: () => ({ toast: toastMock }),
-}));
-vi.mock('@/contexts/HeaderContext', () => ({
-    useHeader: () => ({ setHeaderContent: vi.fn() }),
 }));
 
 const calendar = {
@@ -75,11 +73,13 @@ const calendar = {
 };
 
 const renderPage = () => render(
-    <MemoryRouter initialEntries={['/calendars/7']}>
-        <Routes>
-            <Route path="/calendars/:id" element={<CalendarSettingsPage />} />
-        </Routes>
-    </MemoryRouter>,
+    <HeaderProvider>
+        <MemoryRouter initialEntries={['/calendars/7']}>
+            <Routes>
+                <Route path="/calendars/:id" element={<CalendarSettingsPage />} />
+            </Routes>
+        </MemoryRouter>
+    </HeaderProvider>,
 );
 
 describe('CalendarSettingsPage', () => {

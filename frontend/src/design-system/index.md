@@ -200,25 +200,39 @@ import { semanticColors } from '@/design-system/design-tokens'
 
 ### Page Layout Pattern
 
-All authenticated pages should use the `PageContainer` and `PageSurface` pattern:
+All authenticated pages must use `PageLayout`. It owns the shell title, mobile controls, and page frame. Do not call `setHeaderContent` or import `HeaderContext` from pages.
 
 ```tsx
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer'
-import { MobileControlsBar } from '@/components/MobileControlsBar'
+import { PageLayout } from '@/components/layout/PageLayout'
+import { EmptyState } from '@/components/EmptyState'
+import { ErrorState } from '@/components/ErrorState'
 
 function MyPage() {
   return (
-    <>
-      <MobileControlsBar>{/* mobile-only controls */}</MobileControlsBar>
-      <PageContainer>
-        <PageSurface>
-          {/* page content */}
-        </PageSurface>
-      </PageContainer>
-    </>
+    <PageLayout
+      title="CONTACTS"
+      icon={<Users className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      headerActions={<>{/* desktop search / filters / primary action */}</>}
+      mobileActions={<>{/* same actions, shown below md */}</>}
+    >
+      {initError ? (
+        <ErrorState title="Couldn't load" description={initError} />
+      ) : (
+        children
+      )}
+    </PageLayout>
   )
 }
 ```
+
+Frames:
+
+- `surface` (default) — padded card from `sm` up. List, settings, and editor pages.
+- `split` — full-height flush surface (inbox).
+- `flush` — no page card (canvas, workflow builder). Still sets the shell title.
+- `nav` — optional side navigation beside the surface (Settings, Admin).
+
+Title is always italic Raleway `h1` in the app header. Do not add a second in-page `h1`. Public routes (`/status`, `/help`) render the same slot through `PublicPageHeader` under `PublicLayout`.
 
 ### Empty State Pattern
 
@@ -226,15 +240,15 @@ function MyPage() {
 import { EmptyState } from '@/components/EmptyState'
 
 <EmptyState
-  icon={<YourIcon className="h-12 w-12" />}
+  icon={Inbox}
   title="No items yet"
   description="Get started by creating your first item"
-  action={{
-    label: "Create Item",
-    onClick: handleCreate
-  }}
+  actionLabel="Create Item"
+  onAction={handleCreate}
 />
 ```
+
+Use `size="compact"` inside cards, widgets, and dialogs.
 
 ### Action Button Pattern
 
@@ -310,24 +324,26 @@ The design system supports light and dark themes via CSS variables defined in `s
 :root {
   --background: 220 13% 95%;
   --foreground: 222.2 84% 4.9%;
-  --primary: 222.2 47.4% 11.2%;
-  --primary-foreground: 210 40% 98%;
+  --primary: 221.2 83.2% 53.3%; /* Tailwind blue-600 */
+  --primary-foreground: 0 0% 100%;
+  --primary-hover: 224.3 76.3% 48%; /* Tailwind blue-700 */
   --secondary: 210 40% 96.1%;
   --muted: 210 40% 96.1%;
   --accent: 210 40% 96.1%;
   --destructive: 0 84.2% 60.2%;
   --border: 214.3 31.8% 91.4%;
-  --ring: 222.2 84% 4.9%;
+  --ring: 221.2 83.2% 53.3%;
   --radius: 0.5rem;
 }
 
-/* Dark theme */
+/* Dark theme — same brand primary */
 .dark {
   --background: 215 28% 21%;
   --foreground: 210 20% 98%;
   --card: 215 25% 25%;
-  --primary: 210 40% 98%;
-  --primary-foreground: 215 28% 21%;
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 0 0% 100%;
+  --primary-hover: 224.3 76.3% 48%;
   --secondary: 215 25% 34%;
   --muted: 215 25% 34%;
   --accent: 215 20% 25%;
@@ -392,8 +408,8 @@ When updating existing components to use the design system:
 1. Replace hardcoded color classes with `designTokens` or `colorMixins`
 2. Replace hardcoded spacing with `designTokens.spacing`
 3. Use `semanticColors` for status indicators
-4. Ensure all pages use the `PageContainer` + `PageSurface` pattern
-5. Add `MobileControlsBar` for responsive controls
+4. Ensure all pages use `PageLayout` (header, mobile bar, and frame)
+5. Use `EmptyState` / `ErrorState` inside the layout body
 
 Example migration:
 

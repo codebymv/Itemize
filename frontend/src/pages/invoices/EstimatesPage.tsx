@@ -29,7 +29,6 @@ import { Badge } from '@/components/ui/badge';
 import { getStatusBadgeClass } from '@/lib/badge-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import {
     convertEstimateToInvoice,
@@ -38,9 +37,9 @@ import {
     getEstimates,
     sendEstimate,
 } from '@/services/estimatesApi';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
+import { StatCard } from '@/components/StatCard';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -48,7 +47,6 @@ import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 export function EstimatesPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
     // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
     const {
         showModal: showOnboarding,
@@ -150,63 +148,6 @@ export function EstimatesPage() {
         };
     }, [estimates]);
 
-    // Set header content (after stats is defined)
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2 min-w-0">
-                    <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
-                    >
-                        ESTIMATES
-                    </h1>
-                </div>
-                {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="h-9">
-                            <TabsTrigger value="all" className="text-xs">
-                                All estimates
-                                <Badge variant="secondary" className="ml-2">{estimates.length}</Badge>
-                            </TabsTrigger>
-                            <TabsTrigger value="draft" className="text-xs">
-                                Draft
-                                <Badge variant="secondary" className="ml-2">{stats.draft}</Badge>
-                            </TabsTrigger>
-                            <TabsTrigger value="sent" className="text-xs">
-                                Sent
-                                <Badge variant="secondary" className="ml-2">{stats.sent}</Badge>
-                            </TabsTrigger>
-                            <TabsTrigger value="accepted" className="text-xs">
-                                Accepted
-                                <Badge variant="secondary" className="ml-2">{stats.accepted}</Badge>
-                            </TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search estimates..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
-                    </div>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={() => navigate('/estimates/new')}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Estimate
-                    </Button>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [searchQuery, setHeaderContent, navigate, activeTab, estimates, stats]);
-
     const filteredEstimates = useMemo(() => {
         let filtered = estimates;
 
@@ -245,9 +186,53 @@ export function EstimatesPage() {
     };
 
     return (
-        <>
-            {/* Mobile Controls Bar */}
-            <MobileControlsBar className="flex-col items-stretch">
+        <PageLayout
+            title="ESTIMATES"
+            icon={<FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            mobileClassName="flex-col items-stretch"
+            headerActions={
+                <>
+                    <Tabs value={activeTab} onValueChange={setActiveTab}>
+                        <TabsList className="h-9">
+                            <TabsTrigger value="all" className="text-xs">
+                                All estimates
+                                <Badge variant="secondary" className="ml-2">{estimates.length}</Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="draft" className="text-xs">
+                                Draft
+                                <Badge variant="secondary" className="ml-2">{stats.draft}</Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="sent" className="text-xs">
+                                Sent
+                                <Badge variant="secondary" className="ml-2">{stats.sent}</Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="accepted" className="text-xs">
+                                Accepted
+                                <Badge variant="secondary" className="ml-2">{stats.accepted}</Badge>
+                            </TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                    <div className="relative w-full max-w-xs">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search estimates..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50"
+                        />
+                    </div>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        onClick={() => navigate('/estimates/new')}
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Estimate
+                    </Button>
+                </>
+            }
+            mobileActions={
+                <>
                 <div className="flex items-center gap-2 w-full">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -277,68 +262,47 @@ export function EstimatesPage() {
                         <TabsTrigger value="accepted" className="flex-1 text-xs">Accepted</TabsTrigger>
                     </TabsList>
                 </Tabs>
-            </MobileControlsBar>
-
-            <PageContainer>
-                <PageSurface>
+                </>
+            }
+        >
                 {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('declined')}`}>Declined</Badge>
-                                <p className="text-2xl font-bold text-red-600">{stats.declined}</p>
-                                <p className="text-xs text-muted-foreground">{stats.declined} estimate{stats.declined !== 1 ? 's' : ''}</p>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
-                                <XCircle className="h-5 w-5 text-red-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('draft')}`}>Draft</Badge>
-                                <p className="text-2xl font-bold text-sky-600">{stats.draft}</p>
-                                <p className="text-xs text-muted-foreground">{stats.draft} estimate{stats.draft !== 1 ? 's' : ''}</p>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-sky-100 dark:bg-sky-900 flex items-center justify-center">
-                                <Clock className="h-5 w-5 text-sky-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('sent')}`}>Sent</Badge>
-                                <p className="text-2xl font-bold text-orange-600">{stats.sent}</p>
-                                <p className="text-xs text-muted-foreground">{stats.sent} estimate{stats.sent !== 1 ? 's' : ''}</p>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
-                                <Send className="h-5 w-5 text-orange-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <Badge className={`text-xs mb-2 ${getStatusBadgeClass('accepted')}`}>Accepted</Badge>
-                                <p className="text-2xl font-bold text-green-600">{stats.accepted}</p>
-                                <p className="text-xs text-muted-foreground">{stats.accepted} estimate{stats.accepted !== 1 ? 's' : ''}</p>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                                <CheckCircle className="h-5 w-5 text-green-600" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <StatCard
+                    title="Declined"
+                    badgeText="Declined"
+                    value={stats.declined}
+                    icon={XCircle}
+                    description={`${stats.declined} estimate${stats.declined !== 1 ? 's' : ''}`}
+                    colorTheme="red"
+                    isLoading={loading}
+                />
+                <StatCard
+                    title="Draft"
+                    badgeText="Draft"
+                    value={stats.draft}
+                    icon={Clock}
+                    description={`${stats.draft} estimate${stats.draft !== 1 ? 's' : ''}`}
+                    colorTheme="gray"
+                    isLoading={loading}
+                />
+                <StatCard
+                    title="Sent"
+                    badgeText="Sent"
+                    value={stats.sent}
+                    icon={Send}
+                    description={`${stats.sent} estimate${stats.sent !== 1 ? 's' : ''}`}
+                    colorTheme="orange"
+                    isLoading={loading}
+                />
+                <StatCard
+                    title="Accepted"
+                    badgeText="Accepted"
+                    value={stats.accepted}
+                    icon={CheckCircle}
+                    description={`${stats.accepted} estimate${stats.accepted !== 1 ? 's' : ''}`}
+                    colorTheme="green"
+                    isLoading={loading}
+                />
             </div>
 
             {/* Estimates List */}
@@ -430,10 +394,6 @@ export function EstimatesPage() {
                     )}
                 </CardContent>
             </Card>
-        </PageSurface>
-        </PageContainer>
-
-        {/* Route-aware onboarding modal */}
         {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
             <OnboardingModal
                 isOpen={showOnboarding}
@@ -443,7 +403,7 @@ export function EstimatesPage() {
                 content={ONBOARDING_CONTENT[onboardingFeatureKey]}
             />
         )}
-        </>
+        </PageLayout>
     );
 }
 

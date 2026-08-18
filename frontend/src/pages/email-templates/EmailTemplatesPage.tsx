@@ -20,13 +20,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import { getEmailTemplates, deleteEmailTemplate, duplicateEmailTemplate, sendTestEmail } from '@/services/emailApi';
 import { CreateEmailTemplateModal } from './CreateEmailTemplateModal';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -46,7 +45,6 @@ interface EmailTemplate {
 export function EmailTemplatesPage() {
     const { toast } = useToast();
     const { currentUser } = useAuthState();
-    const { setHeaderContent } = useHeader();
     // Route-aware onboarding (will show 'campaigns' onboarding for all Marketing routes)
     const {
         showModal: showOnboarding,
@@ -62,54 +60,6 @@ export function EmailTemplatesPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [categoryFilter, setCategoryFilter] = useState<string>('all');
     const [showCreateModal, setShowCreateModal] = useState(false);
-
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2 min-w-0">
-                    <FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
-                    >
-                        EMAIL TEMPLATES
-                    </h1>
-                </div>
-                {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search templates..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
-                        />
-                    </div>
-                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                        <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
-                            <SelectValue placeholder="Category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Categories</SelectItem>
-                            <SelectItem value="marketing">Marketing</SelectItem>
-                            <SelectItem value="welcome">Welcome</SelectItem>
-                            <SelectItem value="notification">Notification</SelectItem>
-                            <SelectItem value="system">System</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={() => setShowCreateModal(true)}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Template
-                    </Button>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [searchQuery, categoryFilter, setHeaderContent]);
 
     useEffect(() => {
         if (!initError) return;
@@ -172,53 +122,89 @@ export function EmailTemplatesPage() {
 
     if (initError) {
         return (
-            <PageContainer>
-                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
-                    <p className="text-muted-foreground">{initError}</p>
-                    <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
-                </PageSurface>
-            </PageContainer>
+            <PageLayout
+                title="EMAIL TEMPLATES"
+                icon={<FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            >
+                <ErrorState
+                    description={initError}
+                    icon={FileText}
+                    onAction={() => window.location.reload()}
+                />
+            </PageLayout>
         );
     }
 
     return (
-        <>
-            {/* Mobile Controls Bar */}
-            <MobileControlsBar>
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Search templates..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-9 w-full bg-muted/20 border-border/50"
-                    />
-                </div>
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger className="w-[100px] h-9">
-                        <SelectValue placeholder="Category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Categories</SelectItem>
-                        <SelectItem value="marketing">Marketing</SelectItem>
-                        <SelectItem value="welcome">Welcome</SelectItem>
-                        <SelectItem value="notification">Notification</SelectItem>
-                        <SelectItem value="system">System</SelectItem>
-                    </SelectContent>
-                </Select>
-                <Button
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                    onClick={() => setShowCreateModal(true)}
-                >
-                    <Plus className="h-4 w-4" />
-                </Button>
-            </MobileControlsBar>
-
-            <PageContainer>
-                <PageSurface>
-                <Card>
-                <CardContent className="p-0">
+        <PageLayout
+            title="EMAIL TEMPLATES"
+            icon={<FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            headerActions={
+                <>
+                    <div className="relative w-full max-w-xs">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search templates..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
+                        />
+                    </div>
+                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                        <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
+                            <SelectValue placeholder="Category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Categories</SelectItem>
+                            <SelectItem value="marketing">Marketing</SelectItem>
+                            <SelectItem value="welcome">Welcome</SelectItem>
+                            <SelectItem value="notification">Notification</SelectItem>
+                            <SelectItem value="system">System</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        onClick={() => setShowCreateModal(true)}
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        New Template
+                    </Button>
+                </>
+            }
+            mobileActions={
+                <>
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search templates..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 w-full bg-muted/20 border-border/50"
+                        />
+                    </div>
+                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                        <SelectTrigger className="w-[100px] h-9">
+                            <SelectValue placeholder="Category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Categories</SelectItem>
+                            <SelectItem value="marketing">Marketing</SelectItem>
+                            <SelectItem value="welcome">Welcome</SelectItem>
+                            <SelectItem value="notification">Notification</SelectItem>
+                            <SelectItem value="system">System</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        onClick={() => setShowCreateModal(true)}
+                    >
+                        <Plus className="h-4 w-4" />
+                    </Button>
+                </>
+            }
+        >
                     {loading ? (
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40" />)}
@@ -286,9 +272,6 @@ export function EmailTemplatesPage() {
                             ))}
                         </div>
                     )}
-                </CardContent>
-            </Card>
-            </PageSurface>
 
             {showCreateModal && organizationId && (
                 <CreateEmailTemplateModal
@@ -300,9 +283,7 @@ export function EmailTemplatesPage() {
                     }}
                 />
             )}
-            </PageContainer>
 
-            {/* Route-aware onboarding modal */}
             {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
                 <OnboardingModal
                     isOpen={showOnboarding}
@@ -312,7 +293,7 @@ export function EmailTemplatesPage() {
                     content={ONBOARDING_CONTENT[onboardingFeatureKey]}
                 />
             )}
-        </>
+        </PageLayout>
     );
 }
 

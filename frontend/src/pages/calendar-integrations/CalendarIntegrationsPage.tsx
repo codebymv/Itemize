@@ -12,10 +12,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -47,7 +47,6 @@ const GoogleLogo = () => (
 
 export function CalendarIntegrationsPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
     const navigate = useNavigate();
     const location = useLocation();
     const {
@@ -138,20 +137,6 @@ export function CalendarIntegrationsPage() {
     }, [fetchStatus, location.pathname, location.search, toast]);
 
     useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2 min-w-0">
-                    <Plug className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1 className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground">
-                        INTEGRATIONS
-                    </h1>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [setHeaderContent]);
-
-    useEffect(() => {
         if (!organizationId && initError) {
             setLoading(false);
         }
@@ -208,19 +193,25 @@ export function CalendarIntegrationsPage() {
 
     if (initError) {
         return (
-            <PageContainer>
-                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
-                    <p className="text-muted-foreground">{initError}</p>
-                    <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
-                </PageSurface>
-            </PageContainer>
+            <PageLayout
+                title="INTEGRATIONS"
+                icon={<Plug className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            >
+                <ErrorState
+                    title="Unable to load integrations"
+                    description={initError}
+                    onAction={() => window.location.reload()}
+                />
+            </PageLayout>
         );
     }
 
     return (
-        <>
-            <PageContainer>
-                <PageSurface className="space-y-6">
+        <PageLayout
+            title="INTEGRATIONS"
+            icon={<Plug className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            surfaceClassName="space-y-6"
+        >
                     <div>
                         <h2 className="text-lg font-medium text-foreground">Connected tools</h2>
                         <p className="text-sm text-muted-foreground">
@@ -356,8 +347,6 @@ export function CalendarIntegrationsPage() {
                             )}
                         </CardContent>
                     </Card>
-                </PageSurface>
-            </PageContainer>
 
             {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
                 <OnboardingModal
@@ -368,7 +357,7 @@ export function CalendarIntegrationsPage() {
                     content={ONBOARDING_CONTENT[onboardingFeatureKey]}
                 />
             )}
-        </>
+        </PageLayout>
     );
 }
 

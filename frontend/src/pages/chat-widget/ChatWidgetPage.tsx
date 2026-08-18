@@ -9,14 +9,13 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { getChatWidget, createChatWidget, updateChatWidget, getEmbedCode } from '@/services/chatWidgetApi';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
+import { ErrorState } from '@/components/ErrorState';
 
 interface LocalChatWidgetConfig {
     id?: number;
@@ -32,7 +31,7 @@ interface LocalChatWidgetConfig {
 
 export function ChatWidgetPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();    // Route-aware onboarding (will show 'inbox' onboarding for Communications group)
+    // Route-aware onboarding (will show 'inbox' onboarding for Communications group)
     const {
         showModal: showOnboarding,
         handleComplete: completeOnboarding,
@@ -47,50 +46,6 @@ export function ChatWidgetPage() {
     const [saving, setSaving] = useState(false);
     const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [activeTab, setActiveTab] = useState('settings');
-
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between w-full min-w-0 gap-3 md:gap-2">
-                <div className="flex items-center gap-2 ml-2">
-                    <MessageCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
-                    >
-                        CHAT WIDGET
-                    </h1>
-                </div>
-                <div className="flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    {/* Desktop Tabs - in header */}
-                    <div className="hidden md:flex items-center">
-                        <Tabs value={activeTab} onValueChange={setActiveTab}>
-                            <TabsList className="h-9">
-                                <TabsTrigger value="settings" className="text-xs">
-                                    <Settings className="h-4 w-4 mr-1" />Settings
-                                </TabsTrigger>
-                                <TabsTrigger value="appearance" className="text-xs">
-                                    <Palette className="h-4 w-4 mr-1" />Appearance
-                                </TabsTrigger>
-                                <TabsTrigger value="install" className="text-xs">
-                                    <Code className="h-4 w-4 mr-1" />Install
-                                </TabsTrigger>
-                            </TabsList>
-                        </Tabs>
-                    </div>
-                    {/* Desktop save button */}
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light hidden md:flex"
-                        onClick={handleSave}
-                        disabled={saving}
-                    >
-                        <Save className="h-4 w-4 mr-2" />
-                        {saving ? 'Saving...' : 'Save Changes'}
-                    </Button>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [saving, setHeaderContent, activeTab]);
 
     useEffect(() => {
         if (!organizationId && initError) {
@@ -189,28 +144,91 @@ export function ChatWidgetPage() {
 
     if (initError) {
         return (
-            <PageContainer>
-                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
-                    <p className="text-muted-foreground">{initError}</p>
-                    <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
-                </PageSurface>
-            </PageContainer>
+            <PageLayout
+                title="CHAT WIDGET"
+                icon={<MessageCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            >
+                <ErrorState
+                    title="Unable to load chat widget"
+                    description={initError}
+                    onAction={() => window.location.reload()}
+                />
+            </PageLayout>
         );
     }
 
     if (loading) {
         return (
-            <PageContainer className="max-w-4xl">
-                <PageSurface contentClassName="p-0">
-                    <Skeleton className="h-96" />
-                </PageSurface>
-            </PageContainer>
+            <PageLayout
+                title="CHAT WIDGET"
+                icon={<MessageCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+                className="max-w-4xl"
+                contentClassName="p-0"
+            >
+                <Skeleton className="h-96" />
+            </PageLayout>
         );
     }
 
     return (
-        <>
-            {/* Route-aware onboarding modal */}
+        <PageLayout
+            title="CHAT WIDGET"
+            icon={<MessageCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            className="max-w-4xl"
+            mobileClassName="flex-col items-stretch gap-3"
+            headerActions={
+                <>
+                    <Tabs value={activeTab} onValueChange={setActiveTab}>
+                        <TabsList className="h-9">
+                            <TabsTrigger value="settings" className="text-xs">
+                                <Settings className="h-4 w-4 mr-1" />Settings
+                            </TabsTrigger>
+                            <TabsTrigger value="appearance" className="text-xs">
+                                <Palette className="h-4 w-4 mr-1" />Appearance
+                            </TabsTrigger>
+                            <TabsTrigger value="install" className="text-xs">
+                                <Code className="h-4 w-4 mr-1" />Install
+                            </TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        onClick={handleSave}
+                        disabled={saving}
+                    >
+                        <Save className="h-4 w-4 mr-2" />
+                        {saving ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                </>
+            }
+            mobileActions={
+                <>
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                        <TabsList className="w-full">
+                            <TabsTrigger value="settings" className="flex-1">
+                                <Settings className="h-4 w-4 mr-1" />Settings
+                            </TabsTrigger>
+                            <TabsTrigger value="appearance" className="flex-1">
+                                <Palette className="h-4 w-4 mr-1" />Style
+                            </TabsTrigger>
+                            <TabsTrigger value="install" className="flex-1">
+                                <Code className="h-4 w-4 mr-1" />Install
+                            </TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white w-full"
+                        onClick={handleSave}
+                        disabled={saving}
+                    >
+                        <Save className="h-4 w-4 mr-2" />
+                        {saving ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                </>
+            }
+        >
             {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
                 <OnboardingModal
                     isOpen={showOnboarding}
@@ -221,32 +239,6 @@ export function ChatWidgetPage() {
                 />
             )}
 
-            <MobileControlsBar className="flex-col items-stretch gap-3">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="w-full">
-                        <TabsTrigger value="settings" className="flex-1">
-                            <Settings className="h-4 w-4 mr-1" />Settings
-                        </TabsTrigger>
-                        <TabsTrigger value="appearance" className="flex-1">
-                            <Palette className="h-4 w-4 mr-1" />Style
-                        </TabsTrigger>
-                        <TabsTrigger value="install" className="flex-1">
-                            <Code className="h-4 w-4 mr-1" />Install
-                        </TabsTrigger>
-                    </TabsList>
-                </Tabs>
-                <Button
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white w-full"
-                    onClick={handleSave}
-                    disabled={saving}
-                >
-                    <Save className="h-4 w-4 mr-2" />
-                    {saving ? 'Saving...' : 'Save Changes'}
-                </Button>
-            </MobileControlsBar>
-            <PageContainer className="max-w-4xl">
-                <PageSurface>
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
 
                 <TabsContent value="settings">
@@ -372,9 +364,7 @@ export function ChatWidgetPage() {
                     </Card>
                 </TabsContent>
             </Tabs>
-            </PageSurface>
-        </PageContainer>
-        </>
+        </PageLayout>
     );
 }
 

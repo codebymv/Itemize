@@ -30,7 +30,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
 import { useAuthState } from '@/contexts/AuthContext';
 import {
   fetchCanvasLists,
@@ -66,10 +65,9 @@ import NoteCard from '@/components/NoteCard/NoteCard';
 import WhiteboardCard from '@/components/WhiteboardCard/WhiteboardCard';
 import WireframeCard from '@/components/WireframeCard/WireframeCard';
 import { VaultCard } from '@/components/VaultCard/VaultCard';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { CreateItemModal } from '@/components/CreateItemModal';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
@@ -88,10 +86,9 @@ type SortOption = 'updated' | 'created' | 'title';
 type ViewMode = 'grid' | 'list';
 
 export function ContentsPage() {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const { setHeaderContent } = useHeader();
-  const { token } = useAuthState();
+    const navigate = useNavigate();
+    const { toast } = useToast();
+    const { token } = useAuthState();
   const isMobile = useIsMobile();
 
   const {
@@ -610,16 +607,15 @@ export function ContentsPage() {
     return dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }));
   }, [dbCategories]);
 
-  useEffect(() => {
-    setHeaderContent(
-      <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex items-center gap-2 ml-2">
-          <LayoutGrid className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <h1 className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground">
-            CONTENTS
-          </h1>
-        </div>
-        <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
+  const totalItems = filteredAndSortedLists.length + filteredAndSortedNotes.length + filteredAndSortedWhiteboards.length + filteredAndSortedWireframes.length + filteredAndSortedVaults.length;
+
+  return (
+    <PageLayout
+      title="CONTENTS"
+      icon={<LayoutGrid className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      mobileClassName="flex-col items-stretch gap-3"
+      headerActions={
+        <>
           <div className="flex border rounded-md">
             <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="sm" className="h-9 px-3 rounded-r-none" onClick={() => setViewMode('grid')}>
               <LayoutGrid className="h-4 w-4" />
@@ -664,17 +660,10 @@ export function ContentsPage() {
             <Map className="h-4 w-4 mr-2" />
             Canvas
           </Button>
-        </div>
-      </div>
-    );
-    return () => setHeaderContent(null);
-  }, [navigate, setHeaderContent, viewMode, typeFilter, categoryFilter, searchQuery, sortBy, uniqueCategories]);
-
-  const totalItems = filteredAndSortedLists.length + filteredAndSortedNotes.length + filteredAndSortedWhiteboards.length + filteredAndSortedWireframes.length + filteredAndSortedVaults.length;
-
-  return (
-    <>
-      <MobileControlsBar className="flex-col items-stretch gap-3">
+        </>
+      }
+      mobileActions={
+        <>
         <div className="flex items-center gap-2 w-full">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -724,10 +713,9 @@ export function ContentsPage() {
             </Button>
           </div>
         </div>
-      </MobileControlsBar>
-
-      <PageContainer>
-        <PageSurface>
+        </>
+      }
+    >
         <div className="flex items-center justify-end mb-6">
           <span className="text-sm text-muted-foreground">{totalItems} {totalItems === 1 ? 'item' : 'items'}</span>
         </div>
@@ -873,8 +861,6 @@ export function ContentsPage() {
         )}
           </CardContent>
         </Card>
-        </PageSurface>
-      </PageContainer>
 
       {showNewNoteModal && <CreateItemModal open={showNewNoteModal} onOpenChange={(open) => { setShowNewNoteModal(open); if (!open) fetchAllContent(); }} itemType="note" onCreate={createNote} existingCategories={categoriesForModal} />}
       {showNewListModal && <CreateItemModal open={showNewListModal} onOpenChange={(open) => { setShowNewListModal(open); if (!open) fetchAllContent(); }} itemType="list" onCreate={createList} existingCategories={categoriesForModal} />}
@@ -913,7 +899,7 @@ export function ContentsPage() {
           content={ONBOARDING_CONTENT[onboardingFeatureKey]}
         />
       )}
-    </>
+    </PageLayout>
   );
 }
 

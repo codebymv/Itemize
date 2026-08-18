@@ -6,11 +6,12 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getStatBadgeClass, getStatIconBgClass, getStatValueClass, getStatIconClass, StatTheme } from '@/hooks/useStatStyles';
+import { getStatBadgeClass } from '@/hooks/useStatStyles';
+import { StatCard } from '@/components/StatCard';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,7 +27,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { usePageHeader } from '@/hooks/usePageHeader';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
@@ -39,9 +39,9 @@ import {
   duplicateWorkflow,
   Workflow 
 } from '@/services/automationsApi';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import {
   WORKFLOW_TRIGGER_LABELS,
   WORKFLOW_TRIGGER_OPTIONS,
@@ -73,60 +73,6 @@ export function AutomationsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [triggerFilter, setTriggerFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-
-  usePageHeader(
-    {
-      title: 'WORKFLOWS',
-      icon: <Zap className="h-5 w-5 text-blue-600 flex-shrink-0" />,
-      leftClassName: 'min-w-0 flex-1',
-      rightClassName: 'flex-shrink-0',
-      titleClassName: 'min-w-0',
-      rightContent: (
-        <>
-          <div className="relative w-full max-w-xs">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search workflows..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors font-raleway"
-            />
-          </div>
-          <Select value={triggerFilter} onValueChange={setTriggerFilter}>
-            <SelectTrigger className="w-[150px] h-9 bg-muted/20 border-border/50">
-              <Zap className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Trigger" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Triggers</SelectItem>
-              {WORKFLOW_TRIGGER_OPTIONS.map(({ type, label }) => (
-                <SelectItem key={type} value={type}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[120px] h-9 bg-muted/20 border-border/50">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
-            onClick={() => navigate('/automations/new')}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Workflow
-          </Button>
-        </>
-      ),
-    },
-    [searchQuery, triggerFilter, statusFilter, navigate]
-  );
 
   useEffect(() => {
     if (orgLoading) {
@@ -245,18 +191,17 @@ export function AutomationsPage() {
   // Show error state
   if (initError) {
     return (
-      <PageContainer>
-        <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
-          <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-            <Zap className="h-6 w-6 text-destructive" />
-          </div>
-          <h3 className="text-lg font-medium mb-2">Automations Not Ready</h3>
-          <p className="text-muted-foreground mb-4">{initError}</p>
-          <Button onClick={() => window.location.reload()}>
-            Retry
-          </Button>
-        </PageSurface>
-      </PageContainer>
+      <PageLayout
+        title="WORKFLOWS"
+        icon={<Zap className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      >
+        <ErrorState
+          title="Automations Not Ready"
+          description={initError}
+          icon={Zap}
+          onAction={() => window.location.reload()}
+        />
+      </PageLayout>
     );
   }
 
@@ -270,31 +215,24 @@ export function AutomationsPage() {
   };
 
   return (
-    <>
-      {/* Onboarding Modal */}
-      <OnboardingModal
-        isOpen={showOnboarding}
-        onClose={closeOnboarding}
-        onComplete={completeOnboarding}
-        onDismiss={dismissOnboarding}
-        content={ONBOARDING_CONTENT.automations}
-      />
-
-      <MobileControlsBar className="flex-col items-stretch">
-        <div className="flex items-center gap-2 w-full">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+    <PageLayout
+      title="WORKFLOWS"
+      icon={<Zap className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      mobileClassName="flex-col items-stretch"
+      headerActions={
+        <>
+          <div className="relative w-full max-w-xs">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search workflows..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 w-full"
+              className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors font-raleway"
             />
           </div>
-        </div>
-        <div className="flex items-center gap-2 w-full">
           <Select value={triggerFilter} onValueChange={setTriggerFilter}>
-            <SelectTrigger className="flex-1 h-9">
+            <SelectTrigger className="w-[150px] h-9 bg-muted/20 border-border/50">
+              <Zap className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Trigger" />
             </SelectTrigger>
             <SelectContent>
@@ -305,124 +243,126 @@ export function AutomationsPage() {
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="flex-1 h-9">
+            <SelectTrigger className="w-[120px] h-9 bg-muted/20 border-border/50">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
           </Select>
           <Button
-            size="icon"
-            className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
             onClick={() => navigate('/automations/new')}
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4 mr-2" />
+            Create Workflow
           </Button>
-        </div>
-      </MobileControlsBar>
-      <PageContainer>
-        <PageSurface>
+        </>
+      }
+      mobileActions={
+        <>
+          <div className="flex items-center gap-2 w-full">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search workflows..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-9 w-full"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full">
+            <Select value={triggerFilter} onValueChange={setTriggerFilter}>
+              <SelectTrigger className="flex-1 h-9">
+                <SelectValue placeholder="Trigger" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Triggers</SelectItem>
+                {WORKFLOW_TRIGGER_OPTIONS.map(({ type, label }) => (
+                  <SelectItem key={type} value={type}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="flex-1 h-9">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              size="icon"
+              className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
+              onClick={() => navigate('/automations/new')}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+        </>
+      }
+    >
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={closeOnboarding}
+        onComplete={completeOnboarding}
+        onDismiss={dismissOnboarding}
+        content={ONBOARDING_CONTENT.automations}
+      />
+
         {/* Stats cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-6">
-        {loading ? (
-          <>
-            {[...Array(5)].map((_, i) => (
-              <Card key={i}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Skeleton className="h-5 w-20 mb-2" />
-                      <Skeleton className="h-8 w-24 mb-1" />
-                      <Skeleton className="h-3 w-16" />
-                    </div>
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </>
-        ) : (
-          <>
-            {/* Critical - Red (Needs Attention) */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Badge className={`text-xs mb-2 ${getStatBadgeClass('red')}`}>Inactive</Badge>
-                    <p className={`text-2xl font-bold ${getStatValueClass('red')}`}>{stats.inactive}</p>
-                    <p className="text-xs text-muted-foreground">Inactive Workflows</p>
-                  </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('red')}`}>
-                    <Pause className={`h-5 w-5 ${getStatIconClass('red')}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            {/* General Overview - Blue (Primary Metrics) */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Badge className={`text-xs mb-2 ${getStatBadgeClass('blue')}`}>Total</Badge>
-                    <p className={`text-2xl font-bold ${getStatValueClass('blue')}`}>{stats.total}</p>
-                    <p className="text-xs text-muted-foreground">Total Workflows</p>
-                  </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('blue')}`}>
-                    <Zap className={`h-5 w-5 ${getStatIconClass('blue')}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            {/* Warning - Orange (Attention Needed) */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Badge className={`text-xs mb-2 ${getStatBadgeClass('orange')}`}>Enrolled</Badge>
-                    <p className={`text-2xl font-bold ${getStatValueClass('orange')}`}>{stats.totalEnrolled}</p>
-                    <p className="text-xs text-muted-foreground">Total Enrolled</p>
-                  </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('orange')}`}>
-                    <Users className={`h-5 w-5 ${getStatIconClass('orange')}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            {/* Success - Green (Positive Outcome) */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Badge className={`text-xs mb-2 ${getStatBadgeClass('green')}`}>Active</Badge>
-                    <p className={`text-2xl font-bold ${getStatValueClass('green')}`}>{stats.active}</p>
-                    <p className="text-xs text-muted-foreground">Active Workflows</p>
-                  </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('green')}`}>
-                    <Play className={`h-5 w-5 ${getStatIconClass('green')}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            {/* Success - Green (Positive Outcome) */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Badge className={`text-xs mb-2 ${getStatBadgeClass('green')}`}>Completed</Badge>
-                    <p className={`text-2xl font-bold ${getStatValueClass('green')}`}>{stats.totalCompleted}</p>
-                    <p className="text-xs text-muted-foreground">Completed</p>
-                  </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('green')}`}>
-                    <CheckCircle className={`h-5 w-5 ${getStatIconClass('green')}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </>
-        )}
+            <StatCard
+              title="Inactive Workflows"
+              badgeText="Inactive"
+              value={stats.inactive}
+              icon={Pause}
+              description="Inactive Workflows"
+              colorTheme="red"
+              isLoading={loading}
+            />
+            <StatCard
+              title="Total Workflows"
+              badgeText="Total"
+              value={stats.total}
+              icon={Zap}
+              description="Total Workflows"
+              colorTheme="blue"
+              isLoading={loading}
+            />
+            <StatCard
+              title="Total Enrolled"
+              badgeText="Enrolled"
+              value={stats.totalEnrolled}
+              icon={Users}
+              description="Total Enrolled"
+              colorTheme="orange"
+              isLoading={loading}
+            />
+            <StatCard
+              title="Active Workflows"
+              badgeText="Active"
+              value={stats.active}
+              icon={Play}
+              description="Active Workflows"
+              colorTheme="green"
+              isLoading={loading}
+            />
+            <StatCard
+              title="Completed"
+              badgeText="Completed"
+              value={stats.totalCompleted}
+              icon={CheckCircle}
+              description="Completed"
+              colorTheme="green"
+              isLoading={loading}
+            />
       </div>
 
       {/* Workflows list */}
@@ -508,9 +448,7 @@ export function AutomationsPage() {
           )}
         </CardContent>
       </Card>
-    </PageSurface>
-    </PageContainer>
-    </>
+    </PageLayout>
   );
 }
 

@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import FormEditorPage from './FormEditorPage';
+import { HeaderProvider } from '@/contexts/HeaderContext';
 
 const apiMocks = vi.hoisted(() => ({
     deleteFormSubmission: vi.fn(),
@@ -26,9 +27,6 @@ vi.mock('@/hooks/useOrganization', () => ({
 }));
 vi.mock('@/hooks/use-toast', () => ({
     useToast: () => ({ toast: toastMock }),
-}));
-vi.mock('@/contexts/HeaderContext', () => ({
-    useHeader: () => ({ setHeaderContent: vi.fn() }),
 }));
 
 const form = {
@@ -70,11 +68,13 @@ const form = {
 };
 
 const renderEditor = () => render(
-    <MemoryRouter initialEntries={['/forms/7']}>
-        <Routes>
-            <Route path="/forms/:id" element={<FormEditorPage />} />
-        </Routes>
-    </MemoryRouter>,
+    <HeaderProvider>
+        <MemoryRouter initialEntries={['/forms/7']}>
+            <Routes>
+                <Route path="/forms/:id" element={<FormEditorPage />} />
+            </Routes>
+        </MemoryRouter>
+    </HeaderProvider>,
 );
 
 describe('FormEditorPage', () => {

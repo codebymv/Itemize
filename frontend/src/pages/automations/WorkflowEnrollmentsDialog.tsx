@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pause, Play, RefreshCw, RotateCcw, UserPlus, XCircle } from 'lucide-react';
+import { EmptyState } from '@/components/EmptyState';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -182,7 +183,7 @@ export function WorkflowEnrollmentsDialog({ open, onOpenChange, organizationId, 
 
         <div className="max-h-[45vh] space-y-2 overflow-y-auto">
           {!loading && enrollments.length === 0 && (
-            <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">No enrollments yet.</p>
+            <EmptyState icon={UserPlus} title="No enrollments yet" size="compact" />
           )}
           {enrollments.map((enrollment) => {
             const busy = working?.endsWith(`-${enrollment.id}`) ?? false;

@@ -40,10 +40,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
@@ -90,7 +88,6 @@ const defaultFormData: ProductFormData = {
 
 export function ProductsPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
     // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
     const {
         showModal: showOnboarding,
@@ -116,52 +113,6 @@ export function ProductsPage() {
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const [formData, setFormData] = useState<ProductFormData>(defaultFormData);
     const [saving, setSaving] = useState(false);
-
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2 min-w-0">
-                    <Package className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
-                    >
-                        PRODUCTS
-                    </h1>
-                </div>
-                {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <div className="flex items-center gap-2">
-                        <Switch
-                            id="show-inactive-header"
-                            checked={showInactive}
-                            onCheckedChange={setShowInactive}
-                        />
-                        <Label htmlFor="show-inactive-header" className="text-sm text-muted-foreground">
-                            Show inactive
-                        </Label>
-                    </div>
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search products..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
-                    </div>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={() => openCreateDialog()}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Product
-                    </Button>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [searchQuery, setHeaderContent, showInactive]);
 
     useEffect(() => {
         if (!organizationId) {
@@ -258,9 +209,42 @@ export function ProductsPage() {
     );
 
     return (
-        <>
-            {/* Mobile Controls Bar */}
-            <MobileControlsBar>
+        <PageLayout
+            title="PRODUCTS"
+            icon={<Package className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            headerActions={
+                <>
+                    <div className="flex items-center gap-2">
+                        <Switch
+                            id="show-inactive-header"
+                            checked={showInactive}
+                            onCheckedChange={setShowInactive}
+                        />
+                        <Label htmlFor="show-inactive-header" className="text-sm text-muted-foreground">
+                            Show inactive
+                        </Label>
+                    </div>
+                    <div className="relative w-full max-w-xs">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search products..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50"
+                        />
+                    </div>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        onClick={() => openCreateDialog()}
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Product
+                    </Button>
+                </>
+            }
+            mobileActions={
+                <>
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                     <Input
@@ -287,10 +271,9 @@ export function ProductsPage() {
                 >
                     <Plus className="h-4 w-4" />
                 </Button>
-            </MobileControlsBar>
-
-            <PageContainer>
-                <PageSurface>
+                </>
+            }
+        >
                 {/* Product count */}
                 <div className="flex items-center justify-end mb-6">
                     <p className="text-sm text-muted-foreground">
@@ -377,9 +360,6 @@ export function ProductsPage() {
                     )}
                 </CardContent>
             </Card>
-
-            {/* Create/Edit Product Dialog */}
-            </PageSurface>
 
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogContent className="sm:max-w-[500px]">
@@ -518,9 +498,6 @@ export function ProductsPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </PageContainer>
-
-        {/* Route-aware onboarding modal */}
         {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
             <OnboardingModal
                 isOpen={showOnboarding}
@@ -530,7 +507,7 @@ export function ProductsPage() {
                 content={ONBOARDING_CONTENT[onboardingFeatureKey]}
             />
         )}
-        </>
+        </PageLayout>
     );
 }
 

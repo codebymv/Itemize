@@ -18,26 +18,24 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
 import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { Pipeline, Deal, PipelineStage } from '@/types';
 import { getPipelines, getPipeline, createPipeline, moveDealToStage } from '@/services/pipelinesApi';
 import { useOrganization } from '@/hooks/useOrganization';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { KanbanBoard } from './components/KanbanBoard';
 import { CreateDealModal } from './components/CreateDealModal';
 import { CreatePipelineModal } from './components/CreatePipelineModal';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 
 const getApiStatus = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
 
 export function PipelinesPage() {
   const { toast } = useToast();
-  const { setHeaderContent } = useHeader();
   // Onboarding
   const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('pipelines');
 
@@ -56,77 +54,6 @@ export function PipelinesPage() {
   const [showCreatePipelineModal, setShowCreatePipelineModal] = useState(false);
   const [initialStageId, setInitialStageId] = useState<string | undefined>();
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Set header content following workspace pattern
-  useEffect(() => {
-    setHeaderContent(
-      <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex items-center gap-2 ml-2 min-w-0">
-          <Kanban className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <h1
-            className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
-          >
-            PIPELINES
-          </h1>
-        </div>
-{/* Desktop-only controls */}
-        <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-          <div className="relative w-full max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search deals..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
-            />
-          </div>
-          {pipelines.length > 0 && (
-            <Select
-              value={selectedPipelineId?.toString() || ''}
-              onValueChange={(v) => setSelectedPipelineId(parseInt(v))}
-            >
-              <SelectTrigger className="w-[180px] h-9 bg-muted/20 border-border/50">
-                <SelectValue placeholder="Select pipeline" />
-              </SelectTrigger>
-              <SelectContent>
-                {pipelines.map((pipeline) => (
-                  <SelectItem key={pipeline.id} value={pipeline.id.toString()}>
-                    {pipeline.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-9 w-9">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowCreatePipelineModal(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                New Pipeline
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled>
-                <Settings className="h-4 w-4 mr-2" />
-                Pipeline Settings
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-light whitespace-nowrap"
-            onClick={() => setShowCreateDealModal(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Deal
-          </Button>
-        </div>
-      </div>
-    );
-    return () => setHeaderContent(null);
-  }, [pipelines, selectedPipelineId, searchQuery, setHeaderContent]);
 
   useEffect(() => {
     if (orgLoading) {
@@ -276,62 +203,42 @@ export function PipelinesPage() {
   // Show error state if initialization failed
   if (initError) {
     return (
-      <PageContainer>
-        <PageSurface contentClassName="p-12 text-center">
-          <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-            <TrendingUp className="h-6 w-6 text-destructive" />
-          </div>
-          <h3 className="text-lg font-medium mb-2">CRM Not Ready</h3>
-          <p className="text-muted-foreground mb-4">{initError}</p>
-          <Button onClick={() => window.location.reload()}>
-            Retry
-          </Button>
-        </PageSurface>
-      </PageContainer>
+      <PageLayout
+        title="PIPELINES"
+        icon={<Kanban className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      >
+        <ErrorState
+          title="CRM Not Ready"
+          description={initError}
+          icon={TrendingUp}
+          onAction={() => window.location.reload()}
+        />
+      </PageLayout>
     );
   }
 
   return (
-    <>
-      {/* Onboarding Modal */}
-      <OnboardingModal
-        isOpen={showOnboarding}
-        onClose={closeOnboarding}
-        onComplete={completeOnboarding}
-        onDismiss={dismissOnboarding}
-        content={ONBOARDING_CONTENT.pipelines}
-      />
-
-{/* Mobile Controls Bar */}
-      <MobileControlsBar className="flex-col items-stretch gap-2">
-        {/* Row 1: Primary Actions */}
-        <div className="flex items-center gap-2 w-full">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+    <PageLayout
+      title="PIPELINES"
+      icon={<Kanban className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      mobileClassName="flex-col items-stretch gap-2"
+      headerActions={
+        <>
+          <div className="relative w-full max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search deals..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9 w-full bg-muted/20 border-border/50"
+              className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
             />
           </div>
-          <Button
-            size="icon"
-            className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
-            onClick={() => setShowCreateDealModal(true)}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-        
-        {/* Row 2: Pipeline Selector + Menu */}
-        {pipelines.length > 0 && (
-          <div className="flex items-center gap-2 w-full">
+          {pipelines.length > 0 && (
             <Select
               value={selectedPipelineId?.toString() || ''}
               onValueChange={(v) => setSelectedPipelineId(parseInt(v))}
             >
-              <SelectTrigger className="flex-1 h-9">
+              <SelectTrigger className="w-[180px] h-9 bg-muted/20 border-border/50">
                 <SelectValue placeholder="Select pipeline" />
               </SelectTrigger>
               <SelectContent>
@@ -342,26 +249,100 @@ export function PipelinesPage() {
                 ))}
               </SelectContent>
             </Select>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setShowCreatePipelineModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Pipeline
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Pipeline Settings
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="h-9 w-9">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setShowCreatePipelineModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                New Pipeline
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled>
+                <Settings className="h-4 w-4 mr-2" />
+                Pipeline Settings
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-light whitespace-nowrap"
+            onClick={() => setShowCreateDealModal(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Deal
+          </Button>
+        </>
+      }
+      mobileActions={
+        <>
+          <div className="flex items-center gap-2 w-full">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search deals..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-9 w-full bg-muted/20 border-border/50"
+              />
+            </div>
+            <Button
+              size="icon"
+              className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
+              onClick={() => setShowCreateDealModal(true)}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
           </div>
-        )}
-      </MobileControlsBar>
+          {pipelines.length > 0 && (
+            <div className="flex items-center gap-2 w-full">
+              <Select
+                value={selectedPipelineId?.toString() || ''}
+                onValueChange={(v) => setSelectedPipelineId(parseInt(v))}
+              >
+                <SelectTrigger className="flex-1 h-9">
+                  <SelectValue placeholder="Select pipeline" />
+                </SelectTrigger>
+                <SelectContent>
+                  {pipelines.map((pipeline) => (
+                    <SelectItem key={pipeline.id} value={pipeline.id.toString()}>
+                      {pipeline.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-9 w-9">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setShowCreatePipelineModal(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Pipeline
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Pipeline Settings
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+        </>
+      }
+    >
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={closeOnboarding}
+        onComplete={completeOnboarding}
+        onDismiss={dismissOnboarding}
+        content={ONBOARDING_CONTENT.pipelines}
+      />
 
       <div className="h-full flex flex-col">
         {/* Stats bar */}
@@ -464,7 +445,7 @@ export function PipelinesPage() {
         />
       )}
       </div>
-    </>
+    </PageLayout>
   );
 }
 

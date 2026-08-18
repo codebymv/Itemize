@@ -15,8 +15,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
-import { useHeader } from '@/contexts/HeaderContext';
+import { PageLayout } from '@/components/layout/PageLayout';
+import { ErrorState } from '@/components/ErrorState';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
 import {
@@ -96,7 +96,6 @@ export function CalendarSettingsPage() {
     const { id } = useParams<{ id: string }>();
     const calendarId = Number(id);
     const navigate = useNavigate();
-    const { setHeaderContent } = useHeader();
     const { toast } = useToast();
     const {
         organizationId,
@@ -111,26 +110,6 @@ export function CalendarSettingsPage() {
     const [loadError, setLoadError] = useState<string | null>(null);
     const [savingSettings, setSavingSettings] = useState(false);
     const [savingAvailability, setSavingAvailability] = useState(false);
-
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center gap-3 min-w-0">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Back to calendars"
-                    onClick={() => navigate('/calendars')}
-                >
-                    <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <CalendarIcon className="h-5 w-5 text-blue-600 shrink-0" />
-                <h1 className="text-lg font-semibold truncate">
-                    {calendar?.name || 'Calendar settings'}
-                </h1>
-            </div>,
-        );
-        return () => setHeaderContent(null);
-    }, [calendar?.name, navigate, setHeaderContent]);
 
     const loadCalendar = useCallback(async () => {
         if (organizationLoading) return;
@@ -277,42 +256,54 @@ export function CalendarSettingsPage() {
         }
     };
 
+    const backButton = (
+        <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Back to calendars"
+            onClick={() => navigate('/calendars')}
+        >
+            <ArrowLeft className="h-4 w-4" />
+        </Button>
+    );
+
     if (loading) {
         return (
-            <PageContainer>
-                <PageSurface>
-                    <div className="space-y-4">
-                        <Skeleton className="h-52 w-full" />
-                        <Skeleton className="h-72 w-full" />
-                    </div>
-                </PageSurface>
-            </PageContainer>
+            <PageLayout
+                title="Calendar settings"
+                icon={<CalendarIcon className="h-5 w-5 text-blue-600 shrink-0" />}
+                leading={backButton}
+            >
+                <div className="space-y-4">
+                    <Skeleton className="h-52 w-full" />
+                    <Skeleton className="h-72 w-full" />
+                </div>
+            </PageLayout>
         );
     }
 
     if (loadError || !calendar || !draft) {
         return (
-            <PageContainer>
-                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="text-center">
-                    <CalendarIcon className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                    <h2 className="text-lg font-semibold">Calendar unavailable</h2>
-                    <p className="text-sm text-muted-foreground mt-1 mb-4">
-                        {loadError || 'Unable to load this calendar.'}
-                    </p>
-                    <div className="flex justify-center gap-2">
-                        <Button variant="outline" onClick={() => navigate('/calendars')}>
-                            Back
-                        </Button>
-                        <Button onClick={() => void loadCalendar()}>Retry</Button>
-                    </div>
-                </PageSurface>
-            </PageContainer>
+            <PageLayout
+                title="Calendar settings"
+                icon={<CalendarIcon className="h-5 w-5 text-blue-600 shrink-0" />}
+                leading={backButton}
+            >
+                <ErrorState
+                    title="Calendar unavailable"
+                    description={loadError || 'Unable to load this calendar.'}
+                    onAction={() => void loadCalendar()}
+                />
+            </PageLayout>
         );
     }
 
     return (
-        <PageContainer>
-            <PageSurface>
+        <PageLayout
+            title={calendar.name || 'Calendar settings'}
+            icon={<CalendarIcon className="h-5 w-5 text-blue-600 shrink-0" />}
+            leading={backButton}
+        >
                 <div className="space-y-6">
                     <Card>
                         <CardHeader>
@@ -595,8 +586,7 @@ export function CalendarSettingsPage() {
                         </Card>
                     )}
                 </div>
-            </PageSurface>
-        </PageContainer>
+        </PageLayout>
     );
 }
 

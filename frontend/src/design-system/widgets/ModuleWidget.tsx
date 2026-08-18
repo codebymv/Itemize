@@ -13,7 +13,8 @@ import {
   ChevronDown,
   TrendingUp,
 } from 'lucide-react'
-import { semanticColors, designTokens } from '@/design-system/design-tokens'
+import { semanticColors } from '@/design-system/design-tokens'
+import { EmptyState } from '@/components/EmptyState'
 
 export interface ModuleWidgetProps {
   title: string
@@ -175,13 +176,12 @@ const hasRecentItems = recentItems !== undefined;
                   ))}
                 </div>
               ) : (
-                <div className="border-t pt-4">
-                  <div className="py-1">
-                    <p className="text-sm text-muted-foreground">
-                      {emptyListMessage || `Your ${title.toLowerCase()} will appear here`}
-                    </p>
-                  </div>
-                </div>
+                <EmptyState
+                  icon={Icon}
+                  title={emptyListMessage || `No ${title.toLowerCase()} yet`}
+                  size="compact"
+                  className="border-t pt-4"
+                />
               )}
             </CollapsibleContent>
           </CardContent>

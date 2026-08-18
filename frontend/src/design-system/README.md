@@ -116,7 +116,7 @@ All components support light and dark themes through CSS variables defined in `s
 2. **Use semantic colors** for status indicators (`semanticColors.status.*`)
 3. **Use module colors** for module-specific icons (`semanticColors.module.*`)
 4. **Follow the pattern library** for common UI patterns
-5. **Use PageContainer + PageSurface** for all authenticated pages
+5. **Use PageLayout** for all authenticated pages (and public Status/Docs via `PublicPageHeader`)
 
 ## Roadmap
 

@@ -34,7 +34,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
-import { useHeader } from '@/contexts/HeaderContext';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { getAssetUrl } from '@/lib/api';
 import { useOrganization } from '@/hooks/useOrganization';
 import { getContacts } from '@/services/contactsApi';
@@ -51,7 +51,6 @@ import {
 } from '@/services/invoicesApi';
 import { InvoicePreview } from './components/InvoicePreview';
 import { SendInvoiceModal, SendOptions } from './components/SendInvoiceModal';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { CustomerInfoSection } from './components/CustomerInfoSection';
 import { LineItemsTable } from './components/LineItemsTable';
 import { useLineItems } from './hooks/useLineItems';
@@ -81,7 +80,7 @@ export function InvoiceEditorPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();    const isNew = id === 'new' || !id;
+    const isNew = id === 'new' || !id;
 
     const [loading, setLoading] = useState(!isNew);
     const { organizationId } = useOrganization();
@@ -222,69 +221,6 @@ export function InvoiceEditorPage() {
         }, lineItems);
     };
 
-    // Setup header
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2 min-w-0 flex-1">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/invoices')}>
-                        <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                    <Receipt className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate italic-safe min-w-0 font-raleway text-foreground"
-                    >
-                        {(isNew ? 'New Invoice' : 'Invoice').toUpperCase()}
-                    </h1>
-                </div>
-                {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 mr-4 flex-shrink-0">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowPreview(true)}
-                    >
-                        <Eye className="h-4 w-4 mr-2" />
-                        Preview
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleSave}
-                        disabled={saving || lineItems.filter(i => i.name).length === 0}
-                    >
-                        <Save className="h-4 w-4 mr-2" />
-                        {saving ? 'Saving...' : 'Save Draft'}
-                    </Button>
-                    {!isNew && (
-                        <>
-                            <Button
-                                size="sm"
-                                className="bg-blue-600 hover:bg-blue-700 text-white"
-                                onClick={() => setShowSendModal(true)}
-                                disabled={saving}
-                            >
-                                <Send className="h-4 w-4 mr-2" />
-                                Send Invoice
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
-                                onClick={() => navigate(`/documents/new?invoiceId=${id}`)}
-                                disabled={saving}
-                            >
-                                <FileSignature className="h-4 w-4 mr-2" />
-                                Send for Signature
-                            </Button>
-                        </>
-                    )}
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [setHeaderContent, isNew, id, saving, lineItems, navigate]);
-
     // Initialize
     useEffect(() => {
         if (!organizationId) return;
@@ -360,63 +296,124 @@ export function InvoiceEditorPage() {
 
     if (loading) {
         return (
-            <div className="container mx-auto p-6 max-w-4xl">
+            <PageLayout
+                title={(isNew ? 'New Invoice' : 'Invoice').toUpperCase()}
+                icon={<Receipt className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+                leading={
+                    <Button variant="ghost" size="icon" onClick={() => navigate('/invoices')}>
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                }
+            >
                 <div className="space-y-6">
                     <Skeleton className="h-32" />
                     <Skeleton className="h-64" />
                     <Skeleton className="h-32" />
                 </div>
-            </div>
+            </PageLayout>
         );
     }
 
     return (
-        <>
-            <MobileControlsBar>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowPreview(true)}
-                    className="flex-1"
-                >
-                    <Eye className="h-4 w-4 mr-2" />
-                    Preview
+        <PageLayout
+            title={(isNew ? 'New Invoice' : 'Invoice').toUpperCase()}
+            icon={<Receipt className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            leading={
+                <Button variant="ghost" size="icon" onClick={() => navigate('/invoices')}>
+                    <ArrowLeft className="h-5 w-5" />
                 </Button>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSave}
-                    disabled={saving || lineItems.filter(i => i.name).length === 0}
-                    className="flex-1"
-                >
-                    <Save className="h-4 w-4 mr-2" />
-                    {saving ? 'Saving...' : 'Save'}
-                </Button>
-                {!isNew && (
-                    <>
-                        <Button
-                            size="sm"
-                            className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
-                            onClick={() => setShowSendModal(true)}
-                            disabled={saving}
-                        >
-                            <Send className="h-4 w-4 mr-2" />
-                            Send
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1 border-blue-600 text-blue-600"
-                            onClick={() => navigate(`/documents/new?invoiceId=${id}`)}
-                            disabled={saving}
-                        >
-                            <FileSignature className="h-4 w-4 mr-2" />
-                            Sign
-                        </Button>
-                    </>
-                )}
-            </MobileControlsBar>
-            <div className="container mx-auto p-6 max-w-5xl">
+            }
+            headerActions={
+                <>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowPreview(true)}
+                    >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Preview
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSave}
+                        disabled={saving || lineItems.filter(i => i.name).length === 0}
+                    >
+                        <Save className="h-4 w-4 mr-2" />
+                        {saving ? 'Saving...' : 'Save Draft'}
+                    </Button>
+                    {!isNew && (
+                        <>
+                            <Button
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                onClick={() => setShowSendModal(true)}
+                                disabled={saving}
+                            >
+                                <Send className="h-4 w-4 mr-2" />
+                                Send Invoice
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
+                                onClick={() => navigate(`/documents/new?invoiceId=${id}`)}
+                                disabled={saving}
+                            >
+                                <FileSignature className="h-4 w-4 mr-2" />
+                                Send for Signature
+                            </Button>
+                        </>
+                    )}
+                </>
+            }
+            mobileActions={
+                <>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowPreview(true)}
+                        className="flex-1"
+                    >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Preview
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSave}
+                        disabled={saving || lineItems.filter(i => i.name).length === 0}
+                        className="flex-1"
+                    >
+                        <Save className="h-4 w-4 mr-2" />
+                        {saving ? 'Saving...' : 'Save'}
+                    </Button>
+                    {!isNew && (
+                        <>
+                            <Button
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+                                onClick={() => setShowSendModal(true)}
+                                disabled={saving}
+                            >
+                                <Send className="h-4 w-4 mr-2" />
+                                Send
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1 border-blue-600 text-blue-600"
+                                onClick={() => navigate(`/documents/new?invoiceId=${id}`)}
+                                disabled={saving}
+                            >
+                                <FileSignature className="h-4 w-4 mr-2" />
+                                Sign
+                            </Button>
+                        </>
+                    )}
+                </>
+            }
+        >
                 <div className="space-y-6">
                 {/* Business Address, Contact Details, Title, Summary, and Logo - Collapsible */}
                 <Collapsible open={businessSectionOpen} onOpenChange={setBusinessSectionOpen}>
@@ -923,8 +920,7 @@ export function InvoiceEditorPage() {
                 dueDate={dueDate}
                 business={businesses.find(b => b.id === selectedBusinessId)}
             />
-        </div>
-        </>
+    </PageLayout>
     );
 }
 

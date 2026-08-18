@@ -7,9 +7,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
+import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
 import {
   SignatureTemplate,
   SignatureTemplateRole,
@@ -25,7 +25,6 @@ export default function SignatureTemplateEditorPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { toast } = useToast();
-  const { setHeaderContent } = useHeader();
 
   const [template, setTemplate] = useState<SignatureTemplate | null>(null);
   const [title, setTitle] = useState('');
@@ -35,20 +34,6 @@ export default function SignatureTemplateEditorPage() {
   const [roles, setRoles] = useState<SignatureTemplateRole[]>([]);
   const [fields, setFields] = useState<SignatureTemplateField[]>([]);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    setHeaderContent(
-      <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex items-center gap-2 ml-2 min-w-0">
-          <FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <h1 className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground">
-            EDIT SIGNATURE TEMPLATE
-          </h1>
-        </div>
-      </div>
-    );
-    return () => setHeaderContent(null);
-  }, [setHeaderContent]);
 
   useEffect(() => {
     if (!id) return;
@@ -124,18 +109,22 @@ export default function SignatureTemplateEditorPage() {
   };
 
   return (
-    <PageContainer>
-        <PageSurface>
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-semibold">Edit Template</h1>
-            <div className="flex gap-2">
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSave} disabled={loading || !template}>
-                <Save className="h-4 w-4 mr-2" />
-                Save
-              </Button>
-            </div>
-          </div>
-
+    <PageLayout
+      title="EDIT SIGNATURE TEMPLATE"
+      icon={<FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      headerActions={
+        <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSave} disabled={loading || !template}>
+          <Save className="h-4 w-4 mr-2" />
+          Save
+        </Button>
+      }
+      mobileActions={
+        <Button className="bg-blue-600 hover:bg-blue-700 text-white flex-1" onClick={handleSave} disabled={loading || !template}>
+          <Save className="h-4 w-4 mr-2" />
+          Save
+        </Button>
+      }
+    >
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
@@ -179,7 +168,9 @@ export default function SignatureTemplateEditorPage() {
                 </Button>
               </CardHeader>
               <CardContent className="space-y-4">
-                {roles.length === 0 && <p className="text-sm text-muted-foreground">No roles yet.</p>}
+                {roles.length === 0 && (
+                  <EmptyState icon={FileSignature} title="No roles yet" size="compact" />
+                )}
                 {roles.map((role, index) => (
                   <div key={`${role.role_name}-${index}`} className="grid grid-cols-1 gap-2 border rounded-md p-3">
                     <Input
@@ -216,7 +207,6 @@ export default function SignatureTemplateEditorPage() {
               />
             </CardContent>
           </Card>
-        </PageSurface>
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -23,7 +23,6 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
 import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -37,8 +36,7 @@ import {
     ConversationsQueryParams,
 } from '@/services/conversationsApi';
 import { useOrganization } from '@/hooks/useOrganization';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 
 const CONVERSATION_STATUSES: Array<NonNullable<ConversationsQueryParams['status']>> = ['open', 'closed', 'snoozed', 'all'];
@@ -48,7 +46,6 @@ const isConversationStatus = (value: string): value is NonNullable<Conversations
 
 export function InboxPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
     // Onboarding
     const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('inbox');
 
@@ -61,45 +58,6 @@ export function InboxPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [newMessage, setNewMessage] = useState('');
     const [sendingMessage, setSendingMessage] = useState(false);
-
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2">
-                    <Inbox className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
-                    >
-                        INBOX
-                    </h1>
-                </div>
-                {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search conversations..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 w-64 bg-muted/20 border-border/50 focus:bg-background transition-colors"
-                        />
-                    </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[120px] h-9">
-                            <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="open">Open</SelectItem>
-                            <SelectItem value="closed">Closed</SelectItem>
-                            <SelectItem value="snoozed">Snoozed</SelectItem>
-                            <SelectItem value="all">All</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [statusFilter, searchQuery, setHeaderContent]);
 
     useEffect(() => {
         if (!initError) return;
@@ -204,8 +162,60 @@ export function InboxPage() {
     };
 
     return (
-        <>
-            {/* Onboarding Modal */}
+        <PageLayout
+            title="INBOX"
+            icon={<Inbox className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            frame="split"
+            className="h-[calc(100vh-64px)]"
+            headerActions={
+                <>
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search conversations..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 w-64 bg-muted/20 border-border/50 focus:bg-background transition-colors"
+                        />
+                    </div>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-[120px] h-9">
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="open">Open</SelectItem>
+                            <SelectItem value="closed">Closed</SelectItem>
+                            <SelectItem value="snoozed">Snoozed</SelectItem>
+                            <SelectItem value="all">All</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </>
+            }
+            mobileActions={
+                <>
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search conversations..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 w-full bg-muted/20 border-border/50"
+                        />
+                    </div>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-[120px] h-9">
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="open">Open</SelectItem>
+                            <SelectItem value="closed">Closed</SelectItem>
+                            <SelectItem value="snoozed">Snoozed</SelectItem>
+                            <SelectItem value="all">All</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </>
+            }
+        >
             <OnboardingModal
                 isOpen={showOnboarding}
                 onClose={closeOnboarding}
@@ -214,30 +224,6 @@ export function InboxPage() {
                 content={ONBOARDING_CONTENT.inbox}
             />
 
-            <MobileControlsBar>
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Search conversations..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-9 w-full bg-muted/20 border-border/50"
-                    />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[120px] h-9">
-                        <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="open">Open</SelectItem>
-                        <SelectItem value="closed">Closed</SelectItem>
-                        <SelectItem value="snoozed">Snoozed</SelectItem>
-                        <SelectItem value="all">All</SelectItem>
-                    </SelectContent>
-                </Select>
-            </MobileControlsBar>
-            <PageContainer className="h-[calc(100vh-64px)]">
-                <PageSurface className="h-full" contentClassName="p-0 h-full">
                 <div className="flex h-full">
                     {/* Conversations list */}
                     <div className="w-80 border-r flex flex-col">
@@ -437,9 +423,7 @@ export function InboxPage() {
                         )}
                     </div>
                 </div>
-            </PageSurface>
-        </PageContainer>
-        </>
+        </PageLayout>
     );
 }
 

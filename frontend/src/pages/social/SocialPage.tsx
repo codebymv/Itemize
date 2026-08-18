@@ -14,16 +14,15 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { getChannels, disconnectChannel, getConversations, getFacebookConnectUrl } from '@/services/socialApi';
 import { cn } from '@/lib/utils';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 
 interface SocialChannel {
     id: number;
@@ -49,7 +48,6 @@ interface SocialConversation {
 
 export function SocialPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();
     // Route-aware onboarding (will show 'inbox' onboarding for Communications group)
     const {
         showModal: showOnboarding,
@@ -65,42 +63,6 @@ export function SocialPage() {
     const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState('conversations');
-
-    useEffect(() => {
-        setHeaderContent(
-            <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2">
-                    <Share2 className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1
-                        className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
-                    >
-                        SOCIAL
-                    </h1>
-                </div>
-                {/* Desktop-only controls */}
-                <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search conversations..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
-                    </div>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={handleConnectFacebook}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Connect Account
-                    </Button>
-                </div>
-            </div>
-        );
-        return () => setHeaderContent(null);
-    }, [searchQuery, setHeaderContent]);
 
     useEffect(() => {
         if (!initError) return;
@@ -183,18 +145,65 @@ export function SocialPage() {
 
     if (initError) {
         return (
-            <PageContainer>
-                <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
-                    <p className="text-muted-foreground">{initError}</p>
-                    <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
-                </PageSurface>
-            </PageContainer>
+            <PageLayout
+                title="SOCIAL"
+                icon={<Share2 className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            >
+                <ErrorState
+                    title="Unable to load social"
+                    description={initError}
+                    onAction={() => window.location.reload()}
+                />
+            </PageLayout>
         );
     }
 
     return (
-        <>
-            {/* Route-aware onboarding modal */}
+        <PageLayout
+            title="SOCIAL"
+            icon={<Share2 className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            headerActions={
+                <>
+                    <div className="relative w-full max-w-xs">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search conversations..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50"
+                        />
+                    </div>
+                    <Button
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        onClick={handleConnectFacebook}
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Connect Account
+                    </Button>
+                </>
+            }
+            mobileActions={
+                <>
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                        <Input
+                            placeholder="Search conversations..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 h-9 bg-muted/20 border-border/50"
+                        />
+                    </div>
+                    <Button
+                        size="icon"
+                        className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
+                        onClick={handleConnectFacebook}
+                    >
+                        <Plus className="h-4 w-4" />
+                    </Button>
+                </>
+            }
+        >
             {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
                 <OnboardingModal
                     isOpen={showOnboarding}
@@ -205,26 +214,6 @@ export function SocialPage() {
                 />
             )}
 
-            <MobileControlsBar>
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                        placeholder="Search conversations..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-9 bg-muted/20 border-border/50"
-                    />
-                </div>
-                <Button
-                    size="icon"
-                    className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
-                    onClick={handleConnectFacebook}
-                >
-                    <Plus className="h-4 w-4" />
-                </Button>
-            </MobileControlsBar>
-            <PageContainer>
-                <PageSurface>
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="mb-6">
                     <TabsTrigger value="conversations">
@@ -345,9 +334,7 @@ export function SocialPage() {
                     </Card>
                 </TabsContent>
             </Tabs>
-            </PageSurface>
-        </PageContainer>
-        </>
+        </PageLayout>
     );
 }
 

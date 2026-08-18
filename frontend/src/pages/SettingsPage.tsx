@@ -5,8 +5,8 @@ import { useAISuggest } from '@/context/AISuggestContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useAuthState } from '@/contexts/AuthContext';
 import { useSubscriptionFeatures, useSubscriptionState } from '@/contexts/SubscriptionContext';
-import { useHeader } from '@/contexts/HeaderContext';
 import { Button } from '@/components/ui/button';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -44,8 +44,6 @@ import {
   Loader2,
   Plug,
 } from 'lucide-react';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
-
 // Refactored hooks and components
 import { usePaymentsTab } from './settings/hooks/usePaymentsTab';
 import {
@@ -393,6 +391,9 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
         </Button>
       );
     }
+    return () => {
+      setSaveButton?.(null);
+    };
   }, [handleSaveSettings, saving, loading, setSaveButton]);
 
   useEffect(() => {
@@ -502,7 +503,6 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
 }
 
 export function SettingsPage() {
-  const { setHeaderContent } = useHeader();
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -526,48 +526,26 @@ export function SettingsPage() {
     }
   }, [location.search, location.pathname, navigate, toast, refreshSubscription]);
 
-  useEffect(() => {
-    setHeaderContent(
-      <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex items-center gap-2 ml-2 min-w-0 flex-1">
-          <Settings className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <h1
-            className="text-base sm:text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
-          >
-            {activeNavItem.title.toUpperCase()}
-          </h1>
-        </div>
-        {saveButton && <div className="hidden md:flex items-center gap-2 mr-4">{saveButton}</div>}
-      </div>
-    );
-    return () => setHeaderContent(null);
-  }, [setHeaderContent, activeNavItem.title, saveButton]);
-
   return (
-    <>
-      {saveButton && (
-        <MobileControlsBar>
-          <div className="flex-1">{saveButton}</div>
-        </MobileControlsBar>
-      )}
-      <div className="container mx-auto p-4 sm:p-6 max-w-8xl">
-        <div className="flex flex-col md:flex-row gap-6 md:gap-8">
-          <SettingsNav />
-
-          <div className="min-w-0 flex-1" key={location.pathname}>
-            {location.pathname === '/preferences' && <PreferencesSettings />}
-            {location.pathname === '/payment-settings' && (
-              <PaymentsSettings
-                setSaveButton={setSaveButton}
-                showCheckoutSuccess={showCheckoutSuccess}
-                onCloseCheckoutSuccess={() => setShowCheckoutSuccess(false)}
-              />
-            )}
-            {location.pathname === '/settings' && <AccountSettings />}
-          </div>
-        </div>
+    <PageLayout
+      title={activeNavItem.title.toUpperCase()}
+      icon={<Settings className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      headerActions={saveButton}
+      mobileActions={saveButton ? <div className="flex-1">{saveButton}</div> : undefined}
+      nav={<SettingsNav />}
+    >
+      <div key={location.pathname}>
+        {location.pathname === '/preferences' && <PreferencesSettings />}
+        {location.pathname === '/payment-settings' && (
+          <PaymentsSettings
+            setSaveButton={setSaveButton}
+            showCheckoutSuccess={showCheckoutSuccess}
+            onCloseCheckoutSuccess={() => setShowCheckoutSuccess(false)}
+          />
+        )}
+        {location.pathname === '/settings' && <AccountSettings />}
       </div>
-    </>
+    </PageLayout>
   );
 }
 

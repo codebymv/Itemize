@@ -53,8 +53,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { useToast } from '@/hooks/use-toast';
-import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import {
   getWorkflow,
@@ -67,7 +67,6 @@ import {
   getEmailTemplates,
   EmailTemplate,
 } from '@/services/automationsApi';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
 import {
   WORKFLOW_STEP_LABELS,
   WORKFLOW_TRIGGER_OPTIONS,
@@ -158,7 +157,7 @@ export function WorkflowBuilderPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setHeaderContent } = useHeader();  const { organizationId } = useOrganization({
+  const { organizationId } = useOrganization({
     onError: () => {
       toast({
         title: 'Error',
@@ -276,64 +275,6 @@ export function WorkflowBuilderPage() {
       });
     }
   }, [organizationId, id, isActive, toast]);
-
-  // Set header content
-  useEffect(() => {
-    setHeaderContent(
-      <div className="flex items-center justify-between w-full min-w-0">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9"
-            onClick={() => navigate('/automations')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <Zap className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <h1 
-            className="text-xl font-semibold italic truncate italic-safe min-w-0 font-raleway text-foreground"
-          >
-            {(isNewWorkflow ? 'New Workflow' : name || 'Workflow').toUpperCase()}
-          </h1>
-        </div>
-        {/* Desktop-only controls */}
-        <div className="hidden md:flex items-center gap-2 mr-4 flex-shrink-0">
-          {!isNewWorkflow && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowEnrollments(true)}
-            >
-              <Users className="h-4 w-4 mr-2" />
-              Enrollments
-            </Button>
-          )}
-          {!isNewWorkflow && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleToggleActive}
-              disabled={saving}
-            >
-              {isActive ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
-              {isActive ? 'Deactivate' : 'Activate'}
-            </Button>
-          )}
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-            onClick={handleSave}
-            disabled={saving}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? 'Saving...' : 'Save'}
-          </Button>
-        </div>
-      </div>
-    );
-    return () => setHeaderContent(null);
-  }, [name, isActive, saving, isNewWorkflow, navigate, setHeaderContent, handleSave, handleToggleActive]);
 
   // Fetch workflow and email templates
   useEffect(() => {
@@ -543,45 +484,113 @@ export function WorkflowBuilderPage() {
 
 
   if (loading) {
-    return <PageLoading message="Loading workflow..." className="h-full" />;
+    return (
+      <PageLayout
+        title={(isNewWorkflow ? 'New Workflow' : name || 'Workflow').toUpperCase()}
+        icon={<Zap className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+        leading={
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9"
+            onClick={() => navigate('/automations')}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        }
+        frame="flush"
+      >
+        <PageLoading message="Loading workflow..." className="h-full" />
+      </PageLayout>
+    );
   }
 
   return (
-    <>
-      <MobileControlsBar>
-        {!isNewWorkflow && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowEnrollments(true)}
-            className="flex-1"
-          >
-            <Users className="h-4 w-4 mr-2" />
-            Enrollments
-          </Button>
-        )}
-        {!isNewWorkflow && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleToggleActive}
-            disabled={saving}
-            className="flex-1"
-          >
-            {isActive ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
-            {isActive ? 'Deactivate' : 'Activate'}
-          </Button>
-        )}
+    <PageLayout
+      title={(isNewWorkflow ? 'New Workflow' : name || 'Workflow').toUpperCase()}
+      icon={<Zap className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      leading={
         <Button
-          size="sm"
-          className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
-          onClick={handleSave}
-          disabled={saving}
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9"
+          onClick={() => navigate('/automations')}
         >
-          <Save className="h-4 w-4 mr-2" />
-          {saving ? 'Saving...' : 'Save'}
+          <ArrowLeft className="h-4 w-4" />
         </Button>
-      </MobileControlsBar>
+      }
+      headerActions={
+        <>
+          {!isNewWorkflow && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowEnrollments(true)}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Enrollments
+            </Button>
+          )}
+          {!isNewWorkflow && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleToggleActive}
+              disabled={saving}
+            >
+              {isActive ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+              {isActive ? 'Deactivate' : 'Activate'}
+            </Button>
+          )}
+          <Button
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
+        </>
+      }
+      mobileActions={
+        <>
+          {!isNewWorkflow && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowEnrollments(true)}
+              className="flex-1"
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Enrollments
+            </Button>
+          )}
+          {!isNewWorkflow && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleToggleActive}
+              disabled={saving}
+              className="flex-1"
+            >
+              {isActive ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+              {isActive ? 'Deactivate' : 'Activate'}
+            </Button>
+          )}
+          <Button
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
+        </>
+      }
+      frame="flush"
+    >
       <div className="h-full flex">
       {/* Left sidebar - Step palette */}
       <div className="w-64 border-r bg-sidebar p-3 overflow-y-auto text-sidebar-foreground">
@@ -866,7 +875,7 @@ export function WorkflowBuilderPage() {
         />
       )}
     </div>
-    </>
+    </PageLayout>
   );
 }
 

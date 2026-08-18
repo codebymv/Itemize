@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, MoreHorizontal, Trash2, Tag, UserPlus, Download, Upload, Users, CheckCircle, AlertCircle, Archive } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,20 +20,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
-import { usePageHeader } from '@/hooks/usePageHeader';
+import { PageLayout } from '@/components/layout/PageLayout';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { Contact, ContactsResponse } from '@/types';
 import { getContacts, deleteContact, bulkDeleteContacts, exportContactsCSV, createContact, CreateContactData } from '@/services/contactsApi';
 import { ContactsTable } from './components/ContactsTable';
-import { MobileControlsBar } from '@/components/MobileControlsBar';
-import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
-import { EmptyState } from '@/components/EmptyState';
 import { ContactCardList } from './components/ContactCard';
 import { ContactFilters } from './components/ContactFilters';
 import { CreateContactModal } from './components/CreateContactModal';
@@ -41,8 +39,7 @@ import { ImportContactsModal } from './components/ImportContactsModal';
 import { BulkTagModal } from './components/BulkTagModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOrganization } from '@/hooks/useOrganization';
-import { getStatBadgeClass, getStatIconBgClass, getStatValueClass, getStatIconClass, StatTheme } from '@/hooks/useStatStyles';
-import { getContactStatusBadgeClass } from '@/lib/badge-utils';
+import { StatCard } from '@/components/StatCard';
 
 const getApiStatus = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
@@ -152,64 +149,6 @@ export function ContactsPage() {
     return { total, active, inactive, archived };
   }, [contacts]);
 
-  usePageHeader(
-    {
-      title: 'CONTACTS',
-      icon: <Users className="h-5 w-5 text-blue-600 flex-shrink-0" />,
-      rightContent: (
-        <>
-          <div className="relative w-full max-w-xs">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search contacts..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors font-raleway"
-              aria-label="Search contacts"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="archived">Archived</SelectItem>
-            </SelectContent>
-          </Select>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-9 w-9">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowImportModal(true)} className="group/menu">
-                <Upload className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
-                Import CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => organizationId && exportContactsCSV(organizationId)} className="group/menu">
-                <Download className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
-                Export CSV
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
-            onClick={() => setShowCreateModal(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Contact
-          </Button>
-        </>
-      ),
-    },
-    [searchQuery, statusFilter, organizationId]
-  );
-
   // Handle search with debounce
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -292,55 +231,39 @@ export function ContactsPage() {
   // Show error state if initialization failed
   if (initError) {
     return (
-      <PageContainer>
-        <PageSurface className="max-w-lg mx-auto mt-12" contentClassName="pt-6 text-center">
-          <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-            <UserPlus className="h-6 w-6 text-destructive" />
-          </div>
-          <h3 className="text-lg font-medium mb-2">CRM Not Ready</h3>
-          <p className="text-muted-foreground mb-4">{initError}</p>
-          <Button onClick={() => window.location.reload()}>
-            Retry
-          </Button>
-        </PageSurface>
-      </PageContainer>
+      <PageLayout
+        title="CONTACTS"
+        icon={<Users className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      >
+        <ErrorState
+          title="CRM Not Ready"
+          description={initError}
+          icon={UserPlus}
+          onAction={() => window.location.reload()}
+        />
+      </PageLayout>
     );
   }
 
   return (
-    <>
-      {/* Onboarding Modal */}
-      <OnboardingModal
-        isOpen={showOnboarding}
-        onClose={closeOnboarding}
-        onComplete={completeOnboarding}
-        onDismiss={dismissOnboarding}
-        content={ONBOARDING_CONTENT.contacts}
-      />
-
-      {/* Mobile Controls Bar */}
-      <MobileControlsBar className="flex-col items-stretch">
-        <div className="flex items-center gap-2 w-full">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+    <PageLayout
+      title="CONTACTS"
+      icon={<Users className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      mobileClassName="flex-col items-stretch"
+      headerActions={
+        <>
+          <div className="relative w-full max-w-xs">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search contacts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9 w-full bg-muted/20 border-border/50"
+              className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors font-raleway"
+              aria-label="Search contacts"
             />
           </div>
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-            onClick={() => setShowCreateModal(true)}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="flex items-center gap-2 w-full">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="flex-1 h-9">
+            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -367,76 +290,113 @@ export function ContactsPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
-      </MobileControlsBar>
-
-      <PageContainer>
-        <PageSurface>
+          <Button
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
+            onClick={() => setShowCreateModal(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Contact
+          </Button>
+        </>
+      }
+      mobileActions={
+        <>
+          <div className="flex items-center gap-2 w-full">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search contacts..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-9 w-full bg-muted/20 border-border/50"
+              />
+            </div>
+            <Button
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+              onClick={() => setShowCreateModal(true)}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-2 w-full">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="flex-1 h-9">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="archived">Archived</SelectItem>
+              </SelectContent>
+            </Select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-9 w-9">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setShowImportModal(true)} className="group/menu">
+                  <Upload className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+                  Import CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => organizationId && exportContactsCSV(organizationId)} className="group/menu">
+                  <Download className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+                  Export CSV
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </>
+      }
+    >
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={closeOnboarding}
+        onComplete={completeOnboarding}
+        onDismiss={dismissOnboarding}
+        content={ONBOARDING_CONTENT.contacts}
+      />
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Badge className={`text-xs mb-2 ${getStatBadgeClass('red')}`}>Archived</Badge>
-                    <p className={`text-2xl font-bold ${getStatValueClass('red')}`}>{contactStats.archived}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {contactStats.archived} contact{contactStats.archived !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('red')}`}>
-                    <Archive className={`h-5 w-5 ${getStatIconClass('red')}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Badge className={`text-xs mb-2 ${getStatBadgeClass('blue')}`}>Total</Badge>
-                    <p className={`text-2xl font-bold ${getStatValueClass('blue')}`}>{contactStats.total}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {contactStats.total} contact{contactStats.total !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('blue')}`}>
-                    <Users className={`h-5 w-5 ${getStatIconClass('blue')}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Badge className={`text-xs mb-2 ${getStatBadgeClass('green')}`}>Active</Badge>
-                    <p className={`text-2xl font-bold ${getStatValueClass('green')}`}>{contactStats.active}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {contactStats.active} contact{contactStats.active !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('green')}`}>
-                    <CheckCircle className={`h-5 w-5 ${getStatIconClass('green')}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Badge className={`text-xs mb-2 ${getStatBadgeClass('orange')}`}>Inactive</Badge>
-                    <p className={`text-2xl font-bold ${getStatValueClass('orange')}`}>{contactStats.inactive}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {contactStats.inactive} contact{contactStats.inactive !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('orange')}`}>
-                    <AlertCircle className={`h-5 w-5 ${getStatIconClass('orange')}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <StatCard
+              title="Archived Contacts"
+              badgeText="Archived"
+              value={contactStats.archived}
+              icon={Archive}
+              description={`${contactStats.archived} contact${contactStats.archived !== 1 ? 's' : ''}`}
+              colorTheme="red"
+              isLoading={loading}
+            />
+            <StatCard
+              title="Total Contacts"
+              badgeText="Total"
+              value={contactStats.total}
+              icon={Users}
+              description={`${contactStats.total} contact${contactStats.total !== 1 ? 's' : ''}`}
+              colorTheme="blue"
+              isLoading={loading}
+            />
+            <StatCard
+              title="Active Contacts"
+              badgeText="Active"
+              value={contactStats.active}
+              icon={CheckCircle}
+              description={`${contactStats.active} contact${contactStats.active !== 1 ? 's' : ''}`}
+              colorTheme="green"
+              isLoading={loading}
+            />
+            <StatCard
+              title="Inactive Contacts"
+              badgeText="Inactive"
+              value={contactStats.inactive}
+              icon={AlertCircle}
+              description={`${contactStats.inactive} contact${contactStats.inactive !== 1 ? 's' : ''}`}
+              colorTheme="orange"
+              isLoading={loading}
+            />
           </div>
           {/* Bulk actions */}
           {selectedContacts.length > 0 && (
@@ -532,9 +492,7 @@ export function ContactsPage() {
             </div>
           </div>
         )}
-        </PageSurface>
 
-      {/* Create contact modal */}
       {showCreateModal && organizationId && (
         <CreateContactModal
           organizationId={organizationId}
@@ -565,8 +523,7 @@ export function ContactsPage() {
           }}
         />
       )}
-      </PageContainer>
-    </>
+    </PageLayout>
   );
 }
 
