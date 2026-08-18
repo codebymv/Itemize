@@ -13,6 +13,7 @@ describe('StripeInvoicePaymentLinkProvider', () => {
     customerEmail: null,
     existingSessionId: 'cs_existing',
     idempotencyKey: 'invoice-payment:4:12',
+    stripeAccountId: 'acct_connected',
   };
 
   beforeEach(() => {
@@ -66,6 +67,7 @@ describe('StripeInvoicePaymentLinkProvider', () => {
     const [, createCall] = (global.fetch as jest.Mock).mock.calls;
     expect(createCall[0]).toBe('https://api.stripe.com/v1/checkout/sessions');
     expect(createCall[1].headers['Idempotency-Key']).toBe(request.idempotencyKey);
+    expect(createCall[1].headers['Stripe-Account']).toBe('acct_connected');
     expect(createCall[1].body).toContain('unit_amount%5D=2606');
     expect(createCall[1].body).not.toContain('customer_email');
     expect(createCall[1].body).toContain(
@@ -78,6 +80,16 @@ describe('StripeInvoicePaymentLinkProvider', () => {
       ...request, amountDue: '0.00',
     })).resolves.toEqual({
       kind: 'rejected', message: 'Invoice has no payable balance',
+    });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('rejects payment links when the organization has no connected Stripe account', async () => {
+    await expect(new StripeInvoicePaymentLinkProvider().getOrCreate({
+      ...request, stripeAccountId: null,
+    })).resolves.toEqual({
+      kind: 'rejected',
+      message: 'Connect Stripe in Payments settings to accept card payments',
     });
     expect(global.fetch).not.toHaveBeenCalled();
   });

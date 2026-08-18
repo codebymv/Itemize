@@ -15,6 +15,13 @@ describe('readIntegrationOAuthResult', () => {
     });
   });
 
+  it('reads a Stripe success return', () => {
+    expect(readIntegrationOAuthResult('?stripe_connected=true')).toEqual({
+      ok: true,
+      provider: 'stripe',
+    });
+  });
+
   it('reads an OAuth error return', () => {
     expect(readIntegrationOAuthResult('?error=invalid_state')).toEqual({
       ok: false,

@@ -153,6 +153,9 @@ module.exports.validateEnv = () => {
     if (hasStripeKey && !hasStripeWebhook) {
         warnings.push('STRIPE_WEBHOOK_SECRET is required for Stripe webhook verification');
     }
+    if (hasStripeKey && !process.env.STRIPE_CLIENT_ID) {
+        warnings.push('STRIPE_CLIENT_ID is required for Stripe Connect invoice payments');
+    }
     
     // Validate Google OAuth configuration
     const hasGoogleClientId = !!process.env.GOOGLE_CLIENT_ID;

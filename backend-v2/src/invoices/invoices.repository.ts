@@ -232,6 +232,20 @@ const selection = `
 export class InvoicesRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
+  async findConnectedStripeAccountId(organizationId: number): Promise<string | null> {
+    const result = await this.pool.query<{ stripe_account_id: string | null }>(
+      `SELECT stripe_account_id
+       FROM payment_settings
+       WHERE organization_id = $1
+         AND stripe_connected = TRUE
+         AND stripe_account_id IS NOT NULL
+         AND stripe_account_id <> ''`,
+      [organizationId],
+    );
+    const accountId = result.rows[0]?.stripe_account_id?.trim() ?? '';
+    return /^acct_[A-Za-z0-9]+$/.test(accountId) ? accountId : null;
+  }
+
   async findPage(
     criteria: InvoiceCriteria,
   ): Promise<{ rows: InvoiceRow[]; total: number }> {

@@ -27,6 +27,7 @@ import {
 } from '@/services/calendarIntegrationsApi';
 import { disconnectChannel, getChannels, getFacebookConnectUrl } from '@/services/socialApi';
 import { getPaymentSettings } from '@/services/invoicesApi';
+import { disconnectStripeConnect, initiateStripeConnect } from '@/services/stripeConnectApi';
 import {
     INTEGRATIONS_PATH,
     integrationOAuthToast,
@@ -62,7 +63,7 @@ export function CalendarIntegrationsPage() {
     const [loading, setLoading] = useState(true);
     const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [syncing, setSyncing] = useState<number | null>(null);
-    const [connecting, setConnecting] = useState<'google' | 'facebook' | null>(null);
+    const [connecting, setConnecting] = useState<'google' | 'facebook' | 'stripe' | null>(null);
 
     const handleConnectGoogle = useCallback(async () => {
         if (!organizationId) return;
@@ -84,6 +85,18 @@ export function CalendarIntegrationsPage() {
             window.location.href = auth_url;
         } catch {
             toast({ title: 'Error', description: 'Failed to start Facebook connection', variant: 'destructive' });
+            setConnecting(null);
+        }
+    }, [organizationId, toast]);
+
+    const handleConnectStripe = useCallback(async () => {
+        if (!organizationId) return;
+        setConnecting('stripe');
+        try {
+            const { authUrl } = await initiateStripeConnect(organizationId, INTEGRATIONS_PATH);
+            window.location.href = authUrl;
+        } catch {
+            toast({ title: 'Error', description: 'Failed to start Stripe connection', variant: 'destructive' });
             setConnecting(null);
         }
     }, [organizationId, toast]);
@@ -179,6 +192,17 @@ export function CalendarIntegrationsPage() {
         }
     };
 
+    const handleDisconnectStripe = async () => {
+        if (!organizationId) return;
+        try {
+            await disconnectStripeConnect(organizationId);
+            setStripeConnected(false);
+            toast({ title: 'Disconnected', description: 'Stripe is no longer connected for invoice payments.' });
+        } catch {
+            toast({ title: 'Error', description: 'Failed to disconnect Stripe', variant: 'destructive' });
+        }
+    };
+
     const googleConnection = connections.find((connection) => connection.provider === 'google' && connection.is_active);
 
     if (initError) {
@@ -235,11 +259,15 @@ export function CalendarIntegrationsPage() {
                             />
                             <IntegrationStatusCard
                                 name="Stripe"
-                                description="Accept card payments on invoices. Stripe Connect onboarding is not available yet."
+                                description="Accept card payments on invoices to your Stripe account."
                                 status={stripeConnected ? 'connected' : 'disconnected'}
                                 icon={<span className="text-[#635BFF] font-bold text-lg">S</span>}
-                                primaryLabel={stripeConnected ? 'Manage' : 'Set up'}
-                                onPrimary={() => navigate('/payment-settings')}
+                                primaryLabel={stripeConnected ? 'Reconnect' : 'Connect'}
+                                secondaryLabel="Payments"
+                                onPrimary={() => void handleConnectStripe()}
+                                onSecondary={() => navigate('/payment-settings')}
+                                onDisconnect={stripeConnected ? () => void handleDisconnectStripe() : undefined}
+                                busy={connecting === 'stripe'}
                             />
                             <IntegrationStatusCard
                                 name="Webhooks"

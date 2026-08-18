@@ -1,5 +1,5 @@
 export type IntegrationOAuthResult =
-  | { ok: true; provider: 'google' | 'facebook' }
+  | { ok: true; provider: 'google' | 'facebook' | 'stripe' }
   | { ok: false; error: string };
 
 export const INTEGRATIONS_PATH = '/calendar-integrations';
@@ -13,6 +13,9 @@ export function readIntegrationOAuthResult(search: string): IntegrationOAuthResu
   }
   if (params.get('success') === 'facebook_connected') {
     return { ok: true, provider: 'facebook' };
+  }
+  if (params.get('stripe_connected') === 'true') {
+    return { ok: true, provider: 'stripe' };
   }
 
   const error = params.get('error');
@@ -32,6 +35,12 @@ export function integrationOAuthToast(result: IntegrationOAuthResult): {
     return {
       title: 'Google Calendar connected',
       description: 'Your Google Calendar is now linked and ready to sync.',
+    };
+  }
+  if (result.ok && result.provider === 'stripe') {
+    return {
+      title: 'Stripe connected',
+      description: 'Invoice card payments will go to your Stripe account.',
     };
   }
   if (result.ok) {

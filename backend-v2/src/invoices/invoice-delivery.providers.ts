@@ -70,6 +70,7 @@ export type PaymentLinkRequest = {
   customerEmail: string | null;
   existingSessionId: string | null;
   idempotencyKey: string;
+  stripeAccountId: string | null;
 };
 
 export type PaymentLinkResult =
@@ -81,11 +82,20 @@ export interface InvoicePaymentLinkProvider {
   getOrCreate(request: PaymentLinkRequest): Promise<PaymentLinkResult>;
 }
 
+const CONNECTED_ACCOUNT = /^acct_[A-Za-z0-9]+$/;
+
 @Injectable()
 export class StripeInvoicePaymentLinkProvider implements InvoicePaymentLinkProvider {
   async getOrCreate(request: PaymentLinkRequest): Promise<PaymentLinkResult> {
     const secret = process.env.STRIPE_SECRET_KEY?.trim();
     if (!secret) return { kind: 'rejected', message: 'Stripe is not configured' };
+    const stripeAccountId = request.stripeAccountId?.trim() || '';
+    if (!CONNECTED_ACCOUNT.test(stripeAccountId)) {
+      return {
+        kind: 'rejected',
+        message: 'Connect Stripe in Payments settings to accept card payments',
+      };
+    }
     const amount = Math.round(Number(request.amountDue) * 100);
     if (!Number.isSafeInteger(amount) || amount < 1) {
       return { kind: 'rejected', message: 'Invoice has no payable balance' };
@@ -94,6 +104,9 @@ export class StripeInvoicePaymentLinkProvider implements InvoicePaymentLinkProvi
       const existing = await this.request(
         `/v1/checkout/sessions/${encodeURIComponent(request.existingSessionId)}`,
         secret,
+        undefined,
+        undefined,
+        stripeAccountId,
       );
       const metadata = existing.body.metadata as Record<string, unknown> | undefined;
       if (
@@ -124,9 +137,16 @@ export class StripeInvoicePaymentLinkProvider implements InvoicePaymentLinkProvi
       'metadata[invoice_id]': String(request.invoiceId),
       'metadata[invoice_number]': request.invoiceNumber,
       'metadata[organization_id]': String(request.organizationId),
+      'metadata[stripe_account_id]': stripeAccountId,
     });
     if (request.customerEmail) form.set('customer_email', request.customerEmail);
-    const created = await this.request('/v1/checkout/sessions', secret, form, request.idempotencyKey);
+    const created = await this.request(
+      '/v1/checkout/sessions',
+      secret,
+      form,
+      request.idempotencyKey,
+      stripeAccountId,
+    );
     if (!created.ok || !created.body.id || !created.body.url) {
       return {
         kind: 'rejected',
@@ -141,11 +161,13 @@ export class StripeInvoicePaymentLinkProvider implements InvoicePaymentLinkProvi
     secret: string,
     form?: URLSearchParams,
     idempotencyKey?: string,
+    stripeAccountId?: string,
   ): Promise<{ ok: boolean; body: Record<string, any> }> {
     const response = await fetch(`https://api.stripe.com${path}`, {
       method: form ? 'POST' : 'GET',
       headers: {
         Authorization: `Bearer ${secret}`,
+        ...(stripeAccountId ? { 'Stripe-Account': stripeAccountId } : {}),
         ...(form ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}),
         ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
       },

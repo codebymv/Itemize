@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Link as LinkIcon, CheckCircle, XCircle } from 'lucide-react';
+import { Link as LinkIcon, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import type { PaymentSettings } from '@/services/invoicesApi';
 
 interface PaymentSettingsFormProps {
@@ -20,6 +20,8 @@ interface PaymentSettingsFormProps {
   updateField: <K extends keyof PaymentSettings>(field: K, value: PaymentSettings[K]) => void;
   setTaxRateInput: (value: string) => void;
   onConnectStripe?: () => void;
+  onDisconnectStripe?: () => void;
+  connectingStripe?: boolean;
 }
 
 export const PaymentSettingsForm: React.FC<PaymentSettingsFormProps> = ({
@@ -28,6 +30,8 @@ export const PaymentSettingsForm: React.FC<PaymentSettingsFormProps> = ({
   updateField,
   setTaxRateInput,
   onConnectStripe,
+  onDisconnectStripe,
+  connectingStripe = false,
 }) => {
   const handleTaxRateChange = (value: string) => {
     setTaxRateInput(value);
@@ -190,14 +194,27 @@ export const PaymentSettingsForm: React.FC<PaymentSettingsFormProps> = ({
                   </p>
                 </div>
               </div>
-              <Button
-                variant={settings.stripe_connected ? 'outline' : 'default'}
-                className={`w-full sm:w-auto flex-shrink-0 ${!settings.stripe_connected ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
-                onClick={onConnectStripe}
-              >
-                <LinkIcon className="h-4 w-4 mr-2" />
-                {settings.stripe_connected ? 'Manage Connection' : 'Connect Stripe'}
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto flex-shrink-0">
+                {settings.stripe_connected && onDisconnectStripe ? (
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-auto text-destructive hover:text-destructive"
+                    onClick={onDisconnectStripe}
+                    disabled={connectingStripe}
+                  >
+                    Disconnect
+                  </Button>
+                ) : null}
+                <Button
+                  variant={settings.stripe_connected ? 'outline' : 'default'}
+                  className={`w-full sm:w-auto ${!settings.stripe_connected ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
+                  onClick={onConnectStripe}
+                  disabled={connectingStripe || !onConnectStripe}
+                >
+                  {connectingStripe ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <LinkIcon className="h-4 w-4 mr-2" />}
+                  {settings.stripe_connected ? 'Reconnect' : 'Connect Stripe'}
+                </Button>
+              </div>
             </div>
           </div>
           {settings.stripe_connected && settings.stripe_account_id && (

@@ -51,6 +51,7 @@ export class InvoicePaymentLinkService {
     if (intent.status !== 'processing') return this.result(intent, true);
 
     try {
+      const stripeAccountId = await this.invoices.findConnectedStripeAccountId(organizationId);
       const provider = await this.paymentLinks.getOrCreate({
         invoiceId: intent.invoice_id,
         invoiceNumber: intent.invoice_number,
@@ -61,6 +62,7 @@ export class InvoicePaymentLinkService {
         customerEmail: intent.customer_email,
         existingSessionId: null,
         idempotencyKey: `invoice-payment-link:${organizationId}:${intent.id}`,
+        stripeAccountId,
       });
       if (provider.kind === 'rejected') {
         return this.result(await this.invoices.failPaymentLink(

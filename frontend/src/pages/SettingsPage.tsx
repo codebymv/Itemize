@@ -55,6 +55,11 @@ import {
   DeleteConfirmDialog
 } from './settings';
 import { PaymentsTabLoadingSkeleton, PaymentsTabErrorState } from './settings/components/PaymentsTabLoadingStates';
+import {
+  integrationOAuthToast,
+  readIntegrationOAuthResult,
+} from '@/lib/integrationOAuthReturn';
+import { disconnectStripeConnect, initiateStripeConnect } from '@/services/stripeConnectApi';
 
 // Settings navigation items
 const settingsNav = [
@@ -332,6 +337,10 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
   onCloseCheckoutSuccess?: () => void;
 }) {
   const { toast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { organizationId } = useOrganization();
+  const [connectingStripe, setConnectingStripe] = useState(false);
   const {
     loading,
     initialLoad,
@@ -386,6 +395,37 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
     }
   }, [handleSaveSettings, saving, loading, setSaveButton]);
 
+  useEffect(() => {
+    const result = readIntegrationOAuthResult(location.search);
+    if (!result) return;
+    toast(integrationOAuthToast(result));
+    navigate(location.pathname, { replace: true });
+    if (result.ok) void refetchData();
+  }, [location.pathname, location.search, navigate, refetchData, toast]);
+
+  const handleConnectStripe = async () => {
+    if (!organizationId) return;
+    setConnectingStripe(true);
+    try {
+      const { authUrl } = await initiateStripeConnect(organizationId, '/payment-settings');
+      window.location.href = authUrl;
+    } catch {
+      toast({ title: 'Error', description: 'Failed to start Stripe connection', variant: 'destructive' });
+      setConnectingStripe(false);
+    }
+  };
+
+  const handleDisconnectStripe = async () => {
+    if (!organizationId) return;
+    try {
+      await disconnectStripeConnect(organizationId);
+      toast({ title: 'Disconnected', description: 'Stripe is no longer connected for invoice payments.' });
+      await refetchData();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to disconnect Stripe', variant: 'destructive' });
+    }
+  };
+
   const handleFormChange = (field: string, value: string) => {
     setBusinessFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -420,14 +460,9 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
           taxRateInput={taxRateInput}
           updateField={updateField}
           setTaxRateInput={setTaxRateInput}
-          onConnectStripe={() => {
-            toast({
-              title: settings.stripe_connected ? 'Stripe account on file' : 'Stripe Connect coming soon',
-              description: settings.stripe_connected
-                ? 'This organization already has a Stripe account recorded. Full Connect management is not available yet.'
-                : 'You can still send invoices and record payments manually.',
-            });
-          }}
+          onConnectStripe={() => void handleConnectStripe()}
+          onDisconnectStripe={() => void handleDisconnectStripe()}
+          connectingStripe={connectingStripe}
         />
       )}
 

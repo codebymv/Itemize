@@ -24,6 +24,7 @@ const {
 } = require('../public-signing-proxy');
 const webhooksRoutes = require('../routes/webhooks.routes');
 const calendarIntegrationsRoutes = require('../routes/calendar-integrations.routes');
+const invoiceIntegrationsRoutes = require('../routes/invoice-integrations.routes');
 const sharingRoutes = require('../routes/sharing.routes');
 
 function collectRoutes(stack, basePath = '') {
@@ -235,6 +236,8 @@ function registerApiRoutes({
     logger.info('Webhooks routes initialized');
     app.use('/api/calendar-integrations', calendarIntegrationsRoutes(pool, authenticateJWT));
     logger.info('Calendar Integrations routes initialized');
+    app.use('/api/invoice-integrations', invoiceIntegrationsRoutes(pool, authenticateJWT));
+    logger.info('Invoice Integrations routes initialized');
     app.use('/api', sharingRoutes(pool, authenticateJWT, publicRateLimit, broadcast));
     logger.info('Sharing routes initialized');
     registerStatusRoute({ app, pool, port, logger });
