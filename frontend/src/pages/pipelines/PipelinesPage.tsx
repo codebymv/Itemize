@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus, Settings, MoreHorizontal, DollarSign, TrendingUp, Kanban, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -199,6 +198,17 @@ export function PipelinesPage() {
   };
 
   const stats = getPipelineStats();
+  const hasPipelines = pipelines.length > 0;
+  const renderNewPipelineButton = () => (
+    <Button
+      size="sm"
+      className="bg-blue-600 hover:bg-blue-700 text-white font-light whitespace-nowrap"
+      onClick={() => setShowCreatePipelineModal(true)}
+    >
+      <Plus className="h-4 w-4 mr-2" />
+      New Pipeline
+    </Button>
+  );
 
   // Show error state if initialization failed
   if (initError) {
@@ -223,17 +233,17 @@ export function PipelinesPage() {
       icon={<Kanban className="h-5 w-5 text-blue-600 flex-shrink-0" />}
       mobileClassName="flex-col items-stretch gap-2"
       headerActions={
-        <>
-          <div className="relative w-full max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search deals..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
-            />
-          </div>
-          {pipelines.length > 0 && (
+        hasPipelines ? (
+          <>
+            <div className="relative w-full max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search deals..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
+              />
+            </div>
             <Select
               value={selectedPipelineId?.toString() || ''}
               onValueChange={(v) => setSelectedPipelineId(parseInt(v))}
@@ -249,55 +259,57 @@ export function PipelinesPage() {
                 ))}
               </SelectContent>
             </Select>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-9 w-9">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowCreatePipelineModal(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                New Pipeline
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled>
-                <Settings className="h-4 w-4 mr-2" />
-                Pipeline Settings
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-light whitespace-nowrap"
-            onClick={() => setShowCreateDealModal(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Deal
-          </Button>
-        </>
-      }
-      mobileActions={
-        <>
-          <div className="flex items-center gap-2 w-full">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Search deals..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-9 w-full bg-muted/20 border-border/50"
-              />
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-9 w-9">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setShowCreatePipelineModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Pipeline
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Pipeline Settings
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
-              size="icon"
-              className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-light whitespace-nowrap"
               onClick={() => setShowCreateDealModal(true)}
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-4 w-4 mr-2" />
+              Add Deal
             </Button>
-          </div>
-          {pipelines.length > 0 && (
+          </>
+        ) : (
+          renderNewPipelineButton()
+        )
+      }
+      mobileActions={
+        hasPipelines ? (
+          <>
+            <div className="flex items-center gap-2 w-full">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search deals..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 h-9 w-full bg-muted/20 border-border/50"
+                />
+              </div>
+              <Button
+                size="icon"
+                className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
+                onClick={() => setShowCreateDealModal(true)}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
             <div className="flex items-center gap-2 w-full">
               <Select
                 value={selectedPipelineId?.toString() || ''}
@@ -332,8 +344,10 @@ export function PipelinesPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-          )}
-        </>
+          </>
+        ) : (
+          renderNewPipelineButton()
+        )
       }
     >
       <OnboardingModal
@@ -379,20 +393,13 @@ export function PipelinesPage() {
             ))}
           </div>
         ) : pipelines.length === 0 ? (
-          <div className="p-6">
-            <Card>
-              <CardContent className="p-0">
-                <EmptyState
-                  icon={TrendingUp}
-                  title="No pipelines yet"
-                  description="Create your first sales pipeline to start tracking deals"
-                  actionLabel="New Pipeline"
-                  onAction={() => setShowCreatePipelineModal(true)}
-                  className="p-12"
-                />
-              </CardContent>
-            </Card>
-          </div>
+          <EmptyState
+            icon={TrendingUp}
+            title="No pipelines yet"
+            description="Create your first sales pipeline to start tracking deals"
+            actionLabel="New Pipeline"
+            onAction={() => setShowCreatePipelineModal(true)}
+          />
         ) : currentPipeline ? (
           (() => {
             const filteredDeals = searchQuery

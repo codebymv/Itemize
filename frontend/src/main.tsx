@@ -1,6 +1,9 @@
 import { createRoot } from 'react-dom/client'
+import { reloadOnStaleChunk } from './lib/reloadOnStaleChunk'
 import App from './App.tsx'
 import './index.css'
+
+reloadOnStaleChunk()
 
 createRoot(document.getElementById("root")!).render(<App />);
 
