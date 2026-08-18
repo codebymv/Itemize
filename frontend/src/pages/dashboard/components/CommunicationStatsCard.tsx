@@ -7,9 +7,9 @@ import type { CommunicationStats } from '@/services/analyticsApi';
 export function CommunicationStatsCard({ stats, isLoading }: { stats?: CommunicationStats; isLoading?: boolean }) {
     if (isLoading) {
         return (
-            <div className="space-y-4">
-                <Card><CardContent className="pt-6"><Skeleton className="h-20" /></CardContent></Card>
-                <Card><CardContent className="pt-6"><Skeleton className="h-20" /></CardContent></Card>
+            <div className="flex flex-col gap-3 h-full">
+                <Card className="flex-1"><CardContent className="pt-6"><Skeleton className="h-20" /></CardContent></Card>
+                <Card className="flex-1"><CardContent className="pt-6"><Skeleton className="h-20" /></CardContent></Card>
             </div>
         );
     }
@@ -23,8 +23,8 @@ export function CommunicationStatsCard({ stats, isLoading }: { stats?: Communica
     }
 
     const EmailCommunicationCard = () => (
-        <Card>
-            <CardContent className="pt-6">
+        <Card className="flex-1">
+            <CardContent className="pt-6 h-full flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                         <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900">
@@ -53,8 +53,8 @@ export function CommunicationStatsCard({ stats, isLoading }: { stats?: Communica
     );
 
     const SMSCommunicationCard = () => (
-        <Card>
-            <CardContent className="pt-6">
+        <Card className="flex-1">
+            <CardContent className="pt-6 h-full flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                         <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900">
@@ -83,10 +83,8 @@ export function CommunicationStatsCard({ stats, isLoading }: { stats?: Communica
     );
 
     return (
-        <div className="space-y-4">
-            {/* Email Stats */}
+        <div className="flex flex-col gap-3 h-full">
             <EmailCommunicationCard />
-            {/* SMS Stats */}
             <SMSCommunicationCard />
         </div>
     );

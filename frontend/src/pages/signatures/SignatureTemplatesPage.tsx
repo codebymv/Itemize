@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
@@ -87,7 +88,9 @@ export default function SignatureTemplatesPage() {
       <div className="flex items-center justify-between w-full min-w-0">
         <div className="flex items-center gap-2 ml-2 min-w-0">
           <FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <span className="text-xl font-semibold italic uppercase tracking-wide truncate italic-safe">Signature Templates</span>
+          <h1 className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground">
+            SIGNATURE TEMPLATES
+          </h1>
         </div>
         <div className="hidden md:flex">{headerActions}</div>
       </div>
@@ -116,16 +119,14 @@ export default function SignatureTemplatesPage() {
               {loading ? (
                 <div className="p-6 text-sm text-muted-foreground">Loading...</div>
               ) : templates.length === 0 ? (
-                <div className="p-12 text-center">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <FileSignature className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-lg font-medium mb-2">No templates yet</h3>
-                  <p className="text-muted-foreground mb-4">Create a reusable template for signature requests.</p>
-<Button onClick={() => handleCreate()} className="bg-blue-600 hover:bg-blue-700 text-white">
-                    <Plus className="h-4 w-4 mr-2" />New Template
-                  </Button>
-                </div>
+                <EmptyState
+                  icon={FileSignature}
+                  title="No templates yet"
+                  description="Create a reusable template for signature requests."
+                  actionLabel="New Template"
+                  onAction={() => handleCreate()}
+                  className="p-12"
+                />
               ) : (
                 <div className="divide-y">
                   {templates.map((template) => {

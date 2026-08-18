@@ -34,6 +34,8 @@ export const DraggableWireframeCard: React.FC<DraggableWireframeCardProps> = ({
   updateCategory
 }) => {
   const wireframeRef = useRef<HTMLDivElement>(null);
+  const canvasTransformRef = useRef(canvasTransform);
+  canvasTransformRef.current = canvasTransform;
   
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -62,9 +64,10 @@ export const DraggableWireframeCard: React.FC<DraggableWireframeCardProps> = ({
 
   // Drag start handler
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
     // Don't start drag if clicking on interactive elements or resize handle
     const target = e.target as HTMLElement;
-    if (target.closest('input, textarea, button, [role="button"], [role="menuitem"], .resize-handle, .react-flow')) {
+    if (target.closest('input, textarea, button, [role="button"], [role="menuitem"], .resize-handle, .react-flow, [data-wireframe-title]')) {
       return;
     }
 
@@ -83,15 +86,16 @@ export const DraggableWireframeCard: React.FC<DraggableWireframeCardProps> = ({
       // Calculate drag offset in canvas coordinates
       const containerRect = wireframeRef.current.parentElement?.getBoundingClientRect();
       if (containerRect) {
-        const mouseXInCanvas = (e.clientX - containerRect.left - canvasTransform.x) / canvasTransform.scale;
-        const mouseYInCanvas = (e.clientY - containerRect.top - canvasTransform.y) / canvasTransform.scale;
+        const { x, y, scale } = canvasTransformRef.current;
+        const mouseXInCanvas = (e.clientX - containerRect.left - x) / scale;
+        const mouseYInCanvas = (e.clientY - containerRect.top - y) / scale;
         
         const currentLeft = parseFloat(wireframeRef.current.style.left) || 0;
         const currentTop = parseFloat(wireframeRef.current.style.top) || 0;
         
         setDragOffset({
-          x: (mouseXInCanvas - currentLeft) * canvasTransform.scale,
-          y: (mouseYInCanvas - currentTop) * canvasTransform.scale
+          x: (mouseXInCanvas - currentLeft) * scale,
+          y: (mouseYInCanvas - currentTop) * scale
         });
         setIsDragging(true);
       }
@@ -104,13 +108,12 @@ export const DraggableWireframeCard: React.FC<DraggableWireframeCardProps> = ({
       const containerRect = wireframeRef.current.parentElement?.getBoundingClientRect();
       if (!containerRect) return;
       
-      // Calculate mouse position relative to canvas before transform
-      const mouseXInCanvas = (e.clientX - containerRect.left - canvasTransform.x) / canvasTransform.scale;
-      const mouseYInCanvas = (e.clientY - containerRect.top - canvasTransform.y) / canvasTransform.scale;
+      const { x, y, scale } = canvasTransformRef.current;
+      const mouseXInCanvas = (e.clientX - containerRect.left - x) / scale;
+      const mouseYInCanvas = (e.clientY - containerRect.top - y) / scale;
       
-      // Calculate new position relative to canvas coordinates
-      const newX = mouseXInCanvas - dragOffset.x / canvasTransform.scale;
-      const newY = mouseYInCanvas - dragOffset.y / canvasTransform.scale;
+      const newX = mouseXInCanvas - dragOffset.x / scale;
+      const newY = mouseYInCanvas - dragOffset.y / scale;
       
       // Apply the new position to the element (in canvas coordinates)
       wireframeRef.current.style.left = `${newX}px`;
@@ -121,9 +124,8 @@ export const DraggableWireframeCard: React.FC<DraggableWireframeCardProps> = ({
       const deltaX = e.clientX - resizeStartData.startX;
       const deltaY = e.clientY - resizeStartData.startY;
       
-      // Account for canvas scale in the resize delta
-      const scaledDeltaX = deltaX / canvasTransform.scale;
-      const scaledDeltaY = deltaY / canvasTransform.scale;
+      const scaledDeltaX = deltaX / canvasTransformRef.current.scale;
+      const scaledDeltaY = deltaY / canvasTransformRef.current.scale;
       
       // Enforce both minimum and maximum limits
       const newWidth = Math.min(MAX_WIREFRAME_WIDTH, Math.max(MIN_WIREFRAME_WIDTH, resizeStartData.startWidth + scaledDeltaX));

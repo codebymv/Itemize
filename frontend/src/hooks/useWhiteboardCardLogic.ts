@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react';
 import { Whiteboard, Category } from '@/types';
-import type { CanvasData } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useCardTitleEditing } from '@/hooks/useCardTitleEditing';
 import { useCardColorManagement } from '@/hooks/useCardColorManagement';
 import { useCardCategoryManagement } from '@/hooks/useCardCategoryManagement';
+import { sanitizeWhiteboardPaths } from '@/lib/whiteboardCanvasData';
 import logger from '@/lib/logger';
 
 interface UseWhiteboardCardLogicProps {
@@ -16,15 +16,6 @@ interface UseWhiteboardCardLogicProps {
   updateCategory: (categoryName: string, updatedData: Partial<Category>) => Promise<void>;
   addCategory?: (categoryData: { name: string; color_value: string }) => Promise<unknown>;
 }
-
-type SketchPoint = { x: number; y: number };
-type SketchPathRecord = {
-  drawMode?: unknown;
-  strokeColor?: unknown;
-  strokeWidth?: unknown;
-  paths?: unknown;
-  path?: unknown;
-};
 
 export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isCollapsed, onToggleCollapsed, updateCategory, addCategory }: UseWhiteboardCardLogicProps) => {
   const { toast } = useToast();
@@ -122,78 +113,12 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
   
   const handleCanvasSave = useCallback(async (data: { canvas_data: unknown; updated_at: string }) => {
     try {
-      const canvasPathCount = Array.isArray(data.canvas_data) ? data.canvas_data.length : 0;
+      const sanitizedCanvasData = sanitizeWhiteboardPaths(data.canvas_data);
       logger.debug('whiteboard', 'Saving canvas data:', {
         whiteboardId: whiteboard.id,
-        pathCount: canvasPathCount,
-        dataType: typeof data.canvas_data,
-        isArray: Array.isArray(data.canvas_data)
+        pathCount: sanitizedCanvasData.length,
       });
-
-      // Sanitize canvas data to prevent JSON serialization issues
-      let sanitizedCanvasData: CanvasData['paths'] = [];
-      
-      if (Array.isArray(data.canvas_data)) {
-        try {
-          // Deep clone and sanitize the canvas data to remove any circular references
-          // or problematic nested objects that might cause JSON serialization issues
-          sanitizedCanvasData = data.canvas_data.map(path => {
-            if (typeof path === 'object' && path !== null) {
-              // Create a clean object with only the essential properties
-              const pathRecord = path as SketchPathRecord;
-              const cleanPath = {
-                drawMode: pathRecord.drawMode || true,
-                strokeColor: typeof pathRecord.strokeColor === 'string' ? pathRecord.strokeColor : '#2563eb',
-                strokeWidth: typeof pathRecord.strokeWidth === 'number' ? pathRecord.strokeWidth : 2,
-                paths: Array.isArray(pathRecord.paths) ? pathRecord.paths : (Array.isArray(pathRecord.path) ? pathRecord.path : [])
-              };
-              
-              // Ensure paths array contains only valid coordinate objects
-              if (Array.isArray(cleanPath.paths)) {
-                cleanPath.paths = cleanPath.paths.filter((point): point is SketchPoint =>
-                  point && typeof point === 'object' &&
-                  typeof (point as Partial<SketchPoint>).x === 'number' &&
-                  typeof (point as Partial<SketchPoint>).y === 'number'
-                );
-              }
-              
-              return cleanPath;
-            }
-            return path;
-          });
-          
-          // Test JSON serialization to catch any remaining issues
-          const testSerialization = JSON.stringify(sanitizedCanvasData);
-          JSON.parse(testSerialization);
-          
-          logger.debug('whiteboard', 'Canvas data sanitized successfully:', {
-            originalPaths: canvasPathCount,
-            sanitizedPaths: sanitizedCanvasData.length,
-            dataPreview: testSerialization.substring(0, 200)
-          });
-          
-        } catch (sanitizationError) {
-          logger.error('Canvas data sanitization failed:', sanitizationError);
-          toast({
-            title: "Error",
-            description: "Could not save your drawing. Please try again.",
-            variant: "destructive"
-          });
-          return;
-        }
-      } else {
-        logger.error('Canvas save skipped: canvas data is not a path array');
-        toast({
-          title: "Error",
-          description: "Could not save your drawing. Please try again.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Send the sanitized canvas data
       await onUpdate(whiteboard.id, { canvas_data: sanitizedCanvasData as unknown as Whiteboard['canvas_data'] });
-      
       logger.debug('whiteboard', 'Canvas save completed successfully');
     } catch (error) {
       logger.error('Failed to save canvas data:', error);

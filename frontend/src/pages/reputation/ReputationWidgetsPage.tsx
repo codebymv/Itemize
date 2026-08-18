@@ -25,6 +25,7 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { getReviewWidgets, deleteReviewWidget, createReviewWidget, getWidgetEmbedCode } from '@/services/reputationApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { getWidgetTypeBadgeClass } from '@/lib/badge-utils';
@@ -44,7 +45,8 @@ interface ReviewWidget {
 
 export function ReputationWidgetsPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();    // Route-aware onboarding (will show 'reputation' onboarding for Reputation group)
+    const { setHeaderContent } = useHeader();
+    // Route-aware onboarding (will show 'reputation' onboarding for Reputation group)
     const {
         showModal: showOnboarding,
         handleComplete: handleOnboardingComplete,
@@ -226,16 +228,14 @@ export function ReputationWidgetsPage() {
                             <CardGridSkeleton count={3} height="h-40" />
                         </div>
                     ) : filteredWidgets.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                <Code className="h-6 w-6 text-muted-foreground" />
-                            </div>
-                            <h3 className="text-lg font-medium mb-2">No review widgets yet</h3>
-                            <p className="text-muted-foreground mb-4">Create widgets to display reviews on your website</p>
-                            <Button onClick={handleCreateWidget} className="bg-blue-600 hover:bg-blue-700 text-white">
-                                <Plus className="h-4 w-4 mr-2" />Create Widget
-                            </Button>
-                        </div>
+                        <EmptyState
+                            icon={Code}
+                            title="No review widgets yet"
+                            description="Create widgets to display reviews on your website"
+                            actionLabel="Create Widget"
+                            onAction={handleCreateWidget}
+                            className="p-12"
+                        />
                     ) : (
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filteredWidgets.map((widget) => (

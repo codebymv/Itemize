@@ -5,6 +5,7 @@ export function useCanvasCollapsible(lists: List[]) {
   const [collapsedListIds, setCollapsedListIds] = useState<Set<string>>(new Set());
   const [collapsedNoteIds, setCollapsedNoteIds] = useState<Set<number>>(new Set());
   const [collapsedWhiteboardIds, setCollapsedWhiteboardIds] = useState<Set<number>>(new Set());
+  const [collapsedWireframeIds, setCollapsedWireframeIds] = useState<Set<number>>(new Set());
 
   const isListCollapsed = useCallback((listId: string) => collapsedListIds.has(listId), [collapsedListIds]);
 
@@ -48,6 +49,20 @@ export function useCanvasCollapsible(lists: List[]) {
     });
   }, []);
 
+  const isWireframeCollapsed = useCallback((wireframeId: number) => collapsedWireframeIds.has(wireframeId), [collapsedWireframeIds]);
+
+  const toggleWireframeCollapsed = useCallback((wireframeId: number) => {
+    setCollapsedWireframeIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(wireframeId)) {
+        newSet.delete(wireframeId);
+      } else {
+        newSet.add(wireframeId);
+      }
+      return newSet;
+    });
+  }, []);
+
   // Create stable toggle callbacks for each list to prevent unnecessary re-renders
   const listToggleCallbacks = useMemo(() => {
     const callbacks: Record<string, () => void> = {};
@@ -61,12 +76,15 @@ export function useCanvasCollapsible(lists: List[]) {
     collapsedListIds,
     collapsedNoteIds,
     collapsedWhiteboardIds,
+    collapsedWireframeIds,
     isListCollapsed,
     toggleListCollapsed,
     isNoteCollapsed,
     toggleNoteCollapsed,
     isWhiteboardCollapsed,
     toggleWhiteboardCollapsed,
+    isWireframeCollapsed,
+    toggleWireframeCollapsed,
     listToggleCallbacks,
   };
 }

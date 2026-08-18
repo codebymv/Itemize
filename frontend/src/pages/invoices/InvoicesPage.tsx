@@ -76,6 +76,7 @@ import { RefreshCw } from 'lucide-react';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { cn } from '@/lib/utils';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -123,7 +124,8 @@ interface Stats {
 export function InvoicesPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();    // Onboarding
+    const { setHeaderContent } = useHeader();
+    // Onboarding
     const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('invoices');
 
     const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -812,24 +814,18 @@ export function InvoicesPage() {
                             {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-20" />)}
                         </div>
                     ) : filteredInvoices.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                <Receipt className="h-6 w-6 text-muted-foreground" />
-                            </div>
-                            <h3 className="text-lg font-medium mb-2">
-                                {activeTab === 'all' ? 'No invoices yet' : `No ${activeTab} invoices`}
-                            </h3>
-                            <p className="text-muted-foreground mb-4">
-                                {activeTab === 'all' 
-                                    ? 'Create invoices to bill your customers' 
-                                    : `You don't have any ${activeTab} invoices`}
-                            </p>
-                            {activeTab === 'all' && (
-                                <Button onClick={handleCreateInvoice} className="bg-blue-600 hover:bg-blue-700 text-white">
-                                    <Plus className="h-4 w-4 mr-2" />New Invoice
-                                </Button>
-                            )}
-                        </div>
+                        <EmptyState
+                            icon={Receipt}
+                            title={activeTab === 'all' ? 'No invoices yet' : `No ${activeTab} invoices`}
+                            description={
+                                activeTab === 'all'
+                                    ? 'Create invoices to bill your customers'
+                                    : `You don't have any ${activeTab} invoices`
+                            }
+                            actionLabel={activeTab === 'all' ? 'New Invoice' : undefined}
+                            onAction={activeTab === 'all' ? handleCreateInvoice : undefined}
+                            className="p-12"
+                        />
                     ) : (
                         <div className="divide-y">
                             {filteredInvoices.map((invoice) => {

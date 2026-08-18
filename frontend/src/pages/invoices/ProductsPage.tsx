@@ -44,6 +44,7 @@ import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -89,7 +90,8 @@ const defaultFormData: ProductFormData = {
 
 export function ProductsPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();    // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
+    const { setHeaderContent } = useHeader();
+    // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
     const {
         showModal: showOnboarding,
         handleComplete: handleOnboardingComplete,
@@ -303,16 +305,14 @@ export function ProductsPage() {
                             {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16" />)}
                         </div>
                     ) : filteredProducts.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                <Package className="h-6 w-6 text-muted-foreground" />
-                            </div>
-                            <h3 className="text-lg font-medium mb-2">No products yet</h3>
-                            <p className="text-muted-foreground mb-4">Create products or services to use in your invoices</p>
-                            <Button onClick={openCreateDialog} className="bg-blue-600 hover:bg-blue-700 text-white">
-                                <Plus className="h-4 w-4 mr-2" />Add Product
-                            </Button>
-                        </div>
+                        <EmptyState
+                            icon={Package}
+                            title="No products yet"
+                            description="Create products or services to use in your invoices"
+                            actionLabel="Add Product"
+                            onAction={openCreateDialog}
+                            className="p-12"
+                        />
                     ) : (
                         <div className="divide-y">
                             {filteredProducts.map((product) => (

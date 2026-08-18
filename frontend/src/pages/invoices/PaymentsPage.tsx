@@ -44,6 +44,7 @@ import {
 } from '@/services/invoicePaymentsApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -89,7 +90,8 @@ const STATUS_STYLES: Record<string, string> = {
 export function PaymentsPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();    // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
+    const { setHeaderContent } = useHeader();
+    // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
     const {
         showModal: showOnboarding,
         handleComplete: handleOnboardingComplete,
@@ -440,23 +442,15 @@ const filteredPayments = payments.filter(p => {
                         <div className="p-6 space-y-4">
                             {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16" />)}
                         </div>
-) : filteredPayments.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                <DollarSign className="h-6 w-6 text-muted-foreground" />
-                            </div>
-                            <h3 className="text-lg font-medium mb-2">No payments yet</h3>
-                            <p className="text-muted-foreground mb-4">
-                                Add payments manually or they'll appear when invoices are paid
-                            </p>
-                            <Button
-                                onClick={() => setShowCreateModal(true)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white"
-                            >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Payment
-                            </Button>
-                        </div>
+                    ) : filteredPayments.length === 0 ? (
+                        <EmptyState
+                            icon={DollarSign}
+                            title="No payments yet"
+                            description="Add payments manually or they'll appear when invoices are paid"
+                            actionLabel="Add Payment"
+                            onAction={() => setShowCreateModal(true)}
+                            className="p-12"
+                        />
                     ) : (
                         <div className="divide-y">
                             {filteredPayments.map((payment) => {

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -506,8 +507,10 @@ export function SharedPage() {
           </div>
 
           {/* Content */}
+          <Card>
+            <CardContent className="p-0">
           {loading ? (
-            <div className="space-y-2">
+            <div className="space-y-2 p-6">
               {[...Array(5)].map((_, i) => (
                 <Skeleton key={i} className="h-16" />
               ))}
@@ -521,6 +524,7 @@ export function SharedPage() {
                   ? 'No content of this type has been shared yet'
                   : 'Share lists, notes, whiteboards, or vaults to see them here'
               }
+              className="p-12"
               action={
                 <Button
                   onClick={() => navigate('/canvas')}
@@ -622,6 +626,8 @@ export function SharedPage() {
                 </table>
             </div>
           )}
+            </CardContent>
+          </Card>
 
           {/* Unshare confirmation dialog */}
           <AlertDialog open={unshareDialogOpen} onOpenChange={setUnshareDialogOpen}>

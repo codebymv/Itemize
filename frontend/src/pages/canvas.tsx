@@ -113,6 +113,8 @@ const { currentUser } = useAuthState();
     toggleNoteCollapsed,
     isWhiteboardCollapsed,
     toggleWhiteboardCollapsed,
+    isWireframeCollapsed,
+    toggleWireframeCollapsed,
     listToggleCallbacks,
   } = useCanvasCollapsible(lists);
   const {
@@ -692,6 +694,10 @@ const { currentUser } = useAuthState();
                 }}
                 searchQuery={searchQuery}
                 categoryFilter={categoryFilter}
+                isWhiteboardCollapsed={isWhiteboardCollapsed}
+                onToggleWhiteboardCollapsed={toggleWhiteboardCollapsed}
+                isWireframeCollapsed={isWireframeCollapsed}
+                onToggleWireframeCollapsed={toggleWireframeCollapsed}
                 onReady={(methods) => {
                   if (!canvasMethodsRef.current) {
                     canvasMethodsRef.current = methods;

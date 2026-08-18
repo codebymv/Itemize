@@ -73,7 +73,7 @@ export function ModuleWidget({
 
   if (loading) {
     return (
-      <Card className={cn('bg-muted/10', className)}>
+      <Card className={cn('bg-muted/10 h-full', className)}>
         <CardHeader>
           <Skeleton className="h-6 w-32" />
           <Skeleton className="h-4 w-48 mt-2" />
@@ -91,7 +91,7 @@ const hasRecentItems = recentItems !== undefined;
   if (hasRecentItems) {
     return (
       <Collapsible open={isOpen} onOpenChange={() => setIsOpen(!isOpen)}>
-        <Card className={cn('bg-muted/10', className)}>
+        <Card className={cn('bg-muted/10 h-full', className)}>
           <CardHeader>
             <div className="flex flex-col sm:flex-row lg:flex-col 2xl:flex-row sm:items-start lg:items-start 2xl:items-start justify-between gap-2">
               <div className="flex items-center gap-3">
@@ -191,7 +191,7 @@ const hasRecentItems = recentItems !== undefined;
   }
 
   return (
-    <Card className={cn('bg-muted/10', className)}>
+    <Card className={cn('bg-muted/10 h-full', className)}>
       <CardHeader>
         <div className="flex flex-col sm:flex-row lg:flex-col 2xl:flex-row sm:items-start lg:items-start 2xl:items-start justify-between gap-2">
           <div className="flex items-center gap-3">

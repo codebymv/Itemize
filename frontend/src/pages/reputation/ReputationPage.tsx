@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Star, Search, MoreHorizontal, MessageSquare, ThumbsUp, ThumbsDown, ExternalLink, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +28,7 @@ import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { getReviews, getReputationAnalytics } from '@/services/reputationApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 import { getStatBadgeClass, getStatIconBgClass, getStatValueClass, getStatIconClass, StatTheme } from '@/hooks/useStatStyles';
 import { getSentimentBadgeClass } from '@/lib/badge-utils';
 
@@ -51,7 +53,9 @@ interface Analytics {
 }
 
 export function ReputationPage() {
-    const { toast } = useToast();    // Onboarding
+    const navigate = useNavigate();
+    const { toast } = useToast();
+    // Onboarding
     const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('reputation');
 
     const [reviews, setReviews] = useState<Review[]>([]);
@@ -322,13 +326,14 @@ export function ReputationPage() {
                             {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32" />)}
                         </div>
                     ) : filteredReviews.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                <Star className="h-6 w-6 text-muted-foreground" />
-                            </div>
-                            <h3 className="text-lg font-medium mb-2">No reviews yet</h3>
-                            <p className="text-muted-foreground mb-4">Reviews from your customers will appear here</p>
-                        </div>
+                        <EmptyState
+                            icon={Star}
+                            title="No reviews yet"
+                            description="Reviews from your customers will appear here"
+                            actionLabel="Send Review Request"
+                            onAction={() => navigate('/review-requests')}
+                            className="p-12"
+                        />
                     ) : (
                         <div className="divide-y">
                             {filteredReviews.map((review) => (

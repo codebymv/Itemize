@@ -30,13 +30,15 @@ import { KanbanBoard } from './components/KanbanBoard';
 import { CreateDealModal } from './components/CreateDealModal';
 import { CreatePipelineModal } from './components/CreatePipelineModal';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 
 const getApiStatus = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
 
 export function PipelinesPage() {
   const { toast } = useToast();
-  const { setHeaderContent } = useHeader();  // Onboarding
+  const { setHeaderContent } = useHeader();
+  // Onboarding
   const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('pipelines');
 
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
@@ -398,21 +400,15 @@ export function PipelinesPage() {
         ) : pipelines.length === 0 ? (
           <div className="p-6">
             <Card>
-              <CardContent className="p-12 text-center">
-                <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <TrendingUp className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-medium mb-2">No pipelines yet</h3>
-                <p className="text-muted-foreground mb-4">
-                  Create your first sales pipeline to start tracking deals
-                </p>
-                <Button
-                  onClick={() => setShowCreatePipelineModal(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Pipeline
-                </Button>
+              <CardContent className="p-0">
+                <EmptyState
+                  icon={TrendingUp}
+                  title="No pipelines yet"
+                  description="Create your first sales pipeline to start tracking deals"
+                  actionLabel="New Pipeline"
+                  onAction={() => setShowCreatePipelineModal(true)}
+                  className="p-12"
+                />
               </CardContent>
             </Card>
           </div>

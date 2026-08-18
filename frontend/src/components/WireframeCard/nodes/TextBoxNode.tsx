@@ -3,7 +3,7 @@
  * For annotations without connection handles
  */
 import React, { memo, useState, useCallback, useEffect } from 'react';
-import { NodeProps, useReactFlow } from '@xyflow/react';
+import { NodeProps, NodeResizer, useReactFlow } from '@xyflow/react';
 
 interface TextBoxNodeData {
   label: string;
@@ -61,8 +61,8 @@ const TextBoxNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   return (
     <div
       className={`
-        relative px-3 py-2 rounded border
-        transition-all duration-200 min-w-[60px]
+        relative px-3 py-2 rounded border h-full w-full min-h-[40px] min-w-[80px]
+        transition-all duration-200
         ${selected ? 'ring-2 ring-blue-600 ring-offset-1' : ''}
       `}
       style={{
@@ -72,6 +72,13 @@ const TextBoxNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       }}
       onDoubleClick={handleDoubleClick}
     >
+      <NodeResizer
+        minWidth={80}
+        minHeight={40}
+        isVisible={selected}
+        lineClassName="border-blue-500"
+        handleClassName="h-2 w-2 bg-blue-600 border-none"
+      />
       {/* No handles - this is just a label */}
       {isEditing ? (
         <textarea

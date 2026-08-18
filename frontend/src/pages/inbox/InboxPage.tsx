@@ -39,6 +39,7 @@ import {
 import { useOrganization } from '@/hooks/useOrganization';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 
 const CONVERSATION_STATUSES: Array<NonNullable<ConversationsQueryParams['status']>> = ['open', 'closed', 'snoozed', 'all'];
 
@@ -47,7 +48,8 @@ const isConversationStatus = (value: string): value is NonNullable<Conversations
 
 export function InboxPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();    // Onboarding
+    const { setHeaderContent } = useHeader();
+    // Onboarding
     const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('inbox');
 
     const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -253,11 +255,12 @@ export function InboxPage() {
                                 return contactName.includes(query) || email.includes(query) || preview.includes(query);
                             });
                             return filteredConversations.length === 0 ? (
-                                <div className="flex-1 flex items-center justify-center p-4 text-center">
-                                    <div>
-                                        <Inbox className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                                        <p className="text-muted-foreground">{searchQuery ? 'No conversations match your search' : 'No conversations'}</p>
-                                    </div>
+                                <div className="flex-1 flex items-center justify-center">
+                                    <EmptyState
+                                        icon={Inbox}
+                                        title={searchQuery ? 'No matches' : 'No conversations'}
+                                        description={searchQuery ? 'No conversations match your search' : 'Conversations will appear here when customers message you'}
+                                    />
                                 </div>
                             ) : (
                                 <ScrollArea className="flex-1">

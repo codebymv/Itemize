@@ -26,6 +26,7 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { CreateCalendarModal } from './components/CreateCalendarModal';
 import { CalendarIntegrations } from './components/CalendarIntegrations';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
     const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
@@ -35,7 +36,8 @@ const getApiErrorMessage = (error: unknown, fallback: string): string => {
 export function CalendarsPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();    // Onboarding
+    const { setHeaderContent } = useHeader();
+    // Onboarding
     const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('calendars');
 
     // State
@@ -248,22 +250,14 @@ export function CalendarsPage() {
                             ))}
                         </div>
                     ) : filteredCalendars.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                <CalendarIcon className="h-6 w-6 text-muted-foreground" />
-                            </div>
-                            <h3 className="text-lg font-medium mb-2">No calendars yet</h3>
-                            <p className="text-muted-foreground mb-4">
-                                Create a calendar to start accepting appointments
-                            </p>
-                            <Button
-                                onClick={() => setShowCreateModal(true)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white"
-                            >
-                                <Plus className="h-4 w-4 mr-2" />
-                                New Calendar
-                            </Button>
-                        </div>
+                        <EmptyState
+                            icon={CalendarIcon}
+                            title="No calendars yet"
+                            description="Create a calendar to start accepting appointments"
+                            actionLabel="New Calendar"
+                            onAction={() => setShowCreateModal(true)}
+                            className="p-12"
+                        />
                     ) : (
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filteredCalendars.map((calendar) => (

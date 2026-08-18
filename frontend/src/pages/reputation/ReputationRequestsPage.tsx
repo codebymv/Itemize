@@ -27,6 +27,7 @@ import { getReviewRequests, deleteReviewRequest, resendReviewRequest } from '@/s
 import { SendReviewRequestModal } from './SendReviewRequestModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -62,7 +63,8 @@ const isReviewRequestStatus = (value: string): value is ApiReviewRequest['status
 
 export function ReputationRequestsPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();    // Route-aware onboarding (will show 'reputation' onboarding for Reputation group)
+    const { setHeaderContent } = useHeader();
+    // Route-aware onboarding (will show 'reputation' onboarding for Reputation group)
     const {
         showModal: showOnboarding,
         handleComplete: handleOnboardingComplete,
@@ -256,16 +258,14 @@ export function ReputationRequestsPage() {
                             <ListRowSkeleton count={3} height="h-20" />
                         </div>
                     ) : filteredRequests.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                <Send className="h-6 w-6 text-muted-foreground" />
-                            </div>
-                            <h3 className="text-lg font-medium mb-2">No review requests yet</h3>
-                            <p className="text-muted-foreground mb-4">Send review requests to your customers to collect feedback</p>
-                            <Button onClick={() => setShowSendModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
-                                <Plus className="h-4 w-4 mr-2" />Send First Request
-                            </Button>
-                        </div>
+                        <EmptyState
+                            icon={Send}
+                            title="No review requests yet"
+                            description="Send review requests to your customers to collect feedback"
+                            actionLabel="Send First Request"
+                            onAction={() => setShowSendModal(true)}
+                            className="p-12"
+                        />
                     ) : (
                         <div className="divide-y">
                             {filteredRequests.map((request) => (

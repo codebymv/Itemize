@@ -206,6 +206,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
                   </ColorPicker>
                   <Palette className="h-4 w-4" style={{ color: 'var(--whiteboard-color)' }} />
                   <CardTitle 
+                    data-whiteboard-title
                     className="text-lg font-medium cursor-pointer font-raleway"
                     onClick={() => setIsEditing(true)}
                   >

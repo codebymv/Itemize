@@ -1,15 +1,18 @@
 /**
  * Custom nodes for WireframeCanvas
- * Export all node types for use in React Flow
  */
-export { default as RectangleNode } from './RectangleNode';
-export { default as DiamondNode } from './DiamondNode';
-export { default as CircleNode } from './CircleNode';
-export { default as TextBoxNode } from './TextBoxNode';
-export { default as StickyNoteNode } from './StickyNoteNode';
-export { default as ArrowNode } from './ArrowNode';
+import RectangleNode from './RectangleNode';
+import DiamondNode from './DiamondNode';
+import CircleNode from './CircleNode';
+import TextBoxNode from './TextBoxNode';
+import StickyNoteNode from './StickyNoteNode';
+import ArrowNode from './ArrowNode';
+import FrameNode from './FrameNode';
+import CalloutNode from './CalloutNode';
+import StepNode from './StepNode';
+import HighlightNode from './HighlightNode';
+import UiBlockNode from './UiBlockNode';
 
-// Node types configuration for React Flow
 export const nodeTypes = {
   rectangle: RectangleNode,
   diamond: DiamondNode,
@@ -17,12 +20,12 @@ export const nodeTypes = {
   textBox: TextBoxNode,
   stickyNote: StickyNoteNode,
   arrow: ArrowNode,
+  frame: FrameNode,
+  callout: CalloutNode,
+  step: StepNode,
+  highlight: HighlightNode,
+  uiButton: UiBlockNode,
+  uiInput: UiBlockNode,
+  uiNavbar: UiBlockNode,
+  uiCard: UiBlockNode,
 };
-
-// Import after exports to avoid circular dependency
-import RectangleNode from './RectangleNode';
-import DiamondNode from './DiamondNode';
-import CircleNode from './CircleNode';
-import TextBoxNode from './TextBoxNode';
-import StickyNoteNode from './StickyNoteNode';
-import ArrowNode from './ArrowNode';

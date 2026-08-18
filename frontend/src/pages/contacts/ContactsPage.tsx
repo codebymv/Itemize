@@ -33,6 +33,7 @@ import { getContacts, deleteContact, bulkDeleteContacts, exportContactsCSV, crea
 import { ContactsTable } from './components/ContactsTable';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 import { ContactCardList } from './components/ContactCard';
 import { ContactFilters } from './components/ContactFilters';
 import { CreateContactModal } from './components/CreateContactModal';
@@ -48,7 +49,8 @@ const getApiStatus = (error: unknown): number | undefined =>
 
 export function ContactsPage() {
   const navigate = useNavigate();
-  const { toast } = useToast();  const isMobile = useIsMobile();
+  const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   // Onboarding
   const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('contacts');
@@ -473,22 +475,14 @@ export function ContactsPage() {
                   ))}
                 </div>
               ) : contacts.length === 0 ? (
-                <div className="p-12 text-center">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <UserPlus className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-lg font-medium mb-2">No contacts yet</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Get started by adding your first contact
-                  </p>
-                  <Button
-                    onClick={() => setShowCreateModal(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Contact
-                  </Button>
-                </div>
+                <EmptyState
+                  icon={UserPlus}
+                  title="No contacts yet"
+                  description="Get started by adding your first contact"
+                  actionLabel="Add Contact"
+                  onAction={() => setShowCreateModal(true)}
+                  className="p-12"
+                />
               ) : isMobile ? (
                 <ContactCardList
                   contacts={contacts}

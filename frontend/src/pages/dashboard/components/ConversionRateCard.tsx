@@ -23,8 +23,8 @@ export function ConversionRateCard({
 }) {
     if (isLoading) {
         return (
-            <Card>
-                <CardContent className="pt-6">
+            <Card className="h-full">
+                <CardContent className="pt-6 h-full flex flex-col justify-between">
                     <div className="flex items-center justify-between">
                         <Skeleton className="h-10 w-10 rounded-full" />
                         <Skeleton className="h-8 w-16" />
@@ -37,8 +37,8 @@ export function ConversionRateCard({
     }
 
 return (
-        <Card>
-            <CardContent className="pt-6">
+        <Card className="h-full">
+            <CardContent className="pt-6 h-full flex flex-col justify-between">
                 <div className="flex items-center justify-between">
                     <div className={`p-2 rounded-full bg-muted ${color}`}>
                         <Icon className="h-5 w-5" />

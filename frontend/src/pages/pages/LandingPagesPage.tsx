@@ -31,6 +31,7 @@ import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { getPages, updatePage, deletePage, duplicatePage, createPage } from '@/services/pagesApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 import { formatStatus, titleCase } from '@/utils/textUtils';
 
 interface LandingPage {
@@ -55,7 +56,8 @@ const isLandingPageStatus = (value: string): value is LandingPageStatus =>
 export function LandingPagesPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();    // Onboarding
+    const { setHeaderContent } = useHeader();
+    // Onboarding
     const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('pages');
 
     const [pages, setPages] = useState<LandingPage[]>([]);
@@ -285,16 +287,14 @@ const handleDuplicate = async (id: number) => {
                             {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
                         </div>
                     ) : filteredPages.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                <Layout className="h-6 w-6 text-muted-foreground" />
-                            </div>
-                            <h3 className="text-lg font-medium mb-2">No landing pages yet</h3>
-                            <p className="text-muted-foreground mb-4">Create beautiful landing pages to capture leads</p>
-                            <Button onClick={handleCreatePage} className="bg-blue-600 hover:bg-blue-700 text-white">
-                                <Plus className="h-4 w-4 mr-2" />Create Page
-                            </Button>
-                        </div>
+                        <EmptyState
+                            icon={Layout}
+                            title="No landing pages yet"
+                            description="Create beautiful landing pages to capture leads"
+                            actionLabel="Create Page"
+                            onAction={handleCreatePage}
+                            className="p-12"
+                        />
                     ) : (
                         <div className="divide-y">
                             {filteredPages.map((page) => (

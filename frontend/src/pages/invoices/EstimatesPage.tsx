@@ -40,6 +40,7 @@ import {
 } from '@/services/estimatesApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -47,7 +48,8 @@ import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 export function EstimatesPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();    // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
+    const { setHeaderContent } = useHeader();
+    // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
     const {
         showModal: showOnboarding,
         handleComplete: handleOnboardingComplete,
@@ -347,19 +349,14 @@ export function EstimatesPage() {
                             {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20" />)}
                         </div>
                     ) : filteredEstimates.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                <FileText className="h-6 w-6 text-muted-foreground" />
-                            </div>
-                            <h3 className="text-lg font-medium mb-2">No estimates yet</h3>
-                            <p className="text-muted-foreground mb-4">Create estimates to send quotes to your customers</p>
-                            <Button
-                                onClick={() => navigate('/estimates/new')}
-                                className="bg-blue-600 hover:bg-blue-700 text-white"
-                            >
-                                <Plus className="h-4 w-4 mr-2" />Create Estimate
-                            </Button>
-                        </div>
+                        <EmptyState
+                            icon={FileText}
+                            title="No estimates yet"
+                            description="Create estimates to send quotes to your customers"
+                            actionLabel="Create Estimate"
+                            onAction={() => navigate('/estimates/new')}
+                            className="p-12"
+                        />
                     ) : (
                         <div className="divide-y">
                             {filteredEstimates.map((estimate) => (

@@ -32,6 +32,7 @@ import { getForms, updateForm, deleteForm, duplicateForm, createForm } from '@/s
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { useOrganization } from '@/hooks/useOrganization';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 
 export function FormsPage() {
     const navigate = useNavigate();
@@ -250,16 +251,14 @@ export function FormsPage() {
                                 {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40" />)}
                             </div>
                         ) : filteredForms.length === 0 ? (
-                            <div className="p-12 text-center">
-                                <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                    <FileText className="h-6 w-6 text-muted-foreground" />
-                                </div>
-                                <h3 className="text-lg font-medium mb-2">No forms yet</h3>
-                                <p className="text-muted-foreground mb-4">Create a form to start collecting leads</p>
-                                <Button onClick={handleCreateForm} className="bg-blue-600 hover:bg-blue-700 text-white">
-                                    <Plus className="h-4 w-4 mr-2" />New Form
-                                </Button>
-                            </div>
+                            <EmptyState
+                                icon={FileText}
+                                title="No forms yet"
+                                description="Create a form to start collecting leads"
+                                actionLabel="New Form"
+                                onAction={handleCreateForm}
+                                className="p-12"
+                            />
                         ) : (
                             <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {filteredForms.map((form) => (

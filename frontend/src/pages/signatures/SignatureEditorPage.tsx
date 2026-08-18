@@ -61,9 +61,9 @@ export default function SignatureEditorPage() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <span className="text-xl font-semibold italic uppercase tracking-wide truncate italic-safe">
-            {isEditing ? 'Edit Signature Document' : 'New Signature Document'}
-          </span>
+          <h1 className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground">
+            {isEditing ? 'EDIT SIGNATURE DOCUMENT' : 'NEW SIGNATURE DOCUMENT'}
+          </h1>
         </div>
       </div>
     );

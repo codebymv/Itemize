@@ -23,6 +23,7 @@ import { getChannels, disconnectChannel, getConversations, getFacebookConnectUrl
 import { cn } from '@/lib/utils';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 
 interface SocialChannel {
     id: number;
@@ -48,7 +49,8 @@ interface SocialConversation {
 
 export function SocialPage() {
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();    // Route-aware onboarding (will show 'inbox' onboarding for Communications group)
+    const { setHeaderContent } = useHeader();
+    // Route-aware onboarding (will show 'inbox' onboarding for Communications group)
     const {
         showModal: showOnboarding,
         handleComplete: completeOnboarding,
@@ -241,16 +243,14 @@ export function SocialPage() {
                                     {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20" />)}
                                 </div>
                             ) : filteredConversations.length === 0 ? (
-                                <div className="p-12 text-center">
-                                    <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                        <MessageCircle className="h-6 w-6 text-muted-foreground" />
-                                    </div>
-                                    <h3 className="text-lg font-medium mb-2">No conversations yet</h3>
-                                    <p className="text-muted-foreground mb-4">Connect your social accounts to start receiving messages</p>
-                                    <Button onClick={handleConnectFacebook} className="bg-blue-600 hover:bg-blue-700 text-white">
-                                        <Plus className="h-4 w-4 mr-2" />Connect Facebook
-                                    </Button>
-                                </div>
+                                <EmptyState
+                                    icon={MessageCircle}
+                                    title="No conversations yet"
+                                    description="Connect your social accounts to start receiving messages"
+                                    actionLabel="Connect Facebook"
+                                    onAction={handleConnectFacebook}
+                                    className="p-12"
+                                />
                             ) : (
                                 <div className="divide-y">
                                     {filteredConversations.map((conversation) => (
@@ -296,16 +296,17 @@ export function SocialPage() {
                                     {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-20" />)}
                                 </div>
                             ) : channels.length === 0 ? (
-                                <div className="p-12 text-center">
-                                    <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                        <Share2 className="h-6 w-6 text-muted-foreground" />
-                                    </div>
-                                    <h3 className="text-lg font-medium mb-2">No accounts connected yet</h3>
-                                    <p className="text-muted-foreground mb-4">Connect your social accounts to manage conversations</p>
-                                    <Button onClick={handleConnectFacebook} className="bg-blue-600 hover:bg-blue-700 text-white">
-                                        <Facebook className="h-4 w-4 mr-2" />Connect Facebook
-                                    </Button>
-                                </div>
+                                <EmptyState
+                                    icon={Share2}
+                                    title="No accounts connected yet"
+                                    description="Connect your social accounts to manage conversations"
+                                    action={
+                                        <Button onClick={handleConnectFacebook} className="bg-blue-600 hover:bg-blue-700 text-white">
+                                            <Facebook className="h-4 w-4 mr-2" />Connect Facebook
+                                        </Button>
+                                    }
+                                    className="p-12"
+                                />
                             ) : (
                                 <div className="space-y-4">
                                     {channels.map((channel) => (

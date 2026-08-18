@@ -4,12 +4,14 @@
  */
 import React, { memo, useState, useCallback, useEffect, useRef } from 'react';
 import { NodeProps, useReactFlow, Node } from '@xyflow/react';
+import { useWireframeNodeLabel } from './useWireframeNodeLabel';
 
 interface ArrowNodeData {
   // End point position relative to node position (start point)
   endOffset: { x: number; y: number };
   // Internal flag to align node bounds with rendered arrow
   boundsAligned?: boolean;
+  label?: string;
   // Optional: connection info for smart snapping (future)
   startConnectedTo?: string;
   endConnectedTo?: string;
@@ -29,6 +31,8 @@ const ArrowNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   const nodeData = data as unknown as ArrowNodeData;
   const endOffset = nodeData.endOffset || { x: 100, y: 0 };
   const boundsAligned = nodeData.boundsAligned;
+  const { isEditing, setIsEditing, label, setLabel, handleBlur, handleKeyDown } =
+    useWireframeNodeLabel(id, nodeData.label || '');
   
   // Track which handle is being dragged
   const [draggingHandle, setDraggingHandle] = useState<'start' | 'end' | null>(null);
@@ -410,6 +414,36 @@ const ArrowNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         title="Drag to move end point"
       />
       
+      {(isEditing || label || selected) && (
+        <div
+          className="absolute nodrag nopan z-20 max-w-[140px] rounded border bg-card px-1.5 py-0.5 text-[10px] text-foreground shadow-sm"
+          style={{
+            left: (startX + endX) / 2,
+            top: (startY + endY) / 2,
+            transform: 'translate(-50%, -50%)',
+            borderColor: 'hsl(var(--border))',
+          }}
+          onDoubleClick={(event) => {
+            event.stopPropagation();
+            setIsEditing(true);
+          }}
+        >
+          {isEditing ? (
+            <input
+              value={label}
+              onChange={(event) => setLabel(event.target.value)}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+              className="w-20 bg-transparent outline-none"
+              autoFocus
+              placeholder="Label"
+            />
+          ) : (
+            <span className="truncate">{label || 'Label'}</span>
+          )}
+        </div>
+      )}
+
       {/* Selection indicator */}
       {selected && (
         <div 

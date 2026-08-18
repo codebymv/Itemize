@@ -3,7 +3,7 @@
  * Yellow note with editable text
  */
 import React, { memo, useState, useCallback, useEffect } from 'react';
-import { NodeProps, useReactFlow } from '@xyflow/react';
+import { NodeProps, NodeResizer, useReactFlow } from '@xyflow/react';
 
 interface StickyNoteNodeData {
   label: string;
@@ -55,7 +55,7 @@ const StickyNoteNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   return (
     <div
       className={`
-        relative p-3 rounded-sm min-w-[100px] min-h-[70px] max-w-[180px]
+        relative p-3 rounded-sm min-w-[100px] min-h-[70px] h-full w-full
         shadow-md transition-all duration-200
         ${selected ? 'ring-2 ring-blue-600 ring-offset-2' : ''}
       `}
@@ -65,6 +65,13 @@ const StickyNoteNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       }}
       onDoubleClick={handleDoubleClick}
     >
+      <NodeResizer
+        minWidth={100}
+        minHeight={70}
+        isVisible={selected}
+        lineClassName="border-blue-500"
+        handleClassName="h-2 w-2 bg-blue-600 border-none"
+      />
       {/* Content */}
       {isEditing ? (
         <textarea

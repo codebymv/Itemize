@@ -34,6 +34,8 @@ export const DraggableWhiteboardCard: React.FC<DraggableWhiteboardCardProps> = (
   updateCategory
 }) => {
   const whiteboardRef = useRef<HTMLDivElement>(null);
+  const canvasTransformRef = useRef(canvasTransform);
+  canvasTransformRef.current = canvasTransform;
   
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -62,9 +64,10 @@ export const DraggableWhiteboardCard: React.FC<DraggableWhiteboardCardProps> = (
 
   // Drag start handler
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
     // Don't start drag if clicking on interactive elements or resize handle
     const target = e.target as HTMLElement;
-    if (target.closest('input, textarea, button, [role="button"], [role="menuitem"], .resize-handle, .whiteboard-canvas, canvas')) {
+    if (target.closest('input, textarea, button, [role="button"], [role="menuitem"], .resize-handle, .whiteboard-canvas, canvas, [data-whiteboard-title]')) {
       return;
     }
 
@@ -84,15 +87,16 @@ export const DraggableWhiteboardCard: React.FC<DraggableWhiteboardCardProps> = (
       // Calculate drag offset in canvas coordinates
       const containerRect = whiteboardRef.current.parentElement?.getBoundingClientRect();
       if (containerRect) {
-        const mouseXInCanvas = (e.clientX - containerRect.left - canvasTransform.x) / canvasTransform.scale;
-        const mouseYInCanvas = (e.clientY - containerRect.top - canvasTransform.y) / canvasTransform.scale;
+        const { x, y, scale } = canvasTransformRef.current;
+        const mouseXInCanvas = (e.clientX - containerRect.left - x) / scale;
+        const mouseYInCanvas = (e.clientY - containerRect.top - y) / scale;
         
         const currentLeft = parseFloat(whiteboardRef.current.style.left) || 0;
         const currentTop = parseFloat(whiteboardRef.current.style.top) || 0;
         
         setDragOffset({
-          x: (mouseXInCanvas - currentLeft) * canvasTransform.scale,
-          y: (mouseYInCanvas - currentTop) * canvasTransform.scale
+          x: (mouseXInCanvas - currentLeft) * scale,
+          y: (mouseYInCanvas - currentTop) * scale
         });
         setIsDragging(true);
       }
@@ -106,12 +110,13 @@ export const DraggableWhiteboardCard: React.FC<DraggableWhiteboardCardProps> = (
       if (!containerRect) return;
       
       // Calculate mouse position relative to canvas before transform
-      const mouseXInCanvas = (e.clientX - containerRect.left - canvasTransform.x) / canvasTransform.scale;
-      const mouseYInCanvas = (e.clientY - containerRect.top - canvasTransform.y) / canvasTransform.scale;
+      const { x, y, scale } = canvasTransformRef.current;
+      const mouseXInCanvas = (e.clientX - containerRect.left - x) / scale;
+      const mouseYInCanvas = (e.clientY - containerRect.top - y) / scale;
       
       // Calculate new position relative to canvas coordinates
-      const newX = mouseXInCanvas - dragOffset.x / canvasTransform.scale;
-      const newY = mouseYInCanvas - dragOffset.y / canvasTransform.scale;
+      const newX = mouseXInCanvas - dragOffset.x / scale;
+      const newY = mouseYInCanvas - dragOffset.y / scale;
       
       // Apply the new position to the element (in canvas coordinates)
       whiteboardRef.current.style.left = `${newX}px`;
@@ -123,8 +128,8 @@ export const DraggableWhiteboardCard: React.FC<DraggableWhiteboardCardProps> = (
       const deltaY = e.clientY - resizeStartData.startY;
       
       // Account for canvas scale in the resize delta
-      const scaledDeltaX = deltaX / canvasTransform.scale;
-      const scaledDeltaY = deltaY / canvasTransform.scale;
+      const scaledDeltaX = deltaX / canvasTransformRef.current.scale;
+      const scaledDeltaY = deltaY / canvasTransformRef.current.scale;
       
       // Enforce both minimum and maximum limits to prevent database constraint errors
       const newWidth = Math.min(MAX_WHITEBOARD_WIDTH, Math.max(MIN_WHITEBOARD_WIDTH, resizeStartData.startWidth + scaledDeltaX));

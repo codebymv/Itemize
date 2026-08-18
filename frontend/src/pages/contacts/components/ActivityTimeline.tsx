@@ -10,6 +10,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { EmptyState } from '@/components/EmptyState';
 import { ContactActivity, JsonRecord } from '@/types';
 
 interface ActivityTimelineProps {
@@ -116,14 +117,13 @@ export function ActivityTimeline({ activities }: ActivityTimelineProps) {
   if (activities.length === 0) {
     return (
       <Card>
-        <CardContent className="p-12 text-center">
-          <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-            <MessageSquare className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-medium mb-2">No activities yet</h3>
-          <p className="text-muted-foreground mb-4">
-            Add a note to start tracking interactions
-          </p>
+        <CardContent className="p-0">
+          <EmptyState
+            icon={MessageSquare}
+            title="No activities yet"
+            description="Add a note to start tracking interactions"
+            className="p-12"
+          />
         </CardContent>
       </Card>
     );

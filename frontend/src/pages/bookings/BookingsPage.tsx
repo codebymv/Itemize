@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { Search, Calendar as CalendarIcon, CalendarCheck, Clock, User, MoreHorizontal, X, Check, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ import { getBookings, cancelBooking, BookingsQueryParams } from '@/services/cale
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { useOrganization } from '@/hooks/useOrganization';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 
 const BOOKING_STATUSES: Array<NonNullable<BookingsQueryParams['status']>> = [
     'pending',
@@ -45,8 +47,10 @@ const isBookingStatus = (value: string): value is NonNullable<BookingsQueryParam
     BOOKING_STATUSES.includes(value as NonNullable<BookingsQueryParams['status']>);
 
 export function BookingsPage() {
+    const navigate = useNavigate();
     const { toast } = useToast();
-    const { setHeaderContent } = useHeader();    // Route-aware onboarding (will show 'calendars' onboarding for Scheduling group)
+    const { setHeaderContent } = useHeader();
+    // Route-aware onboarding (will show 'calendars' onboarding for Scheduling group)
     const {
         showModal: showOnboarding,
         handleComplete: completeOnboarding,
@@ -241,15 +245,14 @@ export function BookingsPage() {
                             ))}
                         </div>
                     ) : filteredBookings.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                <CalendarIcon className="h-6 w-6 text-muted-foreground" />
-                            </div>
-                            <h3 className="text-lg font-medium mb-2">No bookings yet</h3>
-                            <p className="text-muted-foreground">
-                                Bookings will appear here when customers schedule appointments
-                            </p>
-                        </div>
+                        <EmptyState
+                            icon={CalendarIcon}
+                            title="No bookings yet"
+                            description="Bookings will appear here when customers schedule appointments"
+                            actionLabel="View Calendars"
+                            onAction={() => navigate('/calendars')}
+                            className="p-12"
+                        />
                     ) : (
                         <div className="divide-y">
                             {filteredBookings.map((booking) => (

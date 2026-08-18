@@ -26,6 +26,7 @@ import { getEmailTemplates, deleteEmailTemplate, duplicateEmailTemplate, sendTes
 import { CreateEmailTemplateModal } from './CreateEmailTemplateModal';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -45,7 +46,8 @@ interface EmailTemplate {
 export function EmailTemplatesPage() {
     const { toast } = useToast();
     const { currentUser } = useAuthState();
-    const { setHeaderContent } = useHeader();    // Route-aware onboarding (will show 'campaigns' onboarding for all Marketing routes)
+    const { setHeaderContent } = useHeader();
+    // Route-aware onboarding (will show 'campaigns' onboarding for all Marketing routes)
     const {
         showModal: showOnboarding,
         handleComplete: handleOnboardingComplete,
@@ -197,7 +199,7 @@ export function EmailTemplatesPage() {
                         <SelectValue placeholder="Category" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="all">All Categories</SelectItem>
                         <SelectItem value="marketing">Marketing</SelectItem>
                         <SelectItem value="welcome">Welcome</SelectItem>
                         <SelectItem value="notification">Notification</SelectItem>
@@ -222,16 +224,14 @@ export function EmailTemplatesPage() {
                             {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40" />)}
                         </div>
                     ) : filteredTemplates.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                <FileText className="h-6 w-6 text-muted-foreground" />
-                            </div>
-                            <h3 className="text-lg font-medium mb-2">No email templates yet</h3>
-                            <p className="text-muted-foreground mb-4">Create reusable email templates for your campaigns</p>
-                            <Button onClick={() => setShowCreateModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
-                                <Plus className="h-4 w-4 mr-2" />Create Template
-                            </Button>
-                        </div>
+                        <EmptyState
+                            icon={FileText}
+                            title="No email templates yet"
+                            description="Create reusable email templates for your campaigns"
+                            actionLabel="Create Template"
+                            onAction={() => setShowCreateModal(true)}
+                            className="p-12"
+                        />
                     ) : (
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filteredTemplates.map((template) => (

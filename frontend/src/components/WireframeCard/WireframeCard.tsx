@@ -2,7 +2,7 @@
  * WireframeCard Component
  * Card wrapper for React Flow based wireframe diagrams
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,6 @@ import { WireframeCardProps } from '@/types';
 import WireframeCanvas from './WireframeCanvas';
 import { CategorySelector } from '../CategorySelector';
 import { DeleteDialog } from '../ui/delete-dialog';
-import { Node, Edge } from '@xyflow/react';
 
 const WireframeCard: React.FC<WireframeCardProps> = ({
   wireframe,
@@ -86,8 +85,7 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
     }
   };
 
-  // Parse flow_data if it's a string
-  const getFlowData = () => {
+  const parsedFlowData = useMemo(() => {
     if (typeof wireframe.flow_data === 'string') {
       try {
         return JSON.parse(wireframe.flow_data);
@@ -96,11 +94,7 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
       }
     }
     return wireframe.flow_data || { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } };
-  };
-
-  const handleFlowDataChange = (flowData: { nodes: Node[]; edges: Edge[]; viewport: { x: number; y: number; zoom: number } }) => {
-    handleFlowDataSave(flowData);
-  };
+  }, [wireframe.flow_data]);
 
   const handleUpdateCategoryColor = async (categoryName: string, newColor: string) => {
     if (updateCategory) {
@@ -204,6 +198,7 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
                   </ColorPicker>
                   <GitBranch className="h-4 w-4" style={{ color: wireframeDisplayColor }} />
                   <CardTitle 
+                    data-wireframe-title
                     className="text-lg font-medium cursor-pointer"
                     onClick={() => setIsEditing(true)}
                   >
@@ -271,8 +266,8 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
             }}
           >
             <WireframeCanvas
-              flowData={getFlowData()}
-              onFlowDataChange={handleFlowDataChange}
+              flowData={parsedFlowData}
+              onFlowDataChange={handleFlowDataSave}
               readOnly={false}
             />
           </div>

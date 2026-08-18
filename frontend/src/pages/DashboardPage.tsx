@@ -130,7 +130,8 @@ export function DashboardPage() {
         });
     };
     const navigate = useNavigate();
-    const { setHeaderContent } = useHeader();    const { organizationId } = useOrganization();
+    const { setHeaderContent } = useHeader();
+    const { organizationId } = useOrganization();
     
     // Onboarding
     const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('dashboard');
@@ -186,7 +187,7 @@ export function DashboardPage() {
                         onClick={() => navigate('/canvas')}
                     >
                         <Map className="h-4 w-4 mr-2" />
-                        Go to Canvas
+                        Canvas
                     </Button>
                 </div>
             </div>
@@ -254,7 +255,7 @@ export function DashboardPage() {
                     onClick={() => navigate('/canvas')}
                 >
                     <Map className="h-4 w-4 mr-2" />
-                    Go to Canvas
+                    Canvas
                 </Button>
             </MobileControlsBar>
             
@@ -352,7 +353,7 @@ export function DashboardPage() {
                     </div>
 
                     {/* Module Widgets - Cross-module visibility */}
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-start mb-8">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-stretch mb-8">
                         <InvoicesWidget
                             primaryStat={analytics?.invoiceMetrics?.pending ?? 0}
                             primaryStatColor="text-blue-600 dark:text-blue-400"
@@ -532,9 +533,9 @@ export function DashboardPage() {
                     </Card>
 
                     {/* Conversion Rates & Communication Stats */}
-                    <div className="grid gap-6 md:grid-cols-2 mb-8">
+                    <div className="grid gap-6 md:grid-cols-2 mb-8 items-stretch">
                         {/* Conversion Rates */}
-                        <Card className="bg-muted/10">
+                        <Card className="bg-muted/10 h-full flex flex-col">
                             <CardHeader>
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="text-base flex items-center gap-2">
@@ -545,8 +546,9 @@ export function DashboardPage() {
                                 </div>
                                 <CardDescription>Closed-deal and form conversion</CardDescription>
                             </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-2 gap-3">
+                            <CardContent className="flex-1 flex flex-col">
+                                <div className="flex flex-col gap-3 h-full">
+                                    <div className="grid grid-cols-2 gap-3 flex-1">
                                     <ConversionRateCard
                                         title="Deal Win Rate"
                                         rate={conversionData?.dealWinRate?.rate ?? 0}
@@ -565,31 +567,41 @@ export function DashboardPage() {
                                         color="text-blue-600 dark:text-blue-400"
                                         isLoading={conversionLoading}
                                     />
-                                    <Card className="col-span-2">
-                                        <CardContent className="pt-6">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div className="p-2 rounded-full bg-muted text-green-600">
-                                                    <DollarSign className="h-5 w-5" />
+                                    </div>
+                                    <Card className="flex-1">
+                                        <CardContent className="pt-6 h-full flex flex-col justify-between">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="p-2 rounded-full bg-muted text-green-600">
+                                                        <DollarSign className="h-5 w-5" />
+                                                    </div>
+                                                    <span className="font-medium">Closed Deal Value</span>
                                                 </div>
-                                                <div className="flex-1 space-y-1 text-right">
-                                                    {conversionData?.dealWinRate.valuesByCurrency.length ? (
-                                                        conversionData.dealWinRate.valuesByCurrency.map((value) => (
-                                                            <div key={value.currency}>
-                                                                <span className="font-semibold text-green-600">
-                                                                    {value.currency} {value.wonValue.toLocaleString()} won
-                                                                </span>
-                                                                <span className="text-xs text-muted-foreground">
-                                                                    {' · '}{value.lostValue.toLocaleString()} lost
-                                                                </span>
-                                                            </div>
-                                                        ))
-                                                    ) : (
-                                                        <span className="text-sm text-muted-foreground">No closed-deal value</span>
-                                                    )}
-                                                </div>
+                                                <span className="text-sm text-muted-foreground">
+                                                    {conversionData?.dealWinRate?.valuesByCurrency?.[0]
+                                                        ? `${conversionData.dealWinRate.valuesByCurrency[0].currency} ${conversionData.dealWinRate.valuesByCurrency[0].wonValue.toLocaleString()}`
+                                                        : '0'}
+                                                </span>
                                             </div>
-                                            <div className="mt-2">
-                                                <p className="text-sm font-medium">Closed Deal Value</p>
+                                            <div className="grid grid-cols-3 gap-4 text-center">
+                                                <div>
+                                                    <div className="text-lg font-bold text-green-600">
+                                                        {conversionData?.dealWinRate?.valuesByCurrency?.[0]?.wonValue.toLocaleString() ?? 0}
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">Won</div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-lg font-bold text-green-600">
+                                                        {conversionData?.dealWinRate?.valuesByCurrency?.[0]?.lostValue.toLocaleString() ?? 0}
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">Lost</div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-lg font-bold text-green-600">
+                                                        {conversionData?.dealWinRate?.totalClosed ?? 0}
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">Closed</div>
+                                                </div>
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -598,7 +610,7 @@ export function DashboardPage() {
                         </Card>
 
                         {/* Communication Stats */}
-                        <Card className="bg-muted/10">
+                        <Card className="bg-muted/10 h-full flex flex-col">
                             <CardHeader>
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="text-base flex items-center gap-2">
@@ -609,7 +621,7 @@ export function DashboardPage() {
                                 </div>
                                 <CardDescription>Email and SMS performance</CardDescription>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="flex-1 flex flex-col">
                                 <CommunicationStatsCard 
                                     stats={commStats} 
                                     isLoading={commLoading} 

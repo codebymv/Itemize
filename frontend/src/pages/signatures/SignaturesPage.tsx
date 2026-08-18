@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { Card, CardContent } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -126,7 +127,9 @@ export function SignaturesPage() {
       <div className="flex items-center justify-between w-full min-w-0">
         <div className="flex items-center gap-2 ml-2 min-w-0">
           <FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <span className="text-xl font-semibold italic uppercase tracking-wide truncate italic-safe">Documents</span>
+          <h1 className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground">
+            DOCUMENTS
+          </h1>
         </div>
         <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">{headerActions}</div>
       </div>
@@ -347,16 +350,14 @@ export function SignaturesPage() {
                   <ListRowSkeleton count={5} />
                 </div>
               ) : filteredDocuments.length === 0 ? (
-                <div className="p-12 text-center">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <FileSignature className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-lg font-medium mb-2">No signature documents yet</h3>
-                  <p className="text-muted-foreground mb-4">Create a document to start collecting signatures.</p>
-                  <Button onClick={() => navigate('/documents/new')} className="bg-blue-600 hover:bg-blue-700 text-white">
-                    <Plus className="h-4 w-4 mr-2" />New Document
-                  </Button>
-                </div>
+                <EmptyState
+                  icon={FileSignature}
+                  title="No signature documents yet"
+                  description="Create a document to start collecting signatures."
+                  actionLabel="New Document"
+                  onAction={() => navigate('/documents/new')}
+                  className="p-12"
+                />
               ) : (
                 <div className="divide-y">
                   {filteredDocuments.map((doc) => {

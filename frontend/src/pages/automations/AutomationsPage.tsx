@@ -41,6 +41,7 @@ import {
 } from '@/services/automationsApi';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 import {
   WORKFLOW_TRIGGER_LABELS,
   WORKFLOW_TRIGGER_OPTIONS,
@@ -60,7 +61,8 @@ const TRIGGER_TYPE_ICONS: Record<string, React.ReactNode> = {
 
 export function AutomationsPage() {
   const navigate = useNavigate();
-  const { toast } = useToast();  // Onboarding
+  const { toast } = useToast();
+  // Onboarding
   const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('automations');
 
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
@@ -433,22 +435,14 @@ export function AutomationsPage() {
               ))}
             </div>
           ) : workflows.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                <Zap className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">No workflows yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Create your first automation workflow to get started
-              </p>
-              <Button 
-                onClick={() => navigate('/automations/new')}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Workflow
-              </Button>
-            </div>
+            <EmptyState
+              icon={Zap}
+              title="No workflows yet"
+              description="Create your first automation workflow to get started"
+              actionLabel="Create Workflow"
+              onAction={() => navigate('/automations/new')}
+              className="p-12"
+            />
           ) : (
             <div className="divide-y">
               {workflows.map((workflow) => (

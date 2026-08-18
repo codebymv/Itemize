@@ -58,6 +58,7 @@ const toCanvasPaths = (value: unknown): CanvasPath[] => {
 
 export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whiteboardData, isLive = false }) => {
   const canvasRef = useRef<ReactSketchCanvasRef>(null);
+  const canvasFrameRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [scaledCanvasHeight, setScaledCanvasHeight] = useState<number | undefined>(undefined);
   const [isCanvasLoaded, setIsCanvasLoaded] = useState(false);
@@ -79,14 +80,26 @@ export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whit
 
   // Calculate scaled canvas dimensions for mobile
   useEffect(() => {
-    if (isMobile && whiteboardData.canvas_width && whiteboardData.canvas_height) {
-      const containerWidth = 320; // Approximate mobile container width
-      const aspectRatio = whiteboardData.canvas_height / whiteboardData.canvas_width;
-      const scaledHeight = Math.max(containerWidth * aspectRatio, 300); // Minimum height
-      setScaledCanvasHeight(scaledHeight);
-    } else {
+    if (!isMobile || !whiteboardData.canvas_width || !whiteboardData.canvas_height) {
       setScaledCanvasHeight(undefined);
+      return;
     }
+
+    const frame = canvasFrameRef.current;
+    const applyWidth = (width: number) => {
+      if (width <= 0) return;
+      const aspectRatio = whiteboardData.canvas_height / whiteboardData.canvas_width;
+      setScaledCanvasHeight(Math.max(width * aspectRatio, 300));
+    };
+
+    applyWidth(frame?.clientWidth || 0);
+    if (!frame || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver((entries) => {
+      applyWidth(entries[0]?.contentRect.width || 0);
+    });
+    observer.observe(frame);
+    return () => observer.disconnect();
   }, [isMobile, whiteboardData.canvas_width, whiteboardData.canvas_height]);
 
   // Load canvas data when component mounts or when canvas data changes (for real-time updates)
@@ -175,6 +188,7 @@ export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whit
         }
       } catch (error) {
         console.error('🎨 SharedWhiteboard: Failed to load canvas data:', error);
+        setIsCanvasLoaded(true);
       }
     }
   }, [whiteboardData.canvas_data, isCanvasLoaded]);
@@ -242,20 +256,28 @@ const canvasWidth = isMobile ? '100%' : `${whiteboardData.canvas_width || 400}px
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Palette className="h-5 w-5 text-gray-600" />
-<div className="flex-1">
+            <div className="flex-1">
               <h3
                 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate"
                 style={{ fontFamily: '"Raleway", sans-serif' }}
               >
                 {whiteboardData.title}
               </h3>
+              <div className="flex items-center gap-2 mt-1">
               <div
-                className="inline-block px-2 py-1 rounded-full text-xs font-medium text-white mt-1 font-raleway border-none"
+                className="inline-block px-2 py-1 rounded-full text-xs font-medium text-white font-raleway border-none"
                 style={{
                   backgroundColor: displayColor
                 }}
               >
                 {displayCategory}
+              </div>
+              {isLive && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 font-raleway">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  Live
+                </span>
+              )}
               </div>
             </div>
           </div>
@@ -264,6 +286,7 @@ const canvasWidth = isMobile ? '100%' : `${whiteboardData.canvas_width || 400}px
 {/* Canvas Content */}
         <CardContent className="p-4">
           <div
+            ref={canvasFrameRef}
             className="relative border-2 border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
             style={{
               backgroundColor: whiteboardData.background_color || '#FFFFFF',

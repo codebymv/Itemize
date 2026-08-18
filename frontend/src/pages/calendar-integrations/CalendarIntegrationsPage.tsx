@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useHeader } from '@/contexts/HeaderContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -298,16 +299,14 @@ export function CalendarIntegrationsPage() {
                                     {[0, 1].map((index) => <Skeleton key={index} className="h-20" />)}
                                 </div>
                             ) : connections.length === 0 ? (
-                                <div className="p-8 text-center">
-                                    <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                                        <Link2 className="h-6 w-6 text-muted-foreground" />
-                                    </div>
-                                    <h3 className="text-lg font-medium mb-2">No calendars connected</h3>
-                                    <p className="text-muted-foreground mb-4">Connect Google Calendar to sync availability</p>
-                                    <Button onClick={() => void handleConnectGoogle()} className="bg-blue-600 hover:bg-blue-700 text-white">
-                                        <Plus className="h-4 w-4 mr-2" />Connect Google Calendar
-                                    </Button>
-                                </div>
+                                <EmptyState
+                                    icon={Link2}
+                                    title="No calendars connected"
+                                    description="Connect Google Calendar to sync availability"
+                                    actionLabel="Connect Google Calendar"
+                                    onAction={() => { void handleConnectGoogle(); }}
+                                    className="p-8"
+                                />
                             ) : (
                                 <div className="space-y-4">
                                     {connections.map((connection) => (

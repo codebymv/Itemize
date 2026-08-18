@@ -58,6 +58,7 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
 
   // Drag start handler
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
     // Don't start drag if clicking on interactive elements or resize handle
     const target = e.target as HTMLElement;
     if (target.closest('input, textarea, button, [role="button"], [role="menuitem"], .resize-handle')) {
