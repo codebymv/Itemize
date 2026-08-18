@@ -2,6 +2,16 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { ReactSketchCanvas, ReactSketchCanvasRef } from 'react-sketch-canvas';
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Palette, Eraser, Brush, Undo, Redo, Sparkles, X } from 'lucide-react';
 import { formatRelativeTime } from '../../utils/timeUtils';
 import { useToast } from '@/hooks/use-toast';
@@ -9,7 +19,8 @@ import { Whiteboard } from '@/types';
 import { cn } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 import { debounce } from 'lodash';
-import { normalizeWhiteboardCanvasData } from '@/lib/whiteboardCanvasData';
+import { normalizeWhiteboardCanvasData, sanitizeWhiteboardPaths } from '@/lib/whiteboardCanvasData';
+import { attachSketchCanvasPointerFix } from '@/utils/sketchCanvasPointer';
 // TODO: Integrate coordinate normalization for mobile canvas support
 // import { processCanvasDataForLoad, processCanvasDataForSave } from '@/utils/canvasCoordinates';
 
@@ -39,14 +50,8 @@ const COLOR_PALETTE = [
   '#A52A2A', // Brown
 ];
 
-type SketchPoint = { x: number; y: number };
-type SketchPathRecord = {
-  drawMode?: unknown;
-  strokeColor?: unknown;
-  strokeWidth?: unknown;
-  paths?: unknown;
-  path?: unknown;
-};
+const isTypingTarget = (target: EventTarget | null) =>
+  target instanceof HTMLElement && Boolean(target.closest('input, textarea, [contenteditable="true"]'));
 
 export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   whiteboard,
@@ -76,6 +81,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const [lastLoadedData, setLastLoadedData] = useState<unknown[]>([]);
   const [canvasLoadTime, setCanvasLoadTime] = useState<number>(0);
   const [isIntentionalClear, setIsIntentionalClear] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   // Mobile touch state
   const [isMultiTouch, setIsMultiTouch] = useState(false);
@@ -92,151 +99,58 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
   // References for direct DOM manipulation to prevent flashing
   const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const pendingPathsRef = useRef<unknown[] | null>(null);
+  const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadedWhiteboardIdRef = useRef(whiteboard.id);
   
 
   // Load existing canvas data on mount
   useEffect(() => {
-    if (canvasRef.current && !isCanvasLoaded) {
-      // Handle empty or null canvas data
-      if (!whiteboard.canvas_data || whiteboard.canvas_data === '' || whiteboard.canvas_data === 'null') {
-        logger.log('🎨 No canvas data to load, initializing empty canvas');
-        try {
-          canvasRef.current.loadPaths([]);
-          setIsCanvasLoaded(true);
-          setCanvasLoadTime(Date.now());
-        } catch (error) {
-          console.error('🎨 Failed to initialize empty canvas:', error);
-        }
-        return;
-      }
-      try {
-        logger.log('🎨 Loading canvas data:', {
-          dataType: typeof whiteboard.canvas_data,
-          isArray: Array.isArray(whiteboard.canvas_data),
-          dataLength: Array.isArray(whiteboard.canvas_data) ? whiteboard.canvas_data.length : 'N/A',
-          dataPreview: typeof whiteboard.canvas_data === 'string' ? whiteboard.canvas_data.substring(0, 300) : JSON.stringify(whiteboard.canvas_data).substring(0, 300)
-        });
-        
-        let dataToLoad: unknown[];
-        try {
-          dataToLoad = normalizeWhiteboardCanvasData(whiteboard.canvas_data);
-        } catch (error) {
-          logger.warn('🎨 Leaving canvas unchanged; canvas data is not a path array', error);
-          return;
-        }
+    if (!canvasRef.current || isCanvasLoaded) return;
 
-        // Additional validation: ensure the array can be JSON serialized
-        try {
-          const testSerialization = JSON.stringify(dataToLoad);
-          JSON.parse(testSerialization);
-        } catch (jsonError) {
-          console.error('🎨 Canvas data fails JSON validation, using empty array:', jsonError);
-          dataToLoad = [];
-          
-          
-        }
-        
-        // If we have data but it's missing required metadata, reconstruct it
-        if (Array.isArray(dataToLoad) && dataToLoad.length > 0) {
-          const firstPath = dataToLoad[0] as SketchPathRecord;
-          if (!firstPath.drawMode || !firstPath.strokeColor || !firstPath.strokeWidth) {
-            logger.log('🎨 Reconstructing missing metadata for canvas paths');
-            dataToLoad = dataToLoad.map((pathData) => {
-              const path = pathData as SketchPathRecord;
-              const paths = Array.isArray(path.paths) ? path.paths : (Array.isArray(path.path) ? path.path : []);
-              return {
-              drawMode: true,
-              strokeColor: typeof path.strokeColor === 'string' ? path.strokeColor : '#2563eb',
-              strokeWidth: typeof path.strokeWidth === 'number' ? path.strokeWidth : 2,
-              paths
-              };
-            });
-          }
-        }
-        
-        logger.log('🎨 Final data to load:', {
-          isArray: Array.isArray(dataToLoad),
-          length: Array.isArray(dataToLoad) ? dataToLoad.length : 'N/A',
-          dataPreview: JSON.stringify(dataToLoad).substring(0, 300)
-        });
-        
-        // Ensure the data is an array (expected format for loadPaths)
-        if (Array.isArray(dataToLoad)) {
-          // Suppress React-Sketch-Canvas warnings/errors for empty data
-          const originalWarn = console.warn;
-          const originalError = console.error;
-          
-          console.warn = (...args) => {
-            if (args[0]?.includes?.('No stroke found')) return;
-            originalWarn.apply(console, args);
-          };
-          
-          console.error = (...args) => {
-            if (args[0]?.includes?.('No stroke found')) return;
-            originalError.apply(console, args);
-          };
-          
-          canvasRef.current.loadPaths(dataToLoad);
-          setIsCanvasLoaded(true);
-          setLastLoadedData(dataToLoad);
-          setCanvasLoadTime(Date.now());
-          
-          // Clear any pending auto-save timeouts to prevent overwriting the loaded data
-          if (autoSaveTimeout) {
-            clearTimeout(autoSaveTimeout);
-            setAutoSaveTimeout(null);
-            logger.log('🎨 Cleared pending auto-save timeout after loading data');
-          }
-          
-          logger.log('🎨 Canvas data loaded successfully');
-          
-          // Restore original console methods
-          console.warn = originalWarn;
-          console.error = originalError;
-        } else {
-          logger.warn('🎨 Invalid canvas data format, using empty canvas:', {
-            dataType: typeof dataToLoad,
-            dataValue: dataToLoad
-          });
-          canvasRef.current.loadPaths([]);
-          setIsCanvasLoaded(true);
-          setLastLoadedData([]);
-          setCanvasLoadTime(Date.now());
-          
-          // Clear any pending auto-save timeouts
-          if (autoSaveTimeout) {
-            clearTimeout(autoSaveTimeout);
-            setAutoSaveTimeout(null);
-          }
-        }
+    if (!whiteboard.canvas_data || whiteboard.canvas_data === '' || whiteboard.canvas_data === 'null') {
+      try {
+        canvasRef.current.loadPaths([]);
+        setIsCanvasLoaded(true);
+        setCanvasLoadTime(Date.now());
       } catch (error) {
-        console.error('🎨 Failed to load canvas data:', error);
-        // Load empty canvas on error
-        try {
-          canvasRef.current.loadPaths([]);
-          setIsCanvasLoaded(true);
-          setLastLoadedData([]);
-          setCanvasLoadTime(Date.now());
-          
-          // Clear any pending auto-save timeouts
-          if (autoSaveTimeout) {
-            clearTimeout(autoSaveTimeout);
-            setAutoSaveTimeout(null);
-          }
-          
-          // Auto-fix corrupted data
-          logger.log('🎨 Auto-fixing corrupted canvas data after load error...');
-          try {
-            onSave({ canvas_data: [], updated_at: new Date().toISOString() });
-          } catch (saveError) {
-            console.error('🎨 Failed to auto-fix corrupted data:', saveError);
-          }
-        } catch (fallbackError) {
-          console.error('🎨 Failed to load empty canvas:', fallbackError);
-        }
+        logger.error('Failed to initialize empty canvas:', error);
       }
+      return;
     }
-  }, [whiteboard.canvas_data, isCanvasLoaded, autoSaveTimeout]);
+
+    try {
+      const dataToLoad = sanitizeWhiteboardPaths(
+        normalizeWhiteboardCanvasData(whiteboard.canvas_data),
+      );
+
+      canvasRef.current.loadPaths(dataToLoad);
+      setIsCanvasLoaded(true);
+      setLastLoadedData(dataToLoad);
+      setCanvasLoadTime(Date.now());
+
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+        autoSaveTimeoutRef.current = null;
+        setAutoSaveTimeout(null);
+      }
+    } catch (error) {
+      logger.error('Failed to load canvas data; leaving the saved drawing untouched', error);
+      toast({
+        title: 'Could not load drawing',
+        description: 'The saved whiteboard could not be opened. Your data was not overwritten.',
+        variant: 'destructive',
+      });
+      setIsCanvasLoaded(true);
+    }
+  }, [whiteboard.canvas_data, isCanvasLoaded, toast]);
+
+  useEffect(() => {
+    if (loadedWhiteboardIdRef.current === whiteboard.id) return;
+    loadedWhiteboardIdRef.current = whiteboard.id;
+    setIsCanvasLoaded(false);
+    setLastLoadedData([]);
+  }, [whiteboard.id]);
 
   // Calculate content scale for mobile responsiveness
   useEffect(() => {
@@ -262,39 +176,44 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     }
   }, [isMobile, whiteboard.canvas_width]);
 
-  // Dynamic canvas sizing - measure container and adjust canvas dimensions
+  // Layout size only — getBoundingClientRect is post-zoom and would desync the SVG bitmap.
   useEffect(() => {
     if (!canvasContainerRef.current) return;
 
+    const applyLayoutSize = (width: number, height: number) => {
+      if (width <= 0 || height <= 0) return;
+      const next = { width: Math.floor(width), height: Math.floor(height) };
+      setCanvasDimensions((prev) => (
+        prev.width === next.width && prev.height === next.height ? prev : next
+      ));
+    };
+
     const observer = new ResizeObserver(entries => {
       for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        if (width > 0 && height > 0) {
-          logger.log('🎨 Container dimensions changed:', { width, height });
-          // Inner container already accounts for footer space via paddingBottom
-          setCanvasDimensions({
-            width: Math.floor(width),
-            height: Math.floor(height)
-          });
-        }
+        applyLayoutSize(entry.contentRect.width, entry.contentRect.height);
       }
     });
 
     observer.observe(canvasContainerRef.current);
-    
-    // Also trigger immediate measurement in case ResizeObserver doesn't fire right away
-    const rect = canvasContainerRef.current.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0) {
-      logger.log('🎨 Initial container dimensions:', { width: rect.width, height: rect.height });
-      // Inner container already accounts for footer space via paddingBottom
-      setCanvasDimensions({
-        width: Math.floor(rect.width),
-        height: Math.floor(rect.height)
-      });
-    }
-    
+    applyLayoutSize(
+      canvasContainerRef.current.clientWidth,
+      canvasContainerRef.current.clientHeight,
+    );
+
     return () => observer.disconnect();
   }, [updatedAt]);
+
+  useEffect(() => {
+    const container = canvasContainerRef.current;
+    if (!container) return;
+    return attachSketchCanvasPointerFix(container);
+  }, []);
+
+  useEffect(() => {
+    if (saveState !== 'saved') return;
+    const timeout = window.setTimeout(() => setSaveState('idle'), 1600);
+    return () => window.clearTimeout(timeout);
+  }, [saveState]);
 
   // Debug canvas dimensions changes
   useEffect(() => {
@@ -303,80 +222,25 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
   // Debounced auto-save function (reduced delay for faster saves)
   const debouncedAutoSave = useCallback(
-    debounce(async (canvasData: unknown[], whiteboardId: number) => {
+    debounce(async (canvasData: unknown[]) => {
       try {
-        // Validate canvas data before saving
-        if (!Array.isArray(canvasData)) {
-          logger.warn('🎨 Invalid canvas data format - not an array:', typeof canvasData);
-          return;
-        }
-
-        // Sanitize canvas data to prevent JSON serialization issues
-        let sanitizedCanvasData = canvasData;
-        
-        try {
-          // Deep clone and sanitize the canvas data to remove any circular references
-          // or problematic nested objects that might cause JSON serialization issues
-          sanitizedCanvasData = canvasData.map(path => {
-            if (typeof path === 'object' && path !== null) {
-              const pathRecord = path as SketchPathRecord;
-              // Create a clean object with only the essential properties
-              const cleanPath = {
-                drawMode: pathRecord.drawMode || true,
-                strokeColor: typeof pathRecord.strokeColor === 'string' ? pathRecord.strokeColor : '#2563eb',
-                strokeWidth: typeof pathRecord.strokeWidth === 'number' ? pathRecord.strokeWidth : 2,
-                paths: Array.isArray(pathRecord.paths) ? pathRecord.paths : (Array.isArray(pathRecord.path) ? pathRecord.path : [])
-              };
-              
-              // Ensure paths array contains only valid coordinate objects
-              if (Array.isArray(cleanPath.paths)) {
-                cleanPath.paths = cleanPath.paths.filter((point): point is SketchPoint =>
-                  point && typeof point === 'object' &&
-                  typeof (point as Partial<SketchPoint>).x === 'number' &&
-                  typeof (point as Partial<SketchPoint>).y === 'number'
-                );
-              }
-              
-              return cleanPath;
-            }
-            return path;
-          });
-          
-          // Test JSON serialization to catch any remaining issues
-          const testSerialization = JSON.stringify(sanitizedCanvasData);
-          JSON.parse(testSerialization);
-          
-          logger.log('🎨 Auto-saving sanitized canvas data:', {
-            originalPaths: canvasData.length,
-            sanitizedPaths: sanitizedCanvasData.length,
-            dataPreview: testSerialization.substring(0, 200),
-            whiteboardId
-          });
-          
-        } catch (sanitizationError) {
-          console.error('🎨 Canvas data sanitization failed during auto-save:', sanitizationError);
-          // Fallback to empty array if sanitization fails
-          sanitizedCanvasData = [];
-        }
-
+        const sanitizedCanvasData = sanitizeWhiteboardPaths(canvasData);
+        pendingPathsRef.current = null;
+        setSaveState('saving');
         await onSave({ canvas_data: sanitizedCanvasData, updated_at: new Date().toISOString() });
-        logger.log('🎨 Canvas auto-save completed successfully');
+        setSaveState('saved');
       } catch (error) {
-        console.error('🎨 Canvas auto-save failed:', error);
-        
-        // If it's a JSON serialization error, show a user-friendly message
-        if (error instanceof Error && (error.message.includes('JSON') || error.message.includes('stringify'))) {
-          console.error('🎨 Canvas data is corrupted and cannot be saved. This may be due to a drawing library error.');
-        }
+        logger.error('Canvas auto-save failed:', error);
+        setSaveState('error');
+        toast({
+          title: 'Could not save drawing',
+          description: 'Your last strokes are still on the board and were not overwritten.',
+          variant: 'destructive',
+        });
       }
-    }, 500), // Reduced from 2000ms to 500ms for faster saves
-    [onSave]
+    }, 500),
+    [onSave, toast]
   );
-
-  // Handle drawing start
-  const handleDrawingStart = () => {
-    setIsDrawing(true);
-  };
 
   // Handle drawing end with auto-save trigger
   const handleDrawingEnd = useCallback(async () => {
@@ -462,17 +326,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           logger.log('🎨 Allowing intentional canvas clear');
         }
         
-        // Clear existing timeout
-        if (autoSaveTimeout) {
-          clearTimeout(autoSaveTimeout);
-        }
-        
-        // Set new auto-save timeout for 1 second after drawing stops (faster response)
-        const timeout = setTimeout(() => {
-          debouncedAutoSave(currentCanvasData, whiteboard.id);
-        }, 1000);
-        
-        setAutoSaveTimeout(timeout);
+        pendingPathsRef.current = currentCanvasData;
+        debouncedAutoSave(currentCanvasData);
       } else {
         logger.log('🎨 No canvas changes detected, skipping auto-save');
       }
@@ -481,14 +336,40 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     }
   }, [autoSaveTimeout, debouncedAutoSave, whiteboard.canvas_data, canvasRef, lastLoadedData, canvasLoadTime, isIntentionalClear]);
 
-  // Clean up timeout on unmount
   useEffect(() => {
-    return () => {
-      if (autoSaveTimeout) {
-        clearTimeout(autoSaveTimeout);
+    autoSaveTimeoutRef.current = autoSaveTimeout;
+  }, [autoSaveTimeout]);
+
+  useEffect(() => {
+    const persistPending = () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+        autoSaveTimeoutRef.current = null;
+      }
+      debouncedAutoSave.cancel();
+      const pending = pendingPathsRef.current;
+      if (!pending) return;
+      pendingPathsRef.current = null;
+      try {
+        const sanitized = sanitizeWhiteboardPaths(pending);
+        void onSave({ canvas_data: sanitized, updated_at: new Date().toISOString() });
+      } catch (error) {
+        logger.error('Failed to flush pending whiteboard strokes:', error);
       }
     };
-  }, [autoSaveTimeout]);
+
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') persistPending();
+    };
+
+    window.addEventListener('beforeunload', persistPending);
+    document.addEventListener('visibilitychange', onHide);
+    return () => {
+      persistPending();
+      window.removeEventListener('beforeunload', persistPending);
+      document.removeEventListener('visibilitychange', onHide);
+    };
+  }, [debouncedAutoSave, onSave]);
 
   // Handle tool change
   const handleToolChange = (tool: 'pen' | 'eraser') => {
@@ -519,37 +400,73 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     setStrokeWidth(width[0]);
   };
 
-  // Handle undo
   const handleUndo = () => {
-    if (canvasRef.current) {
-      canvasRef.current.undo();
-    }
+    if (!canvasRef.current) return;
+    canvasRef.current.undo();
+    window.setTimeout(() => {
+      void handleDrawingEnd();
+    }, 50);
   };
 
-  // Handle redo
   const handleRedo = () => {
-    if (canvasRef.current) {
-      canvasRef.current.redo();
+    if (!canvasRef.current) return;
+    canvasRef.current.redo();
+    window.setTimeout(() => {
+      void handleDrawingEnd();
+    }, 50);
+  };
+
+  const handleClear = async () => {
+    if (!canvasRef.current) return;
+    setIsIntentionalClear(true);
+    canvasRef.current.clearCanvas();
+    pendingPathsRef.current = [];
+    try {
+      await onSave({ canvas_data: [], updated_at: new Date().toISOString() });
+      setLastLoadedData([]);
+      setSaveState('saved');
+    } catch (error) {
+      logger.error('Failed to save cleared canvas:', error);
+      setSaveState('error');
+    } finally {
+      setShowClearConfirm(false);
+      window.setTimeout(() => setIsIntentionalClear(false), 1000);
     }
   };
 
-  // Handle clear canvas
-  const handleClear = async () => {
-    if (canvasRef.current) {
-      setIsIntentionalClear(true);
-      canvasRef.current.clearCanvas();
-      
-      // Immediately save the cleared state
-      try {
-        await onSave({ canvas_data: [], updated_at: new Date().toISOString() });
-        setLastLoadedData([]);
-        logger.log('🎨 Canvas cleared and saved successfully');
-      } catch (error) {
-        console.error('🎨 Failed to save cleared canvas:', error);
-      } finally {
-        // Reset the flag after a short delay
-        setTimeout(() => setIsIntentionalClear(false), 1000);
-      }
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (isTypingTarget(event.target)) return;
+
+    const mod = event.ctrlKey || event.metaKey;
+    if (mod && event.key.toLowerCase() === 'z') {
+      event.preventDefault();
+      if (event.shiftKey) handleRedo();
+      else handleUndo();
+      return;
+    }
+    if (mod && event.key.toLowerCase() === 'y') {
+      event.preventDefault();
+      handleRedo();
+      return;
+    }
+    if (event.key === '[') {
+      event.preventDefault();
+      setStrokeWidth((width) => Math.max(1, width - 1));
+      return;
+    }
+    if (event.key === ']') {
+      event.preventDefault();
+      setStrokeWidth((width) => Math.min(20, width + 1));
+      return;
+    }
+    if (!mod && event.key.toLowerCase() === 'e') {
+      event.preventDefault();
+      handleToolChange('eraser');
+      return;
+    }
+    if (!mod && (event.key.toLowerCase() === 'b' || event.key.toLowerCase() === 'p')) {
+      event.preventDefault();
+      handleToolChange('pen');
     }
   };
 
@@ -680,27 +597,19 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       className="flex flex-col h-full relative"
       data-whiteboard-canvas
       tabIndex={-1}
+      onKeyDown={handleKeyDown}
+      onPointerDown={(event) => {
+        if (isTypingTarget(event.target)) return;
+        event.currentTarget.focus();
+      }}
     >
-      {/* Global CSS override to eliminate ReactSketchCanvas borders */}
       <style>
         {`
-          .react-sketch-canvas {
-            border: none !important;
-            outline: none !important;
-            box-shadow: none !important;
-            pointer-events: all !important; /* Diagnostic: Ensure canvas receives pointer events */
-            z-index: 1000; /* Diagnostic: Bring canvas to front */
-          }
+          .react-sketch-canvas,
           .react-sketch-canvas canvas {
             border: none !important;
             outline: none !important;
             box-shadow: none !important;
-            pointer-events: all !important; /* Diagnostic: Ensure canvas receives pointer events */
-            z-index: 1000; /* Diagnostic: Bring canvas to front */
-          }
-          .whiteboard-drawing-area {
-            pointer-events: all !important; /* Diagnostic: Ensure parent receives pointer events */
-            z-index: 999; /* Diagnostic: Bring parent to front */
           }
         `}
       </style>
@@ -718,6 +627,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => handleToolChange('pen')}
+                  aria-label="Pen"
+                  title="Pen (B)"
                   className={cn("h-8 w-8 p-0 text-foreground hover:bg-accent", currentTool === 'pen' ? 'bg-blue-600 hover:bg-blue-700 text-white' : '')}
                 >
                   <Brush className="h-4 w-4" />
@@ -726,6 +637,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => handleToolChange('eraser')}
+                  aria-label="Eraser"
+                  title="Eraser (E)"
                   className={cn("h-8 w-8 p-0 text-foreground hover:bg-accent", currentTool === 'eraser' ? 'bg-blue-600 hover:bg-blue-700 text-white' : '')}
                 >
                   <Eraser className="h-4 w-4" />
@@ -769,6 +682,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={handleUndo}
+                aria-label="Undo"
+                title="Undo (Ctrl+Z)"
                 className="h-8 w-8 p-0 text-foreground hover:bg-accent"
               >
                 <Undo className="h-4 w-4" />
@@ -777,6 +692,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={handleRedo}
+                aria-label="Redo"
+                title="Redo (Ctrl+Y)"
                 className="h-8 w-8 p-0 text-foreground hover:bg-accent"
               >
                 <Redo className="h-4 w-4" />
@@ -784,7 +701,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleClear}
+                onClick={() => setShowClearConfirm(true)}
+                aria-label="Clear canvas"
+                title="Clear canvas"
                 className="h-8 w-8 p-0 text-foreground hover:bg-accent"
               >
                 <X className="h-4 w-4" />
@@ -812,10 +731,11 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             transform: isMobile ? `translate(${canvasPan.x}px, ${canvasPan.y}px) scale(${canvasScale})` : 'none',
             transformOrigin: 'center',
             transition: isMultiTouch ? 'none' : 'transform 0.1s ease-out',
-            cursor: 'crosshair'
+            cursor: currentTool === 'eraser' ? 'cell' : 'crosshair'
           }}
         >
           <ReactSketchCanvas
+            className="react-sketch-canvas"
             style={{
               width: '100%',
               height: '100%',
@@ -857,9 +777,19 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   fontSize: 'inherit'
                 }}
               >
-                <span className="hidden sm:inline">Last edited: </span>
-                <span className="sm:hidden">Edited: </span>
-                {formatRelativeTime(updatedAt)}
+                {saveState === 'saving' ? (
+                  'Saving…'
+                ) : saveState === 'error' ? (
+                  'Save failed'
+                ) : saveState === 'saved' ? (
+                  'Saved'
+                ) : (
+                  <>
+                    <span className="hidden sm:inline">Last edited: </span>
+                    <span className="sm:hidden">Edited: </span>
+                    {formatRelativeTime(updatedAt)}
+                  </>
+                )}
               </div>
               {/* TODO: Re-enable when adding AI functionality to whiteboards
               {aiEnabled && (
@@ -875,6 +805,22 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           </div>
         )}
       </div>
+      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear this whiteboard?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes every stroke on the board. You can undo only until the clear is saved.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { void handleClear(); }}>
+              Clear
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
