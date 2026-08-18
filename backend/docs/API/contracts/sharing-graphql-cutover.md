@@ -58,6 +58,8 @@ The shipped product choice is bearer-link vault sharing with explicit consent an
 
 The current compatibility schema stores a raw UUID capability. Moving to a keyed hash at rest and optional expiry remains security hardening and requires a database migration plus a dual-read rollout for existing links.
 
+**Successor (design only, not shipped):** vault shares become a client-encrypted snapshot with the decryption key in the URL fragment. The server stores ciphertext it cannot read. See [`../../Security/vault-zero-knowledge-adr.md`](../../Security/vault-zero-knowledge-adr.md). List, note, whiteboard, and wireframe sharing stay server-readable.
+
 ## Realtime behavior
 
 Legacy Socket.IO rooms are keyed by raw share token. New joins verify that the object is still public, while content mutations broadcast only when the object remains public. Successful list, note, whiteboard, and wireframe unshare operations emit the token-free `sharedContentRevoked` event and use adapter-wide Socket.IO room operations to remove every connected viewer. The four reachable public pages discard their local projection and render the unavailable state. They also reauthorize and refetch before accepting queued updates after reconnect, so a capability revoked while offline clears stale content instead of silently restoring a live session.

@@ -17,6 +17,13 @@ export class CreateWorkspaceVaultInput {
   @Field(() => Int, { nullable: true }) height?: number;
   @Field(() => Int, { nullable: true }) zIndex?: number;
   @Field(() => String, { nullable: true }) masterPassword?: string;
+  @Field(() => Int, { nullable: true }) cryptoVersion?: number;
+  @Field(() => String, { nullable: true }) kdfSalt?: string;
+  @Field(() => Int, { nullable: true }) kdfMemoryKiB?: number;
+  @Field(() => Int, { nullable: true }) kdfIterations?: number;
+  @Field(() => Int, { nullable: true }) kdfParallelism?: number;
+  @Field(() => String, { nullable: true }) wrappedVek?: string;
+  @Field(() => String, { nullable: true }) wrappedVekRecovery?: string;
 }
 
 @InputType()
@@ -34,12 +41,40 @@ export class UpdateWorkspaceVaultInput {
 @InputType()
 export class CreateWorkspaceVaultItemInput {
   @Field() itemType: string;
-  @Field() label: string;
-  @Field() value: string;
+  @Field(() => String, { nullable: true }) label?: string;
+  @Field(() => String, { nullable: true }) value?: string;
+  @Field(() => String, { nullable: true }) ciphertext?: string;
+  @Field(() => String, { nullable: true }) iv?: string;
 }
 
 @InputType()
 export class UpdateWorkspaceVaultItemInput {
   @Field(() => String, { nullable: true }) label?: string | null;
   @Field(() => String, { nullable: true }) value?: string | null;
+  @Field(() => String, { nullable: true }) ciphertext?: string | null;
+  @Field(() => String, { nullable: true }) iv?: string | null;
+}
+
+@InputType()
+export class MigrateWorkspaceVaultItemInput {
+  @Field(() => Int) id: number;
+  @Field() ciphertext: string;
+  @Field() iv: string;
+}
+
+@InputType()
+export class MigrateWorkspaceVaultToV2Input {
+  @Field() kdfSalt: string;
+  @Field(() => Int) kdfMemoryKiB: number;
+  @Field(() => Int) kdfIterations: number;
+  @Field(() => Int) kdfParallelism: number;
+  @Field() wrappedVek: string;
+  @Field(() => String, { nullable: true }) wrappedVekRecovery?: string;
+  @Field(() => [MigrateWorkspaceVaultItemInput]) items: MigrateWorkspaceVaultItemInput[];
+}
+
+@InputType()
+export class RewrapWorkspaceVaultInput {
+  @Field() wrappedVek: string;
+  @Field(() => String, { nullable: true }) wrappedVekRecovery?: string;
 }

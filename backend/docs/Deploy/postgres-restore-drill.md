@@ -7,13 +7,13 @@ Perform this drill against a **copy** of production, never against the live prim
 Verified from this repo with Railway CLI (production environment `0e0d56e7-6c8a-4a66-9445-505b9ecf2f1c`):
 
 - Live volume `postgres-volume` on `itemize.cloud Postgres` was **Ready** (~234 MB / 5000 MB).
-- Live `schema_migrations` had **53/53** applied, including `053_chat_widget_graphql` (2026-07-26).
+- Live `schema_migrations` had **53/53** applied, including `053_chat_widget_graphql` (2026-07-26). Current boot head is `054_vault_zero_knowledge`.
 - Railway CLI has **no backup/restore command**. Snapshot restore remains a dashboard action: Postgres service → **Backups**.
 - A throwaway empty Postgres was provisioned to prove we can stand up a replacement (`postgres.railway.internal`), then **deleted**. Local `railway run` cannot apply migrations to a brand-new private hostname (`ENOTFOUND`). Use the dashboard restore-into-new-service flow, or `railway ssh` from a service already on the private network.
 
 ## Goal
 
-Prove we can restore Railway Postgres to a known point and that Express/Nest can boot against the restored data (`schema_migrations` includes `053_chat_widget_graphql`).
+Prove we can restore Railway Postgres to a known point and that Express/Nest can boot against the restored data (`schema_migrations` includes `054_vault_zero_knowledge`).
 
 ## Prerequisites
 
@@ -33,7 +33,7 @@ Prove we can restore Railway Postgres to a known point and that Express/Nest can
    node backend/scripts/run-migrations.js --status
    ```
 
-5. Confirm `053_chat_widget_graphql` is present in `schema_migrations`. If the snapshot predates current head, run:
+5. Confirm `054_vault_zero_knowledge` is present in `schema_migrations`. If the snapshot predates current head, run:
 
    ```bash
    node backend/scripts/run-migrations.js

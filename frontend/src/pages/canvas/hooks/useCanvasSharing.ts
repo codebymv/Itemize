@@ -5,6 +5,7 @@ import { List, Note, Whiteboard, Wireframe, Vault } from '@/types';
 import {
   disableVaultSharingViaGraphql,
   enableVaultSharingViaGraphql,
+  getVaultViaGraphql,
 } from '@/services/workspaceVaultGraphql';
 import {
   disableWorkspaceWireframeSharingViaGraphql,
@@ -18,6 +19,13 @@ import {
   enableNoteSharingViaGraphql,
   enableWhiteboardSharingViaGraphql,
 } from '@/services/workspaceSharingMutationsGraphql';
+
+import { appendShareFragment } from '@/lib/vaultZkCrypto';
+import {
+  decryptZkeVaultItems,
+  encryptVaultShareSnapshot,
+  isVaultZke,
+} from '@/lib/vaultZkSession';
 
 interface ShareItem {
   id: string | number;
@@ -112,6 +120,20 @@ export function useCanvasSharing(
 
   const handleVaultShare = async (vaultId: number): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
+      const vault = vaults.find((candidate) => candidate.id === vaultId);
+      if (vault && isVaultZke(vault)) {
+        const full = await getVaultViaGraphql(vaultId);
+        const items = await decryptZkeVaultItems(full);
+        const snapshot = await encryptVaultShareSnapshot(vaultId, items);
+        const result = await enableVaultSharingViaGraphql(vaultId, {
+          ciphertext: snapshot.ciphertext,
+          iv: snapshot.iv,
+        });
+        return {
+          shareToken: result.shareToken,
+          shareUrl: appendShareFragment(result.shareUrl, snapshot.shareSecret),
+        };
+      }
       return await enableVaultSharingViaGraphql(vaultId);
     } catch (error) {
       logger.error('Error sharing vault:', error);
@@ -213,7 +235,7 @@ export function useCanvasSharing(
       id: vaultId,
       title: vault.title || 'Untitled Vault',
       itemType: 'vault',
-      isLocked: vault.is_locked,
+      isLocked: vault.is_locked && !isVaultZke(vault),
       shareData: existingShareData
     });
     setShowShareModal(true);

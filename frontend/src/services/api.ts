@@ -484,6 +484,8 @@ export interface VaultItemPayload {
   item_type: 'key_value' | 'secure_note';
   label: string;
   value: string;
+  ciphertext?: string;
+  iv?: string;
 }
 
 // Get all vaults
@@ -523,33 +525,55 @@ export const deleteVault = async (vaultId: number, token?: string) => {
 };
 
 // Add item to vault
-export const addVaultItem = async (vaultId: number, item: VaultItemPayload, token?: string) => {
+export const addVaultItem = async (
+  vaultId: number,
+  item: VaultItemPayload,
+  token?: string,
+  masterPassword?: string,
+) => {
   void token;
-  return addVaultItemViaGraphql(vaultId, item);
+  return addVaultItemViaGraphql(vaultId, item, masterPassword);
 };
 
-// Bulk add items to vault (for .env import)
-export const bulkAddVaultItems = async (vaultId: number, items: VaultItemPayload[], token?: string) => {
+export const bulkAddVaultItems = async (
+  vaultId: number,
+  items: VaultItemPayload[],
+  token?: string,
+  masterPassword?: string,
+) => {
   void token;
-  return addVaultItemsViaGraphql(vaultId, items);
+  return addVaultItemsViaGraphql(vaultId, items, masterPassword);
 };
 
-// Update a vault item
-export const updateVaultItem = async (vaultId: number, itemId: number, data: { label?: string; value?: string }, token?: string) => {
+export const updateVaultItem = async (
+  vaultId: number,
+  itemId: number,
+  data: { label?: string; value?: string },
+  token?: string,
+  masterPassword?: string,
+) => {
   void token;
-  return updateVaultItemViaGraphql(vaultId, itemId, data);
+  return updateVaultItemViaGraphql(vaultId, itemId, data, masterPassword);
 };
 
-// Delete a vault item
-export const deleteVaultItem = async (vaultId: number, itemId: number, token?: string) => {
+export const deleteVaultItem = async (
+  vaultId: number,
+  itemId: number,
+  token?: string,
+  masterPassword?: string,
+) => {
   void token;
-  return deleteVaultItemViaGraphql(vaultId, itemId);
+  return deleteVaultItemViaGraphql(vaultId, itemId, masterPassword);
 };
 
-// Reorder vault items
-export const reorderVaultItems = async (vaultId: number, itemIds: number[], token?: string) => {
+export const reorderVaultItems = async (
+  vaultId: number,
+  itemIds: number[],
+  token?: string,
+  masterPassword?: string,
+) => {
   void token;
-  return reorderVaultItemsViaGraphql(vaultId, itemIds);
+  return reorderVaultItemsViaGraphql(vaultId, itemIds, masterPassword);
 };
 
 // Enable vault sharing

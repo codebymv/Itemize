@@ -12,9 +12,20 @@ type GraphqlVaultItem = {
   itemType: 'key_value' | 'secure_note';
   label: string;
   value: string;
+  ciphertext?: string | null;
+  iv?: string | null;
+  cryptoVersion?: number;
   orderIndex: number;
   createdAt: string;
   updatedAt: string;
+};
+
+type GraphqlKdf = {
+  algorithm: string;
+  salt: string;
+  memoryKiB: number;
+  iterations: number;
+  parallelism: number;
 };
 
 type GraphqlVault = {
@@ -30,6 +41,10 @@ type GraphqlVault = {
   zIndex: number;
   isLocked: boolean;
   encryptionSalt: string | null;
+  cryptoVersion?: number;
+  kdf?: GraphqlKdf | null;
+  wrappedVek?: string | null;
+  wrappedVekRecovery?: string | null;
   itemCount: number;
   items: GraphqlVaultItem[];
   requiresUnlock: boolean;
@@ -65,15 +80,17 @@ type GraphqlVaultSharingResult = {
 
 const VAULT_FIELDS = `
   id userId title category colorValue positionX positionY width height zIndex
-  isLocked encryptionSalt itemCount requiresUnlock shareToken isPublic sharedAt
+  isLocked encryptionSalt cryptoVersion wrappedVek wrappedVekRecovery
+  itemCount requiresUnlock shareToken isPublic sharedAt
   createdAt updatedAt
+  kdf { algorithm salt memoryKiB iterations parallelism }
   items {
-    id vaultId itemType label value orderIndex createdAt updatedAt
+    id vaultId itemType label value ciphertext iv cryptoVersion orderIndex createdAt updatedAt
   }
 `;
 
 const VAULT_ITEM_FIELDS =
-  'id vaultId itemType label value orderIndex createdAt updatedAt';
+  'id vaultId itemType label value ciphertext iv cryptoVersion orderIndex createdAt updatedAt';
 
 const legacyVaultItem = (item: GraphqlVaultItem): VaultItem => ({
   id: item.id,
@@ -81,6 +98,9 @@ const legacyVaultItem = (item: GraphqlVaultItem): VaultItem => ({
   item_type: item.itemType,
   label: item.label,
   value: item.value,
+  ciphertext: item.ciphertext ?? null,
+  iv: item.iv ?? null,
+  crypto_version: item.cryptoVersion ?? 1,
   order_index: item.orderIndex,
   created_at: item.createdAt,
   updated_at: item.updatedAt,
@@ -99,6 +119,10 @@ const legacyVault = (vault: GraphqlVault): Vault => ({
   z_index: vault.zIndex,
   is_locked: vault.isLocked,
   ...(vault.encryptionSalt ? { encryption_salt: vault.encryptionSalt } : {}),
+  crypto_version: vault.cryptoVersion ?? 1,
+  kdf: vault.kdf ?? null,
+  wrapped_vek: vault.wrappedVek ?? null,
+  wrapped_vek_recovery: vault.wrappedVekRecovery ?? null,
   item_count: vault.itemCount,
   items: vault.items.map(legacyVaultItem),
   requires_unlock: vault.requiresUnlock,
@@ -242,27 +266,39 @@ export const deleteVaultViaGraphql = async (
 
 const itemInput = (item: VaultItemPayload) => ({
   itemType: item.item_type,
-  label: item.label,
-  value: item.value,
+  ...(item.ciphertext && item.iv
+    ? { ciphertext: item.ciphertext, iv: item.iv }
+    : { label: item.label, value: item.value }),
 });
+
+const withMasterPassword = <T extends Record<string, unknown>>(
+  variables: T,
+  masterPassword?: string,
+) => (masterPassword ? { ...variables, masterPassword } : variables);
 
 export const addVaultItemViaGraphql = async (
   vaultId: number,
   item: VaultItemPayload,
+  masterPassword?: string,
 ): Promise<VaultItem> => {
   const data = await graphqlMutationRequest<
     { addWorkspaceVaultItem: GraphqlVaultItem },
-    { vaultId: number; input: ReturnType<typeof itemInput> }
+    { vaultId: number; input: ReturnType<typeof itemInput>; masterPassword?: string }
   >(
     `mutation AddWorkspaceVaultItem(
       $vaultId: Int!
       $input: CreateWorkspaceVaultItemInput!
+      $masterPassword: String
     ) {
-      addWorkspaceVaultItem(vaultId: $vaultId, input: $input) {
+      addWorkspaceVaultItem(
+        vaultId: $vaultId
+        input: $input
+        masterPassword: $masterPassword
+      ) {
         ${VAULT_ITEM_FIELDS}
       }
     }`,
-    { vaultId, input: itemInput(item) },
+    withMasterPassword({ vaultId, input: itemInput(item) }, masterPassword),
   );
   return legacyVaultItem(data.addWorkspaceVaultItem);
 };
@@ -270,6 +306,7 @@ export const addVaultItemViaGraphql = async (
 export const addVaultItemsViaGraphql = async (
   vaultId: number,
   items: VaultItemPayload[],
+  masterPassword?: string,
 ): Promise<{ items: VaultItem[]; count: number }> => {
   const data = await graphqlMutationRequest<
     {
@@ -278,18 +315,30 @@ export const addVaultItemsViaGraphql = async (
         count: number;
       };
     },
-    { vaultId: number; items: Array<ReturnType<typeof itemInput>> }
+    {
+      vaultId: number;
+      items: Array<ReturnType<typeof itemInput>>;
+      masterPassword?: string;
+    }
   >(
     `mutation AddWorkspaceVaultItems(
       $vaultId: Int!
       $items: [CreateWorkspaceVaultItemInput!]!
+      $masterPassword: String
     ) {
-      addWorkspaceVaultItems(vaultId: $vaultId, items: $items) {
+      addWorkspaceVaultItems(
+        vaultId: $vaultId
+        items: $items
+        masterPassword: $masterPassword
+      ) {
         count
         items { ${VAULT_ITEM_FIELDS} }
       }
     }`,
-    { vaultId, items: items.map(itemInput) },
+    withMasterPassword(
+      { vaultId, items: items.map(itemInput) },
+      masterPassword,
+    ),
   );
   return {
     count: data.addWorkspaceVaultItems.count,
@@ -300,28 +349,32 @@ export const addVaultItemsViaGraphql = async (
 export const updateVaultItemViaGraphql = async (
   vaultId: number,
   itemId: number,
-  input: { label?: string; value?: string },
+  input: { label?: string; value?: string; ciphertext?: string; iv?: string },
+  masterPassword?: string,
 ): Promise<VaultItem> => {
   const data = await graphqlMutationRequest<
     { updateWorkspaceVaultItem: GraphqlVaultItem },
     {
       vaultId: number;
       itemId: number;
-      input: { label?: string; value?: string };
+      input: { label?: string; value?: string; ciphertext?: string; iv?: string };
+      masterPassword?: string;
     }
   >(
     `mutation UpdateWorkspaceVaultItem(
       $vaultId: Int!
       $itemId: Int!
       $input: UpdateWorkspaceVaultItemInput!
+      $masterPassword: String
     ) {
       updateWorkspaceVaultItem(
         vaultId: $vaultId
         itemId: $itemId
         input: $input
+        masterPassword: $masterPassword
       ) { ${VAULT_ITEM_FIELDS} }
     }`,
-    { vaultId, itemId, input },
+    withMasterPassword({ vaultId, itemId, input }, masterPassword),
   );
   return legacyVaultItem(data.updateWorkspaceVaultItem);
 };
@@ -329,17 +382,26 @@ export const updateVaultItemViaGraphql = async (
 export const deleteVaultItemViaGraphql = async (
   vaultId: number,
   itemId: number,
+  masterPassword?: string,
 ): Promise<{ message: string; deletedId: number }> => {
   const data = await graphqlMutationRequest<
     { deleteWorkspaceVaultItem: { deletedId: number } },
-    { vaultId: number; itemId: number }
+    { vaultId: number; itemId: number; masterPassword?: string }
   >(
-    `mutation DeleteWorkspaceVaultItem($vaultId: Int!, $itemId: Int!) {
-      deleteWorkspaceVaultItem(vaultId: $vaultId, itemId: $itemId) {
+    `mutation DeleteWorkspaceVaultItem(
+      $vaultId: Int!
+      $itemId: Int!
+      $masterPassword: String
+    ) {
+      deleteWorkspaceVaultItem(
+        vaultId: $vaultId
+        itemId: $itemId
+        masterPassword: $masterPassword
+      ) {
         deletedId
       }
     }`,
-    { vaultId, itemId },
+    withMasterPassword({ vaultId, itemId }, masterPassword),
   );
   return {
     message: 'Item deleted successfully',
@@ -350,6 +412,7 @@ export const deleteVaultItemViaGraphql = async (
 export const reorderVaultItemsViaGraphql = async (
   vaultId: number,
   itemIds: number[],
+  masterPassword?: string,
 ): Promise<{ message: string; items: VaultItem[] }> => {
   const data = await graphqlMutationRequest<
     {
@@ -357,17 +420,22 @@ export const reorderVaultItemsViaGraphql = async (
         items: GraphqlVaultItem[];
       };
     },
-    { vaultId: number; itemIds: number[] }
+    { vaultId: number; itemIds: number[]; masterPassword?: string }
   >(
     `mutation ReorderWorkspaceVaultItems(
       $vaultId: Int!
       $itemIds: [Int!]!
+      $masterPassword: String
     ) {
-      reorderWorkspaceVaultItems(vaultId: $vaultId, itemIds: $itemIds) {
+      reorderWorkspaceVaultItems(
+        vaultId: $vaultId
+        itemIds: $itemIds
+        masterPassword: $masterPassword
+      ) {
         items { ${VAULT_ITEM_FIELDS} }
       }
     }`,
-    { vaultId, itemIds },
+    withMasterPassword({ vaultId, itemIds }, masterPassword),
   );
   return {
     message: 'Items reordered successfully',
@@ -445,23 +513,39 @@ export const removeVaultPasswordViaGraphql = async (
 
 export const enableVaultSharingViaGraphql = async (
   vaultId: number,
+  snapshot?: { ciphertext: string; iv: string },
 ): Promise<{ shareToken: string; shareUrl: string }> => {
   const data = await graphqlMutationRequest<
     { enableWorkspaceVaultSharing: GraphqlVaultSharingResult },
-    { vaultId: number; confirmDecryptedSharing: boolean }
+    {
+      vaultId: number;
+      confirmDecryptedSharing: boolean;
+      snapshotCiphertext?: string;
+      snapshotIv?: string;
+    }
   >(
     `mutation EnableWorkspaceVaultSharing(
       $vaultId: Int!
       $confirmDecryptedSharing: Boolean!
+      $snapshotCiphertext: String
+      $snapshotIv: String
     ) {
       enableWorkspaceVaultSharing(
         vaultId: $vaultId
         confirmDecryptedSharing: $confirmDecryptedSharing
+        snapshotCiphertext: $snapshotCiphertext
+        snapshotIv: $snapshotIv
       ) {
         vaultId shareToken shareUrl isPublic sharedAt
       }
     }`,
-    { vaultId, confirmDecryptedSharing: true },
+    {
+      vaultId,
+      confirmDecryptedSharing: true,
+      ...(snapshot
+        ? { snapshotCiphertext: snapshot.ciphertext, snapshotIv: snapshot.iv }
+        : {}),
+    },
   );
   const result = data.enableWorkspaceVaultSharing;
   if (
@@ -502,3 +586,66 @@ export const disableVaultSharingViaGraphql = async (
   }
   return { message: 'Vault sharing disabled' };
 };
+
+export const migrateVaultToV2ViaGraphql = async (
+  vaultId: number,
+  input: {
+    kdfSalt: string;
+    kdfMemoryKiB: number;
+    kdfIterations: number;
+    kdfParallelism: number;
+    wrappedVek: string;
+    wrappedVekRecovery?: string;
+    items: Array<{ id: number; ciphertext: string; iv: string }>;
+  },
+  currentPassword?: string,
+): Promise<Vault> => {
+  const data = await graphqlMutationRequest<
+    { migrateWorkspaceVaultToV2: GraphqlVault },
+    {
+      vaultId: number;
+      input: typeof input;
+      currentPassword?: string;
+    }
+  >(
+    `mutation MigrateWorkspaceVaultToV2(
+      $vaultId: Int!
+      $input: MigrateWorkspaceVaultToV2Input!
+      $currentPassword: String
+    ) {
+      migrateWorkspaceVaultToV2(
+        vaultId: $vaultId
+        input: $input
+        currentPassword: $currentPassword
+      ) { ${VAULT_FIELDS} }
+    }`,
+    {
+      vaultId,
+      input,
+      ...(currentPassword ? { currentPassword } : {}),
+    },
+  );
+  return legacyVault(data.migrateWorkspaceVaultToV2);
+};
+
+export const rewrapVaultViaGraphql = async (
+  vaultId: number,
+  input: { wrappedVek: string; wrappedVekRecovery?: string },
+): Promise<{ vaultId: number; isLocked: boolean; encryptionSalt: string | null }> => {
+  const data = await graphqlMutationRequest<
+    { rewrapWorkspaceVault: GraphqlVaultPasswordResult },
+    { vaultId: number; input: typeof input }
+  >(
+    `mutation RewrapWorkspaceVault(
+      $vaultId: Int!
+      $input: RewrapWorkspaceVaultInput!
+    ) {
+      rewrapWorkspaceVault(vaultId: $vaultId, input: $input) {
+        vaultId isLocked encryptionSalt
+      }
+    }`,
+    { vaultId, input },
+  );
+  return data.rewrapWorkspaceVault;
+};
+

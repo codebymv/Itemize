@@ -63,3 +63,6 @@ export const encryptVaultValue = (
 
 export const generateVaultSalt = (): string =>
   randomBytes(16).toString('base64');
+
+export const hashShareToken = (token: string): string =>
+  createHash('sha256').update(token, 'utf8').digest('hex');

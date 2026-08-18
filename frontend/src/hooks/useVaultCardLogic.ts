@@ -13,9 +13,16 @@ import {
   bulkAddVaultItems,
   reorderVaultItems,
   getVault,
-  lockVault,
   unlockVault,
 } from '@/services/api';
+import {
+  encryptZkeItem,
+  enrollVaultToV2,
+  isVaultZke,
+  lockZkeSession,
+  rewrapZkeVault,
+  unlockZkeVault,
+} from '@/lib/vaultZkSession';
 
 export type VaultSecurityDialogMode =
   | 'unlock'
@@ -23,7 +30,11 @@ export type VaultSecurityDialogMode =
   | 'change-password'
   | 'remove-password';
 
+const AUTO_LOCK_MS = 5 * 60 * 1000;
+const CLIPBOARD_CLEAR_MS = 30_000;
+
 const hasCompleteVaultItems = (vault: Vault): boolean => {
+  if (isVaultZke(vault)) return false;
   const items = vault.items || [];
   return !vault.is_locked && items.length >= (vault.item_count ?? items.length);
 };
@@ -87,9 +98,18 @@ export const useVaultCardLogic = ({
   const [confirmMasterPasswordInput, setConfirmMasterPasswordInput] = useState('');
   const [securityDialogMode, setSecurityDialogMode] =
     useState<VaultSecurityDialogMode | null>(null);
+  const [recoveryKit, setRecoveryKit] = useState<string | null>(null);
+  const [needsEnrollment, setNeedsEnrollment] = useState(
+    !isVaultZke(vault) && !vault.is_locked,
+  );
+  const [cryptoVersion, setCryptoVersion] = useState(vault.crypto_version ?? 1);
+  const isZke = cryptoVersion >= 2;
   
   // Refs
   const newItemLabelRef = useRef<HTMLInputElement>(null);
+  const sessionPasswordRef = useRef<string | null>(null);
+  const idleTimerRef = useRef<number | null>(null);
+  const clipboardClearTimerRef = useRef<number | null>(null);
   
   // Update items when vault items change
   useEffect(() => {
@@ -102,8 +122,10 @@ export const useVaultCardLogic = ({
 
   useEffect(() => {
     setIsVaultLocked(vault.is_locked);
-    if (!vault.is_locked) setIsUnlockedForSession(false);
-  }, [vault.is_locked]);
+    setCryptoVersion(vault.crypto_version ?? 1);
+    setNeedsEnrollment(!isZke && !vault.is_locked);
+    if (!vault.is_locked && !isZke) setIsUnlockedForSession(false);
+  }, [vault.is_locked, vault.crypto_version]);
 
   const closeSecurityDialog = useCallback(() => {
     if (isUnlocking) return;
@@ -119,10 +141,53 @@ export const useVaultCardLogic = ({
     setConfirmMasterPasswordInput('');
     setSecurityDialogMode(mode);
   }, []);
+
+  const lockSession = useCallback(() => {
+    sessionPasswordRef.current = null;
+    setIsUnlockedForSession(false);
+    setVisibleItems(new Set());
+    void lockZkeSession(vault.id);
+    if (vault.is_locked || isZke) {
+      setItems([]);
+      setItemsLoaded(false);
+    }
+  }, [vault.id, vault.is_locked, vault.crypto_version]);
+
+  const bumpIdleTimer = useCallback(() => {
+    if (idleTimerRef.current) window.clearTimeout(idleTimerRef.current);
+    if (!sessionPasswordRef.current) return;
+    idleTimerRef.current = window.setTimeout(lockSession, AUTO_LOCK_MS);
+  }, [lockSession]);
+
+  useEffect(() => {
+    if (!isUnlockedForSession) return;
+    bumpIdleTimer();
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') lockSession();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      if (idleTimerRef.current) window.clearTimeout(idleTimerRef.current);
+    };
+  }, [isUnlockedForSession, bumpIdleTimer, lockSession]);
+
+  useEffect(() => {
+    if (!isCollapsibleOpen) lockSession();
+  }, [isCollapsibleOpen, lockSession]);
+
+  useEffect(() => () => {
+    sessionPasswordRef.current = null;
+    if (clipboardClearTimerRef.current) window.clearTimeout(clipboardClearTimerRef.current);
+  }, []);
   
   // Load items if not loaded
   const loadItems = useCallback(async (masterPassword?: string) => {
-    if (isVaultLocked && !isUnlockedForSession && !masterPassword) {
+    if (needsEnrollment && !isZke) {
+      openSecurityDialog('set-password');
+      return;
+    }
+    if ((isVaultLocked || isZke) && !isUnlockedForSession && !masterPassword) {
       openSecurityDialog('unlock');
       return;
     }
@@ -132,13 +197,27 @@ export const useVaultCardLogic = ({
     try {
       const fullVault = await getVault(
         vault.id,
-        masterPassword,
+        isZke ? undefined : masterPassword,
         token || undefined,
       );
+      if (isVaultZke(fullVault) || isZke) {
+        const decrypted = await unlockZkeVault(
+          fullVault,
+          masterPassword || sessionPasswordRef.current || '',
+        );
+        setItems(decrypted);
+        setItemsLoaded(true);
+        if (masterPassword) sessionPasswordRef.current = masterPassword;
+        setIsUnlockedForSession(true);
+        return;
+      }
       if (fullVault.items) {
         setItems(fullVault.items);
         setItemsLoaded(true);
-        if (isVaultLocked) setIsUnlockedForSession(true);
+        if (isVaultLocked && masterPassword) {
+          sessionPasswordRef.current = masterPassword;
+          setIsUnlockedForSession(true);
+        }
       }
     } catch (error) {
       console.error('Failed to load vault items:', error);
@@ -152,11 +231,13 @@ export const useVaultCardLogic = ({
     }
   }, [
     vault.id,
+    vault.crypto_version,
     token,
     itemsLoaded,
     isLoadingItems,
     isVaultLocked,
     isUnlockedForSession,
+    needsEnrollment,
     openSecurityDialog,
     toast,
   ]);
@@ -201,37 +282,76 @@ export const useVaultCardLogic = ({
       if (securityDialogMode === 'unlock') {
         const fullVault = await getVault(
           vault.id,
-          masterPasswordInput,
+          isZke ? undefined : masterPasswordInput,
           token || undefined,
         );
-        setItems(fullVault.items || []);
+        if (isVaultZke(fullVault) || isZke) {
+          const decrypted = await unlockZkeVault(fullVault, masterPasswordInput);
+          setItems(decrypted);
+        } else {
+          setItems(fullVault.items || []);
+          const migrated = await enrollVaultToV2(
+            fullVault,
+            masterPasswordInput,
+            fullVault.items || [],
+            masterPasswordInput,
+          );
+          setRecoveryKit(migrated.recoverySecret);
+          setNeedsEnrollment(false);
+          setCryptoVersion(2);
+        }
         setItemsLoaded(true);
+        sessionPasswordRef.current = masterPasswordInput;
         setIsUnlockedForSession(true);
-        toast({ title: 'Vault opened' });
+        bumpIdleTimer();
+        toast({ title: 'Vault opened', description: 'Locks after 5 minutes idle, or when you leave the tab.' });
       } else if (securityDialogMode === 'remove-password') {
+        if (isZke) {
+          toast({
+            title: 'Password required',
+            description: 'Zero-knowledge vaults cannot remove the vault password.',
+            variant: 'destructive',
+          });
+          return;
+        }
         await unlockVault(
           vault.id,
           masterPasswordInput,
           token || undefined,
         );
         setIsVaultLocked(false);
+        sessionPasswordRef.current = null;
         setIsUnlockedForSession(false);
         setItemsLoaded(false);
+        setNeedsEnrollment(true);
         toast({ title: 'Password removed' });
+      } else if (isZke && securityDialogMode === 'change-password') {
+        const recoverySecret = await rewrapZkeVault(vault, newMasterPasswordInput);
+        sessionPasswordRef.current = newMasterPasswordInput;
+        setRecoveryKit(recoverySecret);
+        toast({ title: 'Password changed' });
       } else {
-        await lockVault(
-          vault.id,
+        const currentItems = itemsLoaded
+          ? items
+          : (await getVault(
+              vault.id,
+              vault.is_locked ? masterPasswordInput : undefined,
+              token || undefined,
+            )).items || [];
+        const migrated = await enrollVaultToV2(
+          vault,
           newMasterPasswordInput,
-          securityDialogMode === 'change-password'
-            ? masterPasswordInput
-            : undefined,
-          token || undefined,
+          currentItems,
+          vault.is_locked ? masterPasswordInput : undefined,
         );
+        setItems(currentItems);
+        setItemsLoaded(true);
         setIsVaultLocked(true);
-        setIsUnlockedForSession(false);
-        setItems([]);
-        setItemsLoaded(false);
-        setVisibleItems(new Set());
+        setNeedsEnrollment(false);
+        setCryptoVersion(2);
+        sessionPasswordRef.current = newMasterPasswordInput;
+        setIsUnlockedForSession(true);
+        setRecoveryKit(migrated.recoverySecret);
         toast({
           title:
             securityDialogMode === 'change-password'
@@ -259,8 +379,11 @@ export const useVaultCardLogic = ({
     newMasterPasswordInput,
     confirmMasterPasswordInput,
     toast,
-    vault.id,
+    vault,
+    items,
+    itemsLoaded,
     token,
+    bumpIdleTimer,
   ]);
   
   const {
@@ -373,12 +496,30 @@ export const useVaultCardLogic = ({
   }, [visibleItems]);
   
   // Copy to clipboard
+  const sessionWritePassword = useCallback(() => {
+    bumpIdleTimer();
+    if ((isVaultLocked || isZke || needsEnrollment) && !isUnlockedForSession) {
+      openSecurityDialog(needsEnrollment ? 'set-password' : 'unlock');
+      return null;
+    }
+    return isZke ? undefined : (sessionPasswordRef.current || undefined);
+  }, [bumpIdleTimer, isVaultLocked, isUnlockedForSession, needsEnrollment, openSecurityDialog, vault.crypto_version]);
+
   const copyToClipboard = useCallback(async (value: string, label?: string) => {
     try {
       await navigator.clipboard.writeText(value);
+      if (clipboardClearTimerRef.current) {
+        window.clearTimeout(clipboardClearTimerRef.current);
+      }
+      clipboardClearTimerRef.current = window.setTimeout(() => {
+        void navigator.clipboard.writeText('').catch(() => undefined);
+      }, CLIPBOARD_CLEAR_MS);
+      bumpIdleTimer();
       toast({
-        title: "Copied!",
-        description: label ? `${label} copied to clipboard` : "Value copied to clipboard",
+        title: 'Copied',
+        description: label
+          ? `${label} copied. Clipboard clears in 30 seconds.`
+          : 'Copied. Clipboard clears in 30 seconds.',
       });
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
@@ -388,7 +529,7 @@ export const useVaultCardLogic = ({
         variant: "destructive"
       });
     }
-  }, [toast]);
+  }, [bumpIdleTimer, toast]);
   
   // Item CRUD operations
   const handleAddItem = useCallback(async () => {
@@ -402,13 +543,30 @@ export const useVaultCardLogic = ({
     }
     
     try {
-      const newItem = await addVaultItem(vault.id, {
-        item_type: newItemType,
+      const masterPassword = sessionWritePassword();
+      if ((isVaultLocked || isZke || needsEnrollment) && !isUnlockedForSession) return;
+      const payload = isZke
+        ? {
+            item_type: newItemType,
+            label: newItemLabel.trim(),
+            value: newItemValue,
+            ...(await encryptZkeItem(vault.id, {
+              item_type: newItemType,
+              label: newItemLabel.trim(),
+              value: newItemValue,
+            })),
+          }
+        : {
+            item_type: newItemType,
+            label: newItemLabel.trim(),
+            value: newItemValue,
+          };
+      const newItem = await addVaultItem(vault.id, payload, token || undefined, masterPassword);
+      setItems(prev => [...prev, {
+        ...newItem,
         label: newItemLabel.trim(),
-        value: newItemValue
-      }, token || undefined);
-      
-      setItems(prev => [...prev, newItem]);
+        value: newItemValue,
+      }]);
       setShowAddItem(false);
       setNewItemLabel('');
       setNewItemValue('');
@@ -426,22 +584,36 @@ export const useVaultCardLogic = ({
         variant: "destructive"
       });
     }
-  }, [vault.id, newItemType, newItemLabel, newItemValue, token, toast]);
+  }, [vault.id, newItemType, newItemLabel, newItemValue, token, toast, isVaultLocked, sessionWritePassword]);
   
   const handleUpdateItem = useCallback(async (itemId: number) => {
     try {
+      const masterPassword = sessionWritePassword();
+      if ((isVaultLocked || isZke || needsEnrollment) && !isUnlockedForSession) return;
+      const payload = isZke
+        ? {
+            ...(await encryptZkeItem(vault.id, {
+              item_type: items.find((item) => item.id === itemId)?.item_type ?? 'key_value',
+              label: editingItemLabel.trim(),
+              value: editingItemValue,
+            })),
+          }
+        : {
+            label: editingItemLabel.trim() || undefined,
+            value: editingItemValue || undefined,
+          };
       const updatedItem = await updateVaultItem(
         vault.id, 
         itemId, 
-        { 
-          label: editingItemLabel.trim() || undefined,
-          value: editingItemValue || undefined 
-        },
-        token || undefined
+        payload,
+        token || undefined,
+        masterPassword
       );
       
       setItems(prev => prev.map(item => 
-        item.id === itemId ? updatedItem : item
+        item.id === itemId
+          ? { ...updatedItem, label: editingItemLabel.trim(), value: editingItemValue }
+          : item
       ));
       setEditingItemId(null);
       setEditingItemLabel('');
@@ -454,11 +626,13 @@ export const useVaultCardLogic = ({
         variant: "destructive"
       });
     }
-  }, [vault.id, editingItemLabel, editingItemValue, token, toast]);
+  }, [vault.id, editingItemLabel, editingItemValue, token, toast, isVaultLocked, sessionWritePassword]);
   
   const handleDeleteItem = useCallback(async (itemId: number) => {
     try {
-      await deleteVaultItem(vault.id, itemId, token || undefined);
+      const masterPassword = sessionWritePassword();
+      if ((isVaultLocked || isZke || needsEnrollment) && !isUnlockedForSession) return;
+      await deleteVaultItem(vault.id, itemId, token || undefined, masterPassword);
       setItems(prev => prev.filter(item => item.id !== itemId));
       toast({
         title: "Item deleted",
@@ -472,7 +646,7 @@ export const useVaultCardLogic = ({
         variant: "destructive"
       });
     }
-  }, [vault.id, token, toast]);
+  }, [vault.id, token, toast, isVaultLocked, sessionWritePassword]);
   
   const startEditingItem = useCallback((item: VaultItem) => {
     setEditingItemId(item.id);
@@ -489,8 +663,21 @@ export const useVaultCardLogic = ({
   // Bulk add items (for .env import)
   const handleBulkAddItems = useCallback(async (itemsToAdd: Array<{ item_type: 'key_value' | 'secure_note'; label: string; value: string }>) => {
     try {
-      const result = await bulkAddVaultItems(vault.id, itemsToAdd, token || undefined);
-      setItems(prev => [...prev, ...result.items]);
+      const masterPassword = sessionWritePassword();
+      if ((isVaultLocked || isZke || needsEnrollment) && !isUnlockedForSession) return [];
+      const payloads = isZke
+        ? await Promise.all(itemsToAdd.map(async (item) => ({
+            ...item,
+            ...(await encryptZkeItem(vault.id, item)),
+          })))
+        : itemsToAdd;
+      const result = await bulkAddVaultItems(vault.id, payloads, token || undefined, masterPassword);
+      const merged = result.items.map((item, index) => ({
+        ...item,
+        label: itemsToAdd[index].label,
+        value: itemsToAdd[index].value,
+      }));
+      setItems(prev => [...prev, ...merged]);
       toast({
         title: "Items imported",
         description: `${result.count} items added to vault`,
@@ -505,7 +692,7 @@ export const useVaultCardLogic = ({
       });
       return [];
     }
-  }, [vault.id, token, toast]);
+  }, [vault.id, token, toast, isVaultLocked, sessionWritePassword]);
   
   // Reorder items
   const handleReorderItems = useCallback(async (newItemIds: number[]) => {
@@ -519,7 +706,12 @@ export const useVaultCardLogic = ({
     setItems(reorderedItems);
     
     try {
-      await reorderVaultItems(vault.id, newItemIds, token || undefined);
+      const masterPassword = sessionWritePassword();
+      if ((isVaultLocked || isZke || needsEnrollment) && !isUnlockedForSession) {
+        setItems(oldItems);
+        return;
+      }
+      await reorderVaultItems(vault.id, newItemIds, token || undefined, masterPassword);
     } catch (error) {
       console.error('Failed to reorder vault items:', error);
       // Rollback on error
@@ -530,7 +722,7 @@ export const useVaultCardLogic = ({
         variant: "destructive"
       });
     }
-  }, [vault.id, items, token, toast]);
+  }, [vault.id, items, token, toast, isVaultLocked, sessionWritePassword]);
   
   // Parse .env format text
   const parseEnvFormat = useCallback((text: string): Array<{ item_type: 'key_value'; label: string; value: string }> => {
@@ -632,9 +824,12 @@ export const useVaultCardLogic = ({
     parseEnvFormat,
     
     // Lock state
-    isVaultLocked,
+    isVaultLocked: isVaultLocked || isZke || needsEnrollment,
     isUnlockedForSession,
     isUnlocking,
+    needsEnrollment,
+    recoveryKit,
+    dismissRecoveryKit: () => setRecoveryKit(null),
     masterPasswordInput,
     setMasterPasswordInput,
     newMasterPasswordInput,

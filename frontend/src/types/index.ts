@@ -206,10 +206,21 @@ export interface VaultItem {
   vault_id: number;
   item_type: 'key_value' | 'secure_note';
   label: string;
-  value: string; // Decrypted value (never stored in frontend)
+  value: string;
+  ciphertext?: string | null;
+  iv?: string | null;
+  crypto_version?: number;
   order_index: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface VaultKdf {
+  algorithm: string;
+  salt: string;
+  memoryKiB: number;
+  iterations: number;
+  parallelism: number;
 }
 
 export interface Vault {
@@ -225,6 +236,10 @@ export interface Vault {
   z_index: number;
   is_locked: boolean;
   encryption_salt?: string;
+  crypto_version?: number;
+  kdf?: VaultKdf | null;
+  wrapped_vek?: string | null;
+  wrapped_vek_recovery?: string | null;
   item_count?: number;
   items?: VaultItem[];
   requires_unlock?: boolean;

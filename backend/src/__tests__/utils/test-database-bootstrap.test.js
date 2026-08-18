@@ -373,6 +373,26 @@ describe('test database schema contract', () => {
         expect(client.release).toHaveBeenCalled();
     });
 
+    test('production migration stream adds zero-knowledge vault columns', async () => {
+        const migration = require('../../../scripts/migrations/054_vault_zero_knowledge');
+        const client = {
+            query: jest.fn().mockResolvedValue({ rows: [] }),
+            release: jest.fn(),
+        };
+        const pool = { connect: jest.fn().mockResolvedValue(client) };
+
+        await migration.up(pool);
+        const sql = client.query.mock.calls
+            .map(([statement]) => statement)
+            .join('\n');
+        expect(sql).toContain('ADD COLUMN IF NOT EXISTS crypto_version');
+        expect(sql).toContain('wrapped_vek');
+        expect(sql).toContain('share_snapshot_ciphertext');
+        expect(sql).toContain('idx_vaults_share_token_hash');
+        expect(client.query).toHaveBeenLastCalledWith('COMMIT');
+        expect(client.release).toHaveBeenCalled();
+    });
+
     test('production migration stream installs authoritative booking availability', async () => {
         const migration = require('../../../scripts/migrations/030_booking_availability_policy');
         const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };

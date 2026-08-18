@@ -209,6 +209,34 @@ describe('workspace vault GraphQL consumer', () => {
     ]);
   });
 
+  it('sends ciphertext instead of plaintext for zero-knowledge item writes', async () => {
+    const item = {
+      ...vault.items[0],
+      label: '',
+      value: '',
+      ciphertext: 'Y2lwaGVy',
+      iv: 'aXY=',
+      cryptoVersion: 2,
+    };
+    vi.mocked(fetch).mockResolvedValue(
+      response({ data: { addWorkspaceVaultItem: item } }),
+    );
+    await addVaultItemViaGraphql(12, {
+      item_type: 'key_value',
+      label: 'Token',
+      value: 'secret',
+      ciphertext: 'Y2lwaGVy',
+      iv: 'aXY=',
+    });
+    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]?.body))).toMatchObject({
+      variables: {
+        vaultId: 12,
+        input: { itemType: 'key_value', ciphertext: 'Y2lwaGVy', iv: 'aXY=' },
+      },
+    });
+    expect(JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]?.body)).variables.input.value).toBeUndefined();
+  });
+
   it('uses CSRF-protected password mutations without REST password shapes', async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(

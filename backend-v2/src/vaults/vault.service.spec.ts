@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { VaultUnlockRateLimitService } from './vault-unlock-rate-limit.service';
 import { VaultRepository } from './vault.repository';
 import { VaultService } from './vault.service';
 
@@ -16,7 +17,17 @@ const row = {
   is_locked: false,
   encryption_salt: null,
   master_password_hash: null,
+  crypto_version: 1,
+  kdf_algorithm: null,
+  kdf_memory_kib: null,
+  kdf_iterations: null,
+  kdf_parallelism: null,
+  wrapped_vek: null,
+  wrapped_vek_recovery: null,
   share_token: null,
+  share_token_hash: null,
+  share_snapshot_ciphertext: null,
+  share_snapshot_iv: null,
   is_public: false,
   shared_at: null,
   created_at: new Date('2026-07-23T01:00:00.000Z'),
@@ -44,8 +55,11 @@ describe('VaultService', () => {
       removePassword: jest.fn(),
       enableSharing: jest.fn(),
       disableSharing: jest.fn(),
+      enrollV2: jest.fn(),
+      rewrapV2: jest.fn(),
     } as unknown as jest.Mocked<VaultRepository>;
-    service = new VaultService(repository);
+    service = new VaultService(repository, new VaultUnlockRateLimitService());
+    repository.find.mockResolvedValue({ vault: row, items: [] });
   });
 
   it('maps a user-scoped paginated list without exposing password material', async () => {
@@ -84,6 +98,7 @@ describe('VaultService', () => {
           label: 'Token',
           encrypted_value: 'ciphertext',
           iv: 'iv',
+          crypto_version: 1,
           order_index: 0,
           created_at: row.created_at,
           updated_at: row.updated_at,
@@ -274,6 +289,7 @@ describe('VaultService', () => {
 
   it('encrypts item creates and returns only plaintext projection', async () => {
     process.env.VAULT_ENCRYPTION_KEY = '34'.repeat(32);
+    repository.find.mockResolvedValue({ vault: row, items: [] });
     repository.addItem.mockImplementation(async (_userId, vaultId, value) => ({
       id: 2,
       vault_id: vaultId,
@@ -281,6 +297,7 @@ describe('VaultService', () => {
       label: value.label,
       encrypted_value: value.encryptedValue,
       iv: value.iv,
+      crypto_version: 1,
       order_index: 0,
       created_at: row.created_at,
       updated_at: row.updated_at,
@@ -300,7 +317,73 @@ describe('VaultService', () => {
     expect(stored.encryptedValue).not.toContain('secret');
   });
 
+  it('stores opaque client blobs on a v2 vault and returns no plaintext', async () => {
+    repository.find.mockResolvedValue({
+      vault: {
+        ...row,
+        crypto_version: 2,
+        is_locked: true,
+        wrapped_vek: 'wrap.iv',
+        encryption_salt: 'salt',
+        kdf_algorithm: 'argon2id',
+        kdf_memory_kib: 32,
+        kdf_iterations: 1,
+        kdf_parallelism: 1,
+      },
+      items: [],
+    });
+    repository.addItem.mockImplementation(async (_userId, vaultId, value) => ({
+      id: 3,
+      vault_id: vaultId,
+      item_type: value.itemType,
+      label: value.label,
+      encrypted_value: value.encryptedValue,
+      iv: value.iv,
+      crypto_version: 2,
+      order_index: 0,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    }));
+    await expect(
+      service.addItem(7, 12, {
+        itemType: 'key_value',
+        ciphertext: 'Y2lwaGVydGV4dGZvcnZhdWx0aXRlbQ',
+        iv: 'MTIzNDU2Nzg5MDEy',
+      }),
+    ).resolves.toMatchObject({
+      value: '',
+      label: '',
+      ciphertext: 'Y2lwaGVydGV4dGZvcnZhdWx0aXRlbQ',
+      cryptoVersion: 2,
+    });
+    expect(repository.addItem.mock.calls[0][2].encryptedValue).toBe(
+      'Y2lwaGVydGV4dGZvcnZhdWx0aXRlbQ',
+    );
+  });
+
+  it('rejects locked-vault writes without the master password', async () => {
+    repository.find.mockResolvedValue({
+      vault: {
+        ...row,
+        is_locked: true,
+        master_password_hash: await bcrypt.hash('password1', 4),
+      },
+      items: [],
+    });
+    await expect(
+      service.addItem(7, 12, {
+        itemType: 'key_value',
+        label: 'Token',
+        value: 'secret',
+      }),
+    ).rejects.toMatchObject({
+      extensions: { code: 'UNAUTHENTICATED', reason: 'VAULT_LOCKED' },
+    });
+    expect(repository.addItem).not.toHaveBeenCalled();
+  });
+
   it('requires reorder to provide the exact item set', async () => {
+    repository.find.mockResolvedValue({ vault: row, items: [] });
     repository.reorderItems.mockResolvedValue('item-set-mismatch');
     await expect(service.reorderItems(7, 12, [2, 3])).rejects.toMatchObject({
       extensions: {

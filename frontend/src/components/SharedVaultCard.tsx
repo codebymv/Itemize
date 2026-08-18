@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { KeyRound, Key, FileText, Eye, EyeOff, Copy, Check } from 'lucide-react';
@@ -40,6 +40,13 @@ export const SharedVaultCard: React.FC<SharedVaultCardProps> = ({ vaultData }) =
   // Track which items are visible
   const [visibleItems, setVisibleItems] = useState<Set<number>>(new Set());
   const [copiedItem, setCopiedItem] = useState<number | null>(null);
+  const clipboardClearTimerRef = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (clipboardClearTimerRef.current) {
+      window.clearTimeout(clipboardClearTimerRef.current);
+    }
+  }, []);
   
   const toggleVisibility = (itemId: number) => {
     setVisibleItems(prev => {
@@ -57,9 +64,15 @@ export const SharedVaultCard: React.FC<SharedVaultCardProps> = ({ vaultData }) =
     try {
       await navigator.clipboard.writeText(value);
       setCopiedItem(itemId);
+      if (clipboardClearTimerRef.current) {
+        window.clearTimeout(clipboardClearTimerRef.current);
+      }
+      clipboardClearTimerRef.current = window.setTimeout(() => {
+        void navigator.clipboard.writeText('').catch(() => undefined);
+      }, 30_000);
       toast({
-        title: "Copied!",
-        description: "Value copied to clipboard",
+        title: 'Copied',
+        description: 'Clipboard clears in 30 seconds.',
       });
       setTimeout(() => setCopiedItem(null), 2000);
     } catch (error) {

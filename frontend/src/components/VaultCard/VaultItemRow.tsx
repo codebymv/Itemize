@@ -63,6 +63,9 @@ export const VaultItemRow: React.FC<VaultItemRowProps> = ({
             onChange={(e) => onEditingLabelChange(e.target.value)}
             placeholder={isKeyValue ? "KEY_NAME" : "Note title"}
             className="h-8 font-mono text-sm"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             autoFocus
           />
         </div>
@@ -73,6 +76,9 @@ export const VaultItemRow: React.FC<VaultItemRowProps> = ({
             onChange={(e) => onEditingValueChange(e.target.value)}
             placeholder="Value"
             className="h-8 font-mono text-sm"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
           />
         ) : (
           <Textarea
@@ -80,6 +86,9 @@ export const VaultItemRow: React.FC<VaultItemRowProps> = ({
             onChange={(e) => onEditingValueChange(e.target.value)}
             placeholder="Secure note content..."
             className="font-mono text-sm min-h-[80px]"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
           />
         )}
         

@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const { decrypt } = require('../../utils/encryption');
 const { logger } = require('../../utils/logger');
 const { asyncHandler } = require('../../middleware/errorHandler');
@@ -6,6 +7,9 @@ const { withDbClient } = require('../../utils/db');
 const { sendSuccess, sendNotFound, sendError } = require('../../utils/response');
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const hashShareToken = (token) =>
+    crypto.createHash('sha256').update(token, 'utf8').digest('hex');
 
 module.exports = (pool, _authenticateJWT, publicRateLimit) => {
     const router = express.Router();
@@ -23,9 +27,14 @@ module.exports = (pool, _authenticateJWT, publicRateLimit) => {
 
             const result = await withDbClient(pool, async (client) => {
                 const vaultResult = await client.query(
-                    `SELECT id, title, category, color_value, is_locked, created_at, updated_at
-                     FROM vaults WHERE share_token = $1 AND is_public = TRUE`,
-                    [token]
+                    `SELECT id, title, category, color_value, is_locked,
+                            COALESCE(crypto_version, 1) AS crypto_version,
+                            share_snapshot_ciphertext, share_snapshot_iv,
+                            created_at, updated_at
+                     FROM vaults
+                     WHERE is_public = TRUE
+                       AND (share_token = $1 OR share_token_hash = $2)`,
+                    [token, hashShareToken(token)]
                 );
 
                 if (vaultResult.rows.length === 0) {
@@ -33,6 +42,21 @@ module.exports = (pool, _authenticateJWT, publicRateLimit) => {
                 }
 
                 const vault = vaultResult.rows[0];
+                if (Number(vault.crypto_version) >= 2) {
+                    if (!vault.share_snapshot_ciphertext || !vault.share_snapshot_iv) {
+                        return { status: 'decryption_failed' };
+                    }
+                    return {
+                        status: 'ok',
+                        cryptoVersion: 2,
+                        vault,
+                        snapshot: {
+                            ciphertext: vault.share_snapshot_ciphertext,
+                            iv: vault.share_snapshot_iv,
+                        },
+                        items: [],
+                    };
+                }
 
                 if (vault.is_locked) {
                     return { status: 'locked' };
@@ -61,7 +85,7 @@ module.exports = (pool, _authenticateJWT, publicRateLimit) => {
                     }
                 }
 
-                return { status: 'ok', vault, items: decryptedItems };
+                return { status: 'ok', cryptoVersion: 1, vault, items: decryptedItems };
             });
 
             if (result.status === 'not_found') {
@@ -81,6 +105,8 @@ module.exports = (pool, _authenticateJWT, publicRateLimit) => {
                 color_value: result.vault.color_value,
                 created_at: result.vault.created_at,
                 updated_at: result.vault.updated_at,
+                crypto_version: result.cryptoVersion,
+                snapshot: result.snapshot ?? null,
                 items: result.items,
                 is_shared: true
             });

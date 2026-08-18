@@ -5,6 +5,8 @@ import { RequestContextService } from '../request-context/request-context.servic
 import {
   CreateWorkspaceVaultItemInput,
   CreateWorkspaceVaultInput,
+  MigrateWorkspaceVaultToV2Input,
+  RewrapWorkspaceVaultInput,
   UpdateWorkspaceVaultItemInput,
   UpdateWorkspaceVaultInput,
   WorkspaceVaultFilterInput,
@@ -98,11 +100,16 @@ export class VaultResolver {
   enableWorkspaceVaultSharing(
     @Args('vaultId', { type: () => Int }) vaultId: number,
     @Args('confirmDecryptedSharing') confirmDecryptedSharing: boolean,
+    @Args('snapshotCiphertext', { nullable: true }) snapshotCiphertext?: string,
+    @Args('snapshotIv', { nullable: true }) snapshotIv?: string,
   ): Promise<WorkspaceVaultSharingResult> {
     return this.vaults.enableSharing(
       this.userId(),
       vaultId,
       confirmDecryptedSharing,
+      snapshotCiphertext || snapshotIv
+        ? { ciphertext: snapshotCiphertext, iv: snapshotIv }
+        : undefined,
     );
   }
 
@@ -115,12 +122,37 @@ export class VaultResolver {
   }
 
   @CsrfProtected()
+  @Mutation(() => WorkspaceVault)
+  migrateWorkspaceVaultToV2(
+    @Args('vaultId', { type: () => Int }) vaultId: number,
+    @Args('input') input: MigrateWorkspaceVaultToV2Input,
+    @Args('currentPassword', { nullable: true }) currentPassword?: string,
+  ): Promise<WorkspaceVault> {
+    return this.vaults.migrateToV2(
+      this.userId(),
+      vaultId,
+      input,
+      currentPassword,
+    );
+  }
+
+  @CsrfProtected()
+  @Mutation(() => WorkspaceVaultPasswordResult)
+  rewrapWorkspaceVault(
+    @Args('vaultId', { type: () => Int }) vaultId: number,
+    @Args('input') input: RewrapWorkspaceVaultInput,
+  ): Promise<WorkspaceVaultPasswordResult> {
+    return this.vaults.rewrap(this.userId(), vaultId, input);
+  }
+
+  @CsrfProtected()
   @Mutation(() => WorkspaceVaultItem)
   addWorkspaceVaultItem(
     @Args('vaultId', { type: () => Int }) vaultId: number,
     @Args('input') input: CreateWorkspaceVaultItemInput,
+    @Args('masterPassword', { nullable: true }) masterPassword?: string,
   ): Promise<WorkspaceVaultItem> {
-    return this.vaults.addItem(this.userId(), vaultId, input);
+    return this.vaults.addItem(this.userId(), vaultId, input, masterPassword);
   }
 
   @CsrfProtected()
@@ -129,8 +161,9 @@ export class VaultResolver {
     @Args('vaultId', { type: () => Int }) vaultId: number,
     @Args('items', { type: () => [CreateWorkspaceVaultItemInput] })
     items: CreateWorkspaceVaultItemInput[],
+    @Args('masterPassword', { nullable: true }) masterPassword?: string,
   ): Promise<WorkspaceVaultItemsResult> {
-    return this.vaults.addItems(this.userId(), vaultId, items);
+    return this.vaults.addItems(this.userId(), vaultId, items, masterPassword);
   }
 
   @CsrfProtected()
@@ -139,8 +172,15 @@ export class VaultResolver {
     @Args('vaultId', { type: () => Int }) vaultId: number,
     @Args('itemId', { type: () => Int }) itemId: number,
     @Args('input') input: UpdateWorkspaceVaultItemInput,
+    @Args('masterPassword', { nullable: true }) masterPassword?: string,
   ): Promise<WorkspaceVaultItem> {
-    return this.vaults.updateItem(this.userId(), vaultId, itemId, input);
+    return this.vaults.updateItem(
+      this.userId(),
+      vaultId,
+      itemId,
+      input,
+      masterPassword,
+    );
   }
 
   @CsrfProtected()
@@ -148,8 +188,9 @@ export class VaultResolver {
   deleteWorkspaceVaultItem(
     @Args('vaultId', { type: () => Int }) vaultId: number,
     @Args('itemId', { type: () => Int }) itemId: number,
+    @Args('masterPassword', { nullable: true }) masterPassword?: string,
   ): Promise<DeleteWorkspaceVaultItemResult> {
-    return this.vaults.deleteItem(this.userId(), vaultId, itemId);
+    return this.vaults.deleteItem(this.userId(), vaultId, itemId, masterPassword);
   }
 
   @CsrfProtected()
@@ -157,8 +198,9 @@ export class VaultResolver {
   reorderWorkspaceVaultItems(
     @Args('vaultId', { type: () => Int }) vaultId: number,
     @Args('itemIds', { type: () => [Int] }) itemIds: number[],
+    @Args('masterPassword', { nullable: true }) masterPassword?: string,
   ): Promise<WorkspaceVaultItemsResult> {
-    return this.vaults.reorderItems(this.userId(), vaultId, itemIds);
+    return this.vaults.reorderItems(this.userId(), vaultId, itemIds, masterPassword);
   }
 
   private userId(): number {

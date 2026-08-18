@@ -9,7 +9,7 @@ const {
 
 describe('api boot state', () => {
     test('requires the current numbered migration head', () => {
-        expect(REQUIRED_PRODUCTION_MIGRATION).toBe('053_chat_widget_graphql');
+        expect(REQUIRED_PRODUCTION_MIGRATION).toBe('054_vault_zero_knowledge');
     });
 
     test('health stays starting during grace when routes are not ready', () => {

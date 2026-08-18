@@ -6,6 +6,8 @@ import { PageInput, pageInfo } from '../common/pagination';
 import {
   CreateWorkspaceVaultItemInput,
   CreateWorkspaceVaultInput,
+  MigrateWorkspaceVaultToV2Input,
+  RewrapWorkspaceVaultInput,
   UpdateWorkspaceVaultItemInput,
   UpdateWorkspaceVaultInput,
   WorkspaceVaultFilterInput,
@@ -14,7 +16,9 @@ import {
   decryptVaultValue,
   encryptVaultValue,
   generateVaultSalt,
+  hashShareToken,
 } from './vault.crypto';
+import { VaultUnlockRateLimitService } from './vault-unlock-rate-limit.service';
 import {
   EnableVaultSharingResult,
   UpdateVaultValue,
@@ -36,7 +40,10 @@ import {
 
 @Injectable()
 export class VaultService {
-  constructor(private readonly vaults: VaultRepository) {}
+  constructor(
+    private readonly vaults: VaultRepository,
+    private readonly unlockAttempts: VaultUnlockRateLimitService,
+  ) {}
 
   async list(
     userId: number,
@@ -67,6 +74,13 @@ export class VaultService {
     this.id(vaultId);
     const aggregate = await this.vaults.find(userId, vaultId);
     if (!aggregate) throw this.notFound();
+    if (this.isV2(aggregate.vault)) {
+      return this.map(
+        aggregate.vault,
+        aggregate.items.map((item) => this.mapItem(item)),
+        false,
+      );
+    }
     const locked = aggregate.vault.is_locked;
     if (locked && !aggregate.vault.master_password_hash) {
       throw this.invalidLockState();
@@ -74,16 +88,13 @@ export class VaultService {
     if (locked && !masterPassword) {
       return this.map(aggregate.vault, [], true);
     }
-    if (
-      locked &&
-      !(await bcrypt.compare(
-        this.password(masterPassword as string),
+    if (locked) {
+      await this.verifyMasterPassword(
+        userId,
+        vaultId,
         aggregate.vault.master_password_hash as string,
-      ))
-    ) {
-      throw itemizeGraphqlError('Invalid master password', 'UNAUTHENTICATED', {
-        reason: 'INVALID_MASTER_PASSWORD',
-      });
+        masterPassword as string,
+      );
     }
     return this.mapAggregate(aggregate);
   }
@@ -92,9 +103,18 @@ export class VaultService {
     userId: number,
     input: CreateWorkspaceVaultInput,
   ): Promise<WorkspaceVault> {
-    const masterPassword = input.masterPassword
+    const v2 = input.cryptoVersion === 2;
+    if (v2 && input.masterPassword) {
+      throw itemizeGraphqlError(
+        'Zero-knowledge vaults do not send a master password to the server',
+        'BAD_USER_INPUT',
+        { field: 'masterPassword' },
+      );
+    }
+    const masterPassword = !v2 && input.masterPassword
       ? this.password(input.masterPassword)
       : undefined;
+    const kdf = v2 ? this.kdfInput(input) : null;
     const row = await this.vaults.create(userId, {
       title: this.text(input.title ?? 'Untitled Vault', 'title', 255),
       category: this.text(input.category ?? 'General', 'category', 255),
@@ -104,10 +124,21 @@ export class VaultService {
       width: this.dimension(input.width ?? 400, 'width'),
       height: this.dimension(input.height ?? 300, 'height'),
       zIndex: this.integer(input.zIndex ?? 0, 'zIndex'),
-      isLocked: Boolean(masterPassword),
-      encryptionSalt: masterPassword ? generateVaultSalt() : null,
+      isLocked: v2 || Boolean(masterPassword),
+      encryptionSalt: v2 ? kdf!.salt : masterPassword ? generateVaultSalt() : null,
       masterPasswordHash: masterPassword
         ? await bcrypt.hash(masterPassword, 12)
+        : null,
+      cryptoVersion: v2 ? 2 : 1,
+      kdfAlgorithm: v2 ? 'argon2id' : null,
+      kdfMemoryKiB: v2 ? kdf!.memoryKiB : null,
+      kdfIterations: v2 ? kdf!.iterations : null,
+      kdfParallelism: v2 ? kdf!.parallelism : null,
+      wrappedVek: v2 ? this.wrappedKey(input.wrappedVek, 'wrappedVek') : null,
+      wrappedVekRecovery: v2
+        ? input.wrappedVekRecovery
+          ? this.wrappedKey(input.wrappedVekRecovery, 'wrappedVekRecovery')
+          : null
         : null,
     });
     return this.map(row, [], false);
@@ -173,6 +204,15 @@ export class VaultService {
     currentPassword?: string,
   ): Promise<WorkspaceVaultPasswordResult> {
     this.id(vaultId);
+    const aggregate = await this.vaults.find(userId, vaultId);
+    if (!aggregate) throw this.notFound();
+    if (this.isV2(aggregate.vault)) {
+      throw itemizeGraphqlError(
+        'Zero-knowledge vaults rewrap the vault key on the client',
+        'BAD_USER_INPUT',
+        { reason: 'VAULT_ZKE_REWRAP_REQUIRED' },
+      );
+    }
     const normalizedNewPassword = this.password(newPassword);
     const normalizedCurrentPassword =
       currentPassword === undefined
@@ -209,6 +249,15 @@ export class VaultService {
     password: string,
   ): Promise<WorkspaceVaultPasswordResult> {
     this.id(vaultId);
+    const aggregate = await this.vaults.find(userId, vaultId);
+    if (!aggregate) throw this.notFound();
+    if (this.isV2(aggregate.vault)) {
+      throw itemizeGraphqlError(
+        'Zero-knowledge vaults cannot remove the vault password',
+        'BAD_USER_INPUT',
+        { reason: 'VAULT_ZKE_PASSWORD_REQUIRED' },
+      );
+    }
     const result = await this.vaults.removePassword(
       userId,
       vaultId,
@@ -234,19 +283,41 @@ export class VaultService {
     userId: number,
     vaultId: number,
     confirmDecryptedSharing: boolean,
+    snapshot?: { ciphertext?: string; iv?: string },
   ): Promise<WorkspaceVaultSharingResult> {
     this.id(vaultId);
     if (confirmDecryptedSharing !== true) {
       throw itemizeGraphqlError(
-        'Confirm that anyone with the link can view decrypted vault contents',
+        'Confirm that anyone with the full link can view the vault snapshot',
         'BAD_USER_INPUT',
         { reason: 'DECRYPTED_SHARING_CONFIRMATION_REQUIRED' },
+      );
+    }
+    const aggregate = await this.vaults.find(userId, vaultId);
+    if (!aggregate) throw this.notFound();
+    const v2 = this.isV2(aggregate.vault);
+    const snapshotCiphertext = snapshot?.ciphertext
+      ? this.blob(snapshot.ciphertext, 'snapshotCiphertext')
+      : undefined;
+    const snapshotIv = snapshot?.iv
+      ? this.blob(snapshot.iv, 'snapshotIv')
+      : undefined;
+    if (v2 && (!snapshotCiphertext || !snapshotIv) && !aggregate.vault.is_public) {
+      throw itemizeGraphqlError(
+        'Zero-knowledge sharing requires an encrypted snapshot',
+        'BAD_USER_INPUT',
+        { reason: 'SNAPSHOT_REQUIRED' },
       );
     }
     let result: EnableVaultSharingResult | undefined;
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
-        result = await this.vaults.enableSharing(userId, vaultId, randomUUID());
+        const shareToken = randomUUID();
+        result = await this.vaults.enableSharing(userId, vaultId, shareToken, {
+          shareTokenHash: hashShareToken(shareToken),
+          snapshotCiphertext,
+          snapshotIv,
+        });
         break;
       } catch (error) {
         if ((error as { code?: string })?.code !== '23505' || attempt === 2) {
@@ -260,6 +331,13 @@ export class VaultService {
         'Locked vaults cannot be shared',
         'BAD_USER_INPUT',
         { reason: 'VAULT_LOCKED' },
+      );
+    }
+    if (result === 'snapshot-required') {
+      throw itemizeGraphqlError(
+        'Zero-knowledge sharing requires an encrypted snapshot',
+        'BAD_USER_INPUT',
+        { reason: 'SNAPSHOT_REQUIRED' },
       );
     }
     if (!result.share_token || !result.is_public || !result.shared_at) {
@@ -301,26 +379,30 @@ export class VaultService {
     userId: number,
     vaultId: number,
     input: CreateWorkspaceVaultItemInput,
+    masterPassword?: string,
   ): Promise<WorkspaceVaultItem> {
     this.id(vaultId);
-    const value = this.itemInput(input);
-    const encrypted = encryptVaultValue(value.value);
-    const row = await this.vaults.addItem(userId, vaultId, {
-      itemType: value.itemType,
-      label: value.label,
-      encryptedValue: encrypted.encrypted,
-      iv: encrypted.iv,
-    });
+    await this.requireUnlockedWrite(userId, vaultId, masterPassword);
+    const aggregate = await this.vaults.find(userId, vaultId);
+    if (!aggregate) throw this.notFound();
+    const stored = this.isV2(aggregate.vault)
+      ? this.v2ItemWrite(input)
+      : this.v1ItemWrite(input);
+    const row = await this.vaults.addItem(userId, vaultId, stored.row);
     if (!row) throw this.notFound();
-    return this.mapItem(row, value.value);
+    return stored.plaintext
+      ? this.mapItem(row, stored.plaintext)
+      : this.mapItem(row);
   }
 
   async addItems(
     userId: number,
     vaultId: number,
     inputs: CreateWorkspaceVaultItemInput[],
+    masterPassword?: string,
   ): Promise<WorkspaceVaultItemsResult> {
     this.id(vaultId);
+    await this.requireUnlockedWrite(userId, vaultId, masterPassword);
     if (!Array.isArray(inputs) || inputs.length < 1 || inputs.length > 500) {
       throw itemizeGraphqlError(
         'items must contain between 1 and 500 entries',
@@ -328,25 +410,23 @@ export class VaultService {
         { field: 'items' },
       );
     }
-    const values = inputs.map((input) => this.itemInput(input));
-    const encrypted = values.map((value) => ({
-      ...value,
-      ...encryptVaultValue(value.value),
-    }));
+    const aggregate = await this.vaults.find(userId, vaultId);
+    if (!aggregate) throw this.notFound();
+    const v2 = this.isV2(aggregate.vault);
+    const stored = inputs.map((input) =>
+      v2 ? this.v2ItemWrite(input) : this.v1ItemWrite(input),
+    );
     const rows = await this.vaults.addItems(
       userId,
       vaultId,
-      encrypted.map((value) => ({
-        itemType: value.itemType,
-        label: value.label,
-        encryptedValue: value.encrypted,
-        iv: value.iv,
-      })),
+      stored.map((value) => value.row),
     );
     if (!rows) throw this.notFound();
     return {
       items: rows.map((row, index) =>
-        this.mapItem(row, encrypted[index].value),
+        stored[index].plaintext
+          ? this.mapItem(row, stored[index].plaintext)
+          : this.mapItem(row),
       ),
       count: rows.length,
     };
@@ -357,9 +437,29 @@ export class VaultService {
     vaultId: number,
     itemId: number,
     input: UpdateWorkspaceVaultItemInput,
+    masterPassword?: string,
   ): Promise<WorkspaceVaultItem> {
     this.id(vaultId);
     this.id(itemId);
+    await this.requireUnlockedWrite(userId, vaultId, masterPassword);
+    const aggregate = await this.vaults.find(userId, vaultId);
+    if (!aggregate) throw this.notFound();
+    if (this.isV2(aggregate.vault)) {
+      if (!input.ciphertext || !input.iv) {
+        throw itemizeGraphqlError(
+          'ciphertext and iv are required',
+          'BAD_USER_INPUT',
+        );
+      }
+      const result = await this.vaults.updateItem(userId, vaultId, itemId, {
+        label: '',
+        encryptedValue: this.blob(input.ciphertext, 'ciphertext'),
+        iv: this.blob(input.iv, 'iv'),
+      });
+      if (result === 'vault-not-found') throw this.notFound();
+      if (result === 'item-not-found') throw this.itemNotFound();
+      return this.mapItem(result);
+    }
     if (input.label === null || input.value === null) {
       throw itemizeGraphqlError(
         'label and value cannot be null',
@@ -409,9 +509,11 @@ export class VaultService {
     userId: number,
     vaultId: number,
     itemId: number,
+    masterPassword?: string,
   ): Promise<DeleteWorkspaceVaultItemResult> {
     this.id(vaultId);
     this.id(itemId);
+    await this.requireUnlockedWrite(userId, vaultId, masterPassword);
     const result = await this.vaults.deleteItem(userId, vaultId, itemId);
     if (result === 'vault-not-found') throw this.notFound();
     if (result === 'item-not-found') throw this.itemNotFound();
@@ -422,8 +524,10 @@ export class VaultService {
     userId: number,
     vaultId: number,
     itemIds: number[],
+    masterPassword?: string,
   ): Promise<WorkspaceVaultItemsResult> {
     this.id(vaultId);
+    await this.requireUnlockedWrite(userId, vaultId, masterPassword);
     if (
       itemIds.length > 500 ||
       new Set(itemIds).size !== itemIds.length
@@ -444,8 +548,13 @@ export class VaultService {
         { field: 'itemIds', reason: 'ITEM_SET_MISMATCH' },
       );
     }
+    const aggregate = await this.vaults.find(userId, vaultId);
+    const v2 = aggregate ? this.isV2(aggregate.vault) : false;
     return {
       items: result.map((row) => {
+        if (v2 || Number(row.crypto_version ?? 1) >= 2) {
+          return this.mapItem(row);
+        }
         try {
           return this.mapItem(
             row,
@@ -463,8 +572,154 @@ export class VaultService {
     };
   }
 
+  async migrateToV2(
+    userId: number,
+    vaultId: number,
+    input: MigrateWorkspaceVaultToV2Input,
+    currentPassword?: string,
+  ): Promise<WorkspaceVault> {
+    this.id(vaultId);
+    const aggregate = await this.vaults.find(userId, vaultId);
+    if (!aggregate) throw this.notFound();
+    if (this.isV2(aggregate.vault)) {
+      throw itemizeGraphqlError(
+        'Vault is already enrolled',
+        'BAD_USER_INPUT',
+        { reason: 'VAULT_ALREADY_ENROLLED' },
+      );
+    }
+    if (aggregate.vault.is_locked) {
+      if (!aggregate.vault.master_password_hash) throw this.invalidLockState();
+      if (!currentPassword) {
+        throw itemizeGraphqlError(
+          'Current password is required',
+          'BAD_USER_INPUT',
+          { reason: 'CURRENT_PASSWORD_REQUIRED', field: 'currentPassword' },
+        );
+      }
+      await this.verifyMasterPassword(
+        userId,
+        vaultId,
+        aggregate.vault.master_password_hash,
+        currentPassword,
+      );
+    }
+    const kdf = this.kdfInput({
+      kdfSalt: input.kdfSalt,
+      kdfMemoryKiB: input.kdfMemoryKiB,
+      kdfIterations: input.kdfIterations,
+      kdfParallelism: input.kdfParallelism,
+    });
+    const items = input.items.map((item) => ({
+      id: this.id(item.id),
+      ciphertext: this.blob(item.ciphertext, 'ciphertext'),
+      iv: this.blob(item.iv, 'iv'),
+    }));
+    const result = await this.vaults.enrollV2(userId, vaultId, {
+      encryptionSalt: kdf.salt,
+      kdfMemoryKiB: kdf.memoryKiB,
+      kdfIterations: kdf.iterations,
+      kdfParallelism: kdf.parallelism,
+      wrappedVek: this.wrappedKey(input.wrappedVek, 'wrappedVek'),
+      wrappedVekRecovery: input.wrappedVekRecovery
+        ? this.wrappedKey(input.wrappedVekRecovery, 'wrappedVekRecovery')
+        : null,
+      items,
+    });
+    if (result === 'vault-not-found') throw this.notFound();
+    if (result === 'already-enrolled') {
+      throw itemizeGraphqlError(
+        'Vault is already enrolled',
+        'BAD_USER_INPUT',
+        { reason: 'VAULT_ALREADY_ENROLLED' },
+      );
+    }
+    if (result === 'item-set-mismatch') {
+      throw itemizeGraphqlError(
+        'Migrated items must exactly match the vault items',
+        'BAD_USER_INPUT',
+        { reason: 'ITEM_SET_MISMATCH' },
+      );
+    }
+    return this.map(
+      result.vault,
+      result.items.map((item) => this.mapItem(item)),
+      false,
+    );
+  }
+
+  async rewrap(
+    userId: number,
+    vaultId: number,
+    input: RewrapWorkspaceVaultInput,
+  ): Promise<WorkspaceVaultPasswordResult> {
+    this.id(vaultId);
+    const result = await this.vaults.rewrapV2(
+      userId,
+      vaultId,
+      this.wrappedKey(input.wrappedVek, 'wrappedVek'),
+      input.wrappedVekRecovery
+        ? this.wrappedKey(input.wrappedVekRecovery, 'wrappedVekRecovery')
+        : null,
+    );
+    if (result === 'vault-not-found') throw this.notFound();
+    if (result === 'not-enrolled') {
+      throw itemizeGraphqlError(
+        'Vault is not a zero-knowledge vault',
+        'BAD_USER_INPUT',
+        { reason: 'VAULT_NOT_ENROLLED' },
+      );
+    }
+    return {
+      vaultId: result.id,
+      isLocked: result.is_locked,
+      encryptionSalt: result.encryption_salt,
+    };
+  }
+
+  private async requireUnlockedWrite(
+    userId: number,
+    vaultId: number,
+    masterPassword?: string,
+  ): Promise<void> {
+    const aggregate = await this.vaults.find(userId, vaultId);
+    if (!aggregate) throw this.notFound();
+    if (this.isV2(aggregate.vault)) return;
+    if (!aggregate.vault.is_locked) return;
+    if (!aggregate.vault.master_password_hash) throw this.invalidLockState();
+    if (!masterPassword) {
+      throw itemizeGraphqlError(
+        'Master password is required to change a locked vault',
+        'UNAUTHENTICATED',
+        { reason: 'VAULT_LOCKED' },
+      );
+    }
+    await this.verifyMasterPassword(
+      userId,
+      vaultId,
+      aggregate.vault.master_password_hash,
+      masterPassword,
+    );
+  }
+
+  private async verifyMasterPassword(
+    userId: number,
+    vaultId: number,
+    passwordHash: string,
+    masterPassword: string,
+  ): Promise<void> {
+    this.unlockAttempts.consume(userId, vaultId);
+    if (!(await bcrypt.compare(this.passwordCandidate(masterPassword), passwordHash))) {
+      throw this.invalidMasterPassword();
+    }
+    this.unlockAttempts.reset(userId, vaultId);
+  }
+
   private mapAggregate(value: VaultAggregate): WorkspaceVault {
     const items = value.items.map((item) => {
+      if (Number(item.crypto_version ?? 1) >= 2) {
+        return this.mapItem(item);
+      }
       let decrypted = '[DECRYPTION_ERROR]';
       try {
         decrypted = decryptVaultValue(item.encrypted_value, item.iv);
@@ -476,16 +731,91 @@ export class VaultService {
     return this.map(value.vault, items, false);
   }
 
-  private mapItem(row: VaultItemRow, value: string): WorkspaceVaultItem {
+  private mapItem(row: VaultItemRow, value?: string): WorkspaceVaultItem {
+    const cryptoVersion = Number(row.crypto_version ?? 1);
+    if (cryptoVersion >= 2 || value === undefined) {
+      return {
+        id: row.id,
+        vaultId: row.vault_id,
+        itemType: row.item_type,
+        label: cryptoVersion >= 2 ? '' : row.label,
+        value: cryptoVersion >= 2 ? '' : (value ?? ''),
+        ciphertext: row.encrypted_value,
+        iv: row.iv,
+        cryptoVersion,
+        orderIndex: row.order_index,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      };
+    }
     return {
       id: row.id,
       vaultId: row.vault_id,
       itemType: row.item_type,
       label: row.label,
       value,
+      ciphertext: null,
+      iv: null,
+      cryptoVersion,
       orderIndex: row.order_index,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+    };
+  }
+
+  private v1ItemWrite(input: CreateWorkspaceVaultItemInput): {
+    row: {
+      itemType: string;
+      label: string;
+      encryptedValue: string;
+      iv: string;
+      cryptoVersion: number;
+    };
+    plaintext: string;
+  } {
+    const value = this.itemInput(input);
+    const encrypted = encryptVaultValue(value.value);
+    return {
+      row: {
+        itemType: value.itemType,
+        label: value.label,
+        encryptedValue: encrypted.encrypted,
+        iv: encrypted.iv,
+        cryptoVersion: 1,
+      },
+      plaintext: value.value,
+    };
+  }
+
+  private v2ItemWrite(input: CreateWorkspaceVaultItemInput): {
+    row: {
+      itemType: string;
+      label: string;
+      encryptedValue: string;
+      iv: string;
+      cryptoVersion: number;
+    };
+    plaintext?: string;
+  } {
+    if (!['key_value', 'secure_note'].includes(input.itemType)) {
+      throw itemizeGraphqlError('Unsupported vault item type', 'BAD_USER_INPUT', {
+        field: 'itemType',
+      });
+    }
+    if (!input.ciphertext || !input.iv) {
+      throw itemizeGraphqlError(
+        'ciphertext and iv are required',
+        'BAD_USER_INPUT',
+      );
+    }
+    return {
+      row: {
+        itemType: input.itemType,
+        label: '',
+        encryptedValue: this.blob(input.ciphertext, 'ciphertext'),
+        iv: this.blob(input.iv, 'iv'),
+        cryptoVersion: 2,
+      },
     };
   }
 
@@ -498,6 +828,12 @@ export class VaultService {
       throw itemizeGraphqlError('Unsupported vault item type', 'BAD_USER_INPUT', {
         field: 'itemType',
       });
+    }
+    if (input.label == null || input.value == null) {
+      throw itemizeGraphqlError(
+        'label and value are required',
+        'BAD_USER_INPUT',
+      );
     }
     return {
       itemType: input.itemType,
@@ -538,6 +874,10 @@ export class VaultService {
       zIndex: row.z_index,
       isLocked: row.is_locked,
       encryptionSalt: row.is_locked ? row.encryption_salt : null,
+      cryptoVersion: Number(row.crypto_version ?? 1),
+      kdf: this.mapKdf(row),
+      wrappedVek: row.wrapped_vek ?? null,
+      wrappedVekRecovery: row.wrapped_vek_recovery ?? null,
       itemCount: Number(row.item_count ?? items.length),
       items,
       requiresUnlock,
@@ -547,6 +887,90 @@ export class VaultService {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
+  }
+
+  private isV2(row: VaultRow): boolean {
+    return Number(row.crypto_version ?? 1) >= 2;
+  }
+
+  private mapKdf(row: VaultRow) {
+    if (!this.isV2(row) || !row.encryption_salt) return null;
+    return {
+      algorithm: row.kdf_algorithm ?? 'argon2id',
+      salt: row.encryption_salt,
+      memoryKiB: Number(row.kdf_memory_kib ?? 65536),
+      iterations: Number(row.kdf_iterations ?? 3),
+      parallelism: Number(row.kdf_parallelism ?? 1),
+    };
+  }
+
+  private kdfInput(input: {
+    kdfSalt?: string;
+    kdfMemoryKiB?: number;
+    kdfIterations?: number;
+    kdfParallelism?: number;
+  }): {
+    salt: string;
+    memoryKiB: number;
+    iterations: number;
+    parallelism: number;
+  } {
+    if (!input.kdfSalt) {
+      throw itemizeGraphqlError('kdfSalt is required', 'BAD_USER_INPUT', {
+        field: 'kdfSalt',
+      });
+    }
+    const memoryKiB = this.integer(input.kdfMemoryKiB ?? 0, 'kdfMemoryKiB');
+    const iterations = this.integer(input.kdfIterations ?? 0, 'kdfIterations');
+    const parallelism = this.integer(
+      input.kdfParallelism ?? 0,
+      'kdfParallelism',
+    );
+    if (memoryKiB < 8 || memoryKiB > 1_048_576) {
+      throw itemizeGraphqlError(
+        'kdfMemoryKiB is out of range',
+        'BAD_USER_INPUT',
+        { field: 'kdfMemoryKiB' },
+      );
+    }
+    if (iterations < 1 || iterations > 16) {
+      throw itemizeGraphqlError(
+        'kdfIterations is out of range',
+        'BAD_USER_INPUT',
+        { field: 'kdfIterations' },
+      );
+    }
+    if (parallelism < 1 || parallelism > 4) {
+      throw itemizeGraphqlError(
+        'kdfParallelism is out of range',
+        'BAD_USER_INPUT',
+        { field: 'kdfParallelism' },
+      );
+    }
+    return {
+      salt: this.blob(input.kdfSalt, 'kdfSalt'),
+      memoryKiB,
+      iterations,
+      parallelism,
+    };
+  }
+
+  private wrappedKey(value: string | undefined, field: string): string {
+    if (!value || !value.includes('.')) {
+      throw itemizeGraphqlError(`${field} is invalid`, 'BAD_USER_INPUT', {
+        field,
+      });
+    }
+    return this.blob(value, field);
+  }
+
+  private blob(value: string, field: string): string {
+    if (typeof value !== 'string' || value.length < 8 || value.length > 2_000_000) {
+      throw itemizeGraphqlError(`${field} is invalid`, 'BAD_USER_INPUT', {
+        field,
+      });
+    }
+    return value;
   }
 
   private text(value: string, field: string, max: number): string {

@@ -2,12 +2,24 @@ import { Field, Float, Int, ObjectType } from '@nestjs/graphql';
 import { PageInfo } from '../common/pagination';
 
 @ObjectType()
+export class VaultKdfParams {
+  @Field() algorithm: string;
+  @Field() salt: string;
+  @Field(() => Int) memoryKiB: number;
+  @Field(() => Int) iterations: number;
+  @Field(() => Int) parallelism: number;
+}
+
+@ObjectType()
 export class WorkspaceVaultItem {
   @Field(() => Int) id: number;
   @Field(() => Int) vaultId: number;
   @Field() itemType: string;
   @Field() label: string;
   @Field() value: string;
+  @Field(() => String, { nullable: true }) ciphertext: string | null;
+  @Field(() => String, { nullable: true }) iv: string | null;
+  @Field(() => Int) cryptoVersion: number;
   @Field(() => Int) orderIndex: number;
   @Field() createdAt: Date;
   @Field() updatedAt: Date;
@@ -27,6 +39,10 @@ export class WorkspaceVault {
   @Field(() => Int) zIndex: number;
   @Field() isLocked: boolean;
   @Field(() => String, { nullable: true }) encryptionSalt: string | null;
+  @Field(() => Int) cryptoVersion: number;
+  @Field(() => VaultKdfParams, { nullable: true }) kdf: VaultKdfParams | null;
+  @Field(() => String, { nullable: true }) wrappedVek: string | null;
+  @Field(() => String, { nullable: true }) wrappedVekRecovery: string | null;
   @Field(() => Int) itemCount: number;
   @Field(() => [WorkspaceVaultItem]) items: WorkspaceVaultItem[];
   @Field() requiresUnlock: boolean;

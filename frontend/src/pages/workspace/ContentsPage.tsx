@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
@@ -74,6 +75,13 @@ import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { ShareModal } from '@/components/ShareModal';
+import { appendShareFragment } from '@/lib/vaultZkCrypto';
+import {
+  decryptZkeVaultItems,
+  encryptVaultShareSnapshot,
+  isVaultZke,
+} from '@/lib/vaultZkSession';
+import { enableVaultSharingViaGraphql, getVaultViaGraphql } from '@/services/workspaceVaultGraphql';
 
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
 type SortOption = 'updated' | 'created' | 'title';
@@ -438,8 +446,24 @@ export function ContentsPage() {
   }, [vaults]);
 
   const enableSelectedVaultSharing = useCallback(async (id: number) => {
-    const result = await shareVault(id, token);
-    setVaults((current) => current.map((vault) => vault.id === id
+    const current = vaults.find((vault) => vault.id === id);
+    let result: { shareToken: string; shareUrl: string };
+    if (current && isVaultZke(current)) {
+      const full = await getVaultViaGraphql(id);
+      const items = await decryptZkeVaultItems(full);
+      const snapshot = await encryptVaultShareSnapshot(id, items);
+      const shared = await enableVaultSharingViaGraphql(id, {
+        ciphertext: snapshot.ciphertext,
+        iv: snapshot.iv,
+      });
+      result = {
+        shareToken: shared.shareToken,
+        shareUrl: appendShareFragment(shared.shareUrl, snapshot.shareSecret),
+      };
+    } else {
+      result = await shareVault(id, token);
+    }
+    setVaults((currentVaults) => currentVaults.map((vault) => vault.id === id
       ? {
           ...vault,
           is_public: true,
@@ -448,7 +472,7 @@ export function ContentsPage() {
         }
       : vault));
     return result;
-  }, [token]);
+  }, [token, vaults]);
 
   const disableSelectedVaultSharing = useCallback(async (id: number) => {
     await unshareVault(id, token);
@@ -708,8 +732,10 @@ export function ContentsPage() {
           <span className="text-sm text-muted-foreground">{totalItems} {totalItems === 1 ? 'item' : 'items'}</span>
         </div>
 
+        <Card>
+          <CardContent className="p-0">
         {loading ? (
-          <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4' : 'space-y-2'}>
+          <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4' : 'space-y-2'} p-6`}>
             {[...Array(8)].map((_, i) => <Skeleton key={i} className={viewMode === 'grid' ? 'h-32' : 'h-16'} />)}
           </div>
         ) : totalItems === 0 ? (
@@ -717,6 +743,7 @@ export function ContentsPage() {
             icon={LayoutGrid}
             title="No content"
             description="Get started by creating content"
+            className="p-12"
             action={
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -736,7 +763,7 @@ export function ContentsPage() {
             }
           />
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6 p-6">
             {(typeFilter === 'all' || typeFilter === 'list') && filteredAndSortedLists.length > 0 && (
               <div>
                 <h2 className="text-lg font-medium mb-4 flex items-center gap-2"><CheckSquare className="h-5 w-5 text-muted-foreground" /> Lists</h2>
@@ -844,6 +871,8 @@ export function ContentsPage() {
             )}
           </div>
         )}
+          </CardContent>
+        </Card>
         </PageSurface>
       </PageContainer>
 
@@ -869,7 +898,7 @@ export function ContentsPage() {
                 shareUrl: `${window.location.origin}/shared/vault/${vaultToShare.share_token}`,
               }
             : undefined}
-          isLocked={vaultToShare.is_locked}
+          isLocked={vaultToShare.is_locked && !isVaultZke(vaultToShare)}
           showWarning
           autoGenerate={false}
         />

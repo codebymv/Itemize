@@ -6,6 +6,8 @@ import { NotAvailableCTA } from '../components/NotAvailableCTA';
 import { useToast } from '../hooks/use-toast';
 import { Spinner } from '../components/ui/Spinner';
 import { getSharedVault } from '../services/api';
+import { readShareFragment } from '../lib/vaultZkCrypto';
+import { runVaultZk } from '../lib/vaultZkClient';
 
 const getApiStatus = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
@@ -27,6 +29,8 @@ interface SharedVaultData {
   updated_at: string;
   items: SharedVaultItem[];
   is_shared: boolean;
+  crypto_version?: number;
+  snapshot?: { ciphertext: string; iv: string } | null;
 }
 
 const SharedVaultPage: React.FC = () => {
@@ -49,17 +53,46 @@ const SharedVaultPage: React.FC = () => {
       }
 
       try {
-        const response = await getSharedVault(token);
-        setVaultData(response);
+        const response = await getSharedVault(token) as SharedVaultData;
+        if ((response.crypto_version ?? 1) >= 2) {
+          const fragment = readShareFragment(window.location.hash);
+          if (!fragment || !response.snapshot) {
+            setError(
+              'This link is missing the secret fragment. Itemize cannot recover it.',
+            );
+            setLoading(false);
+            return;
+          }
+          const items = await runVaultZk<Array<{
+            item_type: SharedVaultItem['item_type'];
+            label: string;
+            value: string;
+          }>>({
+            op: 'decryptShare',
+            shareSecret: fragment,
+            blob: response.snapshot,
+          });
+          setVaultData({
+            ...response,
+            items: items.map((item, index) => ({
+              id: index + 1,
+              item_type: item.item_type,
+              label: item.label,
+              value: item.value,
+              order_index: index,
+            })),
+          });
+        } else {
+          setVaultData(response);
+        }
         
         // Set page title
         document.title = `${response.title} on Itemize`;
-        
-        // Set meta description
         const metaDescription = document.querySelector('meta[name="description"]');
         if (metaDescription) {
-          metaDescription.setAttribute('content', 
-            `View this encrypted vault shared from Itemize.cloud. Contains ${response.items.length} secure items.`
+          metaDescription.setAttribute(
+            'content',
+            'Shared vault. Treat this link like the secrets it contains.',
           );
         }
       } catch (err) {

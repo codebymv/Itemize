@@ -78,12 +78,12 @@ const shareConfig = {
   },
   vault: {
     label: 'Vault',
-    description: 'Create a shareable link for your encrypted vault',
+    description: 'Create a shareable link. The decryption key stays in the URL fragment.',
     icon: KeyRound,
     iconClassName: 'text-blue-600',
-    shareHelp: "Anyone with this link can view this vault's contents",
+    shareHelp: 'Anyone with the full URL, including the #fragment, can read a snapshot of this vault. Itemize cannot recover a link copied without the fragment.',
     shareSuccessTitle: 'Vault shared successfully',
-    shareSuccessDescription: 'Anyone with this link can view your vault contents.',
+    shareSuccessDescription: 'Copy the full link. The fragment after # is the decryption key and is never sent to Itemize.',
     revokeDescription: 'This vault is no longer publicly accessible.'
   }
 } as const;
@@ -230,8 +230,7 @@ export const ShareModal = <TId extends string | number>({
               <ShieldAlert className="h-4 w-4" />
               <AlertTitle>Locked Vault</AlertTitle>
               <AlertDescription>
-                This vault is protected with a master password. Locked vaults cannot be shared for security reasons.
-                Remove the master password protection first if you want to share this vault.
+                This vault is locked. Unlock it on the canvas first so a snapshot can be encrypted on your device.
               </AlertDescription>
             </Alert>
           )}
@@ -241,11 +240,11 @@ export const ShareModal = <TId extends string | number>({
               <AlertTriangle className="h-4 w-4 text-amber-600" />
               <AlertTitle className="text-amber-800 dark:text-amber-400">Security Warning</AlertTitle>
               <AlertDescription className="text-amber-700 dark:text-amber-300">
-                <p className="mb-2">You are about to share sensitive encrypted data. Anyone with this link will be able to view the contents of this vault.</p>
+                <p className="mb-2">You are about to publish a snapshot of this vault. Anyone with the full URL, including the fragment after #, can read it. Itemize never sees that fragment.</p>
                 <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li>Shared data will be decrypted for viewers</li>
-                  <li>Consider if this data should be shared</li>
-                  <li>You can revoke access anytime</li>
+                  <li>Copy the complete link. A link without # is useless ciphertext</li>
+                  <li>Treat the URL like the secrets themselves</li>
+                  <li>Revoke the link as soon as it is no longer needed</li>
                 </ul>
               </AlertDescription>
             </Alert>

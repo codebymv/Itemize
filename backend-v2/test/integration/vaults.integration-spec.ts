@@ -227,15 +227,41 @@ describe('Vault GraphQL PostgreSQL lifecycle', () => {
   });
 
   it('atomically adds, bulk imports, updates, exact-set reorders, and deletes items', async () => {
-    const added = await mutation(
+    const denied = await mutation(
       memberToken,
       `mutation Add($vaultId: Int!, $input: CreateWorkspaceVaultItemInput!) {
         addWorkspaceVaultItem(vaultId: $vaultId, input: $input) {
+          id
+        }
+      }`,
+      {
+        vaultId,
+        input: { itemType: 'secure_note', label: 'Note', value: '' },
+      },
+    ).expect(200);
+    expect(denied.body.errors[0].extensions).toMatchObject({
+      code: 'UNAUTHENTICATED',
+      reason: 'VAULT_LOCKED',
+    });
+
+    const added = await mutation(
+      memberToken,
+      `mutation Add(
+        $vaultId: Int!
+        $input: CreateWorkspaceVaultItemInput!
+        $masterPassword: String
+      ) {
+        addWorkspaceVaultItem(
+          vaultId: $vaultId
+          input: $input
+          masterPassword: $masterPassword
+        ) {
           id vaultId itemType label value orderIndex
         }
       }`,
       {
         vaultId,
+        masterPassword: 'password1',
         input: { itemType: 'secure_note', label: ' Note ', value: '' },
       },
     ).expect(200);
@@ -252,14 +278,20 @@ describe('Vault GraphQL PostgreSQL lifecycle', () => {
       `mutation Bulk(
         $vaultId: Int!
         $items: [CreateWorkspaceVaultItemInput!]!
+        $masterPassword: String
       ) {
-        addWorkspaceVaultItems(vaultId: $vaultId, items: $items) {
+        addWorkspaceVaultItems(
+          vaultId: $vaultId
+          items: $items
+          masterPassword: $masterPassword
+        ) {
           count
           items { id value orderIndex }
         }
       }`,
       {
         vaultId,
+        masterPassword: 'password1',
         items: [
           { itemType: 'key_value', label: 'A', value: 'one' },
           { itemType: 'key_value', label: 'B', value: 'two' },
@@ -288,13 +320,17 @@ describe('Vault GraphQL PostgreSQL lifecycle', () => {
 
     const reordered = await mutation(
       memberToken,
-      `mutation Reorder($vaultId: Int!, $itemIds: [Int!]!) {
-        reorderWorkspaceVaultItems(vaultId: $vaultId, itemIds: $itemIds) {
+      `mutation Reorder($vaultId: Int!, $itemIds: [Int!]!, $masterPassword: String) {
+        reorderWorkspaceVaultItems(
+          vaultId: $vaultId
+          itemIds: $itemIds
+          masterPassword: $masterPassword
+        ) {
           count
           items { id orderIndex value }
         }
       }`,
-      { vaultId, itemIds: order },
+      { vaultId, itemIds: order, masterPassword: 'password1' },
     ).expect(200);
     expect(reordered.body.data.reorderWorkspaceVaultItems.items.map(
       (item: { id: number }) => Number(item.id),
@@ -303,7 +339,11 @@ describe('Vault GraphQL PostgreSQL lifecycle', () => {
     const mismatch = await mutation(
       memberToken,
       `mutation {
-        reorderWorkspaceVaultItems(vaultId: ${vaultId}, itemIds: [${originalId}]) {
+        reorderWorkspaceVaultItems(
+          vaultId: ${vaultId}
+          itemIds: [${originalId}]
+          masterPassword: "password1"
+        ) {
           count
         }
       }`,
@@ -320,6 +360,7 @@ describe('Vault GraphQL PostgreSQL lifecycle', () => {
           vaultId: ${vaultId}
           itemId: ${addedId}
           input: $input
+          masterPassword: "password1"
         ) { id label value }
       }`,
       { input: { label: 'Updated', value: 'new-secret' } },
@@ -333,7 +374,11 @@ describe('Vault GraphQL PostgreSQL lifecycle', () => {
     const removed = await mutation(
       memberToken,
       `mutation {
-        deleteWorkspaceVaultItem(vaultId: ${vaultId}, itemId: ${addedId}) {
+        deleteWorkspaceVaultItem(
+          vaultId: ${vaultId}
+          itemId: ${addedId}
+          masterPassword: "password1"
+        ) {
           deletedId
         }
       }`,
@@ -629,5 +674,74 @@ describe('Vault GraphQL PostgreSQL lifecycle', () => {
       `mutation { deleteWorkspaceVault(id: ${createdId}) { deletedId } }`,
     ).expect(200);
     expect(removed.body.data.deleteWorkspaceVault.deletedId).toBe(createdId);
+  });
+
+  it('stores v2 blobs without decrypting them on the server', async () => {
+    const created = await mutation(
+      memberToken,
+      `mutation Create($input: CreateWorkspaceVaultInput!) {
+        createWorkspaceVault(input: $input) {
+          id cryptoVersion wrappedVek isLocked
+        }
+      }`,
+      {
+        input: {
+          title: 'ZKE vault',
+          positionX: 1,
+          positionY: 2,
+          cryptoVersion: 2,
+          kdfSalt: 'c2FsdHNhbHRzYWx0c2FsdA==',
+          kdfMemoryKiB: 32,
+          kdfIterations: 1,
+          kdfParallelism: 1,
+          wrappedVek: 'dGVzdGl2dGVzdGl2.dGVzdGNpcGhlcnRleHRmb3J0ZXN0',
+        },
+      },
+    ).expect(200);
+    expect(created.body.errors).toBeUndefined();
+    const zkeId = Number(created.body.data.createWorkspaceVault.id);
+    expect(created.body.data.createWorkspaceVault).toMatchObject({
+      cryptoVersion: 2,
+      isLocked: true,
+    });
+
+    const added = await mutation(
+      memberToken,
+      `mutation Add($vaultId: Int!, $input: CreateWorkspaceVaultItemInput!) {
+        addWorkspaceVaultItem(vaultId: $vaultId, input: $input) {
+          label value ciphertext iv cryptoVersion
+        }
+      }`,
+      {
+        vaultId: zkeId,
+        input: {
+          itemType: 'key_value',
+          ciphertext: 'Y2lwaGVydGV4dGZvcnZhdWx0aXRlbQ',
+          iv: 'MTIzNDU2Nzg5MDEy',
+        },
+      },
+    ).expect(200);
+    expect(added.body.errors).toBeUndefined();
+    expect(added.body.data.addWorkspaceVaultItem).toMatchObject({
+      label: '',
+      value: '',
+      ciphertext: 'Y2lwaGVydGV4dGZvcnZhdWx0aXRlbQ',
+      cryptoVersion: 2,
+    });
+
+    const detail = await query(
+      memberToken,
+      `query { workspaceVault(id: ${zkeId}) {
+        cryptoVersion items { value ciphertext }
+      } }`,
+    ).expect(200);
+    expect(detail.body.data.workspaceVault.items[0].value).toBe('');
+    expect(detail.body.data.workspaceVault.items[0].ciphertext).toBe(
+      'Y2lwaGVydGV4dGZvcnZhdWx0aXRlbQ',
+    );
+    await mutation(
+      memberToken,
+      `mutation { deleteWorkspaceVault(id: ${zkeId}) { deletedId } }`,
+    );
   });
 });

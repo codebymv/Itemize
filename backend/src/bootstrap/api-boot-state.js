@@ -1,4 +1,4 @@
-const REQUIRED_PRODUCTION_MIGRATION = '053_chat_widget_graphql';
+const REQUIRED_PRODUCTION_MIGRATION = '054_vault_zero_knowledge';
 
 function createApiBootState() {
     return {

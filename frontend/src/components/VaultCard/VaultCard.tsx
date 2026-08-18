@@ -157,6 +157,9 @@ export const VaultCard: React.FC<VaultCardProps> = ({
     isVaultLocked,
     isUnlockedForSession,
     isUnlocking,
+    needsEnrollment,
+    recoveryKit,
+    dismissRecoveryKit,
     masterPasswordInput,
     setMasterPasswordInput,
     newMasterPasswordInput,
@@ -411,7 +414,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                         <Lock className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
                         {isVaultLocked ? 'Change Password' : 'Add Password'}
                       </DropdownMenuItem>
-                      {isVaultLocked && (
+                      {isVaultLocked && !needsEnrollment && (
                         <DropdownMenuItem
                           onClick={() => openSecurityDialog('remove-password')}
                           className="group/menu font-raleway"
@@ -499,6 +502,9 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                       onPaste={newItemType === 'key_value' ? handleLabelPaste : undefined}
                       placeholder={newItemType === 'key_value' ? "KEY_NAME (paste .env to bulk import)" : "Note title"}
                       className="h-8 font-mono text-sm flex-1"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
                       autoFocus
                     />
                   </div>
@@ -508,6 +514,9 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                       onChange={(e) => setNewItemValue(e.target.value)}
                       placeholder="Value"
                       className="h-8 font-mono text-sm mb-2"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
                     />
                   ) : (
                     <textarea
@@ -515,6 +524,9 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                       onChange={(e) => setNewItemValue(e.target.value)}
                       placeholder="Secure note content..."
                       className="w-full p-2 rounded-md border bg-background font-mono text-sm min-h-[80px] mb-2"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
                     />
                   )}
                   <div className="flex justify-end gap-1">
@@ -536,14 +548,20 @@ export const VaultCard: React.FC<VaultCardProps> = ({
               {isVaultLocked && !isUnlockedForSession ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Lock className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">This vault is password protected</p>
+                  <p className="text-sm">
+                    {needsEnrollment
+                      ? 'Set a vault password. Itemize will not be able to recover it.'
+                      : 'This vault is password protected'}
+                  </p>
                   <Button
                     size="sm"
                     variant="outline"
                     className="mt-3"
-                    onClick={() => openSecurityDialog('unlock')}
+                    onClick={() =>
+                      openSecurityDialog(needsEnrollment ? 'set-password' : 'unlock')
+                    }
                   >
-                    Open Vault
+                    {needsEnrollment ? 'Protect Vault' : 'Open Vault'}
                   </Button>
                 </div>
               ) : isLoadingItems ? (
@@ -622,10 +640,10 @@ export const VaultCard: React.FC<VaultCardProps> = ({
             </DialogTitle>
             <DialogDescription>
               {securityDialogMode === 'unlock'
-                ? 'Enter the master password to view this vault.'
+                ? 'Enter the vault password. It never leaves this device.'
                 : securityDialogMode === 'remove-password'
                   ? 'Enter the current master password.'
-                  : 'Master passwords must be at least 8 characters.'}
+                  : 'This password cannot be reset by email. Save the emergency kit.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -641,7 +659,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                   ? 'Master password'
                   : 'Current password'
               }
-              autoComplete="current-password"
+              autoComplete="off"
               autoFocus
               onKeyDown={(event) => {
                 if (event.key === 'Enter') void handleSecuritySubmit();
@@ -659,7 +677,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                   setNewMasterPasswordInput(event.target.value)
                 }
                 placeholder="New password"
-                autoComplete="new-password"
+                autoComplete="off"
                 autoFocus={securityDialogMode === 'set-password'}
               />
               <Input
@@ -669,7 +687,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                   setConfirmMasterPasswordInput(event.target.value)
                 }
                 placeholder="Confirm new password"
-                autoComplete="new-password"
+                autoComplete="off"
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') void handleSecuritySubmit();
                 }}
@@ -688,6 +706,28 @@ export const VaultCard: React.FC<VaultCardProps> = ({
             <Button onClick={() => void handleSecuritySubmit()} disabled={isUnlocking}>
               {isUnlocking ? <Spinner size="xs" /> : 'Continue'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={Boolean(recoveryKit)} onOpenChange={(open) => { if (!open) dismissRecoveryKit(); }}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Emergency kit</DialogTitle>
+            <DialogDescription>
+              Itemize cannot reset this vault password. Save this recovery secret now.
+            </DialogDescription>
+          </DialogHeader>
+          <Input readOnly value={recoveryKit ?? ''} autoComplete="off" />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (recoveryKit) void navigator.clipboard.writeText(recoveryKit);
+              }}
+            >
+              Copy
+            </Button>
+            <Button onClick={dismissRecoveryKit}>I saved it</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

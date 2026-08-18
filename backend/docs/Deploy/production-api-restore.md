@@ -12,7 +12,7 @@ That combination means deferred init obtained a Postgres pool, then threw **befo
 
 1. Railway logs for `itemize-backend-production-92ad`: search `Database-dependent API initialization failed`. The `error` field is the cause.
 2. Typical causes:
-   - `schema_migrations` missing, or required marker not recorded. Current boot requires `053_chat_widget_graphql`.
+   - `schema_migrations` missing, or required marker not recorded. Current boot requires `054_vault_zero_knowledge`.
    - Invalid `GRAPHQL_UPSTREAM_URL` thrown while creating HTTP proxies.
 3. Run `node backend/scripts/run-migrations.js --status` then `node backend/scripts/run-migrations.js` against production Postgres.
 4. Confirm `GRAPHQL_UPSTREAM_URL` is the private Nest origin (`http`/`https`, no credentials).

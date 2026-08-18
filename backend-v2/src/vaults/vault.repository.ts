@@ -16,7 +16,17 @@ export type VaultRow = {
   is_locked: boolean;
   encryption_salt: string | null;
   master_password_hash: string | null;
+  crypto_version: number;
+  kdf_algorithm: string | null;
+  kdf_memory_kib: number | null;
+  kdf_iterations: number | null;
+  kdf_parallelism: number | null;
+  wrapped_vek: string | null;
+  wrapped_vek_recovery: string | null;
   share_token: string | null;
+  share_token_hash: string | null;
+  share_snapshot_ciphertext: string | null;
+  share_snapshot_iv: string | null;
   is_public: boolean;
   shared_at: Date | null;
   created_at: Date;
@@ -31,6 +41,7 @@ export type VaultItemRow = {
   label: string;
   encrypted_value: string;
   iv: string;
+  crypto_version: number;
   order_index: number;
   created_at: Date;
   updated_at: Date;
@@ -50,6 +61,13 @@ export type VaultValue = {
   isLocked: boolean;
   encryptionSalt: string | null;
   masterPasswordHash: string | null;
+  cryptoVersion?: number;
+  kdfAlgorithm?: string | null;
+  kdfMemoryKiB?: number | null;
+  kdfIterations?: number | null;
+  kdfParallelism?: number | null;
+  wrappedVek?: string | null;
+  wrappedVekRecovery?: string | null;
 };
 
 export type UpdateVaultValue = Partial<
@@ -64,6 +82,7 @@ export type EncryptedVaultItemValue = {
   label: string;
   encryptedValue: string;
   iv: string;
+  cryptoVersion?: number;
 };
 
 export type SetVaultPasswordResult =
@@ -83,13 +102,32 @@ export type RemoveVaultPasswordResult =
 export type EnableVaultSharingResult =
   | 'vault-not-found'
   | 'vault-locked'
+  | 'snapshot-required'
+  | VaultRow;
+
+export type EnrollVaultV2Result =
+  | 'vault-not-found'
+  | 'already-enrolled'
+  | 'item-set-mismatch'
+  | VaultAggregate;
+
+export type RewrapVaultV2Result =
+  | 'vault-not-found'
+  | 'not-enrolled'
   | VaultRow;
 
 const VAULT_COLUMNS = `
   v.id, v.user_id, v.title, v.category, v.color_value,
   v.position_x, v.position_y, v.width, v.height, v.z_index,
   v.is_locked, v.encryption_salt, v.master_password_hash,
-  v.share_token, v.is_public, v.shared_at, v.created_at, v.updated_at`;
+  v.crypto_version, v.kdf_algorithm, v.kdf_memory_kib,
+  v.kdf_iterations, v.kdf_parallelism, v.wrapped_vek, v.wrapped_vek_recovery,
+  v.share_token, v.share_token_hash, v.share_snapshot_ciphertext, v.share_snapshot_iv,
+  v.is_public, v.shared_at, v.created_at, v.updated_at`;
+
+const ITEM_COLUMNS = `
+  id, vault_id, item_type, label, encrypted_value, iv, crypto_version,
+  order_index, created_at, updated_at`;
 
 @Injectable()
 export class VaultRepository {
@@ -143,8 +181,7 @@ export class VaultRepository {
       );
       if (!vault.rows[0]) return null;
       const items = await client.query<VaultItemRow>(
-        `SELECT id, vault_id, item_type, label, encrypted_value, iv,
-                order_index, created_at, updated_at
+        `SELECT ${ITEM_COLUMNS}
          FROM vault_items
          WHERE vault_id = $1
          ORDER BY order_index, id`,
@@ -160,8 +197,10 @@ export class VaultRepository {
     const result = await this.pool.query<VaultRow>(
       `INSERT INTO vaults (
          user_id, title, category, color_value, position_x, position_y,
-         width, height, z_index, is_locked, encryption_salt, master_password_hash
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+         width, height, z_index, is_locked, encryption_salt, master_password_hash,
+         crypto_version, kdf_algorithm, kdf_memory_kib, kdf_iterations,
+         kdf_parallelism, wrapped_vek, wrapped_vek_recovery
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
        RETURNING *, 0::int AS item_count`,
       [
         userId,
@@ -176,6 +215,13 @@ export class VaultRepository {
         value.isLocked,
         value.encryptionSalt,
         value.masterPasswordHash,
+        value.cryptoVersion ?? 1,
+        value.kdfAlgorithm ?? null,
+        value.kdfMemoryKiB ?? null,
+        value.kdfIterations ?? null,
+        value.kdfParallelism ?? null,
+        value.wrappedVek ?? null,
+        value.wrappedVekRecovery ?? null,
       ],
     );
     return result.rows[0];
@@ -293,21 +339,41 @@ export class VaultRepository {
     userId: number,
     vaultId: number,
     shareToken: string,
+    options?: {
+      shareTokenHash?: string;
+      snapshotCiphertext?: string;
+      snapshotIv?: string;
+    },
   ): Promise<EnableVaultSharingResult> {
     return this.transaction(async (client) => {
       const current = await this.lockOwnedVaultRow(client, userId, vaultId);
       if (!current) return 'vault-not-found';
-      if (current.is_locked) return 'vault-locked';
-      if (current.is_public && current.share_token) return current;
+      const isV2 = Number(current.crypto_version ?? 1) >= 2;
+      if (current.is_locked && !isV2) return 'vault-locked';
+      if (isV2 && !current.is_public && (!options?.snapshotCiphertext || !options.snapshotIv)) {
+        return 'snapshot-required';
+      }
+      if (current.is_public && (current.share_token || current.share_token_hash)) {
+        return current;
+      }
       const result = await client.query<VaultRow>(
         `UPDATE vaults
-         SET share_token = $1, is_public = TRUE,
-             shared_at = CURRENT_TIMESTAMP
+         SET share_token = $1, share_token_hash = $4,
+             share_snapshot_ciphertext = COALESCE($5, share_snapshot_ciphertext),
+             share_snapshot_iv = COALESCE($6, share_snapshot_iv),
+             is_public = TRUE, shared_at = CURRENT_TIMESTAMP
          WHERE id = $2 AND user_id = $3
          RETURNING *, (
            SELECT COUNT(*)::int FROM vault_items WHERE vault_id = vaults.id
          ) AS item_count`,
-        [shareToken, vaultId, userId],
+        [
+          shareToken,
+          vaultId,
+          userId,
+          options?.shareTokenHash ?? null,
+          options?.snapshotCiphertext ?? null,
+          options?.snapshotIv ?? null,
+        ],
       );
       return result.rows[0];
     });
@@ -325,7 +391,9 @@ export class VaultRepository {
       }
       const result = await client.query<VaultRow>(
         `UPDATE vaults
-         SET share_token = NULL, is_public = FALSE, shared_at = NULL
+         SET share_token = NULL, share_token_hash = NULL,
+             share_snapshot_ciphertext = NULL, share_snapshot_iv = NULL,
+             is_public = FALSE, shared_at = NULL
          WHERE id = $1 AND user_id = $2
          RETURNING *, (
            SELECT COUNT(*)::int FROM vault_items WHERE vault_id = vaults.id
@@ -345,19 +413,19 @@ export class VaultRepository {
       if (!(await this.lockOwnedVault(client, userId, vaultId))) return null;
       const inserted = await client.query<VaultItemRow>(
         `INSERT INTO vault_items (
-           vault_id, item_type, label, encrypted_value, iv, order_index
+           vault_id, item_type, label, encrypted_value, iv, crypto_version, order_index
          )
-         SELECT $1, $2, $3, $4, $5, COALESCE(MAX(order_index), -1) + 1
+         SELECT $1, $2, $3, $4, $5, $6, COALESCE(MAX(order_index), -1) + 1
          FROM vault_items
          WHERE vault_id = $1
-         RETURNING id, vault_id, item_type, label, encrypted_value, iv,
-                   order_index, created_at, updated_at`,
+         RETURNING ${ITEM_COLUMNS}`,
         [
           vaultId,
           value.itemType,
           value.label,
           value.encryptedValue,
           value.iv,
+          value.cryptoVersion ?? 1,
         ],
       );
       await this.touch(client, vaultId);
@@ -380,22 +448,22 @@ export class VaultRepository {
       const start = Number(order.rows[0].next_order);
       const result = await client.query<VaultItemRow>(
         `INSERT INTO vault_items (
-           vault_id, item_type, label, encrypted_value, iv, order_index
+           vault_id, item_type, label, encrypted_value, iv, crypto_version, order_index
          )
          SELECT $1, item.item_type, item.label, item.encrypted_value, item.iv,
-                $6 + item.ordinality - 1
-         FROM UNNEST($2::text[], $3::text[], $4::text[], $5::text[])
+                item.crypto_version, $7 + item.ordinality - 1
+         FROM UNNEST($2::text[], $3::text[], $4::text[], $5::text[], $6::int[])
               WITH ORDINALITY AS item(
-                item_type, label, encrypted_value, iv, ordinality
+                item_type, label, encrypted_value, iv, crypto_version, ordinality
               )
-         RETURNING id, vault_id, item_type, label, encrypted_value, iv,
-                   order_index, created_at, updated_at`,
+         RETURNING ${ITEM_COLUMNS}`,
         [
           vaultId,
           values.map((value) => value.itemType),
           values.map((value) => value.label),
           values.map((value) => value.encryptedValue),
           values.map((value) => value.iv),
+          values.map((value) => value.cryptoVersion ?? 1),
           start,
         ],
       );
@@ -419,8 +487,7 @@ export class VaultRepository {
         return 'vault-not-found';
       }
       const current = await client.query<VaultItemRow>(
-        `SELECT id, vault_id, item_type, label, encrypted_value, iv,
-                order_index, created_at, updated_at
+        `SELECT ${ITEM_COLUMNS}
          FROM vault_items
          WHERE id = $1 AND vault_id = $2
          FOR UPDATE`,
@@ -433,8 +500,7 @@ export class VaultRepository {
          SET label = $1, encrypted_value = $2, iv = $3,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $4 AND vault_id = $5
-         RETURNING id, vault_id, item_type, label, encrypted_value, iv,
-                   order_index, created_at, updated_at`,
+         RETURNING ${ITEM_COLUMNS}`,
         [
           value.label ?? row.label,
           value.encryptedValue ?? row.encrypted_value,
@@ -513,14 +579,111 @@ export class VaultRepository {
       );
       await this.touch(client, vaultId);
       const result = await client.query<VaultItemRow>(
-        `SELECT id, vault_id, item_type, label, encrypted_value, iv,
-                order_index, created_at, updated_at
+        `SELECT ${ITEM_COLUMNS}
          FROM vault_items
          WHERE vault_id = $1
          ORDER BY order_index, id`,
         [vaultId],
       );
       return result.rows;
+    });
+  }
+
+  async enrollV2(
+    userId: number,
+    vaultId: number,
+    value: {
+      encryptionSalt: string;
+      kdfMemoryKiB: number;
+      kdfIterations: number;
+      kdfParallelism: number;
+      wrappedVek: string;
+      wrappedVekRecovery: string | null;
+      items: Array<{ id: number; ciphertext: string; iv: string }>;
+    },
+  ): Promise<EnrollVaultV2Result> {
+    return this.transaction(async (client) => {
+      const current = await this.lockOwnedVaultRow(client, userId, vaultId);
+      if (!current) return 'vault-not-found';
+      if (Number(current.crypto_version ?? 1) >= 2) return 'already-enrolled';
+      const existing = await client.query<{ id: number }>(
+        `SELECT id FROM vault_items WHERE vault_id = $1 ORDER BY id FOR UPDATE`,
+        [vaultId],
+      );
+      const actual = existing.rows.map((row) => row.id).sort((a, b) => a - b);
+      const requested = value.items.map((item) => item.id).sort((a, b) => a - b);
+      if (
+        actual.length !== requested.length ||
+        actual.some((id, index) => id !== requested[index])
+      ) {
+        return 'item-set-mismatch';
+      }
+      for (const item of value.items) {
+        await client.query(
+          `UPDATE vault_items
+           SET label = '', encrypted_value = $1, iv = $2, crypto_version = 2,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $3 AND vault_id = $4`,
+          [item.ciphertext, item.iv, item.id, vaultId],
+        );
+      }
+      await client.query(
+        `UPDATE vaults
+         SET crypto_version = 2, is_locked = TRUE,
+             encryption_salt = $1, kdf_algorithm = 'argon2id',
+             kdf_memory_kib = $2, kdf_iterations = $3, kdf_parallelism = $4,
+             wrapped_vek = $5, wrapped_vek_recovery = $6,
+             master_password_hash = NULL, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $7 AND user_id = $8`,
+        [
+          value.encryptionSalt,
+          value.kdfMemoryKiB,
+          value.kdfIterations,
+          value.kdfParallelism,
+          value.wrappedVek,
+          value.wrappedVekRecovery,
+          vaultId,
+          userId,
+        ],
+      );
+      const enrolled = await client.query<VaultRow>(
+        `SELECT ${VAULT_COLUMNS}, (
+           SELECT COUNT(*)::int FROM vault_items WHERE vault_id = v.id
+         ) AS item_count
+         FROM vaults v
+         WHERE v.id = $1 AND v.user_id = $2`,
+        [vaultId, userId],
+      );
+      const items = await client.query<VaultItemRow>(
+        `SELECT ${ITEM_COLUMNS} FROM vault_items WHERE vault_id = $1
+         ORDER BY order_index, id`,
+        [vaultId],
+      );
+      return { vault: enrolled.rows[0], items: items.rows };
+    });
+  }
+
+  async rewrapV2(
+    userId: number,
+    vaultId: number,
+    wrappedVek: string,
+    wrappedVekRecovery: string | null,
+  ): Promise<RewrapVaultV2Result> {
+    return this.transaction(async (client) => {
+      const current = await this.lockOwnedVaultRow(client, userId, vaultId);
+      if (!current) return 'vault-not-found';
+      if (Number(current.crypto_version ?? 1) < 2) return 'not-enrolled';
+      const result = await client.query<VaultRow>(
+        `UPDATE vaults
+         SET wrapped_vek = $1, wrapped_vek_recovery = $2,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3 AND user_id = $4
+         RETURNING *, (
+           SELECT COUNT(*)::int FROM vault_items WHERE vault_id = vaults.id
+         ) AS item_count`,
+        [wrappedVek, wrappedVekRecovery, vaultId, userId],
+      );
+      return result.rows[0];
     });
   }
 

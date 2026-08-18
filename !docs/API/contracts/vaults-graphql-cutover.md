@@ -67,6 +67,10 @@ so password rotation/removal does not rewrite ciphertext. This preserves the
 existing storage contract while avoiding a false client-side or zero-knowledge
 encryption claim.
 
+**Successor (design only, not shipped):** client-side zero-knowledge encryption
+is specified in [`../../Security/vault-zero-knowledge-adr.md`](../../Security/vault-zero-knowledge-adr.md).
+Until that implementation lands, this section remains the live contract.
+
 ## Retained public boundary
 
 The explicit-consent vault-sharing model documented in
