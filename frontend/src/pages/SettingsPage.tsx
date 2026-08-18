@@ -532,7 +532,7 @@ export function SettingsPage() {
         <div className="flex items-center gap-2 ml-2 min-w-0 flex-1">
           <Settings className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <h1
-            className="text-base sm:text-xl font-semibold italic truncate font-raleway text-foreground"
+            className="text-base sm:text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
           >
             {activeNavItem.title.toUpperCase()}
           </h1>

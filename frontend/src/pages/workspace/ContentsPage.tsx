@@ -14,8 +14,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
@@ -71,6 +69,7 @@ import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { CreateItemModal } from '@/components/CreateItemModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -83,7 +82,8 @@ type ViewMode = 'grid' | 'list';
 export function ContentsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setHeaderContent } = useHeader();  const { token } = useAuthState();
+  const { setHeaderContent } = useHeader();
+  const { token } = useAuthState();
   const isMobile = useIsMobile();
 
   const {
@@ -591,17 +591,17 @@ export function ContentsPage() {
       <div className="flex items-center justify-between w-full min-w-0">
         <div className="flex items-center gap-2 ml-2">
           <LayoutGrid className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <h1 className="text-xl font-semibold italic truncate font-raleway text-foreground">
+          <h1 className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground">
             CONTENTS
           </h1>
         </div>
         <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">
           <div className="flex border rounded-md">
-            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" className="h-9 px-3 rounded-r-none" onClick={() => setViewMode('list')}>
-              <ListIcon className="h-4 w-4" />
-            </Button>
-            <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="sm" className="h-9 px-3 rounded-l-none" onClick={() => setViewMode('grid')}>
+            <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="sm" className="h-9 px-3 rounded-r-none" onClick={() => setViewMode('grid')}>
               <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" className="h-9 px-3 rounded-l-none" onClick={() => setViewMode('list')}>
+              <ListIcon className="h-4 w-4" />
             </Button>
           </div>
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -620,9 +620,11 @@ export function ContentsPage() {
             </SelectContent>
           </Select>
           <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
-            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50"><SelectValue placeholder="Type" /></SelectTrigger>
+            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="list">Lists</SelectItem>
               <SelectItem value="note">Notes</SelectItem>
               <SelectItem value="whiteboard">Whiteboards</SelectItem>
@@ -632,9 +634,9 @@ export function ContentsPage() {
           </Select>
           <div className="relative w-full max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background" style={{ fontFamily: '"Raleway", sans-serif' }} />
+            <Input placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background font-raleway" />
           </div>
-          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-light" onClick={() => navigate('/canvas')}>
+          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light" onClick={() => navigate('/canvas')}>
             <Map className="h-4 w-4 mr-2" />
             Canvas
           </Button>
@@ -674,7 +676,7 @@ export function ContentsPage() {
           <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
             <SelectTrigger className="flex-1 flex-shrink h-9 pr-8 min-w-0" style={{ paddingLeft: '0.375rem', flexBasis: 0 }}><SelectValue placeholder="Type" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="list">Lists</SelectItem>
               <SelectItem value="note">Notes</SelectItem>
               <SelectItem value="whiteboard">Whiteboards</SelectItem>
@@ -685,23 +687,24 @@ export function ContentsPage() {
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className="flex-1 flex-shrink h-9 pr-8 min-w-0" style={{ paddingLeft: '0.375rem', flexBasis: 0 }}><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="all">All Categories</SelectItem>
               {uniqueCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
             </SelectContent>
           </Select>
           <div className="flex border rounded-md">
-            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" className="h-9 px-3 rounded-r-none" onClick={() => setViewMode('list')}>
-              <ListIcon className="h-4 w-4" />
-            </Button>
-            <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="sm" className="h-9 px-3 rounded-l-none" onClick={() => setViewMode('grid')}>
+            <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="sm" className="h-9 px-3 rounded-r-none" onClick={() => setViewMode('grid')}>
               <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" className="h-9 px-3 rounded-l-none" onClick={() => setViewMode('list')}>
+              <ListIcon className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </MobileControlsBar>
 
-      <div className="flex flex-col h-full">
-        <div className="hidden md:flex justify-end mb-4">
+      <PageContainer>
+        <PageSurface>
+        <div className="flex items-center justify-end mb-6">
           <span className="text-sm text-muted-foreground">{totalItems} {totalItems === 1 ? 'item' : 'items'}</span>
         </div>
 
@@ -710,13 +713,11 @@ export function ContentsPage() {
             {[...Array(8)].map((_, i) => <Skeleton key={i} className={viewMode === 'grid' ? 'h-32' : 'h-16'} />)}
           </div>
         ) : totalItems === 0 ? (
-          <Card className="m-4">
-            <CardContent className="p-12 text-center">
-              <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                <LayoutGrid className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">No content</h3>
-              <p className="text-muted-foreground mb-4">Get started by creating content</p>
+          <EmptyState
+            icon={LayoutGrid}
+            title="No content"
+            description="Get started by creating content"
+            action={
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button className="bg-blue-600 hover:bg-blue-700 text-white">
@@ -732,10 +733,10 @@ export function ContentsPage() {
                   <DropdownMenuItem onClick={() => setShowNewVaultModal(true)}><KeyRound className="h-4 w-4 mr-2" />Vault</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </CardContent>
-          </Card>
+            }
+          />
         ) : (
-          <div className="flex-1 space-y-6 px-4 overflow-y-auto">
+          <div className="space-y-6">
             {(typeFilter === 'all' || typeFilter === 'list') && filteredAndSortedLists.length > 0 && (
               <div>
                 <h2 className="text-lg font-medium mb-4 flex items-center gap-2"><CheckSquare className="h-5 w-5 text-muted-foreground" /> Lists</h2>
@@ -843,7 +844,8 @@ export function ContentsPage() {
             )}
           </div>
         )}
-      </div>
+        </PageSurface>
+      </PageContainer>
 
       {showNewNoteModal && <CreateItemModal open={showNewNoteModal} onOpenChange={(open) => { setShowNewNoteModal(open); if (!open) fetchAllContent(); }} itemType="note" onCreate={createNote} existingCategories={categoriesForModal} />}
       {showNewListModal && <CreateItemModal open={showNewListModal} onOpenChange={(open) => { setShowNewListModal(open); if (!open) fetchAllContent(); }} itemType="list" onCreate={createList} existingCategories={categoriesForModal} />}

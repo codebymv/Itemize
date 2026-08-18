@@ -19,7 +19,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -64,6 +63,7 @@ import {
 import { List, Note, Whiteboard, Wireframe, Vault } from '@/types';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { EmptyState } from '@/components/EmptyState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -86,7 +86,8 @@ interface SharedContent {
 export function SharedPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setHeaderContent } = useHeader();  const { token } = useAuthState();
+  const { setHeaderContent } = useHeader();
+  const { token } = useAuthState();
 
   // Route-aware onboarding (will show 'canvas' onboarding for Workspace group)
   const {
@@ -397,9 +398,9 @@ export function SharedPage() {
         <div className="flex items-center gap-2 ml-2">
           <Share2 className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <h1
-            className="text-xl font-semibold italic truncate font-raleway text-foreground"
+            className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
           >
-            SHARED ITEMS
+            SHARED
           </h1>
         </div>
         {/* Desktop-only controls */}
@@ -435,21 +436,21 @@ export function SharedPage() {
           <div className="relative w-full max-w-xs">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="Search shared..."
+              placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9 bg-muted/20 border-border/50"
+              className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background font-raleway"
             />
           </div>
 
-          {/* Go to Canvas button */}
+          {/* Canvas button */}
           <Button
             size="sm"
             className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
             onClick={() => navigate('/canvas')}
           >
             <Map className="h-4 w-4 mr-2" />
-            Go to Canvas
+            Canvas
           </Button>
         </div>
       </div>
@@ -463,10 +464,10 @@ export function SharedPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search shared..."
+            placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-9 w-full bg-muted/20 border-border/50"
+            className="pl-10 h-9 w-full bg-muted/20 border-border/50 focus:bg-background"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -506,27 +507,21 @@ export function SharedPage() {
 
           {/* Content */}
           {loading ? (
-            <Card>
-              <CardContent className="p-0">
-                <div className="space-y-2 p-4">
-                  {[...Array(5)].map((_, i) => (
-                    <Skeleton key={i} className="h-16" />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <Skeleton key={i} className="h-16" />
+              ))}
+            </div>
           ) : filteredContent.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <Share2 className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-medium mb-2">No shared content</h3>
-                <p className="text-muted-foreground mb-4">
-                  {typeFilter !== 'all'
-                    ? 'No content of this type has been shared yet'
-                    : 'Share lists, notes, whiteboards, or vaults to see them here'}
-                </p>
+            <EmptyState
+              icon={Share2}
+              title="No shared content"
+              description={
+                typeFilter !== 'all'
+                  ? 'No content of this type has been shared yet'
+                  : 'Share lists, notes, whiteboards, or vaults to see them here'
+              }
+              action={
                 <Button
                   onClick={() => navigate('/canvas')}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -534,11 +529,10 @@ export function SharedPage() {
                   <Map className="h-4 w-4 mr-2" />
                   Go to Canvas
                 </Button>
-              </CardContent>
-            </Card>
+              }
+            />
           ) : (
-            <Card>
-              <CardContent className="p-0">
+            <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="border-b bg-muted/30">
                     <tr>
@@ -626,8 +620,7 @@ export function SharedPage() {
                     })}
                   </tbody>
                 </table>
-              </CardContent>
-            </Card>
+            </div>
           )}
 
           {/* Unshare confirmation dialog */}

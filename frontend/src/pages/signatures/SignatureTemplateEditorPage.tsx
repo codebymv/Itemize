@@ -41,7 +41,7 @@ export default function SignatureTemplateEditorPage() {
       <div className="flex items-center justify-between w-full min-w-0">
         <div className="flex items-center gap-2 ml-2 min-w-0">
           <FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <span className="text-xl font-semibold italic uppercase tracking-wide truncate">Edit Signature Template</span>
+          <span className="text-xl font-semibold italic uppercase tracking-wide truncate italic-safe">Edit Signature Template</span>
         </div>
       </div>
     );

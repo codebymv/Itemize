@@ -168,12 +168,12 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                         Skip to main content
                     </a>
                     {/* Top header bar */}
-                <header className="flex h-14 items-center justify-between border-b px-4 bg-background sticky top-0 z-50 w-full overflow-hidden">
-                    <div className="flex items-center gap-2 flex-1 overflow-hidden min-w-0">
+                <header className="flex h-14 items-center justify-between border-b px-4 bg-background sticky top-0 z-50 w-full min-w-0">
+                    <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
                         <SidebarTrigger className="md:hidden" />
 
                         {/* Dynamic header content injected by pages */}
-                        <div className="flex-1 flex items-center min-w-0 overflow-hidden">
+                        <div className="flex-1 flex items-center min-w-0 overflow-hidden py-px">
                             {headerContent}
                         </div>
                     </div>

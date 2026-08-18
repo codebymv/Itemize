@@ -112,7 +112,7 @@ const StatusPage: React.FC = () => {
     <div className={headerContext ? "flex items-center justify-between w-full min-w-0" : "flex items-center justify-between w-full mb-6"}>
       <div className="flex items-center gap-2 min-w-0">
         <Server className="h-5 w-5 text-blue-600 flex-shrink-0" />
-        <h1 className="text-xl font-semibold italic truncate font-raleway text-black dark:text-white">
+        <h1 className="text-xl font-semibold italic truncate italic-safe font-raleway text-black dark:text-white">
           STATUS
         </h1>
       </div>

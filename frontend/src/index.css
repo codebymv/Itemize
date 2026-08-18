@@ -111,6 +111,11 @@
   .font-raleway {
     font-family: "Raleway", sans-serif;
   }
+
+  /* Italic glyphs hang past the layout box. Pair with truncate so the last letter is not clipped. */
+  .italic-safe {
+    padding-inline-end: 0.45em;
+  }
 }
 
 @layer base {

@@ -160,7 +160,7 @@ export function DashboardPage() {
                 <div className="flex items-center gap-2 ml-2 min-w-0">
                     <LayoutDashboard className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate font-raleway text-foreground"
+                        className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
                     >
                         DASHBOARD
                     </h1>

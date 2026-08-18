@@ -70,7 +70,7 @@ export function SocialPage() {
                 <div className="flex items-center gap-2 ml-2">
                     <Share2 className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate font-raleway text-foreground"
+                        className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
                     >
                         SOCIAL
                     </h1>

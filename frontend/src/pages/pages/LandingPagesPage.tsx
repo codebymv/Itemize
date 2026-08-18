@@ -70,7 +70,7 @@ export function LandingPagesPage() {
                 <div className="flex items-center gap-2 ml-2 min-w-0 flex-1">
                     <Layout className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate min-w-0 font-raleway text-foreground"
+                        className="text-xl font-semibold italic truncate italic-safe min-w-0 font-raleway text-foreground"
                     >
                         LANDING PAGES
                     </h1>

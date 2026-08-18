@@ -109,7 +109,7 @@ export function ContactDetailPage() {
           </Button>
           <Users className="h-5 w-5 text-blue-600 flex-shrink-0" />
           <h1
-            className="text-xl font-semibold italic truncate min-w-0 font-raleway text-foreground"
+            className="text-xl font-semibold italic truncate italic-safe min-w-0 font-raleway text-foreground"
           >
             {getContactDisplayName(contact).toUpperCase()}
           </h1>

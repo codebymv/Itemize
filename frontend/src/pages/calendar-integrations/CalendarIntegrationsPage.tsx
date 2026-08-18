@@ -141,7 +141,7 @@ export function CalendarIntegrationsPage() {
             <div className="flex items-center justify-between w-full min-w-0">
                 <div className="flex items-center gap-2 ml-2 min-w-0">
                     <Plug className="h-5 w-5 text-blue-600 flex-shrink-0" />
-                    <h1 className="text-xl font-semibold italic truncate font-raleway text-foreground">
+                    <h1 className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground">
                         INTEGRATIONS
                     </h1>
                 </div>

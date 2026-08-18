@@ -126,7 +126,7 @@ export function SignaturesPage() {
       <div className="flex items-center justify-between w-full min-w-0">
         <div className="flex items-center gap-2 ml-2 min-w-0">
           <FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <span className="text-xl font-semibold italic uppercase tracking-wide truncate">Documents</span>
+          <span className="text-xl font-semibold italic uppercase tracking-wide truncate italic-safe">Documents</span>
         </div>
         <div className="hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4">{headerActions}</div>
       </div>

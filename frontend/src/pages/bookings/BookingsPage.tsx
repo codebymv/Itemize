@@ -75,7 +75,7 @@ export function BookingsPage() {
                 <div className="flex items-center gap-2 ml-2 min-w-0">
                     <CalendarCheck className="h-5 w-5 text-blue-600 flex-shrink-0" />
                     <h1
-                        className="text-xl font-semibold italic truncate font-raleway text-foreground"
+                        className="text-xl font-semibold italic truncate italic-safe font-raleway text-foreground"
                     >
                         BOOKINGS
                     </h1>
