@@ -324,17 +324,27 @@ export function AppSidebar() {
         }
     };
 
+    const brandIcon = (sizeClass: string) => (
+        <span className={cn('relative shrink-0 overflow-hidden', sizeClass)}>
+            <img src="/icon.png" alt="" aria-hidden="true" className="h-full w-full" />
+            <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 -translate-x-full transition-transform duration-1000 ease-out group-hover:translate-x-full"
+                style={{
+                    background:
+                        'linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.45) 50%, transparent 65%)',
+                }}
+            />
+        </span>
+    );
+
     return (
         <Sidebar collapsible="icon" className="border-r">
             <SidebarHeader className={cn("border-b py-4", isCollapsed ? "px-2" : "px-3")}>
                 <div className={cn("flex items-center", isCollapsed ? "flex-col gap-2 justify-center" : "justify-between gap-2")}>
                     {!isCollapsed ? (
-                        <div className="flex items-center gap-2 flex-1 cursor-pointer" onClick={() => navigate('/dashboard')}>
-                            <img
-                                src="/icon.png"
-                                alt="Itemize Icon"
-                                className="h-7 w-7 flex-shrink-0"
-                            />
+                        <div className="group flex items-center gap-2 flex-1 cursor-pointer" onClick={() => navigate('/dashboard')}>
+                            {brandIcon('h-7 w-7')}
                             <img
                                 src={theme === 'dark' ? '/textwhite.png' : '/textblack.png'}
                                 alt="Itemize"
@@ -342,12 +352,14 @@ export function AppSidebar() {
                             />
                         </div>
                     ) : (
-                        <img
-                            src="/icon.png"
-                            alt="Itemize"
-                            className="h-8 w-8 cursor-pointer"
+                        <div
+                            className="group cursor-pointer"
                             onClick={() => navigate('/dashboard')}
-                        />
+                            role="link"
+                            aria-label="Itemize"
+                        >
+                            {brandIcon('h-8 w-8')}
+                        </div>
                     )}
                     <Button
                         variant="ghost"
