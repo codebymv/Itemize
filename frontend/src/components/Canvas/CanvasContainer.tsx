@@ -51,6 +51,10 @@ interface CanvasContainerProps {
   onOpenNewVaultModal?: (position: { x: number; y: number }) => void;
   addCategory?: (categoryData: { name: string; color_value: string }) => Promise<Category>;
   updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
+  isWhiteboardCollapsed?: (id: number) => boolean;
+  onToggleWhiteboardCollapsed?: (id: number) => void;
+  isWireframeCollapsed?: (id: number) => boolean;
+  onToggleWireframeCollapsed?: (id: number) => void;
 }
 
 export interface CanvasContainerMethods {
@@ -97,7 +101,11 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   onVaultShare,
   onOpenNewVaultModal,
   addCategory,
-  updateCategory
+  updateCategory,
+  isWhiteboardCollapsed,
+  onToggleWhiteboardCollapsed,
+  isWireframeCollapsed,
+  onToggleWireframeCollapsed
 }) => {
   const { theme } = useTheme();
   const isDark =
@@ -138,6 +146,8 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   
   const canvasRef = useRef<HTMLDivElement>(null);
   const canvasContentRef = useRef<HTMLDivElement>(null);
+  const canvasTransformRef = useRef(canvasTransform);
+  canvasTransformRef.current = canvasTransform;
 
   const allPositions = useMemo(() => {
     const positions: { x: number; y: number }[] = [];
@@ -346,8 +356,18 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }
     
     // Only start panning on left click and if not clicking on a draggable item or interactive element
-    const isInteractiveElement = target.closest('.draggable-list-card, .draggable-note-card, .context-menu, button, input, textarea, select, .ProseMirror, .tiptap, .rich-text-editor, [contenteditable="true"]');
+    const isInteractiveElement = target.closest('.draggable-list-card, .draggable-note-card, .draggable-whiteboard-card, .draggable-wireframe-card, .draggable-vault-card, .context-menu, button, input, textarea, select, .ProseMirror, .tiptap, .rich-text-editor, [contenteditable="true"]');
     
+    if (e.button === 1) {
+      setIsPanning(true);
+      setPanStart({
+        x: e.clientX - canvasTransform.x,
+        y: e.clientY - canvasTransform.y
+      });
+      e.preventDefault();
+      return;
+    }
+
     if (e.button === 0 && !isInteractiveElement && (e.target === canvasRef.current || e.target === canvasContentRef.current)) {
       setIsPanning(true);
       setPanStart({
@@ -374,90 +394,66 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }
   };
 
-  // Canvas zooming handler
-  const handleWheel = (e: React.WheelEvent) => {
-    const target = e.target as HTMLElement;
-    
-    // Check if the event target is within a text editor or input field
-    const isInTextEditor = target.closest('.ProseMirror') || 
-                          target.closest('textarea') || 
-                          target.closest('input') || 
-                          target.closest('[contenteditable="true"]') ||
-                          target.closest('.tiptap');
-    
-    // If scrolling within a text editor, allow normal scroll behavior
-    if (isInTextEditor) {
-      return;
-    }
-    
-    // Check if the target is within any draggable card on the canvas
-    const isInCard = target.closest('.draggable-note-card') ||
-                     target.closest('.draggable-list-card') ||
-                     target.closest('.draggable-vault-card') ||
-                     target.closest('.draggable-whiteboard-card') ||
-                     target.closest('.draggable-wireframe-card');
-    
-    // If hovering over a card, check for scrollable content
-    if (isInCard) {
-      // Find scrollable container within the card
-      const findScrollableParent = (element: HTMLElement | null): HTMLElement | null => {
-        while (element && element !== isInCard) {
+  // React registers onWheel as passive, so preventDefault only works on a native listener.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      const target = e.target as HTMLElement;
+
+      const isInTextEditor = target.closest('.ProseMirror') ||
+        target.closest('textarea') ||
+        target.closest('input') ||
+        target.closest('[contenteditable="true"]') ||
+        target.closest('.tiptap');
+      if (isInTextEditor) return;
+
+      const isInCard = target.closest('.draggable-note-card') ||
+        target.closest('.draggable-list-card') ||
+        target.closest('.draggable-vault-card') ||
+        target.closest('.draggable-whiteboard-card') ||
+        target.closest('.draggable-wireframe-card');
+      const wantsCanvasZoom = e.ctrlKey || e.metaKey;
+
+      if (isInCard && !wantsCanvasZoom) {
+        const card = isInCard;
+        let element: HTMLElement | null = target;
+        while (element && element !== card) {
           const style = window.getComputedStyle(element);
           const overflowY = style.overflowY;
-          const isScrollable = (overflowY === 'auto' || overflowY === 'scroll') && 
-                               element.scrollHeight > element.clientHeight;
-          
+          const isScrollable = (overflowY === 'auto' || overflowY === 'scroll') &&
+            element.scrollHeight > element.clientHeight;
           if (isScrollable) {
-            // Check if we can actually scroll in the direction the user wants
             const canScrollUp = element.scrollTop > 0;
             const canScrollDown = element.scrollTop < (element.scrollHeight - element.clientHeight);
-            const scrollingUp = e.deltaY < 0;
-            const scrollingDown = e.deltaY > 0;
-            
-            // Only allow native scroll if we can scroll in that direction
-            if ((scrollingUp && canScrollUp) || (scrollingDown && canScrollDown)) {
-              return element;
+            if ((e.deltaY < 0 && canScrollUp) || (e.deltaY > 0 && canScrollDown)) {
+              return;
             }
           }
           element = element.parentElement;
         }
-        return null;
-      };
-      
-      const scrollableParent = findScrollableParent(target);
-      if (scrollableParent) {
-        // Allow native scroll behavior for scrollable containers
+        e.preventDefault();
         return;
       }
-      
-      // Hovering over a card but no scrollable content (or at scroll boundary)
-      // Prevent zoom but don't do anything else - this prevents accidental zooming
+
       e.preventDefault();
-      return;
-    }
-    
-    // Not over a card - allow canvas zoom
-    e.preventDefault();
-    
-    if (canvasRef.current) {
-      const rect = canvasRef.current.getBoundingClientRect();
+      const transform = canvasTransformRef.current;
+      const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-      
       const scaleFactor = e.deltaY < 0 ? 1.1 : 0.9;
-      const newScale = Math.max(0.1, Math.min(3, canvasTransform.scale * scaleFactor));
-      
-      // Calculate the new pan position to zoom towards mouse position
-      const newX = mouseX - (mouseX - canvasTransform.x) * (newScale / canvasTransform.scale);
-      const newY = mouseY - (mouseY - canvasTransform.y) * (newScale / canvasTransform.scale);
-      
+      const newScale = Math.max(0.1, Math.min(3, transform.scale * scaleFactor));
       setCanvasTransform({
-        x: newX,
-        y: newY,
-        scale: newScale
+        x: mouseX - (mouseX - transform.x) * (newScale / transform.scale),
+        y: mouseY - (mouseY - transform.y) * (newScale / transform.scale),
+        scale: newScale,
       });
-    }
-  };
+    };
+
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', handleWheel);
+  }, []);
 
   // Setup global mouse event listeners for panning
   useEffect(() => {
@@ -650,7 +646,6 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onWheel={handleWheel}
         style={{
           position: 'relative',
           width: '100%',
@@ -780,6 +775,8 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                   }
                   onWhiteboardUpdate(whiteboardId, { position_x: newPosition.x, position_y: newPosition.y });
                 }}
+                isCollapsed={isWhiteboardCollapsed?.(whiteboard.id)}
+                onToggleCollapsed={onToggleWhiteboardCollapsed ? () => onToggleWhiteboardCollapsed(whiteboard.id) : undefined}
                 updateCategory={updateCategory}
               />
             ))}
@@ -801,6 +798,8 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                   }
                   onWireframeUpdate(wireframeId, { position_x: newPosition.x, position_y: newPosition.y });
                 }}
+                isCollapsed={isWireframeCollapsed?.(wireframe.id)}
+                onToggleCollapsed={onToggleWireframeCollapsed ? () => onToggleWireframeCollapsed(wireframe.id) : undefined}
                 updateCategory={updateCategory}
               />
             ))}
