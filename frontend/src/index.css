@@ -14,8 +14,10 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Brand primary = Tailwind blue-600 / hover blue-700 */
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 224.3 76.3% 48%;
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -31,7 +33,7 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 221.2 83.2% 53.3%;
 
     --radius: 0.5rem;
 
@@ -67,8 +69,9 @@
     /* Lighter dropdown background */
     --popover-foreground: 210 20% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 215 28% 21%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 224.3 76.3% 48%;
 
     --secondary: 215 25% 34%;
     /* Lighter for better hover visibility */
@@ -88,7 +91,7 @@
     --border: 215 20% 37%;
     /* Lighter borders for better definition */
     --input: 215 20% 37%;
-    --ring: 212.7 26.8% 83.9%;
+    --ring: 221.2 83.2% 53.3%;
     --sidebar-background: 215 28% 21%;
     --sidebar-foreground: 215 13% 85%;
     --sidebar-primary: 224.3 76.3% 48%;

@@ -574,7 +574,7 @@ const { currentUser } = useAuthState();
             <div className="text-destructive text-lg mb-4">⚠️ {error}</div>
             <button
               onClick={() => window.location.reload()}
-              className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90"
+              className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary-hover"
             >
               Retry
             </button>

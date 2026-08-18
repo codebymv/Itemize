@@ -106,7 +106,7 @@ export function UpgradePrompt({
           <div className="flex items-center gap-2">
             <button
               onClick={() => startCheckout(suggestedPlan, 'monthly')}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary-hover transition-colors"
             >
               Upgrade Now
               <ArrowRight className="w-4 h-4" />
@@ -185,7 +185,7 @@ export function UpgradePrompt({
         <div className="flex items-center gap-3">
           <button
             onClick={() => startCheckout(suggestedPlan, 'monthly')}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-md hover:bg-primary-hover transition-colors"
           >
             <Sparkles className="w-4 h-4" />
             Upgrade to {suggestedPlanName}

@@ -207,7 +207,7 @@ export const PaymentLinkModal: React.FC<PaymentLinkModalProps> = ({
                         <Button
                             type="button"
                             onClick={() => onOpenChange(false)}
-                            className="bg-primary hover:bg-primary/90 text-primary-foreground font-raleway"
+                            className="font-raleway"
                         >
                             Done
                         </Button>
