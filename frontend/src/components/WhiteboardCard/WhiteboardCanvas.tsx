@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 import { debounce } from 'lodash';
 import { useTheme } from 'next-themes';
+import { normalizeWhiteboardCanvasData } from '@/lib/whiteboardCanvasData';
 // TODO: Integrate coordinate normalization for mobile canvas support
 // import { processCanvasDataForLoad, processCanvasDataForSave } from '@/utils/canvasCoordinates';
 
@@ -46,10 +47,6 @@ type SketchPathRecord = {
   strokeWidth?: unknown;
   paths?: unknown;
   path?: unknown;
-};
-
-const hasPaths = (value: unknown): value is { paths: unknown } => {
-  return !!value && typeof value === 'object' && 'paths' in value;
 };
 
 export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
@@ -125,40 +122,12 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           dataPreview: typeof whiteboard.canvas_data === 'string' ? whiteboard.canvas_data.substring(0, 300) : JSON.stringify(whiteboard.canvas_data).substring(0, 300)
         });
         
-        // Validate canvas data format - should be an array of CanvasPath objects
-        let dataToLoad: unknown = whiteboard.canvas_data;
-        
-        // Handle different data formats from database
-        if (typeof dataToLoad === 'string') {
-          try {
-            const parsed = JSON.parse(dataToLoad);
-            if (Array.isArray(parsed)) {
-              dataToLoad = parsed;
-            } else if (hasPaths(parsed)) {
-              dataToLoad = parsed.paths;
-            } else {
-              throw new Error('Invalid parsed format');
-            }
-          } catch (e) {
-            logger.warn('🎨 Failed to parse string canvas data:', e);
-            logger.warn('🎨 Corrupted data preview:', (dataToLoad as string)?.substring?.(0, 200) || 'N/A');
-            dataToLoad = [];
-            
-            
-          }
-        } else if (hasPaths(dataToLoad)) {
-          // Object format with paths property from backend
-          logger.log('🎨 Data is in object format with paths, extracting array');
-          dataToLoad = dataToLoad.paths;
-        } else if (!Array.isArray(dataToLoad)) {
-          logger.warn('🎨 Unknown data format or not an array, using empty array');
-          dataToLoad = [];
-        }
-
-        // Ensure dataToLoad is an array before proceeding
-        if (!Array.isArray(dataToLoad)) {
-          logger.warn('🎨 Data is not an array after processing, forcing empty array:', typeof dataToLoad);
-          dataToLoad = [];
+        let dataToLoad: unknown[];
+        try {
+          dataToLoad = normalizeWhiteboardCanvasData(whiteboard.canvas_data);
+        } catch (error) {
+          logger.warn('🎨 Leaving canvas unchanged; canvas data is not a path array', error);
+          return;
         }
 
         // Additional validation: ensure the array can be JSON serialized

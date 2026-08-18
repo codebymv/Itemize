@@ -169,7 +169,7 @@ export function useCanvasCRUD(
       const payloadWithDefaults: CreateWhiteboardPayload = {
         title: title || 'Untitled Whiteboard',
         category: category,
-        canvas_data: '{"paths": [], "shapes": []}',
+        canvas_data: '[]',
         canvas_width: 750,
         canvas_height: 620,
         background_color: '#FFFFFF',

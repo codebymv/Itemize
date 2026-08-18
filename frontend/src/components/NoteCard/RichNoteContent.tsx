@@ -12,9 +12,9 @@ import { RichTextToolbar } from './RichTextToolbar';
 import { useNoteSuggestions } from '../../hooks/use-note-suggestions';
 import { formatRelativeTime } from '../../utils/timeUtils';
 import { useAISuggest } from '@/context/AISuggestContext';
-import { useTheme } from 'next-themes';
 import { storage } from '@/lib/storage';
 import logger from '@/lib/logger';
+import { migrateNoteContentToHtml, shouldApplyExternalNoteHtml } from './noteEditorHtml';
 
 // Global storage for autocomplete suggestions (persists across editor recreations)
 const globalAutocompleteStorage: {
@@ -36,6 +36,9 @@ const AutocompleteExtension = Extension.create({
   addKeyboardShortcuts() {
     return {
       Tab: () => {
+        if (!this.editor.isFocused) {
+          return false;
+        }
         logger.debug('tiptap', 'Tab key pressed');
         logger.debug('tiptap', 'Editor focus state:', this.editor.isFocused);
         logger.debug('tiptap', 'Local storage object:', JSON.stringify(this.storage, null, 2));
@@ -224,6 +227,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
   updatedAt
 }) => {
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isUpdatingFromProps = useRef(false);
   const measureRef = useRef<HTMLDivElement>(null);
   
   // Simplified suggestion state - removed problematic debouncing that causes flashing
@@ -234,10 +238,6 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
   
   // Use global AI enabled state from context
   const { aiEnabled } = useAISuggest();
-
-  // Get theme for styling
-  const { theme } = useTheme();
-  const isLight = theme === 'light';
 
   // Initialize editor with extensions
   const editor = useEditor({
@@ -291,7 +291,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
         // Configure blockquote
         blockquote: {
           HTMLAttributes: {
-            class: 'border-l-4 border-gray-300 pl-4 italic text-gray-600',
+            class: 'note-blockquote',
           },
         },
       }),
@@ -316,66 +316,49 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
     editable: true,
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
+      if (isUpdatingFromProps.current) {
+        return;
+      }
       const htmlContent = editor.getHTML();
       setEditContent(htmlContent);
       
-      // Auto-enable editing mode when user starts typing
       if (!isEditingContent) {
         logger.debug('tiptap', 'Auto-enabling editing mode because content changed');
         setIsEditingContent(true);
       }
       
-      // Auto-save with debounce
       if (autosaveTimeoutRef.current) {
         clearTimeout(autosaveTimeoutRef.current);
       }
       
       autosaveTimeoutRef.current = setTimeout(() => {
         logger.debug('tiptap', 'Auto-saving rich note content...');
-        onAutoSave(htmlContent); // Pass just the content for granular updates
-      }, 1000); // 1 second with granular updates for optimal real-time performance
+        void onAutoSave(htmlContent);
+      }, 1000);
     },
   });
 
   // Global Tab key logger to debug event capture
   useEffect(() => {
     const globalTabHandler = (e: KeyboardEvent) => {
-      if (e.key === 'Tab') {
-        logger.debug('tiptap', 'Global Tab Event:', {
-          target: e.target,
-          tagName: (e.target as Element)?.tagName,
-          className: (e.target as Element)?.className,
-          editorFocused: editor?.isFocused,
-          defaultPrevented: e.defaultPrevented,
-          timeStamp: e.timeStamp
-        });
-        
-        // Fallback: If we have a suggestion and Tab wasn't handled by TipTap
-        const suggestion = globalAutocompleteStorage.suggestion;
-        if (suggestion && !e.defaultPrevented && editor) {
-          logger.debug('tiptap', 'Global fallback: Handling Tab with suggestion:', suggestion.substring(0, 30));
-          e.preventDefault();
-          
-          // Clear the suggestion first
-          globalAutocompleteStorage.suggestion = null;
-          
-          // Insert the suggestion
-          editor.commands.insertContent(suggestion);
-          
-          // Get word count AFTER insertion for proper debounce
-          const newContent = editor.getText();
-          const newWordCount = newContent.trim().split(/\s+/).filter(word => word.length > 0).length;
-          
-          // Set debounce AFTER inserting content
-          if (globalAutocompleteStorage.setSuggestionDebounce) {
-            globalAutocompleteStorage.setSuggestionDebounce(newWordCount);
-          }
+      if (e.key !== 'Tab' || !editor?.isFocused) {
+        return;
+      }
+      const suggestion = globalAutocompleteStorage.suggestion;
+      if (suggestion && !e.defaultPrevented) {
+        e.preventDefault();
+        globalAutocompleteStorage.suggestion = null;
+        editor.commands.insertContent(suggestion);
+        const newContent = editor.getText();
+        const newWordCount = newContent.trim().split(/\s+/).filter(word => word.length > 0).length;
+        if (globalAutocompleteStorage.setSuggestionDebounce) {
+          globalAutocompleteStorage.setSuggestionDebounce(newWordCount);
         }
       }
     };
 
-    document.addEventListener('keydown', globalTabHandler, true); // Capture phase
-    return () => document.removeEventListener('keydown', globalTabHandler, true);
+    document.addEventListener('keydown', globalTabHandler);
+    return () => document.removeEventListener('keydown', globalTabHandler);
   }, [editor]);
 
   // Add keyboard shortcuts for formatting (Apple-style)
@@ -434,23 +417,22 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
 
   // Migrate content from plain text to HTML
   useEffect(() => {
-    if (editor && content !== undefined) {
-      const currentContent = editor.getHTML();
-      
-      // Check if we need to migrate from plain text
-      if (content && content !== '<p></p>' && content !== currentContent) {
-        // If content looks like plain text (no HTML tags), wrap it in a paragraph
-        if (!content.includes('<') && !content.includes('>')) {
-          const htmlContent = `<p>${content.replace(/\n/g, '</p><p>')}</p>`;
-          editor.commands.setContent(htmlContent, false);
-          setEditContent(htmlContent);
-        } else {
-          // Content is already HTML
-          editor.commands.setContent(content, false);
-          setEditContent(content);
-        }
-      }
+    if (!editor || content === undefined) {
+      return;
     }
+    const incomingHtml = migrateNoteContentToHtml(content);
+    if (!shouldApplyExternalNoteHtml({
+      isFocused: editor.isFocused,
+      isUpdatingFromProps: isUpdatingFromProps.current,
+      currentHtml: editor.getHTML(),
+      incomingHtml,
+    })) {
+      return;
+    }
+    isUpdatingFromProps.current = true;
+    editor.commands.setContent(incomingHtml, false);
+    setEditContent(incomingHtml);
+    isUpdatingFromProps.current = false;
   }, [editor, content, setEditContent]);
 
   // Simplified word count tracking without problematic debouncing
@@ -677,11 +659,12 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
         !editorElement.contains(event.target as Node) &&
         (!toolbarElement || !toolbarElement.contains(event.target as Node))
       ) {
-        // Clear autosave timeout since we're manually saving
         if (autosaveTimeoutRef.current) {
           clearTimeout(autosaveTimeoutRef.current);
+          autosaveTimeoutRef.current = null;
         }
-        handleEditContent();
+        void onAutoSave(editor.getHTML());
+        setIsEditingContent(false);
       }
     };
 
@@ -689,7 +672,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isEditingContent, handleEditContent, editor]);
+  }, [isEditingContent, editor, onAutoSave, setIsEditingContent]);
 
   // Cleanup autosave timeout on component unmount to prevent stale calls
   useEffect(() => {
@@ -728,29 +711,21 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
         <div className="relative h-full">
           <EditorContent
             editor={editor}
-            className={`prose prose-sm max-w-none h-full p-3 focus-within:outline-none cursor-text overflow-y-auto ${
-              isLight ? 'prose-gray' : 'prose-invert'
-            }`}
+            className="prose prose-sm max-w-none h-full p-3 focus-within:outline-none cursor-text overflow-y-auto text-foreground"
             style={{
               borderColor: noteColor,
               minHeight: '120px',
-              color: isLight ? '#374151' : '#e5e7eb'
             }}
           />
 
-          {/* AI Suggestion Overlay - GitHub Copilot style - simplified condition */}
           {isEditingContent && currentAutocomplete && aiEnabled && plainTextContent.trim().split(/\s+/).length >= 3 && (
-            <style>
-              {`
-                .ProseMirror p:last-child::after {
-                  content: "${currentAutocomplete.replace(/"/g, '\\"')}";
-                  color: #9CA3AF;
-                  font-style: italic;
-                  opacity: 0.7;
-                  pointer-events: none;
-                }
-              `}
-            </style>
+            <div
+              className="pointer-events-none absolute inset-0 overflow-hidden p-3 text-sm leading-relaxed text-muted-foreground"
+              aria-hidden
+            >
+              <span className="invisible whitespace-pre-wrap">{plainTextContent}</span>
+              <span className="italic opacity-70">{currentAutocomplete}</span>
+            </div>
           )}
 
           {/* Hidden measurement div for text width calculation */}
@@ -778,13 +753,13 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
           className="absolute bottom-0 left-0 right-0 flex-shrink-0 px-2 md:px-3 py-1 md:py-2"
           style={{
             borderTop: `1px solid ${noteColor}33`,
-            backgroundColor: isLight ? '#ffffff' : '#1e293b',
+            backgroundColor: 'hsl(var(--card))',
             fontSize: '10px'
           }}
         >
           <div className="flex items-center justify-between">
             <div
-              className={`${isLight ? 'text-gray-500' : 'text-gray-400'} truncate text-xs md:text-xs`}
+              className="text-muted-foreground truncate text-xs md:text-xs"
               style={{
                 fontFamily: '"Raleway", sans-serif',
                 fontSize: 'inherit'

@@ -50,6 +50,8 @@
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --background-alt: 220 13% 97%;
+    color-scheme: light;
   }
 
   .dark {
@@ -96,6 +98,8 @@
     --sidebar-accent-foreground: 215 13% 90%;
     --sidebar-border: 215 20% 37%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --background-alt: 215 28% 18%;
+    color-scheme: dark;
   }
 
   body {

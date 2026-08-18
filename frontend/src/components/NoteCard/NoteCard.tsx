@@ -13,12 +13,12 @@ import { useNoteCardLogic } from '@/hooks/useNoteCardLogic';
 import { Note } from '@/types';
 import { RichNoteContent } from './RichNoteContent';
 import { CategorySelector } from '../CategorySelector';
-import { useTheme } from 'next-themes';
 
 import { Category } from '@/types';
 import { DeleteDialog } from '../ui/delete-dialog';
 import { updateNoteContent } from '@/services/api';
 import { useAuthState } from '@/contexts/AuthContext';
+import logger from '@/lib/logger';
 
 interface NoteCardProps {
   note: Note;
@@ -99,10 +99,6 @@ const NoteCard: React.FC<NoteCardProps> = ({
       return false;
     }
   };
-
-  // Get theme for styling
-  const { theme } = useTheme();
-  const isLight = theme === 'light';
 
   // Implement click outside handler for title editing
   useEffect(() => {
@@ -308,9 +304,8 @@ const NoteCard: React.FC<NoteCardProps> = ({
 
         <CollapsibleContent className="flex-1">
           <div
-            className="rounded-lg mx-2 md:mx-6 mb-6 flex-1 flex flex-col"
+            className="rounded-lg mx-2 md:mx-6 mb-6 flex-1 flex flex-col bg-card"
             style={{
-              backgroundColor: isLight ? '#ffffff' : '#1e293b',
               border: `2px solid ${noteDisplayColor} !important`,
               borderColor: `${noteDisplayColor} !important`,
               height: `${Math.max(180, (note.height || 300) - 120)}px` // Increased default height
@@ -328,13 +323,10 @@ const NoteCard: React.FC<NoteCardProps> = ({
               noteColor={noteDisplayColor}
               noteId={note.id}
               onAutoSave={async (content: string) => {
-                // Use granular content update for real-time updates
                 try {
                   await updateNoteContent(note.id, content, token);
-                  console.log('✅ Granular content update successful');
                 } catch (error) {
-                  console.error('❌ Granular content update failed:', error);
-                  // Fallback to full update if granular fails
+                  logger.error('Granular content update failed:', error);
                   await onUpdate(note.id, { content, updated_at: new Date().toISOString() });
                 }
               }}

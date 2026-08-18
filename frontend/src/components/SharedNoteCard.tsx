@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { StickyNote } from 'lucide-react';
+import { sanitizeNoteHtml } from '@/lib/sanitizeNoteHtml';
 
 const NEUTRAL_GRAY = '#808080';
 
@@ -37,7 +38,7 @@ export const SharedNoteCard: React.FC<SharedNoteCardProps> = ({ noteData, isLive
 
     // Content is HTML or plain text - render it directly, prose classes handle styling
     if (content.includes('<') && content.includes('>')) {
-      return <div dangerouslySetInnerHTML={{ __html: content }} />;
+      return <div dangerouslySetInnerHTML={{ __html: sanitizeNoteHtml(content) }} />;
     }
 
     // Plain text - convert to paragraphs

@@ -35,10 +35,10 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
   // Refs
   const contentEditRef = useRef<HTMLTextAreaElement>(null);
   
-  // Update content state when note content changes
   useEffect(() => {
+    if (isEditingContent) return;
     setEditContent(note.content || '');
-  }, [note.content]);
+  }, [note.content, isEditingContent]);
   
   const {
     isEditing,
@@ -65,14 +65,13 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
   
   // Content editing handlers - updates note.content using granular API
   const handleEditContent = useCallback(async () => {
-    if (editContent.trim() !== note.content) {
+    if (editContent !== note.content) {
       try {
-        await updateNoteContent(note.id, editContent.trim(), token);
+        await updateNoteContent(note.id, editContent, token);
         logger.debug('note', 'Granular content update successful');
       } catch (error) {
         logger.error('Granular content update failed, falling back:', error);
-        // Fallback to full update if granular fails
-        await onUpdate(note.id, { content: editContent.trim(), updated_at: new Date().toISOString() });
+        await onUpdate(note.id, { content: editContent, updated_at: new Date().toISOString() });
       }
     }
     setIsEditingContent(false);

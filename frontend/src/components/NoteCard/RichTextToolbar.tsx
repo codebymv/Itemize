@@ -23,7 +23,6 @@ import {
   Quote
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { useTheme } from 'next-themes';
 
 interface RichTextToolbarProps {
   editor: Editor | null;
@@ -34,10 +33,6 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
   editor,
   className
 }) => {
-  // Get theme for styling
-  const { theme } = useTheme();
-  const isLight = theme === 'light';
-
   if (!editor) return null;
 
   // Helper function to get current heading level
@@ -65,8 +60,8 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
         className
       )}
       style={{
-        backgroundColor: isLight ? '#f9fafb' : '#334155',
-        borderBottomColor: isLight ? '#e5e7eb' : '#475569'
+        backgroundColor: 'hsl(var(--muted))',
+        borderBottomColor: 'hsl(var(--border))'
       }}
     >
       <div className="flex items-center gap-1 flex-shrink-0">
@@ -121,9 +116,9 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
           <SelectTrigger
             className="w-20 md:w-24 h-8 text-xs"
             style={{
-              backgroundColor: isLight ? 'white' : '#475569',
-              borderColor: isLight ? '#d1d5db' : '#64748b',
-              color: isLight ? '#374151' : '#e5e7eb'
+              backgroundColor: 'hsl(var(--background))',
+              borderColor: 'hsl(var(--border))',
+              color: 'hsl(var(--foreground))'
             }}
           >
             <Type className="h-3 w-3 md:hidden" />
@@ -160,11 +155,11 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             onClick={() => editor.chain().focus().toggleBold().run()}
             style={{
               backgroundColor: editor.isActive('bold') ? '#2563eb' : 'transparent',
-              color: editor.isActive('bold') ? 'white' : (isLight ? '#374151' : '#e5e7eb')
+              color: editor.isActive('bold') ? 'white' : ('hsl(var(--foreground))')
             }}
             onMouseEnter={(e) => {
               if (!editor.isActive('bold')) {
-                e.currentTarget.style.backgroundColor = isLight ? '#f3f4f6' : '#475569';
+                e.currentTarget.style.backgroundColor = 'hsl(var(--accent))';
               }
             }}
             onMouseLeave={(e) => {
@@ -183,11 +178,11 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             onClick={() => editor.chain().focus().toggleItalic().run()}
             style={{
               backgroundColor: editor.isActive('italic') ? '#2563eb' : 'transparent',
-              color: editor.isActive('italic') ? 'white' : (isLight ? '#374151' : '#e5e7eb')
+              color: editor.isActive('italic') ? 'white' : ('hsl(var(--foreground))')
             }}
             onMouseEnter={(e) => {
               if (!editor.isActive('italic')) {
-                e.currentTarget.style.backgroundColor = isLight ? '#f3f4f6' : '#475569';
+                e.currentTarget.style.backgroundColor = 'hsl(var(--accent))';
               }
             }}
             onMouseLeave={(e) => {
@@ -206,11 +201,11 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             onClick={() => editor.chain().focus().toggleUnderline().run()}
             style={{
               backgroundColor: editor.isActive('underline') ? '#2563eb' : 'transparent',
-              color: editor.isActive('underline') ? 'white' : (isLight ? '#374151' : '#e5e7eb')
+              color: editor.isActive('underline') ? 'white' : ('hsl(var(--foreground))')
             }}
             onMouseEnter={(e) => {
               if (!editor.isActive('underline')) {
-                e.currentTarget.style.backgroundColor = isLight ? '#f3f4f6' : '#475569';
+                e.currentTarget.style.backgroundColor = 'hsl(var(--accent))';
               }
             }}
             onMouseLeave={(e) => {
@@ -229,11 +224,11 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             onClick={() => editor.chain().focus().toggleStrike().run()}
             style={{
               backgroundColor: editor.isActive('strike') ? '#2563eb' : 'transparent',
-              color: editor.isActive('strike') ? 'white' : (isLight ? '#374151' : '#e5e7eb')
+              color: editor.isActive('strike') ? 'white' : ('hsl(var(--foreground))')
             }}
             onMouseEnter={(e) => {
               if (!editor.isActive('strike')) {
-                e.currentTarget.style.backgroundColor = isLight ? '#f3f4f6' : '#475569';
+                e.currentTarget.style.backgroundColor = 'hsl(var(--accent))';
               }
             }}
             onMouseLeave={(e) => {
@@ -265,11 +260,11 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             className="h-8 w-8 p-0"
             style={{
               backgroundColor: getCurrentAlignment() === 'left' ? '#2563eb' : 'transparent',
-              color: getCurrentAlignment() === 'left' ? 'white' : (isLight ? '#374151' : '#e5e7eb')
+              color: getCurrentAlignment() === 'left' ? 'white' : ('hsl(var(--foreground))')
             }}
             onMouseEnter={(e) => {
               if (getCurrentAlignment() !== 'left') {
-                e.currentTarget.style.backgroundColor = isLight ? '#f3f4f6' : '#475569';
+                e.currentTarget.style.backgroundColor = 'hsl(var(--accent))';
               }
             }}
             onMouseLeave={(e) => {
@@ -287,11 +282,11 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             className="h-8 w-8 p-0"
             style={{
               backgroundColor: getCurrentAlignment() === 'center' ? '#2563eb' : 'transparent',
-              color: getCurrentAlignment() === 'center' ? 'white' : (isLight ? '#374151' : '#e5e7eb')
+              color: getCurrentAlignment() === 'center' ? 'white' : ('hsl(var(--foreground))')
             }}
             onMouseEnter={(e) => {
               if (getCurrentAlignment() !== 'center') {
-                e.currentTarget.style.backgroundColor = isLight ? '#f3f4f6' : '#475569';
+                e.currentTarget.style.backgroundColor = 'hsl(var(--accent))';
               }
             }}
             onMouseLeave={(e) => {
@@ -309,11 +304,11 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             className="h-8 w-8 p-0"
             style={{
               backgroundColor: getCurrentAlignment() === 'right' ? '#2563eb' : 'transparent',
-              color: getCurrentAlignment() === 'right' ? 'white' : (isLight ? '#374151' : '#e5e7eb')
+              color: getCurrentAlignment() === 'right' ? 'white' : ('hsl(var(--foreground))')
             }}
             onMouseEnter={(e) => {
               if (getCurrentAlignment() !== 'right') {
-                e.currentTarget.style.backgroundColor = isLight ? '#f3f4f6' : '#475569';
+                e.currentTarget.style.backgroundColor = 'hsl(var(--accent))';
               }
             }}
             onMouseLeave={(e) => {
@@ -342,11 +337,11 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             )}
             style={!editor.isActive('bulletList') ? {
               backgroundColor: 'transparent',
-              color: isLight ? '#374151' : '#e5e7eb'
+              color: 'hsl(var(--foreground))'
             } : {}}
             onMouseEnter={(e) => {
               if (!editor.isActive('bulletList')) {
-                e.currentTarget.style.backgroundColor = isLight ? '#f3f4f6' : '#475569';
+                e.currentTarget.style.backgroundColor = 'hsl(var(--accent))';
               }
             }}
             onMouseLeave={(e) => {
@@ -368,11 +363,11 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             )}
             style={!editor.isActive('orderedList') ? {
               backgroundColor: 'transparent',
-              color: isLight ? '#374151' : '#e5e7eb'
+              color: 'hsl(var(--foreground))'
             } : {}}
             onMouseEnter={(e) => {
               if (!editor.isActive('orderedList')) {
-                e.currentTarget.style.backgroundColor = isLight ? '#f3f4f6' : '#475569';
+                e.currentTarget.style.backgroundColor = 'hsl(var(--accent))';
               }
             }}
             onMouseLeave={(e) => {
@@ -394,11 +389,11 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             )}
             style={!editor.isActive('blockquote') ? {
               backgroundColor: 'transparent',
-              color: isLight ? '#374151' : '#e5e7eb'
+              color: 'hsl(var(--foreground))'
             } : {}}
             onMouseEnter={(e) => {
               if (!editor.isActive('blockquote')) {
-                e.currentTarget.style.backgroundColor = isLight ? '#f3f4f6' : '#475569';
+                e.currentTarget.style.backgroundColor = 'hsl(var(--accent))';
               }
             }}
             onMouseLeave={(e) => {

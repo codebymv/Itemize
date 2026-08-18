@@ -174,12 +174,21 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
           
         } catch (sanitizationError) {
           logger.error('Canvas data sanitization failed:', sanitizationError);
-          // Fallback to empty array if sanitization fails
-          sanitizedCanvasData = [];
+          toast({
+            title: "Error",
+            description: "Could not save your drawing. Please try again.",
+            variant: "destructive"
+          });
+          return;
         }
       } else {
-        // If not an array, default to empty array
-        sanitizedCanvasData = [];
+        logger.error('Canvas save skipped: canvas data is not a path array');
+        toast({
+          title: "Error",
+          description: "Could not save your drawing. Please try again.",
+          variant: "destructive"
+        });
+        return;
       }
 
       // Send the sanitized canvas data

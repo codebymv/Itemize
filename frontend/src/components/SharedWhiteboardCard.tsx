@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ReactSketchCanvas, ReactSketchCanvasRef } from 'react-sketch-canvas';
 import type { CanvasPath } from 'react-sketch-canvas/dist/types';
 import { Palette } from 'lucide-react';
+import { normalizeWhiteboardCanvasData } from '@/lib/whiteboardCanvasData';
 
 const NEUTRAL_GRAY = '#808080';
 
@@ -25,9 +26,6 @@ interface SharedWhiteboardCardProps {
   whiteboardData: SharedWhiteboardData;
   isLive?: boolean;
 }
-
-const hasPaths = (value: unknown): value is { paths: unknown } =>
-  Boolean(value && typeof value === 'object' && 'paths' in value);
 
 const toCanvasPaths = (value: unknown): CanvasPath[] => {
   if (!Array.isArray(value)) return [];
@@ -105,37 +103,12 @@ export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whit
           whiteboardTitle: whiteboardData.title
         });
 
-        // Validate canvas data format - should be an array of CanvasPath objects
-        let dataToLoad: unknown = whiteboardData.canvas_data;
-
-        // Handle different data formats from database
-        if (typeof dataToLoad === 'string') {
-          try {
-            const parsed = JSON.parse(dataToLoad);
-            if (Array.isArray(parsed)) {
-              dataToLoad = parsed;
-            } else if (hasPaths(parsed)) {
-              dataToLoad = parsed.paths;
-            } else {
-              throw new Error('Invalid parsed format');
-            }
-          } catch (e) {
-            console.warn('🎨 SharedWhiteboard: Failed to parse string canvas data:', e);
-            dataToLoad = [];
-          }
-        } else if (hasPaths(dataToLoad)) {
-          // Object format with paths property from backend
-          console.log('🎨 SharedWhiteboard: Data is in object format with paths, extracting array');
-          dataToLoad = dataToLoad.paths;
-        } else if (!Array.isArray(dataToLoad)) {
-          console.warn('🎨 SharedWhiteboard: Unknown data format or not an array, using empty array');
-          dataToLoad = [];
-        }
-
-        // Ensure dataToLoad is an array before proceeding
-        if (!Array.isArray(dataToLoad)) {
-          console.warn('🎨 SharedWhiteboard: Data is not an array after processing, forcing empty array:', typeof dataToLoad);
-          dataToLoad = [];
+        let dataToLoad: unknown[];
+        try {
+          dataToLoad = normalizeWhiteboardCanvasData(whiteboardData.canvas_data);
+        } catch (error) {
+          console.warn('🎨 SharedWhiteboard: Leaving canvas unchanged; canvas data is not a path array', error);
+          return;
         }
 
         // If we have data but it's missing required metadata, reconstruct it
@@ -202,13 +175,6 @@ export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whit
         }
       } catch (error) {
         console.error('🎨 SharedWhiteboard: Failed to load canvas data:', error);
-        // Load empty canvas on error
-        try {
-          canvasRef.current.loadPaths([]);
-          setIsCanvasLoaded(true);
-        } catch (fallbackError) {
-          console.error('🎨 SharedWhiteboard: Failed to load empty canvas:', fallbackError);
-        }
       }
     }
   }, [whiteboardData.canvas_data, isCanvasLoaded]);
@@ -223,16 +189,12 @@ export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whit
           length: Array.isArray(whiteboardData.canvas_data) ? whiteboardData.canvas_data.length : 'N/A'
         });
 
-        // Parse and load the updated canvas data
-        let dataToLoad: unknown = whiteboardData.canvas_data;
-
-        if (typeof dataToLoad === 'string') {
-          const parsed = JSON.parse(dataToLoad);
-          dataToLoad = Array.isArray(parsed) ? parsed : (hasPaths(parsed) ? parsed.paths : []);
-        } else if (hasPaths(dataToLoad)) {
-          dataToLoad = dataToLoad.paths;
-        } else if (!Array.isArray(dataToLoad)) {
-          dataToLoad = [];
+        let dataToLoad: unknown[];
+        try {
+          dataToLoad = normalizeWhiteboardCanvasData(whiteboardData.canvas_data);
+        } catch (error) {
+          console.warn('🎨 SharedWhiteboard: Skipping realtime update; canvas data is not a path array', error);
+          return;
         }
 
         // Always load paths, even if empty (for clearing)

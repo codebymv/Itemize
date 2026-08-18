@@ -90,7 +90,7 @@ export const LandingNav: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const isLight = theme === 'light';
+  const isLight = theme !== 'dark';
   
   // Section IDs for scroll spy
   const sectionIds = SECTIONS.map(s => s.id);
@@ -121,19 +121,15 @@ export const LandingNav: React.FC = () => {
 
   // Theme-aware colors
   const navBg = isScrolled
-    ? isLight
-      ? 'bg-white/90 backdrop-blur-xl shadow-sm border-b border-gray-200/50'
-      : 'bg-slate-900/90 backdrop-blur-xl shadow-sm border-b border-slate-700/50'
-    : isLight
-      ? 'bg-[#fafbfe]/0'
-      : 'bg-slate-900/0';
+    ? 'bg-background/90 backdrop-blur-xl shadow-sm border-b border-border/50'
+    : 'bg-background/0';
 
   const textColor = isLight ? 'text-gray-700' : 'text-slate-300';
   const textColorHover = isLight ? 'hover:text-gray-900' : 'hover:text-white';
   const activeTextColor = isLight ? 'text-blue-600' : 'text-blue-400';
 
   return (
-    <header className={cn('fixed top-0 left-0 right-0 z-50 transition-all duration-300', navBg)}>
+    <header className={cn('fixed top-0 left-0 right-0 z-50 transition-colors duration-300', navBg)}>
       <nav className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-4">
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}

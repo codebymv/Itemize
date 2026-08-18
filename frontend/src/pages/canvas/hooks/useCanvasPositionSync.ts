@@ -1,6 +1,7 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { updateCanvasPositions as apiUpdateCanvasPositions, CanvasPositionUpdate } from '@/services/api';
 import { POSITION_UPDATE_DEBOUNCE_MS, POSITION_UPDATE_RETRY_MS } from '../constants/canvasConstants';
+import { shouldRetryPositionSync } from './positionSyncRetry';
 
 export function useCanvasPositionSync() {
   const positionUpdateQueueRef = useRef<Map<string, CanvasPositionUpdate>>(new Map());
@@ -25,8 +26,7 @@ export function useCanvasPositionSync() {
     } catch (error) {
       console.error('Failed to update canvas positions:', error);
 
-      const status = (error as { response?: { status?: number } })?.response?.status;
-      if (status === 429) {
+      if (shouldRetryPositionSync(error)) {
         pendingUpdates.forEach(update => {
           positionUpdateQueueRef.current.set(`${update.type}:${update.id}`, update);
         });
@@ -50,13 +50,18 @@ export function useCanvasPositionSync() {
   }, [flushPositionUpdates]);
 
   useEffect(() => {
-    return () => {
-      if (positionUpdateTimerRef.current) {
-        clearTimeout(positionUpdateTimerRef.current);
-      }
+    const flushPending = () => {
       if (positionUpdateQueueRef.current.size > 0) {
         void flushPositionUpdates();
       }
+    };
+    window.addEventListener('beforeunload', flushPending);
+    return () => {
+      window.removeEventListener('beforeunload', flushPending);
+      if (positionUpdateTimerRef.current) {
+        clearTimeout(positionUpdateTimerRef.current);
+      }
+      flushPending();
     };
   }, [flushPositionUpdates]);
 

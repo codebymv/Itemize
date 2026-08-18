@@ -111,7 +111,7 @@ const Navbar: React.FC = () => {
   }, [isOnAdminRoute]);
 
   return (
-    <nav className="border-b backdrop-blur supports-[backdrop-filter]:bg-background/60" style={{ backgroundColor: theme === 'dark' ? '#1e293b' : '#ffffff', borderBottomColor: theme === 'dark' ? '#475569' : '#e5e7eb' }}>
+    <nav className="border-b border-border bg-background backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo/Brand */}

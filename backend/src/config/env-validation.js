@@ -1,8 +1,8 @@
 const { logger } = require('../utils/logger');
 
 /**
- * Production deployment guardrails — mirror patterns from Gleam release hardening.
- * Warns only (does not exit) so misconfiguration is visible in logs during boot.
+ * Production deployment guardrails.
+ * Missing SENTRY_DSN exits so production never boots without error tracking.
  */
 function validateProductionChecks() {
     if (process.env.NODE_ENV !== 'production') {
@@ -10,7 +10,8 @@ function validateProductionChecks() {
     }
 
     if (!process.env.SENTRY_DSN) {
-        logger.warn('PRODUCTION: Set backend SENTRY_DSN (Railway/hosting env) for error tracking.');
+        logger.error('PRODUCTION: SENTRY_DSN is required for error tracking.');
+        process.exit(1);
     }
 
     const frontendUrl = process.env.FRONTEND_URL || '';

@@ -271,6 +271,20 @@ describe('WorkspaceContentService', () => {
     });
   });
 
+  it('sanitizes note HTML on write', async () => {
+    repository.createNote.mockResolvedValue({
+      kind: 'completed',
+      row: noteRow(),
+    });
+    await service.createNote(7, {
+      title: 'Safe',
+      content: '<p onclick="alert(1)">ok<script>alert(2)</script></p>',
+    });
+    const savedContent = repository.createNote.mock.calls[0][1].content as string;
+    expect(savedContent).toContain('ok');
+    expect(savedContent).not.toMatch(/script|onclick/i);
+  });
+
   it('normalizes bounded list creation and canonical defaults', async () => {
     repository.createList.mockResolvedValue({
       kind: 'completed',
@@ -526,6 +540,26 @@ describe('WorkspaceContentService', () => {
         reason: 'INVALID_WHITEBOARD_CANVAS',
       },
     });
+  });
+
+  it('persists a path array when given a {paths, shapes} wrapper', async () => {
+    repository.createWhiteboard.mockResolvedValue({
+      kind: 'completed',
+      row: whiteboardRow(),
+    });
+    await service.createWhiteboard(7, {
+      title: 'Wrapped',
+      canvasData: JSON.stringify({
+        paths: [{ drawMode: true, strokeColor: '#000' }],
+        shapes: [],
+      }),
+    });
+    expect(repository.createWhiteboard).toHaveBeenCalledWith(
+      7,
+      expect.objectContaining({
+        canvasData: '[{"drawMode":true,"strokeColor":"#000"}]',
+      }),
+    );
   });
 
   it('maps, creates, and revision-guards canonical wireframes', async () => {

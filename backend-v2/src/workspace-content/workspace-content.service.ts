@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { GraphQLError } from 'graphql';
 import { itemizeGraphqlError } from '../common/graphql-error';
+import { sanitizeNoteHtml } from './note-html';
+import { normalizeWhiteboardCanvasData } from './whiteboard-canvas-data';
 import { NormalizedPage, PageInput, pageInfo } from '../common/pagination';
 import {
   BatchCanvasPositionsInput,
@@ -481,7 +483,7 @@ export class WorkspaceContentService {
         ? 'General'
         : this.whiteboardCategory(input.category),
       canvasData: input.canvasData === undefined
-        ? '{"paths":[],"shapes":[]}'
+        ? '[]'
         : this.whiteboardCanvasData(input.canvasData),
       canvasWidth: input.canvasWidth === undefined
         ? 750
@@ -1103,7 +1105,7 @@ export class WorkspaceContentService {
       id: Number(row.id),
       userId: Number(row.user_id),
       title: row.title ?? 'Untitled Note',
-      content: row.content ?? '',
+      content: sanitizeNoteHtml(row.content ?? ''),
       category: row.category ?? 'General',
       categoryId: row.category_id === null ? null : Number(row.category_id),
       colorValue: row.color_value,
@@ -1129,7 +1131,7 @@ export class WorkspaceContentService {
       title: row.title ?? 'Untitled Whiteboard',
       category: row.category ?? 'General',
       categoryId: row.category_id === null ? null : Number(row.category_id),
-      canvasData: JSON.stringify(row.canvas_data ?? []),
+      canvasData: this.serializeWhiteboardCanvasData(row.canvas_data),
       canvasWidth: Number(row.canvas_width ?? 750),
       canvasHeight: Number(row.canvas_height ?? 620),
       backgroundColor: row.background_color ?? '#FFFFFF',
@@ -1227,7 +1229,7 @@ export class WorkspaceContentService {
         { field: 'content', reason: 'INVALID_NOTE_CONTENT' },
       );
     }
-    return value;
+    return sanitizeNoteHtml(value);
   }
 
   private category(value: string | null): string {
@@ -1452,6 +1454,21 @@ export class WorkspaceContentService {
     return category;
   }
 
+  private serializeWhiteboardCanvasData(value: unknown): string {
+    try {
+      return JSON.stringify(normalizeWhiteboardCanvasData(value ?? []));
+    } catch {
+      if (typeof value === 'string') {
+        return value;
+      }
+      try {
+        return JSON.stringify(value);
+      } catch {
+        return '{"unreadable":true}';
+      }
+    }
+  }
+
   private whiteboardCanvasData(value: string | null): string {
     if (
       typeof value !== 'string' ||
@@ -1465,13 +1482,7 @@ export class WorkspaceContentService {
     }
     try {
       const parsed: unknown = JSON.parse(value);
-      if (
-        parsed === null ||
-        typeof parsed !== 'object'
-      ) {
-        throw new Error('Canvas JSON must be an object or array');
-      }
-      return JSON.stringify(parsed);
+      return JSON.stringify(normalizeWhiteboardCanvasData(parsed));
     } catch {
       throw itemizeGraphqlError(
         'Whiteboard canvas data must be valid object or array JSON',

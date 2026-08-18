@@ -433,7 +433,7 @@ describe('test database schema contract', () => {
         );
 
         expect(startupSource).toContain(
-            "WHERE version = '050_vault_storage'"
+            'REQUIRED_PRODUCTION_MIGRATION'
         );
     });
 

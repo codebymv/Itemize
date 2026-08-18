@@ -75,15 +75,15 @@
   }
 
   blockquote {
-    border-left: 4px solid #e5e7eb;
+    border-left: 4px solid hsl(var(--border));
     padding-left: 1rem;
     margin: 1rem 0;
     font-style: italic;
-    color: #6b7280;
+    color: hsl(var(--muted-foreground));
   }
 
   .is-empty::before {
-    color: #9ca3af;
+    color: hsl(var(--muted-foreground));
     content: attr(data-placeholder);
     float: left;
     height: 0;
@@ -92,7 +92,7 @@
 }
 
 .autocomplete-suggestion {
-  color: #9CA3AF !important;
+  color: hsl(var(--muted-foreground)) !important;
   pointer-events: none;
   font-style: italic;
   opacity: 0.7;

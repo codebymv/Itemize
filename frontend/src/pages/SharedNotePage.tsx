@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SharedContentLayout } from '../components/SharedContentLayout';
 import { SharedNoteCard } from '../components/SharedNoteCard';
+import { sanitizeNoteHtml } from '../lib/sanitizeNoteHtml';
 import { NotAvailableCTA } from '../components/NotAvailableCTA';
 import { useToast } from '../hooks/use-toast';
 import { Spinner } from '../components/ui/Spinner';
@@ -132,7 +133,7 @@ const SharedNotePage: React.FC = () => {
             return {
               ...prevData,
               title: update.data.title || prevData.title,
-              content: update.data.content || prevData.content,
+              content: sanitizeNoteHtml(update.data.content || prevData.content),
               category: update.data.category || prevData.category,
               color_value: update.data.color_value || prevData.color_value,
               updated_at: update.data.updated_at || prevData.updated_at
@@ -144,7 +145,7 @@ const SharedNotePage: React.FC = () => {
             if (!prevData) return prevData;
             return {
               ...prevData,
-              content: update.data.content,
+              content: sanitizeNoteHtml(typeof update.data.content === 'string' ? update.data.content : prevData.content),
               updated_at: update.data.updated_at
             };
           });

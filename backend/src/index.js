@@ -40,12 +40,21 @@ const { Server } = require('socket.io');
 const { initScheduler } = require('./scheduler');
 const registerApiRoutes = require('./bootstrap/register-api-routes');
 const { createCorsOptionsDelegate } = require('./config/cors-options');
+const {
+    REQUIRED_PRODUCTION_MIGRATION,
+    createApiBootState,
+    markApiRoutesReady,
+    markApiInitFailed,
+    healthDecision,
+    shouldCrashOnInitFailure,
+} = require('./bootstrap/api-boot-state');
 
 // Create Express app
 const app = express();
 const port = process.env.PORT || 3001;
 const HEALTHCHECK_STARTUP_GRACE_MS = parseInt(process.env.HEALTHCHECK_STARTUP_GRACE_MS || '60000', 10);
 const healthcheckStartedAt = Date.now();
+const apiBootState = createApiBootState();
 
 // Trust proxy headers in production (Railway/other proxies)
 app.set('trust proxy', 1);
@@ -247,38 +256,18 @@ app.get('/api/health', async (req, res) => {
     const now = Date.now();
     const inStartupGrace = now - healthcheckStartedAt < HEALTHCHECK_STARTUP_GRACE_MS;
 
-    if (!pool && inStartupGrace) {
-        return res.status(200).json({
-            status: 'starting',
-            timestamp: new Date().toISOString(),
-            uptime: process.uptime(),
-            environment: process.env.NODE_ENV || 'development',
-            version: process.env.npm_package_version || '1.0.0',
-            checks: {
-                database: {
-                    ok: false,
-                    message: 'Database not initialized yet',
-                    latency: 0,
-                },
-                email: {
-                    ok: Boolean(process.env.RESEND_API_KEY),
-                    message: process.env.RESEND_API_KEY ? 'Configured' : 'Not configured',
-                },
-                twilio: {
-                    ok: Boolean(process.env.TWILIO_ACCOUNT_SID),
-                    message: process.env.TWILIO_ACCOUNT_SID ? 'Configured' : 'Not configured',
-                },
-            },
-            startup: `Grace period ${HEALTHCHECK_STARTUP_GRACE_MS}ms`,
-        });
-    }
-
     try {
         const checks = {
             database: {
                 ok: false,
-                message: 'Unknown',
+                message: pool ? 'Unknown' : 'Database not initialized yet',
                 latency: 0,
+            },
+            apiRoutes: {
+                ok: apiBootState.routesReady,
+                message: apiBootState.routesReady
+                    ? 'Registered'
+                    : (apiBootState.failureMessage || 'API routes are not registered'),
             },
         };
 
@@ -287,7 +276,7 @@ app.get('/api/health', async (req, res) => {
                 const dbStart = Date.now();
                 const dbResult = await pool.query('SELECT 1');
                 const dbLatency = Date.now() - dbStart;
-                
+
                 checks.database = {
                     ok: dbResult.rows.length > 0,
                     message: dbResult.rows.length > 0 ? 'Connected' : 'No rows returned',
@@ -302,10 +291,6 @@ app.get('/api/health', async (req, res) => {
                 logger.error('Database health check failed', { error: err.message });
             }
         }
-
-        const requiredChecks = {
-            database: checks.database,
-        };
 
         const optionalChecks = {
             email: {
@@ -334,24 +319,25 @@ app.get('/api/health', async (req, res) => {
             },
         };
 
-        const databaseOptionalDuringStartup = !pool;
-        const requiredHealthy = databaseOptionalDuringStartup
-            ? true
-            : Object.values(requiredChecks).every(c => c.ok);
         const optionalHealthy = Object.values(optionalChecks).every(c => c.ok);
+        const decision = healthDecision({
+            routesReady: apiBootState.routesReady,
+            inStartupGrace,
+            databaseOk: checks.database.ok,
+            optionalHealthy,
+        });
 
-        const response = {
-            status: requiredHealthy ? (optionalHealthy ? 'healthy' : 'degraded') : 'unhealthy',
+        return res.status(decision.statusCode).json({
+            status: decision.status,
             timestamp: new Date().toISOString(),
             uptime: process.uptime(),
             environment: process.env.NODE_ENV || 'development',
             version: process.env.npm_package_version || '1.0.0',
-            checks: { ...requiredChecks, ...optionalChecks },
-            startup: databaseOptionalDuringStartup ? 'database not initialized yet' : undefined,
-        };
-
-        const statusCode = requiredHealthy ? 200 : 503;
-        return res.status(statusCode).json(response);
+            checks: { database: checks.database, apiRoutes: checks.apiRoutes, ...optionalChecks },
+            startup: decision.reason === 'startup_grace'
+                ? `Grace period ${HEALTHCHECK_STARTUP_GRACE_MS}ms`
+                : undefined,
+        });
     } catch (error) {
         console.error('Health check failed:', error);
         return res.status(503).json({
@@ -459,8 +445,7 @@ setTimeout(async () => {
         const pool = db.createDbConnection();
 
         if (!pool) {
-            logger.warn('Database pool not obtained. API endpoints will not be available.');
-            return;
+            throw new Error('Database pool not obtained. DATABASE_URL is missing or invalid.');
         }
 
 // Store pool reference for graceful shutdown
@@ -481,9 +466,9 @@ app.use(dbMonitor(pool));
             const requiredMigrationCheck = await pool.query(`
                 SELECT EXISTS (
                     SELECT 1 FROM schema_migrations
-                    WHERE version = '050_vault_storage'
+                    WHERE version = $1
                 ) AS has_required_migration
-            `);
+            `, [REQUIRED_PRODUCTION_MIGRATION]);
             if (!requiredMigrationCheck.rows[0]?.has_required_migration) {
                 throw new Error('Required migrations are missing. Run backend/scripts/run-migrations.js before starting production.');
             }
@@ -524,6 +509,7 @@ app.use(dbMonitor(pool));
             port,
             logger
         });
+        markApiRoutesReady(apiBootState);
 
         // Initialize background job scheduler
         initScheduler(pool, io, broadcast);
@@ -537,14 +523,23 @@ app.use(dbMonitor(pool));
         logger.info('Error handling middleware initialized');
 
     } catch (dbError) {
+        markApiInitFailed(apiBootState, dbError);
         const startupErrorMessage = dbError instanceof Error ? dbError.message : String(dbError);
         logger.error(`Database-dependent API initialization failed: ${startupErrorMessage}`, {
             error: startupErrorMessage,
             stack: dbError instanceof Error ? dbError.stack : undefined
         });
-        logger.info('Server will continue running for health checks');
 
         app.use('/api/*', (req, res) => {
+            if (req.path === '/health' || req.originalUrl === '/api/health') {
+                return res.status(503).json({
+                    status: 'unhealthy',
+                    error: {
+                        code: 'API_INITIALIZATION_FAILED',
+                        message: startupErrorMessage,
+                    },
+                });
+            }
             res.status(503).json({
                 success: false,
                 error: {
@@ -553,6 +548,12 @@ app.use(dbMonitor(pool));
                 }
             });
         });
+
+        if (shouldCrashOnInitFailure()) {
+            logger.error('Crashing process because API initialization failed in production');
+            process.exit(1);
+        }
+        logger.info('Server will continue running for health checks in non-production');
     }
 
     // Static files and catch-all route

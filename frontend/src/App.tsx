@@ -34,6 +34,12 @@ const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
 const UserHome = React.lazy(() => import("./pages/UserHome"));
 const DocsPage = React.lazy(() => import("./pages/DocsPage"));
 const StatusPage = React.lazy(() => import("./pages/StatusPage"));
+const TermsOfServicePage = React.lazy(() =>
+  import("./pages/legal/LegalDocumentPage").then((m) => ({ default: m.TermsOfServicePage }))
+);
+const PrivacyPolicyPage = React.lazy(() =>
+  import("./pages/legal/LegalDocumentPage").then((m) => ({ default: m.PrivacyPolicyPage }))
+);
 const SharedListPage = React.lazy(() => import("./pages/SharedListPage"));
 const SharedNotePage = React.lazy(() => import("./pages/SharedNotePage"));
 const SharedWhiteboardPage = React.lazy(() => import("./pages/SharedWhiteboardPage"));
@@ -249,7 +255,7 @@ const AppContent = () => {
   }, [location.pathname]);
 
   // Determine if this is a public route (no sidebar)
-  const publicRoutes = ['/home', '/status', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
+  const publicRoutes = ['/home', '/status', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password', '/legal/terms', '/legal/privacy'];
   const isPublicRoute = publicRoutes.includes(location.pathname) ||
     location.pathname.startsWith('/shared/') ||
     location.pathname.startsWith('/form/') ||
@@ -270,6 +276,8 @@ const AppContent = () => {
       {/* Public routes with navbar/footer layout */}
       <Route path="/home" element={<Home />} />
       <Route path="/status" element={<PublicLayout><StatusPage /></PublicLayout>} />
+      <Route path="/legal/terms" element={<PublicLayout><TermsOfServicePage /></PublicLayout>} />
+      <Route path="/legal/privacy" element={<PublicLayout><PrivacyPolicyPage /></PublicLayout>} />
       <Route path="/help/*" element={<PublicLayout><DocsPage /></PublicLayout>} />
 
       {/* Auth routes (standalone, no navbar/footer) */}
@@ -389,6 +397,8 @@ const App = () => {
           attribute="class"
           defaultTheme="light"
           enableSystem={false}
+          disableTransitionOnChange
+          storageKey="theme"
           themes={['light', 'dark']}
         >
           <BrowserRouter

@@ -32,20 +32,35 @@
     </noscript>
     <!-- No hero/screenshot preloads: mobile LCP is system-ui H1. -->
     <style>
-      html,body{margin:0;background:#fafbfe;color:#0f172a}
+      html,body{margin:0;background:hsl(220 13% 95%);color:hsl(222.2 84% 4.9%);color-scheme:light}
+      html.dark,html.dark body{background:hsl(215 28% 21%);color:hsl(210 20% 98%);color-scheme:dark}
       #lh-lcp-h1{
         font-family:system-ui,-apple-system,Segoe UI,sans-serif!important;
         font-size:clamp(2.15rem,7.5vw,3.4rem);
         font-weight:700;
         line-height:1.1;
         letter-spacing:-0.02em;
-        color:#0f172a;
+        color:hsl(222.2 84% 4.9%);
         margin:0 auto 1.5rem;
         max-width:40rem;
         text-align:center;
       }
+      html.dark #lh-lcp-h1{color:hsl(210 20% 98%)}
       #lh-lcp-h1 .lh-accent{color:#2563eb}
+      html.dark #lh-lcp-h1 .lh-accent{color:#60a5fa}
     </style>
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('theme');
+          var theme = stored === 'dark' || stored === 'light' ? stored : 'light';
+          var root = document.documentElement;
+          if (theme === 'dark') root.classList.add('dark');
+          else root.classList.remove('dark');
+          root.style.colorScheme = theme;
+        } catch (e) {}
+      })();
+    </script>
   </head>
 
   <body>

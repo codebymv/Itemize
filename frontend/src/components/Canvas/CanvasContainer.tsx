@@ -100,6 +100,9 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   updateCategory
 }) => {
   const { theme } = useTheme();
+  const isDark =
+    theme === 'dark' ||
+    (!theme && typeof document !== 'undefined' && document.documentElement.classList.contains('dark'));
   const { currentUser } = useAuthState();
   const { state: sidebarState, isMobile } = useSidebar();
   
@@ -594,7 +597,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
 
   // Memoize the background image to prevent recalculation on every render
   const backgroundImageStyle = useMemo(() => {
-    return theme === 'dark' ? `
+    return isDark ? `
       radial-gradient(circle, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
       radial-gradient(circle, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
       linear-gradient(135deg, rgba(255, 255, 255, 0.01) 0%, rgba(255, 255, 255, 0.04) 50%, rgba(255, 255, 255, 0.01) 100%)
@@ -603,7 +606,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
       radial-gradient(circle, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
       linear-gradient(135deg, rgba(0, 0, 0, 0.01) 0%, rgba(0, 0, 0, 0.04) 50%, rgba(0, 0, 0, 0.01) 100%)
     `;
-  }, [theme]);
+  }, [isDark]);
 
   // Global event listeners for mouse interaction outside canvas
   useEffect(() => {

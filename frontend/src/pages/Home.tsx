@@ -66,7 +66,7 @@ const Home: React.FC = () => {
 
   // Theme-aware base colors - memoized to prevent recalculation
   const themeColors = useMemo(() => {
-    const isLight = theme === 'light';
+    const isLight = theme !== 'dark';
     return {
       isLight,
       textColor: isLight ? 'text-gray-900' : 'text-slate-100',
@@ -113,7 +113,7 @@ const Home: React.FC = () => {
   const handleGetStarted = () => navigate('/register');
 
   return (
-    <div className={`min-h-screen ${isLight ? 'bg-[#fafbfe]' : 'bg-slate-900'} overflow-hidden relative`}>
+    <div className="min-h-screen bg-background overflow-hidden relative">
       {belowFoldReady ? (
         <Suspense fallback={null}>
           <BackgroundClouds opacity={isLight ? 0.12 : 0.08} cloudCount={4} isLight={isLight} />
@@ -531,7 +531,7 @@ const Home: React.FC = () => {
                   { icon: Key, label: 'Secure Auth', desc: 'OAuth2 and 2FA support' },
                 ].map((item, i) => (
                   <RevealSection key={i} variant="fade-up" delay={i * 80}>
-                    <div className={`text-center p-6 rounded-2xl ${cardBgColor} border ${cardBorderColor} transition-all duration-300 hover:shadow-md`}>
+                    <div className={`text-center p-6 rounded-2xl ${cardBgColor} border ${cardBorderColor} transition-shadow duration-300 hover:shadow-md`}>
                       <div className={`w-14 h-14 rounded-2xl ${isLight ? 'bg-emerald-50' : 'bg-emerald-900/20'} flex items-center justify-center mx-auto mb-4`}>
                         <item.icon className={`h-7 w-7 ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`} />
                       </div>

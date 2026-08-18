@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { RealtimeOutboxService } from '../realtime-outbox/realtime-outbox.service';
+import { sanitizeNoteHtml } from './note-html';
 
 export type WorkspaceListItemRow = {
   id: string;
@@ -1532,7 +1533,7 @@ export class WorkspaceContentRepository {
   ): Record<string, unknown> {
     const updatedAt = new Date(note.updated_at).toISOString();
     if (eventType === 'CONTENT_CHANGED') {
-      return { id: note.id, content: note.content, updated_at: updatedAt };
+      return { id: note.id, content: sanitizeNoteHtml(note.content ?? ''), updated_at: updatedAt };
     }
     if (eventType === 'TITLE_CHANGED') {
       return { id: note.id, title: note.title, updated_at: updatedAt };
@@ -1543,7 +1544,7 @@ export class WorkspaceContentRepository {
     return {
       id: note.id,
       title: note.title,
-      content: note.content,
+      content: sanitizeNoteHtml(note.content ?? ''),
       category: note.category,
       color_value: note.color_value,
       updated_at: updatedAt,
