@@ -22,6 +22,7 @@ import { PUBLIC_SHELL_WIDTH } from '@/components/layout/PageContainer';
 import { Skeleton } from '@/components/ui/skeleton';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import { cn } from '@/lib/utils';
+import { useAuthState } from '@/contexts/AuthContext';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
   const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
@@ -75,6 +76,7 @@ interface StatusData {
 
 const StatusPage: React.FC = () => {
   const navigate = useNavigate();
+  const { currentUser } = useAuthState();
   const [statusData, setStatusData] = useState<StatusData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -264,7 +266,7 @@ const StatusPage: React.FC = () => {
         leading={backButton}
         headerActions={renderRefreshButton()}
         mobileActions={renderRefreshButton()}
-        className={PUBLIC_SHELL_WIDTH}
+        className={cn('flex-1', !currentUser && PUBLIC_SHELL_WIDTH)}
       >
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20" />)}
@@ -280,7 +282,7 @@ const StatusPage: React.FC = () => {
       leading={backButton}
       headerActions={renderRefreshButton()}
       mobileActions={renderRefreshButton()}
-      className={PUBLIC_SHELL_WIDTH}
+      className={cn('flex-1', !currentUser && PUBLIC_SHELL_WIDTH)}
     >
       <BackgroundClouds />
         <div className="space-y-3">
