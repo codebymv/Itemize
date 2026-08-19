@@ -156,6 +156,12 @@ router.get('/search', async (req, res) => {
   }
 });
 
+const SKIP_DIR_NAMES = new Set(['archive', 'generated']);
+
+function shouldSkipEntry(relativePath) {
+  return relativePath.split(/[\\/]/).some((segment) => SKIP_DIR_NAMES.has(segment));
+}
+
 /**
  * Recursively build the documentation directory structure
  */
@@ -168,8 +174,11 @@ async function buildDocStructure(dirPath, relativePath = '') {
     console.log(`[buildDocStructure] Found entries in ${dirPath}: ${entries.map(e => e.name).join(', ')}`);
     
     for (const entry of entries) {
-      const entryPath = path.join(dirPath, entry.name);
       const relativeEntryPath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+      if (shouldSkipEntry(relativeEntryPath)) {
+        continue;
+      }
+      const entryPath = path.join(dirPath, entry.name);
       
       if (entry.isDirectory()) {
         console.log(`[buildDocStructure] Processing directory: ${entry.name}`);
@@ -216,8 +225,11 @@ async function searchDocuments(dirPath, query, relativePath = '', results = []) 
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
     
     for (const entry of entries) {
-      const entryPath = path.join(dirPath, entry.name);
       const relativeEntryPath = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+      if (shouldSkipEntry(relativeEntryPath)) {
+        continue;
+      }
+      const entryPath = path.join(dirPath, entry.name);
       
       if (entry.isDirectory()) {
         await searchDocuments(entryPath, query, relativeEntryPath, results);

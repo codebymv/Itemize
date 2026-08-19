@@ -1,27 +1,53 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Menu, X, FileText, Folder, ArrowLeft, Search } from 'lucide-react';
+import {
+  Menu,
+  X,
+  FileText,
+  Folder,
+  ArrowLeft,
+  Search,
+  ChevronRight,
+  ChevronDown,
+  HelpCircle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Skeleton } from '@/components/ui/skeleton';
-import { docsService, DocStructure } from '../services/docsService';
+import {
+  docsService,
+  DocStructure,
+  GUIDES_FOLDER_PATH,
+  groupHelpStructure,
+  parentPaths,
+  findItemByPath,
+} from '../services/docsService';
+import { HelpLanding } from './help/HelpLanding';
+
+const formatName = (name: string) =>
+  name.replace(/-/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 const DocsPage: React.FC = () => {
   const { '*': docPath } = useParams<{ '*': string }>();
   const navigate = useNavigate();
-  const [markdownContent, setMarkdownContent] = useState<string>('');
+  const [markdownContent, setMarkdownContent] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [docStructure, setDocStructure] = useState<DocStructure[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    () => new Set([GUIDES_FOLDER_PATH]),
+  );
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Theme-aware color classes - matching canvas slate colors
+  const isLanding = !docPath || docPath === '/';
+  const searching = searchQuery.trim().length > 0;
+
   const sidebarBg = 'bg-card';
   const textColor = 'text-foreground';
   const mutedTextColor = 'text-muted-foreground';
@@ -29,144 +55,142 @@ const DocsPage: React.FC = () => {
   const hoverBg = 'hover:bg-accent';
   const activeBg = 'bg-blue-200 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
 
-
-
-
-
-  // Function to format names for display
-  const formatName = (name: string) => {
-    return name
-      .replace(/-/g, ' ')
-      .replace(/\b\w/g, l => l.toUpperCase());
-  };
-
-  // Function to filter documentation structure based on search query
   const filterDocStructure = (items: DocStructure[], query: string): DocStructure[] => {
     if (!query.trim()) return items;
-    
     const searchLower = query.toLowerCase();
-    
-    const filterItems = (items: DocStructure[]): DocStructure[] => {
+
+    const filterItems = (nodes: DocStructure[]): DocStructure[] => {
       const filtered: DocStructure[] = [];
-      
-      for (const item of items) {
+      for (const item of nodes) {
         const nameMatches = formatName(item.name).toLowerCase().includes(searchLower);
         const pathMatches = item.path.toLowerCase().includes(searchLower);
-        
         if (item.children) {
           const filteredChildren = filterItems(item.children);
           if (nameMatches || pathMatches || filteredChildren.length > 0) {
             filtered.push({
               ...item,
-              children: filteredChildren.length > 0 ? filteredChildren : item.children
+              children: filteredChildren.length > 0 ? filteredChildren : item.children,
             });
           }
         } else if (nameMatches || pathMatches) {
           filtered.push(item);
         }
       }
-      
       return filtered;
     };
-    
+
     return filterItems(items);
   };
 
-  // Function to recursively render the document tree (sidebar)
-  const renderDocTree = (items: DocStructure[], level = 0) => {
-    // Safety check to ensure items is an array
-    if (!Array.isArray(items)) {
-      console.warn('renderDocTree received non-array items:', items);
-      return [];
-    }
-    return items.map((item) => (
-      <div key={item.path} style={{ paddingLeft: `${level * 16}px` }}>
-        <Link
-          to={`/help/${item.path}`}
-          className={`flex items-center px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${
-            docPath === item.path || (docPath === undefined && item.path === 'getting-started') 
-              ? activeBg + ' shadow-sm'
-              : `${textColor} ${hoverBg}`
-          }`}
-          style={{ fontFamily: '"Raleway", sans-serif' }}
-          onClick={() => setIsSidebarOpen(false)}
-        >
-          {item.type === 'folder' ? (
-            <Folder className="h-4 w-4 mr-3 flex-shrink-0 text-blue-600 dark:text-blue-400" />
-          ) : (
-            <FileText className="h-4 w-4 mr-3 flex-shrink-0 text-blue-600 dark:text-blue-400" />
-          )}
-          <span className="truncate font-medium">{formatName(item.name)}</span>
-        </Link>
-        {item.children && (
-          <div className="mt-1 space-y-1">
-            {renderDocTree(item.children, level + 1)}
-          </div>
-        )}
-      </div>
-    ));
-  };
+  const toggleFolder = useCallback((folderPath: string) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderPath)) next.delete(folderPath);
+      else next.add(folderPath);
+      return next;
+    });
+  }, []);
 
-  // Helper function to find an item by path in the structure
-  const findItemByPath = (items: DocStructure[], path: string): DocStructure | null => {
-    for (const item of items) {
-      if (item.path === path) {
-        return item;
+  const renderDocTree = (items: DocStructure[], level = 0) => {
+    if (!Array.isArray(items)) return [];
+    return items.map((item) => {
+      const isFolder = item.type === 'folder';
+      const isExpanded = searching || expandedFolders.has(item.path);
+      const isActive = docPath === item.path;
+
+      if (isFolder) {
+        return (
+          <div key={item.path}>
+            <button
+              type="button"
+              aria-expanded={isExpanded}
+              onClick={() => toggleFolder(item.path)}
+              className={`flex w-full items-center px-3 py-2 rounded-lg text-sm transition-all duration-200 ${textColor} ${hoverBg}`}
+              style={{ paddingLeft: `${level * 16 + 12}px`, fontFamily: '"Raleway", sans-serif' }}
+            >
+              {isExpanded ? (
+                <ChevronDown className="h-4 w-4 mr-2 flex-shrink-0 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 mr-2 flex-shrink-0 text-muted-foreground" />
+              )}
+              <Folder className="h-4 w-4 mr-2 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+              <span className="truncate font-medium text-left">{formatName(item.name)}</span>
+            </button>
+            {isExpanded && item.children && (
+              <div className="mt-0.5">{renderDocTree(item.children, level + 1)}</div>
+            )}
+          </div>
+        );
       }
-      if (item.children) {
-        const found = findItemByPath(item.children, path);
-        if (found) return found;
-      }
-    }
-    return null;
+
+      return (
+        <div key={item.path}>
+          <Link
+            to={`/help/${item.path}`}
+            className={`flex items-center px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+              isActive ? `${activeBg} shadow-sm` : `${textColor} ${hoverBg}`
+            }`}
+            style={{ paddingLeft: `${level * 16 + 12}px`, fontFamily: '"Raleway", sans-serif' }}
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            <FileText className="h-4 w-4 mr-2 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+            <span className="truncate font-medium">{formatName(item.name)}</span>
+          </Link>
+        </div>
+      );
+    });
   };
 
   useEffect(() => {
+    if (!docPath) return;
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      for (const path of parentPaths(docPath)) next.add(path);
+      return next;
+    });
+  }, [docPath]);
+
+  useEffect(() => {
+    const fetchDocStructure = async () => {
+      try {
+        const structure = await docsService.getDocStructure();
+        const structureData = Array.isArray(structure) ? structure : [];
+        setDocStructure(groupHelpStructure(structureData));
+      } catch {
+        setDocStructure([]);
+      }
+    };
+
     const fetchDocContent = async () => {
+      if (isLanding) {
+        setMarkdownContent('');
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       try {
         setError(null);
-        const effectivePath = (!docPath || docPath === '/') ? 'getting-started' : docPath;
-
-        // Check if this path is a folder in our structure
         const structure = await docsService.getDocStructure();
-        const isFolder = findItemByPath(structure, effectivePath)?.type === 'folder';
-
-        let markdownContent: string;
-        if (isFolder) {
-          markdownContent = docsService.generateFolderContent(effectivePath);
-        } else {
-          markdownContent = await docsService.getDocContent(effectivePath);
-        }
-
-        setMarkdownContent(markdownContent);
-      } catch (err) {
-        console.error('Error fetching documentation content:', err);
-        setError('Failed to load documentation content. Please try again later.');
+        const grouped = groupHelpStructure(Array.isArray(structure) ? structure : []);
+        const isFolder = findItemByPath(grouped, docPath)?.type === 'folder';
+        const content = isFolder
+          ? docsService.generateFolderContent(docPath, grouped)
+          : await docsService.getDocContent(docPath);
+        setMarkdownContent(content);
+      } catch {
+        setError('Failed to load help content. Please try again later.');
         setMarkdownContent('');
       } finally {
         setLoading(false);
       }
     };
 
-    const fetchDocStructure = async () => {
-      try {
-        const structure = await docsService.getDocStructure();
-        // Ensure the response data is an array
-        const structureData = Array.isArray(structure) ? structure : [];
-        setDocStructure(structureData);
-      } catch (err) {
-        console.error('Error fetching documentation structure:', err);
-        // Set empty array on error to prevent .map() issues
-        setDocStructure([]);
-      }
-    };
-
-    fetchDocContent();
     fetchDocStructure();
-  }, [docPath]);
+    fetchDocContent();
+  }, [docPath, isLanding]);
 
-  // Prevent body scroll when sidebar is open on mobile
   useEffect(() => {
     if (isSidebarOpen) {
       document.body.style.overflow = 'hidden';
@@ -178,21 +202,17 @@ const DocsPage: React.FC = () => {
     };
   }, [isSidebarOpen]);
 
-  // Keyboard shortcut to focus search (press "/" key)
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey) {
-        // Only if not focused on an input/textarea
         const activeElement = document.activeElement;
         if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
           return;
         }
-        
         event.preventDefault();
         searchInputRef.current?.focus();
       }
     };
-
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
@@ -212,7 +232,7 @@ const DocsPage: React.FC = () => {
   const filteredDocs = filterDocStructure(docStructure, searchQuery);
   const searchResultCount = filteredDocs.reduce((total, item) => {
     const countItems = (items: DocStructure[]): number =>
-      items.reduce((sum, i) => sum + 1 + (i.children ? countItems(i.children) : 0), 0);
+      items.reduce((sum, node) => sum + 1 + (node.children ? countItems(node.children) : 0), 0);
     return total + countItems([item]);
   }, 0);
 
@@ -225,14 +245,14 @@ const DocsPage: React.FC = () => {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search documentation... (Press / to focus)"
+          placeholder="Search help... (Press /)"
           className={`w-full pl-10 pr-4 py-2 rounded-lg border ${borderColor} bg-background text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors`}
         />
         {searchQuery && (
           <button
             type="button"
             onClick={() => setSearchQuery('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-foreground transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -260,7 +280,7 @@ const DocsPage: React.FC = () => {
         onAction={() => setSearchQuery('')}
       />
     ) : (
-      <div className="space-y-1">{renderDocTree(filteredDocs)}</div>
+      <div className="space-y-0.5">{renderDocTree(filteredDocs)}</div>
     );
 
   const docsNav = (
@@ -270,8 +290,10 @@ const DocsPage: React.FC = () => {
     </nav>
   );
 
-  const article = error ? (
-    <ErrorState title="Documentation Error" description={error} />
+  const article = isLanding ? (
+    <HelpLanding />
+  ) : error ? (
+    <ErrorState title="Help" description={error} />
   ) : loading && !markdownContent ? (
     <div className="space-y-3 p-2">
       <Skeleton className="h-8 w-1/2" />
@@ -306,8 +328,8 @@ const DocsPage: React.FC = () => {
       </div>
 
       <PageLayout
-        title="DOCUMENTATION"
-        icon={<FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+        title="Help"
+        icon={<HelpCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />}
         leading={backButton}
         frame="split"
         nav={docsNav}
