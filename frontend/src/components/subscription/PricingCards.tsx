@@ -335,6 +335,7 @@ export function PricingCards({
 
                             {/* CTA Button */}
                             <Button
+                                type="button"
                                 className={getButtonClass(planId, isHighlighted, isCurrentPlan)}
                                 onClick={() => handlePlanClick(planId)}
                                 disabled={isLoading || isCurrentPlan}

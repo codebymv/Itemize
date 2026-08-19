@@ -99,6 +99,17 @@ const Home: React.FC = () => {
   }, []);
 
   const handleGetStarted = () => navigate('/register');
+  const handleChoosePlan = (plan: 'free' | 'starter' | 'unlimited' | 'pro') => {
+    if (isAuthenticated) {
+      navigate('/payment-settings');
+      return;
+    }
+    if (plan === 'free') {
+      navigate('/register');
+      return;
+    }
+    navigate(`/register?plan=${plan}`);
+  };
 
   return (
     <div className="min-h-screen bg-background overflow-hidden relative">
@@ -530,7 +541,7 @@ const Home: React.FC = () => {
         {/* ═══════════════════════════════════════════════════════════════ */}
         {/* SECTION 8: PRICING                                             */}
         {/* ═══════════════════════════════════════════════════════════════ */}
-        <section id="pricing" className="pt-10 md:pt-16 pb-20 md:pb-32 bg-card/60" style={{ contain: 'layout style', contentVisibility: 'auto' }}>
+        <section id="pricing" className="pt-10 md:pt-16 pb-20 md:pb-32 bg-card/60">
           <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
             <RevealSection>
               <div className="text-center mb-14">
@@ -553,7 +564,7 @@ const Home: React.FC = () => {
                   <PricingCards
                     variant="landing"
                     showYearlyToggle={false}
-                    onUpgrade={() => handleGetStarted()}
+                    onUpgrade={handleChoosePlan}
                   />
                 </Suspense>
                 ) : (

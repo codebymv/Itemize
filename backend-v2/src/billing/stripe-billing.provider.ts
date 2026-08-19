@@ -121,6 +121,20 @@ export class StripeBillingProvider {
     return session.url;
   }
 
+  async changeSubscriptionPrice(
+    subscriptionId: string,
+    priceId: string,
+  ): Promise<void> {
+    this.requireConfiguration();
+    const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
+    const itemId = subscription.items.data[0]?.id;
+    if (!itemId) throw new Error('Subscription has no items');
+    await this.stripe.subscriptions.update(subscriptionId, {
+      items: [{ id: itemId, price: priceId }],
+      proration_behavior: 'create_prorations',
+    });
+  }
+
   private requireConfiguration(): void {
     if (!this.isConfigured()) throw new Error('Stripe is not configured');
   }

@@ -131,6 +131,7 @@ function SettingsNav() {
 function AccountInfo({ currentPlan }: { currentPlan?: Plan }) {
   const { currentUser } = useAuthState();
   const { startCheckout } = useSubscriptionFeatures();
+  const { toast } = useToast();
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [isLoading, setIsLoading] = useState(false);
   const { data: usageStats } = useUsageStats();
@@ -143,7 +144,11 @@ function AccountInfo({ currentPlan }: { currentPlan?: Plan }) {
     try {
       await startCheckout(planId, billingPeriod);
     } catch (error) {
-      console.error('Failed to start checkout:', error);
+      toast({
+        title: 'Could not start checkout',
+        description: error instanceof Error ? error.message : 'Failed to start checkout',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }

@@ -15,6 +15,7 @@ describe('BillingService', () => {
     activeSubscription: jest.fn(),
     createCheckoutSession: jest.fn(),
     createPortalSession: jest.fn(),
+    changeSubscriptionPrice: jest.fn(),
   };
   let service: BillingService;
 
@@ -72,6 +73,7 @@ describe('BillingService', () => {
     provider.activeSubscription.mockResolvedValue({
       id: 'sub_active',
       status: 'active',
+      priceId: 'price_1U5ypmRxBJaRlFvtCDKzCKSC',
     });
     provider.createPortalSession.mockResolvedValue('https://stripe.test/portal');
 
@@ -84,6 +86,31 @@ describe('BillingService', () => {
       'https://itemize.test/success',
       'billing-portal:4:checkout-unit-test-key-0001',
     );
+  });
+
+  it('switches an existing subscription to the selected price instead of opening the portal', async () => {
+    repository.ensureCustomer.mockResolvedValue({
+      customerId: 'cus_existing',
+      existed: true,
+    });
+    provider.activeSubscription.mockResolvedValue({
+      id: 'sub_active',
+      status: 'active',
+      priceId: 'price_1U5ypmRxBJaRlFvtCDKzCKSC',
+    });
+    provider.changeSubscriptionPrice.mockResolvedValue(undefined);
+
+    await expect(
+      service.checkout(4, { ...checkout, planId: 'unlimited' }),
+    ).resolves.toEqual({
+      url: 'https://itemize.test/success',
+    });
+    expect(provider.changeSubscriptionPrice).toHaveBeenCalledWith(
+      'sub_active',
+      'price_1U5yqFRxBJaRlFvtcC8I6bbo',
+    );
+    expect(provider.createPortalSession).not.toHaveBeenCalled();
+    expect(provider.createCheckoutSession).not.toHaveBeenCalled();
   });
 
   it('redacts provider failures behind a stable service error', async () => {

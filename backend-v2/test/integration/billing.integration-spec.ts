@@ -25,6 +25,7 @@ describe('Billing GraphQL PostgreSQL contract', () => {
     activeSubscription: jest.fn(async () => null),
     createCheckoutSession: jest.fn(async () => 'https://checkout.stripe.test/session'),
     createPortalSession: jest.fn(async () => 'https://billing.stripe.test/portal'),
+    changeSubscriptionPrice: jest.fn(async () => undefined),
   };
 
   beforeAll(async () => {

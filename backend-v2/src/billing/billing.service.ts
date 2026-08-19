@@ -115,6 +115,10 @@ export class BillingService {
       if (customer.existed) {
         const active = await this.stripe.activeSubscription(customer.customerId);
         if (active) {
+          if (active.priceId && active.priceId !== resolved.priceId) {
+            await this.stripe.changeSubscriptionPrice(active.id, resolved.priceId);
+            return { url: successUrl };
+          }
           return {
             url: await this.stripe.createPortalSession(
               customer.customerId,
