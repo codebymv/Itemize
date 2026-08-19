@@ -259,7 +259,7 @@ export function DashboardPage() {
                             badgeText="Total Contacts"
                             value={analytics?.contacts?.total ?? 0}
                             icon={Users}
-                            description={analytics?.contacts?.newThisWeek ? `+${analytics.contacts.newThisWeek} this week` : undefined}
+                            description="Added"
                             colorTheme="blue"
                             isLoading={isLoading}
                         />
