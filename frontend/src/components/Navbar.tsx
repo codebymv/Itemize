@@ -24,6 +24,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import { PUBLIC_SHELL_WIDTH } from '@/components/layout/PageContainer';
 
 // Admin navigation items for dropdown
 const adminNavItems = [
@@ -112,7 +113,7 @@ const Navbar: React.FC = () => {
 
   return (
     <nav className="border-b border-border bg-background backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div className={PUBLIC_SHELL_WIDTH}>
         <div className="flex justify-between items-center h-16">
           {/* Logo/Brand */}
           <div className="flex items-center">

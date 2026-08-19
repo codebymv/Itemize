@@ -18,6 +18,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { PUBLIC_SHELL_WIDTH } from '@/components/layout/PageContainer';
 import { Skeleton } from '@/components/ui/skeleton';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import { cn } from '@/lib/utils';
@@ -263,7 +264,7 @@ const StatusPage: React.FC = () => {
         leading={backButton}
         headerActions={renderRefreshButton()}
         mobileActions={renderRefreshButton()}
-        className="max-w-5xl mx-auto"
+        className={PUBLIC_SHELL_WIDTH}
       >
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20" />)}
@@ -279,7 +280,7 @@ const StatusPage: React.FC = () => {
       leading={backButton}
       headerActions={renderRefreshButton()}
       mobileActions={renderRefreshButton()}
-      className="max-w-5xl mx-auto"
+      className={PUBLIC_SHELL_WIDTH}
     >
       <BackgroundClouds />
         <div className="space-y-3">

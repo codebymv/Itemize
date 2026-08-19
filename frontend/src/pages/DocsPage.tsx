@@ -27,6 +27,8 @@ import {
   parentPaths,
   findItemByPath,
 } from '../services/docsService';
+import { PUBLIC_SHELL_WIDTH } from '@/components/layout/PageContainer';
+import { cn } from '@/lib/utils';
 
 const DocsPage: React.FC = () => {
   const { '*': docPath } = useParams<{ '*': string }>();
@@ -354,7 +356,7 @@ const DocsPage: React.FC = () => {
             Menu
           </Button>
         }
-        className="flex-1"
+        className={cn('flex-1', PUBLIC_SHELL_WIDTH)}
       >
         {article}
       </PageLayout>

@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Home, Book, MessageSquare, Twitter, Github, Mail, ArrowUp, Palette, Activity, Globe } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthState } from '@/contexts/AuthContext';
+import { PUBLIC_SHELL_WIDTH } from '@/components/layout/PageContainer';
+import { cn } from '@/lib/utils';
 
 const Footer: React.FC = () => {
   const navigate = useNavigate();
@@ -34,7 +36,7 @@ const Footer: React.FC = () => {
 
   return (
     <footer className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 mt-6">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className={cn(PUBLIC_SHELL_WIDTH, 'py-8')}>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           {/* Brand Section */}
           <div className="md:col-span-2">

@@ -1,6 +1,9 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 
+/** Public chrome width: logo, page header, and body share this inset. */
+export const PUBLIC_SHELL_WIDTH = 'mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8';
+
 interface PageContainerProps {
   children: React.ReactNode;
   className?: string;
