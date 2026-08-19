@@ -19,15 +19,16 @@ import {
 // Plan features - aligned with actual itemize.cloud capabilities
 const PLAN_FEATURES: Record<Plan, string[]> = {
     free: [
-        'Up to 10 lists, notes & whiteboards',
-        '100 contacts',
+        'Full workspace: lists, notes, whiteboards, and canvas',
+        'Organize, share, and keep work in one place',
         '1 team member',
-        'Try the workspace before you pay',
+        'Upgrade when you need CRM and billing',
     ],
     starter: [
+        'Full workspace included',
         'Contacts, pipelines, and calendars',
         'Invoices and 25 e-signatures / month',
-        'Lists, notes, and whiteboards',
+        'Inbox, forms, and landing pages',
         '3 team members',
         'Email support',
     ],
@@ -185,34 +186,47 @@ export function PricingCards({
         <div className="space-y-6">
             {/* Billing Period Toggle */}
             {showYearlyToggle && onBillingPeriodChange && (
-                <div className="flex items-center justify-center gap-4">
-                    <button
-                        onClick={() => onBillingPeriodChange('monthly')}
-                        className={cn(
-                            'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                            billingPeriod === 'monthly'
-                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
-                                : textSecondary,
-                            billingPeriod !== 'monthly' && 'hover:text-foreground'
-                        )}
+                <div className="flex justify-center">
+                    <div
+                        role="tablist"
+                        aria-label="Billing period"
+                        className="inline-flex items-center rounded-lg border border-border bg-muted p-1"
                     >
-                        Monthly
-                    </button>
-                    <button
-                        onClick={() => onBillingPeriodChange('yearly')}
-                        className={cn(
-                            'px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
-                            billingPeriod === 'yearly'
-                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
-                                : textSecondary,
-                            billingPeriod !== 'yearly' && 'hover:text-foreground'
-                        )}
-                    >
-                        Yearly
-                        <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400">
-                            Save 17%
-                        </Badge>
-                    </button>
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={billingPeriod === 'monthly'}
+                            onClick={() => onBillingPeriodChange('monthly')}
+                            className={cn(
+                                'px-4 py-1.5 rounded-md text-sm font-medium transition-colors',
+                                billingPeriod === 'monthly'
+                                    ? 'bg-background text-foreground shadow-sm border border-border'
+                                    : 'text-muted-foreground hover:text-foreground',
+                            )}
+                        >
+                            Monthly
+                        </button>
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={billingPeriod === 'yearly'}
+                            onClick={() => onBillingPeriodChange('yearly')}
+                            className={cn(
+                                'px-4 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2',
+                                billingPeriod === 'yearly'
+                                    ? 'bg-background text-foreground shadow-sm border border-border'
+                                    : 'text-muted-foreground hover:text-foreground',
+                            )}
+                        >
+                            Yearly
+                            <Badge
+                                variant="secondary"
+                                className="bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400"
+                            >
+                                Save 17%
+                            </Badge>
+                        </button>
+                    </div>
                 </div>
             )}
 

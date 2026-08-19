@@ -40,7 +40,7 @@ export function CheckoutSuccessModal({ open, onClose }: CheckoutSuccessModalProp
     : null;
 
   const PLAN_HIGHLIGHTS: Record<string, string[]> = {
-    starter: ['Contacts and pipelines', 'Invoices', 'E-signatures', 'Lists, notes, and whiteboards'],
+    starter: ['Contacts and pipelines', 'Invoices and e-signatures', 'Inbox, forms, and landing pages', 'Full workspace included'],
     unlimited: ['Everything in Solo', 'Unlimited e-signatures', 'Automations', 'Room for a studio team'],
     pro: ['Everything in Studio', 'Legacy agency features'],
     free: ['Basic access'],
