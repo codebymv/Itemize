@@ -2,6 +2,7 @@ import React from 'react';
 import { Separator } from '@/components/ui/separator';
 import { getAssetUrl } from '@/lib/api';
 import { Business } from '@/services/invoicesApi';
+import { getInvoiceFooterText } from '../utils/invoiceFormatters';
 
 export interface PreviewLineItem {
     name: string;
@@ -44,6 +45,7 @@ interface InvoicePreviewCardProps {
     
     // Additional content
     notes?: string;
+    termsAndConditions?: string;
     
     // Styling
     className?: string;
@@ -67,6 +69,7 @@ export function InvoicePreviewCard({
     total,
     currency = 'USD',
     notes,
+    termsAndConditions,
     className = '',
 }: InvoicePreviewCardProps) {
     const formatCurrency = (amount: number) => {
@@ -272,7 +275,8 @@ export function InvoicePreviewCard({
 
                 {/* Footer Message */}
                 <div className={`text-center text-xs ${colors.textMuted} pt-4`}>
-                    <p>Thank you for your business!</p>
+                    {business?.tax_id && <p>Tax ID: {business.tax_id}</p>}
+                    <p className="whitespace-pre-line">{getInvoiceFooterText(termsAndConditions)}</p>
                 </div>
             </div>
 

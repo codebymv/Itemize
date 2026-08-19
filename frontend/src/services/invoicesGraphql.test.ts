@@ -81,7 +81,7 @@ describe('core invoice GraphQL adapter', () => {
         limit: 10,
       }, 4),
     ).resolves.toMatchObject({
-      invoices: [{ total: 26.06, amount_due: 26.06 }],
+      invoices: [{ tax_rate: 8.25, tax_amount: 2.06, total: 26.06, amount_due: 26.06 }],
       pagination: { page: 2, limit: 10, total: 21, totalPages: 3 },
     });
     expect(graphqlRequest).toHaveBeenCalledWith(
@@ -125,6 +125,8 @@ describe('core invoice GraphQL adapter', () => {
       }),
     });
     await expect(getInvoiceViaGraphql(12, 4)).resolves.toMatchObject({
+      tax_rate: 8.25,
+      tax_amount: 2.06,
       items: [{ quantity: 2, unit_price: 12.5 }],
       payments: [{
         amount: 10,

@@ -151,6 +151,7 @@ const mapInvoice = (invoice: GraphqlInvoice): Invoice => ({
   issue_date: invoice.issueDate,
   due_date: invoice.dueDate,
   subtotal: Number(invoice.subtotal),
+  tax_rate: Number(invoice.taxRate),
   tax_amount: Number(invoice.taxAmount),
   discount_amount: Number(invoice.discountAmount),
   ...optional<Invoice, 'discount_type'>('discount_type', invoice.discountType),

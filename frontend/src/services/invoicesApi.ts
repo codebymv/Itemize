@@ -96,6 +96,7 @@ export interface Invoice {
     issue_date: string;
     due_date: string;
     subtotal: number;
+    tax_rate: number;
     tax_amount: number;
     discount_amount: number;
     discount_type?: 'fixed' | 'percent';

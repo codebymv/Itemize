@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getAssetUrl } from '@/lib/api';
 import { Business } from '@/services/invoicesApi';
+import { getInvoiceFooterText } from '../utils/invoiceFormatters';
 
 export interface LineItem {
     id: string;
@@ -262,18 +263,12 @@ export function InlineInvoicePreview({
                 </div>
             )}
 
-            {/* Terms & Conditions */}
-            {termsAndConditions && (
-                <div className="invoice-preview-notes" style={{ background: '#f9fafb', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
-                    <div className="invoice-preview-notes-label" style={{ fontSize: '11px', color: '#6b7280', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.5px' }}>Terms & Conditions</div>
-                    <div style={{ fontSize: '12px', color: '#6b7280', whiteSpace: 'pre-line' }}>{termsAndConditions}</div>
-                </div>
-            )}
-
             {/* Footer */}
             <div className="invoice-preview-footer" style={{ textAlign: 'center', color: '#6b7280', fontSize: '12px', marginTop: '32px' }}>
                 {business?.tax_id && <div>Tax ID: {business.tax_id}</div>}
-                <div style={{ marginTop: '8px' }}>Thank you for your business!</div>
+                <div style={{ marginTop: business?.tax_id ? '8px' : undefined, whiteSpace: 'pre-line' }}>
+                    {getInvoiceFooterText(termsAndConditions)}
+                </div>
             </div>
             </div>
             {/* /.invoice-content */}

@@ -50,6 +50,7 @@ const invoice = {
   issue_date: '2026-07-18',
   due_date: '2026-08-17',
   subtotal: 20,
+  tax_rate: 0,
   tax_amount: 0,
   discount_amount: 0,
   discount_value: 0,

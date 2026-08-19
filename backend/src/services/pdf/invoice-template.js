@@ -401,18 +401,14 @@ async function generateInvoiceHTML(invoice, settings = {}) {
                     </div>
                 ` : ''}
 
-                <!-- Terms & Conditions -->
-                ${invoice.terms_and_conditions ? `
-                    <div class="notes-box">
-                        <div class="notes-label">Terms & Conditions</div>
-                        <div class="terms-content">${escapeHtml(invoice.terms_and_conditions)}</div>
-                    </div>
-                ` : ''}
-
                 <!-- Footer -->
                 <div class="footer">
                     ${business.tax_id ? `<div>Tax ID: ${escapeHtml(business.tax_id)}</div>` : ''}
-                    <div style="margin-top: 8px;">Thank you for your business!</div>
+                    <div style="margin-top: ${business.tax_id ? '8px' : '0'}; white-space: pre-line;">${
+                        invoice.terms_and_conditions && String(invoice.terms_and_conditions).trim()
+                            ? escapeHtml(String(invoice.terms_and_conditions).trim())
+                            : 'Thank you for your business!'
+                    }</div>
                 </div>
                 </div>
                 <!-- /.invoice-content -->

@@ -60,3 +60,14 @@ export function getTodayDateString(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
+
+export const DEFAULT_INVOICE_FOOTER = 'Thank you for your business!';
+
+/**
+ * Footer field on the invoice editor is stored as terms_and_conditions.
+ * Empty values keep the default thank-you line.
+ */
+export function getInvoiceFooterText(footer?: string | null): string {
+  const trimmed = footer?.trim();
+  return trimmed || DEFAULT_INVOICE_FOOTER;
+}

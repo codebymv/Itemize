@@ -886,6 +886,7 @@ export function InvoiceEditorPage() {
                     issue_date: issueDate,
                     due_date: dueDate,
                     subtotal,
+                    tax_rate: taxRate,
                     tax_amount: taxAmount,
                     discount_amount: discountAmount,
                     discount_type: 'fixed',

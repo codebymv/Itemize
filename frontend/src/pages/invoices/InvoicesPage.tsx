@@ -970,6 +970,7 @@ export function InvoicesPage() {
                                                             total={expandedInvoiceData.total}
                                                             currency={expandedInvoiceData.currency}
                                                             notes={expandedInvoiceData.notes}
+                                                            termsAndConditions={expandedInvoiceData.terms_and_conditions}
                                                         />
 
                                                         {/* Action Buttons */}
