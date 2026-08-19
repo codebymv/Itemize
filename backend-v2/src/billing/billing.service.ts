@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import {
   BILLING_PLANS,
   BillingPeriod,
   BillingPlanId,
   billingPrices,
+  isPurchasableStripePriceId,
   planDefinition,
   planForPrice,
 } from './billing.constants';
@@ -21,6 +22,8 @@ import {
 
 @Injectable()
 export class BillingService {
+  private readonly logger = new Logger(BillingService.name);
+
   constructor(
     private readonly billing: BillingRepository,
     private readonly stripe: StripeBillingProvider,
@@ -100,6 +103,7 @@ export class BillingService {
     const cancelUrl = this.redirectUrl(input.cancelUrl, 'cancelUrl');
     const idempotencyKey = this.idempotencyKey(input.idempotencyKey);
     const resolved = this.checkoutPrice(input);
+    this.requirePurchasablePrice(resolved);
     this.requireStripe();
 
     const customer = await this.billing.ensureCustomer(
@@ -112,38 +116,31 @@ export class BillingService {
         }),
     );
     try {
-      if (customer.existed) {
-        const active = await this.stripe.activeSubscription(customer.customerId);
-        if (active) {
-          if (active.priceId && active.priceId !== resolved.priceId) {
-            await this.stripe.changeSubscriptionPrice(active.id, resolved.priceId);
-            return { url: successUrl };
-          }
-          return {
-            url: await this.stripe.createPortalSession(
-              customer.customerId,
-              successUrl,
-              `billing-portal:${organizationId}:${idempotencyKey}`,
-            ),
-          };
-        }
+      return await this.startProviderCheckout(
+        organizationId,
+        customer,
+        resolved.priceId,
+        successUrl,
+        cancelUrl,
+        idempotencyKey,
+      );
+    } catch (error) {
+      if (!this.isMissingStripeCustomer(error)) {
+        throw this.providerFailure(error);
       }
-      return {
-        url: await this.stripe.createCheckoutSession({
-          customerId: customer.customerId,
-          priceId: resolved.priceId,
+      try {
+        const replacement = await this.replaceMissingCustomer(organizationId);
+        return await this.startProviderCheckout(
           organizationId,
+          replacement,
+          resolved.priceId,
           successUrl,
           cancelUrl,
           idempotencyKey,
-        }),
-      };
-    } catch {
-      throw itemizeGraphqlError(
-        'Billing provider request failed',
-        'SERVICE_UNAVAILABLE',
-        { reason: 'BILLING_PROVIDER_FAILURE' },
-      );
+        );
+      } catch (retryError) {
+        throw this.providerFailure(retryError);
+      }
     }
   }
 
@@ -171,12 +168,8 @@ export class BillingService {
           `billing-portal:${organizationId}:${idempotencyKey}`,
         ),
       };
-    } catch {
-      throw itemizeGraphqlError(
-        'Billing provider request failed',
-        'SERVICE_UNAVAILABLE',
-        { reason: 'BILLING_PROVIDER_FAILURE' },
-      );
+    } catch (error) {
+      throw this.providerFailure(error);
     }
   }
 
@@ -222,6 +215,143 @@ export class BillingService {
       planId: definition.id,
       period,
       priceId: billingPrices()[definition.id][period],
+    };
+  }
+
+  private requirePurchasablePrice(resolved: {
+    planId: BillingPlanId;
+    period: BillingPeriod;
+    priceId: string;
+  }): void {
+    if (isPurchasableStripePriceId(resolved.priceId)) return;
+    throw itemizeGraphqlError(
+      'This plan is not available for checkout yet',
+      'SERVICE_UNAVAILABLE',
+      { reason: 'BILLING_PRICE_NOT_CONFIGURED' },
+    );
+  }
+
+  private async startProviderCheckout(
+    organizationId: number,
+    customer: { customerId: string; existed: boolean },
+    priceId: string,
+    successUrl: string,
+    cancelUrl: string,
+    idempotencyKey: string,
+  ): Promise<BillingSession> {
+    if (customer.existed) {
+      const active = await this.stripe.activeSubscription(customer.customerId);
+      if (active) {
+        if (active.priceId && active.priceId !== priceId) {
+          try {
+            await this.stripe.changeSubscriptionPrice(active.id, priceId);
+            return { url: successUrl };
+          } catch (error) {
+            this.logger.warn(
+              `In-place subscription update failed (${this.providerErrorCode(error)}); opening checkout`,
+            );
+          }
+        } else {
+          return {
+            url: await this.stripe.createPortalSession(
+              customer.customerId,
+              successUrl,
+              `billing-portal:${organizationId}:${idempotencyKey}`,
+            ),
+          };
+        }
+      }
+    }
+    return {
+      url: await this.stripe.createCheckoutSession({
+        customerId: customer.customerId,
+        priceId,
+        organizationId,
+        successUrl,
+        cancelUrl,
+        idempotencyKey,
+      }),
+    };
+  }
+
+  private async replaceMissingCustomer(
+    organizationId: number,
+  ): Promise<{ customerId: string; existed: boolean }> {
+    const organization = await this.billing.checkoutOrganization(organizationId);
+    if (!organization) {
+      throw itemizeGraphqlError('Organization not found', 'NOT_FOUND');
+    }
+    const customerId = await this.stripe.createCustomer({
+      name: organization.name,
+      email: `org-${organizationId}@itemize.cloud`,
+      organizationId,
+      generation: String(Date.now()),
+    });
+    await this.billing.replaceStripeCustomer(organizationId, customerId);
+    return { customerId, existed: false };
+  }
+
+  private providerFailure(error: unknown): never {
+    const message = this.safeProviderMessage(error);
+    this.logger.warn(
+      `Billing provider request failed (${this.providerErrorCode(error)}): ${message}`,
+    );
+    throw itemizeGraphqlError(message, 'SERVICE_UNAVAILABLE', {
+      reason: 'BILLING_PROVIDER_FAILURE',
+    });
+  }
+
+  private safeProviderMessage(error: unknown): string {
+    const details = this.providerErrorDetails(error);
+    const message = details?.message ?? '';
+    if (/sk_(live|test)_|rk_(live|test)_/i.test(message)) {
+      return 'Billing provider request failed';
+    }
+    if (/no such price/i.test(message)) {
+      return 'This plan is not configured in Stripe yet';
+    }
+    if (/already has (an existing |a )?subscription/i.test(message)) {
+      return 'Could not switch plans automatically. Use Manage billing to change your plan.';
+    }
+    if (/customer portal/i.test(message) && /activat/i.test(message)) {
+      return 'Stripe Customer Portal is not enabled yet';
+    }
+    return message || 'Billing provider request failed';
+  }
+
+  private providerErrorCode(error: unknown): string {
+    return this.providerErrorDetails(error)?.code ?? 'unknown';
+  }
+
+  private isMissingStripeCustomer(error: unknown): boolean {
+    const details = this.providerErrorDetails(error);
+    if (!details) return false;
+    if (/no such customer/i.test(details.message)) return true;
+    return details.code === 'resource_missing' && details.param === 'customer';
+  }
+
+  private providerErrorDetails(
+    error: unknown,
+  ): { type: string; code?: string; param?: string; message: string } | null {
+    if (!error || typeof error !== 'object') return null;
+    const candidate = error as {
+      type?: unknown;
+      code?: unknown;
+      param?: unknown;
+      message?: unknown;
+    };
+    if (typeof candidate.message !== 'string' || typeof candidate.type !== 'string') {
+      return null;
+    }
+    const isStripe =
+      candidate.type.startsWith('Stripe') ||
+      candidate.type.endsWith('_error');
+    if (!isStripe) return null;
+    return {
+      type: candidate.type,
+      message: candidate.message,
+      ...(typeof candidate.code === 'string' ? { code: candidate.code } : {}),
+      ...(typeof candidate.param === 'string' ? { param: candidate.param } : {}),
     };
   }
 

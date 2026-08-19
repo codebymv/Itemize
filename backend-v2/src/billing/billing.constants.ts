@@ -131,27 +131,60 @@ const defaultPrices: Record<BillingPlanId, Record<BillingPeriod, string>> = {
   },
 };
 
+const PLACEHOLDER_PRICE_IDS = new Set([
+  'price_starter_monthly',
+  'price_unlimited_monthly',
+  'price_pro_monthly',
+  'price_starter_yearly',
+  'price_unlimited_yearly',
+  'price_pro_yearly',
+]);
+
+const configuredPrice = (
+  envValue: string | undefined,
+  fallback: string,
+): string => {
+  const value = envValue?.trim();
+  if (value && isPurchasableStripePriceId(value)) return value;
+  return fallback;
+};
+
+export const isPurchasableStripePriceId = (priceId: string): boolean =>
+  /^price_1[A-Za-z0-9]+$/.test(priceId) && !PLACEHOLDER_PRICE_IDS.has(priceId);
+
 export const billingPrices = (): Record<
   BillingPlanId,
   Record<BillingPeriod, string>
 > => ({
   starter: {
-    monthly:
-      process.env.STRIPE_PRICE_STARTER_MONTHLY ?? defaultPrices.starter.monthly,
-    yearly:
-      process.env.STRIPE_PRICE_STARTER_YEARLY ?? defaultPrices.starter.yearly,
+    monthly: configuredPrice(
+      process.env.STRIPE_PRICE_STARTER_MONTHLY,
+      defaultPrices.starter.monthly,
+    ),
+    yearly: configuredPrice(
+      process.env.STRIPE_PRICE_STARTER_YEARLY,
+      defaultPrices.starter.yearly,
+    ),
   },
   unlimited: {
-    monthly:
-      process.env.STRIPE_PRICE_UNLIMITED_MONTHLY ??
+    monthly: configuredPrice(
+      process.env.STRIPE_PRICE_UNLIMITED_MONTHLY,
       defaultPrices.unlimited.monthly,
-    yearly:
-      process.env.STRIPE_PRICE_UNLIMITED_YEARLY ??
+    ),
+    yearly: configuredPrice(
+      process.env.STRIPE_PRICE_UNLIMITED_YEARLY,
       defaultPrices.unlimited.yearly,
+    ),
   },
   pro: {
-    monthly: process.env.STRIPE_PRICE_PRO_MONTHLY ?? defaultPrices.pro.monthly,
-    yearly: process.env.STRIPE_PRICE_PRO_YEARLY ?? defaultPrices.pro.yearly,
+    monthly: configuredPrice(
+      process.env.STRIPE_PRICE_PRO_MONTHLY,
+      defaultPrices.pro.monthly,
+    ),
+    yearly: configuredPrice(
+      process.env.STRIPE_PRICE_PRO_YEARLY,
+      defaultPrices.pro.yearly,
+    ),
   },
 });
 

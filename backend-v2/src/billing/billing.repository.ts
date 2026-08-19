@@ -133,6 +133,18 @@ export class BillingRepository {
     });
   }
 
+  async replaceStripeCustomer(
+    organizationId: number,
+    customerId: string,
+  ): Promise<void> {
+    await this.pool.query(
+      `UPDATE organizations
+       SET stripe_customer_id = $1, updated_at = NOW()
+       WHERE id = $2`,
+      [customerId, organizationId],
+    );
+  }
+
   async portalCustomer(organizationId: number): Promise<string | null> {
     const result = await this.pool.query<{ stripe_customer_id: string | null }>(
       'SELECT stripe_customer_id FROM organizations WHERE id = $1',

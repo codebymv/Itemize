@@ -30,6 +30,7 @@ export class StripeBillingProvider {
     email: string;
     name: string;
     organizationId: number;
+    generation?: string;
   }): Promise<string> {
     this.requireConfiguration();
     const customer = await this.stripe.customers.create(
@@ -38,7 +39,11 @@ export class StripeBillingProvider {
         name: input.name,
         metadata: { organizationId: String(input.organizationId) },
       },
-      { idempotencyKey: `billing-customer:${input.organizationId}` },
+      {
+        idempotencyKey: input.generation
+          ? `billing-customer:${input.organizationId}:${input.generation}`
+          : `billing-customer:${input.organizationId}`,
+      },
     );
     return customer.id;
   }
@@ -88,7 +93,6 @@ export class StripeBillingProvider {
       {
         customer: input.customerId,
         mode: 'subscription',
-        payment_method_types: ['card'],
         line_items: [{ price: input.priceId, quantity: 1 }],
         success_url: input.successUrl,
         cancel_url: input.cancelUrl,

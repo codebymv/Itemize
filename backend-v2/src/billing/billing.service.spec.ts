@@ -8,6 +8,8 @@ describe('BillingService', () => {
   const repository = {
     ensureCustomer: jest.fn(),
     portalCustomer: jest.fn(),
+    checkoutOrganization: jest.fn(),
+    replaceStripeCustomer: jest.fn(),
   };
   const provider = {
     isConfigured: jest.fn(() => true),
@@ -111,6 +113,100 @@ describe('BillingService', () => {
     );
     expect(provider.createPortalSession).not.toHaveBeenCalled();
     expect(provider.createCheckoutSession).not.toHaveBeenCalled();
+  });
+
+  it('opens checkout when an in-place price change is rejected', async () => {
+    repository.ensureCustomer.mockResolvedValue({
+      customerId: 'cus_existing',
+      existed: true,
+    });
+    provider.activeSubscription.mockResolvedValue({
+      id: 'sub_active',
+      status: 'active',
+      priceId: 'price_1U5ypmRxBJaRlFvtCDKzCKSC',
+    });
+    provider.changeSubscriptionPrice.mockRejectedValue({
+      type: 'StripeInvalidRequestError',
+      code: 'resource_missing',
+      message: 'This customer has no attached payment source',
+    });
+    provider.createCheckoutSession.mockResolvedValue(
+      'https://stripe.test/checkout',
+    );
+
+    await expect(
+      service.checkout(4, { ...checkout, planId: 'unlimited' }),
+    ).resolves.toEqual({
+      url: 'https://stripe.test/checkout',
+    });
+    expect(provider.createCheckoutSession).toHaveBeenCalled();
+  });
+
+  it('replaces a missing Stripe customer and retries checkout', async () => {
+    repository.ensureCustomer.mockResolvedValue({
+      customerId: 'cus_deleted',
+      existed: true,
+    });
+    provider.activeSubscription.mockRejectedValue({
+      type: 'StripeInvalidRequestError',
+      code: 'resource_missing',
+      param: 'customer',
+      message: "No such customer: 'cus_deleted'",
+    });
+    repository.checkoutOrganization.mockResolvedValue({
+      name: 'Acme',
+      stripeCustomerId: 'cus_deleted',
+    });
+    provider.createCustomer.mockResolvedValue('cus_new');
+    provider.createCheckoutSession.mockResolvedValue(
+      'https://stripe.test/checkout',
+    );
+
+    await expect(
+      service.checkout(4, { ...checkout, planId: 'unlimited' }),
+    ).resolves.toEqual({
+      url: 'https://stripe.test/checkout',
+    });
+    expect(repository.replaceStripeCustomer).toHaveBeenCalledWith(4, 'cus_new');
+    expect(provider.createCheckoutSession).toHaveBeenCalledWith(
+      expect.objectContaining({ customerId: 'cus_new' }),
+    );
+  });
+
+  it('surfaces a safe Stripe price error', async () => {
+    repository.ensureCustomer.mockResolvedValue({
+      customerId: 'cus_existing',
+      existed: true,
+    });
+    provider.activeSubscription.mockResolvedValue(null);
+    provider.createCheckoutSession.mockRejectedValue({
+      type: 'StripeInvalidRequestError',
+      code: 'resource_missing',
+      message: "No such price: 'price_unlimited_monthly'",
+    });
+
+    await expect(
+      service.checkout(4, { ...checkout, planId: 'unlimited' }),
+    ).rejects.toMatchObject({
+      message: 'This plan is not configured in Stripe yet',
+      extensions: {
+        code: 'SERVICE_UNAVAILABLE',
+        reason: 'BILLING_PROVIDER_FAILURE',
+      },
+    });
+  });
+
+  it('rejects yearly placeholders before calling Stripe', async () => {
+    await expect(
+      service.checkout(4, { ...checkout, billingPeriod: 'yearly' }),
+    ).rejects.toMatchObject({
+      message: 'This plan is not available for checkout yet',
+      extensions: {
+        code: 'SERVICE_UNAVAILABLE',
+        reason: 'BILLING_PRICE_NOT_CONFIGURED',
+      },
+    });
+    expect(repository.ensureCustomer).not.toHaveBeenCalled();
   });
 
   it('redacts provider failures behind a stable service error', async () => {
