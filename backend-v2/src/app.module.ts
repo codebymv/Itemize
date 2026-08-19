@@ -44,6 +44,7 @@ import { InvoiceSettingsModule } from './invoice-settings/invoice-settings.modul
 import { InvoiceWebhooksModule } from './invoice-webhooks/invoice-webhooks.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { LandingPagesModule } from './landing-pages/landing-pages.module';
+import { GetStartedModule } from './get-started/get-started.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { OrganizationContextGuard } from './organizations/organization-context.guard';
 import { OrganizationsModule } from './organizations/organizations.module';
@@ -124,6 +125,7 @@ const observabilityPlugins = [
     InvoiceWebhooksModule,
     InvoicesModule,
     LandingPagesModule,
+    GetStartedModule,
     OnboardingModule,
     FoundationModule,
     WorkflowsModule,

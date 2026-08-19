@@ -19,6 +19,7 @@ import {
   NormalizedImportContact,
   validateImportEnvelope,
 } from './contact-transfer.contract';
+import { GetStartedService } from '../get-started/get-started.service';
 import { ContactTransfersRepository } from './contact-transfers.repository';
 
 const statuses = new Set(['active', 'inactive', 'archived']);
@@ -29,7 +30,10 @@ const phonePattern = /^[+()\-.\s\d]+$/;
 export class ContactTransfersService {
   private readonly logger = new Logger(ContactTransfersService.name);
 
-  constructor(private readonly repository: ContactTransfersRepository) {}
+  constructor(
+    private readonly repository: ContactTransfersRepository,
+    private readonly getStarted: GetStartedService,
+  ) {}
 
   async exportCsv(
     organizationId: number,
@@ -167,6 +171,14 @@ export class ContactTransfersService {
         skipped: result.skipped,
         rejected: result.errorCount,
       });
+      if (result.imported > 0) {
+        await this.getStarted.record({
+          organizationId,
+          userId,
+          name: 'first_contact',
+          source: 'import_csv',
+        });
+      }
       return result;
     } catch (error) {
       if (error instanceof ForbiddenException) throw error;

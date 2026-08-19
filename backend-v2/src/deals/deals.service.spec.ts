@@ -1,5 +1,6 @@
 import { GraphQLError } from 'graphql';
 import { DealSortDirection, DealSortField } from './deal.enums';
+import { GetStartedService } from '../get-started/get-started.service';
 import { DealsRepository, DealRow } from './deals.repository';
 import { DealsService } from './deals.service';
 
@@ -34,9 +35,11 @@ const row = (overrides: Partial<DealRow> = {}): DealRow => ({
 
 describe('DealsService', () => {
   let repository: jest.Mocked<DealsRepository>;
+  let getStarted: jest.Mocked<Pick<GetStartedService, 'record'>>;
   let service: DealsService;
 
   beforeEach(() => {
+    getStarted = { record: jest.fn().mockResolvedValue(true) };
     repository = {
       findPage: jest.fn(),
       findById: jest.fn(),
@@ -46,7 +49,7 @@ describe('DealsService', () => {
       lifecycle: jest.fn(),
       delete: jest.fn(),
     } as unknown as jest.Mocked<DealsRepository>;
-    service = new DealsService(repository);
+    service = new DealsService(repository, getStarted as unknown as GetStartedService);
   });
 
   it('returns decimal strings and deterministic page criteria', async () => {

@@ -110,7 +110,7 @@ Used for delete/destroy actions.
 
 ### Progress
 
-Use `Progress` for usage meters and completion bars. Sit the meter on card or page chrome — do not tint the full container behind it.
+Use `Progress` for usage meters, completion bars, and Get Started. Sit the meter on card or page chrome — do not tint the full container behind it.
 
 ```tsx
 import { Progress } from '@/components/ui/progress'
@@ -309,6 +309,7 @@ import { PageLoading } from '@/components/ui/page-loading'
 4. **Error states** → Use red (`bg-red-600`, `bg-red-100`)
 5. **Module indicators** → Use `semanticColors.module.*`
 6. **Usage/progress meters** → Use `Progress`; do not tint the full container behind a meter
+7. **Get Started** → Use `Progress` on card chrome; do not tint the card
 
 ### Spacing Guidelines
 

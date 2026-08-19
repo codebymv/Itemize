@@ -50,7 +50,7 @@ import { transformApiActivityToDesignSystem } from '@/design-system/utils/transf
 import { RevenueTrendsChart } from './dashboard/components/RevenueTrendsChart';
 import { useOrganization } from '@/hooks/useOrganization';
 import { InvoicesWidget, SignaturesWidget, WorkspaceWidget, ContactsWidget } from '@/design-system/widgets';
-import { FirstRunBanner } from '@/components/FirstRunBanner';
+import { GetStartedCard } from '@/components/GetStartedCard';
 
 interface QuickAction {
     title: string;
@@ -250,15 +250,7 @@ export function DashboardPage() {
                         </p>
                     </div>
 
-                    {/* First-run CTA when user has no content yet */}
-                    <FirstRunBanner
-                        show={
-                            !isLoading &&
-                            (analytics?.contacts?.total ?? 0) === 0 &&
-                            (analytics?.invoiceMetrics?.recentInvoices?.length ?? 0) === 0
-                        }
-                        onNavigate={(path) => navigate(path)}
-                    />
+                    <GetStartedCard />
 
                     {/* CRM Stats Grid */}
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">

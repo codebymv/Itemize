@@ -3,6 +3,7 @@ import {
   ItemizeGraphqlErrorCode,
   itemizeGraphqlError,
 } from '../common/graphql-error';
+import { GetStartedService } from '../get-started/get-started.service';
 import { PageInput, pageInfo } from '../common/pagination';
 import {
   CreateInvoiceInput,
@@ -38,7 +39,10 @@ const STATUSES = new Set([
 
 @Injectable()
 export class InvoicesService {
-  constructor(private readonly invoices: InvoicesRepository) {}
+  constructor(
+    private readonly invoices: InvoicesRepository,
+    private readonly getStarted: GetStartedService,
+  ) {}
 
   async list(
     organizationId: number,
@@ -115,9 +119,17 @@ export class InvoicesService {
       paymentTerms: this.text(input.paymentTerms, 'paymentTerms', 10_000),
     };
     this.dateOrder(values.issueDate, values.dueDate);
-    return this.saved(
+    const invoice = this.saved(
       await this.invoices.create(organizationId, userId, values),
     );
+    await this.getStarted.record({
+      organizationId,
+      userId,
+      name: 'first_invoice',
+      source: 'create_invoice',
+      properties: { invoiceId: invoice.id },
+    });
+    return invoice;
   }
 
   async update(

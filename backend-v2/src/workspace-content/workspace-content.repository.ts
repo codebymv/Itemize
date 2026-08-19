@@ -587,6 +587,7 @@ export class WorkspaceContentRepository {
   }
 
   async createList(
+    organizationId: number,
     userId: number,
     values: CreateWorkspaceListValues,
   ): Promise<WorkspaceListMutationOutcome> {
@@ -600,13 +601,14 @@ export class WorkspaceContentRepository {
 
       const result = await client.query<WorkspaceListRow>(
         `INSERT INTO lists (
-           user_id, title, category, category_id, items, color_value,
+           user_id, organization_id, title, category, category_id, items, color_value,
            position_x, position_y, width, height
          )
-         VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, $11)
          RETURNING ${listMutationSelection}`,
         [
           userId,
+          organizationId,
           values.title,
           category.name,
           category.id,

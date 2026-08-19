@@ -5,6 +5,7 @@ import {
   WorkspaceWhiteboardRow,
   WorkspaceWireframeRow,
 } from './workspace-content.repository';
+import { GetStartedService } from '../get-started/get-started.service';
 import { WorkspaceContentService } from './workspace-content.service';
 
 const listRow = (
@@ -106,9 +107,11 @@ const wireframeRow = (
 
 describe('WorkspaceContentService', () => {
   let repository: jest.Mocked<WorkspaceContentRepository>;
+  let getStarted: jest.Mocked<Pick<GetStartedService, 'record'>>;
   let service: WorkspaceContentService;
 
   beforeEach(() => {
+    getStarted = { record: jest.fn().mockResolvedValue(true) };
     repository = {
       createList: jest.fn(),
       createNote: jest.fn(),
@@ -136,7 +139,10 @@ describe('WorkspaceContentService', () => {
       updateWhiteboard: jest.fn(),
       updateWireframe: jest.fn(),
     } as unknown as jest.Mocked<WorkspaceContentRepository>;
-    service = new WorkspaceContentService(repository);
+    service = new WorkspaceContentService(
+      repository,
+      getStarted as unknown as GetStartedService,
+    );
   });
 
   it('maps list pages and sanitizes malformed JSON items', async () => {
@@ -291,7 +297,7 @@ describe('WorkspaceContentService', () => {
       row: listRow(),
     });
 
-    await service.createList(7, {
+    await service.createList(42, 7, {
       title: ' Tasks ',
       category: ' general ',
       colorValue: '#abcdef',
@@ -300,7 +306,7 @@ describe('WorkspaceContentService', () => {
       positionY: 15.5,
     });
 
-    expect(repository.createList).toHaveBeenCalledWith(7, {
+    expect(repository.createList).toHaveBeenCalledWith(42, 7, {
       title: 'Tasks',
       category: 'general',
       colorValue: '#ABCDEF',
@@ -341,7 +347,7 @@ describe('WorkspaceContentService', () => {
 
   it('rejects duplicate item identities before writing a list', async () => {
     await expect(
-      service.createList(7, {
+      service.createList(42, 7, {
         title: 'Tasks',
         items: [
           { id: 'same', text: 'First', completed: false },
@@ -359,7 +365,7 @@ describe('WorkspaceContentService', () => {
 
   it('rejects an item projection that cannot fit the realtime outbox', async () => {
     await expect(
-      service.createList(7, {
+      service.createList(42, 7, {
         title: 'Oversized',
         items: Array.from({ length: 81 }, (_, index) => ({
           id: `item-${index}`,

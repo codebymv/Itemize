@@ -1,5 +1,6 @@
 import { GraphQLError } from 'graphql';
 import { ContactSortField, ContactStatus, SortDirection } from './contact.enums';
+import { GetStartedService } from '../get-started/get-started.service';
 import { ContactRow, ContactsRepository } from './contacts.repository';
 import { ContactsService } from './contacts.service';
 
@@ -46,9 +47,15 @@ describe('ContactsService', () => {
     findById: jest.fn(),
     update: jest.fn(),
   } as unknown as jest.Mocked<ContactsRepository>;
-  const service = new ContactsService(repository);
+  const getStarted = {
+    record: jest.fn().mockResolvedValue(true),
+  } as unknown as jest.Mocked<GetStartedService>;
+  const service = new ContactsService(repository, getStarted);
 
-  beforeEach(() => jest.resetAllMocks());
+  beforeEach(() => {
+    jest.resetAllMocks();
+    getStarted.record.mockResolvedValue(true);
+  });
 
   it('normalizes filters and produces the shared page contract', async () => {
     repository.findPage.mockResolvedValue({ rows: [row()], total: 3 });
@@ -149,6 +156,18 @@ describe('ContactsService', () => {
       status: 'active',
       tags: ['vip'],
     }));
+    expect(getStarted.record).toHaveBeenCalledWith(expect.objectContaining({
+      organizationId: 42,
+      name: 'first_contact',
+    }));
+  });
+
+  it('still creates a contact when get started recording fails', async () => {
+    repository.create.mockResolvedValue({ kind: 'created', row: row() });
+    getStarted.record.mockResolvedValue(false);
+    await expect(service.create(42, 7, { firstName: 'Ada' })).resolves.toMatchObject({
+      id: 11,
+    });
   });
 
   it('rejects create without identity and invalid assignment outcomes', async () => {

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { GraphQLError } from 'graphql';
 import { itemizeGraphqlError } from '../common/graphql-error';
+import { GetStartedService } from '../get-started/get-started.service';
 import { NormalizedPage, PageInput, pageInfo } from '../common/pagination';
 import { ContactSortField, SortDirection } from './contact.enums';
 import {
@@ -23,7 +24,10 @@ const MAX_BULK_CONTACTS = 100;
 
 @Injectable()
 export class ContactsService {
-  constructor(private readonly contacts: ContactsRepository) {}
+  constructor(
+    private readonly contacts: ContactsRepository,
+    private readonly getStarted: GetStartedService,
+  ) {}
 
   async list(
     organizationId: number,
@@ -100,7 +104,15 @@ export class ContactsService {
           plan: outcome.plan,
         });
       }
-      return this.mapContact(outcome.row);
+      const contact = this.mapContact(outcome.row);
+      await this.getStarted.record({
+        organizationId,
+        userId,
+        name: 'first_contact',
+        source: 'create_contact',
+        properties: { contactId: contact.id },
+      });
+      return contact;
     } catch (error) {
       if (error instanceof GraphQLError) throw error;
       this.rethrowDatabaseError(error);

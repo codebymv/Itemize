@@ -1,6 +1,6 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { PageInput } from '../common/pagination';
-import { CsrfProtected } from '../common/metadata';
+import { CsrfProtected, OrganizationScoped } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
   BatchCanvasPositionsInput,
@@ -81,11 +81,12 @@ export class WorkspaceContentResolver {
   }
 
   @CsrfProtected()
+  @OrganizationScoped()
   @Mutation(() => WorkspaceList)
   createWorkspaceList(
     @Args('input') input: CreateWorkspaceListInput,
   ): Promise<WorkspaceList> {
-    return this.content.createList(this.userId(), input);
+    return this.content.createList(this.organizationId(), this.userId(), input);
   }
 
   @CsrfProtected()
@@ -306,6 +307,12 @@ export class WorkspaceContentResolver {
     @Args('input') input: BatchCanvasPositionsInput,
   ): Promise<BatchCanvasPositionsResult> {
     return this.content.batchCanvasPositions(this.userId(), input);
+  }
+
+  private organizationId(): number {
+    const organization = this.requestContext.current().organization;
+    if (!organization) throw new Error('Verified organization context is unavailable');
+    return organization.organizationId;
   }
 
   private userId(): number {

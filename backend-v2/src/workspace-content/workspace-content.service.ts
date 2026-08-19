@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { GraphQLError } from 'graphql';
 import { itemizeGraphqlError } from '../common/graphql-error';
+import { GetStartedService } from '../get-started/get-started.service';
 import { sanitizeNoteHtml } from './note-html';
 import { normalizeWhiteboardCanvasData } from './whiteboard-canvas-data';
 import { NormalizedPage, PageInput, pageInfo } from '../common/pagination';
@@ -80,7 +81,10 @@ const MUTATION_ID_PATTERN =
 
 @Injectable()
 export class WorkspaceContentService {
-  constructor(private readonly content: WorkspaceContentRepository) {}
+  constructor(
+    private readonly content: WorkspaceContentRepository,
+    private readonly getStarted: GetStartedService,
+  ) {}
 
   async lists(
     userId: number,
@@ -191,6 +195,7 @@ export class WorkspaceContentService {
   }
 
   async createList(
+    organizationId: number,
     userId: number,
     input: CreateWorkspaceListInput,
   ): Promise<WorkspaceList> {
@@ -219,7 +224,7 @@ export class WorkspaceContentService {
         : this.listDimension(input.height, 'height'),
     };
     try {
-      const outcome = await this.content.createList(userId, values);
+      const outcome = await this.content.createList(organizationId, userId, values);
       if (outcome.kind === 'category_not_found') {
         throw this.listCategoryNotFound();
       }
@@ -229,7 +234,15 @@ export class WorkspaceContentService {
           'SERVICE_UNAVAILABLE',
         );
       }
-      return this.mapList(outcome.row);
+      const list = this.mapList(outcome.row);
+      await this.getStarted.record({
+        organizationId,
+        userId,
+        name: 'first_list',
+        source: 'create_list',
+        properties: { listId: list.id },
+      });
+      return list;
     } catch (error) {
       this.rethrow(error);
     }

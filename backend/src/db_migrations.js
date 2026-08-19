@@ -836,6 +836,43 @@ const runOnboardingMigration = async (pool) => {
   }
 };
 
+const runGetStartedMigration = async (pool) => {
+  console.log('Running get started milestones migration...');
+
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS get_started_milestones (
+        id SERIAL PRIMARY KEY,
+        organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        source TEXT NOT NULL,
+        dedupe_key TEXT NOT NULL UNIQUE,
+        properties JSONB NOT NULL DEFAULT '{}'::jsonb,
+        occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_get_started_milestones_org_name
+      ON get_started_milestones(organization_id, name);
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS get_started_dismissals (
+        organization_id INTEGER NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        dismissed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (organization_id, user_id)
+      );
+    `);
+    console.log('✅ get started tables created');
+    return true;
+  } catch (error) {
+    console.error('❌ Get started migration failed:', error.message);
+    return false;
+  }
+};
+
 module.exports = {
   runCanvasMigration,
   runListResizeMigration,
@@ -848,5 +885,6 @@ module.exports = {
   runEmailPasswordAuthMigration,
   runWireframesMigration,
   runWireframesDimensionsMigration,
-  runOnboardingMigration
+  runOnboardingMigration,
+  runGetStartedMigration
 };

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { itemizeGraphqlError } from '../common/graphql-error';
+import { GetStartedService } from '../get-started/get-started.service';
 import { PageInput, pageInfo } from '../common/pagination';
 import {
   CreateDealInput,
@@ -26,7 +27,10 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 @Injectable()
 export class DealsService {
-  constructor(private readonly deals: DealsRepository) {}
+  constructor(
+    private readonly deals: DealsRepository,
+    private readonly getStarted: GetStartedService,
+  ) {}
 
   async list(
     organizationId: number,
@@ -81,7 +85,15 @@ export class DealsService {
       customFields: this.json(input.customFields),
       tags: this.tags(input.tags),
     };
-    return this.outcome(await this.deals.create(organizationId, userId, values));
+    const deal = this.outcome(await this.deals.create(organizationId, userId, values));
+    await this.getStarted.record({
+      organizationId,
+      userId,
+      name: 'first_deal',
+      source: 'create_deal',
+      properties: { dealId: deal.id },
+    });
+    return deal;
   }
 
   async update(

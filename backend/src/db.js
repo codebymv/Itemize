@@ -15,7 +15,7 @@ const runMigrationOnce = async (pool, migrationName, migrationFn) => {
 };
 
 // Import database migrations
-const { runCanvasMigration, runListResizeMigration, runCreateNotesTableMigration, runAddTitleAndCategoryToNotesMigration, runCategoriesTableMigration, runCategoriesDataMigration, runCleanupDefaultCategories, runSharingMigration, runEmailPasswordAuthMigration, runWireframesMigration, runWireframesDimensionsMigration, runOnboardingMigration } = require('./db_migrations');
+const { runCanvasMigration, runListResizeMigration, runCreateNotesTableMigration, runAddTitleAndCategoryToNotesMigration, runCategoriesTableMigration, runCategoriesDataMigration, runCleanupDefaultCategories, runSharingMigration, runEmailPasswordAuthMigration, runWireframesMigration, runWireframesDimensionsMigration, runOnboardingMigration, runGetStartedMigration } = require('./db_migrations');
 
 const { runCategoryContractMigration } = require('./db_category_contract_migrations');
 
@@ -480,6 +480,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'feature_wireframes', runWireframesMigration);
     await runMigrationOnce(pool, 'feature_wireframes_dimensions', runWireframesDimensionsMigration);
     await runMigrationOnce(pool, 'feature_onboarding', runOnboardingMigration);
+    await runMigrationOnce(pool, 'feature_get_started', runGetStartedMigration);
 
     // Module migrations (each module handles its own tables)
     await runMigrationOnce(pool, 'module_crm', runAllCRMMigrations);
