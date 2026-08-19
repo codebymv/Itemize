@@ -31,7 +31,7 @@ import { Plan } from '@/lib/subscription';
 import { TrialStatusCard } from '@/components/trial/TrialStatusCard';
 import { UsageIndicator, UsageIndicatorGrid } from '@/components/trial/UsageIndicator';
 import { useUsageStats } from '@/hooks/useUsageStats';
-import { Mail, MessageSquare, Zap } from 'lucide-react';
+import { Mail, MessageSquare, Code2 } from 'lucide-react';
 import {
   Settings,
   User,
@@ -208,7 +208,7 @@ function AccountInfo({ currentPlan }: { currentPlan?: Plan }) {
                 used={usageStats.usage.apiCalls.used}
                 limit={typeof usageStats.usage.apiCalls.limit === 'number' ? usageStats.usage.apiCalls.limit : -1}
                 label="API Calls"
-                icon={<Zap className="h-5 w-5" />}
+                icon={<Code2 className="h-5 w-5" />}
               />
             </UsageIndicatorGrid>
           </CardContent>

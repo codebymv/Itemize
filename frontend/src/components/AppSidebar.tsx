@@ -331,7 +331,17 @@ export function AppSidebar() {
                 sizeClass,
             )}
         >
-            <img src="/icon.png" alt="" aria-hidden="true" className="h-full w-full" />
+            <span className="relative block h-full w-full overflow-hidden">
+                <img src="/icon.png" alt="" aria-hidden="true" className="h-full w-full" />
+                <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 -translate-x-full transition-transform duration-1000 ease-out group-hover:translate-x-full"
+                    style={{
+                        background:
+                            'linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.45) 50%, transparent 65%)',
+                    }}
+                />
+            </span>
         </span>
     );
 

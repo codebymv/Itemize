@@ -32,7 +32,7 @@ const iconTheme: Record<UsageState, StatTheme> = {
   normal: 'blue',
   warning: 'orange',
   critical: 'red',
-  unlimited: 'gray',
+  unlimited: 'blue',
 };
 
 export function UsageIndicator({

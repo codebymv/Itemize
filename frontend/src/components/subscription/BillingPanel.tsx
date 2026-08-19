@@ -19,6 +19,7 @@ import {
     User,
     Mail,
     MessageSquare,
+    Code2,
     Globe,
     Users,
     Workflow,
@@ -298,7 +299,7 @@ export function BillingPanel() {
                         {/* API Calls */}
                         {status.api_calls_limit !== 0 && (
                             <UsageRow
-                                icon={Globe}
+                                icon={Code2}
                                 label="API Calls"
                                 used={usage?.usage?.apiCalls?.used || status.api_calls_used || 0}
                                 limit={usage?.usage?.apiCalls?.limit === 'unlimited' ? -1 : (status.api_calls_limit || 0)}
