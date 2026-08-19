@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Check, CheckSquare } from 'lucide-react';
 
 const NEUTRAL_GRAY = '#808080';
@@ -142,15 +143,11 @@ export const SharedListCard: React.FC<SharedListCardProps> = ({ listData, isLive
                   {Math.round(progress)}%
                 </span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div
-                  className="h-2 rounded-full transition-all duration-300 ease-in-out"
-                  style={{
-                    width: `${progress}%`,
-                    backgroundColor: listColor
-                  }}
-                />
-              </div>
+              <Progress
+                value={progress}
+                className="h-2"
+                indicatorStyle={{ backgroundColor: listColor }}
+              />
             </div>
           )}
           

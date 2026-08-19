@@ -6,6 +6,7 @@
 import React from 'react';
 import { useSubscriptionFeatures, UsageType } from '../../contexts/SubscriptionContext';
 import { AlertTriangle, CheckCircle, Infinity as InfinityIcon, TrendingUp } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
 interface UsageMeterProps {
   /**
@@ -83,12 +84,11 @@ export function UsageMeter({
   if (compact) {
     return (
       <div className={`flex items-center gap-2 ${className}`}>
-        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-          <div 
-            className={`h-full transition-all ${getColorClass()}`}
-            style={{ width: unlimited ? '0%' : `${Math.min(percentage, 100)}%` }}
-          />
-        </div>
+        <Progress
+          value={unlimited ? 0 : Math.min(percentage, 100)}
+          className="h-2 flex-1"
+          indicatorClassName={getColorClass()}
+        />
         {unlimited ? (
           <InfinityIcon className="w-4 h-4 text-green-600" />
         ) : (
@@ -130,12 +130,11 @@ export function UsageMeter({
         </div>
       </div>
       
-      <div className="h-2 bg-muted rounded-full overflow-hidden">
-        <div 
-          className={`h-full transition-all ${getColorClass()}`}
-          style={{ width: unlimited ? '0%' : `${Math.min(percentage, 100)}%` }}
-        />
-      </div>
+      <Progress
+        value={unlimited ? 0 : Math.min(percentage, 100)}
+        className="h-2"
+        indicatorClassName={getColorClass()}
+      />
       
       {showNumbers && (
         <div className="flex items-center justify-between text-xs text-muted-foreground">

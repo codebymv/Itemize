@@ -108,6 +108,16 @@ Used for delete/destroy actions.
 </Button>
 ```
 
+### Progress
+
+Use `Progress` for usage meters and completion bars. Sit the meter on card or page chrome — do not tint the full container behind it.
+
+```tsx
+import { Progress } from '@/components/ui/progress'
+
+<Progress value={42} className="h-2.5" />
+```
+
 ### Cards
 
 #### Standard Card
@@ -298,6 +308,7 @@ import { PageLoading } from '@/components/ui/page-loading'
 3. **Warning states** → Use orange (`bg-orange-600`, `bg-orange-100`)
 4. **Error states** → Use red (`bg-red-600`, `bg-red-100`)
 5. **Module indicators** → Use `semanticColors.module.*`
+6. **Usage/progress meters** → Use `Progress`; do not tint the full container behind a meter
 
 ### Spacing Guidelines
 

@@ -1,68 +1,39 @@
 /**
  * UsageIndicator Component
- * 
- * Displays resource consumption (emails, SMS, API calls) against plan limits.
- * Features visual progress bars with four states:
- * - Normal (<70%): Blue colors
- * - Warning (70-90%): Amber colors
- * - Critical (>90%): Red colors
- * - Unlimited: Green badge, no progress bar
+ *
+ * Resource consumption against plan limits. Uses the same card chrome as
+ * StatCard so the progress track stays visible in light and dark themes.
  */
 
 import { type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-
-// ============================================
-// Types
-// ============================================
+import { Progress } from '@/components/ui/progress';
+import { useStatStyles, type StatTheme } from '@/hooks/useStatStyles';
 
 export interface UsageIndicatorProps {
-  /** Type of resource being tracked */
   resourceType: 'emails' | 'sms' | 'apiCalls';
-  /** Current usage amount */
   used: number;
-  /** Maximum limit (-1 or 0 for unlimited) */
   limit: number;
-  /** Display label for the resource */
   label: string;
-  /** Optional icon component */
   icon?: ReactNode;
-  /** Additional CSS classes */
   className?: string;
 }
 
 type UsageState = 'normal' | 'warning' | 'critical' | 'unlimited';
 
-// ============================================
-// Styling Configuration
-// ============================================
-
-const stateStyles = {
-  normal: {
-    container: 'bg-blue-100 dark:bg-blue-900',
-    text: 'text-blue-800 dark:text-blue-300',
-    progress: 'bg-blue-600',
-  },
-  warning: {
-    container: 'bg-amber-100 dark:bg-amber-900',
-    text: 'text-amber-800 dark:text-amber-300',
-    progress: 'bg-amber-600',
-  },
-  critical: {
-    container: 'bg-red-100 dark:bg-red-900',
-    text: 'text-red-800 dark:text-red-300',
-    progress: 'bg-red-600',
-  },
-  unlimited: {
-    container: 'bg-green-100 dark:bg-green-900',
-    text: 'text-green-800 dark:text-green-300',
-    progress: 'bg-green-600',
-  },
+const fillClass: Record<UsageState, string> = {
+  normal: 'bg-blue-600 dark:bg-blue-500',
+  warning: 'bg-amber-500',
+  critical: 'bg-red-600 dark:bg-red-500',
+  unlimited: '',
 };
 
-// ============================================
-// Component
-// ============================================
+const iconTheme: Record<UsageState, StatTheme> = {
+  normal: 'blue',
+  warning: 'orange',
+  critical: 'red',
+  unlimited: 'gray',
+};
 
 export function UsageIndicator({
   resourceType,
@@ -72,85 +43,71 @@ export function UsageIndicator({
   icon,
   className,
 }: UsageIndicatorProps) {
-  // Calculate percentage and determine state
   const isUnlimited = limit === -1 || limit === 0;
-  const percentage = isUnlimited ? null : Math.round((used / limit) * 100);
-  
+  const percentage = isUnlimited ? 0 : Math.round((used / limit) * 100);
   const state: UsageState = isUnlimited
     ? 'unlimited'
-    : percentage! < 70
-    ? 'normal'
-    : percentage! < 90
-    ? 'warning'
-    : 'critical';
-
-  const styles = stateStyles[state];
+    : percentage < 70
+      ? 'normal'
+      : percentage < 90
+        ? 'warning'
+        : 'critical';
+  const { iconBgClass, iconClass } = useStatStyles(iconTheme[state]);
   const labelId = `usage-${resourceType}-label`;
 
   return (
-    <div
-      className={cn(
-        'rounded-lg p-4 space-y-2',
-        styles.container,
-        className
-      )}
-    >
-      {/* Header with icon and label */}
-      <div className="flex items-center gap-2">
+    <div className={cn('space-y-3', className)}>
+      <div className="flex items-center gap-3">
         {icon && (
-          <div className={cn('flex-shrink-0', styles.text)} aria-hidden="true">
+          <div
+            className={cn(
+              'h-10 w-10 shrink-0 rounded-full flex items-center justify-center',
+              iconBgClass,
+              iconClass,
+            )}
+            aria-hidden="true"
+          >
             {icon}
           </div>
         )}
-        <h3
-          id={labelId}
-          className={cn('text-sm font-medium', styles.text)}
-        >
-          {label}
-        </h3>
+        <div className="min-w-0">
+          <h3
+            id={labelId}
+            className="text-xs font-medium text-muted-foreground"
+          >
+            {label}
+          </h3>
+          {isUnlimited ? (
+            <p className="text-xl font-semibold tracking-tight">Unlimited</p>
+          ) : (
+            <p className="text-xl font-semibold tracking-tight">
+              {used.toLocaleString()}
+              <span className="text-sm font-medium text-muted-foreground">
+                {' '}
+                / {limit.toLocaleString()}
+              </span>
+            </p>
+          )}
+        </div>
       </div>
 
-      {/* Usage stats */}
       {isUnlimited ? (
-        <div className={cn('text-xs font-semibold', styles.text)}>
-          Unlimited
-        </div>
+        <p className="text-xs text-muted-foreground">No monthly cap on this plan</p>
       ) : (
         <>
-          <div className={cn('text-xs', styles.text)}>
-            {used.toLocaleString()} / {limit.toLocaleString()} ({percentage}%)
-          </div>
-
-          {/* Progress bar */}
-          <div
-            className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden"
-            role="progressbar"
-            aria-valuenow={used}
-            aria-valuemin={0}
-            aria-valuemax={limit}
+          <Progress
+            value={Math.min(Math.max(percentage, 0), 100)}
+            className="h-2.5"
+            indicatorClassName={fillClass[state]}
             aria-labelledby={labelId}
-          >
-            <div
-              className={cn('h-full rounded-full transition-all duration-300', styles.progress)}
-              style={{ width: `${Math.min(percentage!, 100)}%` }}
-            />
-          </div>
+          />
+          <p className="text-xs text-muted-foreground">{percentage}% used</p>
         </>
       )}
     </div>
   );
 }
 
-// ============================================
-// Responsive Grid Container
-// ============================================
-
-/**
- * Container component for usage indicators with responsive grid layout
- * - Desktop: 3-column grid
- * - Tablet: 2-column grid
- * - Mobile: Single column
- */
 export function UsageIndicatorGrid({
   children,
   className,
@@ -163,7 +120,7 @@ export function UsageIndicatorGrid({
       className={cn(
         'grid gap-4',
         'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
-        className
+        className,
       )}
     >
       {children}

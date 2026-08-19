@@ -6,16 +6,17 @@ import { cn } from "@/lib/utils"
 interface ProgressProps extends React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> {
   /** Custom class name for the indicator (progress bar fill) */
   indicatorClassName?: string;
+  indicatorStyle?: React.CSSProperties;
 }
 
 const Progress = React.forwardRef<
   React.ElementRef<typeof ProgressPrimitive.Root>,
   ProgressProps
->(({ className, value, indicatorClassName, ...props }, ref) => (
+>(({ className, value, indicatorClassName, indicatorStyle, ...props }, ref) => (
   <ProgressPrimitive.Root
     ref={ref}
     className={cn(
-      "relative h-4 w-full overflow-hidden rounded-full bg-secondary",
+      "relative h-4 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700",
       className
     )}
     {...props}
@@ -25,7 +26,10 @@ const Progress = React.forwardRef<
         "h-full w-full flex-1 bg-primary transition-all",
         indicatorClassName
       )}
-      style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+      style={{
+        ...indicatorStyle,
+        transform: `translateX(-${100 - (value || 0)}%)`,
+      }}
     />
   </ProgressPrimitive.Root>
 ))
