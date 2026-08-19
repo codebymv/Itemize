@@ -316,6 +316,9 @@ export class BillingService {
     if (/no such price/i.test(message)) {
       return 'This plan is not configured in Stripe yet';
     }
+    if (/no valid payment method types/i.test(message)) {
+      return 'Stripe live mode has no card payments enabled. Activate Cards in the Stripe Dashboard payment methods settings.';
+    }
     if (/already has (an existing |a )?subscription/i.test(message)) {
       return 'Could not switch plans automatically. Use Manage billing to change your plan.';
     }

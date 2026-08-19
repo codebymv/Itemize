@@ -93,6 +93,7 @@ export class StripeBillingProvider {
       {
         customer: input.customerId,
         mode: 'subscription',
+        payment_method_types: ['card'],
         line_items: [{ price: input.priceId, quantity: 1 }],
         success_url: input.successUrl,
         cancel_url: input.cancelUrl,
