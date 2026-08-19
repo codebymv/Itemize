@@ -22,82 +22,27 @@ const PLAN_FEATURES: Record<Plan, string[]> = {
         'Up to 10 lists, notes & whiteboards',
         '100 contacts',
         '1 team member',
-        '1 automation workflow',
-        '100 emails/month',
-        'Basic features',
+        'Try the workspace before you pay',
     ],
     starter: [
-        'Up to 50 lists, notes & whiteboards',
-        '5,000 contacts',
+        'Contacts, pipelines, and calendars',
+        'Invoices and 25 e-signatures / month',
+        'Lists, notes, and whiteboards',
         '3 team members',
-        '5 automation workflows',
-        '1,000 emails/month',
-        '500 SMS/month',
-        '10 landing pages',
-        '10 forms',
-        '3 calendars',
-        'Basic analytics',
         'Email support',
     ],
     unlimited: [
-        'Unlimited lists, notes & whiteboards',
-        '25,000 contacts',
-        '10 team members',
-        '25 automation workflows',
-        '10,000 emails/month',
-        '5,000 SMS/month',
-        '50 landing pages',
-        '50 forms',
-        'Unlimited calendars',
-        'API access (10K calls/day)',
-        'Custom branding',
-        'Custom domains',
-        'Advanced analytics',
+        'Everything in Solo',
+        'Unlimited e-signatures',
+        '25,000 contacts and 10 teammates',
+        'Automations and higher sending limits',
         'Priority support',
     ],
     pro: [
-        'Everything in Growth, plus:',
-        'Unlimited contacts',
-        'Unlimited team members',
-        'Unlimited workflows',
-        '50,000 emails/month',
-        '25,000 SMS/month',
-        'Unlimited pages & forms',
-        'Full API access (100K calls/day)',
-        'White-label platform',
-        'Client billing',
-        'Mobile app branding',
-        'Audit logs',
-        'Dedicated support',
+        'Everything in Studio',
+        'Legacy agency features',
+        'Not offered to new buyers',
     ],
-};
-
-// Updated plan metadata with itemize.cloud branding
-const ITEMIZE_PLAN_META: Record<Plan, {
-    name: string;
-    displayName: string;
-    tagline: string;
-}> = {
-    free: {
-        name: 'Free',
-        displayName: 'Free',
-        tagline: 'Get started for free',
-    },
-    starter: {
-        name: 'Starter',
-        displayName: 'Starter',
-        tagline: 'Perfect for individuals & small teams',
-    },
-    unlimited: {
-        name: 'Growth',
-        displayName: 'Growth',
-        tagline: 'For scaling businesses',
-    },
-    pro: {
-        name: 'Enterprise',
-        displayName: 'Enterprise',
-        tagline: 'Full platform power',
-    },
 };
 
 interface PricingCardsProps {
@@ -110,6 +55,11 @@ interface PricingCardsProps {
      * Hide the starter plan (for upgrade dialogs)
      */
     hideStarter?: boolean;
+
+    /**
+     * Hide the legacy agency tier (default: off the public catalog)
+     */
+    hidePro?: boolean;
     
     /**
      * Current user's plan (to show "Current Plan" badge)
@@ -158,6 +108,7 @@ const PLAN_ICONS = {
 export function PricingCards({
     hideFree = true,
     hideStarter = false,
+    hidePro = true,
     currentPlan,
     variant = 'landing',
     onUpgrade,
@@ -183,6 +134,9 @@ export function PricingCards({
     }
     if (hideStarter) {
         plans = plans.filter(p => p !== PLANS.STARTER);
+    }
+    if (hidePro) {
+        plans = plans.filter(p => p !== PLANS.PRO);
     }
 
     // Get action label based on plan comparison
@@ -265,11 +219,11 @@ export function PricingCards({
             {/* Pricing Cards Grid */}
             <div className={cn(
                 'grid gap-6',
-                hideStarter ? 'md:grid-cols-2' : 'md:grid-cols-3'
+                plans.length === 1 ? 'md:grid-cols-1' : 'md:grid-cols-2'
             )}>
                 {plans.map((planId) => {
                     const meta = PLAN_METADATA[planId];
-                    const itemizeMeta = ITEMIZE_PLAN_META[planId];
+                    const itemizeMeta = PLAN_METADATA[planId];
                     const pricing = PLAN_PRICING[planId];
                     const features = PLAN_FEATURES[planId];
                     const Icon = PLAN_ICONS[planId];

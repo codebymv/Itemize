@@ -21,7 +21,7 @@ import { useTrialStatus } from '@/hooks/useTrialStatus';
 export interface TrialBannerProps {
   /** ISO 8601 timestamp or Date object for trial end date */
   trialEndsAt: string | Date | null;
-  /** Name of the plan being trialed (e.g., "Starter", "Agency Unlimited") */
+  /** Name of the plan being trialed (e.g., "Solo", "Studio") */
   trialPlan?: string;
   /** Callback when banner is dismissed */
   onDismiss?: () => void;

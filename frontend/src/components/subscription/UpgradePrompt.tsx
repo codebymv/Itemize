@@ -83,8 +83,8 @@ export function UpgradePrompt({
   
   // Determine which plan to promote
   const suggestedPlan: 'unlimited' | 'pro' = tierLevel < 2 ? 'unlimited' : 'pro';
-  const suggestedPlanName = suggestedPlan === 'unlimited' ? 'Agency Unlimited' : 'SaaS Pro';
-  const suggestedPrice = suggestedPlan === 'unlimited' ? '$297' : '$497';
+  const suggestedPlanName = suggestedPlan === 'unlimited' ? 'Studio' : 'Studio+';
+  const suggestedPrice = suggestedPlan === 'unlimited' ? '$49' : '$99';
   
   const defaultHeadline = `Upgrade to ${suggestedPlanName}`;
   const defaultDescription = `Get more features and higher limits to grow your business faster.`;

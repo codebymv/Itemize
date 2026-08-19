@@ -35,9 +35,9 @@ interface FeatureGateProps {
 }
 
 const TIER_NAMES: Record<number, string> = {
-  1: 'Starter',
-  2: 'Agency Unlimited',
-  3: 'SaaS Pro'
+  1: 'Solo',
+  2: 'Studio',
+  3: 'Studio+'
 };
 
 const FEATURE_NAMES: Record<FeatureName, string> = {

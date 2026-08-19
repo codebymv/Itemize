@@ -92,19 +92,19 @@ const USAGE_LIMITS = {
  */
 const PRICING = {
     [PLAN_NAMES.STARTER]: {
-        monthly: 97.00,
-        yearly: 970.00, // ~16% savings (2 months free)
-        yearlyMonthly: 80.83 // Per month when billed yearly
+        monthly: 29.00,
+        yearly: 290.00,
+        yearlyMonthly: 24.17
     },
     [PLAN_NAMES.UNLIMITED]: {
-        monthly: 297.00,
-        yearly: 2970.00,
-        yearlyMonthly: 247.50
+        monthly: 49.00,
+        yearly: 490.00,
+        yearlyMonthly: 40.83
     },
     [PLAN_NAMES.PRO]: {
-        monthly: 497.00,
-        yearly: 4970.00,
-        yearlyMonthly: 414.17
+        monthly: 99.00,
+        yearly: 990.00,
+        yearlyMonthly: 82.50
     }
 };
 
@@ -113,23 +113,23 @@ const PRICING = {
  */
 const PLAN_INFO = {
     [PLAN_NAMES.STARTER]: {
-        displayName: 'Starter',
-        tagline: 'Perfect for solo operators',
-        description: 'Everything you need to get started with CRM, marketing, and automation.',
+        displayName: 'Solo',
+        tagline: 'For freelancers replacing DocuSign + invoicing + notes',
+        description: 'Contacts, invoices, e-signatures, and a workspace — without stacking $20 tools.',
         color: '#3B82F6', // Blue
         popular: false
     },
     [PLAN_NAMES.UNLIMITED]: {
-        displayName: 'Agency Unlimited',
-        tagline: 'For growing agencies',
-        description: 'Scale your agency with unlimited sub-accounts, API access, and white-labeling.',
+        displayName: 'Studio',
+        tagline: 'For small studios that need a team and higher limits',
+        description: 'Unlimited signatures, more contacts, automations, and room for collaborators.',
         color: '#8B5CF6', // Purple
         popular: true
     },
     [PLAN_NAMES.PRO]: {
-        displayName: 'SaaS Pro',
-        tagline: 'Build your own SaaS',
-        description: 'Resell the platform as your own with custom billing and full white-label.',
+        displayName: 'Studio+',
+        tagline: 'Legacy agency tier — not sold on the public page',
+        description: 'Kept for existing subscribers. Not offered to new buyers.',
         color: '#F59E0B', // Amber
         popular: false
     }

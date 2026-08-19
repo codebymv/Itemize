@@ -301,7 +301,7 @@ module.exports = (pool) => {
                 const tierLevel = await getOrgTierLevel(pool, req.organizationId);
 
                 if (tierLevel < minTier) {
-                    const tierNames = { 1: 'Starter', 2: 'Unlimited', 3: 'Pro' };
+                    const tierNames = { 1: 'Solo', 2: 'Studio', 3: 'Studio+' };
                     
                     return res.status(403).json({
                         success: false,

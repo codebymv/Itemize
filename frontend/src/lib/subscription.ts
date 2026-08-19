@@ -52,20 +52,20 @@ export const PLAN_METADATA: Record<Plan, {
         borderColor: 'border-slate-300'
     },
     starter: {
-        name: 'Starter',
-        displayName: 'Starter',
-        tagline: 'Perfect for individuals & small teams',
-        description: 'Everything you need to get organized with lists, notes, and basic automation.',
+        name: 'Solo',
+        displayName: 'Solo',
+        tagline: 'For freelancers replacing DocuSign + invoicing + notes',
+        description: 'Contacts, invoices, e-signatures, and a workspace — without stacking $20 tools.',
         icon: 'zap',
         color: 'text-blue-600',
         bgColor: 'bg-blue-50',
         borderColor: 'border-blue-300'
     },
     unlimited: {
-        name: 'Growth',
-        displayName: 'Growth',
-        tagline: 'For scaling businesses',
-        description: 'Scale your operations with unlimited organization, advanced workflows, and API access.',
+        name: 'Studio',
+        displayName: 'Studio',
+        tagline: 'For small studios that need a team and higher limits',
+        description: 'Unlimited signatures, more contacts, automations, and room for collaborators.',
         icon: 'crown',
         color: 'text-indigo-600',
         bgColor: 'bg-indigo-50',
@@ -73,10 +73,10 @@ export const PLAN_METADATA: Record<Plan, {
         popular: true
     },
     pro: {
-        name: 'Enterprise',
-        displayName: 'Enterprise',
-        tagline: 'Full platform power',
-        description: 'Complete platform control with white-labeling, unlimited everything, and dedicated support.',
+        name: 'Studio+',
+        displayName: 'Studio+',
+        tagline: 'Legacy agency tier — not sold on the public page',
+        description: 'Kept for existing subscribers. Not offered to new buyers.',
         icon: 'building',
         color: 'text-blue-700',
         bgColor: 'bg-blue-50',
@@ -85,7 +85,8 @@ export const PLAN_METADATA: Record<Plan, {
 };
 
 /**
- * Plan pricing (based on GHL)
+ * Checkout uses Nest `STRIPE_PRICE_STARTER_MONTHLY` / `STRIPE_PRICE_UNLIMITED_MONTHLY`
+ * (defaults: Solo `price_1U5ypmRxBJaRlFvtCDKzCKSC`, Studio `price_1U5yqFRxBJaRlFvtcC8I6bbo`).
  */
 export const PLAN_PRICING: Record<Plan, {
     monthly: number;
@@ -100,25 +101,19 @@ export const PLAN_PRICING: Record<Plan, {
         yearlyMonthly: 0
     },
     starter: {
-        monthly: 97,
-        yearly: 970,
-        yearlyMonthly: 80.83,
-        stripePriceIdMonthly: 'price_1SthTHRxBJaRlFvtGlxgpg2n',
-        // stripePriceIdYearly: 'price_yearly_starter' // Add when created
+        monthly: 29,
+        yearly: 290,
+        yearlyMonthly: 24.17,
     },
     unlimited: {
-        monthly: 297,
-        yearly: 2970,
-        yearlyMonthly: 247.50,
-        stripePriceIdMonthly: 'price_1SthTwRxBJaRlFvtg32SqjGf',
-        // stripePriceIdYearly: 'price_yearly_unlimited' // Add when created
+        monthly: 49,
+        yearly: 490,
+        yearlyMonthly: 40.83,
     },
     pro: {
-        monthly: 497,
-        yearly: 4970,
-        yearlyMonthly: 414.17,
-        stripePriceIdMonthly: 'price_1SthUKRxBJaRlFvt2dc5DnSi',
-        // stripePriceIdYearly: 'price_yearly_pro' // Add when created
+        monthly: 99,
+        yearly: 990,
+        yearlyMonthly: 82.50,
     }
 };
 
@@ -204,8 +199,8 @@ export const FEATURES: Record<FeatureKey, FeatureDefinition> = {
         label: 'E-Signatures',
         description: 'Send documents for electronic signature',
         limit: {
-            starter: 5,
-            unlimited: 50,
+            starter: 25,
+            unlimited: Infinity,
             pro: Infinity,
             free: 0
         }

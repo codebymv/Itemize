@@ -32,17 +32,17 @@ type PlanDefinition = {
 export const BILLING_PLANS: readonly PlanDefinition[] = [
   {
     id: 'starter',
-    name: 'Starter',
-    displayName: 'Starter',
-    tagline: 'Perfect for individuals & small teams',
+    name: 'Solo',
+    displayName: 'Solo',
+    tagline: 'For freelancers replacing DocuSign + invoicing + notes',
     description:
-      'Everything you need to get organized with lists, notes, and basic automation.',
+      'Contacts, invoices, e-signatures, and a workspace — without stacking $20 tools.',
     icon: 'zap',
     color: 'text-blue-600',
     bgColor: 'bg-blue-50',
     borderColor: 'border-blue-300',
     popular: false,
-    pricing: { monthly: 97, yearly: 970, yearlyMonthly: 80.83 },
+    pricing: { monthly: 29, yearly: 290, yearlyMonthly: 24.17 },
     tier: 1,
     limits: {
       organizations: 3,
@@ -60,17 +60,17 @@ export const BILLING_PLANS: readonly PlanDefinition[] = [
   },
   {
     id: 'unlimited',
-    name: 'Growth',
-    displayName: 'Growth',
-    tagline: 'For scaling businesses',
+    name: 'Studio',
+    displayName: 'Studio',
+    tagline: 'For small studios that need a team and higher limits',
     description:
-      'Scale your operations with unlimited organization, advanced workflows, and API access.',
+      'Unlimited signatures, more contacts, automations, and room for collaborators.',
     icon: 'crown',
     color: 'text-indigo-600',
     bgColor: 'bg-indigo-50',
     borderColor: 'border-indigo-300',
     popular: true,
-    pricing: { monthly: 297, yearly: 2970, yearlyMonthly: 247.5 },
+    pricing: { monthly: 49, yearly: 490, yearlyMonthly: 40.83 },
     tier: 2,
     limits: {
       organizations: -1,
@@ -88,17 +88,17 @@ export const BILLING_PLANS: readonly PlanDefinition[] = [
   },
   {
     id: 'pro',
-    name: 'Enterprise',
-    displayName: 'Enterprise',
-    tagline: 'Full platform power',
+    name: 'Studio+',
+    displayName: 'Studio+',
+    tagline: 'Legacy agency tier — not sold on the public page',
     description:
-      'Complete platform control with white-labeling, unlimited everything, and dedicated support.',
+      'Kept for existing subscribers. Not offered to new buyers.',
     icon: 'building',
     color: 'text-blue-700',
     bgColor: 'bg-blue-50',
     borderColor: 'border-blue-400',
     popular: false,
-    pricing: { monthly: 497, yearly: 4970, yearlyMonthly: 414.17 },
+    pricing: { monthly: 99, yearly: 990, yearlyMonthly: 82.5 },
     tier: 3,
     limits: {
       organizations: -1,
@@ -118,11 +118,11 @@ export const BILLING_PLANS: readonly PlanDefinition[] = [
 
 const defaultPrices: Record<BillingPlanId, Record<BillingPeriod, string>> = {
   starter: {
-    monthly: 'price_starter_monthly',
+    monthly: 'price_1U5ypmRxBJaRlFvtCDKzCKSC',
     yearly: 'price_starter_yearly',
   },
   unlimited: {
-    monthly: 'price_unlimited_monthly',
+    monthly: 'price_1U5yqFRxBJaRlFvtcC8I6bbo',
     yearly: 'price_unlimited_yearly',
   },
   pro: {
@@ -166,7 +166,15 @@ export const planForPrice = (
       }
     }
   }
-  return null;
+  const aliases: Record<string, { planId: BillingPlanId; period: BillingPeriod }> = {
+    price_starter_monthly: { planId: 'starter', period: 'monthly' },
+    price_unlimited_monthly: { planId: 'unlimited', period: 'monthly' },
+    price_pro_monthly: { planId: 'pro', period: 'monthly' },
+    price_starter_yearly: { planId: 'starter', period: 'yearly' },
+    price_unlimited_yearly: { planId: 'unlimited', period: 'yearly' },
+    price_pro_yearly: { planId: 'pro', period: 'yearly' },
+  };
+  return aliases[priceId] ?? null;
 };
 
 export const planDefinition = (

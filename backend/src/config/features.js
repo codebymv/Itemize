@@ -6,9 +6,9 @@
  * Defines all gated features and their tier requirements
  * 
  * Tier Levels:
- * 1 = Starter ($97/mo)
- * 2 = Unlimited ($297/mo)
- * 3 = Pro ($497/mo)
+ * 1 = Solo ($29/mo)
+ * 2 = Studio ($49/mo)
+ * 3 = Studio+ (legacy, not sold)
  */
 
 const FEATURES = {

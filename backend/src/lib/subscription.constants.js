@@ -1,7 +1,7 @@
 /**
  * Subscription Constants
  * Centralized configuration for plans, limits, features, and Stripe mappings
- * Based on GoHighLevel pricing model
+ * Freelancer catalog (Solo $29 / Studio $49). Plan slugs stay starter/unlimited/pro.
  */
 
 // ============================================
@@ -33,20 +33,20 @@ const PLAN_TIER_ORDER = {
  */
 const PLAN_METADATA = {
     [PLANS.STARTER]: {
-        name: 'Starter',
-        displayName: 'Starter',
-        tagline: 'Perfect for individuals & small teams',
-        description: 'Everything you need to get organized with lists, notes, and basic automation.',
+        name: 'Solo',
+        displayName: 'Solo',
+        tagline: 'For freelancers replacing DocuSign + invoicing + notes',
+        description: 'Contacts, invoices, e-signatures, and a workspace — without stacking $20 tools.',
         icon: 'zap',
         color: 'text-blue-600',
         bgColor: 'bg-blue-50',
         borderColor: 'border-blue-300'
     },
     [PLANS.UNLIMITED]: {
-        name: 'Growth',
-        displayName: 'Growth',
-        tagline: 'For scaling businesses',
-        description: 'Scale your operations with unlimited organization, advanced workflows, and API access.',
+        name: 'Studio',
+        displayName: 'Studio',
+        tagline: 'For small studios that need a team and higher limits',
+        description: 'Unlimited signatures, more contacts, automations, and room for collaborators.',
         icon: 'crown',
         color: 'text-indigo-600',
         bgColor: 'bg-indigo-50',
@@ -54,10 +54,10 @@ const PLAN_METADATA = {
         popular: true
     },
     [PLANS.PRO]: {
-        name: 'Enterprise',
-        displayName: 'Enterprise',
-        tagline: 'Full platform power',
-        description: 'Complete platform control with white-labeling, unlimited everything, and dedicated support.',
+        name: 'Studio+',
+        displayName: 'Studio+',
+        tagline: 'Legacy agency tier — not sold on the public page',
+        description: 'Kept for existing subscribers. Not offered to new buyers.',
         icon: 'building',
         color: 'text-blue-700',
         bgColor: 'bg-blue-50',
@@ -66,23 +66,23 @@ const PLAN_METADATA = {
 };
 
 /**
- * Plan pricing (based on GHL)
+ * Freelancer catalog. Stripe env IDs must be recreated at these amounts.
  */
 const PLAN_PRICING = {
     [PLANS.STARTER]: {
-        monthly: 97,
-        yearly: 970,
-        yearlyMonthly: 80.83
+        monthly: 29,
+        yearly: 290,
+        yearlyMonthly: 24.17
     },
     [PLANS.UNLIMITED]: {
-        monthly: 297,
-        yearly: 2970,
-        yearlyMonthly: 247.50
+        monthly: 49,
+        yearly: 490,
+        yearlyMonthly: 40.83
     },
     [PLANS.PRO]: {
-        monthly: 497,
-        yearly: 4970,
-        yearlyMonthly: 414.17
+        monthly: 99,
+        yearly: 990,
+        yearlyMonthly: 82.50
     }
 };
 
@@ -95,11 +95,13 @@ const PLAN_PRICING = {
  * Update these with your actual Stripe price IDs
  */
 const STRIPE_PRICE_TO_PLAN = {
-    // Monthly prices
+    // Live monthly catalog
+    'price_1U5ypmRxBJaRlFvtCDKzCKSC': PLANS.STARTER,
+    'price_1U5yqFRxBJaRlFvtcC8I6bbo': PLANS.UNLIMITED,
+    // Placeholders kept for local/webhook tests
     'price_starter_monthly': PLANS.STARTER,
     'price_unlimited_monthly': PLANS.UNLIMITED,
     'price_pro_monthly': PLANS.PRO,
-    // Yearly prices
     'price_starter_yearly': PLANS.STARTER,
     'price_unlimited_yearly': PLANS.UNLIMITED,
     'price_pro_yearly': PLANS.PRO
@@ -110,11 +112,11 @@ const STRIPE_PRICE_TO_PLAN = {
  */
 const PLAN_TO_STRIPE_PRICES = {
     [PLANS.STARTER]: {
-        monthly: 'price_starter_monthly',
+        monthly: 'price_1U5ypmRxBJaRlFvtCDKzCKSC',
         yearly: 'price_starter_yearly'
     },
     [PLANS.UNLIMITED]: {
-        monthly: 'price_unlimited_monthly',
+        monthly: 'price_1U5yqFRxBJaRlFvtcC8I6bbo',
         yearly: 'price_unlimited_yearly'
     },
     [PLANS.PRO]: {
@@ -213,8 +215,8 @@ const CALENDAR_LIMITS = {
  * Signature documents per month limits
  */
 const SIGNATURE_LIMITS = {
-    [PLANS.STARTER]: 5,
-    [PLANS.UNLIMITED]: 50,
+    [PLANS.STARTER]: 25,
+    [PLANS.UNLIMITED]: Infinity,
     [PLANS.PRO]: Infinity
 };
 
