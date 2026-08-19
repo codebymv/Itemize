@@ -41,7 +41,8 @@ function verifyStripeSubscriptionWebhook({
   payload,
   signature,
   stripe,
-  secret = process.env.STRIPE_WEBHOOK_SECRET,
+  secret = process.env.STRIPE_BILLING_WEBHOOK_SECRET?.trim()
+    || process.env.STRIPE_WEBHOOK_SECRET,
 }) {
   if (!secret) {
     const error = new Error('Stripe webhook secret is not configured');
