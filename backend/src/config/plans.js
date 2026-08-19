@@ -114,7 +114,7 @@ const PRICING = {
 const PLAN_INFO = {
     [PLAN_NAMES.STARTER]: {
         displayName: 'Solo',
-        tagline: 'For freelancers replacing DocuSign + invoicing + notes',
+        tagline: 'For freelancers replacing signature and invoicing tools',
         description: 'Contacts, invoices, e-signatures, and a workspace — without stacking $20 tools.',
         color: '#3B82F6', // Blue
         popular: false

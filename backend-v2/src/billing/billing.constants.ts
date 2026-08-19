@@ -34,7 +34,7 @@ export const BILLING_PLANS: readonly PlanDefinition[] = [
     id: 'starter',
     name: 'Solo',
     displayName: 'Solo',
-    tagline: 'For freelancers replacing DocuSign + invoicing + notes',
+    tagline: 'For freelancers replacing signature and invoicing tools',
     description:
       'Contacts, invoices, e-signatures, and a workspace — without stacking $20 tools.',
     icon: 'zap',

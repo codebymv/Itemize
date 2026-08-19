@@ -54,7 +54,7 @@ export const PLAN_METADATA: Record<Plan, {
     starter: {
         name: 'Solo',
         displayName: 'Solo',
-        tagline: 'For freelancers replacing DocuSign and invoicing tools',
+        tagline: 'For freelancers replacing signature and invoicing tools',
         description: 'Contacts, invoices, e-signatures, and the full workspace — without stacking $20 tools.',
         icon: 'zap',
         color: 'text-blue-600',
