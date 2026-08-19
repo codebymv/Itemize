@@ -2,30 +2,28 @@ import React from 'react';
 
 interface IntegrationLogoProps {
   name: string;
-  isLight: boolean;
   comingSoon?: boolean;
   children: React.ReactNode;
 }
 
-const IntegrationLogo = React.memo(function IntegrationLogo({ name, isLight, comingSoon, children }: IntegrationLogoProps) {
+const IntegrationLogo = React.memo(function IntegrationLogo({ name, comingSoon, children }: IntegrationLogoProps) {
   return (
-    <div 
+    <div
       className={`
         group relative flex flex-col items-center justify-center text-center gap-3 p-6 rounded-2xl border transition-all duration-300 h-full
-        ${isLight 
-          ? 'bg-white border-gray-200 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/5' 
-          : 'bg-slate-800 border-slate-700 hover:border-blue-700 hover:shadow-lg hover:shadow-blue-500/10'}
+        bg-white border-gray-200 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/5
+        dark:bg-slate-800 dark:border-slate-700 dark:hover:border-blue-700 dark:hover:shadow-blue-500/10
         ${comingSoon ? 'opacity-60' : ''}
       `}
     >
       <div className="w-10 h-10 flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
         {children}
       </div>
-      <span className={`text-sm font-semibold leading-tight ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+      <span className="text-sm font-semibold leading-tight text-gray-700 dark:text-slate-300">
         {name}
       </span>
       {comingSoon && (
-        <span className={`absolute -top-2 -right-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${isLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-900/50 text-amber-300'}`}>
+        <span className="absolute -top-2 -right-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
           SOON
         </span>
       )}
@@ -37,22 +35,19 @@ const IntegrationLogo = React.memo(function IntegrationLogo({ name, isLight, com
  * Renders integration logos as inline SVGs for maximum quality and theme-awareness.
  * These are simplified brand marks (not full logos to avoid trademark issues).
  */
-export const IntegrationGrid = React.memo(function IntegrationGrid({ isLight }: { isLight: boolean }) {
-  const iconColor = isLight ? '#374151' : '#94a3b8';
-  const accentColor = isLight ? '#2563eb' : '#60a5fa';
-
+export const IntegrationGrid = React.memo(function IntegrationGrid() {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
       {/* Stripe */}
-      <IntegrationLogo name="Stripe" isLight={isLight}>
+      <IntegrationLogo name="Stripe">
         <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10">
-          <rect width="40" height="40" rx="8" fill={isLight ? '#635BFF' : '#7B73FF'} fillOpacity="0.1" />
-          <path d="M18.5 15.2c0-.9.7-1.3 1.9-1.3 1.7 0 3.8.5 5.5 1.4V10c-1.8-.7-3.7-1-5.5-1-4.5 0-7.5 2.3-7.5 6.2 0 6.1 8.4 5.1 8.4 7.7 0 1.1-.9 1.4-2.2 1.4-1.9 0-4.3-.8-6.2-1.8v5.4c2.1.9 4.2 1.3 6.2 1.3 4.6 0 7.7-2.3 7.7-6.2-.1-6.5-8.3-5.4-8.3-7.8z" fill={isLight ? '#635BFF' : '#7B73FF'} />
+          <rect width="40" height="40" rx="8" className="fill-[#635BFF]/10 dark:fill-[#7B73FF]/10" />
+          <path d="M18.5 15.2c0-.9.7-1.3 1.9-1.3 1.7 0 3.8.5 5.5 1.4V10c-1.8-.7-3.7-1-5.5-1-4.5 0-7.5 2.3-7.5 6.2 0 6.1 8.4 5.1 8.4 7.7 0 1.1-.9 1.4-2.2 1.4-1.9 0-4.3-.8-6.2-1.8v5.4c2.1.9 4.2 1.3 6.2 1.3 4.6 0 7.7-2.3 7.7-6.2-.1-6.5-8.3-5.4-8.3-7.8z" className="fill-[#635BFF] dark:fill-[#7B73FF]" />
         </svg>
       </IntegrationLogo>
 
       {/* Google Calendar */}
-      <IntegrationLogo name="Google Calendar" isLight={isLight}>
+      <IntegrationLogo name="Google Calendar">
         <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10">
           <rect width="40" height="40" rx="8" fill="#4285F4" fillOpacity="0.1" />
           <g transform="translate(8, 8) scale(0.5)">
@@ -65,7 +60,7 @@ export const IntegrationGrid = React.memo(function IntegrationGrid({ isLight }: 
       </IntegrationLogo>
 
       {/* Gmail */}
-      <IntegrationLogo name="Gmail" isLight={isLight}>
+      <IntegrationLogo name="Gmail">
         <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10">
           <rect width="40" height="40" rx="8" fill="#EA4335" fillOpacity="0.1" />
           <g transform="translate(8, 8)">
@@ -78,7 +73,7 @@ export const IntegrationGrid = React.memo(function IntegrationGrid({ isLight }: 
       </IntegrationLogo>
 
       {/* Twilio */}
-      <IntegrationLogo name="Twilio" isLight={isLight}>
+      <IntegrationLogo name="Twilio">
         <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10">
           <rect width="40" height="40" rx="8" fill="#F22F46" fillOpacity="0.1" />
           <circle cx="20" cy="20" r="10" stroke="#F22F46" strokeWidth="1.5" fill="none" />
@@ -90,18 +85,18 @@ export const IntegrationGrid = React.memo(function IntegrationGrid({ isLight }: 
       </IntegrationLogo>
 
       {/* Webhooks */}
-      <IntegrationLogo name="Webhooks" isLight={isLight}>
-        <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10">
-          <rect width="40" height="40" rx="8" fill={accentColor} fillOpacity="0.1" />
-          <circle cx="20" cy="14" r="3" stroke={accentColor} strokeWidth="1.5" fill="none" />
-          <circle cx="13" cy="26" r="3" stroke={accentColor} strokeWidth="1.5" fill="none" />
-          <circle cx="27" cy="26" r="3" stroke={accentColor} strokeWidth="1.5" fill="none" />
-          <path d="M20 17v3l-5.5 4M20 20l5.5 4" stroke={accentColor} strokeWidth="1.5" strokeLinecap="round" />
+      <IntegrationLogo name="Webhooks">
+        <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10 text-blue-600 dark:text-blue-400">
+          <rect width="40" height="40" rx="8" fill="currentColor" fillOpacity="0.1" />
+          <circle cx="20" cy="14" r="3" stroke="currentColor" strokeWidth="1.5" fill="none" />
+          <circle cx="13" cy="26" r="3" stroke="currentColor" strokeWidth="1.5" fill="none" />
+          <circle cx="27" cy="26" r="3" stroke="currentColor" strokeWidth="1.5" fill="none" />
+          <path d="M20 17v3l-5.5 4M20 20l5.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
       </IntegrationLogo>
 
       {/* Gleam */}
-      <IntegrationLogo name="Gleam" isLight={isLight}>
+      <IntegrationLogo name="Gleam">
         <div className="w-10 h-10 rounded-lg flex items-center justify-center p-2" style={{ backgroundColor: 'rgba(0, 169, 143, 0.1)' }}>
           <img src="/gleam-favicon.png" alt="Gleam" className="w-full h-full object-contain drop-shadow" />
         </div>

@@ -5,7 +5,17 @@ interface FallingClouds3DProps {
   width?: number;
   height?: number;
   cloudCount?: number;
-  isLightTheme?: boolean;
+}
+
+function htmlIsDark() {
+  return typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+}
+
+function cloudPaint(dark: boolean) {
+  return {
+    color: dark ? 0x60a5fa : 0x3b82f6,
+    opacity: dark ? 0.5 : 0.4,
+  };
 }
 
 interface CloudState {
@@ -23,7 +33,6 @@ const FallingClouds3D: React.FC<FallingClouds3DProps> = ({
   width = 128,
   height = 128,
   cloudCount = 6,
-  isLightTheme = false
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const animationIdRef = useRef<number>();
@@ -58,6 +67,7 @@ const FallingClouds3D: React.FC<FallingClouds3DProps> = ({
     initializedRef.current = true;
 
     let cancelled = false;
+    let themeObserver: MutationObserver | null = null;
 
     // Dynamic import Three.js to keep it out of the main bundle
     import('three').then((THREE) => {
@@ -109,8 +119,7 @@ const FallingClouds3D: React.FC<FallingClouds3DProps> = ({
         return group;
       };
 
-      const cloudColor = isLightTheme ? 0x3b82f6 : 0x60a5fa;
-      const cloudOpacity = isLightTheme ? 0.4 : 0.5;
+      const { color: cloudColor, opacity: cloudOpacity } = cloudPaint(htmlIsDark());
 
       const cloudMaterial = new THREE.MeshBasicMaterial({
         color: new THREE.Color(cloudColor),
@@ -168,6 +177,21 @@ const FallingClouds3D: React.FC<FallingClouds3DProps> = ({
 
       cloudsRef.current = clouds;
 
+      const applyCloudTheme = () => {
+        const paint = cloudPaint(htmlIsDark());
+        for (const cloud of clouds) {
+          cloud.baseOpacity = paint.opacity;
+          cloud.mesh.traverse((child) => {
+            if (child instanceof THREE.Mesh && child.material && 'color' in child.material) {
+              (child.material as Three.MeshBasicMaterial).color.setHex(paint.color);
+            }
+          });
+        }
+      };
+
+      themeObserver = new MutationObserver(applyCloudTheme);
+      themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
       const animate = () => {
         animationIdRef.current = requestAnimationFrame(animate);
         const { viewWidth: vw, viewHeight: vh } = viewDimsRef.current;
@@ -217,6 +241,7 @@ const FallingClouds3D: React.FC<FallingClouds3DProps> = ({
 
     return () => {
       cancelled = true;
+      themeObserver?.disconnect();
       if (animationIdRef.current) cancelAnimationFrame(animationIdRef.current);
 
       const renderer = rendererRef.current;

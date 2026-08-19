@@ -1,5 +1,4 @@
 import React from 'react';
-import { useTheme } from 'next-themes';
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuthState } from '@/contexts/AuthContext';
 
 const Footer: React.FC = () => {
-  const { theme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -41,10 +39,21 @@ const Footer: React.FC = () => {
           {/* Brand Section */}
           <div className="md:col-span-2">
             <div className="flex items-center mb-4">
-              <img 
-                src={theme === 'dark' ? '/cover_whitetext.webp' : '/cover.webp'} 
-                alt="Itemize" 
-                className="h-10 w-auto cursor-pointer"
+              <img
+                src="/cover.webp"
+                alt="Itemize"
+                className="h-10 w-auto cursor-pointer dark:hidden"
+                width={200}
+                height={40}
+                loading="lazy"
+                decoding="async"
+                onClick={() => handleNavigate('/')}
+              />
+              <img
+                src="/cover_whitetext.webp"
+                alt=""
+                aria-hidden="true"
+                className="hidden h-10 w-auto cursor-pointer dark:block"
                 width={200}
                 height={40}
                 loading="lazy"

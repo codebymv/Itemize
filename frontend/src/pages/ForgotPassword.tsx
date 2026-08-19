@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,13 +11,10 @@ import { requestPasswordResetViaGraphql } from '@/services/authGraphql';
 
 export default function ForgotPassword() {
   const { toast } = useToast();
-  const { theme } = useTheme();
   
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
-
-  const isLight = theme !== 'dark';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +37,7 @@ export default function ForgotPassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
-      <BackgroundClouds opacity={isLight ? 0.15 : 0.1} cloudCount={8} isLight={isLight} />
+      <BackgroundClouds className="opacity-[0.15] dark:opacity-10" cloudCount={8} />
       
       <Card className="w-full max-w-md relative z-10">
         <CardHeader className="text-center p-0">

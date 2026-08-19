@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +17,6 @@ function LoginForm() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const { theme } = useTheme();
   const { loginWithEmail } = useAuthActions();
   const googleSignIn = useGoogleSignIn();
   
@@ -26,8 +24,6 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-
-  const isLight = theme !== 'dark';
 
   // Get redirect path from location state
   const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/dashboard';
@@ -98,7 +94,7 @@ function LoginForm() {
 
   return (
     <div className="min-h-[100svh] flex items-start justify-center bg-background px-4 pt-4 pb-6 sm:items-center sm:pt-6 sm:pb-6 relative overflow-hidden">
-      <BackgroundClouds opacity={isLight ? 0.15 : 0.1} cloudCount={8} isLight={isLight} />
+      <BackgroundClouds className="opacity-[0.15] dark:opacity-10" cloudCount={8} />
       
       <Card className="w-full max-w-md relative z-10">
         <CardHeader className="text-center pb-2">

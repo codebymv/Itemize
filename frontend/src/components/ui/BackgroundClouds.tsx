@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 import FallingClouds3D from './FallingClouds3D';
 
 interface BackgroundCloudsProps {
-  opacity?: number;
   cloudCount?: number;
-  isLight?: boolean;
+  className?: string;
 }
 
 const BackgroundClouds: React.FC<BackgroundCloudsProps> = ({
-  opacity = 0.05,
   cloudCount = 4,
-  isLight = false
+  className,
 }) => {
   const [dimensions, setDimensions] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 1000,
@@ -63,21 +62,21 @@ const BackgroundClouds: React.FC<BackgroundCloudsProps> = ({
 
   return (
     <div
-      className="fixed pointer-events-none z-0"
+      className={cn(
+        'fixed pointer-events-none z-0 overflow-hidden opacity-[0.12] dark:opacity-[0.08]',
+        className,
+      )}
       style={{
-        opacity,
         top: '80px', // Start below navbar (adjust based on your navbar height)
         left: 0,
         right: 0,
         bottom: '0', // End at the bottom of the viewport
-        overflow: 'hidden' // Clip any content that goes outside
       }}
     >
       <FallingClouds3D
         width={dimensions.width}
         height={dimensions.height - 80} // Subtract navbar height
         cloudCount={cloudCount}
-        isLightTheme={isLight}
       />
     </div>
   );

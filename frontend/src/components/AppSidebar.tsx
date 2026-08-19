@@ -1,6 +1,5 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import {
     Sidebar,
@@ -289,7 +288,6 @@ function isAppleModifierPlatform(): boolean {
 export function AppSidebar() {
     const location = useLocation();
     const navigate = useNavigate();
-    const { theme } = useTheme();
     const { state, toggleSidebar, isMobile, setOpenMobile } = useSidebar();
     const { setSearchOpen } = useSearch();
     const [searchShortcutHint, setSearchShortcutHint] = React.useState<'apple' | 'other' | null>(null);
@@ -345,9 +343,15 @@ export function AppSidebar() {
                         <div className="group flex items-center gap-2 flex-1 cursor-pointer" onClick={() => navigate('/dashboard')}>
                             {brandIcon('h-7 w-7')}
                             <img
-                                src={theme === 'dark' ? '/textwhite.png' : '/textblack.png'}
+                                src="/textblack.png"
                                 alt="Itemize"
-                                className="h-6 w-auto object-contain object-left"
+                                className="h-6 w-auto object-contain object-left dark:hidden"
+                            />
+                            <img
+                                src="/textwhite.png"
+                                alt=""
+                                aria-hidden="true"
+                                className="hidden h-6 w-auto object-contain object-left dark:block"
                             />
                         </div>
                     ) : (

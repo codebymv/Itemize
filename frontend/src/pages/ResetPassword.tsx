@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,7 +19,6 @@ export default function ResetPassword() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const { theme } = useTheme();
   
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -29,8 +27,6 @@ export default function ResetPassword() {
   const [error, setError] = useState<string | null>(null);
 
   const token = searchParams.get('token');
-
-  const isLight = theme !== 'dark';
 
   const passwordsMatch = !password || !confirmPassword || password === confirmPassword;
   const passwordValid = password.length >= 8 && 
@@ -88,7 +84,7 @@ export default function ResetPassword() {
   if (!token) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
-        <BackgroundClouds opacity={isLight ? 0.15 : 0.1} cloudCount={8} isLight={isLight} />
+        <BackgroundClouds className="opacity-[0.15] dark:opacity-10" cloudCount={8} />
         
         <Card className="w-full max-w-md relative z-10">
           <CardHeader className="text-center p-0">
@@ -123,7 +119,7 @@ export default function ResetPassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
-      <BackgroundClouds opacity={isLight ? 0.15 : 0.1} cloudCount={8} isLight={isLight} />
+      <BackgroundClouds className="opacity-[0.15] dark:opacity-10" cloudCount={8} />
       
       <Card className="w-full max-w-md relative z-10">
         <CardHeader className="text-center p-0">

@@ -8,7 +8,6 @@ import { Check, Loader2, Zap, Crown, Building2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { useTheme } from 'next-themes';
 import { 
     Plan, 
     PLANS,
@@ -167,15 +166,11 @@ export function PricingCards({
     billingPeriod = 'monthly',
     onBillingPeriodChange,
 }: PricingCardsProps) {
-    const { theme } = useTheme();
-    const isLight = theme === 'light';
-    
-    // Theme-aware colors matching Home.tsx patterns
-    const cardBg = isLight ? 'bg-white' : 'bg-slate-800';
-    const cardBorder = isLight ? 'border-gray-200' : 'border-slate-700';
-    const textPrimary = isLight ? 'text-gray-900' : 'text-slate-100';
-    const textSecondary = isLight ? 'text-gray-700' : 'text-slate-300';
-    const textMuted = isLight ? 'text-gray-600' : 'text-slate-400';
+    const cardBg = 'bg-card';
+    const cardBorder = 'border-border';
+    const textPrimary = 'text-foreground';
+    const textSecondary = 'text-muted-foreground';
+    const textMuted = 'text-muted-foreground';
     
     // Highlighted card uses blue/indigo gradient
     const highlightedBg = 'bg-gradient-to-b from-blue-600 to-indigo-700';
@@ -206,11 +201,9 @@ export function PricingCards({
         if (isCurrentPlan) {
             return cn(
                 'w-full',
-                isHighlighted 
-                    ? 'bg-white/30 text-white cursor-default' 
-                    : isLight
-                        ? 'bg-gray-100 text-gray-500 cursor-default'
-                        : 'bg-slate-700 text-slate-400 cursor-default'
+                isHighlighted
+                    ? 'bg-white/30 text-white cursor-default'
+                    : 'bg-muted text-muted-foreground cursor-default'
             );
         }
         
@@ -244,11 +237,9 @@ export function PricingCards({
                         className={cn(
                             'px-4 py-2 rounded-lg text-sm font-medium transition-colors',
                             billingPeriod === 'monthly'
-                                ? isLight 
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'bg-blue-900/50 text-blue-300'
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
                                 : textSecondary,
-                            billingPeriod !== 'monthly' && (isLight ? 'hover:text-gray-900' : 'hover:text-slate-200')
+                            billingPeriod !== 'monthly' && 'hover:text-foreground'
                         )}
                     >
                         Monthly
@@ -258,11 +249,9 @@ export function PricingCards({
                         className={cn(
                             'px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2',
                             billingPeriod === 'yearly'
-                                ? isLight
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'bg-blue-900/50 text-blue-300'
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
                                 : textSecondary,
-                            billingPeriod !== 'yearly' && (isLight ? 'hover:text-gray-900' : 'hover:text-slate-200')
+                            billingPeriod !== 'yearly' && 'hover:text-foreground'
                         )}
                     >
                         Yearly
@@ -328,11 +317,9 @@ export function PricingCards({
                                 <div className="flex items-center gap-2 mb-2">
                                     <Icon className={cn(
                                         'h-6 w-6',
-                                        isHighlighted 
-                                            ? 'text-white' 
-                                            : isLight 
-                                                ? 'text-blue-600' 
-                                                : 'text-blue-400'
+                                        isHighlighted
+                                            ? 'text-white'
+                                            : 'text-blue-600 dark:text-blue-400'
                                     )} />
                                     <h3 className={cn(
                                         'text-lg font-semibold',
@@ -378,11 +365,9 @@ export function PricingCards({
                                     <li key={idx} className="flex items-start gap-2">
                                         <Check className={cn(
                                             'h-4 w-4 mt-0.5 flex-shrink-0',
-                                            isHighlighted 
-                                                ? 'text-blue-200' 
-                                                : isLight 
-                                                    ? 'text-blue-600' 
-                                                    : 'text-blue-400'
+                                            isHighlighted
+                                                ? 'text-blue-200'
+                                                : 'text-blue-600 dark:text-blue-400'
                                         )} />
                                         <span className={cn(
                                             'text-sm',

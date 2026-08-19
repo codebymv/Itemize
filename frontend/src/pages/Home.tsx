@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { useAuthState } from '@/contexts/AuthContext';
 import { LandingNav } from '@/components/LandingNav';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import {
   ArrowRight,
   CheckCircle,
@@ -59,11 +58,9 @@ const RevealSection = React.memo(function RevealSection({
 
 const Home: React.FC = () => {
   const { isAuthenticated, token, currentUser } = useAuthState();
-  const { theme } = useTheme();
   const navigate = useNavigate();
   const navigatedRef = React.useRef(false);
   const [belowFoldReady, setBelowFoldReady] = useState(false);
-  const isLight = theme !== 'dark';
   const textColor = 'text-foreground';
   const secondaryTextColor = 'text-muted-foreground';
   const mutedTextColor = 'text-muted-foreground';
@@ -107,7 +104,7 @@ const Home: React.FC = () => {
     <div className="min-h-screen bg-background overflow-hidden relative">
       {belowFoldReady ? (
         <Suspense fallback={null}>
-          <BackgroundClouds opacity={isLight ? 0.12 : 0.08} cloudCount={4} isLight={isLight} />
+          <BackgroundClouds cloudCount={4} />
         </Suspense>
       ) : null}
 
@@ -183,7 +180,6 @@ const Home: React.FC = () => {
                 sublabel="Dashboard view"
                 accentFrom="from-blue-500"
                 accentTo="to-indigo-600"
-                isLight={isLight}
                 showChrome={true}
                 aspectRatio="aspect-[16/10]"
                 className="screenshot-tilt"
@@ -335,7 +331,6 @@ const Home: React.FC = () => {
                     sublabel="Lists, Notes, and Whiteboards alongside your CRM"
                     accentFrom="from-blue-500"
                     accentTo="to-indigo-600"
-                    isLight={isLight}
                     showChrome={true}
                     className="screenshot-tilt"
                     src="/screenshots/workspaces.png"
@@ -418,7 +413,6 @@ const Home: React.FC = () => {
               <div className="space-y-28 md:space-y-36">
                 {/* Feature 1: Contact Management */}
                 <FeatureShowcase
-                  isLight={isLight}
                   reverse={false}
                   badge={{ icon: Users, label: 'Contact Management', color: 'from-blue-500 to-cyan-500' }}
                   title="Every customer, every interaction, one view"
@@ -429,7 +423,6 @@ const Home: React.FC = () => {
 
                 {/* Feature 2: Sales Pipelines */}
                 <FeatureShowcase
-                  isLight={isLight}
                   reverse={true}
                   badge={{ icon: TrendingUp, label: 'Sales Pipelines', color: 'from-emerald-500 to-teal-500' }}
                   title="Visual deal tracking that makes sense"
@@ -440,7 +433,6 @@ const Home: React.FC = () => {
 
                 {/* Feature 3: Calendars & Booking */}
                 <FeatureShowcase
-                  isLight={isLight}
                   reverse={false}
                   badge={{ icon: Calendar, label: 'Calendars & Booking', color: 'from-orange-500 to-amber-500' }}
                   title="Let clients book, you stay focused"
@@ -451,7 +443,6 @@ const Home: React.FC = () => {
 
                 {/* Feature 4: Automations */}
                 <FeatureShowcase
-                  isLight={isLight}
                   reverse={true}
                   badge={{ icon: Zap, label: 'Automations', color: 'from-pink-500 to-rose-500' }}
                   title="Set it up once, let it work forever"
@@ -489,7 +480,7 @@ const Home: React.FC = () => {
 
             <RevealSection variant="fade-up" delay={150}>
               {belowFoldReady ? (
-              <Suspense fallback={<div className="h-40 w-full animate-pulse bg-slate-100 dark:bg-slate-800 rounded-2xl" />}><IntegrationGrid isLight={isLight} /></Suspense>
+              <Suspense fallback={<div className="h-40 w-full animate-pulse bg-slate-100 dark:bg-slate-800 rounded-2xl" />}><IntegrationGrid /></Suspense>
               ) : (
                 <div style={{ minHeight: 160 }} aria-hidden="true" />
               )}

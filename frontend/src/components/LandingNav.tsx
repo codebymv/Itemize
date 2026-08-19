@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import {
@@ -85,13 +84,10 @@ const WORKSPACE_ITEMS = [
 ];
 
 export const LandingNav: React.FC = () => {
-  const { theme } = useTheme();
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const isLight = theme !== 'dark';
-  
   // Section IDs for scroll spy
   const sectionIds = SECTIONS.map(s => s.id);
   const activeSection = useScrollSpy({ sectionIds, offset: 100 });
@@ -139,10 +135,19 @@ export const LandingNav: React.FC = () => {
               className="flex items-center"
               aria-label="Itemize home"
             >
-              <img 
-                src={isLight ? "/cover-nav.webp" : "/cover_whitetext-nav.webp"}
-                alt="Itemize" 
-                className="h-10 md:h-12 w-auto"
+              <img
+                src="/cover-nav.webp"
+                alt="Itemize"
+                className="h-10 md:h-12 w-auto dark:hidden"
+                width={240}
+                height={96}
+                decoding="async"
+              />
+              <img
+                src="/cover_whitetext-nav.webp"
+                alt=""
+                aria-hidden="true"
+                className="hidden h-10 md:h-12 w-auto dark:block"
                 width={240}
                 height={96}
                 decoding="async"
@@ -356,10 +361,20 @@ export const LandingNav: React.FC = () => {
                 {/* Mobile Header */}
                 <div className="flex items-center justify-between pb-4 border-b border-gray-200 dark:border-slate-700">
                   <div className="flex items-center">
-                    <img 
-                      src={isLight ? "/cover-nav.webp" : "/cover_whitetext-nav.webp"}
-                      alt="Itemize" 
-                      className="h-8 w-auto"
+                    <img
+                      src="/cover-nav.webp"
+                      alt="Itemize"
+                      className="h-8 w-auto dark:hidden"
+                      width={240}
+                      height={96}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                    <img
+                      src="/cover_whitetext-nav.webp"
+                      alt=""
+                      aria-hidden="true"
+                      className="hidden h-8 w-auto dark:block"
                       width={240}
                       height={96}
                       loading="lazy"

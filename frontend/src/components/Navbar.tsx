@@ -116,10 +116,17 @@ const Navbar: React.FC = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo/Brand */}
           <div className="flex items-center">
-            <img 
-              src={theme === 'dark' ? '/cover_whitetext.png' : '/cover.png'} 
-              alt="Itemize" 
-              className="h-16 w-auto cursor-pointer" 
+            <img
+              src="/cover.png"
+              alt="Itemize"
+              className="h-16 w-auto cursor-pointer dark:hidden"
+              onClick={() => handleNavigate('/')}
+            />
+            <img
+              src="/cover_whitetext.png"
+              alt=""
+              aria-hidden="true"
+              className="hidden h-16 w-auto cursor-pointer dark:block"
               onClick={() => handleNavigate('/')}
             />
           </div>

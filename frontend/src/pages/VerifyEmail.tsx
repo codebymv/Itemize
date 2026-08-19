@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -23,7 +22,6 @@ export default function VerifyEmail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const { theme } = useTheme();
   const { setCurrentUser } = useAuthActions();
   
   const [verifying, setVerifying] = useState(false);
@@ -34,8 +32,6 @@ export default function VerifyEmail() {
 
   const token = searchParams.get('token');
   const email = searchParams.get('email');
-
-  const isLight = theme !== 'dark';
 
   // Auto-verify if token is present
   useEffect(() => {
@@ -109,7 +105,7 @@ export default function VerifyEmail() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 relative overflow-hidden">
-      <BackgroundClouds opacity={isLight ? 0.15 : 0.1} cloudCount={8} isLight={isLight} />
+      <BackgroundClouds className="opacity-[0.15] dark:opacity-10" cloudCount={8} />
       
       <Card className="w-full max-w-md relative z-10">
         <CardHeader className="text-center p-0">
