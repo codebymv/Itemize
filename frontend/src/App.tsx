@@ -205,6 +205,17 @@ const AuthenticatedLayout = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+const HelpLayout = ({ children }: { children: React.ReactNode }) => {
+  const { currentUser, loading } = useAuthState();
+  if (loading) {
+    return <PageLoading className="min-h-screen" />;
+  }
+  if (currentUser) {
+    return <AuthenticatedLayout>{children}</AuthenticatedLayout>;
+  }
+  return <PublicLayout>{children}</PublicLayout>;
+};
+
 const AppContent = () => {
   const location = useLocation();
 
@@ -272,10 +283,11 @@ const AppContent = () => {
     location.pathname.startsWith('/p/') ||
     location.pathname.startsWith('/review/') ||
     location.pathname.startsWith('/r/');
+  const { currentUser } = useAuthState();
   const marketingChatRoutes = ['/home', '/status', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
   const showMarketingChat =
     marketingChatRoutes.includes(location.pathname) ||
-    location.pathname.startsWith('/help');
+    (location.pathname.startsWith('/help') && !currentUser);
 
   return (
     <>
@@ -288,7 +300,7 @@ const AppContent = () => {
       <Route path="/status" element={<PublicLayout><StatusPage /></PublicLayout>} />
       <Route path="/legal/terms" element={<PublicLayout><TermsOfServicePage /></PublicLayout>} />
       <Route path="/legal/privacy" element={<PublicLayout><PrivacyPolicyPage /></PublicLayout>} />
-      <Route path="/help/*" element={<PublicLayout><DocsPage /></PublicLayout>} />
+      <Route path="/help/*" element={<HelpLayout><DocsPage /></HelpLayout>} />
 
       {/* Auth routes (standalone, no navbar/footer) */}
       <Route path="/login" element={<Login />} />

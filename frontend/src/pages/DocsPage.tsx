@@ -29,9 +29,11 @@ import {
 } from '../services/docsService';
 import { PUBLIC_SHELL_WIDTH } from '@/components/layout/PageContainer';
 import { cn } from '@/lib/utils';
+import { useAuthState } from '@/contexts/AuthContext';
 
 const DocsPage: React.FC = () => {
   const { '*': docPath } = useParams<{ '*': string }>();
+  const { currentUser } = useAuthState();
   const navigate = useNavigate();
   const [markdownContent, setMarkdownContent] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -356,7 +358,7 @@ const DocsPage: React.FC = () => {
             Menu
           </Button>
         }
-        className={cn('flex-1', PUBLIC_SHELL_WIDTH)}
+        className={cn('flex-1', !currentUser && PUBLIC_SHELL_WIDTH)}
       >
         {article}
       </PageLayout>

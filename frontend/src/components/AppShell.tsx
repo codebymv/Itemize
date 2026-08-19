@@ -1,7 +1,6 @@
 import React, { useEffect, useState, createContext, useContext } from 'react';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
-import { Breadcrumbs } from '@/components/Breadcrumbs';
 import { GlobalSearch } from '@/components/GlobalSearch';
 import { useAuthActions, useAuthState } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
@@ -314,13 +313,6 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                     </div>
                 </header>
 
-                {/* Breadcrumb navigation - only for /help routes */}
-                {location.pathname.startsWith('/help') && (
-                    <div className="hidden md:block border-b px-4 py-2 bg-muted/30">
-                        <Breadcrumbs />
-                    </div>
-                )}
-
                 {/* Trial lifecycle modals */}
                 <TrialEndedBillingActiveModal
                     open={showTrialEndedBilling}
@@ -340,12 +332,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                 />
 
                 {/* Main content */}
-                <main id="main-content" tabIndex={-1} className={cn(
-                    "flex-1 overflow-x-hidden overflow-y-auto relative",
-                    location.pathname.startsWith('/help')
-                        ? "h-[calc(100vh-3.5rem-2.5rem)]"
-                        : "h-[calc(100vh-3.5rem)]"
-                )}>
+                <main id="main-content" tabIndex={-1} className="flex-1 overflow-x-hidden overflow-y-auto relative h-[calc(100vh-3.5rem)]">
                     {children}
                 </main>
             </SidebarInset>
