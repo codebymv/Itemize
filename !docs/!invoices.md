@@ -20,5 +20,5 @@ Record payments as they come in. The invoice shows amount due, paid, and overdue
 
 ## Next
 
-- [Signatures](/help/help/signatures)
-- [Billing](/help/help/billing)
+- [Signatures](/help/!signatures)
+- [Billing](/help/!billing)

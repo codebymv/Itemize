@@ -1,28 +1,26 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEVELOPERS_FOLDER_PATH,
+  formatDocName,
   groupHelpStructure,
   parentPaths,
 } from './docsService';
 
 describe('help docs tree helpers', () => {
-  it('groups the help folder as Guides and the rest as Developers', () => {
+  it('strips bang and dollar prefixes from display names', () => {
+    expect(formatDocName('!getting-started')).toBe('Getting Started');
+    expect(formatDocName('!$welcome')).toBe('Welcome');
+  });
+
+  it('pins bang-prefixed files above Developers', () => {
     const grouped = groupHelpStructure([
-      {
-        name: 'Help',
-        path: 'help',
-        type: 'folder',
-        children: [{ name: 'Workspace', path: 'help/workspace', type: 'file' }],
-      },
       { name: 'API', path: 'API', type: 'folder', children: [] },
+      { name: 'Getting Started', path: '!getting-started', type: 'file' },
+      { name: 'Workspace', path: '!workspace', type: 'file' },
     ]);
     expect(grouped).toEqual([
-      {
-        name: 'Guides',
-        path: 'help',
-        type: 'folder',
-        children: [{ name: 'Workspace', path: 'help/workspace', type: 'file' }],
-      },
+      { name: 'Getting Started', path: '!getting-started', type: 'file' },
+      { name: 'Workspace', path: '!workspace', type: 'file' },
       {
         name: 'Developers',
         path: DEVELOPERS_FOLDER_PATH,
@@ -33,7 +31,7 @@ describe('help docs tree helpers', () => {
   });
 
   it('opens ancestor folders and Developers for API paths', () => {
-    expect(parentPaths('help/workspace')).toEqual(['help']);
+    expect(parentPaths('!workspace')).toEqual([]);
     expect(parentPaths('API/contracts/invoices-graphql-cutover')).toEqual([
       'API',
       'API/contracts',

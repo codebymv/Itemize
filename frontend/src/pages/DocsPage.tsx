@@ -21,15 +21,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   docsService,
   DocStructure,
-  GUIDES_FOLDER_PATH,
+  GETTING_STARTED_PATH,
+  formatDocName,
   groupHelpStructure,
   parentPaths,
   findItemByPath,
 } from '../services/docsService';
-import { HelpLanding } from './help/HelpLanding';
-
-const formatName = (name: string) =>
-  name.replace(/-/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 const DocsPage: React.FC = () => {
   const { '*': docPath } = useParams<{ '*': string }>();
@@ -40,12 +37,9 @@ const DocsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
-    () => new Set([GUIDES_FOLDER_PATH]),
-  );
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => new Set());
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const isLanding = !docPath || docPath === '/';
   const searching = searchQuery.trim().length > 0;
 
   const sidebarBg = 'bg-card';
@@ -62,7 +56,7 @@ const DocsPage: React.FC = () => {
     const filterItems = (nodes: DocStructure[]): DocStructure[] => {
       const filtered: DocStructure[] = [];
       for (const item of nodes) {
-        const nameMatches = formatName(item.name).toLowerCase().includes(searchLower);
+        const nameMatches = formatDocName(item.name).toLowerCase().includes(searchLower);
         const pathMatches = item.path.toLowerCase().includes(searchLower);
         if (item.children) {
           const filteredChildren = filterItems(item.children);
@@ -114,7 +108,7 @@ const DocsPage: React.FC = () => {
                 <ChevronRight className="h-4 w-4 mr-2 flex-shrink-0 text-muted-foreground" />
               )}
               <Folder className="h-4 w-4 mr-2 flex-shrink-0 text-blue-600 dark:text-blue-400" />
-              <span className="truncate font-medium text-left">{formatName(item.name)}</span>
+              <span className="truncate font-medium text-left">{formatDocName(item.name)}</span>
             </button>
             {isExpanded && item.children && (
               <div className="mt-0.5">{renderDocTree(item.children, level + 1)}</div>
@@ -134,12 +128,18 @@ const DocsPage: React.FC = () => {
             onClick={() => setIsSidebarOpen(false)}
           >
             <FileText className="h-4 w-4 mr-2 flex-shrink-0 text-blue-600 dark:text-blue-400" />
-            <span className="truncate font-medium">{formatName(item.name)}</span>
+            <span className="truncate font-medium">{formatDocName(item.name)}</span>
           </Link>
         </div>
       );
     });
   };
+
+  useEffect(() => {
+    if (!docPath || docPath === '/') {
+      navigate(`/help/${GETTING_STARTED_PATH}`, { replace: true });
+    }
+  }, [docPath, navigate]);
 
   useEffect(() => {
     if (!docPath) return;
@@ -151,6 +151,8 @@ const DocsPage: React.FC = () => {
   }, [docPath]);
 
   useEffect(() => {
+    if (!docPath || docPath === '/') return;
+
     const fetchDocStructure = async () => {
       try {
         const structure = await docsService.getDocStructure();
@@ -162,13 +164,6 @@ const DocsPage: React.FC = () => {
     };
 
     const fetchDocContent = async () => {
-      if (isLanding) {
-        setMarkdownContent('');
-        setError(null);
-        setLoading(false);
-        return;
-      }
-
       setLoading(true);
       try {
         setError(null);
@@ -189,7 +184,7 @@ const DocsPage: React.FC = () => {
 
     fetchDocStructure();
     fetchDocContent();
-  }, [docPath, isLanding]);
+  }, [docPath]);
 
   useEffect(() => {
     if (isSidebarOpen) {
@@ -290,9 +285,7 @@ const DocsPage: React.FC = () => {
     </nav>
   );
 
-  const article = isLanding ? (
-    <HelpLanding />
-  ) : error ? (
+  const article = error ? (
     <ErrorState title="Help" description={error} />
   ) : loading && !markdownContent ? (
     <div className="space-y-3 p-2">
@@ -303,7 +296,24 @@ const DocsPage: React.FC = () => {
     </div>
   ) : (
     <div
-      className="prose lg:prose-xl max-w-none dark:prose-invert px-4 sm:px-6 py-4"
+      className="prose prose-lg max-w-none dark:prose-invert px-4 sm:px-6 py-4
+        prose-headings:text-foreground prose-headings:font-bold
+        prose-h1:text-4xl prose-h1:mb-4
+        prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4
+        prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-3
+        prose-p:text-muted-foreground prose-p:leading-relaxed prose-p:my-4
+        prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
+        prose-strong:text-foreground prose-strong:font-semibold
+        prose-code:text-blue-600 prose-code:bg-secondary prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
+        prose-pre:bg-secondary prose-pre:border prose-pre:border-border prose-pre:text-foreground
+        prose-blockquote:border-l-blue-600 prose-blockquote:border-l-4 prose-blockquote:text-muted-foreground prose-blockquote:italic
+        prose-ul:text-muted-foreground prose-ul:my-4
+        prose-ol:text-muted-foreground prose-ol:my-4
+        prose-li:my-1
+        prose-table:text-muted-foreground
+        prose-th:bg-secondary prose-th:text-foreground prose-th:font-semibold
+        prose-td:border-border
+        prose-hr:border-border prose-hr:my-8"
       style={{ fontFamily: '"Raleway", sans-serif' }}
     >
       <ReactMarkdown remarkPlugins={[remarkGfm]}>

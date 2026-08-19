@@ -20,5 +20,5 @@ Yearly is billed up front and saves about 17% versus month-to-month.
 
 ## Next
 
-- [Invoices](/help/help/invoices)
-- [Signatures](/help/help/signatures)
+- [Invoices](/help/!invoices)
+- [Signatures](/help/!signatures)

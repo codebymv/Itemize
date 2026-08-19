@@ -16,5 +16,5 @@ Contacts, invoices, and deals are not shared by a canvas link. Share only the li
 
 ## Next
 
-- [Workspace](/help/help/workspace)
-- [Invoices](/help/help/invoices)
+- [Workspace](/help/!workspace)
+- [Invoices](/help/!invoices)

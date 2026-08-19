@@ -20,5 +20,5 @@ Sketch diagrams and brainstorms on an infinite board. Add shapes, text, and draw
 
 ## Next
 
-- [Invoices](/help/help/invoices)
-- [Sharing](/help/help/sharing)
+- [Invoices](/help/!invoices)
+- [Sharing](/help/!sharing)

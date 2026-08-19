@@ -8,15 +8,33 @@ export interface DocStructure {
 }
 
 export const DEVELOPERS_FOLDER_PATH = '__developers';
-export const GUIDES_FOLDER_PATH = 'help';
+export const GETTING_STARTED_PATH = '!getting-started';
 
 const HELP_FALLBACK = `
-# Help
+# Getting Started with Itemize
 
-Itemize is a workspace for lists, notes, whiteboards, invoices, and signatures.
+Itemize is a workspace for organizing work, invoicing clients, and collecting signatures — without stacking extra tools.
 
-Pick a guide from the sidebar, or start at [Help home](/help).
+## Guides
+
+- [Workspace](/help/!workspace)
+- [Invoices](/help/!invoices)
+- [Signatures](/help/!signatures)
+- [Billing](/help/!billing)
+- [Sharing](/help/!sharing)
 `;
+
+export function formatDocName(name: string): string {
+  return name
+    .replace(/^!+/, '')
+    .replace(/^\$+/, '')
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function isPinnedHelpFile(item: DocStructure): boolean {
+  return item.type === 'file' && item.path.startsWith('!');
+}
 
 export function parentPaths(path: string): string[] {
   const segments = path.split('/').filter(Boolean);
@@ -26,22 +44,16 @@ export function parentPaths(path: string): string[] {
     current = current ? `${current}/${segments[i]}` : segments[i];
     paths.push(current);
   }
-  if (segments[0] && segments[0] !== GUIDES_FOLDER_PATH) {
+  if (segments[0] && !segments[0].startsWith('!')) {
     paths.push(DEVELOPERS_FOLDER_PATH);
   }
   return paths;
 }
 
 export function groupHelpStructure(items: DocStructure[]): DocStructure[] {
-  const guides = items.find((item) => item.path === GUIDES_FOLDER_PATH);
-  const rest = items.filter((item) => item.path !== GUIDES_FOLDER_PATH);
-  const grouped: DocStructure[] = [];
-  if (guides) {
-    grouped.push({
-      ...guides,
-      name: 'Guides',
-    });
-  }
+  const pinned = items.filter(isPinnedHelpFile);
+  const rest = items.filter((item) => !isPinnedHelpFile(item));
+  const grouped: DocStructure[] = [...pinned];
   if (rest.length > 0) {
     grouped.push({
       name: 'Developers',
@@ -71,7 +83,7 @@ class DocsService {
       return response.data.content;
     } catch (error) {
       console.error('Error fetching doc content for path:', path, error);
-      if (path === 'getting-started' || path === '' || path === '/') {
+      if (path === GETTING_STARTED_PATH || path === 'getting-started' || path === '' || path === '/') {
         return HELP_FALLBACK;
       }
       return this.getFallbackContent(path);
@@ -105,13 +117,13 @@ class DocsService {
       return this.getFallbackContent(path);
     }
 
-    const folderName = folder.name;
+    const folderName = formatDocName(folder.name);
     let content = `# ${folderName}\n\n`;
 
     const pathSegments = path.split('/').filter((segment) => segment !== DEVELOPERS_FOLDER_PATH);
     if (pathSegments.length > 1) {
       pathSegments.forEach((segment, index) => {
-        const capitalizedSegment = segment.charAt(0).toUpperCase() + segment.slice(1);
+        const capitalizedSegment = formatDocName(segment);
         if (index === 0) {
           content += `[${capitalizedSegment}](/help/${segment})`;
         } else {
@@ -135,7 +147,7 @@ class DocsService {
         content += `### Folders\n\n`;
         folders.forEach(child => {
           const href = child.path === DEVELOPERS_FOLDER_PATH ? '#' : `/help/${child.path}`;
-          content += `- **[${child.name}](${href})** - `;
+          content += `- **[${formatDocName(child.name)}](${href})** - `;
           content += `${child.children?.length || 0} item${(child.children?.length || 0) !== 1 ? 's' : ''}\n`;
         });
         content += `\n`;
@@ -144,7 +156,7 @@ class DocsService {
       if (files.length > 0) {
         content += `### Guides\n\n`;
         files.forEach(child => {
-          content += `- **[${child.name}](/help/${child.path})**\n`;
+          content += `- **[${formatDocName(child.name)}](/help/${child.path})**\n`;
         });
         content += `\n`;
       }
@@ -153,30 +165,24 @@ class DocsService {
     }
 
     content += `\n---\n\n`;
-    content += `[Back to Help](/help)`;
+    content += `[Back to Help](/help/${GETTING_STARTED_PATH})`;
 
     return content;
   }
 
   private getFallbackContent(path: string): string {
-    const fileName = path.split('/').pop()?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Help';
-    return `# ${fileName}\n\nThe content for \`${path}\` could not be loaded. Try [Help home](/help).\n`;
+    const fileName = formatDocName(path.split('/').pop() || 'Help');
+    return `# ${fileName}\n\nThe content for \`${path}\` could not be loaded. Try [Help home](/help/${GETTING_STARTED_PATH}).\n`;
   }
 
   private getStaticStructure(): DocStructure[] {
     return [
-      {
-        name: 'Help',
-        path: GUIDES_FOLDER_PATH,
-        type: 'folder',
-        children: [
-          { name: 'Workspace', path: 'help/workspace', type: 'file' },
-          { name: 'Invoices', path: 'help/invoices', type: 'file' },
-          { name: 'Signatures', path: 'help/signatures', type: 'file' },
-          { name: 'Billing', path: 'help/billing', type: 'file' },
-          { name: 'Sharing', path: 'help/sharing', type: 'file' },
-        ],
-      },
+      { name: 'Getting Started', path: GETTING_STARTED_PATH, type: 'file' },
+      { name: 'Workspace', path: '!workspace', type: 'file' },
+      { name: 'Invoices', path: '!invoices', type: 'file' },
+      { name: 'Signatures', path: '!signatures', type: 'file' },
+      { name: 'Billing', path: '!billing', type: 'file' },
+      { name: 'Sharing', path: '!sharing', type: 'file' },
       {
         name: 'API',
         path: 'API',
@@ -190,8 +196,6 @@ class DocsService {
 
   private getFolderDescription(path: string, folderName: string): string {
     const descriptions: Record<string, string> = {
-      'Help': 'Guides for using Itemize: workspace, invoices, signatures, billing, and sharing.',
-      'Guides': 'Guides for using Itemize: workspace, invoices, signatures, billing, and sharing.',
       'Developers': 'Internal API, configuration, and implementation notes.',
       'API': 'Complete API documentation including endpoints, authentication, and configuration.',
       'Config': 'Configuration files and environment setup guides for frontend and backend.',

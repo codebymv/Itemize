@@ -187,7 +187,8 @@ async function buildDocStructure(dirPath, relativePath = '') {
           name: formatName(entry.name),
           path: relativeEntryPath,
           type: 'folder',
-          children
+          children,
+          _rawName: entry.name,
         });
       } else if (entry.isFile() && entry.name.endsWith('.md')) {
         console.log(`[buildDocStructure] Processing markdown file: ${entry.name}`);
@@ -197,13 +198,18 @@ async function buildDocStructure(dirPath, relativePath = '') {
         items.push({
           name: formatName(nameWithoutExt),
           path: pathWithoutExt,
-          type: 'file'
+          type: 'file',
+          _rawName: entry.name,
         });
       }
     }
     
-    // Sort items: folders first, then files, both alphabetically
+    // '!' prefixed items first, then folders, then files, then alphabetical
     items.sort((a, b) => {
+      const aBang = a._rawName.startsWith('!');
+      const bBang = b._rawName.startsWith('!');
+      if (aBang && !bBang) return -1;
+      if (!aBang && bBang) return 1;
       if (a.type !== b.type) {
         return a.type === 'folder' ? -1 : 1;
       }
@@ -291,6 +297,8 @@ function extractExcerpt(content, query, contextLength = 100) {
  */
 function formatName(name) {
   return name
+    .replace(/^!+/, '')
+    .replace(/^\$+/, '')
     .replace(/-/g, ' ')
     .replace(/\b\w/g, l => l.toUpperCase());
 }

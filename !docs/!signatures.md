@@ -19,5 +19,5 @@ Track status from the documents list. Your client signs in the browser — no ex
 
 ## Next
 
-- [Invoices](/help/help/invoices)
-- [Billing](/help/help/billing)
+- [Invoices](/help/!invoices)
+- [Billing](/help/!billing)
