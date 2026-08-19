@@ -196,6 +196,30 @@ describe('BillingService', () => {
     });
   });
 
+  it('surfaces a Stripe test/live price mismatch', async () => {
+    repository.ensureCustomer.mockResolvedValue({
+      customerId: 'cus_existing',
+      existed: true,
+    });
+    provider.activeSubscription.mockResolvedValue(null);
+    provider.createCheckoutSession.mockRejectedValue({
+      type: 'StripeInvalidRequestError',
+      code: 'resource_missing',
+      message:
+        "No such price: 'price_1U5yqFRxBJaRlFvtcC8I6bbo'; a similar object exists in live mode, but a test mode key was used to make this request.",
+    });
+
+    await expect(
+      service.checkout(4, { ...checkout, planId: 'unlimited' }),
+    ).rejects.toMatchObject({
+      message: 'Stripe test keys cannot checkout the live Solo/Studio prices',
+      extensions: {
+        code: 'SERVICE_UNAVAILABLE',
+        reason: 'BILLING_PROVIDER_FAILURE',
+      },
+    });
+  });
+
   it('rejects yearly placeholders before calling Stripe', async () => {
     await expect(
       service.checkout(4, { ...checkout, billingPeriod: 'yearly' }),

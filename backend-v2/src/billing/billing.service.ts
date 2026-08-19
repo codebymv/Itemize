@@ -307,6 +307,12 @@ export class BillingService {
     if (/sk_(live|test)_|rk_(live|test)_/i.test(message)) {
       return 'Billing provider request failed';
     }
+    if (/live mode, but a test mode key/i.test(message)) {
+      return 'Stripe test keys cannot checkout the live Solo/Studio prices';
+    }
+    if (/test mode, but a live mode key/i.test(message)) {
+      return 'Stripe live keys cannot checkout test plan prices';
+    }
     if (/no such price/i.test(message)) {
       return 'This plan is not configured in Stripe yet';
     }
