@@ -7,6 +7,17 @@ export type AdminUserRow = {
   plan: string | null; created_at: Date;
 };
 
+export type AdminActivationFunnelRow = {
+  as_of: Date;
+  cohort_started_at: Date;
+  organizations_created: number;
+  organizations_sent: number;
+  organizations_advanced: number;
+  organizations_returned: number;
+  trial_organizations_sent: number;
+  organizations_trial_to_paid: number;
+};
+
 @Injectable()
 export class AdminOperationsRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
@@ -67,6 +78,61 @@ export class AdminOperationsRepository {
       `SELECT (SELECT COUNT(*) FROM users)::int AS users,
               (SELECT COUNT(*) FROM contacts)::int AS contacts,
               (SELECT COUNT(*) FROM invoices)::int AS invoices`,
+    );
+    return result.rows[0];
+  }
+
+  async activationFunnel(days: number): Promise<AdminActivationFunnelRow> {
+    const result = await this.pool.query<AdminActivationFunnelRow>(
+      `WITH bounds AS (
+         SELECT CURRENT_TIMESTAMP AS as_of,
+                CURRENT_TIMESTAMP - ($1::int * INTERVAL '1 day') AS started_at
+       ), cohort AS (
+         SELECT o.id, o.subscription_status, o.trial_started_at,
+                o.trial_ends_at
+         FROM organizations o, bounds b
+         WHERE o.created_at >= b.started_at AND o.created_at <= b.as_of
+       ), first_send AS (
+         SELECT event.organization_id, MIN(event.occurred_at) AS sent_at
+         FROM activation_events event
+         JOIN cohort ON cohort.id = event.organization_id
+         WHERE event.event_name = 'artifact_sent'
+         GROUP BY event.organization_id
+       ), advanced AS (
+         SELECT DISTINCT event.organization_id
+         FROM activation_events event
+         JOIN first_send sent ON sent.organization_id = event.organization_id
+         WHERE event.event_name = 'artifact_advanced'
+           AND event.occurred_at >= sent.sent_at
+       ), returned AS (
+         SELECT DISTINCT event.organization_id
+         FROM activation_events event
+         JOIN first_send sent ON sent.organization_id = event.organization_id
+         WHERE event.event_name = 'returned_after_send'
+           AND event.occurred_at >= sent.sent_at
+       )
+       SELECT b.as_of, b.started_at AS cohort_started_at,
+              COUNT(cohort.id)::int AS organizations_created,
+              COUNT(sent.organization_id)::int AS organizations_sent,
+              COUNT(advanced.organization_id)::int AS organizations_advanced,
+              COUNT(returned.organization_id)::int AS organizations_returned,
+              COUNT(*) FILTER (
+                WHERE cohort.trial_started_at IS NOT NULL
+                  AND sent.organization_id IS NOT NULL
+              )::int AS trial_organizations_sent,
+              COUNT(*) FILTER (
+                WHERE cohort.trial_started_at IS NOT NULL
+                  AND cohort.subscription_status = 'active'
+                  AND cohort.trial_ends_at IS NOT NULL
+                  AND cohort.trial_ends_at >= sent.sent_at
+              )::int AS organizations_trial_to_paid
+       FROM bounds b
+       LEFT JOIN cohort ON true
+       LEFT JOIN first_send sent ON sent.organization_id = cohort.id
+       LEFT JOIN advanced ON advanced.organization_id = cohort.id
+       LEFT JOIN returned ON returned.organization_id = cohort.id
+       GROUP BY b.as_of, b.started_at`,
+      [days],
     );
     return result.rows[0];
   }

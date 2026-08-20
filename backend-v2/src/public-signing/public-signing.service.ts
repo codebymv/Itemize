@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ActivationService } from '../activation/activation.service';
 import {
   SIGNATURE_FILE_STORAGE,
   SignatureFileStorage,
@@ -32,6 +33,7 @@ export class PublicSigningService {
   constructor(
     private readonly repository: PublicSigningRepository,
     @Inject(SIGNATURE_FILE_STORAGE) private readonly storage: SignatureFileStorage,
+    private readonly activation: ActivationService,
   ) {}
 
   async session(token: string, audit: PublicSigningAudit) {
@@ -39,6 +41,13 @@ export class PublicSigningService {
     const row = await this.repository.openSession(tokenHash, audit);
     if (!row) throw this.notFound();
     const { capability } = row;
+    await this.activation.recordArtifactAdvanced({
+      organizationId: capability.organization_id,
+      artifactType: 'signature',
+      artifactId: capability.document_id,
+      stage: 'viewed',
+      source: 'signature_recipient_viewed',
+    });
     return {
       document: {
         id: capability.document_id,
@@ -92,7 +101,18 @@ export class PublicSigningService {
       const fields = normalizePublicSigningSubmission(payload);
       const result = await this.repository.submit(tokenHash, fields, audit);
       if (!result) throw this.notFound();
-      return result;
+      await this.activation.recordArtifactAdvanced({
+        organizationId: result.organizationId,
+        artifactType: 'signature',
+        artifactId: result.documentId,
+        stage: 'signed',
+        source: 'signature_recipient_signed',
+      });
+      return {
+        recipientId: result.recipientId,
+        documentId: result.documentId,
+        completionQueued: result.completionQueued,
+      };
     } catch (error) {
       this.validation(error);
     }

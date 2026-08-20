@@ -3,7 +3,7 @@ import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import {
   StripeInvoiceEvent,
-  StripeInvoiceWebhookResult,
+  StripeInvoiceWebhookRepositoryResult,
 } from './invoice-webhooks.types';
 
 type InvoicePaymentRow = {
@@ -23,7 +23,7 @@ export class InvoiceWebhooksRepository {
 
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
-  async process(event: StripeInvoiceEvent): Promise<StripeInvoiceWebhookResult> {
+  async process(event: StripeInvoiceEvent): Promise<StripeInvoiceWebhookRepositoryResult> {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
@@ -41,7 +41,7 @@ export class InvoiceWebhooksRepository {
   private async processWith(
     client: PoolClient,
     event: StripeInvoiceEvent,
-  ): Promise<StripeInvoiceWebhookResult> {
+  ): Promise<StripeInvoiceWebhookRepositoryResult> {
     const claim = await client.query(
       `INSERT INTO stripe_webhook_events (event_id, event_type)
        VALUES ($1, $2)
@@ -202,6 +202,12 @@ export class InvoiceWebhooksRepository {
       duplicateEvent: false,
       handled: true,
       duplicatePayment: false,
+      ...(balance.status === 'paid' && invoice.status !== 'paid' ? {
+        activation: {
+          organizationId: invoice.organization_id,
+          invoiceId: session.invoiceId,
+        },
+      } : {}),
     };
   }
 }

@@ -1,6 +1,6 @@
 # Activation funnel
 
-## Production event
+## Production events
 
 The first commercial activation event is `artifact_sent`. It is written only
 after the delivery provider accepts an invoice, estimate, or initial signature
@@ -10,6 +10,24 @@ Events are organization-scoped, idempotent per artifact, and contain no client
 names, email addresses, phone numbers, document bodies, or provider tokens.
 Telemetry persistence is best-effort and must never fail the delivery itself.
 
+`artifact_advanced` is the downstream value signal. It is written only from
+authoritative server transitions and is idempotent per artifact and stage:
+
+- a public signature session records `viewed`;
+- a valid public signing submission records `signed`;
+- a verified Stripe invoice checkout that changes the invoice to paid records
+  `paid`.
+
+Estimate acceptance is intentionally not counted yet. The current product can
+send estimates and lets an authenticated owner convert one to an invoice, but
+it does not have a recipient-owned public accept action. Treating conversion as
+recipient acceptance would make the activation funnel misleading.
+
+`returned_after_send` is recorded once per organization by an authenticated
+dashboard analytics load at least 24 hours after the first provider-confirmed
+send. The delay avoids counting mutation refetches and same-session browsing as
+retention.
+
 ## Funnel joins
 
 The existing product tables provide the leading indicators:
@@ -18,7 +36,10 @@ The existing product tables provide the leading indicators:
 - first contact creation
 - first invoice, estimate, or signature document creation
 - first provider-confirmed `activation_events.event_name = 'artifact_sent'`
-- active paid subscription after the first send
+- recipient/payment `artifact_advanced` after the first send
+- authenticated `returned_after_send` after the first send
+- active paid subscription with a recorded trial whose end followed the first
+  send
 
 The first-send timestamp for an organization is:
 
@@ -29,9 +50,17 @@ WHERE event_name = 'artifact_sent'
 GROUP BY organization_id;
 ```
 
-Do not use feature-page visits as activation. The next instrumentation slice is
-an `artifact_advanced` event for recipient view, acceptance, signature
-completion, or payment, followed by an authenticated return-after-send metric.
+Do not use feature-page visits as activation. Administrators can query
+`adminActivationFunnel(days: Int)` for a bounded signup cohort (default 30
+days). Rates use explicit denominators: sends/signups, advances/sends,
+returns/sends, and trial-to-paid/activated trials. Trial conversion requires a
+server-recorded trial bounds plus current active billing, and the trial must end
+after the first send. A direct paid signup is not mislabeled as a trial
+conversion.
+
+The next product slice is a recipient-owned public estimate view and
+accept/decline flow. Once it exists, its transitions can join the same
+`artifact_advanced` contract without changing the funnel definition.
 
 ## Background entitlement contract
 

@@ -5,7 +5,8 @@ import { AdminOperationsService } from './admin-operations.service';
 describe('AdminOperationsService', () => {
   const repository = {
     userCount: jest.fn(), searchUsers: jest.fn(), userIds: jest.fn(),
-    usersByIds: jest.fn(), stats: jest.fn(), updateOwnPlan: jest.fn(),
+    usersByIds: jest.fn(), stats: jest.fn(), activationFunnel: jest.fn(),
+    updateOwnPlan: jest.fn(),
   } as unknown as jest.Mocked<AdminOperationsRepository>;
   const service = new AdminOperationsService(repository);
 
@@ -43,5 +44,29 @@ describe('AdminOperationsService', () => {
     await expect(service.updateOwnPlan(8, ' Pro ')).resolves.toEqual({ message: 'Plan updated to pro', plan: 'pro' });
     await expect(service.updateOwnPlan(8, 'starter')).rejects.toMatchObject<Partial<GraphQLError>>({ extensions: expect.objectContaining({ code: 'BAD_USER_INPUT' }) });
     await expect(service.updateOwnPlan(8, 'enterprise')).rejects.toMatchObject<Partial<GraphQLError>>({ extensions: expect.objectContaining({ code: 'BAD_USER_INPUT' }) });
+  });
+
+  it('calculates an admin-only activation cohort with explicit denominators', async () => {
+    repository.activationFunnel.mockResolvedValue({
+      as_of: new Date('2026-08-20T12:00:00.000Z'),
+      cohort_started_at: new Date('2026-07-21T12:00:00.000Z'),
+      organizations_created: 10,
+      organizations_sent: 4,
+      organizations_advanced: 3,
+      organizations_returned: 2,
+      trial_organizations_sent: 2,
+      organizations_trial_to_paid: 1,
+    });
+    await expect(service.activationFunnel()).resolves.toMatchObject({
+      cohortDays: 30,
+      sendRate: 0.4,
+      advanceRate: 0.75,
+      returnRate: 0.5,
+      trialToPaidRate: 0.5,
+    });
+    expect(repository.activationFunnel).toHaveBeenCalledWith(30);
+    await expect(service.activationFunnel(0)).rejects.toMatchObject<Partial<GraphQLError>>({
+      extensions: expect.objectContaining({ code: 'BAD_USER_INPUT' }),
+    });
   });
 });

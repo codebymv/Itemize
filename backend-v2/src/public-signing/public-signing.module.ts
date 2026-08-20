@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ActivationModule } from '../activation/activation.module';
 import { SignatureFilesModule } from '../signature-files/signature-files.module';
 import { PublicSigningController } from './public-signing.controller';
 import { PublicSigningRepository } from './public-signing.repository';
@@ -7,7 +8,7 @@ import { SignatureCompletionJobsRepository } from './signature-completion-jobs.r
 import { SignatureCompletionJobsService } from './signature-completion-jobs.service';
 
 @Module({
-  imports: [SignatureFilesModule],
+  imports: [ActivationModule, SignatureFilesModule],
   controllers: [PublicSigningController],
   providers: [
     PublicSigningRepository,

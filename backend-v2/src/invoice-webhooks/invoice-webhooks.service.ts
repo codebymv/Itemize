@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import Stripe from 'stripe';
+import { ActivationService } from '../activation/activation.service';
 import { InvoiceWebhooksRepository } from './invoice-webhooks.repository';
 import {
   StripeCheckoutSession,
@@ -16,10 +17,24 @@ export class StripeInvoiceWebhookInputError extends Error {
 
 @Injectable()
 export class InvoiceWebhooksService {
-  constructor(private readonly repository: InvoiceWebhooksRepository) {}
+  constructor(
+    private readonly repository: InvoiceWebhooksRepository,
+    private readonly activation: ActivationService,
+  ) {}
 
   async process(event: Stripe.Event): Promise<StripeInvoiceWebhookResult> {
-    return this.repository.process(this.normalize(event));
+    const result = await this.repository.process(this.normalize(event));
+    if (result.activation) {
+      await this.activation.recordArtifactAdvanced({
+        organizationId: result.activation.organizationId,
+        artifactType: 'invoice',
+        artifactId: result.activation.invoiceId,
+        stage: 'paid',
+        source: 'invoice_payment_succeeded',
+      });
+    }
+    const { activation: _activation, ...publicResult } = result;
+    return publicResult;
   }
 
   private normalize(event: Stripe.Event): StripeInvoiceEvent {

@@ -2,6 +2,7 @@ import { GoneException } from '@nestjs/common';
 import { PublicSigningRepository } from './public-signing.repository';
 import { PublicSigningService } from './public-signing.service';
 import { SignatureFileStorage } from '../signature-files/signature-file-storage.provider';
+import { ActivationService } from '../activation/activation.service';
 
 describe('PublicSigningService', () => {
   const head = jest.fn();
@@ -15,7 +16,10 @@ describe('PublicSigningService', () => {
     read: jest.fn(),
     head,
   } as unknown as jest.Mocked<SignatureFileStorage>;
-  const service = new PublicSigningService(repository, storage);
+  const activation = {
+    recordArtifactAdvanced: jest.fn().mockResolvedValue(true),
+  } as unknown as jest.Mocked<ActivationService>;
+  const service = new PublicSigningService(repository, storage, activation);
   const audit = { ipAddress: '203.0.113.5', userAgent: 'browser', requestId: 'request-1' };
   const token = 'a'.repeat(64);
 
@@ -73,6 +77,34 @@ describe('PublicSigningService', () => {
     );
     expect(JSON.stringify(await service.session(token, audit)))
       .not.toContain('/uploads/signatures/private.pdf');
+    expect(activation.recordArtifactAdvanced).toHaveBeenCalledWith({
+      organizationId: 3,
+      artifactType: 'signature',
+      artifactId: 11,
+      stage: 'viewed',
+      source: 'signature_recipient_viewed',
+    });
+  });
+
+  it('records a signed advancement without exposing its organization identity', async () => {
+    repository.submit.mockResolvedValue({
+      recipientId: 7,
+      documentId: 11,
+      organizationId: 3,
+      completionQueued: false,
+    });
+    await expect(service.submit(token, { fields: [] }, audit)).resolves.toEqual({
+      recipientId: 7,
+      documentId: 11,
+      completionQueued: false,
+    });
+    expect(activation.recordArtifactAdvanced).toHaveBeenCalledWith({
+      organizationId: 3,
+      artifactType: 'signature',
+      artifactId: 11,
+      stage: 'signed',
+      source: 'signature_recipient_signed',
+    });
   });
 
   it('returns the same non-enumerating miss for malformed and unknown tokens', async () => {

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ActivationModule } from '../activation/activation.module';
 import { InvoiceWebhooksController } from './invoice-webhooks.controller';
 import { InvoiceWebhooksRepository } from './invoice-webhooks.repository';
 import { InvoiceWebhooksService } from './invoice-webhooks.service';
@@ -8,6 +9,7 @@ import {
 } from './stripe-invoice-webhook.verifier';
 
 @Module({
+  imports: [ActivationModule],
   controllers: [InvoiceWebhooksController],
   providers: [
     InvoiceWebhooksRepository,

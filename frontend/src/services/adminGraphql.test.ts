@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
-import { getAdminUserIdsViaGraphql, searchAdminUsersViaGraphql, updateAdminOwnPlanViaGraphql } from './adminGraphql';
+import { getAdminActivationFunnelViaGraphql, getAdminUserIdsViaGraphql, searchAdminUsersViaGraphql, updateAdminOwnPlanViaGraphql } from './adminGraphql';
 
 vi.mock('./graphqlClient', async (importOriginal) => ({
   ...await importOriginal<typeof import('./graphqlClient')>(), graphqlRequest: vi.fn(), graphqlMutationRequest: vi.fn(),
@@ -22,5 +22,20 @@ describe('admin GraphQL adapters', () => {
     vi.mocked(graphqlMutationRequest).mockResolvedValue({ updateAdminOwnPlan: { message: 'ok', plan: 'pro' } });
     await expect(updateAdminOwnPlanViaGraphql('pro')).resolves.toEqual({ message: 'ok', plan: 'pro' });
     expect(graphqlMutationRequest).toHaveBeenCalledWith(expect.stringContaining('UpdateAdminOwnPlan'), { plan: 'pro' });
+  });
+
+  it('requests the bounded activation cohort explicitly', async () => {
+    const funnel = {
+      asOf: '2026-08-20T12:00:00.000Z', cohortStartedAt: '2026-07-21T12:00:00.000Z',
+      cohortDays: 30, organizationsCreated: 10, organizationsSent: 4,
+      organizationsAdvanced: 3, organizationsReturned: 2,
+      trialOrganizationsSent: 2, organizationsTrialToPaid: 1,
+      sendRate: 0.4, advanceRate: 0.75, returnRate: 0.5, trialToPaidRate: 0.5,
+    };
+    vi.mocked(graphqlRequest).mockResolvedValue({ adminActivationFunnel: funnel });
+    await expect(getAdminActivationFunnelViaGraphql(30)).resolves.toEqual(funnel);
+    expect(graphqlRequest).toHaveBeenCalledWith(
+      expect.stringContaining('AdminActivationFunnel'), { days: 30 },
+    );
   });
 });

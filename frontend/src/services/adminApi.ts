@@ -4,6 +4,7 @@
  */
 
 import {
+    getAdminActivationFunnelViaGraphql,
     getAdminStatsViaGraphql,
     getAdminUserCountViaGraphql,
     getAdminUserIdsViaGraphql,
@@ -35,6 +36,22 @@ export interface SystemStats {
     users: number;
     contacts: number;
     invoices: number;
+}
+
+export interface ActivationFunnel {
+    asOf: string;
+    cohortStartedAt: string;
+    cohortDays: number;
+    organizationsCreated: number;
+    organizationsSent: number;
+    organizationsAdvanced: number;
+    organizationsReturned: number;
+    trialOrganizationsSent: number;
+    organizationsTrialToPaid: number;
+    sendRate: number;
+    advanceRate: number;
+    returnRate: number;
+    trialToPaidRate: number;
 }
 
 export interface UserCountResponse {
@@ -84,6 +101,10 @@ export async function getUsersByIds(ids: number[]): Promise<{ users: AdminUser[]
  */
 export async function getStats(): Promise<SystemStats> {
     return getAdminStatsViaGraphql();
+}
+
+export async function getActivationFunnel(days = 30): Promise<ActivationFunnel> {
+    return getAdminActivationFunnelViaGraphql(days);
 }
 
 /**

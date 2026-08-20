@@ -1,4 +1,5 @@
 import { Args, Int, Query, Resolver } from '@nestjs/graphql';
+import { ActivationService } from '../activation/activation.service';
 import { OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import { AnalyticsService } from './analytics.service';
@@ -28,12 +29,23 @@ export class AnalyticsResolver {
   constructor(
     private readonly analytics: AnalyticsService,
     private readonly requestContext: RequestContextService,
+    private readonly activation: ActivationService,
   ) {}
 
   @OrganizationScoped()
   @Query(() => DashboardAnalytics)
-  dashboardAnalytics(): Promise<DashboardAnalytics> {
-    return this.analytics.dashboard(this.organizationId());
+  async dashboardAnalytics(): Promise<DashboardAnalytics> {
+    const organizationId = this.organizationId();
+    const identity = this.requestContext.current().identity;
+    if (!identity) throw new Error('Verified identity context is unavailable');
+    const [dashboard] = await Promise.all([
+      this.analytics.dashboard(organizationId),
+      this.activation.recordReturnAfterSend({
+        organizationId,
+        userId: identity.userId,
+      }),
+    ]);
+    return dashboard;
   }
 
   @OrganizationScoped()

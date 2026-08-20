@@ -21,3 +21,10 @@ export type StripeInvoiceWebhookResult = {
   duplicatePayment?: boolean;
   reason?: string;
 };
+
+export type StripeInvoiceWebhookRepositoryResult = StripeInvoiceWebhookResult & {
+  activation?: {
+    organizationId: number;
+    invoiceId: number;
+  };
+};

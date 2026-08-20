@@ -4,6 +4,7 @@ import {
   InvoiceWebhooksService,
   StripeInvoiceWebhookInputError,
 } from './invoice-webhooks.service';
+import { ActivationService } from '../activation/activation.service';
 
 const event = (object: Record<string, unknown>): Stripe.Event => ({
   id: 'evt_invoice_1',
@@ -15,7 +16,10 @@ describe('InvoiceWebhooksService', () => {
   const repository = {
     process: jest.fn(),
   } as unknown as jest.Mocked<InvoiceWebhooksRepository>;
-  const service = new InvoiceWebhooksService(repository);
+  const activation = {
+    recordArtifactAdvanced: jest.fn().mockResolvedValue(true),
+  } as unknown as jest.Mocked<ActivationService>;
+  const service = new InvoiceWebhooksService(repository, activation);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -67,6 +71,36 @@ describe('InvoiceWebhooksService', () => {
         }),
       }),
     );
+  });
+
+  it('records authoritative paid evidence and keeps internal ownership private', async () => {
+    repository.process.mockResolvedValue({
+      received: true,
+      duplicateEvent: false,
+      handled: true,
+      duplicatePayment: false,
+      activation: { organizationId: 4, invoiceId: 12 },
+    });
+    await expect(service.process(event({
+      id: 'cs_invoice_1',
+      payment_intent: 'pi_invoice_1',
+      payment_status: 'paid',
+      amount_total: 2606,
+      currency: 'usd',
+      metadata: { invoice_id: '12', organization_id: '4' },
+    }))).resolves.toEqual({
+      received: true,
+      duplicateEvent: false,
+      handled: true,
+      duplicatePayment: false,
+    });
+    expect(activation.recordArtifactAdvanced).toHaveBeenCalledWith({
+      organizationId: 4,
+      artifactType: 'invoice',
+      artifactId: 12,
+      stage: 'paid',
+      source: 'invoice_payment_succeeded',
+    });
   });
 
   it.each([

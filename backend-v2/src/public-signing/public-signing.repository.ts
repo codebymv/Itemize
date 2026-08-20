@@ -76,6 +76,7 @@ export type PublicSigningFileRow = {
 export type PublicSigningSubmitResult = {
   recipientId: number;
   documentId: number;
+  organizationId: number;
   completionQueued: boolean;
 };
 
@@ -231,6 +232,7 @@ export class PublicSigningRepository {
         return {
           recipientId: capability.recipient_id,
           documentId: capability.document_id,
+          organizationId: capability.organization_id,
           completionQueued: true,
         };
       }
@@ -259,6 +261,7 @@ export class PublicSigningRepository {
       return {
         recipientId: capability.recipient_id,
         documentId: capability.document_id,
+        organizationId: capability.organization_id,
         completionQueued: false,
       };
     });

@@ -1,4 +1,4 @@
-import { Field, GraphQLISODateTime, Int, ObjectType } from '@nestjs/graphql';
+import { Field, Float, GraphQLISODateTime, Int, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
 export class AdminUser {
@@ -38,4 +38,21 @@ export class AdminSystemStats {
 export class AdminPlanUpdate {
   @Field() message: string;
   @Field() plan: string;
+}
+
+@ObjectType()
+export class AdminActivationFunnel {
+  @Field(() => GraphQLISODateTime) asOf: Date;
+  @Field(() => GraphQLISODateTime) cohortStartedAt: Date;
+  @Field(() => Int) cohortDays: number;
+  @Field(() => Int) organizationsCreated: number;
+  @Field(() => Int) organizationsSent: number;
+  @Field(() => Int) organizationsAdvanced: number;
+  @Field(() => Int) organizationsReturned: number;
+  @Field(() => Int) trialOrganizationsSent: number;
+  @Field(() => Int) organizationsTrialToPaid: number;
+  @Field(() => Float) sendRate: number;
+  @Field(() => Float) advanceRate: number;
+  @Field(() => Float) returnRate: number;
+  @Field(() => Float) trialToPaidRate: number;
 }

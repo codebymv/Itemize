@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { AdminUserIdsInput, AdminUserSearchInput } from './admin-operations.inputs';
 import { AdminOperationsRepository, AdminUserRow } from './admin-operations.repository';
-import { AdminPlanUpdate, AdminSystemStats, AdminUser, AdminUserCount, AdminUserIds, AdminUserSearchResult } from './admin-operations.types';
+import { AdminActivationFunnel, AdminPlanUpdate, AdminSystemStats, AdminUser, AdminUserCount, AdminUserIds, AdminUserSearchResult } from './admin-operations.types';
 
 const PLANS = new Set(['free', 'starter', 'unlimited', 'pro']);
 
@@ -36,6 +36,34 @@ export class AdminOperationsService {
 
   stats(): Promise<AdminSystemStats> { return this.repository.stats(); }
 
+  async activationFunnel(days = 30): Promise<AdminActivationFunnel> {
+    if (!Number.isSafeInteger(days) || days < 1 || days > 365) {
+      this.bad('Days must be between 1 and 365', 'days');
+    }
+    const row = await this.repository.activationFunnel(days);
+    const created = Number(row.organizations_created);
+    const sent = Number(row.organizations_sent);
+    const advanced = Number(row.organizations_advanced);
+    const returned = Number(row.organizations_returned);
+    const trialsSent = Number(row.trial_organizations_sent);
+    const trialToPaid = Number(row.organizations_trial_to_paid);
+    return {
+      asOf: row.as_of,
+      cohortStartedAt: row.cohort_started_at,
+      cohortDays: days,
+      organizationsCreated: created,
+      organizationsSent: sent,
+      organizationsAdvanced: advanced,
+      organizationsReturned: returned,
+      trialOrganizationsSent: trialsSent,
+      organizationsTrialToPaid: trialToPaid,
+      sendRate: this.rate(sent, created),
+      advanceRate: this.rate(advanced, sent),
+      returnRate: this.rate(returned, sent),
+      trialToPaidRate: this.rate(trialToPaid, trialsSent),
+    };
+  }
+
   async updateOwnPlan(userId: number, requestedPlan: string): Promise<AdminPlanUpdate> {
     const plan = this.plan(requestedPlan, false)!;
     const result = await this.repository.updateOwnPlan(userId, plan);
@@ -65,5 +93,9 @@ export class AdminOperationsService {
 
   private bad(message: string, field: string): never {
     throw itemizeGraphqlError(message, 'BAD_USER_INPUT', { field });
+  }
+
+  private rate(numerator: number, denominator: number): number {
+    return denominator === 0 ? 0 : Number((numerator / denominator).toFixed(4));
   }
 }
