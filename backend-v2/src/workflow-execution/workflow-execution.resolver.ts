@@ -1,11 +1,12 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected, OrganizationScoped } from '../common/metadata';
+import { CsrfProtected, OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { PageInput } from '../common/pagination';
 import { RequestContextService } from '../request-context/request-context.service';
 import { ReconcileWorkflowSmsSideEffectInput, WorkflowSideEffectFilterInput } from './workflow-execution.inputs';
 import { WorkflowExecutionService } from './workflow-execution.service';
 import { WorkflowExecutionSummary, WorkflowSideEffect, WorkflowSideEffectPage } from './workflow-execution.types';
 
+@RequiresPlan()
 @Resolver(() => WorkflowSideEffect)
 export class WorkflowExecutionResolver {
   constructor(private readonly execution: WorkflowExecutionService, private readonly context: RequestContextService) {}

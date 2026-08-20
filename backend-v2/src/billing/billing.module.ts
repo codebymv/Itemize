@@ -3,6 +3,8 @@ import { BillingRepository } from './billing.repository';
 import { BillingResolver } from './billing.resolver';
 import { BillingService } from './billing.service';
 import { StripeBillingProvider } from './stripe-billing.provider';
+import { BillingEntitlementService } from './billing-entitlement.service';
+import { GraphqlEntitlementGuard } from './graphql-entitlement.guard';
 
 @Module({
   providers: [
@@ -10,6 +12,9 @@ import { StripeBillingProvider } from './stripe-billing.provider';
     BillingResolver,
     BillingService,
     StripeBillingProvider,
+    BillingEntitlementService,
+    GraphqlEntitlementGuard,
   ],
+  exports: [BillingEntitlementService, GraphqlEntitlementGuard],
 })
 export class BillingModule {}

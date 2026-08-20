@@ -411,14 +411,17 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
   }, [skipFetch, isAuthenticated, fetchPlans, refreshSubscription, refreshUsage]);
 
   // Computed values
-  const isSubscribed = subscription?.status === 'active' || subscription?.status === 'trialing';
-  const isTrialing = subscription?.status === 'trialing';
+  const isTrialing = subscription?.status === 'trialing'
+    && Boolean(subscription.trial?.endsAt)
+    && new Date(subscription.trial!.endsAt).getTime() > Date.now();
+  const isSubscribed = subscription?.status === 'active' || isTrialing;
   const isPastDue = subscription?.status === 'past_due';
   const tierLevel = subscription?.tierLevel || 0;
   const planName = subscription?.planName || null;
 
   // Check if user has access to a feature
   const hasFeature = useCallback((feature: FeatureName): boolean => {
+    if (!isSubscribed) return false;
     // Check subscription features first
     if (subscription?.features?.[feature]) {
       return true;
@@ -427,7 +430,7 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
     // Fall back to tier-based access
     const requiredTier = FEATURE_TIERS[feature] || 0;
     return tierLevel >= requiredTier;
-  }, [subscription, tierLevel]);
+  }, [isSubscribed, subscription, tierLevel]);
 
   // Get usage info for a resource
   const getUsageInfo = useCallback((usageType: UsageType) => {

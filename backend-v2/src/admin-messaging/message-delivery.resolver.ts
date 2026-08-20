@@ -1,5 +1,5 @@
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CsrfProtected, OrganizationScoped } from '../common/metadata';
+import { CsrfProtected, OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
   EnqueueContactEmailInput,
@@ -10,6 +10,7 @@ import {
 import { MessageDeliveryService } from './message-delivery.service';
 import { MessageDelivery } from './message-delivery.types';
 
+@RequiresPlan()
 @Resolver()
 export class MessageDeliveryResolver {
   constructor(

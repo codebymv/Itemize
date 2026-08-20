@@ -1,11 +1,12 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected, OrganizationScoped } from '../common/metadata';
+import { CsrfProtected, OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import { UpdateInvoiceSettingsInput } from './invoice-settings.inputs';
 import { InvoiceSettingsService } from './invoice-settings.service';
 import { InvoiceSettings } from './invoice-settings.types';
 import { InvoiceLogoRemovalResult } from '../invoice-logo-cleanup/invoice-logo-cleanup.types';
 
+@RequiresPlan()
 @Resolver(() => InvoiceSettings)
 export class InvoiceSettingsResolver {
   constructor(

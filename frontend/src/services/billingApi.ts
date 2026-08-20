@@ -234,7 +234,7 @@ export async function redirectToCheckout(params: {
  */
 export async function redirectToPortal(): Promise<void> {
     const result = await createPortalSession(
-        `${window.location.origin}/settings?tab=billing`
+        `${window.location.origin}/payment-settings`
     );
 
     if (result.success && result.data?.url) {

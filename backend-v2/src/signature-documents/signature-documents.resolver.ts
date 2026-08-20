@@ -1,11 +1,12 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected, OrganizationScoped } from '../common/metadata';
+import { CsrfProtected, OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { PageInput } from '../common/pagination';
 import { RequestContextService } from '../request-context/request-context.service';
 import { CreateSignatureDocumentInput, SignatureDocumentFilterInput, UpdateSignatureDraftInput } from './signature-document.inputs';
 import { SignatureAuditEvent, SignatureDocument, SignatureDocumentDetail, SignatureDocumentPage } from './signature-document.types';
 import { SignatureDocumentsService } from './signature-documents.service';
 
+@RequiresPlan()
 @Resolver(() => SignatureDocument)
 export class SignatureDocumentsResolver {
   constructor(private readonly service: SignatureDocumentsService, private readonly context: RequestContextService) {}

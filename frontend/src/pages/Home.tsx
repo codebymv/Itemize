@@ -98,17 +98,17 @@ const Home: React.FC = () => {
     };
   }, []);
 
-  const handleGetStarted = () => navigate('/register');
+  const handleGetStarted = () => navigate('/register?mode=trial');
   const handleChoosePlan = (plan: 'free' | 'starter' | 'unlimited' | 'pro') => {
     if (isAuthenticated) {
       navigate('/payment-settings');
       return;
     }
     if (plan === 'free') {
-      navigate('/register');
+      navigate('/register?mode=free');
       return;
     }
-    navigate(`/register?plan=${plan}`);
+    navigate('/register?mode=trial');
   };
 
   return (
@@ -387,7 +387,7 @@ const Home: React.FC = () => {
                     ))}
                   </ul>
                   <Button
-                    onClick={handleGetStarted}
+                    onClick={() => handleChoosePlan('free')}
                     className={`rounded-xl px-6 py-5 ${accentGradient} ${accentGradientHover} text-white font-semibold shadow-lg shadow-blue-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5`}
                   >
                     Try Workspaces Free

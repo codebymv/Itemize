@@ -1,11 +1,12 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected, OrganizationScoped } from '../common/metadata';
+import { CsrfProtected, OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { PageInput } from '../common/pagination';
 import { RequestContextService } from '../request-context/request-context.service';
 import { CreateSmsTemplateInput, SmsTemplateFilterInput, UpdateSmsTemplateInput } from './sms-template.inputs';
 import { DeleteSmsTemplateResult, SmsMessageInfo, SmsTemplate, SmsTemplateCategory, SmsTemplatePage } from './sms-template.types';
 import { SmsTemplatesService } from './sms-templates.service';
 
+@RequiresPlan()
 @Resolver(() => SmsTemplate)
 export class SmsTemplatesResolver {
   constructor(private readonly templates: SmsTemplatesService, private readonly requestContext: RequestContextService) {}

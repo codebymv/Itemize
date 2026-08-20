@@ -1,5 +1,5 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected, OrganizationScoped } from '../common/metadata';
+import { CsrfProtected, OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
   ChatWidgetConfigInput,
@@ -15,6 +15,7 @@ import {
   ConvertChatSessionResult,
 } from './chat-widget.types';
 
+@RequiresPlan()
 @OrganizationScoped()
 @Resolver()
 export class ChatWidgetResolver {

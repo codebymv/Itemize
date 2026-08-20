@@ -1,5 +1,5 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected, OrganizationScoped } from '../common/metadata';
+import { CsrfProtected, OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { PageInput } from '../common/pagination';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
@@ -10,6 +10,7 @@ import {
 import { Booking, BookingPage } from './booking.types';
 import { BookingsService } from './bookings.service';
 
+@RequiresPlan()
 @Resolver(() => Booking)
 export class BookingsResolver {
   constructor(

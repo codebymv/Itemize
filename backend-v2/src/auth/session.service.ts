@@ -6,6 +6,7 @@ import { randomBytes } from 'node:crypto';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { AuthRepository, AuthenticationUser } from './auth.repository';
 import { AuthSessionPayload, AuthSessionStatus, CurrentUser } from './auth.types';
+import { SignupMode } from './auth.inputs';
 
 type RefreshTokenPayload = {
   userId?: unknown;
@@ -72,9 +73,10 @@ export class SessionService {
   async googleLogin(
     accessToken: string,
     response: Response,
+    signupMode: SignupMode = SignupMode.FREE,
   ): Promise<AuthSessionPayload> {
     const identity = await this.verifyGoogleAccessToken(accessToken);
-    const user = await this.users.findOrCreateGoogleUser(identity);
+    const user = await this.users.findOrCreateGoogleUser(identity, signupMode);
     await this.createSession(user, response);
     return { success: true, user: this.sessionUser(user) };
   }

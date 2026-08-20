@@ -4,15 +4,15 @@
 
 ## Summary
 
-- Registered method/path operations: 60
-- API operations under `/api`: 53
+- Registered method/path operations: 63
+- API operations under `/api`: 56
 - Non-API registered operations: 7
-- Static frontend callsites: 42
-- Operations with frontend consumers: 37
-- Operations referenced by backend tests: 37
-- Recommended GraphQL queries: 0
-- Recommended GraphQL mutations: 0
-- Recommended retained HTTP endpoints: 53
+- Static frontend callsites: 44
+- Operations with frontend consumers: 39
+- Operations referenced by backend tests: 40
+- Recommended GraphQL queries: 1
+- Recommended GraphQL mutations: 1
+- Recommended retained HTTP endpoints: 54
 - High-risk operations: 49
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
@@ -51,6 +51,9 @@
 | GET | `/api/forms/public/form/:identifier` | 1 | 3 | retain-http | high | crm / PublicFormsModule / getPublicForm |
 | POST | `/api/forms/public/form/:identifier` | 1 | 5 | retain-http | high | crm / PublicFormsModule / submitPublicForm |
 | GET | `/api/health` | 0 | 0 | retain-http | low | platform-operations / HealthBoundary / readiness |
+| GET | `/api/invoice-integrations/stripe/callback` | 0 | 3 | retain-http | medium | _unassigned_ |
+| GET | `/api/invoice-integrations/stripe/connect` | 1 | 1 | graphql-query | medium | _unassigned_ |
+| POST | `/api/invoice-integrations/stripe/disconnect` | 1 | 1 | graphql-mutation | medium | _unassigned_ |
 | GET | `/api/invoices/:id/pdf` | 1 | 12 | retain-http | high | billing / InvoicesModule / invoicePdf |
 | POST | `/api/invoices/businesses/:id/logo` | 1 | 9 | retain-http | high | billing / InvoiceBusinessesModule / uploadInvoiceBusinessLogo |
 | POST | `/api/invoices/settings/logo` | 1 | 0 | retain-http | high | billing / InvoiceSettingsModule / uploadInvoiceSettingsLogo |

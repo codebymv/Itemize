@@ -7,8 +7,16 @@ export type OrganizationIdentity = {
   organizationRole: string;
 };
 
+export type OrganizationEntitlementIdentity = {
+  organizationId: number;
+  plan: string | null;
+  subscriptionStatus: string | null;
+  trialEndsAt: Date | string | null;
+};
+
 export type ItemizeRequestContext = {
   requestId: string;
   identity?: AuthenticatedIdentity;
   organization?: OrganizationIdentity;
+  entitlement?: OrganizationEntitlementIdentity;
 };

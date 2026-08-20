@@ -5,6 +5,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { Request, Response } from 'express';
 import { AuthModule } from './auth/auth.module';
 import { BillingModule } from './billing/billing.module';
+import { GraphqlEntitlementGuard } from './billing/graphql-entitlement.guard';
 import { AdminOperationsModule } from './admin-operations/admin-operations.module';
 import { AdminMessagingModule } from './admin-messaging/admin-messaging.module';
 import { MessagingDeliveryModule } from './admin-messaging/messaging-delivery.module';
@@ -147,6 +148,7 @@ const observabilityPlugins = [
     { provide: APP_GUARD, useExisting: GraphqlAuthGuard },
     { provide: APP_GUARD, useExisting: GraphqlCsrfGuard },
     { provide: APP_GUARD, useExisting: OrganizationContextGuard },
+    { provide: APP_GUARD, useExisting: GraphqlEntitlementGuard },
   ],
 })
 export class AppModule implements NestModule {

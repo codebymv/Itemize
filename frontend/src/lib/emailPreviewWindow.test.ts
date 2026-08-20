@@ -16,7 +16,7 @@ describe('sandboxedEmailPreviewDocument', () => {
 
   it('prevents attribute and iframe breakout payloads', () => {
     const document = sandboxedEmailPreviewDocument(
-      '\"><\/iframe><script>alert(1)</script>',
+      '"></iframe><script>alert(1)</script>',
     );
     expect(document).not.toContain('</iframe><script>alert(1)</script>');
     expect(document).toContain('&quot;&gt;&lt;/iframe&gt;&lt;script&gt;alert(1)&lt;/script&gt;');

@@ -115,7 +115,7 @@ export function TrialBanner({
   };
 
   const handleAddPayment = () => {
-    navigate('/settings?tab=billing');
+    navigate('/payment-settings');
   };
 
   const handleDismiss = () => {

@@ -1,5 +1,5 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected, OrganizationScoped } from '../common/metadata';
+import { CsrfProtected, OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { PageInput } from '../common/pagination';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
@@ -17,6 +17,7 @@ import { EstimateEmailDeliveryService } from './estimate-email-delivery.service'
 import { EstimateSendResult } from './estimate-email-delivery.types';
 import { EstimatesService } from './estimates.service';
 
+@RequiresPlan()
 @Resolver(() => Estimate)
 export class EstimatesResolver {
   constructor(

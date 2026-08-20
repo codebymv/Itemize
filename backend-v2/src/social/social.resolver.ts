@@ -1,5 +1,5 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected, OrganizationScoped } from '../common/metadata';
+import { CsrfProtected, OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import { SendSocialMessageInput, UpdateSocialConversationInput } from './social.inputs';
 import { SocialService } from './social.service';
@@ -12,6 +12,7 @@ import {
   SocialMessageDelivery,
 } from './social.types';
 
+@RequiresPlan('unlimited')
 @OrganizationScoped()
 @Resolver()
 export class SocialResolver {

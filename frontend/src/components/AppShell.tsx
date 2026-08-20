@@ -65,7 +65,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     const { headerContent } = useHeader();
     const navigate = useNavigate();
     const location = useLocation();
-    const { subscription } = useSubscriptionState();
+    const { subscription, isSubscribed } = useSubscriptionState();
     const [searchOpen, setSearchOpen] = useState(false);
     const [showTrialEndedBilling, setShowTrialEndedBilling] = useState(false);
     const [showTrialExpired, setShowTrialExpired] = useState(false);
@@ -336,7 +336,11 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                     {children}
                 </main>
             </SidebarInset>
-            <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
+            <GlobalSearch
+                open={searchOpen}
+                onClose={() => setSearchOpen(false)}
+                hasPaidAccess={isSubscribed}
+            />
         </SidebarProvider>
     </SearchContext.Provider>
     );

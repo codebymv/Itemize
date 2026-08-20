@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { AuthError, useAuthActions } from '@/contexts/AuthContext';
 import { GoogleOAuthGate } from '@/components/auth/GoogleOAuthGate';
@@ -14,6 +14,7 @@ import BackgroundClouds from '@/components/ui/BackgroundClouds';
 
 function RegisterForm() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { register } = useAuthActions();
   const googleSignIn = useGoogleSignIn();
@@ -25,6 +26,8 @@ function RegisterForm() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const signupMode = searchParams.get('mode') === 'trial' ? 'TRIAL' : 'FREE';
+  const isTrial = signupMode === 'TRIAL';
 
   const passwordsMatch = !password || !confirmPassword || password === confirmPassword;
   const passwordValid = password.length >= 8 && 
@@ -65,7 +68,7 @@ function RegisterForm() {
     setLoading(true);
 
     try {
-      await register(email, password, name);
+      await register(email, password, name, signupMode);
       toast({
         title: 'Account created!',
         description: 'Please check your email to verify your account.',
@@ -93,7 +96,7 @@ function RegisterForm() {
 
   const handleGoogleLogin = () => {
     setGoogleLoading(true);
-    googleSignIn('/dashboard');
+    googleSignIn('/dashboard', signupMode);
     setTimeout(() => setGoogleLoading(false), 1000);
   };
 
@@ -112,12 +115,21 @@ function RegisterForm() {
               />
             </div>
           </Link>
-          <CardTitle className="text-2xl text-foreground">
-            Create your account
-          </CardTitle>
+          <h1 className="text-2xl font-semibold leading-none tracking-tight text-foreground">
+            {isTrial ? 'Start your 14-day Solo trial' : 'Create your Free Workspace'}
+          </h1>
           <CardDescription className="text-muted-foreground">
-            Start organizing your business today
+            {isTrial
+              ? 'Explore the complete Solo toolkit. No credit card required.'
+              : 'Lists, notes, whiteboards, and canvas—free for as long as you need.'}
           </CardDescription>
+          <p className="text-xs text-muted-foreground">
+            {isTrial ? (
+              <>Only need workspace tools? <Link className="text-blue-600 underline" to="/register?mode=free">Choose Free</Link></>
+            ) : (
+              <>Need CRM, invoicing, and signatures? <Link className="text-blue-600 underline" to="/register?mode=trial">Try Solo</Link></>
+            )}
+          </p>
         </CardHeader>
 
         <form onSubmit={handleRegister}>
@@ -130,10 +142,14 @@ function RegisterForm() {
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="name"
+                  name="name"
                   type="text"
+                  autoComplete="name"
                   placeholder="John Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  required
+                  maxLength={100}
                   className="pl-10"
                 />
               </div>
@@ -147,7 +163,9 @@ function RegisterForm() {
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="email"
+                  name="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -165,7 +183,9 @@ function RegisterForm() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
+                  name="password"
                   type="password"
+                  autoComplete="new-password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -190,7 +210,9 @@ function RegisterForm() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="confirmPassword"
+                  name="confirmPassword"
                   type="password"
+                  autoComplete="new-password"
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -238,7 +260,7 @@ function RegisterForm() {
                   Creating account...
                 </>
               ) : (
-                'Create Account'
+                isTrial ? 'Start Solo Trial' : 'Create Free Workspace'
               )}
             </Button>
 

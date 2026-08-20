@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { PG_POOL } from '../database/database.module';
+import { SignupMode } from './auth.inputs';
 
 export type AuthenticationUser = {
   id: number;
@@ -66,6 +67,7 @@ export class AuthRepository {
     passwordHash: string;
     verificationTokenHash: string;
     verificationTokenExpires: Date;
+    signupMode: SignupMode;
   }): Promise<AuthenticationUser> {
     const client = await this.pool.connect();
     try {
@@ -85,7 +87,7 @@ export class AuthRepository {
         ],
       );
       const user = mapUser(inserted.rows[0]);
-      await this.ensurePersonalOrganization(client, user);
+      await this.ensurePersonalOrganization(client, user, input.signupMode);
       await client.query('COMMIT');
       return user;
     } catch (error) {
@@ -220,7 +222,7 @@ export class AuthRepository {
     googleId: string;
     email: string;
     name: string;
-  }): Promise<AuthenticationUser> {
+  }, signupMode: SignupMode = SignupMode.FREE): Promise<AuthenticationUser> {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
@@ -251,7 +253,7 @@ export class AuthRepository {
       }
 
       const user = mapUser(result.rows[0]);
-      await this.ensurePersonalOrganization(client, user);
+      await this.ensurePersonalOrganization(client, user, signupMode);
       await client.query('COMMIT');
       return user;
     } catch (error) {
@@ -265,6 +267,7 @@ export class AuthRepository {
   private async ensurePersonalOrganization(
     client: PoolClient,
     user: AuthenticationUser,
+    signupMode: SignupMode,
   ): Promise<void> {
     const existing = await client.query<{ default_organization_id: number | null }>(
       'SELECT default_organization_id FROM users WHERE id = $1',
@@ -276,11 +279,36 @@ export class AuthRepository {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
+    const isTrial = signupMode === SignupMode.TRIAL;
     const organization = await client.query<{ id: number }>(
-      `INSERT INTO organizations (name, slug, settings)
-       VALUES ($1, $2, $3::jsonb)
+      `INSERT INTO organizations (
+         name, slug, settings, plan, subscription_status,
+         trial_started_at, trial_ends_at,
+         emails_limit, sms_limit, api_calls_limit, contacts_limit,
+         users_limit, workflows_limit, landing_pages_limit, forms_limit, calendars_limit
+       ) VALUES (
+         $1, $2, $3::jsonb, $4, $5,
+         CASE WHEN $5 = 'trialing' THEN NOW() ELSE NULL END,
+         CASE WHEN $5 = 'trialing' THEN NOW() + INTERVAL '14 days' ELSE NULL END,
+         $6, $7, $8, $9, $10, $11, $12, $13, $14
+       )
        RETURNING id`,
-      [`${user.name}'s Workspace`, `${slugBase}-${user.id}`, JSON.stringify({ personal: true })],
+      [
+        `${user.name}'s Workspace`,
+        `${slugBase}-${user.id}`,
+        JSON.stringify({ personal: true }),
+        isTrial ? 'starter' : 'free',
+        isTrial ? 'trialing' : 'none',
+        isTrial ? 1_000 : 0,
+        isTrial ? 500 : 0,
+        0,
+        isTrial ? 5_000 : 0,
+        isTrial ? 3 : 1,
+        isTrial ? 5 : 0,
+        isTrial ? 10 : 0,
+        isTrial ? 10 : 0,
+        isTrial ? 3 : 0,
+      ],
     );
     const organizationId = Number(organization.rows[0].id);
     await client.query(

@@ -161,7 +161,7 @@ describe('SessionService', () => {
       googleId: 'google-user-id',
       email: 'google.member@example.com',
       name: 'Google Member',
-    });
+    }, 'FREE');
     expect(res.cookie).toHaveBeenCalledTimes(2);
   });
 

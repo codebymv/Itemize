@@ -4,6 +4,7 @@ import { AuthEmailService } from './auth-email.service';
 import { AuthRepository, AuthenticationUser } from './auth.repository';
 import { IdentityLifecycleService } from './identity-lifecycle.service';
 import { SessionService } from './session.service';
+import { SignupMode } from './auth.inputs';
 
 const user: AuthenticationUser = {
   id: 41,
@@ -75,6 +76,7 @@ describe('IdentityLifecycleService', () => {
       name: 'Member',
       passwordHash: expect.any(String),
       verificationTokenHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+      signupMode: SignupMode.FREE,
     }));
     expect(emails.sendVerification).toHaveBeenCalledWith(
       user,
@@ -97,6 +99,22 @@ describe('IdentityLifecycleService', () => {
       }),
     });
     expect(users.registerEmailUser).not.toHaveBeenCalled();
+  });
+
+  it('passes an explicit Solo trial intent to organization provisioning', async () => {
+    users.findByEmail.mockResolvedValue(null);
+    users.registerEmailUser.mockResolvedValue(user);
+
+    await service.register(
+      'member@example.com',
+      'StrongPass1',
+      'Member',
+      SignupMode.TRIAL,
+    );
+
+    expect(users.registerEmailUser).toHaveBeenCalledWith(
+      expect.objectContaining({ signupMode: SignupMode.TRIAL }),
+    );
   });
 
   it('consumes a verification token once before establishing the session', async () => {

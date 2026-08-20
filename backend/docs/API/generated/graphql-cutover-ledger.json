@@ -6,19 +6,19 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 60,
-    "apiOperationCount": 53,
+    "operationCount": 63,
+    "apiOperationCount": 56,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 42,
-    "operationsWithFrontendConsumers": 37,
-    "operationsWithBackendTests": 37,
+    "frontendCallsiteCount": 44,
+    "operationsWithFrontendConsumers": 39,
+    "operationsWithBackendTests": 40,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
     "unmatchedBackendTestCallCount": 36,
-    "retainHttpCount": 53,
-    "graphqlQueryCount": 0,
-    "graphqlMutationCount": 0,
+    "retainHttpCount": 54,
+    "graphqlQueryCount": 1,
+    "graphqlMutationCount": 1,
     "highRiskCount": 49,
     "literalInterpolationRiskCount": 0
   },
@@ -37,7 +37,7 @@
       "routeSources": [
         {
           "source": "backend/src/index.js",
-          "line": 561
+          "line": 562
         }
       ],
       "consumerCallsites": [],
@@ -685,7 +685,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 133
+          "line": 134
         }
       ],
       "consumerCallsites": [
@@ -744,7 +744,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 134
+          "line": 135
         }
       ],
       "consumerCallsites": [
@@ -952,7 +952,7 @@
       "routeSources": [
         {
           "source": "backend/src/index.js",
-          "line": 245
+          "line": 254
         }
       ],
       "consumerCallsites": [],
@@ -969,6 +969,131 @@
       "risk": "low"
     },
     {
+      "id": "GET /api/invoice-integrations/stripe/callback",
+      "key": "GET /api/invoice-integrations/stripe/callback",
+      "method": "GET",
+      "path": "/api/invoice-integrations/stripe/callback",
+      "routeSources": [
+        {
+          "source": "backend/src/routes/invoice-integrations.routes.js",
+          "line": 43
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend/src/__tests__/routes/invoice-integrations.routes.test.js",
+          "line": 65
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend/src/__tests__/routes/invoice-integrations.routes.test.js",
+          "line": 82
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend/src/__tests__/routes/invoice-integrations.routes.test.js",
+          "line": 113
+        }
+      ],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Browser/provider callback endpoint.",
+      "disposition": "retain-http",
+      "owner": null,
+      "targetOperation": null,
+      "targetModule": null,
+      "parityStatus": "not-started",
+      "notes": null,
+      "literalInterpolationRisk": false,
+      "risk": "medium"
+    },
+    {
+      "id": "GET /api/invoice-integrations/stripe/connect",
+      "key": "GET /api/invoice-integrations/stripe/connect",
+      "method": "GET",
+      "path": "/api/invoice-integrations/stripe/connect",
+      "routeSources": [
+        {
+          "source": "backend/src/routes/invoice-integrations.routes.js",
+          "line": 27
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
+          "rawPath": "/api/invoice-integrations/stripe/connect",
+          "source": "frontend/src/services/stripeConnectApi.ts",
+          "line": 11,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
+          "source": "backend/src/__tests__/routes/invoice-integrations.routes.test.js",
+          "line": 51
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
+      "disposition": "graphql-query",
+      "owner": null,
+      "targetOperation": null,
+      "targetModule": null,
+      "parityStatus": "not-started",
+      "notes": null,
+      "literalInterpolationRisk": false,
+      "risk": "medium"
+    },
+    {
+      "id": "POST /api/invoice-integrations/stripe/disconnect",
+      "key": "POST /api/invoice-integrations/stripe/disconnect",
+      "method": "POST",
+      "path": "/api/invoice-integrations/stripe/disconnect",
+      "routeSources": [
+        {
+          "source": "backend/src/routes/invoice-integrations.routes.js",
+          "line": 93
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/invoice-integrations/stripe/disconnect",
+          "rawPath": "/api/invoice-integrations/stripe/disconnect",
+          "source": "frontend/src/services/stripeConnectApi.ts",
+          "line": 21,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/invoice-integrations/stripe/disconnect",
+          "source": "backend/src/__tests__/routes/invoice-integrations.routes.test.js",
+          "line": 134
+        }
+      ],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "disposition": "graphql-mutation",
+      "owner": null,
+      "targetOperation": null,
+      "targetModule": null,
+      "parityStatus": "not-started",
+      "notes": null,
+      "literalInterpolationRisk": false,
+      "risk": "medium"
+    },
+    {
       "id": "GET /api/invoices/:id/pdf",
       "key": "GET /api/invoices/:*/pdf",
       "method": "GET",
@@ -976,7 +1101,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 161
+          "line": 162
         },
         {
           "source": "backend/src/routes/invoices/pdf.routes.js",
@@ -989,7 +1114,7 @@
           "path": "/api/invoices/:invoiceId/pdf",
           "rawPath": "/api/invoices/${invoiceId}/pdf",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 495,
+          "line": 496,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1087,7 +1212,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 153
+          "line": 154
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -1100,7 +1225,7 @@
           "path": "/api/invoices/businesses/:businessId/logo",
           "rawPath": "/api/invoices/businesses/${businessId}/logo",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 463,
+          "line": 464,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1180,7 +1305,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 157
+          "line": 158
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -1193,7 +1318,7 @@
           "path": "/api/invoices/settings/logo",
           "rawPath": "/api/invoices/settings/logo",
           "source": "frontend/src/services/invoicesApi.ts",
-          "line": 406,
+          "line": 407,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1218,7 +1343,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 149
+          "line": 150
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -1406,7 +1531,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 209
+          "line": 210
         }
       ],
       "consumerCallsites": [
@@ -1483,7 +1608,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 229
+          "line": 230
         }
       ],
       "consumerCallsites": [
@@ -1536,7 +1661,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 225
+          "line": 226
         }
       ],
       "consumerCallsites": [
@@ -1577,7 +1702,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 217
+          "line": 218
         }
       ],
       "consumerCallsites": [],
@@ -1601,7 +1726,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 213
+          "line": 214
         }
       ],
       "consumerCallsites": [],
@@ -1632,7 +1757,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 221
+          "line": 222
         }
       ],
       "consumerCallsites": [],
@@ -1845,7 +1970,7 @@
           "path": "/api/shared/note/:token",
           "rawPath": "/api/shared/note/${token}",
           "source": "frontend/src/pages/SharedNotePage.tsx",
-          "line": 55,
+          "line": 56,
           "client": "api",
           "literalInterpolation": false
         },
@@ -1854,7 +1979,7 @@
           "path": "/api/shared/note/:token",
           "rawPath": "/api/shared/note/${token}",
           "source": "frontend/src/pages/SharedNotePage.tsx",
-          "line": 109,
+          "line": 110,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1879,7 +2004,7 @@
       "routeSources": [
         {
           "source": "backend/src/routes/vaults/sharing.routes.js",
-          "line": 14
+          "line": 18
         }
       ],
       "consumerCallsites": [
@@ -1888,7 +2013,7 @@
           "path": "/api/shared/vault/:shareToken",
           "rawPath": "/api/shared/vault/${shareToken}",
           "source": "frontend/src/services/api.ts",
-          "line": 569,
+          "line": 593,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2035,7 +2160,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 195
+          "line": 196
         }
       ],
       "consumerCallsites": [],
@@ -2072,7 +2197,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 191
+          "line": 192
         }
       ],
       "consumerCallsites": [],
@@ -2109,7 +2234,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 177
+          "line": 178
         }
       ],
       "consumerCallsites": [
@@ -2204,7 +2329,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 199
+          "line": 200
         }
       ],
       "consumerCallsites": [],
@@ -2228,7 +2353,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 184
+          "line": 185
         }
       ],
       "consumerCallsites": [
@@ -2498,7 +2623,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 53
+          "line": 54
         }
       ],
       "consumerCallsites": [
@@ -2507,7 +2632,7 @@
           "path": "/api/status",
           "rawPath": "/api/status",
           "source": "frontend/src/pages/StatusPage.tsx",
-          "line": 94,
+          "line": 91,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2602,7 +2727,7 @@
           "path": "/docs/content",
           "rawPath": "/docs/content?path=${encodeURIComponent(path)}",
           "source": "frontend/src/services/docsService.ts",
-          "line": 134,
+          "line": 82,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2636,7 +2761,7 @@
           "path": "/docs/search",
           "rawPath": "/docs/search?q=${encodeURIComponent(query)}",
           "source": "frontend/src/services/docsService.ts",
-          "line": 158,
+          "line": 105,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2670,7 +2795,7 @@
           "path": "/docs/structure",
           "rawPath": "/docs/structure",
           "source": "frontend/src/services/docsService.ts",
-          "line": 148,
+          "line": 95,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2695,7 +2820,7 @@
       "routeSources": [
         {
           "source": "backend/src/index.js",
-          "line": 233
+          "line": 242
         }
       ],
       "consumerCallsites": [],
@@ -2719,7 +2844,7 @@
       "routeSources": [
         {
           "source": "backend/src/index.js",
-          "line": 232
+          "line": 241
         }
       ],
       "consumerCallsites": [],
@@ -2743,7 +2868,7 @@
       "routeSources": [
         {
           "source": "backend/src/index.js",
-          "line": 365
+          "line": 351
         }
       ],
       "consumerCallsites": [],

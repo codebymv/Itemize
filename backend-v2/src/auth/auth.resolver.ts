@@ -7,6 +7,7 @@ import {
   GoogleAccessTokenInput,
   LoginInput,
   RegisterInput,
+  SignupMode,
   RequestPasswordResetInput,
   ResetPasswordInput,
   ResendVerificationInput,
@@ -42,7 +43,12 @@ export class AuthResolver {
     @Context() context: GraphqlHttpContext,
   ) {
     this.rateLimit.consume(context.req, input.email);
-    return this.identityLifecycle.register(input.email, input.password, input.name);
+    return this.identityLifecycle.register(
+      input.email,
+      input.password,
+      input.name,
+      input.signupMode ?? SignupMode.FREE,
+    );
   }
 
   @Public()
@@ -119,7 +125,11 @@ export class AuthResolver {
     @Context() context: GraphqlHttpContext,
   ) {
     this.rateLimit.consume(context.req);
-    return this.sessions.googleLogin(input.accessToken, context.res);
+    return this.sessions.googleLogin(
+      input.accessToken,
+      context.res,
+      input.signupMode ?? SignupMode.FREE,
+    );
   }
 
   @Query(() => CurrentUser)

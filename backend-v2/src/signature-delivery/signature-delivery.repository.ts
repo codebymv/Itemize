@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import { hasPaidEntitlement, PaidEntitlementState } from '../billing/billing-entitlement';
 import { signatureDeliveryTokenHash } from './signature-delivery.token';
 
 type SignatureDeliveryDocument = {
@@ -27,12 +28,11 @@ export class SignatureDeliveryRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
   async hasFeatureAccess(organizationId: number): Promise<boolean> {
-    const result = await this.pool.query<{ plan: string | null }>(
-      'SELECT plan FROM organizations WHERE id=$1',
+    const result = await this.pool.query<PaidEntitlementState>(
+      'SELECT plan, subscription_status, trial_ends_at FROM organizations WHERE id=$1',
       [organizationId],
     );
-    return result.rows[0] !== undefined
-      && ['starter', 'unlimited', 'pro'].includes(result.rows[0].plan ?? 'starter');
+    return hasPaidEntitlement(result.rows[0]);
   }
 
   async enqueueInitial(organizationId: number, documentId: number): Promise<boolean> {

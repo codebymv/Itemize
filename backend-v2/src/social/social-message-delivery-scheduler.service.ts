@@ -20,7 +20,7 @@ export class SocialMessageDeliverySchedulerService
   constructor(private readonly social: SocialService) {}
 
   onApplicationBootstrap(): void {
-    if (process.env.SOCIAL_MESSAGE_DELIVERY_SCHEDULER_ENABLED === 'false') return;
+    if (process.env.SOCIAL_MESSAGE_DELIVERY_SCHEDULER_ENABLED !== 'true') return;
     const interval = boundedInteger(
       process.env.SOCIAL_MESSAGE_DELIVERY_INTERVAL_MS,
       5_000,

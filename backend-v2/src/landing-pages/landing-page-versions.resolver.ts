@@ -1,5 +1,5 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected, OrganizationScoped } from '../common/metadata';
+import { CsrfProtected, OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
   DeleteLandingPageVersionResult,
@@ -8,6 +8,7 @@ import {
 } from './landing-page-version.types';
 import { LandingPageVersionsService } from './landing-page-versions.service';
 
+@RequiresPlan()
 @Resolver(() => LandingPageVersion)
 export class LandingPageVersionsResolver {
   constructor(

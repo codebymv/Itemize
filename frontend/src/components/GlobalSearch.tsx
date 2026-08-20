@@ -30,6 +30,7 @@ interface SearchResult {
 interface GlobalSearchProps {
   open: boolean;
   onClose: () => void;
+  hasPaidAccess: boolean;
 }
 
 const STATIC_PAGES: SearchResult[] = [
@@ -47,7 +48,7 @@ const STATIC_PAGES: SearchResult[] = [
   { id: 'page-settings', type: 'page', title: 'Settings', subtitle: 'Account settings', icon: FileText, href: '/settings' },
 ];
 
-export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
+export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -157,7 +158,10 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         const lowerQuery = query.toLowerCase();
         const allResults: SearchResult[] = [];
 
-        const matchedPages = STATIC_PAGES.filter(p =>
+        const searchablePages = hasPaidAccess
+          ? STATIC_PAGES
+          : STATIC_PAGES.filter((page) => page.href === '/canvas' || page.href === '/settings');
+        const matchedPages = searchablePages.filter(p =>
           p.title.toLowerCase().includes(lowerQuery) ||
           p.subtitle?.toLowerCase().includes(lowerQuery)
         );
@@ -171,9 +175,11 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
               getWhiteboards(),
               getWireframes(),
               getVaults(),
-              getSegments({ search: query }),
-              getCampaigns({ search: query, limit: 3 }),
-              getWorkflows(Number(getOrgId() || 0), { search: query }).catch(() => ({ workflows: [] }))
+              hasPaidAccess ? getSegments({ search: query }) : Promise.resolve([]),
+              hasPaidAccess ? getCampaigns({ search: query, limit: 3 }) : Promise.resolve({ campaigns: [] }),
+              hasPaidAccess
+                ? getWorkflows(Number(getOrgId() || 0), { search: query }).catch(() => ({ workflows: [] }))
+                : Promise.resolve({ workflows: [] })
             ]);
 
             if (listsData.status === 'fulfilled' && Array.isArray(listsData.value)) {
@@ -297,7 +303,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
               allResults.push(...matchedAutomations);
             }
 
-            if (query.length > 2) {
+            if (hasPaidAccess && query.length > 2) {
               const [contactsData, invoicesData, signaturesData] = await Promise.allSettled([
                 getContacts({ search: query, limit: 3 }),
                 getInvoices({ search: query, limit: 3 }),
@@ -379,7 +385,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
 
     const debounce = setTimeout(search, 300);
     return () => clearTimeout(debounce);
-  }, [query, getOrgId]);
+  }, [query, getOrgId, hasPaidAccess]);
 
   const handleSelect = (result: SearchResult) => {
     navigate(result.href);
@@ -418,12 +424,19 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
             <div className="p-8 text-center text-slate-600 dark:text-slate-400">
               <Search className="h-12 w-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
               <p className="text-lg font-medium text-slate-700 dark:text-slate-300">Search for anything</p>
-              <p className="text-sm">Type to find lists, notes, contacts, campaigns, and more.</p>
+              <p className="text-sm">
+                {hasPaidAccess
+                  ? 'Type to find lists, notes, contacts, campaigns, and more.'
+                  : 'Type to find lists, notes, whiteboards, wireframes, and vaults.'}
+              </p>
 
               <div className="mt-8 text-left max-w-sm mx-auto">
                 <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase mb-3 px-2">Quick Links</p>
                 <div className="space-y-1">
-                  {STATIC_PAGES.slice(0, 5).map((page, index) => (
+                  {(hasPaidAccess
+                    ? STATIC_PAGES.slice(0, 5)
+                    : STATIC_PAGES.filter((page) => page.href === '/canvas' || page.href === '/settings')
+                  ).map((page, index) => (
                     <button
                       key={page.id}
                       onClick={() => handleSelect(page)}

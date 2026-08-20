@@ -11,6 +11,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { Request } from 'express';
 import { GraphQLError } from 'graphql';
 import { AccessTokenService } from '../auth/access-token.service';
+import { BillingEntitlementService } from '../billing/billing-entitlement.service';
 import { OrganizationContextService } from '../organizations/organization-context.service';
 import { RequestContextService } from '../request-context/request-context.service';
 
@@ -20,6 +21,7 @@ export class SignatureFileGuard implements CanActivate {
     private readonly accessTokens: AccessTokenService,
     private readonly organizations: OrganizationContextService,
     private readonly requestContext: RequestContextService,
+    private readonly entitlements: BillingEntitlementService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -39,6 +41,7 @@ export class SignatureFileGuard implements CanActivate {
       );
       this.requestContext.setIdentity(identity);
       this.requestContext.setOrganization(organization);
+      await this.entitlements.assertPlan(organization.organizationId, 'starter');
     } catch (error) {
       this.rethrow(error);
     }
@@ -95,6 +98,10 @@ export class SignatureFileGuard implements CanActivate {
         : {}),
       ...(error.extensions.field
         ? { field: String(error.extensions.field) }
+        : {}),
+      ...(error.extensions.plan ? { plan: String(error.extensions.plan) } : {}),
+      ...(error.extensions.requiredPlan
+        ? { requiredPlan: String(error.extensions.requiredPlan) }
         : {}),
     };
     if (body.code === 'UNAUTHENTICATED') throw new UnauthorizedException(body);

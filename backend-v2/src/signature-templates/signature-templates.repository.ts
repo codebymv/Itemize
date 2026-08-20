@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import { hasPaidEntitlement, PaidEntitlementState, signatureDocumentLimit } from '../billing/billing-entitlement';
 import { SignatureDocumentRow, SignatureQuotaExceededError, SignatureRecipientWrite, SignatureReferenceError } from '../signature-documents/signature-documents.repository';
 
 export type SignatureTemplateRow = {
@@ -59,13 +60,11 @@ export class SignatureTemplatesRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
   async hasFeatureAccess(organizationId: number): Promise<boolean> {
-    const result = await this.pool.query<{ plan: string | null }>(
-      'SELECT plan FROM organizations WHERE id=$1',
+    const result = await this.pool.query<PaidEntitlementState>(
+      'SELECT plan, subscription_status, trial_ends_at FROM organizations WHERE id=$1',
       [organizationId],
     );
-    const organization = result.rows[0];
-    return organization !== undefined
-      && ['starter', 'unlimited', 'pro'].includes(organization.plan ?? 'starter');
+    return hasPaidEntitlement(result.rows[0]);
   }
 
   async findAll(organizationId: number): Promise<SignatureTemplateRow[]> {
@@ -171,7 +170,7 @@ export class SignatureTemplatesRepository {
     );
   }
   private assertFieldRoles(fields:SignatureTemplateFieldWrite[],roles:SignatureTemplateRoleWrite[]):void{const names=new Set(roles.map(r=>r.roleName.toLowerCase()));for(const field of fields)if(field.roleName!==null&&!names.has(field.roleName.toLowerCase()))throw new SignatureReferenceError('Template field role must belong to the template');}
-  private async lockQuota(client:PoolClient,organizationId:number):Promise<void>{const organization=await client.query<{plan:string|null}>('SELECT plan FROM organizations WHERE id=$1 FOR UPDATE',[organizationId]);if(!organization.rows[0])throw new SignatureReferenceError('Organization not found');const plan=organization.rows[0].plan??'starter';const limit=plan==='starter'?5:plan==='unlimited'?50:Number.POSITIVE_INFINITY;if(Number.isFinite(limit)){const count=await client.query<{total:string}>("SELECT COUNT(*) AS total FROM signature_documents WHERE organization_id=$1 AND created_at>=(date_trunc('month',CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')",[organizationId]);if(Number(count.rows[0]?.total??0)>=limit)throw new SignatureQuotaExceededError('Monthly signature document limit reached');}}
+  private async lockQuota(client:PoolClient,organizationId:number):Promise<void>{const organization=await client.query<{plan:string|null}>('SELECT plan FROM organizations WHERE id=$1 FOR UPDATE',[organizationId]);if(!organization.rows[0])throw new SignatureReferenceError('Organization not found');const plan=organization.rows[0].plan??'free';const limit=signatureDocumentLimit(plan);if(Number.isFinite(limit)){const count=await client.query<{total:string}>("SELECT COUNT(*) AS total FROM signature_documents WHERE organization_id=$1 AND created_at>=(date_trunc('month',CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')",[organizationId]);if(Number(count.rows[0]?.total??0)>=limit)throw new SignatureQuotaExceededError('Monthly signature document limit reached');}}
   private async selectTemplate(client:PoolClient,organizationId:number,id:number):Promise<SignatureTemplateRow>{const row=await this.selectTemplateOrNull(client,organizationId,id);if(!row)throw new SignatureReferenceError('Signature template not found');return row;}
   private async selectTemplateOrNull(client:PoolClient,organizationId:number,id:number,lock=false):Promise<SignatureTemplateRow|null>{const result=await client.query<SignatureTemplateRow>(`SELECT ${columns} FROM signature_templates t WHERE t.id=$1 AND t.organization_id=$2${lock?' FOR UPDATE':''}`,[id,organizationId]);return result.rows[0]??null;}
   private async selectDocument(client:PoolClient,organizationId:number,id:number):Promise<SignatureDocumentRow>{const result=await client.query<SignatureDocumentRow>(`SELECT ${documentColumns},(SELECT COUNT(*)::int FROM signature_recipients r WHERE r.document_id=d.id AND r.organization_id=d.organization_id) AS recipient_count FROM signature_documents d WHERE d.id=$1 AND d.organization_id=$2`,[id,organizationId]);return result.rows[0];}

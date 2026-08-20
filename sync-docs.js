@@ -132,11 +132,28 @@ async function checkSync() {
     const sourceFiles = await getFileList(DOCS_SOURCE);
     const targetFiles = await getFileList(DOCS_TARGET);
 
-    if (sourceFiles.length !== targetFiles.length) {
+    const sourceRelative = sourceFiles.map((file) => path.relative(DOCS_SOURCE, file)).sort();
+    const targetRelative = targetFiles.map((file) => path.relative(DOCS_TARGET, file)).sort();
+    const sameFileSet = sourceRelative.length === targetRelative.length
+      && sourceRelative.every((file, index) => file === targetRelative[index]);
+
+    if (!sameFileSet) {
       console.log('⚠️  Documentation appears to be out of sync');
       console.log(`📊 Source files: ${sourceFiles.length}, Target files: ${targetFiles.length}`);
       console.log('💡 Run: npm run docs:sync');
       return false;
+    }
+
+    for (const relativePath of sourceRelative) {
+      const [sourceContent, targetContent] = await Promise.all([
+        fs.readFile(path.join(DOCS_SOURCE, relativePath)),
+        fs.readFile(path.join(DOCS_TARGET, relativePath)),
+      ]);
+      if (!sourceContent.equals(targetContent)) {
+        console.log(`⚠️  Documentation differs: ${relativePath}`);
+        console.log('💡 Run: npm run docs:sync');
+        return false;
+      }
     }
 
     console.log('✅ Documentation appears to be in sync');
@@ -176,7 +193,7 @@ async function main() {
 
   switch (command) {
     case 'sync':
-      await copyDocs();
+      if (!(await copyDocs())) process.exitCode = 1;
       break;
     
     case 'watch':
@@ -184,7 +201,7 @@ async function main() {
       break;
     
     case 'check':
-      await checkSync();
+      if (!(await checkSync())) process.exitCode = 1;
       break;
     
     default:
@@ -219,4 +236,4 @@ Examples:
 // Run main function
 main().catch(console.error);
 
-module.exports = { copyDocs, checkSync }; 
+module.exports = { copyDocs, checkSync };

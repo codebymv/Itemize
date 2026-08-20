@@ -1,11 +1,12 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected, OrganizationScoped } from '../common/metadata';
+import { CsrfProtected, OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import { SignatureDocument } from '../signature-documents/signature-document.types';
 import { SignatureEmailPreviewInput } from './signature-delivery.inputs';
 import { SignatureDeliveryService } from './signature-delivery.service';
 import { SignatureEmailPreview, SignatureReminderSchedule } from './signature-delivery.types';
 
+@RequiresPlan()
 @Resolver(() => SignatureEmailPreview)
 export class SignatureDeliveryResolver {
   constructor(

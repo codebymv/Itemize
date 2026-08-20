@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
+import { Logger } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { configureApp } from './configure-app';
@@ -13,4 +14,11 @@ async function bootstrap(): Promise<void> {
   await app.listen(port);
 }
 
-void bootstrap();
+void bootstrap().catch((error: unknown) => {
+  Logger.error(
+    error instanceof Error ? error.stack : String(error),
+    undefined,
+    'Bootstrap',
+  );
+  process.exitCode = 1;
+});

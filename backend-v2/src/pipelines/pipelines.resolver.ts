@@ -1,5 +1,5 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected, OrganizationScoped } from '../common/metadata';
+import { CsrfProtected, OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
   CreatePipelineInput,
@@ -8,6 +8,7 @@ import {
 import { DeletePipelineResult, Pipeline } from './pipeline.types';
 import { PipelinesService } from './pipelines.service';
 
+@RequiresPlan()
 @Resolver(() => Pipeline)
 export class PipelinesResolver {
   constructor(

@@ -61,7 +61,7 @@ describe('authentication GraphQL adapter', () => {
     expect(graphqlPublicRequest).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining('mutation Register'),
-      { input: { email: 'new@example.com', password: 'StrongPass1', name: 'New Member' } },
+      { input: { email: 'new@example.com', password: 'StrongPass1', name: 'New Member', signupMode: 'FREE' } },
     );
     await expect(verifyEmailViaGraphql('token')).resolves.toMatchObject({ success: true });
     expect(graphqlPublicRequest).toHaveBeenNthCalledWith(

@@ -1,11 +1,12 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected, OrganizationScoped } from '../common/metadata';
+import { CsrfProtected, OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import { SignatureDocument } from '../signature-documents/signature-document.types';
 import { CreateSignatureTemplateInput, InstantiateSignatureTemplateInput, UpdateSignatureTemplateInput } from './signature-template.inputs';
 import { SignatureTemplate, SignatureTemplateDetail } from './signature-template.types';
 import { SignatureTemplatesService } from './signature-templates.service';
 
+@RequiresPlan()
 @Resolver(()=>SignatureTemplate)
 export class SignatureTemplatesResolver {
   constructor(private readonly service:SignatureTemplatesService,private readonly context:RequestContextService){}

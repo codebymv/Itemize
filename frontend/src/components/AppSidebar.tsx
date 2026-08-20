@@ -46,6 +46,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSearch } from '@/components/AppShell';
+import { useSubscriptionState } from '@/contexts/SubscriptionContext';
 
 // Navigation items for the sidebar
 interface NavItem {
@@ -290,11 +291,31 @@ export function AppSidebar() {
     const navigate = useNavigate();
     const { state, toggleSidebar, isMobile, setOpenMobile } = useSidebar();
     const { setSearchOpen } = useSearch();
+    const { isLoading: isSubscriptionLoading, isSubscribed, tierLevel } = useSubscriptionState();
     const [searchShortcutHint, setSearchShortcutHint] = React.useState<'apple' | 'other' | null>(null);
 
     const isCollapsed = state === 'collapsed';
 
-    const filteredMainNavItems = mainNavItems;
+    const workspaceItems = mainNavItems.filter((item) => item.title === 'Workspace');
+    const paidItems = tierLevel >= 2
+        ? mainNavItems
+        : mainNavItems.map((item) => item.title === 'Communications' && item.items
+            ? { ...item, items: item.items.filter((subItem) => subItem.title !== 'Social') }
+            : item);
+    const filteredMainNavItems = isSubscriptionLoading
+        ? workspaceItems
+        : isSubscribed
+            ? paidItems
+            : [
+                ...workspaceItems,
+                { title: 'Unlock business tools', icon: Zap, path: '/payment-settings' },
+            ];
+    const filteredSecondaryNavItems = isSubscribed
+        ? secondaryNavItems
+        : secondaryNavItems.map((item) => item.title === 'Settings' && item.items
+            ? { ...item, items: item.items.filter((subItem) => subItem.title !== 'Integrations') }
+            : item);
+    const homePath = isSubscribed ? '/dashboard' : '/canvas';
 
     // Auto-close sidebar on mobile when route changes
     React.useEffect(() => {
@@ -350,7 +371,7 @@ export function AppSidebar() {
             <SidebarHeader className={cn("border-b py-4", isCollapsed ? "px-2" : "px-3")}>
                 <div className={cn("flex items-center", isCollapsed ? "flex-col gap-2 justify-center" : "justify-between gap-2")}>
                     {!isCollapsed ? (
-                        <div className="group flex items-center gap-2 flex-1 cursor-pointer" onClick={() => navigate('/dashboard')}>
+                        <div className="group flex items-center gap-2 flex-1 cursor-pointer" onClick={() => navigate(homePath)}>
                             {brandIcon('h-7 w-7')}
                             <img
                                 src="/textblack.png"
@@ -367,7 +388,7 @@ export function AppSidebar() {
                     ) : (
                         <div
                             className="group cursor-pointer"
-                            onClick={() => navigate('/dashboard')}
+                            onClick={() => navigate(homePath)}
                             role="link"
                             aria-label="Itemize"
                         >
@@ -496,12 +517,12 @@ export function AppSidebar() {
                 </SidebarGroup>
             </SidebarContent>
 
-            {secondaryNavItems.length > 0 && (
+            {filteredSecondaryNavItems.length > 0 && (
                 <SidebarFooter className={cn("border-t", isCollapsed && "flex items-center justify-center")}>
                     <SidebarGroup className={cn(isCollapsed && "w-full flex items-center justify-center")}>
                         <SidebarGroupContent className={cn(isCollapsed && "w-full flex items-center justify-center")}>
                             <SidebarMenu className={cn("gap-2", isCollapsed && "w-full items-center")}>
-                                {secondaryNavItems.map((item) => {
+                                {filteredSecondaryNavItems.map((item) => {
                                     const isActive = location.pathname === item.path ||
                                         (item.path !== '/' && location.pathname.startsWith(item.path)) ||
                                         (item.items?.some(sub => location.pathname === sub.path || location.pathname.startsWith(sub.path + '/')));

@@ -1,4 +1,14 @@
-import { Field, InputType } from '@nestjs/graphql';
+import { Field, InputType, registerEnumType } from '@nestjs/graphql';
+
+export enum SignupMode {
+  FREE = 'FREE',
+  TRIAL = 'TRIAL',
+}
+
+registerEnumType(SignupMode, {
+  name: 'SignupMode',
+  description: 'The commercial state assigned to a newly-created workspace.',
+});
 
 @InputType()
 export class LoginInput {
@@ -13,6 +23,9 @@ export class LoginInput {
 export class GoogleAccessTokenInput {
   @Field()
   accessToken: string;
+
+  @Field(() => SignupMode, { nullable: true, defaultValue: SignupMode.FREE })
+  signupMode?: SignupMode;
 }
 
 @InputType()
@@ -25,6 +38,9 @@ export class RegisterInput {
 
   @Field({ nullable: true })
   name?: string;
+
+  @Field(() => SignupMode, { nullable: true, defaultValue: SignupMode.FREE })
+  signupMode?: SignupMode;
 }
 
 @InputType()

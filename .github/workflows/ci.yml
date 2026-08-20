@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run docs:check
+      - run: npm run lint:backend
+      - run: npm run lint:frontend
+      - run: npm run test
+      - run: npm run build:graphql
+      - run: npm run build:frontend
+      - run: npm run build:check --workspace itemize-frontend
+      - run: npm audit --omit=dev --audit-level=critical

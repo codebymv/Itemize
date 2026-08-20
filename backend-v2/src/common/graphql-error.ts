@@ -50,6 +50,7 @@ export const formatItemizeGraphqlError = (error: GraphQLFormattedError) => {
     'actualStatus',
     'limit',
     'plan',
+    'requiredPlan',
   ] as const) {
     if (sourceExtensions[key] !== undefined) {
       extensions[key] = sourceExtensions[key];

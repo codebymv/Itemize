@@ -22,6 +22,8 @@ export type CurrentGraphqlUser = {
   createdAt: string;
 };
 
+export type SignupMode = 'FREE' | 'TRIAL';
+
 const SESSION_FIELDS = `
   success
   user { uid email name role photoURL }
@@ -44,15 +46,16 @@ export const registerViaGraphql = async (
   email: string,
   password: string,
   name?: string,
+  signupMode: SignupMode = 'FREE',
 ) => {
   const data = await graphqlPublicRequest<
     { register: { success: boolean; message: string; email?: string } },
-    { input: { email: string; password: string; name?: string } }
+    { input: { email: string; password: string; name?: string; signupMode: SignupMode } }
   >(
     `mutation Register($input: RegisterInput!) {
       register(input: $input) { success message email }
     }`,
-    { input: { email, password, ...(name ? { name } : {}) } },
+    { input: { email, password, ...(name ? { name } : {}), signupMode } },
   );
   return data.register;
 };
@@ -140,15 +143,18 @@ export const updateViewerProfileViaGraphql = async (name: string) => {
   return data.updateViewerProfile;
 };
 
-export const loginWithGoogleAccessTokenViaGraphql = async (accessToken: string) => {
+export const loginWithGoogleAccessTokenViaGraphql = async (
+  accessToken: string,
+  signupMode: SignupMode = 'FREE',
+) => {
   const data = await graphqlPublicRequest<
     { loginWithGoogleAccessToken: { success: boolean; user: AuthGraphqlUser } },
-    { input: { accessToken: string } }
+    { input: { accessToken: string; signupMode: SignupMode } }
   >(
     `mutation LoginWithGoogle($input: GoogleAccessTokenInput!) {
       loginWithGoogleAccessToken(input: $input) { ${SESSION_FIELDS} }
     }`,
-    { input: { accessToken } },
+    { input: { accessToken, signupMode } },
   );
   return data.loginWithGoogleAccessToken;
 };

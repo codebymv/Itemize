@@ -6,11 +6,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { OrganizationProvider } from '@/contexts/OrganizationContext';
 import React, { useEffect, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useParams } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuthState } from "@/contexts/AuthContext";
 import { AISuggestProvider } from "@/context/AISuggestContext";
-import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
+import { SubscriptionProvider, useSubscriptionState } from "@/contexts/SubscriptionContext";
+import { UpgradePromptCard } from "@/components/subscription/UpgradeCTA";
+import { type Plan } from "@/lib/subscription";
+import { authenticatedHomePath, hasPlanAccess } from "@/lib/entitlements";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
 import { HeaderProvider } from '@/contexts/HeaderContext';
 
@@ -171,13 +174,15 @@ const SubscriptionProviderWrapper = ({ children }: { children: React.ReactNode }
 // Root redirect component to handle initial routing based on auth state
 const RootRedirect = () => {
   const { currentUser, loading } = useAuthState();
+  const { isLoading, isSubscribed } = useSubscriptionState();
 
-  if (loading) {
+  if (loading || (currentUser && isLoading)) {
     return <PageLoading className="min-h-screen" />;
   }
 
-  // Redirect to dashboard when authenticated
-  return currentUser ? <Navigate to="/dashboard" replace /> : <Navigate to="/home" replace />;
+  return currentUser
+    ? <Navigate to={authenticatedHomePath(isSubscribed)} replace />
+    : <Navigate to="/home" replace />;
 };
 
 // Public layout with navbar and footer
@@ -203,6 +208,32 @@ const AuthenticatedLayout = ({ children }: { children: React.ReactNode }) => {
       {children}
     </AppShell>
   );
+};
+
+const EntitledRoute = ({ requiredPlan = 'starter' }: { requiredPlan?: Plan }) => {
+  const { subscription, isLoading, isSubscribed, tierLevel, planName } = useSubscriptionState();
+
+  if (isLoading) {
+    return <PageLoading className="min-h-screen" />;
+  }
+
+  if (!subscription || !hasPlanAccess(isSubscribed, tierLevel, requiredPlan)) {
+    return (
+      <AuthenticatedLayout>
+        <div className="mx-auto flex min-h-full w-full max-w-3xl items-center px-4 py-12 sm:px-6">
+          <UpgradePromptCard
+            requiredPlan={requiredPlan}
+            currentPlan={(planName as Plan | null) ?? 'free'}
+            title="Unlock Itemize business tools"
+            description="Keep using your Free workspace, or upgrade to manage clients, documents, billing, communication, and delivery in one place."
+            className="w-full bg-background"
+          />
+        </div>
+      </AuthenticatedLayout>
+    );
+  }
+
+  return <AuthenticatedLayout><Outlet /></AuthenticatedLayout>;
 };
 
 const AppOrPublicLayout = ({ children }: { children: React.ReactNode }) => {
@@ -284,7 +315,7 @@ const AppContent = () => {
     location.pathname.startsWith('/review/') ||
     location.pathname.startsWith('/r/');
   const { currentUser } = useAuthState();
-  const marketingChatRoutes = ['/home', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
+  const marketingChatRoutes = ['/home'];
   const showMarketingChat =
     marketingChatRoutes.includes(location.pathname) ||
     ((location.pathname === '/status' || location.pathname.startsWith('/help')) && !currentUser);
@@ -323,20 +354,6 @@ const AppContent = () => {
 
       {/* Protected routes with sidebar layout */}
       <Route element={<ProtectedRoute />}>
-        <Route path="/dashboard" element={<AuthenticatedLayout><DashboardPage /></AuthenticatedLayout>} />
-        <Route path="/contacts" element={<AuthenticatedLayout><ContactsPage /></AuthenticatedLayout>} />
-        <Route path="/contacts/:id" element={<AuthenticatedLayout><ContactDetailPage /></AuthenticatedLayout>} />
-        <Route path="/pipelines" element={<AuthenticatedLayout><PipelinesPage /></AuthenticatedLayout>} />
-        <Route path="/calendars" element={<AuthenticatedLayout><CalendarsPage /></AuthenticatedLayout>} />
-        <Route path="/calendars/:id" element={<AuthenticatedLayout><CalendarSettingsPage /></AuthenticatedLayout>} />
-        <Route path="/bookings" element={<AuthenticatedLayout><BookingsPage /></AuthenticatedLayout>} />
-        <Route path="/forms" element={<AuthenticatedLayout><FormsPage /></AuthenticatedLayout>} />
-        <Route path="/forms/:id" element={<AuthenticatedLayout><FormEditorPage /></AuthenticatedLayout>} />
-        <Route path="/inbox" element={<AuthenticatedLayout><InboxPage /></AuthenticatedLayout>} />
-        <Route path="/automations" element={<AuthenticatedLayout><AutomationsPage /></AuthenticatedLayout>} />
-        <Route path="/automations/new" element={<AuthenticatedLayout><WorkflowBuilderPage /></AuthenticatedLayout>} />
-        <Route path="/automations/:id" element={<AuthenticatedLayout><WorkflowBuilderPage /></AuthenticatedLayout>} />
-        
         {/* Workspace (Canvas, Contents, Shared) */}
         <Route path="/canvas" element={<AuthenticatedLayout><CanvasPage /></AuthenticatedLayout>} />
         <Route path="/lists" element={<AuthenticatedLayout><UserHome /></AuthenticatedLayout>} />
@@ -349,51 +366,56 @@ const AppContent = () => {
         <Route path="/payment-settings" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
         <Route path="/admin/*" element={<AuthenticatedLayout><AdminPage /></AuthenticatedLayout>} />
 
-        {/* Segments */}
-        <Route path="/segments" element={<AuthenticatedLayout><SegmentsPage /></AuthenticatedLayout>} />
+        <Route element={<EntitledRoute />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/contacts" element={<ContactsPage />} />
+          <Route path="/contacts/:id" element={<ContactDetailPage />} />
+          <Route path="/pipelines" element={<PipelinesPage />} />
+          <Route path="/calendars" element={<CalendarsPage />} />
+          <Route path="/calendars/:id" element={<CalendarSettingsPage />} />
+          <Route path="/bookings" element={<BookingsPage />} />
+          <Route path="/forms" element={<FormsPage />} />
+          <Route path="/forms/:id" element={<FormEditorPage />} />
+          <Route path="/inbox" element={<InboxPage />} />
+          <Route path="/automations" element={<AutomationsPage />} />
+          <Route path="/automations/new" element={<WorkflowBuilderPage />} />
+          <Route path="/automations/:id" element={<WorkflowBuilderPage />} />
+          <Route path="/segments" element={<SegmentsPage />} />
+          <Route path="/calendar-integrations" element={<CalendarIntegrationsPage />} />
+          <Route path="/settings/integrations" element={<IntegrationsAliasRedirect />} />
+          <Route path="/campaigns" element={<CampaignsPage />} />
+          <Route path="/email-templates" element={<EmailTemplatesPage />} />
+          <Route path="/sms-templates" element={<SMSTemplatesPage />} />
+          <Route path="/pages" element={<LandingPagesPage />} />
+          <Route path="/pages/:id" element={<PageEditorPage />} />
+          <Route path="/chat-widget" element={<ChatWidgetPage />} />
+          <Route path="/reviews" element={<ReputationPage />} />
+          <Route path="/review-requests" element={<ReputationRequestsPage />} />
+          <Route path="/review-widgets" element={<ReputationWidgetsPage />} />
+          <Route path="/invoices" element={<InvoicesPage />} />
+          <Route path="/invoices/new" element={<InvoiceEditorPage />} />
+          <Route path="/invoices/:id" element={<InvoiceEditorPage />} />
+          <Route path="/estimates" element={<EstimatesPage />} />
+          <Route path="/estimates/new" element={<EstimateEditorPage />} />
+          <Route path="/estimates/:id" element={<EstimateEditorPage />} />
+          <Route path="/recurring-invoices" element={<RecurringInvoicesPage />} />
+          <Route path="/invoices/payments" element={<PaymentsPage />} />
+          <Route path="/products" element={<ProductsPage />} />
+          <Route path="/signatures/templates/:id" element={<SignatureTemplateRedirect />} />
+          <Route path="/signatures/templates" element={<Navigate to="/templates" replace />} />
+          <Route path="/signatures/new" element={<Navigate to="/documents/new" replace />} />
+          <Route path="/signatures/:id" element={<SignatureDocumentRedirect />} />
+          <Route path="/signatures" element={<Navigate to="/documents" replace />} />
+          <Route path="/documents" element={<SignaturesPage />} />
+          <Route path="/documents/new" element={<SignatureEditorPage />} />
+          <Route path="/documents/:id" element={<SignatureEditorPage />} />
+          <Route path="/templates" element={<SignatureTemplatesPage />} />
+          <Route path="/templates/:id" element={<SignatureTemplateEditorPage />} />
+        </Route>
 
-        {/* Calendar Integrations */}
-        <Route path="/calendar-integrations" element={<AuthenticatedLayout><CalendarIntegrationsPage /></AuthenticatedLayout>} />
-        <Route path="/settings/integrations" element={<AuthenticatedLayout><IntegrationsAliasRedirect /></AuthenticatedLayout>} />
-
-        {/* Campaigns & Templates */}
-        <Route path="/campaigns" element={<AuthenticatedLayout><CampaignsPage /></AuthenticatedLayout>} />
-        <Route path="/email-templates" element={<AuthenticatedLayout><EmailTemplatesPage /></AuthenticatedLayout>} />
-        <Route path="/sms-templates" element={<AuthenticatedLayout><SMSTemplatesPage /></AuthenticatedLayout>} />
-
-        {/* Landing Pages */}
-        <Route path="/pages" element={<AuthenticatedLayout><LandingPagesPage /></AuthenticatedLayout>} />
-        <Route path="/pages/:id" element={<AuthenticatedLayout><PageEditorPage /></AuthenticatedLayout>} />
-
-        {/* Communications */}
-        <Route path="/chat-widget" element={<AuthenticatedLayout><ChatWidgetPage /></AuthenticatedLayout>} />
-        <Route path="/social" element={<AuthenticatedLayout><SocialPage /></AuthenticatedLayout>} />
-
-        {/* Reputation Management */}
-        <Route path="/reviews" element={<AuthenticatedLayout><ReputationPage /></AuthenticatedLayout>} />
-        <Route path="/review-requests" element={<AuthenticatedLayout><ReputationRequestsPage /></AuthenticatedLayout>} />
-        <Route path="/review-widgets" element={<AuthenticatedLayout><ReputationWidgetsPage /></AuthenticatedLayout>} />
-
-        {/* Sales & Payments */}
-        <Route path="/invoices" element={<AuthenticatedLayout><InvoicesPage /></AuthenticatedLayout>} />
-        <Route path="/invoices/new" element={<AuthenticatedLayout><InvoiceEditorPage /></AuthenticatedLayout>} />
-        <Route path="/invoices/:id" element={<AuthenticatedLayout><InvoiceEditorPage /></AuthenticatedLayout>} />
-        <Route path="/estimates" element={<AuthenticatedLayout><EstimatesPage /></AuthenticatedLayout>} />
-        <Route path="/estimates/new" element={<AuthenticatedLayout><EstimateEditorPage /></AuthenticatedLayout>} />
-        <Route path="/estimates/:id" element={<AuthenticatedLayout><EstimateEditorPage /></AuthenticatedLayout>} />
-        <Route path="/recurring-invoices" element={<AuthenticatedLayout><RecurringInvoicesPage /></AuthenticatedLayout>} />
-        <Route path="/invoices/payments" element={<AuthenticatedLayout><PaymentsPage /></AuthenticatedLayout>} />
-        <Route path="/products" element={<AuthenticatedLayout><ProductsPage /></AuthenticatedLayout>} />
-        <Route path="/signatures/templates/:id" element={<SignatureTemplateRedirect />} />
-        <Route path="/signatures/templates" element={<Navigate to="/templates" replace />} />
-        <Route path="/signatures/new" element={<Navigate to="/documents/new" replace />} />
-        <Route path="/signatures/:id" element={<SignatureDocumentRedirect />} />
-        <Route path="/signatures" element={<Navigate to="/documents" replace />} />
-        <Route path="/documents" element={<AuthenticatedLayout><SignaturesPage /></AuthenticatedLayout>} />
-        <Route path="/documents/new" element={<AuthenticatedLayout><SignatureEditorPage /></AuthenticatedLayout>} />
-        <Route path="/documents/:id" element={<AuthenticatedLayout><SignatureEditorPage /></AuthenticatedLayout>} />
-        <Route path="/templates" element={<AuthenticatedLayout><SignatureTemplatesPage /></AuthenticatedLayout>} />
-        <Route path="/templates/:id" element={<AuthenticatedLayout><SignatureTemplateEditorPage /></AuthenticatedLayout>} />
+        <Route element={<EntitledRoute requiredPlan="unlimited" />}>
+          <Route path="/social" element={<SocialPage />} />
+        </Route>
       </Route>
 
       {/* Catch-all route */}

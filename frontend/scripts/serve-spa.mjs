@@ -6,6 +6,7 @@
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { createServer } from 'node:http';
+import { createBrotliCompress, createGzip } from 'node:zlib';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -42,13 +43,26 @@ function send(res, status, headers, body) {
   res.end(body);
 }
 
-async function sendFile(res, filePath, cacheControl) {
+async function sendFile(req, res, filePath, cacheControl) {
   const type = MIME[path.extname(filePath)] || 'application/octet-stream';
-  res.writeHead(200, {
+  const headers = {
     'Content-Type': type,
     'Cache-Control': cacheControl,
-  });
-  createReadStream(filePath).pipe(res);
+    'Vary': 'Accept-Encoding',
+  };
+  const accepted = req.headers['accept-encoding'] || '';
+  const compressible = /^(text\/|application\/(javascript|json))/.test(type);
+  const source = createReadStream(filePath);
+  if (compressible && /\bbr\b/.test(accepted)) {
+    res.writeHead(200, { ...headers, 'Content-Encoding': 'br' });
+    source.pipe(createBrotliCompress()).pipe(res);
+  } else if (compressible && /\bgzip\b/.test(accepted)) {
+    res.writeHead(200, { ...headers, 'Content-Encoding': 'gzip' });
+    source.pipe(createGzip()).pipe(res);
+  } else {
+    res.writeHead(200, headers);
+    source.pipe(res);
+  }
 }
 
 const server = createServer(async (req, res) => {
@@ -65,7 +79,7 @@ const server = createServer(async (req, res) => {
     const fileStat = await stat(filePath);
     if (fileStat.isFile()) {
       const cacheControl = pathname.startsWith('/assets/') ? ASSET_CACHE : HTML_CACHE;
-      await sendFile(res, filePath, cacheControl);
+      await sendFile(req, res, filePath, cacheControl);
       return;
     }
   } catch {
@@ -80,7 +94,7 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  await sendFile(res, path.join(dist, 'index.html'), HTML_CACHE);
+  await sendFile(req, res, path.join(dist, 'index.html'), HTML_CACHE);
 });
 
 server.listen(port, '0.0.0.0', () => {

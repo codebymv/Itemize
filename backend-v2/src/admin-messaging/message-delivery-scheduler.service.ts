@@ -17,7 +17,7 @@ implements OnApplicationBootstrap, OnApplicationShutdown {
   constructor(private readonly delivery: MessageDeliveryService) {}
 
   onApplicationBootstrap(): void {
-    if (process.env.MESSAGE_DELIVERY_SCHEDULER_ENABLED === 'false') return;
+    if (process.env.MESSAGE_DELIVERY_SCHEDULER_ENABLED !== 'true') return;
     const interval = boundedInteger(
       process.env.MESSAGE_DELIVERY_INTERVAL_MS,
       5_000,

@@ -1,4 +1,4 @@
-import { Global, Inject, Injectable, Module, OnApplicationShutdown } from '@nestjs/common';
+import { Global, Inject, Injectable, Module, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
 import { Pool } from 'pg';
 
 export const PG_POOL = Symbol('PG_POOL');
@@ -24,8 +24,12 @@ const createPool = (): Pool => {
 };
 
 @Injectable()
-class DatabaseLifecycle implements OnApplicationShutdown {
+class DatabaseLifecycle implements OnApplicationBootstrap, OnApplicationShutdown {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+
+  async onApplicationBootstrap(): Promise<void> {
+    await this.pool.query('SELECT 1');
+  }
 
   async onApplicationShutdown(): Promise<void> {
     await this.pool.end();

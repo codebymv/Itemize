@@ -3,11 +3,11 @@
   "generator": "scripts/generate-api-surface.js",
   "scope": "Static Express route declarations under backend/src, excluding __tests__.",
   "summary": {
-    "declarationCount": 64,
-    "resolvedDeclarationCount": 64,
+    "declarationCount": 67,
+    "resolvedDeclarationCount": 67,
     "unresolvedDeclarationCount": 0,
-    "uniqueResolvedOperationCount": 60,
-    "sourceFileCount": 21
+    "uniqueResolvedOperationCount": 63,
+    "sourceFileCount": 22
   },
   "caveats": [
     "This is static source analysis; it does not execute application modules.",
@@ -23,7 +23,7 @@
       ],
       "declaredPath": "*",
       "source": "backend/src/index.js",
-      "line": 561,
+      "line": 562,
       "dynamic": false
     },
     {
@@ -173,7 +173,7 @@
       ],
       "declaredPath": "/api/contacts/export/csv",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 133,
+      "line": 134,
       "dynamic": false
     },
     {
@@ -183,7 +183,7 @@
       ],
       "declaredPath": "/api/contacts/import/csv",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 134,
+      "line": 135,
       "dynamic": false
     },
     {
@@ -223,7 +223,37 @@
       ],
       "declaredPath": "/api/health",
       "source": "backend/src/index.js",
-      "line": 245,
+      "line": 254,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoice-integrations/stripe/callback"
+      ],
+      "declaredPath": "/stripe/callback",
+      "source": "backend/src/routes/invoice-integrations.routes.js",
+      "line": 43,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoice-integrations/stripe/connect"
+      ],
+      "declaredPath": "/stripe/connect",
+      "source": "backend/src/routes/invoice-integrations.routes.js",
+      "line": 27,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoice-integrations/stripe/disconnect"
+      ],
+      "declaredPath": "/stripe/disconnect",
+      "source": "backend/src/routes/invoice-integrations.routes.js",
+      "line": 93,
       "dynamic": false
     },
     {
@@ -233,7 +263,7 @@
       ],
       "declaredPath": "/api/invoices/:id/pdf",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 161,
+      "line": 162,
       "dynamic": false
     },
     {
@@ -253,7 +283,7 @@
       ],
       "declaredPath": "/api/invoices/businesses/:id/logo",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 153,
+      "line": 154,
       "dynamic": false
     },
     {
@@ -273,7 +303,7 @@
       ],
       "declaredPath": "/api/invoices/settings/logo",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 157,
+      "line": 158,
       "dynamic": false
     },
     {
@@ -293,7 +323,7 @@
       ],
       "declaredPath": "/api/invoices/webhook/stripe",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 149,
+      "line": 150,
       "dynamic": false
     },
     {
@@ -333,7 +363,7 @@
       ],
       "declaredPath": "/api/public/sign/:token",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 209,
+      "line": 210,
       "dynamic": false
     },
     {
@@ -343,7 +373,7 @@
       ],
       "declaredPath": "/api/public/sign/:token",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 229,
+      "line": 230,
       "dynamic": false
     },
     {
@@ -353,7 +383,7 @@
       ],
       "declaredPath": "/api/public/sign/:token/decline",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 225,
+      "line": 226,
       "dynamic": false
     },
     {
@@ -363,7 +393,7 @@
       ],
       "declaredPath": "/api/public/sign/:token/download",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 217,
+      "line": 218,
       "dynamic": false
     },
     {
@@ -373,7 +403,7 @@
       ],
       "declaredPath": "/api/public/sign/:token/file",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 213,
+      "line": 214,
       "dynamic": false
     },
     {
@@ -383,7 +413,7 @@
       ],
       "declaredPath": "/api/public/sign/:token/verify",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 221,
+      "line": 222,
       "dynamic": false
     },
     {
@@ -443,7 +473,7 @@
       ],
       "declaredPath": "/shared/vault/:token",
       "source": "backend/src/routes/vaults/sharing.routes.js",
-      "line": 14,
+      "line": 18,
       "dynamic": false
     },
     {
@@ -473,7 +503,7 @@
       ],
       "declaredPath": "/api/signatures/documents/:id/download",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 195,
+      "line": 196,
       "dynamic": false
     },
     {
@@ -483,7 +513,7 @@
       ],
       "declaredPath": "/api/signatures/documents/:id/file",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 191,
+      "line": 192,
       "dynamic": false
     },
     {
@@ -493,7 +523,7 @@
       ],
       "declaredPath": "/api/signatures/documents/upload",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 177,
+      "line": 178,
       "dynamic": false
     },
     {
@@ -503,7 +533,7 @@
       ],
       "declaredPath": "/api/signatures/templates/:id/file",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 199,
+      "line": 200,
       "dynamic": false
     },
     {
@@ -513,7 +543,7 @@
       ],
       "declaredPath": "/api/signatures/templates/upload",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 184,
+      "line": 185,
       "dynamic": false
     },
     {
@@ -583,7 +613,7 @@
       ],
       "declaredPath": "/api/status",
       "source": "backend/src/bootstrap/register-api-routes.js",
-      "line": 53,
+      "line": 54,
       "dynamic": false
     },
     {
@@ -633,7 +663,7 @@
       ],
       "declaredPath": "/graphql",
       "source": "backend/src/index.js",
-      "line": 233,
+      "line": 242,
       "dynamic": false
     },
     {
@@ -643,7 +673,7 @@
       ],
       "declaredPath": "/graphql",
       "source": "backend/src/index.js",
-      "line": 232,
+      "line": 241,
       "dynamic": false
     },
     {
@@ -653,7 +683,7 @@
       ],
       "declaredPath": "/health",
       "source": "backend/src/index.js",
-      "line": 365,
+      "line": 351,
       "dynamic": false
     }
   ]

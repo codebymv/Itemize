@@ -1,5 +1,5 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected, OrganizationScoped } from '../common/metadata';
+import { CsrfProtected, OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
   CalendarAvailabilityWindowInput,
@@ -14,6 +14,7 @@ import {
 } from './calendar.types';
 import { CalendarsService } from './calendars.service';
 
+@RequiresPlan()
 @Resolver(() => Calendar)
 export class CalendarsResolver {
   constructor(

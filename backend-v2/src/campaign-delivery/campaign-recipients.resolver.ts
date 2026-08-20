@@ -1,11 +1,12 @@
 import { Args, Int, Query, Resolver } from '@nestjs/graphql';
-import { OrganizationScoped } from '../common/metadata';
+import { OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { PageInput } from '../common/pagination';
 import { RequestContextService } from '../request-context/request-context.service';
 import { CampaignRecipientFilterInput } from './campaign-recipient.inputs';
 import { CampaignRecipient, CampaignRecipientPage } from './campaign-recipient.types';
 import { CampaignRecipientsService } from './campaign-recipients.service';
 
+@RequiresPlan()
 @Resolver(() => CampaignRecipient)
 export class CampaignRecipientsResolver {
   constructor(

@@ -1,5 +1,5 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected, OrganizationScoped } from '../common/metadata';
+import { CsrfProtected, OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { PageInput } from '../common/pagination';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
@@ -23,6 +23,7 @@ import { InvoicePaymentLinkService } from './invoice-payment-link.service';
 import { InvoicePaymentLinkResult } from './invoice-payment-link.types';
 import { InvoicesService } from './invoices.service';
 
+@RequiresPlan()
 @Resolver(() => Invoice)
 export class InvoicesResolver {
   constructor(

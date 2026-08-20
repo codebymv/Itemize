@@ -9,6 +9,7 @@ import {
   loginViaGraphql,
   logoutViaGraphql,
   registerViaGraphql,
+  type SignupMode,
 } from '@/services/authGraphql';
 import { GraphqlRequestError } from '@/services/graphqlClient';
 
@@ -31,7 +32,7 @@ interface AuthActionsContextType {
   /** @deprecated Prefer useGoogleSignIn on login/register — kept for API compatibility */
   login: (redirectTo?: string) => void;
   loginWithEmail: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name?: string) => Promise<void>;
+  register: (email: string, password: string, name?: string, signupMode?: SignupMode) => Promise<void>;
   logout: () => void;
   establishSession: (userData: User) => void;
   setCurrentUser: (user: User | null) => void;
@@ -228,9 +229,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [establishSession]);
 
-  const register = useCallback(async (email: string, password: string, name?: string): Promise<void> => {
+  const register = useCallback(async (email: string, password: string, name?: string, signupMode: SignupMode = 'FREE'): Promise<void> => {
     try {
-      await registerViaGraphql(email, password, name);
+      await registerViaGraphql(email, password, name, signupMode);
     } catch (error) {
       if (
         error instanceof GraphqlRequestError ||

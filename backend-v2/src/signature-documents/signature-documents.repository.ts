@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import { hasPaidEntitlement, PaidEntitlementState, signatureDocumentLimit } from '../billing/billing-entitlement';
 import { SignatureDocumentStatus } from './signature-document.enums';
 
 export type SignatureDocumentRow = {
@@ -73,12 +74,10 @@ export class SignatureDocumentsRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
   async hasFeatureAccess(organizationId: number): Promise<boolean> {
-    const result = await this.pool.query<{ plan: string | null }>(
-      'SELECT plan FROM organizations WHERE id = $1', [organizationId],
+    const result = await this.pool.query<PaidEntitlementState>(
+      'SELECT plan, subscription_status, trial_ends_at FROM organizations WHERE id = $1', [organizationId],
     );
-    const organization = result.rows[0];
-    return organization !== undefined
-      && ['starter', 'unlimited', 'pro'].includes(organization.plan ?? 'starter');
+    return hasPaidEntitlement(result.rows[0]);
   }
 
   async findPage(input: { organizationId: number; status?: SignatureDocumentStatus; pageSize: number; offset: number }): Promise<{ rows: SignatureDocumentRow[]; total: number }> {
@@ -299,7 +298,7 @@ export class SignatureDocumentsRepository {
   private async lockQuota(client: PoolClient, organizationId:number):Promise<void>{
     const organization = await client.query<{plan:string|null}>('SELECT plan FROM organizations WHERE id=$1 FOR UPDATE',[organizationId]);
     if (!organization.rows[0]) throw new SignatureReferenceError('Organization not found');
-    const plan=organization.rows[0].plan??'starter'; const limit=plan==='starter'?5:plan==='unlimited'?50:Number.POSITIVE_INFINITY;
+    const plan=organization.rows[0].plan??'free'; const limit=signatureDocumentLimit(plan);
     if(Number.isFinite(limit)){
       const count=await client.query<{total:string}>("SELECT COUNT(*) AS total FROM signature_documents WHERE organization_id=$1 AND created_at>=(date_trunc('month',CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')",[organizationId]);
       if(Number(count.rows[0]?.total??0)>=limit)throw new SignatureQuotaExceededError('Monthly signature document limit reached');

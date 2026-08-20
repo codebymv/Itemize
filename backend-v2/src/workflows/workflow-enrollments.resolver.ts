@@ -1,11 +1,12 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected, OrganizationScoped } from '../common/metadata';
+import { CsrfProtected, OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { PageInput } from '../common/pagination';
 import { RequestContextService } from '../request-context/request-context.service';
 import { EnrollContactInWorkflowInput, WorkflowEnrollmentFilterInput } from './workflow.inputs';
 import { WorkflowEnrollment, WorkflowEnrollmentPage } from './workflow.types';
 import { WorkflowEnrollmentsService } from './workflow-enrollments.service';
 
+@RequiresPlan()
 @Resolver(() => WorkflowEnrollment)
 export class WorkflowEnrollmentsResolver {
   constructor(private readonly enrollments: WorkflowEnrollmentsService, private readonly context: RequestContextService) {}

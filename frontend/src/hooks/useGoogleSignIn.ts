@@ -5,6 +5,7 @@ import { toast } from '@/components/ui/use-toast';
 import { useAuthActions, type User } from '@/contexts/AuthContext';
 import logger from '@/lib/logger';
 import { loginWithGoogleAccessTokenViaGraphql } from '@/services/authGraphql';
+import type { SignupMode } from '@/services/authGraphql';
 
 /**
  * Google OAuth popup sign-in. Only use inside GoogleOAuthProvider
@@ -14,6 +15,7 @@ export function useGoogleSignIn() {
   const navigate = useNavigate();
   const { establishSession } = useAuthActions();
   const pendingRedirectRef = useRef<string>('/dashboard');
+  const signupModeRef = useRef<SignupMode>('FREE');
 
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -21,6 +23,7 @@ export function useGoogleSignIn() {
         logger.debug('auth', 'Google login successful, establishing server session');
         const userData = (await loginWithGoogleAccessTokenViaGraphql(
           tokenResponse.access_token,
+          signupModeRef.current,
         )).user as unknown as User;
         establishSession(userData);
 
@@ -52,8 +55,9 @@ export function useGoogleSignIn() {
     scope: 'email profile',
   });
 
-  return useCallback((redirectTo?: string) => {
+  return useCallback((redirectTo?: string, signupMode: SignupMode = 'FREE') => {
     pendingRedirectRef.current = redirectTo || '/dashboard';
+    signupModeRef.current = signupMode;
     logger.debug('auth', 'Starting Google login, will redirect to:', pendingRedirectRef.current);
     googleLogin();
   }, [googleLogin]);

@@ -1,5 +1,5 @@
 import { Args, Int, Query, Resolver } from '@nestjs/graphql';
-import { OrganizationScoped } from '../common/metadata';
+import { OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import { AnalyticsService } from './analytics.service';
 import {
@@ -22,6 +22,7 @@ import {
   WorkflowPerformanceAnalytics,
 } from './analytics.types';
 
+@RequiresPlan()
 @Resolver(() => DashboardAnalytics)
 export class AnalyticsResolver {
   constructor(

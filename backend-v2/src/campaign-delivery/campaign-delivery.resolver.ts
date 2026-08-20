@@ -1,11 +1,12 @@
 import { Args, Int, Mutation, Resolver } from '@nestjs/graphql';
-import { CsrfProtected, OrganizationScoped } from '../common/metadata';
+import { CsrfProtected, OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import { CampaignTestEmailService } from './campaign-test-email.service';
 import { CampaignTestEmailResult } from './campaign-test-email.types';
 import { CampaignSendService } from './campaign-send.service';
 import { CampaignResumeResult, CampaignSendResult } from './campaign-send.types';
 
+@RequiresPlan()
 @Resolver()
 export class CampaignDeliveryResolver {
   constructor(

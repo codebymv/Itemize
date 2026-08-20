@@ -7,6 +7,7 @@ import { AuthEmailService } from './auth-email.service';
 import { AuthRepository } from './auth.repository';
 import { AuthMessagePayload, AuthSessionPayload } from './auth.types';
 import { SessionService } from './session.service';
+import { SignupMode } from './auth.inputs';
 
 const VERIFICATION_MESSAGE =
   'If an account exists with this email, you will receive a verification link.';
@@ -25,6 +26,7 @@ export class IdentityLifecycleService {
     rawEmail: string,
     rawPassword: string,
     rawName?: string,
+    signupMode: SignupMode = SignupMode.FREE,
   ): Promise<AuthMessagePayload> {
     const email = this.email(rawEmail);
     const password = this.password(rawPassword);
@@ -48,6 +50,7 @@ export class IdentityLifecycleService {
       passwordHash: await bcrypt.hash(password, 12),
       verificationTokenHash: this.hashToken(token),
       verificationTokenExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      signupMode,
     });
     await this.emails.sendVerification(user, token);
     return {

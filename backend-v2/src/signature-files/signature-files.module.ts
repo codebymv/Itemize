@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
+import { BillingModule } from '../billing/billing.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { SignatureFileGuard } from './signature-file.guard';
 import {
@@ -15,7 +16,7 @@ import { SignatureFilesRepository } from './signature-files.repository';
 import { SignatureFilesService } from './signature-files.service';
 
 @Module({
-  imports: [AuthModule, OrganizationsModule],
+  imports: [AuthModule, BillingModule, OrganizationsModule],
   controllers: [SignatureFilesController],
   providers: [
     SignatureFileGuard,

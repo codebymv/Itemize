@@ -122,4 +122,58 @@ describe('GraphQL foundation', () => {
     });
     expect(query).not.toHaveBeenCalled();
   });
+
+  it('denies paid GraphQL fields to a Free organization before domain reads', async () => {
+    query
+      .mockResolvedValueOnce({ rows: [{ organization_id: 42, role: 'owner' }] })
+      .mockResolvedValueOnce({
+        rows: [{ plan: 'free', subscription_status: 'none', trial_ends_at: null }],
+      });
+    const token = await jwt.signAsync(
+      { id: 7 },
+      { secret: process.env.JWT_SECRET, expiresIn: '15m' },
+    );
+
+    const response = await request(app.getHttpServer())
+      .post('/graphql')
+      .set('Cookie', `itemize_auth=${token}`)
+      .set('x-organization-id', '42')
+      .send({ query: '{ dashboardAnalytics { reportingTimezone } }' })
+      .expect(200);
+
+    expect(response.body.errors[0].extensions).toMatchObject({
+      code: 'FORBIDDEN',
+      reason: 'SUBSCRIPTION_REQUIRED',
+      plan: 'free',
+      requiredPlan: 'starter',
+    });
+    expect(query).toHaveBeenCalledTimes(2);
+  });
+
+  it('enforces Studio-only fields independently of an active Solo subscription', async () => {
+    query
+      .mockResolvedValueOnce({ rows: [{ organization_id: 42, role: 'owner' }] })
+      .mockResolvedValueOnce({
+        rows: [{ plan: 'starter', subscription_status: 'active', trial_ends_at: null }],
+      });
+    const token = await jwt.signAsync(
+      { id: 7 },
+      { secret: process.env.JWT_SECRET, expiresIn: '15m' },
+    );
+
+    const response = await request(app.getHttpServer())
+      .post('/graphql')
+      .set('Cookie', `itemize_auth=${token}`)
+      .set('x-organization-id', '42')
+      .send({ query: '{ socialChannels { id } }' })
+      .expect(200);
+
+    expect(response.body.errors[0].extensions).toMatchObject({
+      code: 'FORBIDDEN',
+      reason: 'SUBSCRIPTION_REQUIRED',
+      plan: 'starter',
+      requiredPlan: 'unlimited',
+    });
+    expect(query).toHaveBeenCalledTimes(2);
+  });
 });

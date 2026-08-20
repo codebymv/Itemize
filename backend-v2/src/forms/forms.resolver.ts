@@ -1,5 +1,5 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected, OrganizationScoped } from '../common/metadata';
+import { CsrfProtected, OrganizationScoped, RequiresPlan } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import { CreateFormInput, FormFieldInput, UpdateFormInput } from './form.inputs';
 import {
@@ -11,6 +11,7 @@ import {
 } from './form.types';
 import { FormsService } from './forms.service';
 
+@RequiresPlan()
 @Resolver(() => Form)
 export class FormsResolver {
   constructor(

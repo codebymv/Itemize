@@ -6,6 +6,7 @@ import { InvoicesService } from './invoices.service';
 import { InvoiceEmailDeliveryService } from './invoice-email-delivery.service';
 import { InvoicePaymentLinkService } from './invoice-payment-link.service';
 import { AuthModule } from '../auth/auth.module';
+import { BillingModule } from '../billing/billing.module';
 import { GetStartedModule } from '../get-started/get-started.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { InvoicePdfController } from './invoice-pdf.controller';
@@ -21,7 +22,7 @@ import {
 } from './invoice-delivery.providers';
 
 @Module({
-  imports: [AuthModule, GetStartedModule, OrganizationsModule],
+  imports: [AuthModule, BillingModule, GetStartedModule, OrganizationsModule],
   controllers: [InvoicePdfController],
   providers: [
     InvoicesRepository,

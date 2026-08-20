@@ -1,5 +1,6 @@
 import { Pool, PoolClient } from 'pg';
 import { AuthRepository } from './auth.repository';
+import { SignupMode } from './auth.inputs';
 
 describe('AuthRepository registration transaction', () => {
   it('rolls back the user when personal-workspace creation fails', async () => {
@@ -28,6 +29,7 @@ describe('AuthRepository registration transaction', () => {
       passwordHash: 'hash',
       verificationTokenHash: 'token-hash',
       verificationTokenExpires: new Date(),
+      signupMode: SignupMode.FREE,
     })).rejects.toThrow('organization insert failed');
 
     expect(query.mock.calls.map(([sql]) => String(sql).trim().split(/\s+/)[0])).toEqual([
@@ -37,6 +39,7 @@ describe('AuthRepository registration transaction', () => {
       'INSERT',
       'ROLLBACK',
     ]);
+    expect(query.mock.calls[3][1]).toEqual(expect.arrayContaining(['free', 'none']));
     expect(client.release).toHaveBeenCalled();
   });
 });

@@ -108,7 +108,7 @@ export const LandingNav: React.FC = () => {
   };
 
   const handleGetStarted = () => {
-    navigate('/register');
+    navigate('/register?mode=trial');
   };
 
   const handleSignIn = () => {
