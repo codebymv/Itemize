@@ -288,8 +288,8 @@ export class AuthRepository {
          users_limit, workflows_limit, landing_pages_limit, forms_limit, calendars_limit
        ) VALUES (
          $1, $2, $3::jsonb, $4, $5,
-         CASE WHEN $5 = 'trialing' THEN NOW() ELSE NULL END,
-         CASE WHEN $5 = 'trialing' THEN NOW() + INTERVAL '14 days' ELSE NULL END,
+         CASE WHEN $5::varchar = 'trialing' THEN NOW() ELSE NULL END,
+         CASE WHEN $5::varchar = 'trialing' THEN NOW() + INTERVAL '14 days' ELSE NULL END,
          $6, $7, $8, $9, $10, $11, $12, $13, $14
        )
        RETURNING id`,
