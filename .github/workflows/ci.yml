@@ -16,6 +16,8 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      VITE_GOOGLE_CLIENT_ID: itemize-ci.apps.googleusercontent.com
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
