@@ -252,6 +252,19 @@ describe('test database schema contract', () => {
         expect(sql).toContain("'deal_reopened'");
     });
 
+    test('production migration stream creates PII-free activation events', async () => {
+        const migration = require('../../../scripts/migrations/056_activation_events');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS activation_events');
+        expect(sql).toContain('dedupe_key VARCHAR(255) NOT NULL UNIQUE');
+        expect(sql).toContain('idx_activation_events_org_event_time');
+        expect(sql).not.toContain('email');
+        expect(sql).not.toContain('phone');
+    });
+
     test('production migration stream installs the canonical pipeline-stage contract', () => {
         const migration = require('../../../scripts/migrations/026_canonical_pipeline_stage_contract');
         const {

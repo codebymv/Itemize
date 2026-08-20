@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { ActivationService } from '../activation/activation.service';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import {
   ESTIMATE_EMAIL_PROVIDER,
@@ -27,6 +28,7 @@ export class EstimateEmailDeliveryService {
     private readonly estimates: EstimatesRepository,
     @Inject(ESTIMATE_EMAIL_PROVIDER)
     private readonly provider: EstimateEmailProvider,
+    private readonly activation: ActivationService,
   ) {}
 
   async send(
@@ -56,14 +58,14 @@ export class EstimateEmailDeliveryService {
     if (['dead_letter', 'reconciliation_required'].includes(delivery.status)) {
       return this.result(delivery, true);
     }
-    return this.attempt(organizationId, delivery.id, prepared.kind === 'replayed');
+    return this.attempt(organizationId, delivery.id, prepared.kind === 'replayed', userId);
   }
 
   async runDue(limit = 25): Promise<{ attempted: number; sent: number }> {
     const ids = await this.estimates.dueEmailDeliveryIds(Math.max(1, Math.min(limit, 100)));
     let sent = 0;
     for (const delivery of ids) {
-      const result = await this.attempt(delivery.organizationId, delivery.id, false);
+      const result = await this.attempt(delivery.organizationId, delivery.id, false, null);
       if (result.emailSent) sent += 1;
     }
     return { attempted: ids.length, sent };
@@ -73,6 +75,7 @@ export class EstimateEmailDeliveryService {
     organizationId: number,
     deliveryId: number,
     replayed: boolean,
+    userId: number | null,
   ): Promise<EstimateSendResult> {
     const claimed = await this.estimates.claimEmailDelivery(organizationId, deliveryId);
     if (!claimed) {
@@ -96,6 +99,13 @@ export class EstimateEmailDeliveryService {
       const completed = await this.estimates.completeEmailDelivery(
         organizationId, deliveryId, providerResult.providerId,
       );
+      await this.activation.recordArtifactSent({
+        organizationId,
+        userId,
+        artifactType: 'estimate',
+        artifactId: Number(claimed.estimate_id),
+        source: 'estimate_email_delivered',
+      });
       return this.result(completed, replayed);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown provider failure';

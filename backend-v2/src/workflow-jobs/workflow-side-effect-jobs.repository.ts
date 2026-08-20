@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
+import { paidEntitlementSql } from '../billing/paid-entitlement.sql';
 import { PG_POOL } from '../database/database.module';
 import { workflowJobBackoffMs } from './workflow-job.util';
 
@@ -50,11 +51,14 @@ export class WorkflowSideEffectJobsRepository {
         WHERE effect_type='sms' AND ($1::bigint IS NULL OR id=$1) AND status='processing'
           AND cancelled_at IS NULL AND lease_expires_at <= NOW()`, [outboxId]);
       const result = await client.query<WorkflowSideEffectClaim>(`WITH candidate AS (
-          SELECT id FROM workflow_side_effect_outbox WHERE ($2::bigint IS NULL OR id=$2) AND cancelled_at IS NULL AND (
-            (status IN ('queued','retry') AND COALESCE(next_attempt_at,created_at) <= NOW()) OR
-            (status='processing' AND effect_type <> 'sms' AND lease_expires_at <= NOW()))
-          ORDER BY COALESCE(next_attempt_at,created_at),created_at,id
-          FOR UPDATE SKIP LOCKED LIMIT 1
+          SELECT outbox.id FROM workflow_side_effect_outbox outbox
+          JOIN organizations organization ON organization.id=outbox.organization_id
+          WHERE ($2::bigint IS NULL OR outbox.id=$2) AND outbox.cancelled_at IS NULL
+            AND ${paidEntitlementSql('organization')} AND (
+            (outbox.status IN ('queued','retry') AND COALESCE(outbox.next_attempt_at,outbox.created_at) <= NOW()) OR
+            (outbox.status='processing' AND outbox.effect_type <> 'sms' AND outbox.lease_expires_at <= NOW()))
+          ORDER BY COALESCE(outbox.next_attempt_at,outbox.created_at),outbox.created_at,outbox.id
+          FOR UPDATE OF outbox SKIP LOCKED LIMIT 1
         ) UPDATE workflow_side_effect_outbox outbox SET status='processing',attempt_count=attempt_count+1,
           lease_expires_at=NOW()+($1::int*INTERVAL '1 second'),last_error=NULL
         FROM candidate WHERE outbox.id=candidate.id RETURNING outbox.*`, [leaseSeconds, outboxId]);

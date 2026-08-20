@@ -1,3 +1,4 @@
+import { ActivationService } from '../activation/activation.service';
 import { WorkflowEmailProvider } from '../workflow-jobs/workflow-side-effect.providers';
 import {
   SignatureDeliveryClaim,
@@ -13,7 +14,10 @@ describe('SignatureDeliveryJobsService', () => {
     markFailure: jest.fn(),
   } as unknown as jest.Mocked<SignatureDeliveryJobsRepository>;
   const email = { send: jest.fn() } as jest.Mocked<WorkflowEmailProvider>;
-  const service = new SignatureDeliveryJobsService(repository, email);
+  const activation = {
+    recordArtifactSent: jest.fn(),
+  } as unknown as jest.Mocked<ActivationService>;
+  const service = new SignatureDeliveryJobsService(repository, email, activation);
   const claim: SignatureDeliveryClaim = {
     id: 11,
     idempotency_key: 'signature-request-v1-22-33',
@@ -40,6 +44,7 @@ describe('SignatureDeliveryJobsService', () => {
     repository.enqueueDueReminders.mockResolvedValue(0);
     repository.claim.mockResolvedValueOnce(claim).mockResolvedValue(null);
     repository.markSent.mockResolvedValue(true);
+    activation.recordArtifactSent.mockResolvedValue(true);
     email.send.mockResolvedValue({ providerId: 'provider-1' });
   });
 
@@ -54,6 +59,12 @@ describe('SignatureDeliveryJobsService', () => {
       ]),
     }));
     expect(repository.markSent).toHaveBeenCalledWith(claim, 'provider-1');
+    expect(activation.recordArtifactSent).toHaveBeenCalledWith({
+      organizationId: 4,
+      artifactType: 'signature',
+      artifactId: 22,
+      source: 'signature_request_delivered',
+    });
   });
 
   it('records retry and dead-letter outcomes without acknowledging delivery', async () => {

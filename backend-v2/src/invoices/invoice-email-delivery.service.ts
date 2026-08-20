@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { ActivationService } from '../activation/activation.service';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { SendInvoiceInput } from './invoice.inputs';
 import {
@@ -32,6 +33,7 @@ export class InvoiceEmailDeliveryService {
     @Inject(INVOICE_EMAIL_PROVIDER) private readonly email: InvoiceEmailProvider,
     @Inject(INVOICE_PAYMENT_LINK_PROVIDER) private readonly paymentLinks: InvoicePaymentLinkProvider,
     @Inject(INVOICE_PDF_RENDERER) private readonly pdf: InvoicePdfRenderer,
+    private readonly activation: ActivationService,
   ) {}
 
   async send(
@@ -53,14 +55,14 @@ export class InvoiceEmailDeliveryService {
     if (delivery.status === 'sent' || ['dead_letter', 'reconciliation_required'].includes(delivery.status)) {
       return this.result(delivery, true);
     }
-    return this.attempt(organizationId, delivery.id, prepared.kind === 'replayed');
+    return this.attempt(organizationId, delivery.id, prepared.kind === 'replayed', userId);
   }
 
   async runDue(limit = 25): Promise<{ attempted: number; sent: number }> {
     const ids = await this.invoices.dueEmailDeliveryIds(Math.max(1, Math.min(limit, 100)));
     let sent = 0;
     for (const delivery of ids) {
-      const result = await this.attempt(delivery.organizationId, delivery.id, false);
+      const result = await this.attempt(delivery.organizationId, delivery.id, false, null);
       if (result.emailSent) sent += 1;
     }
     return { attempted: ids.length, sent };
@@ -70,6 +72,7 @@ export class InvoiceEmailDeliveryService {
     organizationId: number,
     deliveryId: number,
     replayed: boolean,
+    userId: number | null,
   ): Promise<InvoiceSendResult> {
     let claimed = await this.invoices.claimEmailDelivery(organizationId, deliveryId);
     if (!claimed) {
@@ -141,9 +144,17 @@ export class InvoiceEmailDeliveryService {
           organizationId, deliveryId, provider.message, false,
         ), replayed);
       }
-      return this.result(await this.invoices.completeEmailDelivery(
+      const completed = await this.invoices.completeEmailDelivery(
         organizationId, deliveryId, provider.providerId,
-      ), replayed);
+      );
+      await this.activation.recordArtifactSent({
+        organizationId,
+        userId,
+        artifactType: 'invoice',
+        artifactId: Number(claimed.invoice_id),
+        source: 'invoice_email_delivered',
+      });
+      return this.result(completed, replayed);
     } catch (error) {
       return this.result(await this.invoices.failEmailDelivery(
         organizationId, deliveryId, this.error(error), true,

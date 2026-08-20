@@ -1,4 +1,4 @@
-const REQUIRED_PRODUCTION_MIGRATION = '054_vault_zero_knowledge';
+const REQUIRED_PRODUCTION_MIGRATION = '056_activation_events';
 
 function createApiBootState() {
     return {

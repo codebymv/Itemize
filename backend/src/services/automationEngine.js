@@ -9,6 +9,7 @@ const { randomUUID } = require('node:crypto');
 const { workflowColumns, workflowStepColumns, workflowEnrollmentColumns } = require('../routes/workflow-columns');
 const { emailTemplateColumns, smsTemplateColumns } = require('../routes/template-columns');
 const { normalizeWorkflowTriggerType } = require('../domain/workflowRegistry');
+const { paidEntitlementSql } = require('../lib/paid-entitlement-sql');
 const {
   DEFAULT_WEBHOOK_MAX_REQUEST_BYTES,
   normalizeWorkflowWebhookHeaders,
@@ -73,17 +74,20 @@ async function claimWorkflowEnrollment(queryable, {
   const claimToken = randomUUID();
   const result = await queryable.query(`
     WITH candidate AS (
-      SELECT id
-      FROM workflow_enrollments
-      WHERE status = 'active'
-        AND next_action_at <= CURRENT_TIMESTAMP
-        AND ($1::integer IS NULL OR id = $1)
+      SELECT enrollment.id
+      FROM workflow_enrollments enrollment
+      JOIN workflows workflow ON workflow.id = enrollment.workflow_id
+      JOIN organizations organization ON organization.id = workflow.organization_id
+      WHERE enrollment.status = 'active'
+        AND enrollment.next_action_at <= CURRENT_TIMESTAMP
+        AND ($1::integer IS NULL OR enrollment.id = $1)
+        AND ${paidEntitlementSql('organization')}
         AND (
-          execution_claim_token IS NULL
-          OR execution_lease_expires_at <= CURRENT_TIMESTAMP
+          enrollment.execution_claim_token IS NULL
+          OR enrollment.execution_lease_expires_at <= CURRENT_TIMESTAMP
         )
-      ORDER BY next_action_at, id
-      FOR UPDATE SKIP LOCKED
+      ORDER BY enrollment.next_action_at, enrollment.id
+      FOR UPDATE OF enrollment SKIP LOCKED
       LIMIT 1
     )
     UPDATE workflow_enrollments enrollment SET

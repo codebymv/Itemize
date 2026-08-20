@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
+import { paidEntitlementSql } from '../billing/paid-entitlement.sql';
 import { PG_POOL } from '../database/database.module';
 
 export type InvoiceRow = {
@@ -762,10 +763,12 @@ export class InvoicesRepository {
     limit: number,
   ): Promise<Array<{ id: number; organizationId: number }>> {
     const result = await this.pool.query<{ id: number; organization_id: number }>(
-      `SELECT id, organization_id FROM invoice_email_deliveries
-       WHERE (status IN ('queued', 'retry') AND next_attempt_at <= CURRENT_TIMESTAMP)
-          OR (status = 'processing' AND lease_expires_at <= CURRENT_TIMESTAMP)
-       ORDER BY next_attempt_at, id LIMIT $1`,
+      `SELECT delivery.id, delivery.organization_id FROM invoice_email_deliveries delivery
+       JOIN organizations organization ON organization.id=delivery.organization_id
+       WHERE ${paidEntitlementSql('organization')} AND (
+         (delivery.status IN ('queued', 'retry') AND delivery.next_attempt_at <= CURRENT_TIMESTAMP)
+         OR (delivery.status = 'processing' AND delivery.lease_expires_at <= CURRENT_TIMESTAMP)
+       ) ORDER BY delivery.next_attempt_at, delivery.id LIMIT $1`,
       [limit],
     );
     return result.rows.map((row) => ({
@@ -778,14 +781,16 @@ export class InvoicesRepository {
     deliveryId: number,
   ): Promise<InvoiceEmailDeliveryRow | null> {
     const result = await this.pool.query<InvoiceEmailDeliveryRow>(
-      `UPDATE invoice_email_deliveries
+      `UPDATE invoice_email_deliveries delivery
        SET status = 'processing', attempt_count = attempt_count + 1,
            lease_expires_at = CURRENT_TIMESTAMP + INTERVAL '60 seconds',
            claimed_by = $3, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $1 AND organization_id = $2
-         AND ((status IN ('queued', 'retry') AND next_attempt_at <= CURRENT_TIMESTAMP)
-           OR (status = 'processing' AND lease_expires_at <= CURRENT_TIMESTAMP))
-       RETURNING *`,
+       FROM organizations organization
+       WHERE delivery.id = $1 AND delivery.organization_id = $2
+         AND organization.id=delivery.organization_id AND ${paidEntitlementSql('organization')}
+         AND ((delivery.status IN ('queued', 'retry') AND delivery.next_attempt_at <= CURRENT_TIMESTAMP)
+           OR (delivery.status = 'processing' AND delivery.lease_expires_at <= CURRENT_TIMESTAMP))
+       RETURNING delivery.*`,
       [deliveryId, organizationId, `nest:${process.pid}`],
     );
     return result.rows[0] ?? null;

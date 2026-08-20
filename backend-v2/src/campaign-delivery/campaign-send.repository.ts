@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { compileCampaignAudience } from '../campaigns/audience.compiler';
 import { CampaignsRepository } from '../campaigns/campaigns.repository';
+import { paidEntitlementSql } from '../billing/paid-entitlement.sql';
 import { PG_POOL } from '../database/database.module';
 
 export type CampaignDeliveryPayload = {
@@ -113,7 +114,9 @@ export class CampaignSendRepository {
         `SELECT sp.limits->>'emails_per_month' AS limit_value
          FROM subscriptions s
          JOIN subscription_plans sp ON sp.id=s.plan_id AND sp.is_active=TRUE
+         JOIN organizations organization ON organization.id=s.organization_id
          WHERE s.organization_id=$1 AND s.status IN ('active','trialing')
+           AND ${paidEntitlementSql('organization')}
          FOR UPDATE OF s`,
         [organizationId],
       );
@@ -204,12 +207,14 @@ export class CampaignSendRepository {
        JOIN email_campaigns campaign
          ON campaign.id=recipient.campaign_id
         AND campaign.organization_id=recipient.organization_id
+       JOIN organizations organization ON organization.id=recipient.organization_id
        WHERE campaign.status='sending' AND recipient.delivery_job_id IS NOT NULL AND (
          (recipient.delivery_status IN ('queued','retry')
            AND recipient.delivery_next_attempt_at <= CURRENT_TIMESTAMP)
          OR (recipient.delivery_status='processing'
            AND recipient.delivery_lease_expires_at <= CURRENT_TIMESTAMP)
-       ) ORDER BY recipient.delivery_next_attempt_at, recipient.id LIMIT $1`,
+       ) AND ${paidEntitlementSql('organization')}
+       ORDER BY recipient.delivery_next_attempt_at, recipient.id LIMIT $1`,
       [limit],
     );
     return result.rows.map((row) => ({ id: Number(row.id), organizationId: Number(row.organization_id) }));
@@ -301,10 +306,12 @@ export class CampaignSendRepository {
          delivery_status='processing', delivery_attempt_count=delivery_attempt_count+1,
          delivery_lease_expires_at=CURRENT_TIMESTAMP + INTERVAL '30 seconds',
          delivery_claimed_by=$3, updated_at=CURRENT_TIMESTAMP
-       FROM campaign_delivery_jobs job, email_campaigns campaign
+       FROM campaign_delivery_jobs job, email_campaigns campaign, organizations organization
        WHERE recipient.id=$1 AND recipient.organization_id=$2
          AND job.id=recipient.delivery_job_id
          AND campaign.id=recipient.campaign_id AND campaign.organization_id=recipient.organization_id
+         AND organization.id=recipient.organization_id
+         AND ${paidEntitlementSql('organization')}
          AND campaign.status='sending' AND (
            (recipient.delivery_status IN ('queued','retry')
              AND recipient.delivery_next_attempt_at <= CURRENT_TIMESTAMP)

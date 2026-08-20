@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
+import { paidEntitlementSql } from '../billing/paid-entitlement.sql';
 import { PG_POOL } from '../database/database.module';
 import { redactWorkflowJobError, workflowJobBackoffMs, workflowTriggerMatches } from './workflow-job.util';
 
@@ -32,10 +33,14 @@ export class WorkflowTriggerJobsRepository {
     return this.transaction(async (client) => {
       const due = await client.query<{
         id: number; organization_id: number; scheduled_contact_id: number; next_trigger_at: Date;
-      }>(`SELECT id,organization_id,scheduled_contact_id,next_trigger_at FROM workflows
-        WHERE trigger_type='scheduled' AND is_active=true AND scheduled_contact_id IS NOT NULL
-          AND next_trigger_at <= NOW() AND ($1::int IS NULL OR id=$1)
-        ORDER BY next_trigger_at,id FOR UPDATE SKIP LOCKED LIMIT 1`, [workflowId]);
+      }>(`SELECT workflow.id,workflow.organization_id,workflow.scheduled_contact_id,workflow.next_trigger_at
+        FROM workflows workflow
+        JOIN organizations organization ON organization.id=workflow.organization_id
+        WHERE workflow.trigger_type='scheduled' AND workflow.is_active=true
+          AND workflow.scheduled_contact_id IS NOT NULL AND workflow.next_trigger_at <= NOW()
+          AND ($1::int IS NULL OR workflow.id=$1) AND ${paidEntitlementSql('organization')}
+        ORDER BY workflow.next_trigger_at,workflow.id
+        FOR UPDATE OF workflow SKIP LOCKED LIMIT 1`, [workflowId]);
       const workflow = due.rows[0];
       if (!workflow) return null;
       const scheduledAt = new Date(workflow.next_trigger_at).toISOString();
@@ -60,11 +65,13 @@ export class WorkflowTriggerJobsRepository {
   claimTrigger(leaseSeconds: number, triggerId: number | null = null): Promise<WorkflowTriggerClaim | null> {
     return this.transaction(async (client) => {
       const result = await client.query<WorkflowTriggerClaim>(`WITH candidate AS (
-          SELECT id FROM workflow_triggers WHERE ($2::int IS NULL OR id=$2) AND (
-            (status IN ('queued','retry') AND COALESCE(next_attempt_at,created_at) <= NOW()) OR
-            (status='processing' AND lease_expires_at <= NOW()))
-          ORDER BY COALESCE(next_attempt_at,created_at),created_at,id
-          FOR UPDATE SKIP LOCKED LIMIT 1
+          SELECT trigger.id FROM workflow_triggers trigger
+          JOIN organizations organization ON organization.id=trigger.organization_id
+          WHERE ($2::int IS NULL OR trigger.id=$2) AND ${paidEntitlementSql('organization')} AND (
+            (trigger.status IN ('queued','retry') AND COALESCE(trigger.next_attempt_at,trigger.created_at) <= NOW()) OR
+            (trigger.status='processing' AND trigger.lease_expires_at <= NOW()))
+          ORDER BY COALESCE(trigger.next_attempt_at,trigger.created_at),trigger.created_at,trigger.id
+          FOR UPDATE OF trigger SKIP LOCKED LIMIT 1
         ) UPDATE workflow_triggers t SET status='processing',attempt_count=attempt_count+1,
           lease_expires_at=NOW()+($1::int*INTERVAL '1 second'),last_error=NULL,updated_at=NOW()
         FROM candidate WHERE t.id=candidate.id RETURNING t.*`, [leaseSeconds, triggerId]);

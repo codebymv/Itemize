@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
+import { paidEntitlementSql } from '../billing/paid-entitlement.sql';
 import { smsMessageInfo } from '../sms-templates/sms-message-info';
 import { PG_POOL } from '../database/database.module';
 import {
@@ -82,10 +83,15 @@ export class WorkflowEnrollmentJobsRepository {
   async claimEnrollment(leaseSeconds: number, enrollmentId: number | null = null): Promise<WorkflowEnrollmentClaim | null> {
     const token = randomUUID();
     const result = await this.pool.query<Omit<WorkflowEnrollmentClaim, 'lease_seconds'>>(`WITH candidate AS (
-        SELECT id FROM workflow_enrollments
-        WHERE status='active' AND next_action_at <= NOW() AND ($1::int IS NULL OR id=$1)
-          AND (execution_claim_token IS NULL OR execution_lease_expires_at <= NOW())
-        ORDER BY next_action_at,id FOR UPDATE SKIP LOCKED LIMIT 1
+        SELECT enrollment.id FROM workflow_enrollments enrollment
+        JOIN workflows workflow ON workflow.id=enrollment.workflow_id
+        JOIN organizations organization ON organization.id=workflow.organization_id
+        WHERE enrollment.status='active' AND enrollment.next_action_at <= NOW()
+          AND ($1::int IS NULL OR enrollment.id=$1)
+          AND (enrollment.execution_claim_token IS NULL OR enrollment.execution_lease_expires_at <= NOW())
+          AND ${paidEntitlementSql('organization')}
+        ORDER BY enrollment.next_action_at,enrollment.id
+        FOR UPDATE OF enrollment SKIP LOCKED LIMIT 1
       ) UPDATE workflow_enrollments enrollment SET
         execution_attempt_count=execution_attempt_count+1,execution_claim_token=$2::uuid,
         execution_lease_expires_at=NOW()+($3::int*INTERVAL '1 second')

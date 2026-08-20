@@ -9,6 +9,7 @@ const {
 } = require('../services/workflowWebhookEgress');
 const { withTransaction } = require('../utils/db');
 const { logger } = require('../utils/logger');
+const { paidEntitlementSql } = require('../lib/paid-entitlement-sql');
 
 const DEFAULT_BATCH_SIZE = 25;
 const DEFAULT_LEASE_SECONDS = 300;
@@ -115,22 +116,24 @@ async function claimWorkflowSideEffect(pool, leaseSeconds, outboxId = null) {
     await quarantineExpiredSmsAttempts(client, outboxId);
     const result = await client.query(`
       WITH candidate AS (
-        SELECT id
-        FROM workflow_side_effect_outbox
-        WHERE ($2::integer IS NULL OR id = $2)
-          AND cancelled_at IS NULL
+        SELECT outbox.id
+        FROM workflow_side_effect_outbox outbox
+        JOIN organizations organization ON organization.id = outbox.organization_id
+        WHERE ($2::integer IS NULL OR outbox.id = $2)
+          AND outbox.cancelled_at IS NULL
+          AND ${paidEntitlementSql('organization')}
           AND (
           (
-            status IN ('queued', 'retry')
-            AND COALESCE(next_attempt_at, created_at) <= CURRENT_TIMESTAMP
+            outbox.status IN ('queued', 'retry')
+            AND COALESCE(outbox.next_attempt_at, outbox.created_at) <= CURRENT_TIMESTAMP
           ) OR (
-            status = 'processing'
-            AND effect_type <> 'sms'
-            AND lease_expires_at <= CURRENT_TIMESTAMP
+            outbox.status = 'processing'
+            AND outbox.effect_type <> 'sms'
+            AND outbox.lease_expires_at <= CURRENT_TIMESTAMP
           )
         )
-        ORDER BY COALESCE(next_attempt_at, created_at), created_at, id
-        FOR UPDATE SKIP LOCKED
+        ORDER BY COALESCE(outbox.next_attempt_at, outbox.created_at), outbox.created_at, outbox.id
+        FOR UPDATE OF outbox SKIP LOCKED
         LIMIT 1
       )
       UPDATE workflow_side_effect_outbox outbox SET

@@ -4,6 +4,7 @@
  */
 
 const { logger } = require('../utils/logger');
+const { paidEntitlementSql } = require('../lib/paid-entitlement-sql');
 const { generateToken, hashToken } = require('../services/signature.service');
 const signatureEmailService = require('../services/signature-email.service');
 
@@ -27,7 +28,9 @@ async function runSignatureReminderJobs(pool) {
             FROM signature_reminders sr
             JOIN signature_recipients r ON r.id = sr.recipient_id
             JOIN signature_documents d ON d.id = sr.document_id
+            JOIN organizations organization ON organization.id = d.organization_id
             WHERE sr.status = 'pending' AND sr.scheduled_at <= CURRENT_TIMESTAMP
+              AND ${paidEntitlementSql('organization')}
         `);
 
         for (const reminder of reminders.rows) {

@@ -6,6 +6,7 @@
  */
 
 const { logger } = require('../utils/logger');
+const { paidEntitlementSql } = require('../lib/paid-entitlement-sql');
 const { invoiceColumns, recurringTemplateColumns } = require('../routes/recurring-columns');
 const { allocateInvoiceNumber } = require('../services/invoice-number.service');
 
@@ -63,9 +64,11 @@ async function runRecurringInvoiceGeneration(pool) {
         const templatesResult = await client.query(`
             SELECT r.id
             FROM recurring_invoice_templates r
+            JOIN organizations organization ON organization.id = r.organization_id
             WHERE r.status = 'active'
             AND r.next_run_date <= CURRENT_DATE
             AND (r.end_date IS NULL OR r.end_date >= CURRENT_DATE)
+            AND ${paidEntitlementSql('organization')}
         `);
 
         const generated = [];
@@ -80,11 +83,13 @@ async function runRecurringInvoiceGeneration(pool) {
                 const claimedResult = await client.query(`
                     SELECT ${recurringTemplateColumns('r')}, c.email as contact_email
                     FROM recurring_invoice_templates r
+                    JOIN organizations organization ON organization.id = r.organization_id
                     LEFT JOIN contacts c ON r.contact_id = c.id
                     WHERE r.id = $1
                     AND r.status = 'active'
                     AND r.next_run_date <= CURRENT_DATE
                     AND (r.end_date IS NULL OR r.end_date >= CURRENT_DATE)
+                    AND ${paidEntitlementSql('organization')}
                     FOR UPDATE OF r SKIP LOCKED
                 `, [candidate.id]);
 

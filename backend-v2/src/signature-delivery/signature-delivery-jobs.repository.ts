@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
+import { paidEntitlementSql } from '../billing/paid-entitlement.sql';
 import { PG_POOL } from '../database/database.module';
 import { workflowJobBackoffMs } from '../workflow-jobs/workflow-job.util';
 import { SignatureDeliveryPayload } from './signature-delivery.email';
@@ -73,12 +74,14 @@ export class SignatureDeliveryJobsRepository {
            document.expires_at
          FROM signature_reminders reminder
          JOIN signature_documents document ON document.id=reminder.document_id
+         JOIN organizations organization ON organization.id=document.organization_id
          JOIN signature_recipients recipient ON recipient.id=reminder.recipient_id
            AND recipient.document_id=document.id
            AND recipient.organization_id=document.organization_id
          WHERE reminder.status='pending' AND reminder.scheduled_at<=CURRENT_TIMESTAMP
            AND document.status IN ('sent','in_progress')
            AND recipient.status IN ('pending','sent','viewed')
+           AND ${paidEntitlementSql('organization')}
            AND (COALESCE(document.routing_mode,'parallel')='parallel'
              OR recipient.routing_status='active')
            AND NOT EXISTS (
@@ -161,12 +164,15 @@ export class SignatureDeliveryJobsRepository {
       );
       const result = await client.query<SignatureDeliveryClaim>(
         `WITH candidate AS (
-           SELECT id FROM signature_delivery_outbox
-           WHERE ($2::bigint IS NULL OR id=$2) AND cancelled_at IS NULL
-             AND ((status IN ('queued','retry') AND next_attempt_at<=CURRENT_TIMESTAMP)
-               OR (status='processing' AND lease_expires_at<=CURRENT_TIMESTAMP))
-           ORDER BY next_attempt_at,created_at,id
-           FOR UPDATE SKIP LOCKED LIMIT 1
+           SELECT outbox.id FROM signature_delivery_outbox outbox
+           JOIN organizations organization ON organization.id=outbox.organization_id
+           WHERE ($2::bigint IS NULL OR outbox.id=$2) AND outbox.cancelled_at IS NULL
+             AND (outbox.delivery_type NOT IN ('signature_request','signature_reminder')
+               OR ${paidEntitlementSql('organization')})
+             AND ((outbox.status IN ('queued','retry') AND outbox.next_attempt_at<=CURRENT_TIMESTAMP)
+               OR (outbox.status='processing' AND outbox.lease_expires_at<=CURRENT_TIMESTAMP))
+           ORDER BY outbox.next_attempt_at,outbox.created_at,outbox.id
+           FOR UPDATE OF outbox SKIP LOCKED LIMIT 1
          )
          UPDATE signature_delivery_outbox outbox
          SET status='processing',attempt_count=attempt_count+1,

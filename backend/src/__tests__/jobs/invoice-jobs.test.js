@@ -16,6 +16,9 @@ describe('recurring invoice job claims', () => {
 
         const claim = client.query.mock.calls.find(([sql]) => sql.includes('FOR UPDATE OF r SKIP LOCKED'));
         expect(claim[1]).toEqual([12]);
+        expect(claim[0]).toContain("organization.plan IN ('starter','unlimited','pro')");
+        expect(claim[0]).toContain("organization.subscription_status = 'active'");
+        expect(claim[0]).toContain('organization.trial_ends_at > CURRENT_TIMESTAMP');
         expect(client.query).toHaveBeenCalledWith('ROLLBACK');
         expect(client.query.mock.calls.some(([sql]) => sql.includes('INSERT INTO invoices'))).toBe(false);
         expect(client.release).toHaveBeenCalledTimes(1);

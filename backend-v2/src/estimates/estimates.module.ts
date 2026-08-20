@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ActivationModule } from '../activation/activation.module';
 import { EstimatesRepository } from './estimates.repository';
 import { EstimatesResolver } from './estimates.resolver';
 import { EstimatesService } from './estimates.service';
@@ -9,6 +10,7 @@ import {
 } from './estimate-email.provider';
 
 @Module({
+  imports: [ActivationModule],
   providers: [
     EstimatesRepository,
     EstimatesService,

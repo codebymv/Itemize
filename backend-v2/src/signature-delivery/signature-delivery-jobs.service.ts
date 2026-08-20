@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { ActivationService } from '../activation/activation.service';
 import {
   WORKFLOW_EMAIL_PROVIDER,
   WorkflowEmailProvider,
@@ -25,6 +26,7 @@ export class SignatureDeliveryJobsService {
   constructor(
     private readonly repository: SignatureDeliveryJobsRepository,
     @Inject(WORKFLOW_EMAIL_PROVIDER) private readonly email: WorkflowEmailProvider,
+    private readonly activation: ActivationService,
   ) {}
 
   async run(options: {
@@ -62,8 +64,17 @@ export class SignatureDeliveryJobsService {
       summary.claimed += 1;
       try {
         const result = await this.deliver(claim);
-        if (await this.repository.markSent(claim, result.providerId)) summary.sent += 1;
-        else summary.cancelled += 1;
+        if (await this.repository.markSent(claim, result.providerId)) {
+          summary.sent += 1;
+          if (claim.delivery_type === 'signature_request') {
+            await this.activation.recordArtifactSent({
+              organizationId: claim.organization_id,
+              artifactType: 'signature',
+              artifactId: claim.document_id,
+              source: 'signature_request_delivered',
+            });
+          }
+        } else summary.cancelled += 1;
       } catch (error) {
         const typed = error as Error & { retryable?: boolean };
         const outcome = await this.repository.markFailure(claim, error, {
