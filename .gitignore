@@ -58,6 +58,7 @@ jspm_packages/
 frontend/dist/
 backend/dist/
 backend-v2/dist/
+backend/.cache/
 backend/.workflow-rollout-results/
 
 # OS

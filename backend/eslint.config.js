@@ -7,7 +7,7 @@ const recommendedWarnings = Object.fromEntries(
 
 module.exports = [
   {
-    ignores: ['node_modules/**', 'coverage/**', 'dist/**', 'docs/archive/**', 'output.log']
+    ignores: ['node_modules/**', '.cache/**', 'coverage/**', 'dist/**', 'docs/archive/**', 'output.log']
   },
   {
     files: ['**/*.js'],
