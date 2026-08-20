@@ -6,10 +6,10 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 
 ## Summary
 
-- Route declarations: 67
-- Resolved declarations: 67
+- Route declarations: 70
+- Resolved declarations: 70
 - Unresolved declarations: 0
-- Unique resolved method/path operations: 63
+- Unique resolved method/path operations: 66
 - Files containing declarations: 22
 
 ## Interpretation limits
@@ -38,8 +38,8 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/chat-widget/public/messages/:sessionToken` | `/public/messages/:sessionToken` | `backend/src/routes/chat-widget/public.routes.js:208` |
 | POST | `/api/chat-widget/public/session` | `/public/session` | `backend/src/routes/chat-widget/public.routes.js:78` |
 | POST | `/api/chat-widget/public/typing` | `/public/typing` | `backend/src/routes/chat-widget/public.routes.js:381` |
-| GET | `/api/contacts/export/csv` | `/api/contacts/export/csv` | `backend/src/bootstrap/register-api-routes.js:134` |
-| POST | `/api/contacts/import/csv` | `/api/contacts/import/csv` | `backend/src/bootstrap/register-api-routes.js:135` |
+| GET | `/api/contacts/export/csv` | `/api/contacts/export/csv` | `backend/src/bootstrap/register-api-routes.js:138` |
+| POST | `/api/contacts/import/csv` | `/api/contacts/import/csv` | `backend/src/bootstrap/register-api-routes.js:139` |
 | POST | `/api/email/webhook/resend` | `/webhook/resend` | `backend/src/routes/email-webhooks.routes.js:35` |
 | GET | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:88` |
 | POST | `/api/forms/public/form/:identifier` | `/public/form/:identifier` | `backend/src/routes/forms.routes.js:123` |
@@ -47,22 +47,25 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/invoice-integrations/stripe/callback` | `/stripe/callback` | `backend/src/routes/invoice-integrations.routes.js:43` |
 | GET | `/api/invoice-integrations/stripe/connect` | `/stripe/connect` | `backend/src/routes/invoice-integrations.routes.js:27` |
 | POST | `/api/invoice-integrations/stripe/disconnect` | `/stripe/disconnect` | `backend/src/routes/invoice-integrations.routes.js:93` |
-| GET | `/api/invoices/:id/pdf` | `/api/invoices/:id/pdf` | `backend/src/bootstrap/register-api-routes.js:162` |
+| GET | `/api/invoices/:id/pdf` | `/api/invoices/:id/pdf` | `backend/src/bootstrap/register-api-routes.js:166` |
 | GET | `/api/invoices/:id/pdf` | `/:id/pdf` | `backend/src/routes/invoices/pdf.routes.js:17` |
-| POST | `/api/invoices/businesses/:id/logo` | `/api/invoices/businesses/:id/logo` | `backend/src/bootstrap/register-api-routes.js:154` |
+| POST | `/api/invoices/businesses/:id/logo` | `/api/invoices/businesses/:id/logo` | `backend/src/bootstrap/register-api-routes.js:158` |
 | POST | `/api/invoices/businesses/:id/logo` | `/businesses/:id/logo` | `backend/src/routes/invoices/businesses.routes.js:17` |
-| POST | `/api/invoices/settings/logo` | `/api/invoices/settings/logo` | `backend/src/bootstrap/register-api-routes.js:158` |
+| POST | `/api/invoices/settings/logo` | `/api/invoices/settings/logo` | `backend/src/bootstrap/register-api-routes.js:162` |
 | POST | `/api/invoices/settings/logo` | `/settings/logo` | `backend/src/routes/invoices/settings.routes.js:15` |
-| POST | `/api/invoices/webhook/stripe` | `/api/invoices/webhook/stripe` | `backend/src/bootstrap/register-api-routes.js:150` |
+| POST | `/api/invoices/webhook/stripe` | `/api/invoices/webhook/stripe` | `backend/src/bootstrap/register-api-routes.js:154` |
 | POST | `/api/invoices/webhook/stripe` | `/webhook/stripe` | `backend/src/routes/invoices/stripe-webhook.routes.js:18` |
 | GET | `/api/pages/public/page/:slug` | `/public/page/:slug` | `backend/src/routes/pages/public.routes.js:18` |
 | POST | `/api/pages/public/page/:slug/analytics` | `/public/page/:slug/analytics` | `backend/src/routes/pages/public.routes.js:141` |
-| GET | `/api/public/sign/:token` | `/api/public/sign/:token` | `backend/src/bootstrap/register-api-routes.js:210` |
-| POST | `/api/public/sign/:token` | `/api/public/sign/:token` | `backend/src/bootstrap/register-api-routes.js:230` |
-| POST | `/api/public/sign/:token/decline` | `/api/public/sign/:token/decline` | `backend/src/bootstrap/register-api-routes.js:226` |
-| GET | `/api/public/sign/:token/download` | `/api/public/sign/:token/download` | `backend/src/bootstrap/register-api-routes.js:218` |
-| GET | `/api/public/sign/:token/file` | `/api/public/sign/:token/file` | `backend/src/bootstrap/register-api-routes.js:214` |
-| POST | `/api/public/sign/:token/verify` | `/api/public/sign/:token/verify` | `backend/src/bootstrap/register-api-routes.js:222` |
+| GET | `/api/public/estimates/:token` | `/api/public/estimates/:token` | `backend/src/bootstrap/register-api-routes.js:242` |
+| POST | `/api/public/estimates/:token/accept` | `/api/public/estimates/:token/accept` | `backend/src/bootstrap/register-api-routes.js:246` |
+| POST | `/api/public/estimates/:token/decline` | `/api/public/estimates/:token/decline` | `backend/src/bootstrap/register-api-routes.js:250` |
+| GET | `/api/public/sign/:token` | `/api/public/sign/:token` | `backend/src/bootstrap/register-api-routes.js:214` |
+| POST | `/api/public/sign/:token` | `/api/public/sign/:token` | `backend/src/bootstrap/register-api-routes.js:234` |
+| POST | `/api/public/sign/:token/decline` | `/api/public/sign/:token/decline` | `backend/src/bootstrap/register-api-routes.js:230` |
+| GET | `/api/public/sign/:token/download` | `/api/public/sign/:token/download` | `backend/src/bootstrap/register-api-routes.js:222` |
+| GET | `/api/public/sign/:token/file` | `/api/public/sign/:token/file` | `backend/src/bootstrap/register-api-routes.js:218` |
+| POST | `/api/public/sign/:token/verify` | `/api/public/sign/:token/verify` | `backend/src/bootstrap/register-api-routes.js:226` |
 | GET | `/api/reputation/public/review/:token` | `/public/review/:token` | `backend/src/routes/reputation/public.routes.js:102` |
 | POST | `/api/reputation/public/review/:token` | `/public/review/:token` | `backend/src/routes/reputation/public.routes.js:156` |
 | GET | `/api/reputation/public/widget/:widgetKey` | `/public/widget/:widgetKey` | `backend/src/routes/reputation/public.routes.js:20` |
@@ -71,18 +74,18 @@ This is the source-level endpoint baseline for REST-to-GraphQL cutover tracking.
 | GET | `/api/shared/vault/:token` | `/shared/vault/:token` | `backend/src/routes/vaults/sharing.routes.js:18` |
 | GET | `/api/shared/whiteboard/:token` | `/shared/whiteboard/:token` | `backend/src/routes/sharing.routes.js:139` |
 | GET | `/api/shared/wireframe/:token` | `/shared/wireframe/:token` | `backend/src/routes/sharing.routes.js:190` |
-| GET | `/api/signatures/documents/:id/download` | `/api/signatures/documents/:id/download` | `backend/src/bootstrap/register-api-routes.js:196` |
-| GET | `/api/signatures/documents/:id/file` | `/api/signatures/documents/:id/file` | `backend/src/bootstrap/register-api-routes.js:192` |
-| POST | `/api/signatures/documents/upload` | `/api/signatures/documents/upload` | `backend/src/bootstrap/register-api-routes.js:178` |
-| GET | `/api/signatures/templates/:id/file` | `/api/signatures/templates/:id/file` | `backend/src/bootstrap/register-api-routes.js:200` |
-| POST | `/api/signatures/templates/upload` | `/api/signatures/templates/upload` | `backend/src/bootstrap/register-api-routes.js:185` |
+| GET | `/api/signatures/documents/:id/download` | `/api/signatures/documents/:id/download` | `backend/src/bootstrap/register-api-routes.js:200` |
+| GET | `/api/signatures/documents/:id/file` | `/api/signatures/documents/:id/file` | `backend/src/bootstrap/register-api-routes.js:196` |
+| POST | `/api/signatures/documents/upload` | `/api/signatures/documents/upload` | `backend/src/bootstrap/register-api-routes.js:182` |
+| GET | `/api/signatures/templates/:id/file` | `/api/signatures/templates/:id/file` | `backend/src/bootstrap/register-api-routes.js:204` |
+| POST | `/api/signatures/templates/upload` | `/api/signatures/templates/upload` | `backend/src/bootstrap/register-api-routes.js:189` |
 | POST | `/api/sms-templates/webhook/inbound` | `/webhook/inbound` | `backend/src/routes/sms-webhooks.routes.js:121` |
 | POST | `/api/sms-templates/webhook/status` | `/webhook/status` | `backend/src/routes/sms-webhooks.routes.js:51` |
 | GET | `/api/social/callback/facebook` | `/callback/facebook` | `backend/src/routes/social/oauth.routes.js:61` |
 | GET | `/api/social/connect/facebook` | `/connect/facebook` | `backend/src/routes/social/oauth.routes.js:17` |
 | GET | `/api/social/webhook` | `/webhook` | `backend/src/routes/social/webhook.routes.js:43` |
 | POST | `/api/social/webhook` | `/webhook` | `backend/src/routes/social/webhook.routes.js:66` |
-| GET | `/api/status` | `/api/status` | `backend/src/bootstrap/register-api-routes.js:54` |
+| GET | `/api/status` | `/api/status` | `backend/src/bootstrap/register-api-routes.js:58` |
 | POST | `/api/webhooks/:workflowId` | `/:workflowId` | `backend/src/routes/webhooks.routes.js:54` |
 | GET | `/docs/content` | `/content` | `backend/src/routes/docs.js:48` |
 | GET | `/docs/search` | `/search` | `backend/src/routes/docs.js:138` |

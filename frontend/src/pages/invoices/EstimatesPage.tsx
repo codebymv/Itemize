@@ -387,6 +387,15 @@ export function EstimatesPage() {
                                     </div>
                                     <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                                         <span className="md:hidden font-semibold">{formatCurrency(estimate.total)}</span>
+                                        {estimate.viewed_at && (
+                                            <span>Viewed {new Date(estimate.viewed_at).toLocaleString()}</span>
+                                        )}
+                                        {estimate.accepted_at && (
+                                            <span className="text-emerald-700">Accepted {new Date(estimate.accepted_at).toLocaleString()}</span>
+                                        )}
+                                        {estimate.declined_at && (
+                                            <span>Declined {new Date(estimate.declined_at).toLocaleString()}</span>
+                                        )}
                                     </div>
                                 </div>
                             ))}

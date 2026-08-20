@@ -15,13 +15,15 @@ authoritative server transitions and is idempotent per artifact and stage:
 
 - a public signature session records `viewed`;
 - a valid public signing submission records `signed`;
+- a public estimate session records `viewed`;
+- an explicit public estimate approval records `accepted`;
 - a verified Stripe invoice checkout that changes the invoice to paid records
   `paid`.
 
-Estimate acceptance is intentionally not counted yet. The current product can
-send estimates and lets an authenticated owner convert one to an invoice, but
-it does not have a recipient-owned public accept action. Treating conversion as
-recipient acceptance would make the activation funnel misleading.
+Estimate declines update the estimate lifecycle for owner visibility but do not
+count as downstream activation. Estimate view and acceptance events come only
+from a valid, unexpired recipient capability; authenticated owner conversion is
+not treated as recipient acceptance.
 
 `returned_after_send` is recorded once per organization by an authenticated
 dashboard analytics load at least 24 hours after the first provider-confirmed
@@ -58,9 +60,10 @@ server-recorded trial bounds plus current active billing, and the trial must end
 after the first send. A direct paid signup is not mislabeled as a trial
 conversion.
 
-The next product slice is a recipient-owned public estimate view and
-accept/decline flow. Once it exists, its transitions can join the same
-`artifact_advanced` contract without changing the funnel definition.
+Public estimate links store only a token hash, expire at the end of the quoted
+validity date, and render the immutable delivery snapshot. A successful resend
+revokes older links. Public responses are terminal and serialized under a row
+lock, so accept and decline cannot overwrite one another.
 
 ## Background entitlement contract
 

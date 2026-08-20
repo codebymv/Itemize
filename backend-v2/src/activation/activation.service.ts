@@ -15,6 +15,8 @@ const ADVANCEMENT_SOURCES: Record<string, {
   artifactType: ActivationArtifactType;
   stage: ActivationArtifactStage;
 }> = {
+  estimate_recipient_accepted: { artifactType: 'estimate', stage: 'accepted' },
+  estimate_recipient_viewed: { artifactType: 'estimate', stage: 'viewed' },
   invoice_payment_succeeded: { artifactType: 'invoice', stage: 'paid' },
   signature_recipient_signed: { artifactType: 'signature', stage: 'signed' },
   signature_recipient_viewed: { artifactType: 'signature', stage: 'viewed' },

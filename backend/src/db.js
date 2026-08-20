@@ -66,6 +66,9 @@ const {
   runEstimateEmailDeliveryMigration,
 } = require('./db_estimate_email_delivery_migrations');
 const {
+  runEstimatePublicCapabilityMigration,
+} = require('./db_estimate_public_capability_migrations');
+const {
   runInvoiceEmailDeliveryMigration,
 } = require('./db_invoice_email_delivery_migrations');
 const {
@@ -554,6 +557,11 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'module_estimates_recurring', runEstimatesRecurringMigrations);
     await runMigrationOnce(pool, 'estimates_business_column', addBusinessIdToEstimates);
     await runMigrationOnce(pool, 'estimate_email_deliveries', runEstimateEmailDeliveryMigration);
+    await runMigrationOnce(
+      pool,
+      'estimate_public_capabilities',
+      runEstimatePublicCapabilityMigration,
+    );
     await runMigrationOnce(pool, 'invoice_email_deliveries', runInvoiceEmailDeliveryMigration);
     await runMigrationOnce(pool, 'invoice_payment_link_intents', runInvoicePaymentLinkMigration);
     await runMigrationOnce(pool, 'invoice_logo_deletion_jobs', runInvoiceLogoDeletionMigration);

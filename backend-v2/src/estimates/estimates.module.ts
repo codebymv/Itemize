@@ -8,12 +8,18 @@ import {
   ESTIMATE_EMAIL_PROVIDER,
   ResendEstimateEmailProvider,
 } from './estimate-email.provider';
+import { EstimatePublicController } from './estimate-public.controller';
+import { EstimatePublicRepository } from './estimate-public.repository';
+import { EstimatePublicService } from './estimate-public.service';
 
 @Module({
   imports: [ActivationModule],
+  controllers: [EstimatePublicController],
   providers: [
     EstimatesRepository,
+    EstimatePublicRepository,
     EstimatesService,
+    EstimatePublicService,
     EstimateEmailDeliveryService,
     EstimatesResolver,
     ResendEstimateEmailProvider,

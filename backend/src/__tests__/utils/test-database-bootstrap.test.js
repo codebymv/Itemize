@@ -265,6 +265,18 @@ describe('test database schema contract', () => {
         expect(sql).not.toContain('phone');
     });
 
+    test('production migration stream creates hashed public estimate capabilities', async () => {
+        const migration = require('../../../scripts/migrations/057_estimate_public_capabilities');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS estimate_public_capabilities');
+        expect(sql).toContain('token_hash VARCHAR(64) NOT NULL UNIQUE');
+        expect(sql).toContain('estimate_public_capability_tenant');
+        expect(sql).not.toContain('recipient_email');
+    });
+
     test('production migration stream installs the canonical pipeline-stage contract', () => {
         const migration = require('../../../scripts/migrations/026_canonical_pipeline_stage_contract');
         const {

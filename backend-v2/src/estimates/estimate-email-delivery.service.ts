@@ -15,6 +15,7 @@ import {
   EstimateEmailPreparation,
   EstimatesRepository,
 } from './estimates.repository';
+import { estimateDeliveryToken } from './estimate-public.token';
 
 const KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 
@@ -87,7 +88,7 @@ export class EstimateEmailDeliveryService {
       const providerResult = await this.provider.send({
         to: claimed.recipient_email,
         subject: claimed.subject,
-        html: this.html(claimed.payload),
+        html: this.html(claimed),
         idempotencyKey: `estimate-email:${claimed.organization_id}:${claimed.id}`,
       });
       if (providerResult.kind === 'rejected') {
@@ -144,19 +145,40 @@ export class EstimateEmailDeliveryService {
     };
   }
 
-  private html(payload: EstimateEmailPayload): string {
+  private html(delivery: EstimateEmailDeliveryRow): string {
+    const payload: EstimateEmailPayload = delivery.payload;
     const customer = payload.customerName?.trim() || 'Valued Customer';
     const business = payload.businessName?.trim() || 'Our Company';
     const amount = new Intl.NumberFormat('en-US', {
       style: 'currency', currency: payload.currency || 'USD',
     }).format(Number(payload.total));
+    const publicUrl = `${this.frontendOrigin()}/estimate/${estimateDeliveryToken(
+      Number(delivery.organization_id),
+      Number(delivery.estimate_id),
+      delivery.idempotency_key,
+    )}`;
     return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${escapeHtml(payload.subject)}</title></head>` +
       `<body style="font-family:Arial,sans-serif;color:#1f2937"><div style="max-width:600px;margin:0 auto;padding:24px">` +
       `<h1 style="font-size:24px">Estimate ${escapeHtml(payload.estimateNumber)}</h1>` +
       `<p>Dear ${escapeHtml(customer)},</p><p>Please find your estimate from ${escapeHtml(business)}.</p>` +
       `<p><strong>Total:</strong> ${escapeHtml(amount)}<br><strong>Valid until:</strong> ${escapeHtml(payload.validUntil)}</p>` +
+      `<div style="text-align:center;margin:24px 0"><a href="${escapeHtml(publicUrl)}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:600">Review estimate</a></div>` +
       `<p>Best regards,<br>${escapeHtml(business)}</p>` +
       (payload.businessEmail ? `<p style="color:#6b7280">${escapeHtml(payload.businessEmail)}</p>` : '') +
       `</div></body></html>`;
+  }
+
+  private frontendOrigin(): string {
+    const fallback = process.env.NODE_ENV === 'production'
+      ? 'https://itemize.cloud'
+      : 'http://localhost:5173';
+    try {
+      const configured = new URL(process.env.FRONTEND_URL ?? fallback);
+      return ['http:', 'https:'].includes(configured.protocol)
+        ? configured.origin
+        : fallback;
+    } catch {
+      return fallback;
+    }
   }
 }

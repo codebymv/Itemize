@@ -9,7 +9,7 @@ const {
 
 describe('api boot state', () => {
     test('requires the current numbered migration head', () => {
-        expect(REQUIRED_PRODUCTION_MIGRATION).toBe('056_activation_events');
+        expect(REQUIRED_PRODUCTION_MIGRATION).toBe('057_estimate_public_capabilities');
     });
 
     test('health stays starting during grace when routes are not ready', () => {

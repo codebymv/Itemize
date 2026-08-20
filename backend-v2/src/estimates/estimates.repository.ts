@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { paidEntitlementSql } from '../billing/paid-entitlement.sql';
 import { PG_POOL } from '../database/database.module';
+import { estimateDeliveryTokenHash } from './estimate-public.token';
 
 export type EstimateRow = {
   id: number;
@@ -114,11 +115,26 @@ export type EstimateEmailPayload = {
   subject: string;
   estimateNumber: string;
   customerName: string | null;
+  issueDate: string;
   total: string;
+  subtotal: string;
+  taxAmount: string;
+  discountAmount: string;
   currency: string;
   validUntil: string;
   businessName: string | null;
   businessEmail: string | null;
+  notes: string | null;
+  termsAndConditions: string | null;
+  items: Array<{
+    name: string;
+    description: string | null;
+    quantity: string;
+    unitPrice: string;
+    taxRate: string;
+    taxAmount: string;
+    total: string;
+  }>;
 };
 
 export type EstimateEmailDeliveryRow = {
@@ -389,6 +405,7 @@ export class EstimatesRepository {
         total: string;
         notes: string | null;
         terms_and_conditions: string | null;
+        status: string;
         converted_invoice_id: number | null;
       }>(
         `SELECT
@@ -396,7 +413,7 @@ export class EstimatesRepository {
            e.customer_name, e.customer_email, e.customer_phone,
            e.customer_address, e.subtotal, e.tax_amount, e.discount_amount,
            e.discount_type, e.discount_value, e.total, e.notes,
-           e.terms_and_conditions, e.converted_invoice_id
+           e.terms_and_conditions, e.status, e.converted_invoice_id
          FROM estimates e
          LEFT JOIN contacts c
            ON c.id = e.contact_id AND c.organization_id = e.organization_id
@@ -424,6 +441,10 @@ export class EstimatesRepository {
           invoiceNumber: existing.rows[0].invoice_number,
           replayed: true,
         };
+      }
+
+      if (estimate.status === 'declined' || estimate.status === 'expired') {
+        return { kind: 'invalid-state' };
       }
 
       const allocation = await client.query<{
@@ -509,15 +530,23 @@ export class EstimatesRepository {
         estimate_number: string;
         customer_name: string | null;
         customer_email: string | null;
+        issue_date: string;
         valid_until: string;
+        subtotal: string;
+        tax_amount: string;
+        discount_amount: string;
         total: string;
         currency: string;
         status: string;
+        notes: string | null;
+        terms_and_conditions: string | null;
         business_name: string | null;
         business_email: string | null;
       }>(
         `SELECT e.estimate_number, e.customer_name, e.customer_email,
-                e.valid_until::text, e.total, e.currency, e.status,
+                e.issue_date::text, e.valid_until::text, e.subtotal,
+                e.tax_amount, e.discount_amount, e.total, e.currency, e.status,
+                e.notes, e.terms_and_conditions,
                 COALESCE(NULLIF(b.name, ''), NULLIF(settings.business_name, ''))
                   AS business_name,
                 COALESCE(NULLIF(b.email, ''), NULLIF(settings.business_email, ''))
@@ -551,15 +580,45 @@ export class EstimatesRepository {
       const businessName = estimate.business_name || 'Our Company';
       const subject = `Estimate ${estimate.estimate_number} from ${businessName}`
         .slice(0, 255);
+      const items = await client.query<{
+        name: string;
+        description: string | null;
+        quantity: string;
+        unit_price: string;
+        tax_rate: string;
+        tax_amount: string;
+        total: string;
+      }>(
+        `SELECT name, description, quantity, unit_price, tax_rate, tax_amount, total
+         FROM estimate_items
+         WHERE estimate_id = $1 AND organization_id = $2
+         ORDER BY sort_order, id`,
+        [estimateId, organizationId],
+      );
       const payload: EstimateEmailPayload = {
         subject,
         estimateNumber: estimate.estimate_number,
         customerName: estimate.customer_name,
+        issueDate: estimate.issue_date,
         total: estimate.total,
+        subtotal: estimate.subtotal,
+        taxAmount: estimate.tax_amount,
+        discountAmount: estimate.discount_amount,
         currency: estimate.currency,
         validUntil: estimate.valid_until,
         businessName,
         businessEmail: estimate.business_email,
+        notes: estimate.notes,
+        termsAndConditions: estimate.terms_and_conditions,
+        items: items.rows.map((item) => ({
+          name: item.name,
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unit_price,
+          taxRate: item.tax_rate,
+          taxAmount: item.tax_amount,
+          total: item.total,
+        })),
       };
       const inserted = await client.query<EstimateEmailDeliveryRow>(
         `INSERT INTO estimate_email_deliveries (
@@ -570,6 +629,18 @@ export class EstimatesRepository {
         [
           organizationId, estimateId, userId, idempotencyKey,
           estimate.customer_email.trim(), subject, JSON.stringify(payload),
+        ],
+      );
+      await client.query(
+        `INSERT INTO estimate_public_capabilities (
+           organization_id, estimate_id, delivery_id, token_hash, expires_at
+         ) VALUES ($1, $2, $3, $4, ($5::date + 1)::timestamptz)`,
+        [
+          organizationId,
+          estimateId,
+          inserted.rows[0].id,
+          estimateDeliveryTokenHash(organizationId, estimateId, idempotencyKey),
+          estimate.valid_until,
         ],
       );
       return { kind: 'created', delivery: inserted.rows[0] };
@@ -673,6 +744,13 @@ export class EstimatesRepository {
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $1 AND organization_id = $2`,
         [delivery.estimate_id, organizationId],
+      );
+      await client.query(
+        `UPDATE estimate_public_capabilities
+         SET revoked_at = CURRENT_TIMESTAMP
+         WHERE estimate_id = $1 AND organization_id = $2
+           AND delivery_id <> $3 AND revoked_at IS NULL`,
+        [delivery.estimate_id, organizationId, deliveryId],
       );
       const completed = await client.query<EstimateEmailDeliveryRow>(
         `UPDATE estimate_email_deliveries

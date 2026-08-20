@@ -1,4 +1,4 @@
-const REQUIRED_PRODUCTION_MIGRATION = '056_activation_events';
+const REQUIRED_PRODUCTION_MIGRATION = '057_estimate_public_capabilities';
 
 function createApiBootState() {
     return {

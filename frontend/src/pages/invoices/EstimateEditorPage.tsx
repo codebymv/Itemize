@@ -11,6 +11,9 @@ import {
     Calendar,
     DollarSign,
     ArrowRight,
+    CheckCircle,
+    Eye,
+    XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -93,6 +96,11 @@ export function EstimateEditorPage() {
         { id: crypto.randomUUID(), name: '', description: '', quantity: 1, unit_price: 0, tax_rate: 0 }
     ]);
     const [status, setStatus] = useState<string>('draft');
+    const [lifecycle, setLifecycle] = useState<{
+        viewedAt?: string | null;
+        acceptedAt?: string | null;
+        declinedAt?: string | null;
+    }>({});
 
     // Set default valid until (30 days from now)
     useEffect(() => {
@@ -129,6 +137,11 @@ export function EstimateEditorPage() {
                     setDiscountType(estimate.discount_type || 'fixed');
                     setDiscountValue(estimate.discount_value || 0);
                     setStatus(estimate.status || 'draft');
+                    setLifecycle({
+                        viewedAt: estimate.viewed_at,
+                        acceptedAt: estimate.accepted_at,
+                        declinedAt: estimate.declined_at,
+                    });
                     
                     if (estimate.items && estimate.items.length > 0) {
                         setLineItems((estimate.items as EstimateItem[]).map((item) => ({
@@ -414,6 +427,30 @@ export function EstimateEditorPage() {
             }
         >
                 <div className="space-y-6">
+                {!isNew && (lifecycle.viewedAt || lifecycle.acceptedAt || lifecycle.declinedAt) && (
+                    <Card className="border-slate-200">
+                        <CardContent className="py-4 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
+                            {lifecycle.viewedAt && (
+                                <span className="inline-flex items-center gap-2 text-muted-foreground">
+                                    <Eye className="h-4 w-4" />
+                                    Viewed {new Date(lifecycle.viewedAt).toLocaleString()}
+                                </span>
+                            )}
+                            {lifecycle.acceptedAt && (
+                                <span className="inline-flex items-center gap-2 text-emerald-700 font-medium">
+                                    <CheckCircle className="h-4 w-4" />
+                                    Accepted {new Date(lifecycle.acceptedAt).toLocaleString()}
+                                </span>
+                            )}
+                            {lifecycle.declinedAt && (
+                                <span className="inline-flex items-center gap-2 text-muted-foreground font-medium">
+                                    <XCircle className="h-4 w-4" />
+                                    Declined {new Date(lifecycle.declinedAt).toLocaleString()}
+                                </span>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
                     {/* Customer Details */}
                 <Card>
                     <CardHeader>

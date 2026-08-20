@@ -3,7 +3,7 @@ import { Pool } from 'pg';
 import { PG_POOL } from '../database/database.module';
 
 export type ActivationArtifactType = 'estimate' | 'invoice' | 'signature';
-export type ActivationArtifactStage = 'viewed' | 'signed' | 'paid';
+export type ActivationArtifactStage = 'viewed' | 'accepted' | 'signed' | 'paid';
 
 @Injectable()
 export class ActivationRepository {

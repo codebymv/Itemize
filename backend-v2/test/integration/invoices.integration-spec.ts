@@ -1173,7 +1173,7 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     contactId,
     customerName: 'Ada Estimate',
     customerEmail: 'ada@example.com',
-    validUntil: '2026-08-17',
+    validUntil: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10),
     discountType: 'fixed',
     discountValue: '1.00',
     items: [{
@@ -1683,6 +1683,47 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     expect(state.rows[0]).toEqual({
       status: 'sent', has_sent_at: true, delivery_status: 'sent',
       provider_id: 'email-provider-1', attempt_count: 1,
+    });
+
+    const html = String(estimateEmailProvider.send.mock.calls[0][0].html);
+    const publicToken = /\/estimate\/([A-Za-z0-9_-]{32,128})/.exec(html)?.[1];
+    expect(publicToken).toBeTruthy();
+    const opened = await request(app.getHttpServer())
+      .get(`/api/public/estimates/${publicToken}`)
+      .expect(200);
+    expect(opened.headers['cache-control']).toBe('private, no-store');
+    expect(opened.body.data).toMatchObject({
+      estimate: {
+        number: created.body.data.createEstimate.estimateNumber,
+        status: 'sent',
+        total: '26.00',
+      },
+      customer: { name: 'Ada <script>alert(1)</script>' },
+      business: { name: 'Primary Business' },
+      items: [expect.objectContaining({ name: 'Consulting' })],
+    });
+    expect(JSON.stringify(opened.body.data)).not.toContain('organization_id');
+    expect(JSON.stringify(opened.body.data)).not.toContain('customer_email');
+
+    const accepted = await request(app.getHttpServer())
+      .post(`/api/public/estimates/${publicToken}/accept`)
+      .expect(200);
+    expect(accepted.body.data.estimate.status).toBe('accepted');
+    await request(app.getHttpServer())
+      .post(`/api/public/estimates/${publicToken}/accept`)
+      .expect(200);
+    const rejectedOpposite = await request(app.getHttpServer())
+      .post(`/api/public/estimates/${publicToken}/decline`)
+      .expect(409);
+    expect(rejectedOpposite.body.error.reason).toBe('ESTIMATE_RESPONSE_FINALIZED');
+    const recipientState = await pool.query(
+      `SELECT status, viewed_at IS NOT NULL AS viewed,
+              accepted_at IS NOT NULL AS accepted, declined_at
+       FROM estimates WHERE id = $1 AND organization_id = $2`,
+      [id, organizationId],
+    );
+    expect(recipientState.rows[0]).toEqual({
+      status: 'accepted', viewed: true, accepted: true, declined_at: null,
     });
   });
 

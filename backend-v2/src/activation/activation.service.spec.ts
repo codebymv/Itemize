@@ -70,6 +70,24 @@ describe('ActivationService', () => {
     });
   });
 
+  it('accepts recipient-owned estimate acceptance evidence', async () => {
+    repository.insertArtifactAdvanced.mockResolvedValue(true);
+    await expect(service.recordArtifactAdvanced({
+      organizationId: 7,
+      artifactType: 'estimate',
+      artifactId: 12,
+      stage: 'accepted',
+      source: 'estimate_recipient_accepted',
+    })).resolves.toBe(true);
+    expect(repository.insertArtifactAdvanced).toHaveBeenCalledWith(
+      expect.objectContaining({
+        artifactType: 'estimate',
+        artifactId: 12,
+        stage: 'accepted',
+      }),
+    );
+  });
+
   it('rejects mismatched advancement evidence', async () => {
     await expect(service.recordArtifactAdvanced({
       organizationId: 7,

@@ -22,6 +22,10 @@ const {
     publicSigningMutationsEnabled,
     publicSigningReadsEnabled,
 } = require('../public-signing-proxy');
+const {
+    createPublicEstimateProxy,
+    publicEstimatesEnabled,
+} = require('../public-estimate-proxy');
 const webhooksRoutes = require('../routes/webhooks.routes');
 const calendarIntegrationsRoutes = require('../routes/calendar-integrations.routes');
 const invoiceIntegrationsRoutes = require('../routes/invoice-integrations.routes');
@@ -230,6 +234,22 @@ function registerApiRoutes({
     app.post(
         '/api/public/sign/:token',
         ...publicSigningRoute('submit', publicSigningMutationsEnabled()),
+    );
+    const publicEstimateRoute = (action) => {
+        const proxy = createPublicEstimateProxy({ action, logger });
+        return publicEstimatesEnabled() ? [publicRateLimit, proxy] : [proxy];
+    };
+    app.get(
+        '/api/public/estimates/:token',
+        ...publicEstimateRoute('open'),
+    );
+    app.post(
+        '/api/public/estimates/:token/accept',
+        ...publicEstimateRoute('accept'),
+    );
+    app.post(
+        '/api/public/estimates/:token/decline',
+        ...publicEstimateRoute('decline'),
     );
     logger.info('Signature file and public signing routes initialized');
     app.use('/api/webhooks', webhooksRoutes);
