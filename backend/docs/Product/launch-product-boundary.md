@@ -71,4 +71,3 @@ Feature usage alone is not a launch success metric. A feature matters when it sh
 - Do not lead onboarding with white-label, SaaS-resale, API, or advanced automation concepts.
 - Do not add a new top-level module unless it clearly strengthens the golden path or demonstrates paid retention.
 - Do not treat a frontend lock as authorization; paid access must be enforced by the server.
-
