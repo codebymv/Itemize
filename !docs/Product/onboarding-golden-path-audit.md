@@ -54,21 +54,43 @@ The PostgreSQL GraphQL integration test covers:
 
 ## Production matrix status — August 21, 2026
 
-The matrix is intentionally halted, not passed.
+The email-based Free and Solo golden paths passed against production. Every
+fixture used a disposable `codebymv+gold-*` identity and a dedicated personal
+organization; no client organization or connected Stripe account was touched.
 
-- [x] Free desktop email signup was accepted and created the correct Free
-  workspace/navigation state.
-- [x] The post-verification exit resolved to Canvas and presented the focused
-  workspace onboarding choice.
-- [ ] The received signup email met the branded-email contract. The initial run
-  failed because the deployed GraphQL authentication service was older than the
-  renderer in source.
-- [x] The corrected GraphQL deployment produced a provider-confirmed branded
-  verification payload in a disposable canary.
-- [ ] Visually inspect a newly received verification email after deployment.
-- [ ] Complete Free mobile, Solo desktop/mobile, Google signup, first artifact,
-  provider-confirmed send, and recipient-response rows.
+| Journey | Desktop | Mobile | Production evidence |
+| --- | --- | --- | --- |
+| Free email signup and verification | Pass | Pass | Branded verification/welcome payloads; post-verification routing opened Canvas |
+| Free first workspace action | Pass | Pass | Focused Canvas onboarding exposed the workspace content choices without forcing a list |
+| Solo first contact | Pass | Pass | Fresh Solo navigation and contact creation completed without an upgrade dead end |
+| Estimate create, send, and recipient response | Pass | Pass | `EST-00001` for `$125.00` delivered, public response completed, and owner notification delivered |
+| Estimate-to-invoice handoff | Pass | Pass | Conversion created `INV-00001` while preserving the client and line-item data |
+| Invoice delivery | Pass | Pass | Provider-confirmed branded `Your invoice` email; the production service generated and attached its PDF |
+| Fresh payment settings | Pass | Pass | The new Solo account loaded the valid Stripe `Not connected` state; the prior load error is isolated to legacy account data |
+| Invoice-to-signature handoff | Pass | Pass | Recipient, title, message, and invoice PDF were prefilled; the signature field was assigned to the signer |
+| Public signing and completion | Pass | Pass | Branded public shell, one-use capability, signed PDF generation, completed document, and four first-attempt delivery rows |
 
-The interrupted Free account, the email-brand canary, and both personal
-organizations were removed. See [outbound-email-brand-audit.md](outbound-email-brand-audit.md)
+Production signature document `6` completed with recipient `5`; its completion
+job completed on attempt one, and the request, signer-completed, and both
+document-completed deliveries were provider-confirmed with no last error. The
+one-use public capability correctly stops resolving after the signature is
+recorded; recipients retain their branded completion email as the receipt.
+
+The auth email was visually reviewed after the corrected deployment. Its
+redundant `Account security notification from Itemize.` footer was removed, and
+the newest production welcome payload confirms the shared shell is present and
+the removed footer is absent.
+
+### Remaining matrix extensions
+
+- Google OAuth signup still needs one fresh, disposable identity. It is a
+  separate authentication-provider row and does not invalidate the email path.
+- A live Stripe checkout/payment is intentionally deferred until the Itemize
+  Stripe account review and connection are complete. The matrix did not access
+  or mutate any client-owned Stripe account.
+- Estimate decline and signature decline are covered by renderer/service tests;
+  add production canaries when destructive fixture coverage is next scheduled.
+
+All golden-path users and their personal organizations are removed after the
+evidence is recorded. See [outbound-email-brand-audit.md](outbound-email-brand-audit.md)
 for the sender inventory, production cause, and regression gates.

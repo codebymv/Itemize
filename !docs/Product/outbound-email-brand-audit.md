@@ -43,13 +43,32 @@ shell, `https://itemize.cloud/cover.png`, `#2563eb`, `#f1f5f9`, `#ffffff`, and
 the styled verification CTA. The disposable user and its personal organization
 were then deleted.
 
+The golden-path continuation also exercised the commercial sender families in
+production:
+
+- Estimate delivery and acceptance notification were provider-confirmed with
+  the shared shell and generic subjects.
+- Invoice delivery initially exposed a missing production PDF renderer. The
+  GraphQL service now renders invoice PDFs itself; the retried delivery sent a
+  branded `Your invoice` message with the generated attachment.
+- Signature request, public signing, signer-completed, and document-completed
+  paths all completed. Every resulting delivery row sent on its first attempt,
+  and the delivered HTML used the shared shell.
+- Account verification/welcome were visually reviewed. The redundant
+  `Account security notification from Itemize.` footer was removed; a fresh
+  provider payload confirms it is absent.
+
+The deployed signature request subject is now `Your signature is requested`
+(and `Reminder: your signature is requested` for reminders), so recipient
+addresses and internal artifact numbers do not leak into the inbox subject.
+
 ## Regression gates
 
 - GraphQL renderer/provider coverage: auth, estimate, invoice, signature,
   reputation, administrator, workflow, and the shared primitive.
 - Retained-backend coverage: canonical wrapper, marketing unsubscribe link,
   subscription notification, and HTTPS production asset fallback.
-- Before resuming the matrix, create a fresh account and visually inspect one
-  received verification email in both desktop and mobile Gmail rendering.
+- Visually inspect one newly received verification email in desktop and mobile
+  Gmail whenever the shared auth renderer or shell changes.
 - Release deployments that change an email renderer must deploy every service
   that owns a sender; frontend-only success is not sufficient evidence.
