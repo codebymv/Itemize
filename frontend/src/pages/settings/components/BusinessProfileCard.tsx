@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Building, Clock, Edit, Trash2, Upload } from 'lucide-react';
+import { Plus, Building, Clock, Edit, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,8 @@ import type { Business } from '@/services/invoicesApi';
 interface BusinessProfileCardProps {
   businesses: Business[];
   loading?: boolean;
+  loadError?: boolean;
+  onRetry?: () => void;
   onAddBusiness: () => void;
   onEditBusiness: (business: Business) => void;
   onDeleteBusiness: (business: Business) => void;
@@ -17,6 +19,8 @@ interface BusinessProfileCardProps {
 export const BusinessProfileCard: React.FC<BusinessProfileCardProps> = ({
   businesses,
   loading = false,
+  loadError = false,
+  onRetry,
   onAddBusiness,
   onEditBusiness,
   onDeleteBusiness,
@@ -57,7 +61,24 @@ export const BusinessProfileCard: React.FC<BusinessProfileCardProps> = ({
         )}
       </CardHeader>
       <CardContent>
-        {businesses.length === 0 ? (
+        {loadError ? (
+          <div className="flex flex-col items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex gap-3">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
+              <div>
+                <p className="text-sm font-medium text-foreground">Business profiles could not be loaded</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Your payment settings are still available. Retry before adding or editing a profile.
+                </p>
+              </div>
+            </div>
+            {onRetry && (
+              <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+                Retry
+              </Button>
+            )}
+          </div>
+        ) : businesses.length === 0 ? (
           <EmptyState
             icon={Building}
             title="No businesses yet"

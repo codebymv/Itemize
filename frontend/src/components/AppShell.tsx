@@ -225,7 +225,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                                         <>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem
-                                                onClick={() => navigate('/payment-settings')}
+                                                onClick={() => navigate('/settings')}
                                                 className="cursor-pointer"
                                             >
                                                 <span className="flex-1">Trial access</span>

@@ -44,7 +44,7 @@ export function TrialExpiredModal({ open, onClose, billing }: TrialExpiredModalP
 
           <div className="space-y-2">
             <Button
-              onClick={() => { onClose(); navigate('/payment-settings'); }}
+              onClick={() => { onClose(); navigate('/settings'); }}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             >
               Upgrade Now

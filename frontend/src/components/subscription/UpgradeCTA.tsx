@@ -100,7 +100,7 @@ export function UpgradeCTA({
 
     return (
         <Link 
-            to="/payment-settings"
+            to="/settings"
             onClick={onClick}
             title={showTooltip && featureDescription ? `${featureDescription} - Available on ${planMeta.name} and above` : undefined}
         >

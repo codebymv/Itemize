@@ -308,7 +308,7 @@ export function AppSidebar() {
             ? paidItems
             : [
                 ...workspaceItems,
-                { title: 'Unlock business tools', icon: Zap, path: '/payment-settings' },
+                { title: 'Unlock business tools', icon: Zap, path: '/settings' },
             ];
     const filteredSecondaryNavItems = isSubscribed
         ? secondaryNavItems

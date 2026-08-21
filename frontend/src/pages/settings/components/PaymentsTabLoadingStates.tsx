@@ -1,6 +1,9 @@
 import React from 'react';
+import { AlertTriangle, Building2, Zap } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import type { PaymentsLoadError } from '../hooks/usePaymentsTab';
 
 export function PaymentsTabLoadingSkeleton() {
   return (
@@ -116,23 +119,50 @@ export function PaymentsTabLoadingSkeleton() {
   );
 }
 
-export function PaymentsTabErrorState({ onRetry }: { onRetry: () => void }) {
+export function PaymentsTabErrorState({
+  error,
+  onRetry,
+  onUpgrade,
+}: {
+  error: Exclude<PaymentsLoadError, null>;
+  onRetry: () => void;
+  onUpgrade?: () => void;
+}) {
+  const organizationUnavailable = error === 'organization';
+  const subscriptionRequired = error === 'subscription';
+
   return (
-    <div className="flex flex-col items-center justify-center py-12 space-y-4">
-      <div className="text-center">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-          Unable to load payment data
+    <Card>
+      <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+        <div className={subscriptionRequired
+          ? 'mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary'
+          : 'mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-destructive/10 text-destructive'}>
+          {subscriptionRequired ? (
+            <Zap className="h-5 w-5" aria-hidden="true" />
+          ) : organizationUnavailable ? (
+            <Building2 className="h-5 w-5" aria-hidden="true" />
+          ) : (
+            <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+          )}
+        </div>
+        <h3 className="text-lg font-medium text-foreground">
+          {subscriptionRequired
+            ? 'Unlock invoicing tools'
+            : organizationUnavailable
+              ? 'Workspace unavailable'
+              : 'Unable to load payment settings'}
         </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          There was an error loading your payment settings. Please try again.
+        <p className="mt-2 max-w-md text-sm text-muted-foreground">
+          {subscriptionRequired
+            ? 'Business profiles, invoice defaults, and payment collection are available on the Solo plan and above.'
+            : organizationUnavailable
+            ? 'We could not load or repair a workspace for this account. Try again to restore access.'
+            : 'Your workspace is available, but its invoicing settings could not be loaded. Try again before making changes.'}
         </p>
-        <button
-          onClick={onRetry}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          Try Again
-        </button>
-      </div>
-    </div>
+        <Button onClick={subscriptionRequired ? onUpgrade : onRetry} className="mt-5">
+          {subscriptionRequired ? 'View plans' : 'Try Again'}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

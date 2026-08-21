@@ -353,6 +353,8 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
     settings,
     businesses,
     taxRateInput,
+    loadError,
+    businessesLoadError,
     businessDialogOpen,
     editingBusiness,
     businessFormData,
@@ -382,8 +384,7 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
       setSaveButton(
         <Button
           onClick={handleSaveSettings}
-          disabled={saving || loading}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
+          disabled={saving || loading || !settings}
         >
           {saving ? (
             <>
@@ -399,7 +400,7 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
     return () => {
       setSaveButton?.(null);
     };
-  }, [handleSaveSettings, saving, loading, setSaveButton]);
+  }, [handleSaveSettings, saving, loading, settings, setSaveButton]);
 
   useEffect(() => {
     const result = readIntegrationOAuthResult(location.search);
@@ -443,7 +444,13 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
 
   // Show error state only if we have tried loading but have no settings
   if (!settings && !initialLoad) {
-    return <PaymentsTabErrorState onRetry={refetchData} />;
+    return (
+      <PaymentsTabErrorState
+        error={loadError ?? 'settings'}
+        onRetry={refetchData}
+        onUpgrade={() => navigate('/settings')}
+      />
+    );
   }
 
   return (
@@ -475,6 +482,8 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
       <BusinessProfileCard
         businesses={businesses}
         loading={loading}
+        loadError={businessesLoadError}
+        onRetry={refetchData}
         onAddBusiness={openBusinessDialog}
         onEditBusiness={openBusinessDialog}
         onDeleteBusiness={handleDeleteClick}

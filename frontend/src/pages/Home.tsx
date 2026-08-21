@@ -101,7 +101,7 @@ const Home: React.FC = () => {
   const handleGetStarted = () => navigate('/register?mode=trial');
   const handleChoosePlan = (plan: 'free' | 'starter' | 'unlimited' | 'pro') => {
     if (isAuthenticated) {
-      navigate('/payment-settings');
+      navigate('/settings');
       return;
     }
     if (plan === 'free') {

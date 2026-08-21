@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
+import { GraphqlRequestError } from '@/services/graphqlClient';
 import {
   getPaymentSettings,
   updatePaymentSettings,
@@ -22,6 +23,11 @@ interface BusinessFormData {
   logo_url: string;
 }
 
+export type PaymentsLoadError = 'organization' | 'settings' | 'subscription' | null;
+
+const isSubscriptionRequired = (error: unknown): boolean =>
+  error instanceof GraphqlRequestError && error.reason === 'SUBSCRIPTION_REQUIRED';
+
 interface UsePaymentsTabReturn {
   // Loading states
   loading: boolean;
@@ -34,6 +40,8 @@ interface UsePaymentsTabReturn {
   settings: PaymentSettings | null;
   businesses: Business[];
   taxRateInput: string;
+  loadError: PaymentsLoadError;
+  businessesLoadError: boolean;
   
   // Dialog states
   businessDialogOpen: boolean;
@@ -65,7 +73,12 @@ interface UsePaymentsTabReturn {
 
 export const usePaymentsTab = (): UsePaymentsTabReturn => {
   const { toast } = useToast();
-  const { organizationId } = useOrganization();
+  const {
+    organizationId,
+    isLoading: organizationLoading,
+    error: organizationError,
+    refresh: refreshOrganization,
+  } = useOrganization();
 
   // Loading states
   const [loading, setLoading] = useState(false);
@@ -78,6 +91,8 @@ export const usePaymentsTab = (): UsePaymentsTabReturn => {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [taxRateInput, setTaxRateInput] = useState<string>('');
   const [initialLoad, setInitialLoad] = useState(true);
+  const [loadError, setLoadError] = useState<PaymentsLoadError>(null);
+  const [businessesLoadError, setBusinessesLoadError] = useState(false);
 
   // Dialog states
   const [businessDialogOpen, setBusinessDialogOpen] = useState(false);
@@ -96,33 +111,71 @@ export const usePaymentsTab = (): UsePaymentsTabReturn => {
 
   // Unified data fetching
   const refetchData = useCallback(async () => {
-    if (!organizationId) return;
+    if (organizationLoading) return;
+
+    let targetOrganizationId = organizationId;
+    if (!targetOrganizationId) {
+      setLoading(true);
+      const repairedOrganization = await refreshOrganization();
+      targetOrganizationId = repairedOrganization?.id ?? null;
+      if (!targetOrganizationId) {
+        setSettings(null);
+        setBusinesses([]);
+        setLoadError('organization');
+        setBusinessesLoadError(false);
+        setLoading(false);
+        setInitialLoad(false);
+        return;
+      }
+    }
 
     setLoading(true);
+    setLoadError(null);
+    setBusinessesLoadError(false);
+    setBusinesses([]);
+
     try {
-      // Fetch both data sources in parallel
-      const [settingsData, businessesData] = await Promise.all([
-        getPaymentSettings(organizationId),
-        getBusinesses(organizationId),
+      // Business profiles enhance invoice setup, but should not prevent the core
+      // payment settings from loading when their request fails independently.
+      const [settingsResult, businessesResult] = await Promise.allSettled([
+        getPaymentSettings(targetOrganizationId),
+        getBusinesses(targetOrganizationId),
       ]);
 
-      setSettings(settingsData);
-      setBusinesses(businessesData);
-      
-      // Set tax rate input
-      const rate = settingsData.default_tax_rate;
-      setTaxRateInput(rate === 0 || rate === null || rate === undefined ? '' : String(rate));
-    } catch (error) {
-      toast({ 
-        title: 'Error', 
-        description: 'Failed to load payment data. Please try again.', 
-        variant: 'destructive' 
-      });
+      if (settingsResult.status === 'fulfilled') {
+        const settingsData = settingsResult.value;
+        setSettings(settingsData);
+        setLoadError(null);
+
+        // Keep zero visually empty to match the existing form behavior.
+        const rate = settingsData.default_tax_rate;
+        setTaxRateInput(rate === 0 || rate === null || rate === undefined ? '' : String(rate));
+      } else {
+        setSettings(null);
+        setTaxRateInput('');
+        setLoadError(isSubscriptionRequired(settingsResult.reason) ? 'subscription' : 'settings');
+      }
+
+      if (businessesResult.status === 'fulfilled') {
+        setBusinesses(businessesResult.value);
+      } else {
+        setBusinesses([]);
+        setBusinessesLoadError(true);
+      }
     } finally {
       setLoading(false);
       setInitialLoad(false);
     }
-  }, [organizationId, toast]);
+  }, [organizationId, organizationLoading, refreshOrganization]);
+
+  // Surface a failed organization bootstrap as its own recovery state. The
+  // context already attempts to create or select a default organization.
+  useEffect(() => {
+    if (!organizationLoading && organizationError && !organizationId) {
+      setLoadError('organization');
+      setInitialLoad(false);
+    }
+  }, [organizationError, organizationId, organizationLoading]);
 
   // Auto-fetch data when organizationId changes
   useEffect(() => {
@@ -317,6 +370,8 @@ export const usePaymentsTab = (): UsePaymentsTabReturn => {
     settings,
     businesses,
     taxRateInput,
+    loadError,
+    businessesLoadError,
     
     // Dialog states
     businessDialogOpen,

@@ -115,7 +115,7 @@ export function TrialBanner({
   };
 
   const handleAddPayment = () => {
-    navigate('/payment-settings');
+    navigate('/settings');
   };
 
   const handleDismiss = () => {
@@ -152,7 +152,7 @@ export function TrialBanner({
                 'focus:outline-none focus:ring-2 focus:ring-offset-2',
                 styles.button
               )}
-              aria-label="Navigate to billing settings to add payment method"
+              aria-label="Open subscription settings to add a payment method"
             >
               Add Payment Method
             </button>
@@ -206,7 +206,7 @@ export function TrialBanner({
               'min-h-[44px]', // Touch-friendly minimum size
               styles.button
             )}
-            aria-label="Navigate to billing settings to add payment method"
+            aria-label="Open subscription settings to add a payment method"
           >
             Add Payment Method
           </button>
