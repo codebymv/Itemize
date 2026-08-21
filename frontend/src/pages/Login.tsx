@@ -26,7 +26,7 @@ function LoginForm() {
   const [googleLoading, setGoogleLoading] = useState(false);
 
   // Get redirect path from location state
-  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/dashboard';
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/';
 
   // Check if redirected due to session expiration
   const sessionExpired = searchParams.get('session') === 'expired';

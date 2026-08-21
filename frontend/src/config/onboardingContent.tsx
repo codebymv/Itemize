@@ -22,41 +22,18 @@ import {
 
 export const ONBOARDING_CONTENT: Record<string, OnboardingContent> = {
   canvas: {
-    title: "Welcome to Canvas View",
-    description: "Your infinite workspace for organizing lists, notes, and whiteboards visually",
-    version: "1.0",
+    title: "Start your workspace",
+    description: "Create one useful piece of work first. You can add notes and visual tools whenever you need them.",
+    version: "2.0",
+    completeLabel: "Create first list",
     steps: [
       {
-        title: "Infinite Canvas",
-        description: "Arrange your workspace exactly how you want. Drag and drop items anywhere on the canvas for a personalized layout.",
-        icon: <Layout className="h-12 w-12 text-primary" />,
-        tips: [
-          "Click and drag items to move them around",
-          "Scroll to pan across the canvas",
-          "Use mouse wheel or pinch to zoom in/out",
-          "Double-click empty space to create new items"
-        ]
-      },
-      {
-        title: "Create & Organize",
-        description: "Add lists, notes, and whiteboards directly on the canvas. Each item can be resized and positioned independently.",
-        icon: <StickyNote className="h-12 w-12 text-primary" />,
-        tips: [
-          "Click '+' button to create new items",
-          "Drag edges to resize items",
-          "Use categories to organize related items",
-          "Color-code items for quick visual reference"
-        ]
-      },
-      {
-        title: "Save Automatically",
-        description: "All your changes are saved automatically. Your canvas layout persists across sessions.",
+        title: "Create your first list",
+        description: "Start with the work already on your mind. Itemize will place it on your canvas and save it automatically.",
         icon: <CheckSquare className="h-12 w-12 text-primary" />,
         tips: [
-          "Changes sync in real-time",
-          "No need to manually save",
-          "Access from any device",
-          "Undo/redo support for mistakes"
+          "Name the list after a project or outcome",
+          "Add the next few actions you need to remember"
         ]
       }
     ]

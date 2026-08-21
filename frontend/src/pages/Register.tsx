@@ -96,7 +96,7 @@ function RegisterForm() {
 
   const handleGoogleLogin = () => {
     setGoogleLoading(true);
-    googleSignIn('/dashboard', signupMode);
+    googleSignIn('/', signupMode);
     setTimeout(() => setGoogleLoading(false), 1000);
   };
 

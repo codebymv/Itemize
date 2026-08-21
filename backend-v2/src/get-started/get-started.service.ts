@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import {
+  BUSINESS_GET_STARTED_STEPS,
+  FREE_GET_STARTED_STEPS,
   GET_STARTED_MILESTONES,
   GET_STARTED_SOURCES,
-  GET_STARTED_STEPS,
   GetStartedMilestoneName,
   GetStartedSource,
 } from './get-started.constants';
@@ -62,9 +63,9 @@ export class GetStartedService {
     organizationId: number,
     userId: number,
   ): Promise<GetStartedProgress> {
-    const [rows, counts, dismissed] = await Promise.all([
+    const [rows, live, dismissed] = await Promise.all([
       this.getStarted.findMilestones(organizationId),
-      this.getStarted.liveCounts(organizationId),
+      this.getStarted.liveState(organizationId),
       this.getStarted.isDismissed(organizationId, userId),
     ]);
 
@@ -73,29 +74,35 @@ export class GetStartedService {
     );
 
     await Promise.all([
-      this.ensure(organizationId, completed, 'first_contact', counts.contacts > 0),
-      this.ensure(organizationId, completed, 'first_list', counts.lists > 0),
-      this.ensure(organizationId, completed, 'first_invoice', counts.invoices > 0),
-      this.ensure(organizationId, completed, 'first_deal', counts.deals > 0),
+      this.ensure(organizationId, completed, 'first_contact', live.contacts > 0),
+      this.ensure(organizationId, completed, 'first_list', live.lists > 0),
     ]);
 
-    const steps: GetStartedStep[] = GET_STARTED_STEPS.map((step) => {
-      if (step.id === 'workspace_ready') {
+    const businessJourney = live.plan != null && live.plan !== 'free';
+    const definitions = businessJourney
+      ? BUSINESS_GET_STARTED_STEPS
+      : FREE_GET_STARTED_STEPS;
+    const firstArtifactHref = {
+      estimate: '/estimates',
+      invoice: '/invoices',
+      signature: '/documents',
+    }[live.first_artifact_type ?? 'estimate'];
+
+    const steps: GetStartedStep[] = definitions.map((step) => {
+      if (step.id === 'first_artifact') {
         return {
           id: step.id,
-          completed: true,
-          completedAt: null,
+          completed: live.first_artifact_at != null,
+          completedAt: live.first_artifact_at,
           href: step.href,
         };
       }
-      if (step.id === 'first_money') {
-        const completedAt =
-          completed.get('first_invoice') ?? completed.get('first_deal') ?? null;
+      if (step.id === 'first_send') {
         return {
           id: step.id,
-          completed: completedAt != null,
-          completedAt,
-          href: step.href,
+          completed: live.artifact_sent_at != null,
+          completedAt: live.artifact_sent_at,
+          href: firstArtifactHref,
         };
       }
       return {

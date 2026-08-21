@@ -9,65 +9,89 @@ describe('GetStartedService', () => {
     repository = {
       findMilestones: jest.fn(),
       insertMilestone: jest.fn(),
-      liveCounts: jest.fn(),
+      liveState: jest.fn(),
       isDismissed: jest.fn(),
       dismiss: jest.fn(),
     } as unknown as jest.Mocked<GetStartedRepository>;
     service = new GetStartedService(repository);
   });
 
-  it('projects four steps and folds invoice or deal into first_money', async () => {
+  it('projects the Solo journey through the first provider-confirmed send', async () => {
     repository.findMilestones.mockResolvedValue([
       { name: 'first_contact', occurred_at: new Date('2026-08-01T00:00:00.000Z') },
-      { name: 'first_deal', occurred_at: new Date('2026-08-02T00:00:00.000Z') },
     ]);
-    repository.liveCounts.mockResolvedValue({
+    repository.liveState.mockResolvedValue({
+      plan: 'starter',
       contacts: 1,
       lists: 0,
-      invoices: 0,
-      deals: 1,
+      first_artifact_at: new Date('2026-08-02T00:00:00.000Z'),
+      first_artifact_type: 'estimate',
+      artifact_sent_at: null,
     });
     repository.isDismissed.mockResolvedValue(false);
 
     await expect(service.progress(4, 7)).resolves.toEqual({
       dismissed: false,
-      completedCount: 3,
-      totalCount: 4,
+      completedCount: 2,
+      totalCount: 3,
       steps: [
-        { id: 'workspace_ready', completed: true, completedAt: null, href: '/settings' },
         {
           id: 'first_contact',
           completed: true,
           completedAt: new Date('2026-08-01T00:00:00.000Z'),
           href: '/contacts',
         },
-        { id: 'first_list', completed: false, completedAt: null, href: '/canvas' },
         {
-          id: 'first_money',
+          id: 'first_artifact',
           completed: true,
           completedAt: new Date('2026-08-02T00:00:00.000Z'),
-          href: '/invoices/new',
+          href: '/estimates/new',
         },
+        { id: 'first_send', completed: false, completedAt: null, href: '/estimates' },
       ],
     });
     expect(repository.insertMilestone).not.toHaveBeenCalled();
   });
 
-  it('lazy-stamps missing events from live counts', async () => {
+  it('projects a focused workspace journey for Free organizations', async () => {
     repository.findMilestones.mockResolvedValue([]);
-    repository.liveCounts.mockResolvedValue({
-      contacts: 2,
+    repository.liveState.mockResolvedValue({
+      plan: 'free',
+      contacts: 0,
       lists: 1,
-      invoices: 0,
-      deals: 0,
+      first_artifact_at: null,
+      first_artifact_type: null,
+      artifact_sent_at: null,
     });
     repository.isDismissed.mockResolvedValue(false);
     repository.insertMilestone.mockResolvedValue(undefined);
 
     const progress = await service.progress(4, 7);
-    expect(repository.insertMilestone).toHaveBeenCalledTimes(2);
-    expect(progress.steps.find((step) => step.id === 'first_contact')?.completed).toBe(true);
-    expect(progress.steps.find((step) => step.id === 'first_list')?.completed).toBe(true);
+    expect(repository.insertMilestone).toHaveBeenCalledTimes(1);
+    expect(progress).toMatchObject({
+      completedCount: 1,
+      totalCount: 1,
+      steps: [{ id: 'first_list', completed: true, href: '/canvas' }],
+    });
+  });
+
+  it('returns the user to the kind of artifact they created when it is time to send', async () => {
+    repository.findMilestones.mockResolvedValue([
+      { name: 'first_contact', occurred_at: new Date('2026-08-01T00:00:00.000Z') },
+    ]);
+    repository.liveState.mockResolvedValue({
+      plan: 'starter',
+      contacts: 1,
+      lists: 0,
+      first_artifact_at: new Date('2026-08-02T00:00:00.000Z'),
+      first_artifact_type: 'invoice',
+      artifact_sent_at: null,
+    });
+    repository.isDismissed.mockResolvedValue(false);
+
+    const progress = await service.progress(4, 7);
+    expect(progress.steps.find((step) => step.id === 'first_send')?.href)
+      .toBe('/invoices');
   });
 
   it('swallows record failures so creates can keep succeeding', async () => {

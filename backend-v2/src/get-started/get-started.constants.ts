@@ -18,21 +18,12 @@ export const GET_STARTED_SOURCES = [
 
 export type GetStartedSource = (typeof GET_STARTED_SOURCES)[number];
 
-export const GET_STARTED_STEPS = [
-  {
-    id: 'workspace_ready',
-    href: '/settings',
-  },
-  {
-    id: 'first_contact',
-    href: '/contacts',
-  },
-  {
-    id: 'first_list',
-    href: '/canvas',
-  },
-  {
-    id: 'first_money',
-    href: '/invoices/new',
-  },
+export const FREE_GET_STARTED_STEPS = [
+  { id: 'first_list', href: '/canvas' },
+] as const;
+
+export const BUSINESS_GET_STARTED_STEPS = [
+  { id: 'first_contact', href: '/contacts' },
+  { id: 'first_artifact', href: '/estimates/new' },
+  { id: 'first_send', href: '/estimates' },
 ] as const;

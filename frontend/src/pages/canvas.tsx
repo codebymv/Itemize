@@ -404,6 +404,11 @@ const { currentUser } = useAuthState();
     }
   };
 
+  const handleCanvasOnboardingComplete = async () => {
+    await completeOnboarding();
+    handleButtonAddList();
+  };
+
   const handleButtonAddNote = () => {
     setShowButtonContextMenu(false);
     const position = getIntelligentPosition(lists, notes, whiteboards, wireframes); // Use intelligent positioning for button creation
@@ -533,7 +538,7 @@ const { currentUser } = useAuthState();
       <OnboardingModal
         isOpen={showOnboarding}
         onClose={closeOnboarding}
-        onComplete={completeOnboarding}
+        onComplete={handleCanvasOnboardingComplete}
         onDismiss={dismissOnboarding}
         content={ONBOARDING_CONTENT.canvas}
       />

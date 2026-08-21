@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import {
   CheckCircle2,
   Circle,
-  CreditCard,
+  FileText,
   ListChecks,
-  Settings,
+  Send,
   Users,
   X,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useStatStyles } from '@/hooks/useStatStyles';
@@ -21,30 +22,37 @@ import {
 import { useOrganization } from '@/hooks/useOrganization';
 
 const STEP_COPY: Record<string, { label: string; description: string }> = {
-  workspace_ready: {
-    label: 'Your workspace is ready',
-    description: 'Add company details anytime in Settings',
-  },
   first_contact: {
-    label: 'Add your first contact',
-    description: 'Start the CRM with one person or company',
+    label: 'Add a client',
+    description: 'Give your first estimate a real recipient',
   },
   first_list: {
-    label: 'Create a list',
-    description: 'Put a checklist on the canvas',
+    label: 'Create your first list',
+    description: 'Put the first piece of work on your canvas',
   },
-  first_money: {
-    label: 'Create an invoice or a deal',
-    description: 'Bill a customer or track an opportunity',
+  first_artifact: {
+    label: 'Create an estimate',
+    description: 'Turn the work into a clear price for your client',
+  },
+  first_send: {
+    label: 'Send it to your client',
+    description: 'Share it and start tracking the response',
   },
 };
 
 const STEP_ICON = {
-  workspace_ready: Settings,
   first_contact: Users,
   first_list: ListChecks,
-  first_money: CreditCard,
+  first_artifact: FileText,
+  first_send: Send,
 } as const;
+
+const STEP_ACTION: Record<string, string> = {
+  first_contact: 'Add client',
+  first_list: 'Create list',
+  first_artifact: 'Create estimate',
+  first_send: 'Open drafts',
+};
 
 export function GetStartedCard() {
   const navigate = useNavigate();
@@ -73,6 +81,8 @@ export function GetStartedCard() {
   const percent = data.totalCount > 0
     ? (data.completedCount / data.totalCount) * 100
     : 0;
+  const nextStep = data.steps.find((step) => !step.completed);
+  const isBusinessJourney = data.steps.some((step) => step.id === 'first_contact');
 
   return (
     <Card className="mb-6">
@@ -80,8 +90,13 @@ export function GetStartedCard() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <CardTitle className="text-base font-semibold">
-              Get started with Itemize
+              {isBusinessJourney ? 'Get your first client approval' : 'Start your workspace'}
             </CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {isBusinessJourney
+                ? 'Follow one simple path from client to sent estimate.'
+                : 'Begin with one useful piece of work.'}
+            </p>
             <div className="mt-2 flex items-center gap-2">
               <Progress value={percent} className="h-2 w-40 sm:w-56" />
               <span className="text-xs text-muted-foreground">
@@ -104,6 +119,7 @@ export function GetStartedCard() {
           <GetStartedRow
             key={step.id}
             step={step}
+            isCurrent={step.id === nextStep?.id}
             iconBgClass={iconBgClass}
             iconClass={iconClass}
             onOpen={() => navigate(step.href)}
@@ -116,11 +132,13 @@ export function GetStartedCard() {
 
 function GetStartedRow({
   step,
+  isCurrent,
   iconBgClass,
   iconClass,
   onOpen,
 }: {
   step: GetStartedStep;
+  isCurrent: boolean;
   iconBgClass: string;
   iconClass: string;
   onOpen: () => void;
@@ -131,12 +149,12 @@ function GetStartedRow({
   };
   const Icon = STEP_ICON[step.id as keyof typeof STEP_ICON] ?? Circle;
 
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
+  const content = (
+    <div
       className={cn(
-        'flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted/50',
+        'flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left',
+        isCurrent && 'border border-blue-200 bg-blue-50/70 dark:border-blue-800 dark:bg-blue-950/30',
+        !step.completed && !isCurrent && 'opacity-55',
         step.completed && 'opacity-70',
       )}
     >
@@ -156,16 +174,24 @@ function GetStartedRow({
         </p>
         <p className="truncate text-xs text-muted-foreground">{copy.description}</p>
       </div>
-      <div
-        className={cn(
-          'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
-          iconBgClass,
-          iconClass,
-        )}
-        aria-hidden="true"
-      >
-        <Icon className="h-4 w-4" />
-      </div>
-    </button>
+      {isCurrent ? (
+        <Button type="button" size="sm" onClick={onOpen} className="shrink-0">
+          {STEP_ACTION[step.id] ?? 'Continue'}
+        </Button>
+      ) : (
+        <div
+          className={cn(
+            'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+            iconBgClass,
+            iconClass,
+          )}
+          aria-hidden="true"
+        >
+          <Icon className="h-4 w-4" />
+        </div>
+      )}
+    </div>
   );
+
+  return content;
 }

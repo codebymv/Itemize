@@ -2,9 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthState } from '@/contexts/AuthContext';
-import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
-import { OnboardingModal } from '@/components/OnboardingModal';
-import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -130,9 +127,6 @@ export function DashboardPage() {
     const navigate = useNavigate();
     const { organizationId } = useOrganization();
     
-    // Onboarding
-    const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('dashboard');
-    
     // Period selector hook
     const { period, setPeriod } = usePeriodSelector('30days');
 
@@ -232,14 +226,6 @@ export function DashboardPage() {
                 </>
             }
         >
-            <OnboardingModal
-                isOpen={showOnboarding}
-                onClose={closeOnboarding}
-                onComplete={completeOnboarding}
-                onDismiss={dismissOnboarding}
-                content={ONBOARDING_CONTENT.dashboard}
-            />
-
                     {/* Welcome Section */}
                     <div className="mb-8">
                         <h2 className="text-2xl font-light tracking-tight mb-2">

@@ -8,11 +8,13 @@ export type GetStartedMilestoneRow = {
   occurred_at: Date;
 };
 
-export type GetStartedLiveCounts = {
+export type GetStartedLiveState = {
+  plan: string | null;
   contacts: number;
   lists: number;
-  invoices: number;
-  deals: number;
+  first_artifact_at: Date | null;
+  first_artifact_type: 'estimate' | 'invoice' | 'signature' | null;
+  artifact_sent_at: Date | null;
 };
 
 @Injectable()
@@ -55,9 +57,10 @@ export class GetStartedRepository {
     );
   }
 
-  async liveCounts(organizationId: number): Promise<GetStartedLiveCounts> {
-    const result = await this.pool.query<GetStartedLiveCounts>(
+  async liveState(organizationId: number): Promise<GetStartedLiveState> {
+    const result = await this.pool.query<GetStartedLiveState>(
       `SELECT
+         organization.plan,
          (SELECT COUNT(*)::int FROM contacts WHERE organization_id = $1) AS contacts,
          (SELECT COUNT(*)::int FROM lists
            WHERE organization_id = $1
@@ -68,11 +71,39 @@ export class GetStartedRepository {
                 )
               )
          ) AS lists,
-         (SELECT COUNT(*)::int FROM invoices WHERE organization_id = $1) AS invoices,
-         (SELECT COUNT(*)::int FROM deals WHERE organization_id = $1) AS deals`,
+         artifact.created_at AS first_artifact_at,
+         artifact.artifact_type AS first_artifact_type,
+         (SELECT MIN(event.occurred_at)
+            FROM activation_events event
+           WHERE event.organization_id = $1
+             AND event.event_name = 'artifact_sent') AS artifact_sent_at
+       FROM organizations organization
+       LEFT JOIN LATERAL (
+         SELECT candidate.artifact_type, candidate.created_at
+         FROM (
+           SELECT 'estimate'::text AS artifact_type, created_at
+             FROM estimates WHERE organization_id = $1
+           UNION ALL
+           SELECT 'invoice'::text AS artifact_type, created_at
+             FROM invoices WHERE organization_id = $1
+           UNION ALL
+           SELECT 'signature'::text AS artifact_type, created_at
+             FROM signature_documents WHERE organization_id = $1
+         ) candidate
+         ORDER BY candidate.created_at ASC
+         LIMIT 1
+       ) artifact ON TRUE
+       WHERE organization.id = $1`,
       [organizationId],
     );
-    return result.rows[0] ?? { contacts: 0, lists: 0, invoices: 0, deals: 0 };
+    return result.rows[0] ?? {
+      plan: null,
+      contacts: 0,
+      lists: 0,
+      first_artifact_at: null,
+      first_artifact_type: null,
+      artifact_sent_at: null,
+    };
   }
 
   async isDismissed(organizationId: number, userId: number): Promise<boolean> {

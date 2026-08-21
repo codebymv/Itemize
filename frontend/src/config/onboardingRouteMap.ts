@@ -41,7 +41,6 @@ const SIDEBAR_GROUPS: Record<string, { onboardingKey: string; routes: string[] }
 
 // Direct route mappings (non-grouped routes)
 const DIRECT_ROUTE_MAP: Record<string, string> = {
-  '/dashboard': 'dashboard',
   '/contacts': 'contacts',
   '/pipelines': 'pipelines',
   '/automations': 'automations',

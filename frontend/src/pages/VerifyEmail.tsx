@@ -70,8 +70,9 @@ export default function VerifyEmail() {
           description: 'Your account is now active.',
         });
 
-        // Redirect to dashboard after a moment
-        setTimeout(() => navigate('/dashboard'), 2000);
+        // Let the plan-aware root route send Free users to Canvas and
+        // trial/paid users to the business dashboard.
+        setTimeout(() => navigate('/'), 2000);
       }
     } catch (err) {
       setError(getApiErrorMessage(err, 'Verification failed. The link may be invalid or expired.'));
@@ -145,7 +146,7 @@ export default function VerifyEmail() {
                 <CheckCircle className="h-10 w-10 text-green-600 dark:text-green-400" />
               </div>
               <p className="text-muted-foreground">
-                Redirecting you to the dashboard...
+                Redirecting you to Itemize...
               </p>
             </div>
           ) : error ? (

@@ -12,6 +12,7 @@ describe('Onboarding GraphQL PostgreSQL contract', () => {
   let pool: Pool;
   let memberId: number;
   let outsiderId: number;
+  let organizationId: number;
   let memberToken: string;
   let outsiderToken: string;
   const jwt = new JwtService();
@@ -40,6 +41,22 @@ describe('Onboarding GraphQL PostgreSQL contract', () => {
       ],
     );
     [memberId, outsiderId] = users.rows.map((row) => Number(row.id));
+    const organization = await pool.query<{ id: number }>(
+      `INSERT INTO organizations (name, slug, plan, subscription_status)
+       VALUES ('Onboarding Workspace', $1, 'free', 'none')
+       RETURNING id`,
+      [`onboarding-${suffix}`],
+    );
+    organizationId = Number(organization.rows[0].id);
+    await pool.query(
+      `INSERT INTO organization_members (organization_id, user_id, role)
+       VALUES ($1, $2, 'owner')`,
+      [organizationId, memberId],
+    );
+    await pool.query(
+      'UPDATE users SET default_organization_id = $1 WHERE id = $2',
+      [organizationId, memberId],
+    );
     memberToken = await jwt.signAsync(
       { id: memberId },
       { secret: process.env.JWT_SECRET, expiresIn: '15m' },
@@ -63,6 +80,9 @@ describe('Onboarding GraphQL PostgreSQL contract', () => {
   });
 
   afterAll(async () => {
+    if (pool && organizationId) {
+      await pool.query('DELETE FROM organizations WHERE id = $1', [organizationId]);
+    }
     if (pool && (memberId || outsiderId)) {
       await pool.query('DELETE FROM users WHERE id = ANY($1::int[])', [
         [memberId, outsiderId].filter(Boolean),
@@ -79,6 +99,8 @@ describe('Onboarding GraphQL PostgreSQL contract', () => {
     request(graphqlApp.getHttpServer())
       .post('/graphql')
       .set('Cookie', `itemize_auth=${token}`)
+      .set(token === memberToken ? 'x-organization-id' : 'x-test-user-scope',
+        token === memberToken ? String(organizationId) : 'true')
       .send({ query: document, variables });
 
   const mutation = (
@@ -96,6 +118,85 @@ describe('Onboarding GraphQL PostgreSQL contract', () => {
 
   const progressFields =
     'featureKey seen timestamp version dismissed stepCompleted';
+
+  it('guides Free and Solo accounts through their distinct first-value paths', async () => {
+    const fields = 'id completed completedAt href';
+    const free = await query(
+      memberToken,
+      `{ getStartedProgress {
+        completedCount totalCount steps { ${fields} }
+      } }`,
+    ).expect(200);
+    expect(free.body.errors).toBeUndefined();
+    expect(free.body.data.getStartedProgress).toEqual({
+      completedCount: 0,
+      totalCount: 1,
+      steps: [{ id: 'first_list', completed: false, completedAt: null, href: '/canvas' }],
+    });
+
+    await pool.query(
+      `UPDATE organizations
+       SET plan = 'starter', subscription_status = 'trialing',
+           trial_ends_at = NOW() + INTERVAL '14 days'
+       WHERE id = $1`,
+      [organizationId],
+    );
+    await pool.query(
+      `INSERT INTO get_started_milestones (
+         organization_id, name, user_id, source, dedupe_key
+       ) VALUES ($1, 'first_contact', $2, 'create_contact', $3)`,
+      [organizationId, memberId, `${organizationId}:first_contact:first`],
+    );
+    const estimate = await pool.query<{ id: number }>(
+      `INSERT INTO estimates (
+         organization_id, estimate_number, valid_until, created_by
+       ) VALUES ($1, 'EST-ONBOARDING', CURRENT_DATE + 7, $2)
+       RETURNING id`,
+      [organizationId, memberId],
+    );
+    const estimateId = Number(estimate.rows[0].id);
+
+    const readyToSend = await query(
+      memberToken,
+      `{ getStartedProgress {
+        completedCount totalCount steps { ${fields} }
+      } }`,
+    ).expect(200);
+    expect(readyToSend.body.errors).toBeUndefined();
+    expect(readyToSend.body.data.getStartedProgress).toMatchObject({
+      completedCount: 2,
+      totalCount: 3,
+      steps: [
+        { id: 'first_contact', completed: true, href: '/contacts' },
+        { id: 'first_artifact', completed: true, href: '/estimates/new' },
+        { id: 'first_send', completed: false, href: '/estimates' },
+      ],
+    });
+
+    await pool.query(
+      `INSERT INTO activation_events (
+         organization_id, user_id, event_name, artifact_type, artifact_id,
+         source, dedupe_key
+       ) VALUES ($1, $2, 'artifact_sent', 'estimate', $3,
+         'estimate_email_delivered', $4)`,
+      [
+        organizationId,
+        memberId,
+        estimateId,
+        `${organizationId}:artifact_sent:estimate:${estimateId}`,
+      ],
+    );
+    const activated = await query(
+      memberToken,
+      `{ getStartedProgress { completedCount totalCount steps { ${fields} } } }`,
+    ).expect(200);
+    expect(activated.body.errors).toBeUndefined();
+    expect(activated.body.data.getStartedProgress).toMatchObject({
+      completedCount: 3,
+      totalCount: 3,
+      steps: [{ completed: true }, { completed: true }, { completed: true }],
+    });
+  });
 
   it('returns empty progress and explicit unseen feature semantics', async () => {
     const target = await query(
