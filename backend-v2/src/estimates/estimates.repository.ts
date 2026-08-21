@@ -547,7 +547,12 @@ export class EstimatesRepository {
                 e.issue_date::text, e.valid_until::text, e.subtotal,
                 e.tax_amount, e.discount_amount, e.total, e.currency, e.status,
                 e.notes, e.terms_and_conditions,
-                COALESCE(NULLIF(b.name, ''), NULLIF(settings.business_name, ''))
+                COALESCE(
+                  NULLIF(b.name, ''),
+                  NULLIF(settings.business_name, ''),
+                  NULLIF(organization.name, ''),
+                  'Itemize workspace'
+                )
                   AS business_name,
                 COALESCE(NULLIF(b.email, ''), NULLIF(settings.business_email, ''))
                   AS business_email
@@ -556,6 +561,8 @@ export class EstimatesRepository {
            ON b.id = e.business_id AND b.organization_id = e.organization_id
          LEFT JOIN payment_settings settings
            ON settings.organization_id = e.organization_id
+         JOIN organizations organization
+           ON organization.id = e.organization_id
          WHERE e.id = $1 AND e.organization_id = $2
          FOR UPDATE OF e`,
         [estimateId, organizationId],
@@ -577,7 +584,7 @@ export class EstimatesRepository {
       }
       if (!estimate.customer_email?.trim()) return { kind: 'missing-email' };
 
-      const businessName = estimate.business_name || 'Our Company';
+      const businessName = estimate.business_name || 'Itemize workspace';
       const subject = `Estimate ${estimate.estimate_number} from ${businessName}`
         .slice(0, 255);
       const items = await client.query<{

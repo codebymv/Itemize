@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ActivationService } from '../activation/activation.service';
+import { brandedTransactionalEmail } from '../common/branded-transactional-email';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import {
   ESTIMATE_EMAIL_PROVIDER,
@@ -148,7 +149,7 @@ export class EstimateEmailDeliveryService {
   private html(delivery: EstimateEmailDeliveryRow): string {
     const payload: EstimateEmailPayload = delivery.payload;
     const customer = payload.customerName?.trim() || 'Valued Customer';
-    const business = payload.businessName?.trim() || 'Our Company';
+    const business = payload.businessName?.trim() || 'Itemize workspace';
     const amount = new Intl.NumberFormat('en-US', {
       style: 'currency', currency: payload.currency || 'USD',
     }).format(Number(payload.total));
@@ -157,15 +158,25 @@ export class EstimateEmailDeliveryService {
       Number(delivery.estimate_id),
       delivery.idempotency_key,
     )}`;
-    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${escapeHtml(payload.subject)}</title></head>` +
-      `<body style="font-family:Arial,sans-serif;color:#1f2937"><div style="max-width:600px;margin:0 auto;padding:24px">` +
-      `<h1 style="font-size:24px">Estimate ${escapeHtml(payload.estimateNumber)}</h1>` +
-      `<p>Dear ${escapeHtml(customer)},</p><p>Please find your estimate from ${escapeHtml(business)}.</p>` +
-      `<p><strong>Total:</strong> ${escapeHtml(amount)}<br><strong>Valid until:</strong> ${escapeHtml(payload.validUntil)}</p>` +
-      `<div style="text-align:center;margin:24px 0"><a href="${escapeHtml(publicUrl)}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:600">Review estimate</a></div>` +
-      `<p>Best regards,<br>${escapeHtml(business)}</p>` +
-      (payload.businessEmail ? `<p style="color:#6b7280">${escapeHtml(payload.businessEmail)}</p>` : '') +
-      `</div></body></html>`;
+    const businessEmail = payload.businessEmail
+      ? `<p style="margin:16px 0 0;color:#64748b;font-size:13px">${escapeHtml(payload.businessEmail)}</p>`
+      : '';
+    const bodyHtml =
+      `<p style="margin:0 0 16px">Hi ${escapeHtml(customer)},</p>` +
+      `<p style="margin:0 0 22px">${escapeHtml(business)} sent you an estimate to review.</p>` +
+      `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;margin:0 0 8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">` +
+      `<tr><td style="padding:16px 18px;color:#64748b;font-size:13px">Total</td><td align="right" style="padding:16px 18px;color:#0f172a;font-size:18px;font-weight:700">${escapeHtml(amount)}</td></tr>` +
+      `<tr><td style="padding:0 18px 16px;color:#64748b;font-size:13px">Valid until</td><td align="right" style="padding:0 18px 16px;color:#334155;font-size:13px;font-weight:600">${escapeHtml(payload.validUntil)}</td></tr>` +
+      `</table>${businessEmail}`;
+    return brandedTransactionalEmail({
+      assetOrigin: this.frontendOrigin(),
+      previewText: `${business} sent estimate ${payload.estimateNumber} for ${amount}.`,
+      eyebrow: `Estimate · ${payload.estimateNumber}`,
+      heading: `A new estimate from ${business}`,
+      bodyHtml,
+      cta: { label: 'Review estimate', url: publicUrl },
+      footerText: 'This private link provides access to your estimate. Please do not forward it.',
+    });
   }
 
   private frontendOrigin(): string {

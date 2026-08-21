@@ -21,6 +21,7 @@ describe('EstimatePublicService', () => {
     organization_id: 3,
     estimate_id: 7,
     estimate_number: 'EST-00007',
+    organization_name: 'Studio workspace',
     status: 'sent',
     sent_at: new Date('2026-08-20T10:00:00Z'),
     viewed_at: new Date('2026-08-20T10:05:00Z'),
@@ -68,6 +69,28 @@ describe('EstimatePublicService', () => {
       artifactId: 7,
       stage: 'viewed',
       source: 'estimate_recipient_viewed',
+    });
+  });
+
+  it('uses a product-native workspace fallback instead of placeholder company copy', async () => {
+    repository.open.mockResolvedValue({
+      ...capability,
+      payload: { ...capability.payload, businessName: null },
+    });
+
+    await expect(service.open(token)).resolves.toMatchObject({
+      business: { name: 'Studio workspace' },
+    });
+  });
+
+  it('repairs legacy placeholder business names with the organization identity', async () => {
+    repository.open.mockResolvedValue({
+      ...capability,
+      payload: { ...capability.payload, businessName: 'Our Company' },
+    });
+
+    await expect(service.open(token)).resolves.toMatchObject({
+      business: { name: 'Studio workspace' },
     });
   });
 

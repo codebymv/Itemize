@@ -1,5 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, FileText, Loader2, Mail, ShieldCheck, XCircle } from 'lucide-react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import {
+  CheckCircle2,
+  FileText,
+  Loader2,
+  Mail,
+  Moon,
+  ShieldCheck,
+  Sun,
+  XCircle,
+} from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { useParams } from 'react-router-dom';
 import {
   AlertDialog,
@@ -11,6 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { PUBLIC_SHELL_WIDTH } from '@/components/layout/PageContainer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -26,6 +37,53 @@ const date = (value: string): string => {
     ? value
     : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(parsed);
 };
+
+function RecipientHeader() {
+  const { resolvedTheme, setTheme } = useTheme();
+  const dark = resolvedTheme === 'dark';
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
+      <div className={`${PUBLIC_SHELL_WIDTH} flex h-16 items-center justify-between gap-4`}>
+        <a href="https://itemize.cloud" className="group flex items-center gap-2.5" aria-label="Itemize home">
+          <img
+            src="/icon.png"
+            alt=""
+            aria-hidden="true"
+            className="h-8 w-8 shrink-0 transition-transform group-hover:-translate-y-0.5"
+          />
+          <img src="/textblack.png" alt="Itemize" className="h-6 w-auto dark:hidden" />
+          <img src="/textwhite.png" alt="" aria-hidden="true" className="hidden h-6 w-auto dark:block" />
+        </a>
+        <div className="flex items-center gap-1 sm:gap-2">
+          <div className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            Private estimate
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9"
+            onClick={() => setTheme(dark ? 'light' : 'dark')}
+            aria-label={`Use ${dark ? 'light' : 'dark'} theme`}
+          >
+            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function RecipientPage({ children }: { children: ReactNode }) {
+  return (
+    <main className="min-h-screen bg-background text-foreground">
+      <RecipientHeader />
+      {children}
+    </main>
+  );
+}
 
 export default function PublicEstimatePage() {
   const { token = '' } = useParams();
@@ -74,26 +132,34 @@ export default function PublicEstimatePage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-50 grid place-items-center p-6">
-        <div className="flex items-center gap-3 text-slate-600" role="status">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          Loading estimate…
+      <RecipientPage>
+        <div className="grid min-h-[calc(100vh-4rem)] place-items-center p-6">
+          <div className="flex items-center gap-3 text-muted-foreground" role="status">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            Loading estimate…
+          </div>
         </div>
-      </main>
+      </RecipientPage>
     );
   }
 
   if (!data) {
     return (
-      <main className="min-h-screen bg-slate-50 grid place-items-center p-6">
-        <Card className="w-full max-w-md border-slate-200 shadow-sm">
-          <CardContent className="p-8 text-center space-y-4">
-            <FileText className="h-10 w-10 text-slate-400 mx-auto" />
-            <h1 className="text-xl font-semibold text-slate-900">Estimate unavailable</h1>
-            <p className="text-sm text-slate-600">{error || 'This estimate link is invalid or expired.'}</p>
-          </CardContent>
-        </Card>
-      </main>
+      <RecipientPage>
+        <div className="grid min-h-[calc(100vh-4rem)] place-items-center p-6">
+          <Card className="w-full max-w-md">
+            <CardContent className="space-y-4 p-8 text-center">
+              <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-muted">
+                <FileText className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <h1 className="text-xl font-semibold">Estimate unavailable</h1>
+              <p className="text-sm text-muted-foreground">
+                {error || 'This estimate link is invalid or expired.'}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </RecipientPage>
     );
   }
 
@@ -101,32 +167,20 @@ export default function PublicEstimatePage() {
   const terminal = estimate.status === 'accepted' || estimate.status === 'declined';
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 font-semibold">
-            <div className="h-8 w-8 rounded-lg bg-blue-600 text-white grid place-items-center">
-              <FileText className="h-4 w-4" />
-            </div>
-            Itemize
-          </div>
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <ShieldCheck className="h-4 w-4" />
-            Secure estimate
-          </div>
-        </div>
-      </header>
-
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12 space-y-6">
+    <RecipientPage>
+      <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8 sm:px-6 sm:py-12">
         {terminal && (
-          <div className={`rounded-xl border p-4 flex items-start gap-3 ${
-            estimate.status === 'accepted'
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-              : 'border-slate-300 bg-slate-100 text-slate-800'
-          }`} role="status">
+          <div
+            className={`flex items-start gap-3 rounded-xl border p-4 ${
+              estimate.status === 'accepted'
+                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                : 'border-destructive/30 bg-destructive/10 text-destructive'
+            }`}
+            role="status"
+          >
             {estimate.status === 'accepted'
-              ? <CheckCircle2 className="h-5 w-5 mt-0.5 shrink-0" />
-              : <XCircle className="h-5 w-5 mt-0.5 shrink-0" />}
+              ? <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+              : <XCircle className="mt-0.5 h-5 w-5 shrink-0" />}
             <div>
               <p className="font-semibold">
                 Estimate {estimate.status === 'accepted' ? 'accepted' : 'declined'}
@@ -136,106 +190,178 @@ export default function PublicEstimatePage() {
           </div>
         )}
 
-        <Card className="overflow-hidden border-slate-200 shadow-sm">
+        <Card className="overflow-hidden shadow-sm">
+          <div className="h-1 bg-primary" aria-hidden="true" />
           <CardContent className="p-0">
-            <section className="p-6 sm:p-8 border-b border-slate-200 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6">
+            <section className="flex flex-col gap-6 border-b border-border bg-muted/25 p-6 sm:flex-row sm:items-start sm:justify-between sm:p-8">
               <div>
-                <p className="text-sm font-medium text-blue-600 mb-1">Estimate from</p>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{data.business.name}</h1>
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
+                  <FileText className="h-3.5 w-3.5" />Estimate
+                </div>
+                <p className="text-sm text-muted-foreground">Prepared by</p>
+                <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{data.business.name}</h1>
                 {data.business.email && (
-                  <a className="mt-2 inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-blue-700" href={`mailto:${data.business.email}`}>
+                  <a
+                    className="mt-2 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary"
+                    href={`mailto:${data.business.email}`}
+                  >
                     <Mail className="h-4 w-4" />{data.business.email}
                   </a>
                 )}
               </div>
               <div className="sm:text-right">
-                <p className="text-xs uppercase tracking-wider text-slate-500">Estimate</p>
-                <p className="font-semibold text-lg">{estimate.number}</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Estimate number</p>
+                <p className="text-lg font-semibold tabular-nums">{estimate.number}</p>
                 <dl className="mt-3 grid grid-cols-[auto_auto] gap-x-4 gap-y-1 text-sm">
-                  <dt className="text-slate-500">Issued</dt><dd>{date(estimate.issue_date)}</dd>
-                  <dt className="text-slate-500">Valid until</dt><dd>{date(estimate.valid_until)}</dd>
+                  <dt className="text-muted-foreground">Issued</dt><dd>{date(estimate.issue_date)}</dd>
+                  <dt className="text-muted-foreground">Valid until</dt><dd>{date(estimate.valid_until)}</dd>
                 </dl>
               </div>
             </section>
 
             {data.customer.name && (
-              <section className="px-6 py-5 sm:px-8 border-b border-slate-200">
-                <p className="text-xs uppercase tracking-wider text-slate-500">Prepared for</p>
+              <section className="border-b border-border px-6 py-5 sm:px-8">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Prepared for</p>
                 <p className="mt-1 font-medium">{data.customer.name}</p>
               </section>
             )}
 
-            <section className="overflow-x-auto" aria-label="Estimate line items">
+            <section className="divide-y divide-border sm:hidden" aria-label="Estimate line items">
+              <div className="bg-muted/50 px-6 py-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Items
+              </div>
+              {data.items.map((item, index) => (
+                <article className="space-y-4 px-6 py-5" key={`mobile-${item.name}-${index}`}>
+                  <div>
+                    <p className="font-medium">{item.name}</p>
+                    {item.description && (
+                      <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
+                    )}
+                  </div>
+                  <dl className="grid grid-cols-3 gap-3 text-sm">
+                    <div>
+                      <dt className="text-xs uppercase tracking-wider text-muted-foreground">Qty</dt>
+                      <dd className="mt-1 tabular-nums">{Number(item.quantity).toLocaleString()}</dd>
+                    </div>
+                    <div className="text-right">
+                      <dt className="text-xs uppercase tracking-wider text-muted-foreground">Rate</dt>
+                      <dd className="mt-1 tabular-nums">{currency.format(Number(item.unit_price))}</dd>
+                    </div>
+                    <div className="text-right">
+                      <dt className="text-xs uppercase tracking-wider text-muted-foreground">Amount</dt>
+                      <dd className="mt-1 font-medium tabular-nums">{currency.format(Number(item.total))}</dd>
+                    </div>
+                  </dl>
+                </article>
+              ))}
+            </section>
+
+            <section className="hidden overflow-x-auto sm:block" aria-label="Estimate line items table">
               <table className="w-full min-w-[640px] text-sm">
-                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wider text-slate-500">
+                <thead className="bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
                   <tr>
-                    <th className="px-6 py-3 sm:px-8 font-medium">Item</th>
+                    <th className="px-6 py-3 font-medium sm:px-8">Item</th>
                     <th className="px-4 py-3 text-right font-medium">Qty</th>
                     <th className="px-4 py-3 text-right font-medium">Rate</th>
-                    <th className="px-6 py-3 sm:px-8 text-right font-medium">Amount</th>
+                    <th className="px-6 py-3 text-right font-medium sm:px-8">Amount</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-border">
                   {data.items.map((item, index) => (
                     <tr key={`${item.name}-${index}`}>
                       <td className="px-6 py-4 sm:px-8">
                         <p className="font-medium">{item.name}</p>
-                        {item.description && <p className="mt-1 text-slate-500 whitespace-pre-wrap">{item.description}</p>}
+                        {item.description && (
+                          <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{item.description}</p>
+                        )}
                       </td>
                       <td className="px-4 py-4 text-right tabular-nums">{Number(item.quantity).toLocaleString()}</td>
                       <td className="px-4 py-4 text-right tabular-nums">{currency.format(Number(item.unit_price))}</td>
-                      <td className="px-6 py-4 sm:px-8 text-right font-medium tabular-nums">{currency.format(Number(item.total))}</td>
+                      <td className="px-6 py-4 text-right font-medium tabular-nums sm:px-8">{currency.format(Number(item.total))}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </section>
 
-            <section className="px-6 py-6 sm:px-8 border-t border-slate-200 flex justify-end">
+            <section className="flex justify-end border-t border-border px-6 py-6 sm:px-8">
               <dl className="w-full max-w-sm space-y-2 text-sm">
-                <div className="flex justify-between"><dt className="text-slate-500">Subtotal</dt><dd className="tabular-nums">{currency.format(Number(estimate.subtotal))}</dd></div>
-                {Number(estimate.discount_amount) > 0 && <div className="flex justify-between"><dt className="text-slate-500">Discount</dt><dd className="tabular-nums">−{currency.format(Number(estimate.discount_amount))}</dd></div>}
-                {Number(estimate.tax_amount) > 0 && <div className="flex justify-between"><dt className="text-slate-500">Tax</dt><dd className="tabular-nums">{currency.format(Number(estimate.tax_amount))}</dd></div>}
-                <div className="flex justify-between border-t border-slate-200 pt-3 text-lg font-bold"><dt>Total</dt><dd className="tabular-nums">{currency.format(Number(estimate.total))}</dd></div>
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Subtotal</dt>
+                  <dd className="tabular-nums">{currency.format(Number(estimate.subtotal))}</dd>
+                </div>
+                {Number(estimate.discount_amount) > 0 && (
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Discount</dt>
+                    <dd className="tabular-nums">−{currency.format(Number(estimate.discount_amount))}</dd>
+                  </div>
+                )}
+                {Number(estimate.tax_amount) > 0 && (
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Tax</dt>
+                    <dd className="tabular-nums">{currency.format(Number(estimate.tax_amount))}</dd>
+                  </div>
+                )}
+                <div className="flex justify-between border-t border-border pt-3 text-lg font-bold">
+                  <dt>Total</dt>
+                  <dd className="tabular-nums">{currency.format(Number(estimate.total))}</dd>
+                </div>
               </dl>
             </section>
 
             {(estimate.notes || estimate.terms_and_conditions) && (
-              <section className="px-6 py-6 sm:px-8 border-t border-slate-200 grid gap-6 sm:grid-cols-2 text-sm">
-                {estimate.notes && <div><h2 className="font-semibold mb-2">Notes</h2><p className="text-slate-600 whitespace-pre-wrap">{estimate.notes}</p></div>}
-                {estimate.terms_and_conditions && <div><h2 className="font-semibold mb-2">Terms</h2><p className="text-slate-600 whitespace-pre-wrap">{estimate.terms_and_conditions}</p></div>}
+              <section className="grid gap-6 border-t border-border bg-muted/20 px-6 py-6 text-sm sm:grid-cols-2 sm:px-8">
+                {estimate.notes && (
+                  <div>
+                    <h2 className="mb-2 font-semibold">Notes</h2>
+                    <p className="whitespace-pre-wrap text-muted-foreground">{estimate.notes}</p>
+                  </div>
+                )}
+                {estimate.terms_and_conditions && (
+                  <div>
+                    <h2 className="mb-2 font-semibold">Terms</h2>
+                    <p className="whitespace-pre-wrap text-muted-foreground">{estimate.terms_and_conditions}</p>
+                  </div>
+                )}
               </section>
             )}
           </CardContent>
         </Card>
 
         {!terminal && (
-          <Card className="border-slate-200 shadow-sm">
-            <CardContent className="p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+          <Card className="shadow-sm">
+            <CardContent className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
               <div>
-                <h2 className="font-semibold text-lg">Ready to respond?</h2>
-                <p className="text-sm text-slate-600 mt-1">Your response is shared immediately with {data.business.name}.</p>
+                <h2 className="text-lg font-semibold">Ready to respond?</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Your response is shared immediately with {data.business.name}.
+                </p>
               </div>
-              <div className="flex flex-col-reverse sm:flex-row gap-3 sm:shrink-0">
+              <div className="flex flex-col-reverse gap-3 sm:shrink-0 sm:flex-row">
                 <Button variant="outline" onClick={() => setConfirming('decline')} disabled={!!pending}>
-                  {pending === 'decline' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Decline
+                  {pending === 'decline' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Decline
                 </Button>
-                <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setConfirming('accept')} disabled={!!pending}>
-                  {pending === 'accept' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Accept estimate
+                <Button onClick={() => setConfirming('accept')} disabled={!!pending}>
+                  {pending === 'accept' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Accept estimate
                 </Button>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {error && data && <p className="text-sm text-red-700 text-center" role="alert">{error}</p>}
-        <p className="text-center text-xs text-slate-500">This private link provides access to this estimate. Please do not forward it.</p>
+        {error && data && <p className="text-center text-sm text-destructive" role="alert">{error}</p>}
+        <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
+          <ShieldCheck className="h-3.5 w-3.5" />
+          This private link provides access to this estimate. Please do not forward it.
+        </p>
       </div>
 
       <AlertDialog open={confirming !== null} onOpenChange={(open) => !open && setConfirming(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{confirming === 'accept' ? 'Accept this estimate?' : 'Decline this estimate?'}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {confirming === 'accept' ? 'Accept this estimate?' : 'Decline this estimate?'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {confirming === 'accept'
                 ? `This records your approval of estimate ${estimate.number} for ${currency.format(Number(estimate.total))}.`
@@ -245,7 +371,9 @@ export default function PublicEstimatePage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className={confirming === 'decline' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}
+              className={confirming === 'decline'
+                ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                : undefined}
               onClick={() => confirming && void respond(confirming)}
             >
               {confirming === 'accept' ? 'Accept estimate' : 'Decline estimate'}
@@ -253,6 +381,6 @@ export default function PublicEstimatePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </main>
+    </RecipientPage>
   );
 }

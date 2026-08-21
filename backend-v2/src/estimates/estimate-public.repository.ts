@@ -10,6 +10,7 @@ export type PublicEstimateCapability = {
   organization_id: number;
   estimate_id: number;
   estimate_number: string;
+  organization_name: string;
   status: PublicEstimateState;
   sent_at: Date | null;
   viewed_at: Date | null;
@@ -114,6 +115,7 @@ export class EstimatePublicRepository {
     const result = await client.query<PublicEstimateCapability>(
       `SELECT capability.id AS capability_id, capability.organization_id,
               capability.estimate_id, estimate.estimate_number,
+              organization.name AS organization_name,
               estimate.status, estimate.sent_at, estimate.viewed_at,
               estimate.accepted_at, estimate.declined_at,
               capability.expires_at, delivery.payload
@@ -121,6 +123,8 @@ export class EstimatePublicRepository {
        JOIN estimates estimate
          ON estimate.id = capability.estimate_id
         AND estimate.organization_id = capability.organization_id
+       JOIN organizations organization
+         ON organization.id = capability.organization_id
        JOIN estimate_email_deliveries delivery
          ON delivery.id = capability.delivery_id
         AND delivery.estimate_id = capability.estimate_id

@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ActivationService } from '../activation/activation.service';
+import { brandedTransactionalEmail } from '../common/branded-transactional-email';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { SendInvoiceInput } from './invoice.inputs';
 import {
@@ -236,12 +237,30 @@ export class InvoiceEmailDeliveryService {
 
   private html(delivery: InvoiceEmailDeliveryRow, paymentUrl: string | null): string {
     const message = escapeHtml(delivery.payload.message);
-    const link = paymentUrl
-      ? `<div style="text-align:center;margin:24px 0"><a href="${escapeHtml(paymentUrl)}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:500">Pay Now</a></div>`
-      : '';
-    return '<!doctype html><html lang="en"><head><meta charset="utf-8"></head>' +
-      `<body style="font-family:Arial,sans-serif;color:#1f2937"><div style="max-width:600px;margin:0 auto;padding:24px">` +
-      `<div style="white-space:pre-wrap;line-height:1.6">${message}</div>${link}</div></body></html>`;
+    const number = String(delivery.payload.invoice.invoice_number || 'Invoice');
+    return brandedTransactionalEmail({
+      assetOrigin: this.frontendOrigin(),
+      previewText: `Invoice ${number} is ready.`,
+      eyebrow: `Invoice · ${number}`,
+      heading: `Invoice ${number}`,
+      bodyHtml: `<div style="white-space:pre-wrap">${message}</div>`,
+      cta: paymentUrl ? { label: 'Pay invoice', url: paymentUrl } : undefined,
+      footerText: 'Your invoice PDF is attached. Sent securely with Itemize.',
+    });
+  }
+
+  private frontendOrigin(): string {
+    const fallback = process.env.NODE_ENV === 'production'
+      ? 'https://itemize.cloud'
+      : 'http://localhost:5173';
+    try {
+      const configured = new URL(process.env.FRONTEND_URL ?? fallback);
+      return ['http:', 'https:'].includes(configured.protocol)
+        ? configured.origin
+        : fallback;
+    } catch {
+      return fallback;
+    }
   }
 
   private error(error: unknown): string {

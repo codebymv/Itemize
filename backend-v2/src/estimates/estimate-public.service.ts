@@ -78,6 +78,10 @@ export class EstimatePublicService {
 
   private present(capability: PublicEstimateCapability) {
     const payload = capability.payload;
+    const capturedBusinessName = payload.businessName?.trim();
+    const businessName = capturedBusinessName && capturedBusinessName !== 'Our Company'
+      ? capturedBusinessName
+      : capability.organization_name?.trim() || 'Itemize workspace';
     return {
       estimate: {
         number: capability.estimate_number,
@@ -98,7 +102,7 @@ export class EstimatePublicService {
       },
       customer: { name: payload.customerName ?? null },
       business: {
-        name: payload.businessName || 'Our Company',
+        name: businessName,
         email: payload.businessEmail ?? null,
       },
       items: (payload.items ?? []).map((item) => ({
