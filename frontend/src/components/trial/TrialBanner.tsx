@@ -175,10 +175,10 @@ export function TrialBanner({
 
         {/* Mobile Layout */}
         <div className="flex md:hidden flex-col gap-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-start gap-2 flex-1">
-              <Icon className={cn('h-5 w-5 flex-shrink-0 mt-0.5', styles.icon)} aria-hidden="true" />
-              <p className={cn('text-sm font-semibold', styles.text)}>
+          <div className="relative flex min-h-6 items-center justify-center px-8">
+            <div className="flex items-center justify-center gap-2 text-center">
+              <Icon className={cn('h-5 w-5 flex-shrink-0', styles.icon)} aria-hidden="true" />
+              <p className={cn('text-center text-sm font-semibold', styles.text)}>
                 {urgencyState === 'urgent'
                   ? `Trial ends in ${trialStatus.daysRemaining} ${trialStatus.daysRemaining === 1 ? 'day' : 'days'}!`
                   : `${trialStatus.daysRemaining} ${trialStatus.daysRemaining === 1 ? 'day' : 'days'} left in trial`}
@@ -189,7 +189,7 @@ export function TrialBanner({
               <button
                 onClick={handleDismiss}
                 className={cn(
-                  'p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex-shrink-0',
+                  'absolute right-0 p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors',
                   'focus:outline-none focus:ring-2 focus:ring-offset-2',
                   styles.text
                 )}
