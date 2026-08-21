@@ -42,6 +42,7 @@ import { ConversionRateCard } from './dashboard/components/ConversionRateCard';
 import { CommunicationStatsCard } from './dashboard/components/CommunicationStatsCard';
 import { PipelineDealAgeCard } from './dashboard/components/PipelineDealAgeCard';
 import { RecentActivityList } from './dashboard/components/RecentActivityList';
+import { DashboardStatRail } from './dashboard/components/DashboardStatRail';
 import { ActivityTimeline } from '@/components/activity-timeline';
 import { transformApiActivityToDesignSystem } from '@/design-system/utils/transform-api-activity';
 import { RevenueTrendsChart } from './dashboard/components/RevenueTrendsChart';
@@ -238,8 +239,12 @@ export function DashboardPage() {
 
                     <GetStartedCard />
 
-                    {/* CRM Stats Grid */}
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+                    {/* CRM Stats: swipeable rail on mobile, grid on desktop */}
+                    <DashboardStatRail
+                        label="CRM overview"
+                        isMobile={isMobile}
+                        desktopColumns="md:grid-cols-2 lg:grid-cols-4"
+                    >
                         <StatCard
                             title="Total Contacts"
                             badgeText="Total Contacts"
@@ -276,10 +281,14 @@ export function DashboardPage() {
                             colorTheme="blue"
                             isLoading={isLoading}
                         />
-                    </div>
+                    </DashboardStatRail>
 
-                    {/* Secondary Stats Row */}
-                    <div className="grid gap-4 md:grid-cols-3 mb-8">
+                    {/* Secondary Stats: swipeable rail on mobile, grid on desktop */}
+                    <DashboardStatRail
+                        label="Activity overview"
+                        isMobile={isMobile}
+                        desktopColumns="md:grid-cols-3"
+                    >
                         <StatCard
                             title="Tasks Overdue"
                             badgeText="Overdue"
@@ -307,7 +316,7 @@ export function DashboardPage() {
                             colorTheme="green"
                             isLoading={isLoading}
                         />
-                    </div>
+                    </DashboardStatRail>
 
                     {/* Module Widgets - Cross-module visibility */}
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-stretch mb-8">
