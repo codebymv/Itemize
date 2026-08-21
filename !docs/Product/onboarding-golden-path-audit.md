@@ -20,7 +20,7 @@ the Solo journey. Creating a draft or deal is not activation.
 | The dashboard checklist mixed Free workspace actions with paid CRM actions | Neither audience received a coherent journey | The server now returns a one-step Free journey or a three-step Solo journey based on the organization plan |
 | Creating an invoice or deal completed the former commercial checklist | The UI claimed value before anything reached a client | The final step now reads the authoritative `artifact_sent` activation event |
 | Every checklist row was independently clickable | Several equal choices competed for attention | Only the next incomplete step has a CTA; later steps remain visible as orientation |
-| The Canvas tour taught three feature groups before asking for work | Free users had to learn the product before receiving value | Canvas onboarding is now one step and opens the first-list editor when completed |
+| The Canvas tour taught three feature groups before asking for work | Free users had to learn the product before receiving value | Canvas onboarding is now a focused two-step chooser that explains every workspace format and starts only the format the user selects |
 
 The Solo default path uses an estimate because it is the lowest-commitment
 commercial artifact. If the user creates an invoice or signature document
@@ -61,7 +61,7 @@ organization; no client organization or connected Stripe account was touched.
 | Journey | Desktop | Mobile | Production evidence |
 | --- | --- | --- | --- |
 | Free email signup and verification | Pass | Pass | Branded verification/welcome payloads; post-verification routing opened Canvas |
-| Google OAuth existing-account sign-in | Pass | Pass | Correct Itemize client/origin, verified server audience, HttpOnly session, Canvas landing, and Free-scoped navigation |
+| Fresh Google OAuth signup | Pass | Pass | Consent-gated account chooser, verified server audience, HttpOnly session, new personal Free workspace, Canvas landing, and Free-scoped navigation |
 | Free first workspace action | Pass | Pass | Focused Canvas onboarding exposed the workspace content choices without forcing a list |
 | Solo first contact | Pass | Pass | Fresh Solo navigation and contact creation completed without an upgrade dead end |
 | Estimate create, send, and recipient response | Pass | Pass | `EST-00001` for `$125.00` delivered, public response completed, and owner notification delivered |
@@ -82,20 +82,24 @@ redundant `Account security notification from Itemize.` footer was removed, and
 the newest production welcome payload confirms the shared shell is present and
 the removed footer is absent.
 
+Fresh Google-user provisioning was rerun after an authorized greenfield reset.
+Production created exactly one Google-verified user, one personal organization,
+and one owner membership. The organization is `free` with subscription status
+`none` and no trial timestamps; both desktop and mobile routes expose only the
+Free workspace scope. This run also reconfirmed the matching Google client ID,
+required Terms/Privacy acknowledgement, and the intended Google profile name
+for a genuinely new user.
+
 ### Remaining matrix extensions
 
-- Google OAuth sign-in against an existing account passed. The run exposed and
-  closed two production gaps: GraphQL was missing the matching Google client ID,
-  and Google registration could bypass the Terms/Privacy acknowledgement. The
-  account-linking path now also preserves the user's existing Itemize display
-  name instead of replacing it with the Google profile name. Fresh Google-user
-  provisioning still needs one genuinely disposable Google identity.
 - A live Stripe checkout/payment is intentionally deferred until the Itemize
   Stripe account review and connection are complete. The matrix did not access
   or mutate any client-owned Stripe account.
 - Estimate decline and signature decline are covered by renderer/service tests;
   add production canaries when destructive fixture coverage is next scheduled.
 
-All golden-path users and their personal organizations are removed after the
-evidence is recorded. See [outbound-email-brand-audit.md](outbound-email-brand-audit.md)
-for the sender inventory, production cause, and regression gates.
+Earlier disposable golden-path fixtures were removed after their evidence was
+recorded. The fresh OAuth account is retained as the sole production user for
+continued first-run testing. See
+[outbound-email-brand-audit.md](outbound-email-brand-audit.md) for the sender
+inventory, production cause, and regression gates.
