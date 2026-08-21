@@ -19,13 +19,14 @@ export interface UsageIndicatorProps {
   className?: string;
 }
 
-type UsageState = 'normal' | 'warning' | 'critical' | 'unlimited';
+type UsageState = 'normal' | 'warning' | 'critical' | 'unlimited' | 'unavailable';
 
 const fillClass: Record<UsageState, string> = {
   normal: 'bg-blue-600 dark:bg-blue-500',
   warning: 'bg-amber-500',
   critical: 'bg-red-600 dark:bg-red-500',
   unlimited: '',
+  unavailable: '',
 };
 
 const iconTheme: Record<UsageState, StatTheme> = {
@@ -33,6 +34,7 @@ const iconTheme: Record<UsageState, StatTheme> = {
   warning: 'orange',
   critical: 'red',
   unlimited: 'blue',
+  unavailable: 'blue',
 };
 
 export function UsageIndicator({
@@ -43,9 +45,12 @@ export function UsageIndicator({
   icon,
   className,
 }: UsageIndicatorProps) {
-  const isUnlimited = limit === -1 || limit === 0;
-  const percentage = isUnlimited ? 0 : Math.round((used / limit) * 100);
-  const state: UsageState = isUnlimited
+  const isUnlimited = limit === -1;
+  const isUnavailable = limit === 0;
+  const percentage = isUnlimited || isUnavailable ? 0 : Math.round((used / limit) * 100);
+  const state: UsageState = isUnavailable
+    ? 'unavailable'
+    : isUnlimited
     ? 'unlimited'
     : percentage < 70
       ? 'normal'
@@ -77,7 +82,9 @@ export function UsageIndicator({
           >
             {label}
           </h3>
-          {isUnlimited ? (
+          {isUnavailable ? (
+            <p className="text-xl font-semibold tracking-tight">Not included</p>
+          ) : isUnlimited ? (
             <p className="text-xl font-semibold tracking-tight">Unlimited</p>
           ) : (
             <p className="text-xl font-semibold tracking-tight">
@@ -91,7 +98,9 @@ export function UsageIndicator({
         </div>
       </div>
 
-      {isUnlimited ? (
+      {isUnavailable ? (
+        <p className="text-xs text-muted-foreground">Available on Solo and Studio</p>
+      ) : isUnlimited ? (
         <p className="text-xs text-muted-foreground">No monthly cap on this plan</p>
       ) : (
         <>

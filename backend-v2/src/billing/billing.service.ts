@@ -182,6 +182,37 @@ export class BillingService {
     return { acknowledged: true };
   }
 
+  async startSoloTrial(organizationId: number): Promise<BillingStatus> {
+    const current = await this.billing.status(organizationId);
+    if (!current) throw itemizeGraphqlError('Organization not found', 'NOT_FOUND');
+    if (
+      current.plan !== 'free' ||
+      current.subscription_status !== 'none' ||
+      current.trial_started_at ||
+      current.stripe_subscription_id
+    ) {
+      throw itemizeGraphqlError(
+        'This workspace is not eligible for another free trial',
+        'BAD_USER_INPUT',
+        { reason: 'TRIAL_NOT_AVAILABLE' },
+      );
+    }
+    const definition = planDefinition('starter');
+    if (!definition) throw new Error('Solo plan definition is unavailable');
+    const updated = await this.billing.startSoloTrial(
+      organizationId,
+      definition.limits,
+    );
+    if (!updated) {
+      throw itemizeGraphqlError(
+        'This workspace is not eligible for another free trial',
+        'BAD_USER_INPUT',
+        { reason: 'TRIAL_NOT_AVAILABLE' },
+      );
+    }
+    return this.mapStatus(updated);
+  }
+
   private checkoutPrice(input: CreateBillingCheckoutInput): {
     planId: BillingPlanId;
     period: BillingPeriod;

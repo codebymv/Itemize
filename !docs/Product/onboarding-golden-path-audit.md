@@ -90,6 +90,19 @@ Free workspace scope. This run also reconfirmed the matching Google client ID,
 required Terms/Privacy acknowledgement, and the intended Google profile name
 for a genuinely new user.
 
+The Free-to-Solo preflight confirmed the retained production workspace still
+has no subscription or trial after an abandoned Stripe Checkout. It also
+surfaced three release blockers now covered by regression tests: the Free plan's
+zero email, SMS, and API entitlements must read `Not included`, not `Unlimited`;
+publishing a workspace item must require an explicit confirmation and expose
+working copy/open/revoke controls; and the advertised 14-day Solo trial must
+start in-app without requiring a card. Trial activation is an owner-only,
+organization-scoped, atomic, one-time mutation. A production activation canary
+remains pending deployment and explicit confirmation at the point of action.
+While that no-card trial is active (or after it expires), the current Solo card
+remains convertible through a `Subscribe to Solo` Stripe Checkout action rather
+than becoming a disabled conversion dead end.
+
 ### Remaining matrix extensions
 
 - A live Stripe checkout/payment is intentionally deferred until the Itemize

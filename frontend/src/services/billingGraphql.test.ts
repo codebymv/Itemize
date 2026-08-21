@@ -11,6 +11,7 @@ import {
   getBillingPlansViaGraphql,
   getBillingStatusViaGraphql,
   getBillingUsageViaGraphql,
+  startBillingSoloTrialViaGraphql,
 } from './billingGraphql';
 
 vi.mock('./graphqlClient', () => ({
@@ -129,6 +130,33 @@ describe('billing GraphQL adapter', () => {
       })
       .mockResolvedValueOnce({
         acknowledgeBillingTrialEnd: { acknowledged: true },
+      })
+      .mockResolvedValueOnce({
+        startBillingSoloTrial: {
+          plan: 'starter',
+          subscriptionStatus: 'trialing',
+          billingPeriod: 'monthly',
+          billingPeriodStart: null,
+          billingPeriodEnd: null,
+          stripeCustomerId: null,
+          stripeSubscriptionId: null,
+          emailsUsed: 0,
+          emailsLimit: 1000,
+          smsUsed: 0,
+          smsLimit: 500,
+          apiCallsUsed: 0,
+          apiCallsLimit: 0,
+          contactsLimit: 5000,
+          usersLimit: 3,
+          workflowsLimit: 5,
+          landingPagesLimit: 10,
+          formsLimit: 10,
+          calendarsLimit: 3,
+          trialEndsAt: '2026-09-04T00:00:00.000Z',
+          trialEndAcknowledgedAt: null,
+          cancelAtPeriodEnd: false,
+          canceledAt: null,
+        },
       });
 
     const checkout = {
@@ -146,6 +174,11 @@ describe('billing GraphQL adapter', () => {
     ).toEqual({ url: 'https://stripe.test/portal' });
     expect(await acknowledgeBillingTrialEndViaGraphql()).toEqual({
       acknowledged: true,
+    });
+    expect(await startBillingSoloTrialViaGraphql()).toMatchObject({
+      plan: 'starter',
+      subscription_status: 'trialing',
+      emails_limit: 1000,
     });
     expect(graphqlMutationRequest).toHaveBeenNthCalledWith(
       1,
@@ -166,6 +199,11 @@ describe('billing GraphQL adapter', () => {
           idempotencyKey: expect.any(String),
         },
       },
+    );
+    expect(graphqlMutationRequest).toHaveBeenNthCalledWith(
+      4,
+      expect.stringContaining('StartBillingSoloTrial'),
+      {},
     );
   });
 });

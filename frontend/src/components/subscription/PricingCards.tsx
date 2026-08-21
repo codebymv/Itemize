@@ -76,6 +76,12 @@ interface PricingCardsProps {
      * Callback when user clicks upgrade button
      */
     onUpgrade?: (planId: Plan) => void;
+
+    /** Free workspaces may start one no-card Solo trial. */
+    starterTrialEligible?: boolean;
+
+    /** A no-card Solo trial can convert its current plan through checkout. */
+    canSubscribeCurrentTrial?: boolean;
     
     /**
      * Show loading state on buttons
@@ -113,6 +119,8 @@ export function PricingCards({
     currentPlan,
     variant = 'landing',
     onUpgrade,
+    starterTrialEligible = false,
+    canSubscribeCurrentTrial = false,
     isLoading = false,
     showYearlyToggle = true,
     billingPeriod = 'monthly',
@@ -141,9 +149,11 @@ export function PricingCards({
     }
 
     // Get action label based on plan comparison
-    const getActionLabel = (targetPlan: Plan): 'Upgrade' | 'Downgrade' | 'Current' => {
+    const getActionLabel = (targetPlan: Plan): string => {
         if (!currentPlan) return 'Upgrade';
+        if (canSubscribeCurrentTrial && targetPlan === PLANS.STARTER) return 'Subscribe';
         if (currentPlan === targetPlan) return 'Current';
+        if (starterTrialEligible && targetPlan === PLANS.STARTER) return 'Start Trial';
         
         const currentTier = PLAN_TIER_ORDER[currentPlan] || 0;
         const targetTier = PLAN_TIER_ORDER[targetPlan] || 0;
@@ -176,7 +186,7 @@ export function PricingCards({
     };
 
     const handlePlanClick = (plan: Plan) => {
-        if (currentPlan === plan) return;
+        if (currentPlan === plan && !canSubscribeCurrentTrial) return;
         if (onUpgrade) {
             onUpgrade(plan);
         }
@@ -243,6 +253,8 @@ export function PricingCards({
                     const Icon = PLAN_ICONS[planId];
                     const isHighlighted = planId === 'unlimited';
                     const isCurrentPlan = currentPlan === planId;
+                    const isConvertibleTrial =
+                        canSubscribeCurrentTrial && planId === PLANS.STARTER;
                     const actionLabel = getActionLabel(planId);
                     
                     const price = billingPeriod === 'yearly' 
@@ -350,19 +362,27 @@ export function PricingCards({
                             {/* CTA Button */}
                             <Button
                                 type="button"
-                                className={getButtonClass(planId, isHighlighted, isCurrentPlan)}
+                                className={getButtonClass(
+                                    planId,
+                                    isHighlighted,
+                                    isCurrentPlan && !isConvertibleTrial,
+                                )}
                                 onClick={() => handlePlanClick(planId)}
-                                disabled={isLoading || isCurrentPlan}
+                                disabled={isLoading || (isCurrentPlan && !isConvertibleTrial)}
                             >
                                 {isLoading ? (
                                     <span className="flex items-center gap-2">
                                         <Loader2 className="h-4 w-4 animate-spin" />
                                         Processing...
                                     </span>
+                                ) : isConvertibleTrial ? (
+                                    `Subscribe to ${itemizeMeta.name}`
                                 ) : isCurrentPlan ? (
                                     'Current Plan'
                                 ) : (
-                                    `${actionLabel} to ${itemizeMeta.name}`
+                                    actionLabel === 'Start Trial'
+                                        ? `Start ${itemizeMeta.name} Trial`
+                                        : `${actionLabel} to ${itemizeMeta.name}`
                                 )}
                             </Button>
                         </div>
@@ -372,7 +392,9 @@ export function PricingCards({
 
             {/* Footer */}
             <p className={cn('text-center text-sm', textMuted)}>
-                All plans include a 14-day free trial. No credit card required to start.
+                {starterTrialEligible
+                    ? 'Start Solo free for 14 days. No credit card required.'
+                    : 'Subscriptions are managed securely through Stripe.'}
             </p>
         </div>
     );

@@ -165,6 +165,7 @@ interface SubscriptionFeaturesContextType {
   getRequiredTier: (feature: FeatureName) => number;
   refreshSubscription: () => Promise<void>;
   refreshUsage: () => Promise<void>;
+  startSoloTrial: () => Promise<void>;
   startCheckout: (planName: 'starter' | 'unlimited' | 'pro', billingPeriod: 'monthly' | 'yearly') => Promise<void>;
   openBillingPortal: () => Promise<void>;
 }
@@ -479,6 +480,15 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
     }
   }, []);
 
+  const startSoloTrial = useCallback(async () => {
+    const result = await billingApi.startSoloTrial();
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to start Solo trial');
+    }
+    await refreshSubscription();
+    await refreshUsage();
+  }, [refreshSubscription, refreshUsage]);
+
   // Open billing portal
   const openBillingPortal = useCallback(async () => {
     try {
@@ -520,6 +530,7 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
     getRequiredTier,
     refreshSubscription,
     refreshUsage,
+    startSoloTrial,
     startCheckout,
     openBillingPortal
   }), [
@@ -529,6 +540,7 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
     getRequiredTier,
     refreshSubscription,
     refreshUsage,
+    startSoloTrial,
     startCheckout,
     openBillingPortal
   ]);

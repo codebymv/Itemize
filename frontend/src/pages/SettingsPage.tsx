@@ -128,9 +128,17 @@ function SettingsNav() {
   );
 }
 
-function AccountInfo({ currentPlan }: { currentPlan?: Plan }) {
+function AccountInfo({
+  currentPlan,
+  starterTrialEligible,
+  canSubscribeCurrentTrial,
+}: {
+  currentPlan?: Plan;
+  starterTrialEligible: boolean;
+  canSubscribeCurrentTrial: boolean;
+}) {
   const { currentUser } = useAuthState();
-  const { startCheckout } = useSubscriptionFeatures();
+  const { startCheckout, startSoloTrial } = useSubscriptionFeatures();
   const { toast } = useToast();
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [isLoading, setIsLoading] = useState(false);
@@ -138,15 +146,23 @@ function AccountInfo({ currentPlan }: { currentPlan?: Plan }) {
 
   const handleUpgrade = async (planId: Plan) => {
     if (planId === 'free') return;
-    if (currentPlan === planId) return;
+    if (currentPlan === planId && !canSubscribeCurrentTrial) return;
 
     setIsLoading(true);
     try {
-      await startCheckout(planId, billingPeriod);
+      if (currentPlan === 'free' && planId === 'starter') {
+        await startSoloTrial();
+        toast({
+          title: 'Solo trial started',
+          description: 'Your business tools are unlocked for 14 days.',
+        });
+      } else {
+        await startCheckout(planId, billingPeriod);
+      }
     } catch (error) {
       toast({
-        title: 'Could not start checkout',
-        description: error instanceof Error ? error.message : 'Failed to start checkout',
+        title: 'Could not change plan',
+        description: error instanceof Error ? error.message : 'Failed to change plan',
         variant: 'destructive',
       });
     } finally {
@@ -224,6 +240,8 @@ function AccountInfo({ currentPlan }: { currentPlan?: Plan }) {
           <PricingCards
             variant="dashboard"
             currentPlan={currentPlan}
+            starterTrialEligible={starterTrialEligible}
+            canSubscribeCurrentTrial={canSubscribeCurrentTrial}
             onUpgrade={handleUpgrade}
             isLoading={isLoading}
             showYearlyToggle={true}
@@ -237,8 +255,13 @@ function AccountInfo({ currentPlan }: { currentPlan?: Plan }) {
 }
 
 function AccountSettings() {
-  const { planName } = useSubscriptionState();
+  const { planName, subscription } = useSubscriptionState();
   const navigate = useNavigate();
+  const starterTrialEligible = planName === 'free' && !subscription?.trial?.endsAt;
+  const canSubscribeCurrentTrial =
+    planName === 'starter' &&
+    subscription?.status === 'trialing' &&
+    !subscription.hasSubscription;
 
   return (
     <div className="space-y-6">
@@ -249,7 +272,11 @@ function AccountSettings() {
         </p>
       </div>
       <Separator />
-      <AccountInfo currentPlan={planName as Plan | undefined} />
+      <AccountInfo
+        currentPlan={planName as Plan | undefined}
+        starterTrialEligible={starterTrialEligible}
+        canSubscribeCurrentTrial={canSubscribeCurrentTrial}
+      />
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Integrations</CardTitle>

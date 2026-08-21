@@ -55,6 +55,9 @@ import {
   shareList as apiShareList,
   shareNote as apiShareNote,
   shareWhiteboard as apiShareWhiteboard,
+  unshareList as apiUnshareList,
+  unshareNote as apiUnshareNote,
+  unshareWhiteboard as apiUnshareWhiteboard,
   shareVault,
   unshareVault,
 } from '@/services/api';
@@ -80,10 +83,21 @@ import {
   isVaultZke,
 } from '@/lib/vaultZkSession';
 import { enableVaultSharingViaGraphql, getVaultViaGraphql } from '@/services/workspaceVaultGraphql';
+import {
+  disableWorkspaceWireframeSharingViaGraphql,
+  enableWorkspaceWireframeSharingViaGraphql,
+} from '@/services/workspaceWireframeMutationsGraphql';
 
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
 type SortOption = 'updated' | 'created' | 'title';
 type ViewMode = 'grid' | 'list';
+type WorkspaceShareTarget = {
+  itemType: 'list' | 'note' | 'whiteboard' | 'wireframe';
+  itemId: string | number;
+  itemTitle: string;
+  isPublic?: boolean;
+  shareToken?: string;
+};
 
 export function ContentsPage() {
     const navigate = useNavigate();
@@ -118,6 +132,7 @@ export function ContentsPage() {
   const [showNewWhiteboardModal, setShowNewWhiteboardModal] = useState(false);
   const [showNewWireframeModal, setShowNewWireframeModal] = useState(false);
   const [showNewVaultModal, setShowNewVaultModal] = useState(false);
+  const [workspaceShareTarget, setWorkspaceShareTarget] = useState<WorkspaceShareTarget | null>(null);
   const [vaultToShare, setVaultToShare] = useState<Vault | null>(null);
 
   const {
@@ -270,18 +285,16 @@ export function ContentsPage() {
     }
   }, [token, toast, fetchAllContent]);
 
-  const handleListShare = useCallback(async (id: string) => {
-    try {
-      await apiShareList(id, token);
-      toast({ title: 'Shared', description: 'List link copied' });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to share list',
-        variant: 'destructive',
-      });
-    }
-  }, [token, toast]);
+  const handleListShare = useCallback((id: string) => {
+    const list = lists.find((candidate) => candidate.id === id);
+    if (list) setWorkspaceShareTarget({
+      itemType: 'list',
+      itemId: id,
+      itemTitle: list.title || 'Untitled List',
+      isPublic: list.is_public,
+      shareToken: list.share_token,
+    });
+  }, [lists]);
 
   const handleNoteUpdate = useCallback(async (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at'>>) => {
     try {
@@ -312,18 +325,16 @@ export function ContentsPage() {
     }
   }, [token, toast, fetchAllContent]);
 
-  const handleNoteShare = useCallback(async (id: number) => {
-    try {
-      await apiShareNote(id, token);
-      toast({ title: 'Shared', description: 'Note link copied' });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to share note',
-        variant: 'destructive',
-      });
-    }
-  }, [token, toast]);
+  const handleNoteShare = useCallback((id: number) => {
+    const note = notes.find((candidate) => candidate.id === id);
+    if (note) setWorkspaceShareTarget({
+      itemType: 'note',
+      itemId: id,
+      itemTitle: note.title || 'Untitled Note',
+      isPublic: note.is_public,
+      shareToken: note.share_token,
+    });
+  }, [notes]);
 
   const handleWhiteboardUpdate = useCallback(async (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
     try {
@@ -390,18 +401,16 @@ export function ContentsPage() {
     }
   }, [token, toast, fetchAllContent]);
 
-  const handleWhiteboardShare = useCallback(async (id: number) => {
-    try {
-      await apiShareWhiteboard(id, token);
-      toast({ title: 'Shared', description: 'Whiteboard link copied' });
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to share whiteboard',
-        variant: 'destructive',
-      });
-    }
-  }, [token, toast]);
+  const handleWhiteboardShare = useCallback((id: number) => {
+    const whiteboard = whiteboards.find((candidate) => candidate.id === id);
+    if (whiteboard) setWorkspaceShareTarget({
+      itemType: 'whiteboard',
+      itemId: id,
+      itemTitle: whiteboard.title || 'Untitled Whiteboard',
+      isPublic: whiteboard.is_public,
+      shareToken: whiteboard.share_token,
+    });
+  }, [whiteboards]);
 
   const handleWireframeDelete = useCallback(async (id: number): Promise<boolean> => {
     try {
@@ -419,6 +428,57 @@ export function ContentsPage() {
       return false;
     }
   }, [token, toast, fetchAllContent]);
+
+  const handleWireframeShare = useCallback((id: number) => {
+    const wireframe = wireframes.find((candidate) => candidate.id === id);
+    if (wireframe) setWorkspaceShareTarget({
+      itemType: 'wireframe',
+      itemId: id,
+      itemTitle: wireframe.title || 'Untitled Wireframe',
+      isPublic: wireframe.is_public,
+      shareToken: wireframe.share_token,
+    });
+  }, [wireframes]);
+
+  const enableSelectedWorkspaceSharing = useCallback(async (id: string | number) => {
+    if (!workspaceShareTarget) throw new Error('No workspace item selected');
+    let result: { shareToken: string; shareUrl: string };
+    switch (workspaceShareTarget.itemType) {
+      case 'list':
+        result = await apiShareList(String(id), token);
+        break;
+      case 'note':
+        result = await apiShareNote(Number(id), token);
+        break;
+      case 'whiteboard':
+        result = await apiShareWhiteboard(Number(id), token);
+        break;
+      case 'wireframe':
+        result = await enableWorkspaceWireframeSharingViaGraphql(Number(id));
+        break;
+    }
+    await fetchAllContent();
+    return result;
+  }, [fetchAllContent, token, workspaceShareTarget]);
+
+  const disableSelectedWorkspaceSharing = useCallback(async (id: string | number) => {
+    if (!workspaceShareTarget) throw new Error('No workspace item selected');
+    switch (workspaceShareTarget.itemType) {
+      case 'list':
+        await apiUnshareList(String(id), token);
+        break;
+      case 'note':
+        await apiUnshareNote(Number(id), token);
+        break;
+      case 'whiteboard':
+        await apiUnshareWhiteboard(Number(id), token);
+        break;
+      case 'wireframe':
+        await disableWorkspaceWireframeSharingViaGraphql(Number(id));
+        break;
+    }
+    await fetchAllContent();
+  }, [fetchAllContent, token, workspaceShareTarget]);
 
   const handleVaultDelete = useCallback(async (id: number): Promise<boolean> => {
     try {
@@ -826,7 +886,7 @@ export function ContentsPage() {
                       wireframe={wf}
                       onUpdate={handleWireframeUpdate}
                       onDelete={handleWireframeDelete}
-                      onShare={() => {}}
+                      onShare={handleWireframeShare}
                       existingCategories={dbCategories}
                       isCollapsed={isWireframeCollapsed(wf.id)}
                       onToggleCollapsed={() => toggleWireframeCollapsed(wf.id)}
@@ -867,6 +927,26 @@ export function ContentsPage() {
       {showNewWhiteboardModal && <CreateItemModal open={showNewWhiteboardModal} onOpenChange={(open) => { setShowNewWhiteboardModal(open); if (!open) fetchAllContent(); }} itemType="whiteboard" onCreate={createWhiteboard} existingCategories={categoriesForModal} />}
       {showNewWireframeModal && <CreateItemModal open={showNewWireframeModal} onOpenChange={(open) => { setShowNewWireframeModal(open); if (!open) fetchAllContent(); }} itemType="wireframe" onCreate={createWireframe} existingCategories={categoriesForModal} />}
       {showNewVaultModal && <CreateItemModal open={showNewVaultModal} onOpenChange={(open) => { setShowNewVaultModal(open); if (!open) fetchAllContent(); }} itemType="vault" onCreate={createVault} existingCategories={categoriesForModal} />}
+      {workspaceShareTarget && (
+        <ShareModal
+          open
+          onOpenChange={(open) => {
+            if (!open) setWorkspaceShareTarget(null);
+          }}
+          itemType={workspaceShareTarget.itemType}
+          itemId={workspaceShareTarget.itemId}
+          itemTitle={workspaceShareTarget.itemTitle}
+          onShare={enableSelectedWorkspaceSharing}
+          onUnshare={disableSelectedWorkspaceSharing}
+          existingShareData={workspaceShareTarget.isPublic && workspaceShareTarget.shareToken
+            ? {
+                shareToken: workspaceShareTarget.shareToken,
+                shareUrl: `${window.location.origin}/shared/${workspaceShareTarget.itemType}/${workspaceShareTarget.shareToken}`,
+              }
+            : undefined}
+          autoGenerate={false}
+        />
+      )}
       {vaultToShare && (
         <ShareModal
           open

@@ -24,6 +24,7 @@ export type BillingStatusRow = {
   landing_pages_limit: number | null;
   forms_limit: number | null;
   calendars_limit: number | null;
+  trial_started_at: Date | null;
   trial_ends_at: Date | null;
   trial_end_acknowledged_at: Date | null;
   cancel_at_period_end: boolean | null;
@@ -53,7 +54,7 @@ const statusSelection = `
   emails_used, emails_limit, sms_used, sms_limit, api_calls_used,
   api_calls_limit, contacts_limit, users_limit, workflows_limit,
   landing_pages_limit, forms_limit, calendars_limit, trial_ends_at,
-  trial_end_acknowledged_at, cancel_at_period_end, canceled_at`;
+  trial_started_at, trial_end_acknowledged_at, cancel_at_period_end, canceled_at`;
 
 @Injectable()
 export class BillingRepository {
@@ -161,6 +162,51 @@ export class BillingRepository {
       [organizationId],
     );
     return (result.rowCount ?? 0) === 1;
+  }
+
+  async startSoloTrial(
+    organizationId: number,
+    limits: {
+      emails: number;
+      sms: number;
+      apiCalls: number;
+      contacts: number;
+      users: number;
+      workflows: number;
+      landingPages: number;
+      forms: number;
+      calendars: number;
+    },
+  ): Promise<BillingStatusRow | null> {
+    const result = await this.pool.query<BillingStatusRow>(
+      `UPDATE organizations SET
+         plan = 'starter', subscription_status = 'trialing',
+         trial_started_at = NOW(), trial_ends_at = NOW() + INTERVAL '14 days',
+         trial_end_acknowledged_at = NULL,
+         emails_limit = $1, sms_limit = $2, api_calls_limit = $3,
+         contacts_limit = $4, users_limit = $5, workflows_limit = $6,
+         landing_pages_limit = $7, forms_limit = $8, calendars_limit = $9,
+         updated_at = NOW()
+       WHERE id = $10
+         AND plan = 'free'
+         AND subscription_status = 'none'
+         AND trial_started_at IS NULL
+         AND stripe_subscription_id IS NULL
+       RETURNING ${statusSelection}`,
+      [
+        limits.emails,
+        limits.sms,
+        limits.apiCalls,
+        limits.contacts,
+        limits.users,
+        limits.workflows,
+        limits.landingPages,
+        limits.forms,
+        limits.calendars,
+        organizationId,
+      ],
+    );
+    return result.rows[0] ?? null;
   }
 
   async synchronizeSubscription(

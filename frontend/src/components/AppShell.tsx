@@ -110,7 +110,11 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
 
         if (billingStatus.subscription_status === 'active') {
             setShowTrialEndedBilling(true);
-        } else if (billingStatus.subscription_status === 'canceled' || billingStatus.plan === 'free') {
+        } else if (
+            billingStatus.subscription_status === 'canceled' ||
+            billingStatus.plan === 'free' ||
+            (billingStatus.subscription_status === 'trialing' && !billingStatus.stripe_subscription_id)
+        ) {
             setShowTrialExpired(true);
         }
     }, [billingStatus]);

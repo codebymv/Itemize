@@ -1,11 +1,13 @@
 import { GraphQLError } from 'graphql';
-import { BillingRepository } from './billing.repository';
+import { BillingRepository, BillingStatusRow } from './billing.repository';
 import { BillingService } from './billing.service';
 import { StripeBillingProvider } from './stripe-billing.provider';
 
 describe('BillingService', () => {
   const originalFrontendUrl = process.env.FRONTEND_URL;
   const repository = {
+    status: jest.fn(),
+    startSoloTrial: jest.fn(),
     ensureCustomer: jest.fn(),
     portalCustomer: jest.fn(),
     checkoutOrganization: jest.fn(),
@@ -44,6 +46,33 @@ describe('BillingService', () => {
     idempotencyKey: 'checkout-unit-test-key-0001',
   };
 
+  const freeStatus = {
+    plan: 'free',
+    subscription_status: 'none',
+    billing_period: 'monthly',
+    billing_period_start: null,
+    billing_period_end: null,
+    stripe_customer_id: 'cus_abandoned_checkout',
+    stripe_subscription_id: null,
+    emails_used: 0,
+    emails_limit: 0,
+    sms_used: 0,
+    sms_limit: 0,
+    api_calls_used: 0,
+    api_calls_limit: 0,
+    contacts_limit: 0,
+    users_limit: 1,
+    workflows_limit: 0,
+    landing_pages_limit: 0,
+    forms_limit: 0,
+    calendars_limit: 0,
+    trial_started_at: null,
+    trial_ends_at: null,
+    trial_end_acknowledged_at: null,
+    cancel_at_period_end: false,
+    canceled_at: null,
+  } satisfies BillingStatusRow;
+
   it('publishes three complete purchasable plans', () => {
     expect(service.plans().map((plan) => plan.id)).toEqual([
       'starter',
@@ -51,6 +80,50 @@ describe('BillingService', () => {
       'pro',
     ]);
     expect(service.plans().every((plan) => Boolean(plan.pricing))).toBe(true);
+  });
+
+  it('starts one Solo trial for an eligible Free workspace without Stripe', async () => {
+    const trialEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+    repository.status.mockResolvedValue(freeStatus);
+    repository.startSoloTrial.mockResolvedValue({
+      ...freeStatus,
+      plan: 'starter',
+      subscription_status: 'trialing',
+      emails_limit: 1000,
+      sms_limit: 500,
+      contacts_limit: 5000,
+      users_limit: 3,
+      workflows_limit: 5,
+      landing_pages_limit: 10,
+      forms_limit: 10,
+      calendars_limit: 3,
+      trial_started_at: new Date(),
+      trial_ends_at: trialEnd,
+    });
+
+    await expect(service.startSoloTrial(4)).resolves.toMatchObject({
+      plan: 'starter',
+      subscriptionStatus: 'trialing',
+      trialEndsAt: trialEnd,
+      stripeSubscriptionId: null,
+    });
+    expect(repository.startSoloTrial).toHaveBeenCalledWith(
+      4,
+      expect.objectContaining({ emails: 1000, sms: 500, contacts: 5000 }),
+    );
+    expect(provider.createCheckoutSession).not.toHaveBeenCalled();
+  });
+
+  it('rejects a repeat Solo trial', async () => {
+    repository.status.mockResolvedValue({
+      ...freeStatus,
+      trial_started_at: new Date('2026-08-01T00:00:00.000Z'),
+    });
+
+    await expect(service.startSoloTrial(4)).rejects.toMatchObject({
+      extensions: { code: 'BAD_USER_INPUT', reason: 'TRIAL_NOT_AVAILABLE' },
+    });
+    expect(repository.startSoloTrial).not.toHaveBeenCalled();
   });
 
   it('rejects unsupported modes, prices, redirect origins, and weak keys before provider work', async () => {

@@ -111,6 +111,12 @@ const acknowledgeMutation = `
   }
 `;
 
+const startSoloTrialMutation = `
+  mutation StartBillingSoloTrial {
+    startBillingSoloTrial { ${statusFields} }
+  }
+`;
+
 const mapStatus = (status: GraphqlBillingStatus): BillingStatus => ({
   plan: status.plan,
   subscription_status: status.subscriptionStatus,
@@ -219,4 +225,12 @@ export const acknowledgeBillingTrialEndViaGraphql = async (): Promise<{
     Record<string, never>
   >(acknowledgeMutation, {});
   return response.acknowledgeBillingTrialEnd;
+};
+
+export const startBillingSoloTrialViaGraphql = async (): Promise<BillingStatus> => {
+  const response = await graphqlMutationRequest<
+    { startBillingSoloTrial: GraphqlBillingStatus },
+    Record<string, never>
+  >(startSoloTrialMutation, {});
+  return mapStatus(response.startBillingSoloTrial);
 };

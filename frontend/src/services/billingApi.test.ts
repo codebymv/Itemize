@@ -6,6 +6,7 @@ import {
   getBillingPlansViaGraphql,
   getBillingStatusViaGraphql,
   getBillingUsageViaGraphql,
+  startBillingSoloTrialViaGraphql,
 } from './billingGraphql';
 import {
   acknowledgeTrialEnd,
@@ -14,6 +15,7 @@ import {
   getBillingStatus,
   getPlans,
   getUsageStats,
+  startSoloTrial,
 } from './billingApi';
 
 vi.mock('./billingGraphql', () => ({
@@ -23,12 +25,13 @@ vi.mock('./billingGraphql', () => ({
   getBillingPlansViaGraphql: vi.fn(),
   getBillingStatusViaGraphql: vi.fn(),
   getBillingUsageViaGraphql: vi.fn(),
+  startBillingSoloTrialViaGraphql: vi.fn(),
 }));
 
 describe('billing API compatibility facade', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('preserves success envelopes for all six GraphQL operations', async () => {
+  it('preserves success envelopes for all billing GraphQL operations', async () => {
     vi.mocked(getBillingStatusViaGraphql).mockResolvedValue({ plan: 'starter' } as never);
     vi.mocked(getBillingPlansViaGraphql).mockResolvedValue([]);
     vi.mocked(getBillingUsageViaGraphql).mockResolvedValue({} as never);
@@ -37,6 +40,10 @@ describe('billing API compatibility facade', () => {
     vi.mocked(acknowledgeBillingTrialEndViaGraphql).mockResolvedValue({
       acknowledged: true,
     });
+    vi.mocked(startBillingSoloTrialViaGraphql).mockResolvedValue({
+      plan: 'starter',
+      subscription_status: 'trialing',
+    } as never);
 
     expect(await getBillingStatus()).toMatchObject({ success: true });
     expect(await getPlans()).toEqual({ success: true, data: [] });
@@ -55,6 +62,10 @@ describe('billing API compatibility facade', () => {
     expect(await acknowledgeTrialEnd()).toEqual({
       success: true,
       data: { acknowledged: true },
+    });
+    expect(await startSoloTrial()).toMatchObject({
+      success: true,
+      data: { plan: 'starter', subscription_status: 'trialing' },
     });
   });
 

@@ -12,6 +12,7 @@ import {
     getBillingPlansViaGraphql,
     getBillingStatusViaGraphql,
     getBillingUsageViaGraphql,
+    startBillingSoloTrialViaGraphql,
 } from './billingGraphql';
 
 const getApiErrorMessage = (error: unknown): string => {
@@ -258,11 +259,23 @@ export async function acknowledgeTrialEnd(): Promise<ApiResponse<{ acknowledged:
     }
 }
 
+export async function startSoloTrial(): Promise<ApiResponse<BillingStatus>> {
+    try {
+        return { success: true, data: await startBillingSoloTrialViaGraphql() };
+    } catch (error: unknown) {
+        return {
+            success: false,
+            error: getApiErrorMessage(error) || 'Failed to start Solo trial'
+        };
+    }
+}
+
 // Export all functions as a namespace for convenience
 export const billingApi = {
     getBillingStatus,
     getPlans,
     createCheckoutSession,
+    startSoloTrial,
     createPortalSession,
     getUsageStats,
     redirectToCheckout,

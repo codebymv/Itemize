@@ -1,6 +1,7 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { CsrfProtected, OrganizationScoped, Public } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
+import { itemizeGraphqlError } from '../common/graphql-error';
 import {
   CreateBillingCheckoutInput,
   CreateBillingPortalInput,
@@ -45,7 +46,7 @@ export class BillingResolver {
   createBillingCheckoutSession(
     @Args('input') input: CreateBillingCheckoutInput,
   ): Promise<BillingSession> {
-    return this.billing.checkout(this.organizationId(), input);
+    return this.billing.checkout(this.billingOwnerOrganizationId(), input);
   }
 
   @CsrfProtected()
@@ -55,7 +56,7 @@ export class BillingResolver {
     @Args('input') input: CreateBillingPortalInput,
   ): Promise<BillingSession> {
     return this.billing.portal(
-      this.organizationId(),
+      this.billingOwnerOrganizationId(),
       input.returnUrl,
       input.idempotencyKey,
     );
@@ -68,10 +69,32 @@ export class BillingResolver {
     return this.billing.acknowledgeTrialEnd(this.organizationId());
   }
 
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => BillingStatus)
+  startBillingSoloTrial(): Promise<BillingStatus> {
+    return this.billing.startSoloTrial(this.billingOwnerOrganizationId());
+  }
+
   private organizationId(): number {
     const organization = this.requestContext.current().organization;
     if (!organization) {
       throw new Error('Verified organization context is unavailable');
+    }
+    return organization.organizationId;
+  }
+
+  private billingOwnerOrganizationId(): number {
+    const organization = this.requestContext.current().organization;
+    if (!organization) {
+      throw new Error('Verified organization context is unavailable');
+    }
+    if (organization.organizationRole.toLowerCase() !== 'owner') {
+      throw itemizeGraphqlError(
+        'Only the workspace owner can manage billing',
+        'FORBIDDEN',
+        { reason: 'BILLING_OWNER_REQUIRED' },
+      );
     }
     return organization.organizationId;
   }
