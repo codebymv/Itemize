@@ -24,8 +24,7 @@ module.exports = {
     collectCoverageFrom: [
         'src/**/*.js',
         '!src/__tests__/**',
-        '!src/index.js',
-        '!src/models.js'
+        '!src/index.js'
     ],
     
     // Coverage thresholds (can be increased over time)

@@ -58,7 +58,7 @@
 ```json
 {
   "react": "^18.3.1",
-  "vite": "^5.4.1",
+  "vite": "6.4.3",
   "tailwindcss": "^3.4.11",
   "@tanstack/react-query": "^5.56.2"
 }
@@ -68,8 +68,7 @@
 ```json
 {
   "express": "^4.18.2",
-  "pg": "^8.16.0",
-  "sequelize": "^6.37.7",
+  "pg": "^8.20.0",
   "@google/generative-ai": "^0.24.1",
   "jsonwebtoken": "^9.0.2"
 }
