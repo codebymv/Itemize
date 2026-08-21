@@ -97,6 +97,7 @@ const OPTIONAL_ENV_VARS = [
     { var: 'CALENDAR_TOKEN_ACTIVE_KEY_ID', name: 'Calendar token active key ID' },
     { var: 'STRIPE_SECRET_KEY', name: 'Stripe Secret Key' },
     { var: 'STRIPE_WEBHOOK_SECRET', name: 'Stripe Webhook Secret' },
+    { var: 'STRIPE_INVOICE_WEBHOOK_SECRET', name: 'Stripe Invoice Webhook Secret' },
     { var: 'AWS_ACCESS_KEY_ID', name: 'AWS Access Key ID' },
     { var: 'AWS_SECRET_ACCESS_KEY', name: 'AWS Secret Access Key' },
     { var: 'AWS_REGION', name: 'AWS Region' },
@@ -149,9 +150,15 @@ module.exports.validateEnv = () => {
     // Validate Stripe configuration
     const hasStripeKey = !!process.env.STRIPE_SECRET_KEY;
     const hasStripeWebhook = !!process.env.STRIPE_WEBHOOK_SECRET;
+    const hasStripeInvoiceWebhook = !!process.env.STRIPE_INVOICE_WEBHOOK_SECRET;
     
     if (hasStripeKey && !hasStripeWebhook) {
-        warnings.push('STRIPE_WEBHOOK_SECRET is required for Stripe webhook verification');
+        warnings.push('STRIPE_WEBHOOK_SECRET is required for Stripe billing webhook verification');
+    }
+    if (hasStripeKey && !hasStripeInvoiceWebhook) {
+        warnings.push(
+            'STRIPE_INVOICE_WEBHOOK_SECRET is required for connected-account invoice payment webhooks'
+        );
     }
     if (hasStripeKey && !process.env.STRIPE_CLIENT_ID) {
         warnings.push('STRIPE_CLIENT_ID is required for Stripe Connect invoice payments');

@@ -32,7 +32,8 @@ export class StripeSdkInvoiceWebhookVerifier
   );
 
   verify(payload: Buffer, signature: string | undefined): Stripe.Event {
-    const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
+    const secret = process.env.STRIPE_INVOICE_WEBHOOK_SECRET?.trim()
+      || process.env.STRIPE_WEBHOOK_SECRET?.trim();
     if (!secret) throw new StripeInvoiceWebhookUnavailableError();
     if (!signature) throw new StripeInvoiceWebhookVerificationError();
     try {

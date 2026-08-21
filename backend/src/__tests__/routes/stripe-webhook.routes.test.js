@@ -76,14 +76,18 @@ function createApp(client) {
 
 describe('Stripe invoice webhook transaction', () => {
     const originalSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const originalInvoiceSecret = process.env.STRIPE_INVOICE_WEBHOOK_SECRET;
 
     beforeEach(() => {
         delete process.env.STRIPE_WEBHOOK_SECRET;
+        delete process.env.STRIPE_INVOICE_WEBHOOK_SECRET;
     });
 
     afterAll(() => {
         if (originalSecret === undefined) delete process.env.STRIPE_WEBHOOK_SECRET;
         else process.env.STRIPE_WEBHOOK_SECRET = originalSecret;
+        if (originalInvoiceSecret === undefined) delete process.env.STRIPE_INVOICE_WEBHOOK_SECRET;
+        else process.env.STRIPE_INVOICE_WEBHOOK_SECRET = originalInvoiceSecret;
     });
 
     test('commits once and acknowledges duplicate event delivery', async () => {
@@ -125,7 +129,8 @@ describe('Stripe invoice webhook transaction', () => {
     });
 
     test('verifies the exact body captured before JSON parsing', async () => {
-        process.env.STRIPE_WEBHOOK_SECRET = 'whsec_exact';
+        process.env.STRIPE_WEBHOOK_SECRET = 'whsec_billing';
+        process.env.STRIPE_INVOICE_WEBHOOK_SECRET = 'whsec_invoice';
         const client = createClient();
         const pool = { connect: jest.fn().mockResolvedValue(client) };
         const stripe = {
@@ -152,7 +157,7 @@ describe('Stripe invoice webhook transaction', () => {
         expect(stripe.webhooks.constructEvent).toHaveBeenCalledWith(
             expect.any(Buffer),
             't=1,v1=exact',
-            'whsec_exact',
+            'whsec_invoice',
         );
         expect(stripe.webhooks.constructEvent.mock.calls[0][0].toString('utf8'))
             .toBe(raw);

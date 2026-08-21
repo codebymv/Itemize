@@ -21,7 +21,8 @@ module.exports = ({ pool, stripe }) => {
         }
 
         const sig = req.headers['stripe-signature'];
-        const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+        const endpointSecret = process.env.STRIPE_INVOICE_WEBHOOK_SECRET?.trim()
+            || process.env.STRIPE_WEBHOOK_SECRET?.trim();
         const isProd = process.env.NODE_ENV === 'production';
         const devSkipVerify =
             !isProd &&
@@ -33,7 +34,9 @@ module.exports = ({ pool, stripe }) => {
         try {
             if (isProd) {
                 if (!endpointSecret || !sig) {
-                    logger.warn('[Stripe webhook] Production requires STRIPE_WEBHOOK_SECRET and Stripe-Signature');
+                    logger.warn(
+                        '[Stripe invoice webhook] Production requires a signing secret and Stripe-Signature'
+                    );
                     return sendBadRequest(res, 'Webhook verification required');
                 }
                 event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);

@@ -7,6 +7,7 @@ import {
 
 describe('StripeSdkInvoiceWebhookVerifier', () => {
   const originalSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const originalInvoiceSecret = process.env.STRIPE_INVOICE_WEBHOOK_SECRET;
   const secret = 'whsec_invoice_verifier_test';
   const stripe = new Stripe('sk_test_webhook_verification_test');
   const payload = Buffer.from(
@@ -16,10 +17,16 @@ describe('StripeSdkInvoiceWebhookVerifier', () => {
   afterEach(() => {
     if (originalSecret === undefined) delete process.env.STRIPE_WEBHOOK_SECRET;
     else process.env.STRIPE_WEBHOOK_SECRET = originalSecret;
+    if (originalInvoiceSecret === undefined) {
+      delete process.env.STRIPE_INVOICE_WEBHOOK_SECRET;
+    } else {
+      process.env.STRIPE_INVOICE_WEBHOOK_SECRET = originalInvoiceSecret;
+    }
   });
 
   it('verifies the exact raw bytes with Stripe signature semantics', () => {
-    process.env.STRIPE_WEBHOOK_SECRET = secret;
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_billing';
+    process.env.STRIPE_INVOICE_WEBHOOK_SECRET = secret;
     const signature = stripe.webhooks.generateTestHeaderString({
       payload: payload.toString('utf8'),
       secret,
@@ -43,11 +50,12 @@ describe('StripeSdkInvoiceWebhookVerifier', () => {
 
   it('fails closed when signing configuration or the signature is absent', () => {
     delete process.env.STRIPE_WEBHOOK_SECRET;
+    delete process.env.STRIPE_INVOICE_WEBHOOK_SECRET;
     const verifier = new StripeSdkInvoiceWebhookVerifier();
     expect(() => verifier.verify(payload, 'signed'))
       .toThrow(StripeInvoiceWebhookUnavailableError);
 
-    process.env.STRIPE_WEBHOOK_SECRET = secret;
+    process.env.STRIPE_INVOICE_WEBHOOK_SECRET = secret;
     expect(() => verifier.verify(payload, undefined))
       .toThrow(StripeInvoiceWebhookVerificationError);
   });
