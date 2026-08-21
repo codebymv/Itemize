@@ -4,6 +4,32 @@
  */
 
 const { logger } = require('../utils/logger');
+const Sentry = require('@sentry/node');
+
+const captureServerError = (err, req, statusCode, code) => {
+    if (statusCode < 500 || !process.env.SENTRY_DSN) {
+        return;
+    }
+
+    try {
+        Sentry.captureException(err, {
+            tags: {
+                'error.code': code,
+                'http.method': req.method
+            },
+            extra: {
+                path: req.path,
+                requestId: req.requestId,
+                statusCode
+            }
+        });
+    } catch (captureError) {
+        logger.warn('Failed to report server error to Sentry', {
+            message: captureError.message,
+            requestId: req.requestId
+        });
+    }
+};
 
 /**
  * Custom application error class
@@ -107,6 +133,8 @@ const errorHandler = (err, req, res, _next) => {
         userId: req.user?.id,
         ...(statusCode >= 500 && { stack: err.stack })
     });
+
+    captureServerError(err, req, statusCode, code);
 
     // Don't expose internal error details in production
     if (statusCode === 500 && process.env.NODE_ENV === 'production' && !err.isOperational) {

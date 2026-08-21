@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const { google } = require('googleapis');
 const { logger } = require('../utils/logger');
 const { calendarSyncEventColumns } = require('../routes/calendar-columns');
+const { getProductionApiOrigin } = require('../utils/publicApiOrigin');
 
 // Retry configuration
 const MAX_RETRIES = 3;
@@ -95,7 +96,7 @@ const getCalendarOAuthRedirectUri = () => {
     const configured = process.env.GOOGLE_CALENDAR_REDIRECT_URI?.trim();
     if (!configured) {
         return process.env.NODE_ENV === 'production'
-            ? 'https://api.itemize.cloud/api/calendar-integrations/google/callback'
+            ? `${getProductionApiOrigin()}/api/calendar-integrations/google/callback`
             : 'http://localhost:3001/api/calendar-integrations/google/callback';
     }
 

@@ -2,6 +2,11 @@
  * Error Handler Middleware Tests
  */
 
+jest.mock('@sentry/node', () => ({
+    captureException: jest.fn()
+}));
+
+const Sentry = require('@sentry/node');
 const { AppError, errors, errorHandler, asyncHandler } = require('../../middleware/errorHandler');
 
 describe('AppError', () => {
@@ -84,9 +89,12 @@ describe('errorHandler middleware', () => {
     let mockNext;
 
     beforeEach(() => {
+        process.env.SENTRY_DSN = 'https://public@example.invalid/1';
+        Sentry.captureException.mockClear();
         mockReq = {
             path: '/api/test',
-            method: 'GET'
+            method: 'GET',
+            requestId: 'request-123'
         };
         mockRes = {
             status: jest.fn().mockReturnThis(),
@@ -117,6 +125,25 @@ describe('errorHandler middleware', () => {
         errorHandler(error, mockReq, mockRes, mockNext);
         
         expect(mockRes.status).toHaveBeenCalledWith(500);
+        expect(Sentry.captureException).toHaveBeenCalledWith(error, {
+            tags: {
+                'error.code': 'INTERNAL_ERROR',
+                'http.method': 'GET'
+            },
+            extra: {
+                path: '/api/test',
+                requestId: 'request-123',
+                statusCode: 500
+            }
+        });
+    });
+
+    it('should not report expected client errors to Sentry', () => {
+        const error = new AppError('Not found', 404, 'NOT_FOUND');
+
+        errorHandler(error, mockReq, mockRes, mockNext);
+
+        expect(Sentry.captureException).not.toHaveBeenCalled();
     });
 
     it('should handle PostgreSQL unique violation (23505)', () => {

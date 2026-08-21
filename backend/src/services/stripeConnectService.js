@@ -1,4 +1,5 @@
 const { logger } = require('../utils/logger');
+const { getProductionApiOrigin } = require('../utils/publicApiOrigin');
 
 const STRIPE_ACCOUNT_ID = /^acct_[A-Za-z0-9]+$/;
 
@@ -6,7 +7,7 @@ function getConnectRedirectUri() {
     const configured = process.env.STRIPE_CONNECT_REDIRECT_URI?.trim();
     if (!configured) {
         return process.env.NODE_ENV === 'production'
-            ? 'https://api.itemize.cloud/api/invoice-integrations/stripe/callback'
+            ? `${getProductionApiOrigin()}/api/invoice-integrations/stripe/callback`
             : 'http://localhost:3001/api/invoice-integrations/stripe/callback';
     }
 

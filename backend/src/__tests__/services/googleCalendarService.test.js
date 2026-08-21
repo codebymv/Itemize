@@ -25,6 +25,8 @@ const {
 } = require('../../services/googleCalendarService');
 
 describe('Google calendar delivery replay contract', () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+  const originalRailwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN;
   const connection = {
     id: 9,
     organization_id: 17,
@@ -56,6 +58,19 @@ describe('Google calendar delivery replay contract', () => {
 
   afterAll(() => {
     delete process.env.GOOGLE_CALENDAR_REDIRECT_URI;
+    process.env.NODE_ENV = originalNodeEnv;
+    if (originalRailwayDomain === undefined) delete process.env.RAILWAY_PUBLIC_DOMAIN;
+    else process.env.RAILWAY_PUBLIC_DOMAIN = originalRailwayDomain;
+  });
+
+  test('uses the Railway public domain for the production OAuth callback', () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.GOOGLE_CALENDAR_REDIRECT_URI;
+    process.env.RAILWAY_PUBLIC_DOMAIN = 'itemize-api.example.railway.app';
+
+    expect(getCalendarOAuthRedirectUri()).toBe(
+      'https://itemize-api.example.railway.app/api/calendar-integrations/google/callback'
+    );
   });
 
   test('uses an explicit environment-specific OAuth callback', () => {

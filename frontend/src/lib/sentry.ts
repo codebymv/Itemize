@@ -25,16 +25,15 @@ export const initSentry = () => {
         return breadcrumb.category === 'xhr' ? null : breadcrumb;
       },
       beforeSend(event, hint) {
-        if (event.exception) {
-          event.exception.values?.forEach(exception => {
-            if (exception.type === 'ChunkLoadError') {
-              return null;
-            }
-            if (exception.value?.includes('Loading CSS chunk')) {
-              return null;
-            }
-          });
+        const isStaleAssetError = event.exception?.values?.some(exception =>
+          exception.type === 'ChunkLoadError'
+          || exception.value?.includes('Loading CSS chunk')
+        );
+
+        if (isStaleAssetError) {
+          return null;
         }
+
         return event;
       }
     });
