@@ -238,7 +238,7 @@ export class WorkspaceContentService {
       await this.getStarted.record({
         organizationId,
         userId,
-        name: 'first_list',
+        name: 'first_workspace_item',
         source: 'create_list',
         properties: { listId: list.id },
       });

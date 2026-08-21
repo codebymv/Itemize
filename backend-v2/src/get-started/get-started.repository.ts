@@ -11,7 +11,7 @@ export type GetStartedMilestoneRow = {
 export type GetStartedLiveState = {
   plan: string | null;
   contacts: number;
-  lists: number;
+  workspaceItems: number;
   first_artifact_at: Date | null;
   first_artifact_type: 'estimate' | 'invoice' | 'signature' | null;
   artifact_sent_at: Date | null;
@@ -59,18 +59,35 @@ export class GetStartedRepository {
 
   async liveState(organizationId: number): Promise<GetStartedLiveState> {
     const result = await this.pool.query<GetStartedLiveState>(
-      `SELECT
+      `WITH member_users AS (
+         SELECT user_id
+         FROM organization_members
+         WHERE organization_id = $1
+       )
+       SELECT
          organization.plan,
          (SELECT COUNT(*)::int FROM contacts WHERE organization_id = $1) AS contacts,
-         (SELECT COUNT(*)::int FROM lists
-           WHERE organization_id = $1
-              OR (
-                organization_id IS NULL
-                AND user_id IN (
-                  SELECT user_id FROM organization_members WHERE organization_id = $1
-                )
-              )
-         ) AS lists,
+         (SELECT COUNT(*)::int
+            FROM (
+              SELECT id FROM lists
+               WHERE organization_id = $1
+                  OR (organization_id IS NULL AND user_id IN (SELECT user_id FROM member_users))
+              UNION ALL
+              SELECT id FROM notes
+               WHERE organization_id = $1
+                  OR (organization_id IS NULL AND user_id IN (SELECT user_id FROM member_users))
+              UNION ALL
+              SELECT id FROM whiteboards
+               WHERE organization_id = $1
+                  OR (organization_id IS NULL AND user_id IN (SELECT user_id FROM member_users))
+              UNION ALL
+              SELECT id FROM wireframes
+               WHERE user_id IN (SELECT user_id FROM member_users)
+              UNION ALL
+              SELECT id FROM vaults
+               WHERE user_id IN (SELECT user_id FROM member_users)
+            ) workspace_item
+         ) AS "workspaceItems",
          artifact.created_at AS first_artifact_at,
          artifact.artifact_type AS first_artifact_type,
          (SELECT MIN(event.occurred_at)
@@ -99,7 +116,7 @@ export class GetStartedRepository {
     return result.rows[0] ?? {
       plan: null,
       contacts: 0,
-      lists: 0,
+      workspaceItems: 0,
       first_artifact_at: null,
       first_artifact_type: null,
       artifact_sent_at: null,

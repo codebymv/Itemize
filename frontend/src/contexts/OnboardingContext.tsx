@@ -1,6 +1,8 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { onboardingService, OnboardingProgress } from '@/services/onboardingService';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
+import { shouldShowFeatureOnboarding } from '@/lib/onboardingVersion';
 import { useAuthState, isPublicAuthSkipPath } from './AuthContext';
 import logger from '@/lib/logger';
 
@@ -61,16 +63,15 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (loading || !isAuthenticated) return false;
     
     const featureProgress = progress?.[featureKey];
-    
-    // Show if never seen or explicitly not dismissed
-    if (!featureProgress) return true;
-    if (!featureProgress.seen) return true;
-    if (featureProgress.dismissed) return false;
-    
-    return false;
+    const currentVersion = ONBOARDING_CONTENT[featureKey]?.version ?? '1.0';
+
+    return shouldShowFeatureOnboarding(featureProgress, currentVersion);
   }, [progress, loading, isAuthenticated]);
 
-  const markAsSeen = useCallback(async (featureKey: string, version: string = '1.0') => {
+  const markAsSeen = useCallback(async (
+    featureKey: string,
+    version: string = ONBOARDING_CONTENT[featureKey]?.version ?? '1.0',
+  ) => {
     try {
       console.log('[Onboarding] Calling markSeen API for:', featureKey);
       const updatedProgress = await onboardingService.markSeen(featureKey, version);

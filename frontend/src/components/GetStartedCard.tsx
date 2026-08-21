@@ -4,7 +4,7 @@ import {
   CheckCircle2,
   Circle,
   FileText,
-  ListChecks,
+  LayoutGrid,
   Send,
   Users,
   X,
@@ -27,8 +27,12 @@ const STEP_COPY: Record<string, { label: string; description: string }> = {
     description: 'Give your first estimate a real recipient',
   },
   first_list: {
-    label: 'Create your first list',
-    description: 'Put the first piece of work on your canvas',
+    label: 'Add something to your workspace',
+    description: 'Choose a list, note, whiteboard, wireframe, or vault',
+  },
+  first_workspace_item: {
+    label: 'Add something to your workspace',
+    description: 'Choose a list, note, whiteboard, wireframe, or vault',
   },
   first_artifact: {
     label: 'Create an estimate',
@@ -42,14 +46,16 @@ const STEP_COPY: Record<string, { label: string; description: string }> = {
 
 const STEP_ICON = {
   first_contact: Users,
-  first_list: ListChecks,
+  first_list: LayoutGrid,
+  first_workspace_item: LayoutGrid,
   first_artifact: FileText,
   first_send: Send,
 } as const;
 
 const STEP_ACTION: Record<string, string> = {
   first_contact: 'Add client',
-  first_list: 'Create list',
+  first_list: 'Open canvas',
+  first_workspace_item: 'Open canvas',
   first_artifact: 'Create estimate',
   first_send: 'Open drafts',
 };

@@ -73,9 +73,21 @@ export class GetStartedService {
       rows.map((row) => [row.name, row.occurred_at]),
     );
 
+    // Preserve completion for organizations that finished the original,
+    // list-only workspace step before it was broadened to any Canvas item.
+    const legacyFirstListAt = completed.get('first_list');
+    if (legacyFirstListAt && !completed.has('first_workspace_item')) {
+      completed.set('first_workspace_item', legacyFirstListAt);
+    }
+
     await Promise.all([
       this.ensure(organizationId, completed, 'first_contact', live.contacts > 0),
-      this.ensure(organizationId, completed, 'first_list', live.lists > 0),
+      this.ensure(
+        organizationId,
+        completed,
+        'first_workspace_item',
+        live.workspaceItems > 0,
+      ),
     ]);
 
     const businessJourney = live.plan != null && live.plan !== 'free';

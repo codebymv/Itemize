@@ -22,18 +22,32 @@ import {
 
 export const ONBOARDING_CONTENT: Record<string, OnboardingContent> = {
   canvas: {
-    title: "Start your workspace",
-    description: "Create one useful piece of work first. You can add notes and visual tools whenever you need them.",
-    version: "2.0",
-    completeLabel: "Create first list",
+    title: "Build your workspace",
+    description: "Choose the kinds of content that fit your work and arrange them together on one canvas.",
+    version: "3.0",
+    completeLabel: "Start exploring",
     steps: [
       {
-        title: "Create your first list",
-        description: "Start with the work already on your mind. Itemize will place it on your canvas and save it automatically.",
-        icon: <CheckSquare className="h-12 w-12 text-primary" />,
+        title: "Choose what belongs on your canvas",
+        description: "Start with the format that fits your work. Mix different content types together or use only what you need.",
+        icon: <Layout className="h-12 w-12 text-primary" />,
         tips: [
-          "Name the list after a project or outcome",
-          "Add the next few actions you need to remember"
+          "Lists — track tasks and repeatable work",
+          "Notes — capture context and ideas",
+          "Whiteboards — sketch and brainstorm",
+          "Wireframes — plan screens and layouts",
+          "Vaults — protect sensitive information"
+        ]
+      },
+      {
+        title: "Arrange it around the way you work",
+        description: "Move and resize content as your project evolves, then use search and filters whenever you need to focus.",
+        icon: <Palette className="h-12 w-12 text-primary" />,
+        tips: [
+          "Drag items anywhere on the canvas",
+          "Resize content to match its importance",
+          "Search and filter across your workspace",
+          "Share individual items when needed"
         ]
       }
     ]
@@ -168,30 +182,31 @@ lists: {
   },
 
   invoices: {
-    title: "Welcome to Invoicing",
-    description: "Create professional invoices and track payments",
-    version: "1.0",
+    title: "Explore Sales & Payments",
+    description: "Price work, bill clients, and follow the money from one connected toolkit.",
+    version: "2.0",
+    completeLabel: "Explore sales tools",
     steps: [
       {
-        title: "Create Invoices",
-        description: "Generate professional invoices with your branding and send them to customers.",
+        title: "Price and bill your work",
+        description: "Use the document that matches the job, from an initial estimate through recurring billing.",
         icon: <FileText className="h-12 w-12 text-primary" />,
         tips: [
-          "Customize invoice templates",
-          "Add your logo and branding",
-          "Calculate taxes automatically",
-          "Send via email or download PDF"
+          "Estimates — propose a price and record approval",
+          "Invoices — bill completed or in-progress work",
+          "Recurring invoices — automate repeat billing",
+          "Products — reuse your standard services and prices"
         ]
       },
       {
-        title: "Track Payments",
-        description: "Monitor invoice status and record payments to stay on top of receivables.",
+        title: "Track what gets paid",
+        description: "Monitor document status, payment activity, and overdue balances without losing the client context.",
         icon: <TrendingUp className="h-12 w-12 text-primary" />,
         tips: [
-          "See paid, pending, and overdue invoices",
-          "Record partial payments",
-          "Send payment reminders",
-          "Generate financial reports"
+          "See draft, sent, paid, and overdue work",
+          "Review payment activity in one place",
+          "Follow up on outstanding balances",
+          "Keep every transaction tied to its client"
         ]
       }
     ]
@@ -228,19 +243,31 @@ lists: {
   },
 
   calendars: {
-    title: "Welcome to Calendar",
-    description: "Schedule appointments and manage your availability",
-    version: "1.0",
+    title: "Explore Scheduling",
+    description: "Configure availability, accept bookings, and connect the calendars you already use.",
+    version: "2.0",
+    completeLabel: "Explore scheduling",
     steps: [
       {
-        title: "Appointment Booking",
-        description: "Let customers book time with you based on your availability.",
+        title: "Make your time bookable",
+        description: "Create calendars with the availability, duration, and booking rules each service needs.",
         icon: <Calendar className="h-12 w-12 text-primary" />,
         tips: [
-          "Set your available hours",
-          "Create booking links to share",
-          "Sync with Google Calendar",
-          "Send automatic reminders"
+          "Calendars — define availability and booking rules",
+          "Bookings — manage upcoming appointments",
+          "Share booking links with clients",
+          "Use reminders to reduce missed meetings"
+        ]
+      },
+      {
+        title: "Keep your calendars connected",
+        description: "Connect external calendars so availability and scheduled work stay aligned.",
+        icon: <CalendarCheck className="h-12 w-12 text-primary" />,
+        tips: [
+          "Calendar integrations — connect supported providers",
+          "Choose which calendars affect availability",
+          "Keep Itemize bookings visible in your schedule",
+          "Review integration status when something changes"
         ]
       }
     ]
@@ -266,57 +293,93 @@ lists: {
   },
 
   inbox: {
-    title: "Welcome to Inbox",
-    description: "Your unified communication hub for all customer conversations",
-    version: "1.0",
+    title: "Explore Communications",
+    description: "Bring customer conversations together across your inbox, website, and connected social channels.",
+    version: "2.0",
+    completeLabel: "Explore communications",
     steps: [
       {
-        title: "Unified Inbox",
-        description: "Manage all your customer conversations in one place - emails, messages, and more.",
+        title: "Bring conversations together",
+        description: "Use the inbox as the shared record of customer messages, replies, and follow-up work.",
         icon: <Inbox className="h-12 w-12 text-primary" />,
         tips: [
-          "View all conversations in one place",
-          "Filter by status: open, closed, or all",
-          "Quick reply to messages",
-          "Archive conversations when done"
+          "Inbox — review and reply to conversations",
+          "Chat Widget — capture website conversations",
+          "Social — connect supported social channels",
+          "Close or archive conversations when resolved"
+        ]
+      },
+      {
+        title: "Meet customers where they reach you",
+        description: "Configure each channel independently while keeping the resulting conversations in one workflow.",
+        icon: <MessageCircle className="h-12 w-12 text-primary" />,
+        tips: [
+          "Customize the website chat experience",
+          "Connect only the channels you need",
+          "Keep replies associated with the right contact",
+          "Use conversation status to organize follow-up"
         ]
       }
     ]
   },
 
   campaigns: {
-    title: "Welcome to Campaigns",
-    description: "Create and manage email marketing campaigns to engage your audience",
-    version: "1.0",
+    title: "Explore Campaigns",
+    description: "Define the audience, prepare reusable messages, and send campaigns from one place.",
+    version: "2.0",
+    completeLabel: "Explore campaigns",
     steps: [
       {
-        title: "Email Campaigns",
-        description: "Design beautiful emails, target specific segments, and track performance.",
+        title: "Reach the right audience",
+        description: "Build campaigns around the contacts and segments that should receive each message.",
         icon: <Send className="h-12 w-12 text-primary" />,
         tips: [
-          "Create campaigns from templates",
-          "Target specific contact segments",
-          "Schedule or send immediately",
-          "Track opens, clicks, and conversions"
+          "Segments — define reusable audiences",
+          "Campaigns — compose, schedule, and send",
+          "Email templates — standardize recurring messages",
+          "SMS templates — prepare concise text outreach"
+        ]
+      },
+      {
+        title: "Learn from every send",
+        description: "Review delivery and engagement signals, then refine the next audience or message.",
+        icon: <TrendingUp className="h-12 w-12 text-primary" />,
+        tips: [
+          "Track delivery before judging engagement",
+          "Compare opens and clicks over time",
+          "Reuse strong messages as templates",
+          "Keep targeting decisions in your segments"
         ]
       }
     ]
   },
 
   pages: {
-    title: "Welcome to Landing Pages",
-    description: "Build beautiful landing pages to capture leads and showcase your business",
-    version: "1.0",
+    title: "Explore Pages & Forms",
+    description: "Publish focused pages and collect structured responses without adding another builder.",
+    version: "2.0",
+    completeLabel: "Explore pages and forms",
     steps: [
       {
-        title: "Page Builder",
-        description: "Create stunning landing pages with our drag-and-drop editor.",
+        title: "Publish a focused destination",
+        description: "Use landing pages to explain an offer, present a clear next step, or support a campaign.",
         icon: <Globe className="h-12 w-12 text-primary" />,
         tips: [
-          "Choose from pre-built templates",
-          "Customize colors and branding",
-          "Add forms to capture leads",
-          "Track page views and conversions"
+          "Start with a page structure that fits the goal",
+          "Apply your content and visual identity",
+          "Keep each page focused on one action",
+          "Share the published link wherever you need it"
+        ]
+      },
+      {
+        title: "Collect the information you need",
+        description: "Build forms for inquiries, intake, feedback, or any structured response.",
+        icon: <ClipboardList className="h-12 w-12 text-primary" />,
+        tips: [
+          "Forms — choose fields and validation rules",
+          "Use standalone forms or connect them to pages",
+          "Review submissions in Itemize",
+          "Turn useful responses into contact context"
         ]
       }
     ]
@@ -399,19 +462,20 @@ lists: {
   },
 
   reputation: {
-    title: "Welcome to Reputation",
-    description: "Monitor and manage your online reviews and reputation",
-    version: "1.0",
+    title: "Explore Reputation",
+    description: "Monitor feedback, request new reviews, and publish trust signals where customers will see them.",
+    version: "2.0",
+    completeLabel: "Explore reputation",
     steps: [
       {
-        title: "Review Management",
-        description: "Track reviews across platforms and respond to customer feedback.",
+        title: "Build a repeatable review loop",
+        description: "Bring existing reviews into view, ask satisfied customers for feedback, and reuse the strongest proof.",
         icon: <Star className="h-12 w-12 text-primary" />,
         tips: [
-          "See all reviews in one place",
-          "Respond to reviews quickly",
-          "Request reviews from happy customers",
-          "Track your average rating over time"
+          "Reviews — monitor feedback in one place",
+          "Review Requests — invite customers to respond",
+          "Widgets — publish selected reputation signals",
+          "Track rating and response patterns over time"
         ]
       }
     ]

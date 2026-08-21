@@ -23,7 +23,7 @@ describe('GetStartedService', () => {
     repository.liveState.mockResolvedValue({
       plan: 'starter',
       contacts: 1,
-      lists: 0,
+      workspaceItems: 0,
       first_artifact_at: new Date('2026-08-02T00:00:00.000Z'),
       first_artifact_type: 'estimate',
       artifact_sent_at: null,
@@ -58,7 +58,7 @@ describe('GetStartedService', () => {
     repository.liveState.mockResolvedValue({
       plan: 'free',
       contacts: 0,
-      lists: 1,
+      workspaceItems: 1,
       first_artifact_at: null,
       first_artifact_type: null,
       artifact_sent_at: null,
@@ -71,8 +71,37 @@ describe('GetStartedService', () => {
     expect(progress).toMatchObject({
       completedCount: 1,
       totalCount: 1,
-      steps: [{ id: 'first_list', completed: true, href: '/canvas' }],
+      steps: [{ id: 'first_workspace_item', completed: true, href: '/canvas' }],
     });
+  });
+
+  it('preserves completion from the legacy list-only workspace step', async () => {
+    const completedAt = new Date('2026-08-01T00:00:00.000Z');
+    repository.findMilestones.mockResolvedValue([
+      { name: 'first_list', occurred_at: completedAt },
+    ]);
+    repository.liveState.mockResolvedValue({
+      plan: 'free',
+      contacts: 0,
+      workspaceItems: 0,
+      first_artifact_at: null,
+      first_artifact_type: null,
+      artifact_sent_at: null,
+    });
+    repository.isDismissed.mockResolvedValue(false);
+
+    await expect(service.progress(4, 7)).resolves.toMatchObject({
+      completedCount: 1,
+      steps: [
+        {
+          id: 'first_workspace_item',
+          completed: true,
+          completedAt,
+          href: '/canvas',
+        },
+      ],
+    });
+    expect(repository.insertMilestone).not.toHaveBeenCalled();
   });
 
   it('returns the user to the kind of artifact they created when it is time to send', async () => {
@@ -82,7 +111,7 @@ describe('GetStartedService', () => {
     repository.liveState.mockResolvedValue({
       plan: 'starter',
       contacts: 1,
-      lists: 0,
+      workspaceItems: 0,
       first_artifact_at: new Date('2026-08-02T00:00:00.000Z'),
       first_artifact_type: 'invoice',
       artifact_sent_at: null,

@@ -1,6 +1,7 @@
 export const GET_STARTED_MILESTONES = [
   'first_contact',
   'first_list',
+  'first_workspace_item',
   'first_invoice',
   'first_deal',
 ] as const;
@@ -19,7 +20,7 @@ export const GET_STARTED_SOURCES = [
 export type GetStartedSource = (typeof GET_STARTED_SOURCES)[number];
 
 export const FREE_GET_STARTED_STEPS = [
-  { id: 'first_list', href: '/canvas' },
+  { id: 'first_workspace_item', href: '/canvas' },
 ] as const;
 
 export const BUSINESS_GET_STARTED_STEPS = [

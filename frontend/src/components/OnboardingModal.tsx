@@ -52,8 +52,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     setCurrentStep(prev => Math.max(0, prev - 1));
   };
 
-  const handleSkip = () => {
+  const handleClose = () => {
     onClose();
+  };
+
+  const handleDismiss = () => {
+    onDismiss();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -62,14 +66,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     } else if (e.key === 'ArrowLeft' && !isFirstStep) {
       handlePrevious();
     } else if (e.key === 'Escape') {
-      handleSkip();
+      handleClose();
     }
   };
 
   const currentStepContent = content.steps[currentStep];
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleSkip()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent 
         className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto p-4 sm:p-6"
         onKeyDown={handleKeyDown}
@@ -91,9 +95,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 key={index}
                 className={`h-1.5 sm:h-2 rounded-full transition-all ${
                   index === currentStep
-                    ? 'w-6 sm:w-8 bg-blue-600'
+                    ? 'w-6 sm:w-8 bg-primary'
                     : index < currentStep
-                    ? 'w-1.5 sm:w-2 bg-blue-600/50'
+                    ? 'w-1.5 sm:w-2 bg-primary/50'
                     : 'w-1.5 sm:w-2 bg-muted'
                 }`}
               />
@@ -114,7 +118,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
 {currentStepContent.icon && (
               <div className="flex justify-center">
-                <div className="p-3 sm:p-4 rounded-full bg-blue-600/10">
+                <div className="p-3 sm:p-4 rounded-full bg-primary/10">
                   <div className="[&>svg]:h-8 [&>svg]:w-8 sm:[&>svg]:h-12 sm:[&>svg]:w-12">
                     {currentStepContent.icon}
                   </div>
@@ -123,9 +127,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             )}
 
 {currentStepContent.tips && currentStepContent.tips.length > 0 && (
-              <div className="bg-blue-50 dark:bg-blue-950/10 border border-blue-200 dark:border-blue-800/30 rounded-lg p-3 sm:p-4">
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 sm:p-4">
                 <div className="flex items-start gap-2 sm:gap-3">
-                  <Lightbulb className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 mt-0.5 shrink-0" />
+                  <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-primary sm:h-5 sm:w-5" />
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-xs sm:text-sm text-foreground mb-1.5 sm:mb-2">
                       Quick Tips
@@ -133,7 +137,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1 sm:gap-1.5 text-xs sm:text-sm text-muted-foreground">
                       {currentStepContent.tips.map((tip, index) => (
                         <li key={index} className="flex items-start gap-1.5">
-                          <span className="text-blue-600 mt-0.5">•</span>
+                          <span className="mt-0.5 text-primary" aria-hidden="true">&bull;</span>
                           <span className="leading-tight">{tip}</span>
                         </li>
                       ))}
@@ -150,7 +154,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           <div className="flex items-center justify-between w-full gap-2">
             <Button
               variant="outline"
-              onClick={handleSkip}
+              onClick={handleDismiss}
               size="sm"
               className="text-xs sm:text-sm"
             >
@@ -173,7 +177,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 <Button
                 onClick={handleNext}
                 size="sm"
-                className="min-w-[100px] sm:min-w-[120px] bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                className="min-w-[100px] text-xs sm:min-w-[120px] sm:text-sm"
               >
                 {isLastStep ? (content.completeLabel ?? 'Get Started') : 'Next'}
                 {!isLastStep && <ChevronRight className="h-4 w-4 ml-1" />}

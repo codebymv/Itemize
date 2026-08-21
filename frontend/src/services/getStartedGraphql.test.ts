@@ -18,7 +18,7 @@ const progress = {
   steps: [
     { id: 'workspace_ready', completed: true, completedAt: null, href: '/settings' },
     { id: 'first_contact', completed: true, completedAt: '2026-08-01T00:00:00.000Z', href: '/contacts' },
-    { id: 'first_list', completed: false, completedAt: null, href: '/canvas' },
+    { id: 'first_workspace_item', completed: false, completedAt: null, href: '/canvas' },
     { id: 'first_money', completed: false, completedAt: null, href: '/invoices/new' },
   ],
 };

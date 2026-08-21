@@ -131,7 +131,14 @@ describe('Onboarding GraphQL PostgreSQL contract', () => {
     expect(free.body.data.getStartedProgress).toEqual({
       completedCount: 0,
       totalCount: 1,
-      steps: [{ id: 'first_list', completed: false, completedAt: null, href: '/canvas' }],
+      steps: [
+        {
+          id: 'first_workspace_item',
+          completed: false,
+          completedAt: null,
+          href: '/canvas',
+        },
+      ],
     });
 
     await pool.query(
