@@ -42,7 +42,7 @@ import { ConversionRateCard } from './dashboard/components/ConversionRateCard';
 import { CommunicationStatsCard } from './dashboard/components/CommunicationStatsCard';
 import { PipelineDealAgeCard } from './dashboard/components/PipelineDealAgeCard';
 import { RecentActivityList } from './dashboard/components/RecentActivityList';
-import { DashboardCardRail } from './dashboard/components/DashboardCardRail';
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { ActivityTimeline } from '@/components/activity-timeline';
 import { transformApiActivityToDesignSystem } from '@/design-system/utils/transform-api-activity';
 import { RevenueTrendsChart } from './dashboard/components/RevenueTrendsChart';
@@ -240,10 +240,10 @@ export function DashboardPage() {
                     <GetStartedCard />
 
                     {/* CRM Stats: swipeable rail on mobile, grid on desktop */}
-                    <DashboardCardRail
+                    <ResponsiveCardRail
                         label="CRM overview"
-                        isMobile={isMobile}
                         desktopColumns="md:grid-cols-2 lg:grid-cols-4"
+                        className="mb-8"
                     >
                         <StatCard
                             title="Total Contacts"
@@ -281,13 +281,13 @@ export function DashboardPage() {
                             colorTheme="blue"
                             isLoading={isLoading}
                         />
-                    </DashboardCardRail>
+                    </ResponsiveCardRail>
 
                     {/* Secondary Stats: swipeable rail on mobile, grid on desktop */}
-                    <DashboardCardRail
+                    <ResponsiveCardRail
                         label="Activity overview"
-                        isMobile={isMobile}
                         desktopColumns="md:grid-cols-3"
+                        className="mb-8"
                     >
                         <StatCard
                             title="Tasks Overdue"
@@ -316,14 +316,14 @@ export function DashboardPage() {
                             colorTheme="green"
                             isLoading={isLoading}
                         />
-                    </DashboardCardRail>
+                    </ResponsiveCardRail>
 
                     {/* Module summaries: swipeable rail on mobile, grid on desktop */}
-                    <DashboardCardRail
+                    <ResponsiveCardRail
                         label="Module summaries"
-                        isMobile={isMobile}
                         desktopColumns="md:grid-cols-2 lg:grid-cols-4"
                         mobileCardClassName="flex-[0_0_88%]"
+                        className="mb-8"
                     >
                         <InvoicesWidget
                             primaryStat={analytics?.invoiceMetrics?.pending ?? 0}
@@ -400,7 +400,7 @@ export function DashboardPage() {
                             isCollapsed={isWidgetCollapsed('contacts')}
                             onToggleCollapse={() => toggleWidgetCollapse('contacts')}
                         />
-                    </DashboardCardRail>
+                    </ResponsiveCardRail>
 
                     {/* Revenue Trends Chart */}
                     <Card className="bg-muted/10 mb-8">
@@ -508,11 +508,11 @@ export function DashboardPage() {
                     </Card>
 
                     {/* Performance analytics: swipeable rail on mobile, grid on desktop */}
-                    <DashboardCardRail
+                    <ResponsiveCardRail
                         label="Performance analytics"
-                        isMobile={isMobile}
                         desktopColumns="md:grid-cols-2 md:gap-6"
                         mobileCardClassName="flex-[0_0_92%]"
+                        className="mb-8"
                     >
                         {/* Conversion Rates */}
                         <Card className="bg-muted/10 h-full flex flex-col">
@@ -608,7 +608,7 @@ export function DashboardPage() {
                                 />
                             </CardContent>
                         </Card>
-                    </DashboardCardRail>
+                    </ResponsiveCardRail>
 
                     {/* Quick Actions */}
                     <div className="mb-8">

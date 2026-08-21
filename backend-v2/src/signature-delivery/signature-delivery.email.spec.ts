@@ -37,9 +37,11 @@ describe('signature delivery capabilities and email rendering', () => {
     });
     expect(rendered.subject).toBe('Alice & Bob wants your signature');
     expect(rendered.html).toContain('Please &lt;img src=x onerror=alert(1)&gt; sign');
-    expect(rendered.html).toContain('Document: &lt;b&gt;NDA&lt;/b&gt;');
+    expect(rendered.html).toContain('&lt;b&gt;NDA&lt;/b&gt;');
     expect(rendered.html).toContain(`https://itemize.cloud/sign/${signatureDeliveryToken('request-1')}`);
-    expect(rendered.html).not.toContain('<img');
+    expect(rendered.html).toContain('https://itemize.cloud/cover.png');
+    expect(rendered.html).toContain('height:4px;background:#2563eb');
+    expect(rendered.html).not.toContain('<img src=x');
     expect(rendered.html).not.toContain('<script>');
   });
 
@@ -59,8 +61,9 @@ describe('signature delivery capabilities and email rendering', () => {
     });
     expect(rendered.html).toContain(heading);
     expect(rendered.html).toContain('&lt;script&gt;NDA&lt;/script&gt;');
+    expect(rendered.html).toContain('https://itemize.cloud/cover.png');
     expect(rendered.html).not.toContain('<script>');
-    expect(rendered.html).not.toContain('<img');
+    expect(rendered.html).not.toContain('<img src=x');
     expect(rendered.html).not.toContain('/sign/');
   });
 });

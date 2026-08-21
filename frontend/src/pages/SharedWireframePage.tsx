@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import WireframeCanvas from '@/components/WireframeCard/WireframeCanvas';
+import { SharedItemCard } from '@/components/public/BrandedPublicPage';
 import { SharedContentLayout } from '@/components/SharedContentLayout';
 import { NotAvailableCTA } from '@/components/NotAvailableCTA';
 import { Spinner } from '@/components/ui/Spinner';
@@ -53,6 +54,13 @@ const SharedWireframePage: React.FC = () => {
         );
         setWireframe(response.data);
         document.title = `${response.data.title} on Itemize`;
+        const metaDescription = document.querySelector('meta[name="description"]');
+        if (metaDescription) {
+          metaDescription.setAttribute(
+            'content',
+            `“${response.data.title}” is a wireframe shared by ${response.data.creator_name} with Itemize.`,
+          );
+        }
       } catch (loadError) {
         const status = statusOf(loadError);
         setError(status === 429
@@ -178,24 +186,25 @@ const SharedWireframePage: React.FC = () => {
       contentType="wireframe"
       onBackToHome={back}
     >
-      <div className="rounded-lg border bg-background p-4 text-left shadow-sm">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold">{wireframe.title}</h1>
-            <p className="text-sm text-muted-foreground">
-              {wireframe.category} · shared by {wireframe.creator_name}
-            </p>
-          </div>
-          <span className="text-xs text-muted-foreground">
-            {isConnected ? 'Live' : 'Static'}
-          </span>
+      <SharedItemCard
+        title={wireframe.title}
+        contentType="wireframe"
+        category={wireframe.category || 'General'}
+        creatorName={wireframe.creator_name}
+        createdAt={wireframe.created_at}
+        isLive={isConnected}
+        accentColor={wireframe.color_value || '#2563eb'}
+        className="mx-auto w-full max-w-5xl text-left"
+        contentClassName="p-3 sm:p-5"
+      >
+        <div className="overflow-hidden rounded-lg border border-border">
+          <WireframeCanvas
+            flowData={wireframe.flow_data}
+            readOnly
+            height={Math.min(Math.max(wireframe.height || 600, 400), 800)}
+          />
         </div>
-        <WireframeCanvas
-          flowData={wireframe.flow_data}
-          readOnly
-          height={Math.min(Math.max(wireframe.height || 600, 400), 800)}
-        />
-      </div>
+      </SharedItemCard>
     </SharedContentLayout>
   );
 };

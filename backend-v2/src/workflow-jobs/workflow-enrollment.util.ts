@@ -1,5 +1,6 @@
 import { isIP } from 'node:net';
 import ipaddr from 'ipaddr.js';
+import { brandedTransactionalEmail } from '../common/branded-transactional-email';
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -54,33 +55,13 @@ export const wrapWorkflowEmail = (body: string, subject: string): string => {
   if (/<!doctype|<html/i.test(body)) return body;
   const origin = String(process.env.PROD_URL || 'https://itemize.cloud').replace(/\/+$/, '');
   const content = inlineWorkflowEmailClasses(body);
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>${subject}</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; line-height: 1.6; color: #1e293b; background-color: #ffffff; margin: 0; padding: 0; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
-    a { color: #2563eb; }
-    img { max-width: 100%; height: auto; }
-    @media only screen and (max-width: 600px) { .email-wrapper { padding: 10px !important; } .email-body { padding: 20px !important; } }
-  </style>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; line-height: 1.6; color: #1e293b; background-color: #ffffff; margin: 0; padding: 0;">
-  <div class="email-wrapper" style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
-    <div style="text-align: center; padding: 20px; background: #ffffff; border-radius: 12px 12px 0 0;">
-      <a href="${origin}" target="_blank" style="text-decoration: none;"><img src="${origin}/cover.png" alt="Itemize" width="200" style="display: block; margin: 0 auto; max-width: 200px; height: auto; border: 0; outline: none;" /></a>
-    </div>
-    <div class="email-body" style="background-color: #ffffff; padding: 40px 30px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">${content}</div>
-    <div style="text-align: center; padding: 30px 20px; color: #64748b; font-size: 13px;">
-      <p style="margin: 0 0 10px 0;">© ${new Date().getFullYear()} Itemize. All rights reserved.</p>
-      <p style="margin: 0;"><a href="{{unsubscribeUrl}}" style="color: #2563eb; text-decoration: none;">Unsubscribe</a> · <a href="${origin}" style="color: #2563eb; text-decoration: none;">Visit Website</a></p>
-    </div>
-  </div>
-</body>
-</html>`;
+  return brandedTransactionalEmail({
+    assetOrigin: origin,
+    previewText: subject,
+    heading: subject,
+    bodyHtml: content,
+    footerText: 'Sent with Itemize.',
+  });
 };
 
 export const normalizeWorkflowPhone = (value: unknown): string => {

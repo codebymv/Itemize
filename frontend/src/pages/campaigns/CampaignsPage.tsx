@@ -32,6 +32,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { Campaign } from '@/types/campaigns';
 import type { EmailCampaign } from '@/services/campaignsApi';
 import { StatCard } from '@/components/StatCard';
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { PageLayout } from '@/components/layout/PageLayout';
 
 export function CampaignsPage() {
@@ -250,7 +251,10 @@ export function CampaignsPage() {
                 content={ONBOARDING_CONTENT.campaigns}
             />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <ResponsiveCardRail
+                    label="Campaign status summary"
+                    desktopColumns="md:grid-cols-2 lg:grid-cols-4"
+                >
                     <StatCard
                         title="Total Campaigns"
                         badgeText="Total"
@@ -283,7 +287,7 @@ export function CampaignsPage() {
                         colorTheme="green"
                         isLoading={loading}
                     />
-                </div>
+                </ResponsiveCardRail>
                     {loading ? (
                         <div className="p-6 space-y-4">
                             {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24" />)}

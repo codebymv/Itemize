@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getStatBadgeClass } from '@/hooks/useStatStyles';
 import { StatCard } from '@/components/StatCard';
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -317,7 +318,10 @@ export function AutomationsPage() {
       />
 
         {/* Stats cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-6">
+      <ResponsiveCardRail
+        label="Automation summary"
+        desktopColumns="md:grid-cols-2 lg:grid-cols-5"
+      >
             <StatCard
               title="Inactive Workflows"
               badgeText="Inactive"
@@ -363,7 +367,7 @@ export function AutomationsPage() {
               colorTheme="green"
               isLoading={loading}
             />
-      </div>
+      </ResponsiveCardRail>
 
       {/* Workflows list */}
       <Card>

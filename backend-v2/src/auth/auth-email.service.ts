@@ -1,4 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+import {
+  brandedTransactionalEmail,
+  transactionalEmailAssetOrigin,
+} from '../common/branded-transactional-email';
 
 type AuthEmailUser = { email: string; name: string };
 
@@ -17,41 +21,83 @@ export class AuthEmailService {
 
   sendVerification(user: AuthEmailUser, token: string): Promise<boolean> {
     const url = `${this.appUrl()}/verify-email?token=${encodeURIComponent(token)}`;
+    const html = brandedTransactionalEmail({
+      assetOrigin: transactionalEmailAssetOrigin(),
+      previewText: 'Verify your email address to activate your Itemize account.',
+      heading: 'Verify your email address',
+      bodyHtml: this.greeting(user) +
+        '<p style="margin:0">Confirm this email address to finish setting up your Itemize account.</p>' +
+        '<p style="margin:20px 0 0;color:#64748b;font-size:13px">This secure link expires in 24 hours. If you did not create an Itemize account, you can ignore this email.</p>',
+      cta: { label: 'Verify email address', url },
+      footerText: 'Account security notification from Itemize.',
+    });
     return this.send(
       user,
       'Verify your Itemize account',
       `Verify your email by opening this link within 24 hours: ${url}`,
-      `<p>Hi ${escapeHtml(user.name)},</p><p>Verify your email address to activate your Itemize account.</p><p><a href="${escapeHtml(url)}">Verify email address</a></p><p>This link expires in 24 hours.</p>`,
+      html,
     );
   }
 
   sendWelcome(user: AuthEmailUser): Promise<boolean> {
     const url = `${this.appUrl()}/dashboard`;
+    const html = brandedTransactionalEmail({
+      assetOrigin: transactionalEmailAssetOrigin(),
+      previewText: 'Your Itemize account is ready.',
+      heading: 'Welcome to Itemize',
+      bodyHtml: this.greeting(user) +
+        '<p style="margin:0">Your email is verified and your workspace is ready.</p>',
+      cta: { label: 'Open Itemize', url },
+      footerText: 'Welcome to your Itemize workspace.',
+    });
     return this.send(
       user,
       'Welcome to Itemize',
       `Your email is verified. Open Itemize: ${url}`,
-      `<p>Hi ${escapeHtml(user.name)},</p><p>Your email is verified and your Itemize account is ready.</p><p><a href="${escapeHtml(url)}">Open Itemize</a></p>`,
+      html,
     );
   }
 
   sendPasswordReset(user: AuthEmailUser, token: string): Promise<boolean> {
     const url = `${this.appUrl()}/reset-password?token=${encodeURIComponent(token)}`;
+    const html = brandedTransactionalEmail({
+      assetOrigin: transactionalEmailAssetOrigin(),
+      previewText: 'Reset your Itemize password using this secure link.',
+      heading: 'Reset your password',
+      bodyHtml: this.greeting(user) +
+        '<p style="margin:0">We received a request to reset your Itemize password.</p>' +
+        '<p style="margin:20px 0 0;color:#64748b;font-size:13px">This secure link expires in 1 hour. If you did not request a password reset, you can ignore this email.</p>',
+      cta: { label: 'Reset password', url },
+      footerText: 'Account security notification from Itemize.',
+    });
     return this.send(
       user,
       'Reset your Itemize password',
       `Reset your password by opening this link within 1 hour: ${url}`,
-      `<p>Hi ${escapeHtml(user.name)},</p><p>We received a request to reset your Itemize password.</p><p><a href="${escapeHtml(url)}">Reset password</a></p><p>This link expires in 1 hour. If you did not request it, you can ignore this email.</p>`,
+      html,
     );
   }
 
   sendPasswordChanged(user: AuthEmailUser): Promise<boolean> {
+    const html = brandedTransactionalEmail({
+      assetOrigin: transactionalEmailAssetOrigin(),
+      previewText: 'Your Itemize password was changed.',
+      heading: 'Password changed',
+      bodyHtml: this.greeting(user) +
+        '<p style="margin:0">Your Itemize password was changed successfully.</p>' +
+        '<div style="margin-top:20px;padding:14px 16px;border:1px solid #fecaca;border-radius:8px;background:#fef2f2;color:#991b1b">If this was not you, reset your password and contact support immediately.</div>',
+      footerText: 'Account security notification from Itemize.',
+    });
     return this.send(
       user,
       'Your Itemize password was changed',
       'Your Itemize password was changed. If this was not you, contact support immediately.',
-      `<p>Hi ${escapeHtml(user.name)},</p><p>Your Itemize password was changed.</p><p>If this was not you, contact support immediately.</p>`,
+      html,
     );
+  }
+
+  private greeting(user: AuthEmailUser): string {
+    return `<p style="margin:0 0 16px">Hi ${escapeHtml(user.name)},</p>`;
   }
 
   private async send(

@@ -7,6 +7,7 @@ export type InvoiceEmailMessage = {
   cc: string[];
   subject: string;
   html: string;
+  text: string;
   filename: string;
   pdf: Buffer;
   idempotencyKey: string;
@@ -34,11 +35,12 @@ export class ResendInvoiceEmailProvider implements InvoiceEmailProvider {
         'Idempotency-Key': message.idempotencyKey,
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM?.trim() || 'onboarding@resend.dev',
+        from: process.env.EMAIL_FROM?.trim() || 'Itemize <noreply@itemize.cloud>',
         to: [message.to],
         ...(message.cc.length > 0 ? { cc: message.cc } : {}),
         subject: message.subject,
         html: message.html,
+        text: message.text,
         attachments: [{
           filename: message.filename,
           content: message.pdf.toString('base64'),

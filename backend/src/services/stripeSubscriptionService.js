@@ -9,6 +9,11 @@
 const BaseService = require('./BaseService');
 const Stripe = require('stripe');
 const emailService = require('./emailService');
+const {
+    brandedTransactionalEmail,
+    escapeHtml,
+    transactionalEmailAssetOrigin,
+} = require('./branded-transactional-email');
 const { subscriptionColumns, subscriptionPlanColumns } = require('./subscription-columns');
 
 class StripeSubscriptionService extends BaseService {
@@ -664,13 +669,19 @@ class StripeSubscriptionService extends BaseService {
                     const trialEndDate = new Date(subscription.trial_end * 1000).toLocaleDateString();
                     const template = {
                         subject: 'Your trial is ending soon',
-                        body_html: `
-                            <h2>Hello ${org.name || 'there'},</h2>
-                            <p>We hope you are enjoying your trial. This is a quick reminder that your trial period will end on <strong>${trialEndDate}</strong>.</p>
-                            <p>To ensure uninterrupted access to all features, please make sure your billing information is up to date.</p>
-                            <br/>
-                            <a href="{{billingUrl}}" class="button-primary">Update Billing Information</a>
-                        `
+                        body_html: brandedTransactionalEmail({
+                            assetOrigin: transactionalEmailAssetOrigin(),
+                            previewText: `Your Itemize trial ends on ${trialEndDate}.`,
+                            heading: 'Your trial is ending soon',
+                            bodyHtml:
+                                `<p style="margin:0 0 16px">Hi ${escapeHtml(org.name || 'there')},</p>` +
+                                `<p style="margin:0">Your Itemize trial ends on <strong>${escapeHtml(trialEndDate)}</strong>. Add a payment method to keep uninterrupted access.</p>`,
+                            cta: {
+                                label: 'Update billing information',
+                                url: `${process.env.FRONTEND_URL || 'https://itemize.cloud'}/payment-settings`,
+                            },
+                            footerText: 'Trial notification from Itemize.',
+                        })
                     };
 
                     await emailService.sendTemplateEmail({

@@ -1,15 +1,11 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   CheckCircle2,
   FileText,
   Loader2,
   Mail,
-  Moon,
-  ShieldCheck,
-  Sun,
   XCircle,
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { useParams } from 'react-router-dom';
 import {
   AlertDialog,
@@ -21,9 +17,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PUBLIC_SHELL_WIDTH } from '@/components/layout/PageContainer';
+import {
+  BrandedPublicCard,
+  BrandedPublicContainer,
+  BrandedPublicPage,
+  PublicPrivateLinkNotice,
+} from '@/components/public/BrandedPublicPage';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { CardContent } from '@/components/ui/card';
 import {
   acceptPublicEstimate,
   declinePublicEstimate,
@@ -37,52 +38,6 @@ const date = (value: string): string => {
     ? value
     : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(parsed);
 };
-
-function RecipientHeader() {
-  const { resolvedTheme, setTheme } = useTheme();
-  const dark = resolvedTheme === 'dark';
-
-  return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
-      <div className={`${PUBLIC_SHELL_WIDTH} flex h-16 items-center justify-between gap-4`}>
-        <a href="https://itemize.cloud" className="group flex items-center gap-2.5" aria-label="Itemize home">
-          <img
-            src="/icon.png"
-            alt=""
-            aria-hidden="true"
-            className="h-8 w-8 shrink-0 transition-transform group-hover:-translate-y-0.5"
-          />
-          <img src="/textblack.png" alt="Itemize" className="h-6 w-auto dark:hidden" />
-          <img src="/textwhite.png" alt="" aria-hidden="true" className="hidden h-6 w-auto dark:block" />
-        </a>
-        <div className="flex items-center gap-1 sm:gap-2">
-          <Button asChild size="sm" className="h-9 px-3 sm:px-4">
-            <a href="/register?mode=trial">Try Itemize</a>
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9"
-            onClick={() => setTheme(dark ? 'light' : 'dark')}
-            aria-label={`Use ${dark ? 'light' : 'dark'} theme`}
-          >
-            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </Button>
-        </div>
-      </div>
-    </header>
-  );
-}
-
-function RecipientPage({ children }: { children: ReactNode }) {
-  return (
-    <main className="min-h-screen bg-background text-foreground">
-      <RecipientHeader />
-      {children}
-    </main>
-  );
-}
 
 export default function PublicEstimatePage() {
   const { token = '' } = useParams();
@@ -131,22 +86,22 @@ export default function PublicEstimatePage() {
 
   if (loading) {
     return (
-      <RecipientPage>
+      <BrandedPublicPage>
         <div className="grid min-h-[calc(100vh-4rem)] place-items-center p-6">
           <div className="flex items-center gap-3 text-muted-foreground" role="status">
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
             Loading estimate…
           </div>
         </div>
-      </RecipientPage>
+      </BrandedPublicPage>
     );
   }
 
   if (!data) {
     return (
-      <RecipientPage>
+      <BrandedPublicPage>
         <div className="grid min-h-[calc(100vh-4rem)] place-items-center p-6">
-          <Card className="w-full max-w-md">
+          <BrandedPublicCard className="w-full max-w-md">
             <CardContent className="space-y-4 p-8 text-center">
               <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-muted">
                 <FileText className="h-6 w-6 text-muted-foreground" />
@@ -156,9 +111,9 @@ export default function PublicEstimatePage() {
                 {error || 'This estimate link is invalid or expired.'}
               </p>
             </CardContent>
-          </Card>
+          </BrandedPublicCard>
         </div>
-      </RecipientPage>
+      </BrandedPublicPage>
     );
   }
 
@@ -166,8 +121,8 @@ export default function PublicEstimatePage() {
   const terminal = estimate.status === 'accepted' || estimate.status === 'declined';
 
   return (
-    <RecipientPage>
-      <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8 sm:px-6 sm:py-12">
+    <BrandedPublicPage>
+      <BrandedPublicContainer>
         {terminal && (
           <div
             className={`flex items-start gap-3 rounded-xl border p-4 ${
@@ -189,8 +144,7 @@ export default function PublicEstimatePage() {
           </div>
         )}
 
-        <Card className="overflow-hidden shadow-sm">
-          <div className="h-1 bg-primary" aria-hidden="true" />
+        <BrandedPublicCard>
           <CardContent className="p-0">
             <section className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-1 border-b border-border bg-muted/25 p-6 sm:gap-x-8 sm:p-8">
               <p className="self-end text-xs uppercase tracking-wider text-muted-foreground">Prepared by</p>
@@ -325,10 +279,10 @@ export default function PublicEstimatePage() {
               </section>
             )}
           </CardContent>
-        </Card>
+        </BrandedPublicCard>
 
         {!terminal && (
-          <Card className="shadow-sm">
+          <BrandedPublicCard showBrandRule={false}>
             <CardContent className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
               <div>
                 <h2 className="text-lg font-semibold">Ready to respond?</h2>
@@ -345,15 +299,12 @@ export default function PublicEstimatePage() {
                 </Button>
               </div>
             </CardContent>
-          </Card>
+          </BrandedPublicCard>
         )}
 
         {error && data && <p className="text-center text-sm text-destructive" role="alert">{error}</p>}
-        <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
-          <ShieldCheck className="h-3.5 w-3.5" />
-          This private link provides access to this estimate. Please do not forward it.
-        </p>
-      </div>
+        <PublicPrivateLinkNotice contentLabel="estimate" />
+      </BrandedPublicContainer>
 
       <AlertDialog open={confirming !== null} onOpenChange={(open) => !open && setConfirming(null)}>
         <AlertDialogContent>
@@ -380,6 +331,6 @@ export default function PublicEstimatePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </RecipientPage>
+    </BrandedPublicPage>
   );
 }

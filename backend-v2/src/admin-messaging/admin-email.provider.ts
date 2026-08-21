@@ -27,7 +27,7 @@ export class ResendAdminEmailProvider implements AdminEmailProvider {
         'Idempotency-Key': message.idempotencyKey,
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM?.trim() || 'onboarding@resend.dev',
+        from: process.env.EMAIL_FROM?.trim() || 'Itemize <noreply@itemize.cloud>',
         to: [message.to],
         subject: message.subject,
         html: message.html,

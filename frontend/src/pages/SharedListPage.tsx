@@ -66,7 +66,7 @@ const SharedListPage: React.FC = () => {
         const metaDescription = document.querySelector('meta[name="description"]');
         if (metaDescription) {
           metaDescription.setAttribute('content',
-            `View this list shared from Itemize.cloud. Created by ${response.data.creator_name} on ${new Date(response.data.created_at).toLocaleDateString()}.`
+            `“${response.data.title}” is a list shared by ${response.data.creator_name} with Itemize.`
           );
         }
 

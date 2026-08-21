@@ -40,6 +40,7 @@ import { BulkTagModal } from './components/BulkTagModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOrganization } from '@/hooks/useOrganization';
 import { StatCard } from '@/components/StatCard';
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 
 const getApiStatus = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
@@ -360,7 +361,10 @@ export function ContactsPage() {
         onDismiss={dismissOnboarding}
         content={ONBOARDING_CONTENT.contacts}
       />
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <ResponsiveCardRail
+            label="Contact status summary"
+            desktopColumns="md:grid-cols-4"
+          >
             <StatCard
               title="Archived Contacts"
               badgeText="Archived"
@@ -397,7 +401,7 @@ export function ContactsPage() {
               colorTheme="orange"
               isLoading={loading}
             />
-          </div>
+          </ResponsiveCardRail>
           {/* Bulk actions */}
           {selectedContacts.length > 0 && (
             <Card className="mb-4 border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/20">

@@ -370,7 +370,10 @@ export class WorkspaceContentRepository {
           parameters.push(update.height);
           assignments.push(`height = $${parameters.length}`);
         }
-        if (['wireframe', 'vault'].includes(update.type)) {
+        // Canvas-only movement must not invalidate the optimistic revision used
+        // by the wireframe editor. Content mutations update wireframes.updated_at;
+        // layout mutations are broadcast with their own occurredAt timestamp.
+        if (update.type === 'vault') {
           assignments.push('updated_at = CURRENT_TIMESTAMP');
         }
         parameters.push(update.id, userId);

@@ -40,6 +40,7 @@ import {
 import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { StatCard } from '@/components/StatCard';
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -267,7 +268,10 @@ export function EstimatesPage() {
             }
         >
                 {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <ResponsiveCardRail
+                label="Estimate status summary"
+                desktopColumns="md:grid-cols-4"
+            >
                 <StatCard
                     title="Declined"
                     badgeText="Declined"
@@ -304,7 +308,7 @@ export function EstimatesPage() {
                     colorTheme="green"
                     isLoading={loading}
                 />
-            </div>
+            </ResponsiveCardRail>
 
             {/* Estimates List */}
             <Card>

@@ -92,7 +92,7 @@ const SharedVaultPage: React.FC = () => {
         if (metaDescription) {
           metaDescription.setAttribute(
             'content',
-            'Shared vault. Treat this link like the secrets it contains.',
+            'A secure vault shared with Itemize. Treat this link like the information it contains.',
           );
         }
       } catch (err) {

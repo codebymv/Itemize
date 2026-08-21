@@ -28,6 +28,7 @@ import { getReviews, getReputationAnalytics } from '@/services/reputationApi';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { getStatBadgeClass, getStatIconBgClass, getStatValueClass, getStatIconClass, StatTheme } from '@/hooks/useStatStyles';
 import { getSentimentBadgeClass } from '@/lib/badge-utils';
 
@@ -217,7 +218,10 @@ export function ReputationPage() {
             />
 
                 {/* Analytics Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+            <ResponsiveCardRail
+                label="Reputation summary"
+                desktopColumns="md:grid-cols-5"
+            >
                 {loading ? (
                     <>
                         {[...Array(5)].map((_, i) => (
@@ -313,7 +317,7 @@ export function ReputationPage() {
                         </Card>
                     </>
                 ) : null}
-            </div>
+            </ResponsiveCardRail>
 
             {/* Reviews List */}
             <Card>

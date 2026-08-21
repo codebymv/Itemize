@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { SharedItemCard } from '@/components/public/BrandedPublicPage';
 import { Button } from "@/components/ui/button";
 import { KeyRound, Key, FileText, Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
@@ -27,15 +27,12 @@ interface SharedVaultCardProps {
   vaultData: SharedVaultData;
 }
 
-const NEUTRAL_GRAY = '#808080';
-
 export const SharedVaultCard: React.FC<SharedVaultCardProps> = ({ vaultData }) => {
   const { toast } = useToast();
   const vaultColor = vaultData.color_value || '#3B82F6';
 
   // Category display matching canvas logic
   const displayCategory = vaultData.category || 'General';
-  const displayColor = displayCategory === 'General' ? NEUTRAL_GRAY : vaultColor;
   
   // Track which items are visible
   const [visibleItems, setVisibleItems] = useState<Set<number>>(new Set());
@@ -87,38 +84,15 @@ export const SharedVaultCard: React.FC<SharedVaultCardProps> = ({ vaultData }) =
   const maskedValue = '••••••••••••';
 
   return (
-    <div className="w-full max-w-lg mx-auto">
-      <Card
-        className="w-full shadow-lg border bg-white dark:bg-slate-800"
-        style={{
-          '--vault-color': vaultColor
-        } as React.CSSProperties}
+    <div className="mx-auto w-full max-w-3xl">
+      <SharedItemCard
+        title={vaultData.title}
+        contentType="vault"
+        category={displayCategory}
+        updatedAt={vaultData.updated_at}
+        accentColor={vaultColor}
       >
-        {/* Header */}
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
-              <KeyRound className="h-5 w-5" style={{ color: vaultColor }} />
-            </div>
-<div className="flex-1">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 truncate font-raleway">
-                {vaultData.title}
-              </h3>
-              <div
-                className="inline-block px-2 py-1 rounded-full text-xs font-medium text-white mt-1 font-raleway border-none"
-                style={{
-                  backgroundColor: displayColor
-                }}
-              >
-                {displayCategory}
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-
-{/* Content */}
-        <CardContent className="pt-0">
-          <div className="mb-3">
+        <div className="mb-3">
             <span className="text-sm text-muted-foreground">
               {vaultData.items.length} {vaultData.items.length === 1 ? 'item' : 'items'}
             </span>
@@ -198,7 +172,7 @@ export const SharedVaultCard: React.FC<SharedVaultCardProps> = ({ vaultData }) =
                         title="Copy value"
                       >
                         {isCopied ? (
-                          <Check className="h-3.5 w-3.5 text-green-600" />
+                          <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                         ) : (
                           <Copy className="h-3.5 w-3.5" />
                         )}
@@ -209,15 +183,7 @@ export const SharedVaultCard: React.FC<SharedVaultCardProps> = ({ vaultData }) =
               })}
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Timestamps */}
-      <div className="mt-4 text-center">
-        <p className="text-sm text-gray-500 dark:text-gray-400 font-raleway">
-          Last updated {new Date(vaultData.updated_at).toLocaleDateString()}
-        </p>
-      </div>
+      </SharedItemCard>
     </div>
   );
 };

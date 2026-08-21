@@ -1,4 +1,8 @@
 const defaultEmailService = require('../services/emailService');
+const {
+  brandedTransactionalEmail,
+  transactionalEmailAssetOrigin,
+} = require('../services/branded-transactional-email');
 const { reconcileStripeSubscriptionEvent } = require('../services/subscriptionWebhookService');
 const { withTransaction } = require('../utils/db');
 const { logger } = require('../utils/logger');
@@ -98,7 +102,13 @@ async function sendUpgradeNotification(job, emailService) {
   const result = await emailService.sendEmail({
     to: job.owner_email,
     subject: 'Subscription upgrade successful',
-    html: `<p>${organizationName} has been upgraded from ${previousPlan} to ${newPlan}.</p>`,
+    html: brandedTransactionalEmail({
+      assetOrigin: transactionalEmailAssetOrigin(),
+      previewText: `${job.organization_name || 'Your workspace'} is now on the ${job.new_plan || 'new'} plan.`,
+      heading: 'Subscription updated',
+      bodyHtml: `<p style="margin:0">${organizationName} has been upgraded from <strong>${previousPlan}</strong> to <strong>${newPlan}</strong>.</p>`,
+      footerText: 'Billing notification from Itemize.',
+    }),
     text: `${job.organization_name || 'Your organization'} has been upgraded from ${job.previous_plan || 'the previous plan'} to ${job.new_plan || 'the new plan'}.`,
     tags: [{ name: 'notification_type', value: 'subscription_upgraded' }],
     idempotencyKey: `subscription-upgrade-${job.stripe_event_id}`,

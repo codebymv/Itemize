@@ -20,7 +20,7 @@ class EmailService extends BaseService {
     super('EmailService', { timeout: 10000, maxRetries: 3 });
     
     this.resend = null;
-    this.fromEmail = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+    this.fromEmail = process.env.EMAIL_FROM || 'Itemize <noreply@itemize.cloud>';
     this.isConfigured = false;
 
     if (Resend && process.env.RESEND_API_KEY) {

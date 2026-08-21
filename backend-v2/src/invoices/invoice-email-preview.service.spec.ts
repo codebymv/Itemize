@@ -1,19 +1,19 @@
 import { InvoiceEmailPreviewService } from './invoice-email-preview.service';
 
 describe('InvoiceEmailPreviewService', () => {
-  const originalFrontendUrl = process.env.FRONTEND_URL;
+  const originalAssetOrigin = process.env.EMAIL_ASSET_ORIGIN;
   const originalNodeEnv = process.env.NODE_ENV;
   const service = new InvoiceEmailPreviewService();
 
   afterEach(() => {
-    if (originalFrontendUrl === undefined) delete process.env.FRONTEND_URL;
-    else process.env.FRONTEND_URL = originalFrontendUrl;
+    if (originalAssetOrigin === undefined) delete process.env.EMAIL_ASSET_ORIGIN;
+    else process.env.EMAIL_ASSET_ORIGIN = originalAssetOrigin;
     if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
     else process.env.NODE_ENV = originalNodeEnv;
   });
 
   it('renders the branded transactional layout from the configured origin', () => {
-    process.env.FRONTEND_URL = 'https://app.example.test/some/path';
+    process.env.EMAIL_ASSET_ORIGIN = 'https://app.example.test/some/path';
     const result = service.preview({
       message: 'Hello\nInvoice attached.',
       subject: 'Invoice INV-00001',
@@ -22,13 +22,14 @@ describe('InvoiceEmailPreviewService', () => {
     expect(result.html).toContain('<title>Invoice INV-00001</title>');
     expect(result.html).toContain('Hello\nInvoice attached.');
     expect(result.html).toContain('https://app.example.test/cover.png');
-    expect(result.html).toContain('Pay Now');
+    expect(result.html).toContain('Pay now');
+    expect(result.html).toContain('height:4px;background:#2563eb');
     expect(result.html).not.toContain('Unsubscribe');
   });
 
   it('treats user content as plain text and ignores unsafe configured URLs', () => {
     process.env.NODE_ENV = 'production';
-    process.env.FRONTEND_URL = 'javascript:alert(1)';
+    process.env.EMAIL_ASSET_ORIGIN = 'javascript:alert(1)';
     const result = service.preview({
       message: '<script>window.opener.pwned=true</script>',
       subject: '</title><script>alert(1)</script>',
@@ -38,7 +39,7 @@ describe('InvoiceEmailPreviewService', () => {
     expect(result.html).toContain('&lt;/title&gt;&lt;script&gt;alert(1)&lt;/script&gt;');
     expect(result.html).not.toContain('<script>alert(1)</script>');
     expect(result.html).toContain('https://itemize.cloud/cover.png');
-    expect(result.html).not.toContain('Pay Now');
+    expect(result.html).not.toContain('Pay now');
   });
 
   it('rejects empty and oversized content with stable reasons', () => {

@@ -21,6 +21,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Segment } from '@/types/segments';
 import { StatCard } from '@/components/StatCard';
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
@@ -173,7 +174,10 @@ export function SegmentsPage() {
                 </>
             }
         >
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <ResponsiveCardRail
+                        label="Segment summary"
+                        desktopColumns="md:grid-cols-2 lg:grid-cols-4"
+                    >
                         <StatCard
                             title="Total Segments"
                             badgeText="Total"
@@ -206,7 +210,7 @@ export function SegmentsPage() {
                             colorTheme="green"
                             isLoading={loading}
                         />
-                    </div>
+                    </ResponsiveCardRail>
                         {loading ? (
                             <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40" />)}

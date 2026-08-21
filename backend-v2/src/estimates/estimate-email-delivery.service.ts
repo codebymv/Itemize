@@ -94,6 +94,7 @@ export class EstimateEmailDeliveryService {
         to: claimed.recipient_email,
         subject: claimed.subject,
         html: this.html(claimed),
+        text: this.text(claimed),
         idempotencyKey: `estimate-email:${claimed.organization_id}:${claimed.id}`,
       });
       if (providerResult.kind === 'rejected') {
@@ -156,6 +157,22 @@ export class EstimateEmailDeliveryService {
     return delivery.delivery_type === 'estimate_sent'
       ? this.estimateHtml(delivery, delivery.payload as EstimateEmailPayload)
       : this.responseHtml(delivery, delivery.payload as EstimateResponseEmailPayload);
+  }
+
+  private text(delivery: EstimateEmailDeliveryRow): string {
+    if (delivery.delivery_type === 'estimate_sent') {
+      const payload = delivery.payload as EstimateEmailPayload;
+      const business = payload.businessName?.trim() || 'An Itemize workspace';
+      const publicUrl = `${this.frontendOrigin()}/estimate/${estimateDeliveryToken(
+        Number(delivery.organization_id),
+        Number(delivery.estimate_id),
+        delivery.idempotency_key,
+      )}`;
+      return `${business} sent you an estimate for ${payload.total} ${payload.currency}.\n\nReview estimate: ${publicUrl}`;
+    }
+    const payload = delivery.payload as EstimateResponseEmailPayload;
+    const response = delivery.delivery_type === 'estimate_accepted' ? 'accepted' : 'declined';
+    return `${payload.customerName || 'Your customer'} ${response} your estimate for ${payload.total} ${payload.currency}.`;
   }
 
   private estimateHtml(

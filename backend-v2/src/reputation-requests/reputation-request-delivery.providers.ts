@@ -1,4 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import {
+  brandedTransactionalEmail,
+  transactionalEmailAssetOrigin,
+} from '../common/branded-transactional-email';
 
 export type ReputationDeliveryProviderResult =
   | { kind: 'sent'; providerId: string | null }
@@ -36,7 +40,15 @@ export class ResendReputationEmailProvider implements ReputationEmailProvider {
   async send(message: ReputationEmailMessage): Promise<ReputationDeliveryProviderResult> {
     const apiKey = process.env.RESEND_API_KEY?.trim();
     if (!apiKey) return { kind: 'rejected', message: 'Email service is not configured' };
-    const html = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;white-space:pre-wrap;line-height:1.6">${escapeHtml(message.text)}</div>`;
+    const reviewUrl = message.text.match(/https?:\/\/[^\s<>"']+/i)?.[0];
+    const html = brandedTransactionalEmail({
+      assetOrigin: transactionalEmailAssetOrigin(),
+      previewText: message.text,
+      heading: message.subject,
+      bodyHtml: `<div style="white-space:pre-wrap">${escapeHtml(message.text)}</div>`,
+      ...(reviewUrl ? { cta: { label: 'Leave a review', url: reviewUrl } } : {}),
+      footerText: 'This feedback request was sent with Itemize.',
+    });
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -45,7 +57,7 @@ export class ResendReputationEmailProvider implements ReputationEmailProvider {
         'Idempotency-Key': message.idempotencyKey,
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM?.trim() || 'onboarding@resend.dev',
+        from: process.env.EMAIL_FROM?.trim() || 'Itemize <noreply@itemize.cloud>',
         to: [message.to],
         subject: message.subject,
         text: message.text,

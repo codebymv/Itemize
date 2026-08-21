@@ -54,9 +54,11 @@ describe('SignatureDeliveryService', () => {
 
     expect(preview.subject).toBe('Alice & Bob wants your signature');
     expect(preview.html).toContain('Please &lt;script&gt;alert(1)&lt;/script&gt; sign');
-    expect(preview.html).toContain('Document: &lt;b&gt;NDA&lt;/b&gt;');
+    expect(preview.html).toContain('&lt;b&gt;NDA&lt;/b&gt;');
     expect(preview.html).toContain('Expires on August 2, 2026');
     expect(preview.html).toContain('http://localhost:5173/sign/preview');
+    expect(preview.html).toContain('https://itemize.cloud/cover.png');
+    expect(preview.html).toContain('Email preview');
     expect(preview.html).not.toContain('<script>');
   });
 

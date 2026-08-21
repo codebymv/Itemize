@@ -1,11 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { SharedItemCard } from '@/components/public/BrandedPublicPage';
 import { ReactSketchCanvas, ReactSketchCanvasRef } from 'react-sketch-canvas';
 import type { CanvasPath } from 'react-sketch-canvas/dist/types';
-import { Palette } from 'lucide-react';
 import { normalizeWhiteboardCanvasData } from '@/lib/whiteboardCanvasData';
-
-const NEUTRAL_GRAY = '#808080';
 
 interface SharedWhiteboardData {
   id: number;
@@ -65,7 +62,7 @@ export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whit
 
   // Category display matching canvas logic
   const displayCategory = whiteboardData.category || 'General';
-  const displayColor = displayCategory === 'General' ? NEUTRAL_GRAY : (whiteboardData.color_value || '#3B82F6');
+  const whiteboardColor = whiteboardData.color_value || '#2563eb';
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -191,7 +188,13 @@ export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whit
         setIsCanvasLoaded(true);
       }
     }
-  }, [whiteboardData.canvas_data, isCanvasLoaded]);
+  }, [
+    isCanvasLoaded,
+    isLive,
+    whiteboardData.canvas_data,
+    whiteboardData.id,
+    whiteboardData.title,
+  ]);
 
   // Handle real-time updates when canvas is already loaded
   useEffect(() => {
@@ -244,50 +247,19 @@ const canvasWidth = isMobile ? '100%' : `${whiteboardData.canvas_width || 400}px
   const canvasHeight = isMobile ? `${scaledCanvasHeight || 300}px` : `${whiteboardData.canvas_height || 300}px`;
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
-      <Card 
-        className="w-full shadow-lg border-2 transition-all duration-200"
-        style={{ 
-          borderColor: whiteboardData.color_value,
-          '--whiteboard-color': whiteboardData.color_value 
-        } as React.CSSProperties}
+    <div className="mx-auto w-full max-w-5xl">
+      <SharedItemCard
+        title={whiteboardData.title}
+        contentType="whiteboard"
+        category={displayCategory}
+        creatorName={whiteboardData.creator_name}
+        createdAt={whiteboardData.created_at}
+        isLive={isLive}
+        accentColor={whiteboardColor}
       >
-        {/* Header */}
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <Palette className="h-5 w-5 text-gray-600" />
-            <div className="flex-1">
-              <h3
-                className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate"
-                style={{ fontFamily: '"Raleway", sans-serif' }}
-              >
-                {whiteboardData.title}
-              </h3>
-              <div className="flex items-center gap-2 mt-1">
-              <div
-                className="inline-block px-2 py-1 rounded-full text-xs font-medium text-white font-raleway border-none"
-                style={{
-                  backgroundColor: displayColor
-                }}
-              >
-                {displayCategory}
-              </div>
-              {isLive && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200 font-raleway">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  Live
-                </span>
-              )}
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-
-{/* Canvas Content */}
-        <CardContent className="p-4">
           <div
             ref={canvasFrameRef}
-            className="relative border-2 border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
+            className="relative overflow-hidden rounded-lg border border-border"
             style={{
               backgroundColor: whiteboardData.background_color || '#FFFFFF',
             }}
@@ -322,25 +294,13 @@ const canvasWidth = isMobile ? '100%' : `${whiteboardData.canvas_width || 400}px
 
             {/* Read-only indicator */}
             <div
-              className="absolute top-2 right-2 bg-gray-800 text-white text-xs px-2 py-1 rounded-md opacity-75"
+              className="absolute right-2 top-2 rounded-md bg-foreground/80 px-2 py-1 text-xs text-background"
               style={{ zIndex: 11 }}
             >
-              Read Only
+              Read only
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Creator Attribution */}
-      <div className="mt-4 text-center">
-        <p 
-          className="text-sm text-gray-500 dark:text-gray-400"
-          style={{ fontFamily: '"Raleway", sans-serif' }}
-        >
-          Created by <span className="font-medium">{whiteboardData.creator_name}</span> on{' '}
-          {new Date(whiteboardData.created_at).toLocaleDateString()}
-        </p>
-      </div>
+      </SharedItemCard>
     </div>
   );
 };

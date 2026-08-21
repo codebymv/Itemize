@@ -4,6 +4,7 @@ export type EstimateEmailMessage = {
   to: string;
   subject: string;
   html: string;
+  text: string;
   idempotencyKey: string;
 };
 
@@ -32,10 +33,11 @@ export class ResendEstimateEmailProvider implements EstimateEmailProvider {
         'Idempotency-Key': message.idempotencyKey,
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM?.trim() || 'onboarding@resend.dev',
+        from: process.env.EMAIL_FROM?.trim() || 'Itemize <noreply@itemize.cloud>',
         to: [message.to],
         subject: message.subject,
         html: message.html,
+        text: message.text,
       }),
       signal: AbortSignal.timeout(10_000),
     });

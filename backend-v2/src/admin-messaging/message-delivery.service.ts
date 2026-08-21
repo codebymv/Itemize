@@ -1,5 +1,9 @@
 import { createHash } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
+import {
+  brandedTransactionalEmail,
+  transactionalEmailAssetOrigin,
+} from '../common/branded-transactional-email';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { smsMessageInfo } from '../sms-templates/sms-message-info';
 import {
@@ -84,7 +88,7 @@ export class MessageDeliveryService {
         return {
           to: this.email(contact.email!, 'contact.email'),
           from: process.env.EMAIL_FROM?.trim() ||
-            `${organizationName} <onboarding@resend.dev>`,
+            `${organizationName} <noreply@itemize.cloud>`,
           subject: renderedSubject,
           html: renderedHtml,
           text: renderedText,
@@ -165,7 +169,7 @@ export class MessageDeliveryService {
         return {
           to,
           from: process.env.EMAIL_FROM?.trim() ||
-            `${organizationName} <onboarding@resend.dev>`,
+            `${organizationName} <noreply@itemize.cloud>`,
           subject,
           html: this.wrapEmail(
             `<div style="padding:10px;background:#fef3c7;color:#92400e;font-weight:600">TEST EMAIL</div>${renderedBody}`,
@@ -356,17 +360,13 @@ export class MessageDeliveryService {
   private wrapEmail(html: string, subject: string): string {
     const lower = html.toLowerCase();
     if (lower.includes('<!doctype') || lower.includes('<html')) return html;
-    const baseUrl = (process.env.FRONTEND_URL || 'https://itemize.cloud').replace(/\/+$/, '');
-    return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${this.escape(subject)}</title></head><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1e293b;margin:0"><div style="max-width:600px;margin:0 auto;padding:20px"><div style="text-align:center;padding:20px"><a href="${baseUrl}">Itemize</a></div><div style="padding:40px 30px">${html}</div><div style="text-align:center;padding:20px;color:#64748b;font-size:13px"><a href="{{unsubscribeUrl}}">Unsubscribe</a> · <a href="${baseUrl}">Visit Website</a></div></div></body></html>`;
-  }
-
-  private escape(value: string): string {
-    return value
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;');
+    return brandedTransactionalEmail({
+      assetOrigin: transactionalEmailAssetOrigin(),
+      previewText: subject,
+      heading: subject,
+      bodyHtml: html,
+      footerText: 'Sent with Itemize.',
+    });
   }
 
   private tags(job: MessageDeliveryJobRow): Array<{ name: string; value: string }> {

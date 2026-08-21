@@ -139,6 +139,7 @@ export class InvoiceEmailDeliveryService {
         cc: claimed.payload.ccEmails,
         subject: claimed.subject,
         html: this.html(claimed, paymentUrl),
+        text: this.text(claimed, paymentUrl),
         filename: `${String(claimed.payload.invoice.invoice_number)}.pdf`,
         pdf: attachment,
         idempotencyKey: `invoice-email:${organizationId}:${claimed.id}`,
@@ -248,6 +249,14 @@ export class InvoiceEmailDeliveryService {
       cta: paymentUrl ? { label: 'Pay invoice', url: paymentUrl } : undefined,
       footerText: 'Your invoice PDF is attached. Sent securely with Itemize.',
     });
+  }
+
+  private text(delivery: InvoiceEmailDeliveryRow, paymentUrl: string | null): string {
+    return [
+      delivery.payload.message,
+      paymentUrl ? `Pay invoice: ${paymentUrl}` : null,
+      'Your invoice PDF is attached.',
+    ].filter(Boolean).join('\n\n');
   }
 
   private frontendOrigin(): string {

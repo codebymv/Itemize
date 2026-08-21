@@ -115,6 +115,7 @@ export class SignatureDeliveryJobsService {
       to,
       subject: rendered.subject,
       html: rendered.html,
+      text: rendered.text,
       tags: [
         { name: 'signature_document_id', value: String(claim.document_id) },
         ...(claim.recipient_id

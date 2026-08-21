@@ -1,3 +1,7 @@
+import {
+  brandedTransactionalEmail,
+  transactionalEmailAssetOrigin,
+} from '../common/branded-transactional-email';
 import { signatureDeliveryToken } from './signature-delivery.token';
 
 export type SignatureDeliveryPayload = {
@@ -8,6 +12,12 @@ export type SignatureDeliveryPayload = {
   senderEmail: string | null;
   message: string | null;
   expiresAt: string | null;
+};
+
+export type RenderedSignatureEmail = {
+  subject: string;
+  html: string;
+  text: string;
 };
 
 const escapeHtml = (value: string): string => value.replace(/[&<>"']/g, (character) => ({
@@ -26,6 +36,65 @@ const frontendOrigin = (): string => {
   }
 };
 
+const formattedExpiry = (expiresAt: string | null): string | null => expiresAt
+  ? new Intl.DateTimeFormat('en-US', {
+    year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
+  }).format(new Date(expiresAt))
+  : null;
+
+const requestEmail = (
+  payload: SignatureDeliveryPayload,
+  options: { reminder: boolean; signingUrl: string; preview: boolean },
+): RenderedSignatureEmail => {
+  const sender = payload.senderEmail || payload.senderName || 'Itemize';
+  const subject = options.reminder
+    ? `Reminder: Please sign ${payload.documentTitle || 'Document'}`
+    : `${sender} wants your signature`;
+  const heading = options.reminder ? 'Signature reminder' : 'Signature requested';
+  const expires = formattedExpiry(payload.expiresAt);
+  const greeting = `<p style="margin:0 0 16px">Hi ${escapeHtml(payload.recipientName || 'there')},</p>`;
+  const context = options.reminder
+    ? `<p style="margin:0 0 16px">This is a reminder to review and sign ${escapeHtml(payload.documentTitle || 'the document')} from ${escapeHtml(payload.senderName || 'Itemize')}.</p>`
+    : '<p style="margin:0 0 16px">A document is ready for your review and signature.</p>';
+  const message = payload.message
+    ? `<div style="white-space:pre-wrap;margin:0 0 20px">${escapeHtml(payload.message)}</div>`
+    : '';
+  const preview = options.preview
+    ? '<div style="margin:0 0 20px;padding:10px 14px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb;color:#92400e;font-size:13px;font-weight:700">Email preview</div>'
+    : '';
+  const metadata =
+    `<div style="margin-top:20px;padding:14px 16px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc">` +
+    `<div style="color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:.04em">Document</div>` +
+    `<div style="margin-top:4px;color:#0f172a;font-weight:700">${escapeHtml(payload.documentTitle || 'Document')}</div>` +
+    (expires
+      ? `<div style="margin-top:10px;color:#64748b;font-size:13px">Expires on ${escapeHtml(expires)}</div>`
+      : '') +
+    '</div>';
+
+  return {
+    subject,
+    html: brandedTransactionalEmail({
+      assetOrigin: transactionalEmailAssetOrigin(),
+      previewText: options.reminder
+        ? 'A document is still waiting for your signature.'
+        : 'A document is ready for your signature.',
+      heading,
+      bodyHtml: preview + greeting + context + message + metadata,
+      cta: { label: 'Review and sign', url: options.signingUrl },
+      footerText: 'This secure signature request was sent with Itemize.',
+    }),
+    text: [
+      options.reminder
+        ? `This is a reminder to sign ${payload.documentTitle || 'the document'}.`
+        : 'A document is ready for your review and signature.',
+      payload.message,
+      `Document: ${payload.documentTitle || 'Document'}`,
+      expires ? `Expires on ${expires}` : null,
+      `Review and sign: ${options.signingUrl}`,
+    ].filter(Boolean).join('\n\n'),
+  };
+};
+
 export const renderSignatureDeliveryEmail = (
   deliveryType:
     | 'signature_request'
@@ -35,7 +104,7 @@ export const renderSignatureDeliveryEmail = (
     | 'signature_declined',
   idempotencyKey: string,
   payload: SignatureDeliveryPayload,
-): { subject: string; html: string } => {
+): RenderedSignatureEmail => {
   if (deliveryType === 'signer_completed') {
     const subject = `${payload.recipientName || 'A recipient'} signed ${payload.documentTitle}`;
     return notification(
@@ -61,44 +130,34 @@ export const renderSignatureDeliveryEmail = (
       `${payload.recipientName || 'A recipient'} declined to sign ${payload.documentTitle}.${reason}`,
     );
   }
-  const reminder = deliveryType === 'signature_reminder';
-  const sender = payload.senderEmail || payload.senderName || 'Itemize';
-  const subject = reminder
-    ? `Reminder: Please sign ${payload.documentTitle || 'Document'}`
-    : `${sender} wants your signature`;
-  const signingUrl = `${frontendOrigin()}/sign/${signatureDeliveryToken(idempotencyKey)}`;
-  const expires = payload.expiresAt
-    ? new Intl.DateTimeFormat('en-US', {
-      year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
-    }).format(new Date(payload.expiresAt))
-    : null;
-  const greeting = reminder
-    ? `<h1 style="font-size:22px;margin:0 0 16px;color:#111827">Signature Reminder</h1>
-       <p style="color:#374151;margin:0 0 16px;line-height:1.6">Hi ${escapeHtml(payload.recipientName || 'there')}, this is a reminder to sign ${escapeHtml(payload.documentTitle || 'the document')} from ${escapeHtml(payload.senderName || 'Itemize')}.</p>`
-    : '';
-  return {
-    subject,
-    html: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>${escapeHtml(subject)}</title></head>
-<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1e293b;background:#fff;margin:0;padding:0">
-<div style="max-width:600px;margin:0 auto;padding:32px 30px">${greeting}
-<div style="white-space:pre-wrap;color:#374151;line-height:1.6">${escapeHtml(payload.message || '')}</div>
-<div style="text-align:center;margin:24px 0"><a href="${escapeHtml(signingUrl)}" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:500">Review and Sign</a></div>
-<p style="color:#6b7280;font-size:13px">Document: ${escapeHtml(payload.documentTitle)}</p>
-${expires ? `<p style="color:#6b7280;font-size:13px">Expires on ${escapeHtml(expires)}</p>` : ''}
-</div></body></html>`,
-  };
+  return requestEmail(payload, {
+    reminder: deliveryType === 'signature_reminder',
+    signingUrl: `${frontendOrigin()}/sign/${signatureDeliveryToken(idempotencyKey)}`,
+    preview: false,
+  });
 };
+
+export const renderSignaturePreviewEmail = (
+  payload: SignatureDeliveryPayload,
+  signingUrl: string,
+): RenderedSignatureEmail => requestEmail(payload, {
+  reminder: false,
+  signingUrl,
+  preview: true,
+});
 
 const notification = (
   subject: string,
   heading: string,
   message: string,
-): { subject: string; html: string } => ({
+): RenderedSignatureEmail => ({
   subject,
-  html: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>${escapeHtml(subject)}</title></head>
-<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1e293b;background:#fff;margin:0;padding:0">
-<div style="max-width:600px;margin:0 auto;padding:32px 30px">
-<h1 style="font-size:22px;margin:0 0 16px;color:#111827">${escapeHtml(heading)}</h1>
-<p style="color:#374151;margin:0;line-height:1.6">${escapeHtml(message)}</p>
-</div></body></html>`,
+  html: brandedTransactionalEmail({
+    assetOrigin: transactionalEmailAssetOrigin(),
+    previewText: message,
+    heading,
+    bodyHtml: `<p style="margin:0">${escapeHtml(message)}</p>`,
+    footerText: 'Signature activity notification from Itemize.',
+  }),
+  text: message,
 });

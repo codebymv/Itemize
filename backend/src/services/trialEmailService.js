@@ -10,6 +10,11 @@ const { logger } = require('../utils/logger');
 const pool = require('../db');
 const fs = require('fs').promises;
 const path = require('path');
+const {
+  brandedTransactionalEmail,
+  escapeHtml,
+  transactionalEmailAssetOrigin,
+} = require('./branded-transactional-email');
 
 // Check if Resend is available (optional dependency)
 let Resend = null;
@@ -24,7 +29,7 @@ class TrialEmailService extends BaseService {
     super('TrialEmailService', { timeout: 10000, maxRetries: 3 });
     
     this.resend = null;
-    this.fromEmail = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+    this.fromEmail = process.env.EMAIL_FROM || 'Itemize <noreply@itemize.cloud>';
     this.isConfigured = false;
 
     if (Resend && process.env.RESEND_API_KEY) {
@@ -123,14 +128,6 @@ class TrialEmailService extends BaseService {
     }
 
     try {
-      // Load template
-      let template = await this.loadTemplate('welcome-email');
-      
-      // Fallback to inline template if file doesn't exist
-      if (!template) {
-        template = this.getWelcomeEmailTemplate();
-      }
-
       // Format dates
       const trialEndFormatted = new Date(data.trialEndDate).toLocaleDateString('en-US', {
         month: 'long',
@@ -138,20 +135,23 @@ class TrialEmailService extends BaseService {
         year: 'numeric',
       });
 
-      // Replace variables
-      const html = this.replaceVariables(template, {
-        userName: data.userName || 'there',
-        organizationName: data.organizationName,
-        planName: data.planName,
-        trialEndDate: trialEndFormatted,
-        billingPageUrl: data.billingPageUrl,
+      const html = brandedTransactionalEmail({
+        assetOrigin: transactionalEmailAssetOrigin(),
+        previewText: `Your ${data.planName || 'Itemize'} trial is ready.`,
+        heading: 'Your Itemize trial is ready',
+        bodyHtml:
+          `<p style="margin:0 0 16px">Hi ${escapeHtml(data.userName || 'there')},</p>` +
+          `<p style="margin:0">Your <strong>${escapeHtml(data.planName || 'Itemize')}</strong> trial for ${escapeHtml(data.organizationName || 'your workspace')} is active.</p>` +
+          `<div style="margin-top:20px;padding:14px 16px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;color:#334155">Your trial ends on <strong>${escapeHtml(trialEndFormatted)}</strong>.</div>`,
+        cta: { label: 'Open billing', url: data.billingPageUrl },
+        footerText: 'Trial notification from Itemize.',
       });
 
       // Send email
       const result = await this.resend.emails.send({
         from: this.fromEmail,
         to: data.userEmail,
-        subject: `Welcome to itemize.cloud - Your ${data.planName} Trial Starts Now!`,
+        subject: 'Your Itemize trial is ready',
         html,
       });
 
@@ -196,14 +196,6 @@ class TrialEmailService extends BaseService {
     }
 
     try {
-      // Load template
-      let template = await this.loadTemplate('trial-reminder-email');
-      
-      // Fallback to inline template if file doesn't exist
-      if (!template) {
-        template = this.getTrialReminderTemplate();
-      }
-
       // Format dates
       const trialEndFormatted = new Date(data.trialEndDate).toLocaleDateString('en-US', {
         month: 'long',
@@ -213,21 +205,23 @@ class TrialEmailService extends BaseService {
         minute: '2-digit',
       });
 
-      // Replace variables
-      const html = this.replaceVariables(template, {
-        userName: data.userName || 'there',
-        organizationName: data.organizationName,
-        planName: data.planName,
-        daysRemaining: data.daysRemaining,
-        trialEndDate: trialEndFormatted,
-        addPaymentUrl: data.addPaymentUrl,
+      const html = brandedTransactionalEmail({
+        assetOrigin: transactionalEmailAssetOrigin(),
+        previewText: `Your Itemize trial ends in ${data.daysRemaining} days.`,
+        heading: 'Your trial is ending soon',
+        bodyHtml:
+          `<p style="margin:0 0 16px">Hi ${escapeHtml(data.userName || 'there')},</p>` +
+          `<p style="margin:0">Your ${escapeHtml(data.planName || 'Itemize')} trial for ${escapeHtml(data.organizationName || 'your workspace')} ends in <strong>${escapeHtml(data.daysRemaining)} days</strong>.</p>` +
+          `<div style="margin-top:20px;padding:14px 16px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb;color:#92400e">Trial access ends on <strong>${escapeHtml(trialEndFormatted)}</strong>.</div>`,
+        cta: { label: 'Add payment method', url: data.addPaymentUrl },
+        footerText: 'Trial notification from Itemize.',
       });
 
       // Send email
       const result = await this.resend.emails.send({
         from: this.fromEmail,
         to: data.userEmail,
-        subject: `Your itemize.cloud Trial Ends in ${data.daysRemaining} Days`,
+        subject: `Your Itemize trial ends in ${data.daysRemaining} days`,
         html,
       });
 

@@ -8,6 +8,7 @@ describe('ResendEstimateEmailProvider', () => {
     to: 'recipient@example.com',
     subject: 'Estimate EST-00001',
     html: '<p>Estimate body</p>',
+    text: 'Estimate body',
     idempotencyKey: 'estimate-email:4:12',
   };
 
@@ -61,6 +62,7 @@ describe('ResendEstimateEmailProvider', () => {
       to: [message.to],
       subject: message.subject,
       html: message.html,
+      text: message.text,
     });
   });
 

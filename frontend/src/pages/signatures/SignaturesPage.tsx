@@ -9,6 +9,7 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatCard } from '@/components/StatCard';
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -275,7 +276,10 @@ export function SignaturesPage() {
         </>
       }
     >
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <ResponsiveCardRail
+            label="Document status summary"
+            desktopColumns="md:grid-cols-4"
+          >
             <StatCard
               title="Drafts"
               badgeText="Drafts"
@@ -312,7 +316,7 @@ export function SignaturesPage() {
               colorTheme="green"
               isLoading={loading}
             />
-          </div>
+          </ResponsiveCardRail>
 
           <Card>
             <CardContent className="p-0">

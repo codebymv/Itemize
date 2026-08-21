@@ -1425,6 +1425,10 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       [outsiderId],
     );
     const mutationId = '19790a37-5406-44f6-b798-8876e67733c9';
+    const wireframeRevisionBeforeMove = await pool.query<{ updated_at: Date }>(
+      'SELECT updated_at FROM wireframes WHERE id = $1',
+      [ids.wireframe],
+    );
     const document = `mutation Batch($input: BatchCanvasPositionsInput!) {
       batchCanvasPositions(input: $input) {
         updated { type id positionX positionY width height }
@@ -1534,6 +1538,14 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
         position_x: 0,
         position_y: 0,
       });
+
+      const wireframeRevisionAfterMove = await pool.query<{ updated_at: Date }>(
+        'SELECT updated_at FROM wireframes WHERE id = $1',
+        [ids.wireframe],
+      );
+      expect(wireframeRevisionAfterMove.rows[0].updated_at.toISOString()).toBe(
+        wireframeRevisionBeforeMove.rows[0].updated_at.toISOString(),
+      );
 
       const events = await pool.query<{
         id: string;

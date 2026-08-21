@@ -109,7 +109,9 @@ describe('MessageDeliveryService', () => {
       text: 'Hello Ada Lovelace',
     });
     expect(payload.html).toContain('blue {{unknown}}');
-    expect(payload.html?.match(/<!DOCTYPE html>/g)).toHaveLength(1);
+    expect(payload.html?.match(/<!doctype html>/gi)).toHaveLength(1);
+    expect(payload.html).toContain('https://itemize.cloud/cover.png');
+    expect(payload.html).not.toContain('{{unsubscribeUrl}}');
   });
 
   it('rejects invalid destinations before persisting test intent', async () => {

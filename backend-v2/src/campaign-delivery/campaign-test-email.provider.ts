@@ -26,7 +26,7 @@ export class ResendCampaignTestEmailProvider implements CampaignTestEmailProvide
   async send(message: CampaignTestEmailMessage): Promise<CampaignTestEmailProviderResult> {
     const apiKey = process.env.RESEND_API_KEY?.trim();
     if (!apiKey) return { kind: 'rejected', message: 'Email service is not configured' };
-    const configuredFrom = process.env.EMAIL_FROM?.trim() || 'onboarding@resend.dev';
+    const configuredFrom = process.env.EMAIL_FROM?.trim() || 'Itemize <noreply@itemize.cloud>';
     const fromEmail = message.fromEmail?.trim() || configuredFrom;
     const from = message.fromName?.trim()
       ? `${message.fromName.trim()} <${fromEmail}>`

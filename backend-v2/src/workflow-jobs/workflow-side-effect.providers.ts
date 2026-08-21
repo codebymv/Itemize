@@ -38,7 +38,7 @@ export class ResendWorkflowEmailProvider implements WorkflowEmailProvider {
         headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json',
           'Idempotency-Key': message.idempotencyKey },
         body: JSON.stringify({
-          from: message.from || process.env.EMAIL_FROM?.trim() || 'onboarding@resend.dev',
+          from: message.from || process.env.EMAIL_FROM?.trim() || 'Itemize <noreply@itemize.cloud>',
           to: [message.to], subject: message.subject, html: message.html,
           ...(message.text ? { text: message.text } : {}),
           ...(message.replyTo ? { reply_to: message.replyTo } : {}),

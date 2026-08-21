@@ -1,49 +1,29 @@
-import React from 'react';
-import { Home, ExternalLink } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import type { ReactNode } from 'react';
+import {
+  BrandedPublicContainer,
+  BrandedPublicPage,
+  PublicPrivateLinkNotice,
+  PublicProductCTA,
+  type PublicContentType,
+} from '@/components/public/BrandedPublicPage';
 
 interface SharedContentLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
   title: string;
-  contentType: 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
+  contentType: PublicContentType;
   onBackToHome?: () => void;
-  showCTA?: boolean; // Whether to show the "Create your own..." CTA section
-  isError?: boolean; // Whether this is an error state (reduces spacing)
+  showCTA?: boolean;
+  isError?: boolean;
 }
 
-export const SharedContentLayout: React.FC<SharedContentLayoutProps> = ({
+export function SharedContentLayout({
   children,
-  title,
   contentType,
-  onBackToHome,
-  showCTA = true, // Default to true for backward compatibility
-  isError = false // Default to false
-}) => {
-  const handleBackToHome = () => {
-    if (onBackToHome) {
-      onBackToHome();
-    } else {
-      window.location.href = 'https://itemize.cloud';
-    }
-  };
-
-  const handleCreateAccount = () => {
-    window.location.href = 'https://itemize.cloud';
-  };
-
-  const getContentTypeLabel = () => {
-    switch (contentType) {
-      case 'list': return 'List';
-      case 'note': return 'Note';
-      case 'whiteboard': return 'Whiteboard';
-      case 'wireframe': return 'Wireframe';
-      default: return 'Content';
-    }
-  };
-
-return (
-    <div className="bg-background flex-1 min-h-full">
-      {/* Global overflow protection text rendering */}
+  showCTA = true,
+  isError = false,
+}: SharedContentLayoutProps) {
+  return (
+    <BrandedPublicPage>
       <style>{`
         .shared-content-container *, .shared-content-container *::before, .shared-content-container *::after {
           box-sizing: border-box;
@@ -56,53 +36,16 @@ return (
           max-width: 100%;
         }
       `}</style>
-      {/* Main content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 min-h-full shared-content-container">
-        {/* Back button */}
-        <div className="mb-6">
-          <Button
-            onClick={handleBackToHome}
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-            style={{ fontFamily: '"Raleway", sans-serif' }}
-          >
-            <Home className="h-4 w-4" />
-            Home
-          </Button>
-        </div>
-
-        {/* Content */}
-        <div className={`${isError ? 'text-center' : 'text-center'}`}>
-          {children}
-        </div>
-
-        {/* Footer CTA - only show when showCTA is true */}
-        {showCTA && (
-          <div className="mt-8 text-center">
-            <div className="max-w-md mx-auto">
-              <h3
-                className="text-lg font-semibold text-foreground mb-2 font-raleway"
-                style={{ fontFamily: '"Raleway", sans-serif' }}
-              >
-                Create your own {contentType}s
-              </h3>
-              <p
-                className="text-sm text-muted-foreground mb-4 font-raleway"
-                style={{ fontFamily: '"Raleway", sans-serif' }}
-              >
-                Join Itemize.cloud to organize your thoughts, tasks, and ideas with lists, notes, and whiteboards.
-              </p>
-              <Button
-                onClick={handleCreateAccount}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-                style={{ fontFamily: '"Raleway", sans-serif' }}
-              >
-                Get Started Free
-              </Button>
-            </div>
-          </div>
+      <BrandedPublicContainer className="shared-content-container">
+        {children}
+        {showCTA && <PublicProductCTA />}
+        {!isError && (
+          <PublicPrivateLinkNotice
+            contentLabel={contentType}
+            sensitive={contentType === 'vault'}
+          />
         )}
-      </div>
-    </div>
+      </BrandedPublicContainer>
+    </BrandedPublicPage>
   );
-};
+}

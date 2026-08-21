@@ -20,6 +20,11 @@ const {
     getPlanFromStripePrice
 } = require('../lib/subscription.constants');
 const emailService = require('./emailService');
+const {
+    brandedTransactionalEmail,
+    escapeHtml,
+    transactionalEmailAssetOrigin,
+} = require('./branded-transactional-email');
 
 class StripeService {
     constructor(pool) {
@@ -389,14 +394,15 @@ class StripeService {
                 try {
                     const template = {
                         subject: 'Subscription Upgrade Successful',
-                        body_html: `
-                            <h2>Hello ${org.name || 'there'},</h2>
-                            <p>Great news! Your organization has successfully upgraded to the <strong>${plan}</strong> plan.</p>
-                            <p>You now have access to all the features and increased limits associated with your new plan.</p>
-                            <p>Thank you for your continued business!</p>
-                            <br/>
-                            <p>The Team</p>
-                        `
+                        body_html: brandedTransactionalEmail({
+                            assetOrigin: transactionalEmailAssetOrigin(),
+                            previewText: `Your workspace is now on the ${plan} plan.`,
+                            heading: 'Subscription updated',
+                            bodyHtml:
+                                `<p style="margin:0 0 16px">Hi ${escapeHtml(org.name || 'there')},</p>` +
+                                `<p style="margin:0">Your workspace has been upgraded to the <strong>${escapeHtml(plan)}</strong> plan. Your new features and limits are available now.</p>`,
+                            footerText: 'Billing notification from Itemize.',
+                        })
                     };
 
                     await emailService.sendTemplateEmail({

@@ -83,6 +83,7 @@ import { InvoicePreviewCard } from './components/InvoicePreviewCard';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { StatCard } from '@/components/StatCard';
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -562,7 +563,10 @@ export function RecurringInvoicesPage() {
             }
         >
                 {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <ResponsiveCardRail
+                    label="Recurring invoice summary"
+                    desktopColumns="md:grid-cols-3"
+                >
                 <StatCard
                     title="Active"
                     badgeText="Active"
@@ -590,7 +594,7 @@ export function RecurringInvoicesPage() {
                     colorTheme="green"
                     isLoading={loading}
                 />
-            </div>
+                </ResponsiveCardRail>
 
             {/* Recurring List */}
             <Card>

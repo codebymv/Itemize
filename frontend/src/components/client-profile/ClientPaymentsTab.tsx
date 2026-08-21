@@ -1,6 +1,7 @@
 import React from 'react'
 import { DollarSign, Calendar, CheckCircle2 } from 'lucide-react'
 import { StatCard } from '@/components/StatCard'
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail'
 import { EmptyState } from '@/components/EmptyState'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { ClientPayment } from '../../design-system/types/client.types'
@@ -15,7 +16,11 @@ export function ClientPaymentsTab({ payments }: ClientPaymentsTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
+      <ResponsiveCardRail
+        label="Client payment summary"
+        desktopColumns="md:grid-cols-3"
+        className="mb-0"
+      >
         <StatCard
           title="Total Paid"
           badgeText="Total Paid"
@@ -37,7 +42,7 @@ export function ClientPaymentsTab({ payments }: ClientPaymentsTabProps) {
           icon={Calendar}
           colorTheme="gray"
         />
-      </div>
+      </ResponsiveCardRail>
 
       <Card className="bg-muted/10">
         <CardHeader>

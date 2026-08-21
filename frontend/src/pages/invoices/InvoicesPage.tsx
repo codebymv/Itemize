@@ -77,6 +77,7 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { StatCard } from '@/components/StatCard';
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -735,7 +736,10 @@ export function InvoicesPage() {
             />
 
                 {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <ResponsiveCardRail
+                label="Invoice status summary"
+                desktopColumns="md:grid-cols-4"
+            >
                 <StatCard
                     title="Overdue"
                     badgeText="Overdue"
@@ -772,7 +776,7 @@ export function InvoicesPage() {
                     colorTheme="green"
                     isLoading={loading}
                 />
-            </div>
+            </ResponsiveCardRail>
 
             {/* Invoice List */}
             <Card>
