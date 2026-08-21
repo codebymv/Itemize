@@ -128,13 +128,24 @@ Application safeguards added during this pass:
 - Customer communications use `Free`, `Solo`, `Studio`, and `Studio+` rather
   than internal plan keys.
 
-No live charge was created during this preflight. Stripe's hosted billing
-portal is now live and active as the Itemize default configuration
-(`bpc_1U710SRxBJaRlFvtwSY1dRrY`). It allows payment-method updates, invoice
-history, monthly Solo/Studio plan changes with prorations disclosed by Stripe,
-and end-of-period cancellation. A deliberately authorized low-value
-checkout/refund canary remains required before declaring the paid path
-production-complete.
+No live charge was created during this preflight. The authorized checkout
+canary was halted before card entry because the configured live Stripe account
+is the shared CodeByMV account: it also contains active TLM and GLEAM products,
+and Checkout identifies the merchant as `Matt Valentine` with the `CODEBYMV`
+statement descriptor. Itemize must not globally rebrand or share a billing
+boundary with those products. The portal configuration created during the
+preflight cannot be deactivated because Stripe made it the account default, so
+it was neutralized: Itemize branding and product mappings were removed, and
+subscription changes and cancellation were disabled.
+
+Checkout also exposed that new Stripe customers used a synthetic
+`org-{id}@itemize.cloud` address. Customer creation now selects the
+organization owner's verified account email instead. The aborted attempt
+created only an Itemize-labeled customer and Checkout session; that session was
+explicitly expired while still unpaid. No payment, subscription, refund, or
+TLM/GLEAM product or customer mutation occurred during the canary. Production
+subscription Checkout now fails closed unless
+`ITEMIZE_SUBSCRIPTION_BILLING_ENABLED=true` is set after account isolation.
 
 The targeted frontend, billing service, webhook worker, legacy PostgreSQL
 integration, and production builds pass. The broader backend-v2 integration
@@ -145,9 +156,10 @@ release gate.
 
 ### Remaining matrix extensions
 
-- A live Stripe checkout/payment remains intentionally deferred until an
-  action-time confirmation is given for the charge/refund canary. The matrix
-  did not access or mutate any client-owned Stripe account.
+- Create or select a dedicated Itemize Stripe account, install its live secret
+  and webhook signing secret, recreate the Solo/Studio monthly catalog and
+  Itemize portal configuration there, then rerun the authorized charge/refund
+  canary. Do not reuse the shared account containing TLM/GLEAM products.
 - Estimate decline and signature decline are covered by renderer/service tests;
   add production canaries when destructive fixture coverage is next scheduled.
 

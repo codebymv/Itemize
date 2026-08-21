@@ -87,43 +87,69 @@ export class BillingRepository {
 
   async checkoutOrganization(
     organizationId: number,
-  ): Promise<{ name: string; stripeCustomerId: string | null } | null> {
+  ): Promise<{
+    name: string;
+    ownerEmail: string;
+    stripeCustomerId: string | null;
+  } | null> {
     const result = await this.pool.query<{
       name: string;
+      owner_email: string | null;
       stripe_customer_id: string | null;
     }>(
-      `SELECT name, stripe_customer_id
-       FROM organizations
-       WHERE id = $1`,
+      `SELECT o.name, o.stripe_customer_id,
+              (SELECT BTRIM(u.email)
+               FROM organization_members om
+               JOIN users u ON u.id = om.user_id
+               WHERE om.organization_id = o.id
+                 AND om.role = 'owner'
+                 AND NULLIF(BTRIM(u.email), '') IS NOT NULL
+               ORDER BY om.joined_at, om.user_id
+               LIMIT 1) AS owner_email
+       FROM organizations o
+       WHERE o.id = $1`,
       [organizationId],
     );
     const row = result.rows[0];
-    return row
-      ? { name: row.name, stripeCustomerId: row.stripe_customer_id }
-      : null;
+    if (!row?.owner_email) return null;
+    return {
+      name: row.name,
+      ownerEmail: row.owner_email,
+      stripeCustomerId: row.stripe_customer_id,
+    };
   }
 
   async ensureCustomer(
     organizationId: number,
-    create: (name: string) => Promise<string>,
+    create: (name: string, ownerEmail: string) => Promise<string>,
   ): Promise<{ customerId: string; existed: boolean }> {
     return this.transaction(async (client) => {
       const result = await client.query<{
         name: string;
+        owner_email: string | null;
         stripe_customer_id: string | null;
       }>(
-        `SELECT name, stripe_customer_id
-         FROM organizations
-         WHERE id = $1
+        `SELECT o.name, o.stripe_customer_id,
+                (SELECT BTRIM(u.email)
+                 FROM organization_members om
+                 JOIN users u ON u.id = om.user_id
+                 WHERE om.organization_id = o.id
+                   AND om.role = 'owner'
+                   AND NULLIF(BTRIM(u.email), '') IS NOT NULL
+                 ORDER BY om.joined_at, om.user_id
+                 LIMIT 1) AS owner_email
+         FROM organizations o
+         WHERE o.id = $1
          FOR UPDATE`,
         [organizationId],
       );
       const row = result.rows[0];
       if (!row) throw new Error('Organization not found');
+      if (!row.owner_email) throw new Error('Organization owner email not found');
       if (row.stripe_customer_id) {
         return { customerId: row.stripe_customer_id, existed: true };
       }
-      const customerId = await create(row.name);
+      const customerId = await create(row.name, row.owner_email);
       await client.query(
         `UPDATE organizations
          SET stripe_customer_id = $1, updated_at = NOW()

@@ -5,6 +5,9 @@ import { StripeBillingProvider } from './stripe-billing.provider';
 
 describe('BillingService', () => {
   const originalFrontendUrl = process.env.FRONTEND_URL;
+  const originalNodeEnv = process.env.NODE_ENV;
+  const originalBillingEnabled =
+    process.env.ITEMIZE_SUBSCRIPTION_BILLING_ENABLED;
   const repository = {
     status: jest.fn(),
     startSoloTrial: jest.fn(),
@@ -36,6 +39,13 @@ describe('BillingService', () => {
   afterAll(() => {
     if (originalFrontendUrl === undefined) delete process.env.FRONTEND_URL;
     else process.env.FRONTEND_URL = originalFrontendUrl;
+    if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = originalNodeEnv;
+    if (originalBillingEnabled === undefined) {
+      delete process.env.ITEMIZE_SUBSCRIPTION_BILLING_ENABLED;
+    } else {
+      process.env.ITEMIZE_SUBSCRIPTION_BILLING_ENABLED = originalBillingEnabled;
+    }
   });
 
   const checkout = {
@@ -142,6 +152,47 @@ describe('BillingService', () => {
     expect(repository.ensureCustomer).not.toHaveBeenCalled();
   });
 
+  it('fails closed for production subscription billing without an isolation flag', async () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.ITEMIZE_SUBSCRIPTION_BILLING_ENABLED;
+
+    await expect(service.checkout(4, checkout)).rejects.toMatchObject({
+      message: 'Subscription checkout is temporarily unavailable',
+      extensions: {
+        code: 'SERVICE_UNAVAILABLE',
+        reason: 'BILLING_ISOLATION_REQUIRED',
+      },
+    });
+    expect(repository.ensureCustomer).not.toHaveBeenCalled();
+
+    process.env.NODE_ENV = originalNodeEnv || 'test';
+  });
+
+  it('creates the Stripe customer with the organization owner email', async () => {
+    repository.ensureCustomer.mockImplementation(
+      async (
+        _organizationId: number,
+        create: (name: string, ownerEmail: string) => Promise<string>,
+      ) => ({
+        customerId: await create('Acme', 'owner@itemize.test'),
+        existed: false,
+      }),
+    );
+    provider.createCustomer.mockResolvedValue('cus_owner_email');
+    provider.createCheckoutSession.mockResolvedValue(
+      'https://stripe.test/checkout',
+    );
+
+    await expect(service.checkout(4, checkout)).resolves.toEqual({
+      url: 'https://stripe.test/checkout',
+    });
+    expect(provider.createCustomer).toHaveBeenCalledWith({
+      name: 'Acme',
+      email: 'owner@itemize.test',
+      organizationId: 4,
+    });
+  });
+
   it('routes an already-subscribed tenant to a provider portal', async () => {
     repository.ensureCustomer.mockResolvedValue({
       customerId: 'cus_existing',
@@ -225,6 +276,7 @@ describe('BillingService', () => {
     });
     repository.checkoutOrganization.mockResolvedValue({
       name: 'Acme',
+      ownerEmail: 'owner@itemize.test',
       stripeCustomerId: 'cus_deleted',
     });
     provider.createCustomer.mockResolvedValue('cus_new');

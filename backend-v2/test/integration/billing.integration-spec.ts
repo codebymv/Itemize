@@ -17,6 +17,7 @@ describe('Billing GraphQL PostgreSQL contract', () => {
   let outsiderId: number;
   let token: string;
   let outsiderToken: string;
+  let ownerEmail: string;
   const jwt = new JwtService();
   const originalFrontendUrl = process.env.FRONTEND_URL;
   const provider = {
@@ -42,13 +43,14 @@ describe('Billing GraphQL PostgreSQL contract', () => {
     });
 
     const suffix = `${Date.now()}-${process.pid}`;
+    ownerEmail = `billing-member-${suffix}@test.itemize`;
     const users = await pool.query<{ id: number }>(
       `INSERT INTO users (email, name, provider, email_verified)
        VALUES ($1, 'Billing Member', 'email', true),
               ($2, 'Billing Outsider', 'email', true)
        RETURNING id`,
       [
-        `billing-member-${suffix}@test.itemize`,
+        ownerEmail,
         `billing-outsider-${suffix}@test.itemize`,
       ],
     );
@@ -249,6 +251,13 @@ describe('Billing GraphQL PostgreSQL contract', () => {
       'https://checkout.stripe.test/session',
     );
     expect(provider.createCustomer).toHaveBeenCalledTimes(1);
+    expect(provider.createCustomer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: ownerEmail,
+        name: 'Billing Org',
+        organizationId,
+      }),
+    );
     expect(provider.createCheckoutSession).toHaveBeenCalledTimes(2);
     expect(provider.createCheckoutSession).toHaveBeenCalledWith(
       expect.objectContaining({

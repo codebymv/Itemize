@@ -92,6 +92,7 @@ export class BillingService {
     organizationId: number,
     input: CreateBillingCheckoutInput,
   ): Promise<BillingSession> {
+    this.requireSubscriptionBillingIsolation();
     if (input.mode && input.mode !== 'subscription') {
       throw itemizeGraphqlError(
         'Only subscription checkout is supported',
@@ -108,10 +109,10 @@ export class BillingService {
 
     const customer = await this.billing.ensureCustomer(
       organizationId,
-      (name) =>
+      (name, ownerEmail) =>
         this.stripe.createCustomer({
           name,
-          email: `org-${organizationId}@itemize.cloud`,
+          email: ownerEmail,
           organizationId,
         }),
     );
@@ -149,6 +150,7 @@ export class BillingService {
     returnUrlValue: string,
     idempotencyKeyValue: string,
   ): Promise<BillingSession> {
+    this.requireSubscriptionBillingIsolation();
     const returnUrl = this.redirectUrl(returnUrlValue, 'returnUrl');
     const idempotencyKey = this.idempotencyKey(idempotencyKeyValue);
     this.requireStripe();
@@ -306,7 +308,7 @@ export class BillingService {
     }
     const customerId = await this.stripe.createCustomer({
       name: organization.name,
-      email: `org-${organizationId}@itemize.cloud`,
+      email: organization.ownerEmail,
       organizationId,
       generation: String(Date.now()),
     });
@@ -442,6 +444,19 @@ export class BillingService {
         'Billing is temporarily unavailable',
         'SERVICE_UNAVAILABLE',
         { reason: 'BILLING_NOT_CONFIGURED' },
+      );
+    }
+  }
+
+  private requireSubscriptionBillingIsolation(): void {
+    if (
+      process.env.NODE_ENV === 'production' &&
+      process.env.ITEMIZE_SUBSCRIPTION_BILLING_ENABLED !== 'true'
+    ) {
+      throw itemizeGraphqlError(
+        'Subscription checkout is temporarily unavailable',
+        'SERVICE_UNAVAILABLE',
+        { reason: 'BILLING_ISOLATION_REQUIRED' },
       );
     }
   }
