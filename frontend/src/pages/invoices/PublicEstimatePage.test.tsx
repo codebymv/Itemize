@@ -79,10 +79,13 @@ describe('PublicEstimatePage', () => {
     expect(screen.queryByText('Private estimate')).not.toBeInTheDocument();
     expect(screen.getByText('your response is shared immediately')).toBeInTheDocument();
     expect(container.querySelector('main')).toHaveClass('bg-background', 'text-foreground');
-    expect(screen.getByText('EST-00007').parentElement).toHaveClass(
+    const estimateBadge = screen.getByText('EST-00007').parentElement;
+    expect(estimateBadge).toHaveClass(
       'bg-primary',
       'text-primary-foreground',
     );
+    expect(estimateBadge).toHaveTextContent(/^EST-00007$/);
+    expect(estimateBadge?.querySelector('svg')).toBeNull();
     screen.getAllByText('Discovery session').forEach((element) => {
       expect(element).toHaveClass('text-muted-foreground');
     });

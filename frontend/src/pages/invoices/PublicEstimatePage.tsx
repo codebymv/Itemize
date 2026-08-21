@@ -196,9 +196,6 @@ export default function PublicEstimatePage() {
               <p className="self-end text-xs uppercase tracking-wider text-muted-foreground">Prepared by</p>
               <div className="flex flex-col items-end text-right">
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-primary-foreground shadow-sm sm:text-xs">
-                  <FileText className="h-3.5 w-3.5" />
-                  <span>Estimate</span>
-                  <span aria-hidden="true" className="opacity-70">·</span>
                   <span className="tabular-nums">{estimate.number}</span>
                 </div>
               </div>
