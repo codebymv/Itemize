@@ -234,13 +234,12 @@ export class AuthRepository {
       if (result.rows[0]) {
         result = await client.query<AuthenticationUserRow>(
           `UPDATE users
-           SET name = $1,
-               google_id = $2,
+           SET google_id = $1,
                email_verified = true,
                updated_at = NOW()
-           WHERE id = $3
+           WHERE id = $2
            RETURNING ${USER_COLUMNS}`,
-          [identity.name, identity.googleId, result.rows[0].id],
+          [identity.googleId, result.rows[0].id],
         );
       } else {
         result = await client.query<AuthenticationUserRow>(

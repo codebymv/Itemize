@@ -79,4 +79,38 @@ describe('AuthRepository registration transaction', () => {
     expect(query.mock.calls[3][1]).toEqual(expect.arrayContaining(['free', 'none']));
     expect(client.release).toHaveBeenCalled();
   });
+
+  it('links Google to an existing account without replacing its Itemize profile name', async () => {
+    const existing = {
+      id: 14,
+      email: 'member@example.com',
+      name: 'Chosen Itemize Name',
+      password_hash: 'hash',
+      provider: 'email',
+      email_verified: true,
+      role: 'USER',
+      created_at: new Date(),
+    };
+    const query = jest.fn()
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [existing] })
+      .mockResolvedValueOnce({ rows: [existing] })
+      .mockResolvedValueOnce({ rows: [{ default_organization_id: 31 }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const client = { query, release: jest.fn() } as unknown as PoolClient;
+    const pool = { connect: jest.fn().mockResolvedValue(client) } as unknown as Pool;
+    const repository = new AuthRepository(pool);
+
+    await expect(repository.findOrCreateGoogleUser({
+      email: 'member@example.com',
+      name: 'Google Profile Name',
+      googleId: 'google-id-14',
+    })).resolves.toMatchObject({ name: 'Chosen Itemize Name' });
+
+    const linkSql = String(query.mock.calls[2][0]);
+    expect(linkSql).toContain('SET google_id = $1');
+    expect(linkSql).not.toContain('SET name');
+    expect(query.mock.calls[2][1]).toEqual(['google-id-14', 14]);
+    expect(query.mock.calls.at(-1)?.[0]).toBe('COMMIT');
+  });
 });

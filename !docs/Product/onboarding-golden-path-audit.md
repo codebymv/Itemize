@@ -61,6 +61,7 @@ organization; no client organization or connected Stripe account was touched.
 | Journey | Desktop | Mobile | Production evidence |
 | --- | --- | --- | --- |
 | Free email signup and verification | Pass | Pass | Branded verification/welcome payloads; post-verification routing opened Canvas |
+| Google OAuth existing-account sign-in | Pass | Pass | Correct Itemize client/origin, verified server audience, HttpOnly session, Canvas landing, and Free-scoped navigation |
 | Free first workspace action | Pass | Pass | Focused Canvas onboarding exposed the workspace content choices without forcing a list |
 | Solo first contact | Pass | Pass | Fresh Solo navigation and contact creation completed without an upgrade dead end |
 | Estimate create, send, and recipient response | Pass | Pass | `EST-00001` for `$125.00` delivered, public response completed, and owner notification delivered |
@@ -83,8 +84,12 @@ the removed footer is absent.
 
 ### Remaining matrix extensions
 
-- Google OAuth signup still needs one fresh, disposable identity. It is a
-  separate authentication-provider row and does not invalidate the email path.
+- Google OAuth sign-in against an existing account passed. The run exposed and
+  closed two production gaps: GraphQL was missing the matching Google client ID,
+  and Google registration could bypass the Terms/Privacy acknowledgement. The
+  account-linking path now also preserves the user's existing Itemize display
+  name instead of replacing it with the Google profile name. Fresh Google-user
+  provisioning still needs one genuinely disposable Google identity.
 - A live Stripe checkout/payment is intentionally deferred until the Itemize
   Stripe account review and connection are complete. The matrix did not access
   or mutate any client-owned Stripe account.
