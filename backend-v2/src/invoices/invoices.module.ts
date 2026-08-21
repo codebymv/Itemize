@@ -17,10 +17,10 @@ import {
   INVOICE_EMAIL_PROVIDER,
   INVOICE_PAYMENT_LINK_PROVIDER,
   INVOICE_PDF_RENDERER,
-  LegacyInvoicePdfRenderer,
   ResendInvoiceEmailProvider,
   StripeInvoicePaymentLinkProvider,
 } from './invoice-delivery.providers';
+import { PdfLibInvoiceRenderer } from './invoice-pdf.renderer';
 
 @Module({
   imports: [ActivationModule, AuthModule, BillingModule, GetStartedModule, OrganizationsModule],
@@ -35,10 +35,10 @@ import {
     InvoicePdfService,
     ResendInvoiceEmailProvider,
     StripeInvoicePaymentLinkProvider,
-    LegacyInvoicePdfRenderer,
+    PdfLibInvoiceRenderer,
     { provide: INVOICE_EMAIL_PROVIDER, useExisting: ResendInvoiceEmailProvider },
     { provide: INVOICE_PAYMENT_LINK_PROVIDER, useExisting: StripeInvoicePaymentLinkProvider },
-    { provide: INVOICE_PDF_RENDERER, useExisting: LegacyInvoicePdfRenderer },
+    { provide: INVOICE_PDF_RENDERER, useExisting: PdfLibInvoiceRenderer },
     InvoicesResolver,
   ],
   exports: [InvoicesService, InvoiceEmailDeliveryService, InvoicePaymentLinkService],
