@@ -35,7 +35,11 @@ describe('workspace share public shell', () => {
     expect(screen.getByText('Planning')).toHaveClass('bg-secondary', 'text-secondary-foreground');
     expect(screen.getByText('Live')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Bring your work together' })).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: 'Try Itemize' })).toHaveLength(2);
+    expect(screen.getByRole('link', { name: 'Try Itemize' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Start Free Trial' })).toHaveAttribute(
+      'href',
+      '/register?mode=trial',
+    );
     expect(screen.getByText(/private link provides access to this note/i)).toBeInTheDocument();
     expect(screen.queryByText(/Create your own note/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Home' })).not.toBeInTheDocument();

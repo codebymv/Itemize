@@ -157,19 +157,18 @@ export function TrialBanner({
               Add Payment Method
             </button>
             
-            {onDismiss && (
-              <button
-                onClick={handleDismiss}
-                className={cn(
-                  'p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors',
-                  'focus:outline-none focus:ring-2 focus:ring-offset-2',
-                  styles.text
-                )}
-                aria-label="Dismiss trial banner"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleDismiss}
+              className={cn(
+                'rounded-md p-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5',
+                'focus:outline-none focus:ring-2 focus:ring-offset-2',
+                styles.text
+              )}
+              aria-label="Dismiss trial reminder"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         </div>
 
@@ -185,19 +184,18 @@ export function TrialBanner({
               </p>
             </div>
             
-            {onDismiss && (
-              <button
-                onClick={handleDismiss}
-                className={cn(
-                  'absolute right-0 p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors',
-                  'focus:outline-none focus:ring-2 focus:ring-offset-2',
-                  styles.text
-                )}
-                aria-label="Dismiss trial banner"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleDismiss}
+              className={cn(
+                'absolute right-0 rounded-md p-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5',
+                'focus:outline-none focus:ring-2 focus:ring-offset-2',
+                styles.text
+              )}
+              aria-label="Dismiss trial reminder"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
           
           <button

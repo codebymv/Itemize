@@ -184,7 +184,7 @@ export function PublicProductCTA() {
           </p>
         </div>
         <Button asChild className="sm:shrink-0">
-          <a href="/register?mode=trial">Try Itemize</a>
+          <a href="/register?mode=trial">Start Free Trial</a>
         </Button>
       </div>
     </BrandedPublicCard>
