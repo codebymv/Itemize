@@ -348,7 +348,9 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                 {/* Trial Banner - Shows only during active trial */}
                 <TrialBanner
                     trialEndsAt={billingStatus?.trial_ends_at || null}
-                    trialPlan={billingStatus?.plan}
+                    trialPlan={billingStatus
+                        ? (PLAN_METADATA[billingStatus.plan]?.displayName || billingStatus.plan)
+                        : undefined}
                 />
 
                 {/* Main content */}

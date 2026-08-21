@@ -510,6 +510,7 @@ export class BillingService {
       landingPagesLimit: Number(row.landing_pages_limit ?? 0),
       formsLimit: Number(row.forms_limit ?? 0),
       calendarsLimit: Number(row.calendars_limit ?? 0),
+      trialStartedAt: row.trial_started_at,
       trialEndsAt: row.trial_ends_at,
       trialEndAcknowledgedAt: row.trial_end_acknowledged_at,
       cancelAtPeriodEnd: Boolean(row.cancel_at_period_end),

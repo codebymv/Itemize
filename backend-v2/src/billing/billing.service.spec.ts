@@ -83,6 +83,7 @@ describe('BillingService', () => {
   });
 
   it('starts one Solo trial for an eligible Free workspace without Stripe', async () => {
+    const trialStart = new Date();
     const trialEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
     repository.status.mockResolvedValue(freeStatus);
     repository.startSoloTrial.mockResolvedValue({
@@ -97,13 +98,14 @@ describe('BillingService', () => {
       landing_pages_limit: 10,
       forms_limit: 10,
       calendars_limit: 3,
-      trial_started_at: new Date(),
+      trial_started_at: trialStart,
       trial_ends_at: trialEnd,
     });
 
     await expect(service.startSoloTrial(4)).resolves.toMatchObject({
       plan: 'starter',
       subscriptionStatus: 'trialing',
+      trialStartedAt: trialStart,
       trialEndsAt: trialEnd,
       stripeSubscriptionId: null,
     });

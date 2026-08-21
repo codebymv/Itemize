@@ -97,11 +97,16 @@ zero email, SMS, and API entitlements must read `Not included`, not `Unlimited`;
 publishing a workspace item must require an explicit confirmation and expose
 working copy/open/revoke controls; and the advertised 14-day Solo trial must
 start in-app without requiring a card. Trial activation is an owner-only,
-organization-scoped, atomic, one-time mutation. A production activation canary
-remains pending deployment and explicit confirmation at the point of action.
+organization-scoped, atomic, one-time mutation. The production activation
+canary passed after explicit action-time confirmation: the sole workspace moved
+from Free/none to Solo/trialing, received a valid 14-day window and the expected
+1,000-email/500-SMS limits, unlocked the paid navigation, and created no Stripe
+subscription or charge.
 While that no-card trial is active (or after it expires), the current Solo card
 remains convertible through a `Subscribe to Solo` Stripe Checkout action rather
-than becoming a disabled conversion dead end.
+than becoming a disabled conversion dead end. The post-activation display uses
+the customer-facing `Solo` name and the persisted trial start date rather than
+the internal `starter` key or an `N/A` placeholder.
 
 ### Remaining matrix extensions
 

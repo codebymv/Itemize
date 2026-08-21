@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useTrialStatus } from '@/hooks/useTrialStatus';
 import { useBillingStatus } from '@/hooks/useBillingStatus';
 import { redirectToCheckout } from '@/services/billingApi';
+import { PLAN_METADATA } from '@/lib/subscription';
 
 // ============================================
 // Types
@@ -29,6 +30,9 @@ export function TrialStatusCard({ className }: TrialStatusCardProps) {
   const { data: billingStatus, isLoading, error } = useBillingStatus();
   const [isRedirecting, setIsRedirecting] = useState(false);
   const trialStatus = useTrialStatus(billingStatus?.trial_ends_at || null);
+  const trialPlanName = billingStatus
+    ? (PLAN_METADATA[billingStatus.plan]?.displayName || billingStatus.plan)
+    : 'plan';
 
   // Don't render if not in trial
   if (!billingStatus || !trialStatus.isInTrial) {
@@ -116,7 +120,7 @@ export function TrialStatusCard({ className }: TrialStatusCardProps) {
             Trial Status
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            You're currently on a {billingStatus.plan} trial
+            You're currently on a {trialPlanName} trial
           </p>
         </div>
         <div className={cn('text-3xl font-bold', urgencyStyles[urgencyState])}>
@@ -136,7 +140,7 @@ export function TrialStatusCard({ className }: TrialStatusCardProps) {
               Trial Started
             </p>
             <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-0.5">
-              {formatDate(billingStatus.billing_period_start)}
+              {formatDate(billingStatus.trial_started_at)}
             </p>
           </div>
         </div>

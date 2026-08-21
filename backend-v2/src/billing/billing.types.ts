@@ -66,6 +66,9 @@ export class BillingStatus {
   calendarsLimit: number;
 
   @Field(() => GraphQLISODateTime, { nullable: true })
+  trialStartedAt: Date | null;
+
+  @Field(() => GraphQLISODateTime, { nullable: true })
   trialEndsAt: Date | null;
 
   @Field(() => GraphQLISODateTime, { nullable: true })

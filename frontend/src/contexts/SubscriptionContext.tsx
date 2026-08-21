@@ -36,6 +36,7 @@ export interface Subscription {
     end: string;
   };
   trial?: {
+    startsAt: string | null;
     endsAt: string;
     isActive: boolean;
   } | null;
@@ -239,6 +240,7 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
             end: status.billing_period_end
           } : undefined,
           trial: status.trial_ends_at ? {
+            startsAt: status.trial_started_at,
             endsAt: status.trial_ends_at,
             isActive: status.subscription_status === 'trialing'
           } : null,

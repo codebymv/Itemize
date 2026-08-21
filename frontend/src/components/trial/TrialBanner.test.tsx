@@ -11,7 +11,7 @@ const renderBanner = (onDismiss?: () => void) => render(
   <MemoryRouter>
     <TrialBanner
       trialEndsAt="2026-09-03T00:00:00.000Z"
-      trialPlan="starter"
+      trialPlan="Solo"
       onDismiss={onDismiss}
     />
   </MemoryRouter>,
@@ -45,6 +45,6 @@ describe('TrialBanner dismissal', () => {
     renderBanner();
 
     expect(screen.getByRole('banner', { name: 'Trial status banner' })).toBeInTheDocument();
-    expect(screen.getByText(/Your starter trial ends on/)).toBeInTheDocument();
+    expect(screen.getByText(/Your Solo trial ends on/)).toBeInTheDocument();
   });
 });
