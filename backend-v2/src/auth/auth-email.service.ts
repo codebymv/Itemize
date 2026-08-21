@@ -29,7 +29,7 @@ export class AuthEmailService {
         '<p style="margin:0">Confirm this email address to finish setting up your Itemize account.</p>' +
         '<p style="margin:20px 0 0;color:#64748b;font-size:13px">This secure link expires in 24 hours. If you did not create an Itemize account, you can ignore this email.</p>',
       cta: { label: 'Verify email address', url },
-      footerText: 'Account security notification from Itemize.',
+      showFooter: false,
     });
     return this.send(
       user,
@@ -68,7 +68,7 @@ export class AuthEmailService {
         '<p style="margin:0">We received a request to reset your Itemize password.</p>' +
         '<p style="margin:20px 0 0;color:#64748b;font-size:13px">This secure link expires in 1 hour. If you did not request a password reset, you can ignore this email.</p>',
       cta: { label: 'Reset password', url },
-      footerText: 'Account security notification from Itemize.',
+      showFooter: false,
     });
     return this.send(
       user,
@@ -86,7 +86,7 @@ export class AuthEmailService {
       bodyHtml: this.greeting(user) +
         '<p style="margin:0">Your Itemize password was changed successfully.</p>' +
         '<div style="margin-top:20px;padding:14px 16px;border:1px solid #fecaca;border-radius:8px;background:#fef2f2;color:#991b1b">If this was not you, reset your password and contact support immediately.</div>',
-      footerText: 'Account security notification from Itemize.',
+      showFooter: false,
     });
     return this.send(
       user,

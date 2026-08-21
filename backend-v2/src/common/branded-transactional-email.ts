@@ -4,6 +4,7 @@ export type BrandedTransactionalEmailInput = {
   heading: string;
   bodyHtml: string;
   cta?: { label: string; url: string };
+  showFooter?: boolean;
   footerText?: string;
   footerHtml?: string;
 };
@@ -52,6 +53,11 @@ export const brandedTransactionalEmail = (
       `<a href="${escapeHtml(input.cta.url)}" style="display:inline-block;background:${EMAIL_TOKENS.primary};color:#ffffff!important;text-decoration:none;padding:14px 24px;border-radius:${EMAIL_TOKENS.controlRadius};font-size:15px;font-weight:800;line-height:20px">${escapeHtml(input.cta.label)}</a>` +
       `</td></tr></table>`
     : '';
+  const footer = input.showFooter === false
+    ? ''
+    : `<tr><td style="padding:20px 28px;background:${EMAIL_TOKENS.surfaceMuted};border-top:1px solid ${EMAIL_TOKENS.border};color:${EMAIL_TOKENS.muted};font-size:12px;line-height:1.5">` +
+      `${input.footerHtml ?? escapeHtml(input.footerText || 'Sent securely with Itemize.')}` +
+      `</td></tr>`;
 
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width,initial-scale=1">` +
@@ -71,7 +77,5 @@ export const brandedTransactionalEmail = (
     `<h1 style="margin:0 0 20px;color:${EMAIL_TOKENS.foreground};font-size:26px;line-height:1.25;font-weight:800;letter-spacing:-0.02em">${escapeHtml(input.heading)}</h1>` +
     `<div style="color:${EMAIL_TOKENS.body};font-size:15px;line-height:1.65">${input.bodyHtml}</div>${cta}` +
     `</td></tr>` +
-    `<tr><td style="padding:20px 28px;background:${EMAIL_TOKENS.surfaceMuted};border-top:1px solid ${EMAIL_TOKENS.border};color:${EMAIL_TOKENS.muted};font-size:12px;line-height:1.5">` +
-    `${input.footerHtml ?? escapeHtml(input.footerText || 'Sent securely with Itemize.')}` +
-    `</td></tr></table></td></tr></table></body></html>`;
+    `${footer}</table></td></tr></table></body></html>`;
 };

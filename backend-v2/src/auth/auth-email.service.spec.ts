@@ -38,6 +38,10 @@ describe('AuthEmailService', () => {
     expect(request.html).toContain('height:4px;background:#2563eb');
     expect(request.html).toContain('Hi Ada,');
     expect(request.text).toEqual(expect.any(String));
+    if (_name !== 'welcome') {
+      expect(request.html).not.toContain('Account security notification from Itemize.');
+      expect(request.html).not.toContain('Sent securely with Itemize.');
+    }
   });
 
   it('escapes account names in branded body content', async () => {
