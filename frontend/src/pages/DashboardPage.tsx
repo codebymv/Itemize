@@ -42,7 +42,7 @@ import { ConversionRateCard } from './dashboard/components/ConversionRateCard';
 import { CommunicationStatsCard } from './dashboard/components/CommunicationStatsCard';
 import { PipelineDealAgeCard } from './dashboard/components/PipelineDealAgeCard';
 import { RecentActivityList } from './dashboard/components/RecentActivityList';
-import { DashboardStatRail } from './dashboard/components/DashboardStatRail';
+import { DashboardCardRail } from './dashboard/components/DashboardCardRail';
 import { ActivityTimeline } from '@/components/activity-timeline';
 import { transformApiActivityToDesignSystem } from '@/design-system/utils/transform-api-activity';
 import { RevenueTrendsChart } from './dashboard/components/RevenueTrendsChart';
@@ -240,7 +240,7 @@ export function DashboardPage() {
                     <GetStartedCard />
 
                     {/* CRM Stats: swipeable rail on mobile, grid on desktop */}
-                    <DashboardStatRail
+                    <DashboardCardRail
                         label="CRM overview"
                         isMobile={isMobile}
                         desktopColumns="md:grid-cols-2 lg:grid-cols-4"
@@ -281,10 +281,10 @@ export function DashboardPage() {
                             colorTheme="blue"
                             isLoading={isLoading}
                         />
-                    </DashboardStatRail>
+                    </DashboardCardRail>
 
                     {/* Secondary Stats: swipeable rail on mobile, grid on desktop */}
-                    <DashboardStatRail
+                    <DashboardCardRail
                         label="Activity overview"
                         isMobile={isMobile}
                         desktopColumns="md:grid-cols-3"
@@ -316,10 +316,15 @@ export function DashboardPage() {
                             colorTheme="green"
                             isLoading={isLoading}
                         />
-                    </DashboardStatRail>
+                    </DashboardCardRail>
 
-                    {/* Module Widgets - Cross-module visibility */}
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 items-stretch mb-8">
+                    {/* Module summaries: swipeable rail on mobile, grid on desktop */}
+                    <DashboardCardRail
+                        label="Module summaries"
+                        isMobile={isMobile}
+                        desktopColumns="md:grid-cols-2 lg:grid-cols-4"
+                        mobileCardClassName="flex-[0_0_88%]"
+                    >
                         <InvoicesWidget
                             primaryStat={analytics?.invoiceMetrics?.pending ?? 0}
                             primaryStatColor="text-blue-600 dark:text-blue-400"
@@ -335,6 +340,7 @@ export function DashboardPage() {
                             })) ?? []}
                             action={{ label: 'View Invoices', onClick: () => navigate('/invoices') }}
                             loading={isLoading}
+                            compact={isMobile}
                             isCollapsed={isWidgetCollapsed('invoices')}
                             onToggleCollapse={() => toggleWidgetCollapse('invoices')}
                         />
@@ -352,6 +358,7 @@ export function DashboardPage() {
                             })) ?? []}
                             action={{ label: 'View Documents', onClick: () => navigate('/documents') }}
                             loading={isLoading}
+                            compact={isMobile}
                             isCollapsed={isWidgetCollapsed('signatures')}
                             onToggleCollapse={() => toggleWidgetCollapse('signatures')}
                         />
@@ -370,6 +377,7 @@ export function DashboardPage() {
                             })) ?? []}
                             action={{ label: 'Open Workspace', onClick: () => navigate('/canvas') }}
                             loading={isLoading}
+                            compact={isMobile}
                             isCollapsed={isWidgetCollapsed('workspace')}
                             onToggleCollapse={() => toggleWidgetCollapse('workspace')}
                         />
@@ -388,10 +396,11 @@ export function DashboardPage() {
                             })) ?? []}
                             action={{ label: 'View Contacts', onClick: () => navigate('/contacts') }}
                             loading={isLoading}
+                            compact={isMobile}
                             isCollapsed={isWidgetCollapsed('contacts')}
                             onToggleCollapse={() => toggleWidgetCollapse('contacts')}
                         />
-                    </div>
+                    </DashboardCardRail>
 
                     {/* Revenue Trends Chart */}
                     <Card className="bg-muted/10 mb-8">

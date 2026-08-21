@@ -44,6 +44,7 @@ export interface ModuleWidgetProps {
     onClick: () => void
   }
   className?: string
+  compact?: boolean
   isCollapsed?: boolean
   onToggleCollapse?: () => void
   emptyListMessage?: string
@@ -62,6 +63,7 @@ export function ModuleWidget({
   loading,
   action,
   className,
+  compact = false,
   isCollapsed = false,
   onToggleCollapse,
   emptyListMessage,
@@ -91,7 +93,14 @@ const hasRecentItems = recentItems !== undefined;
 
   if (hasRecentItems) {
     return (
-      <Collapsible open={isOpen} onOpenChange={() => setIsOpen(!isOpen)}>
+      <Collapsible
+        open={compact ? false : isOpen}
+        onOpenChange={(nextIsOpen) => {
+          if (compact) return;
+          setIsOpen(nextIsOpen);
+          onToggleCollapse?.();
+        }}
+      >
         <Card className={cn('bg-muted/10 h-full', className)}>
           <CardHeader>
             <div className="flex flex-col sm:flex-row lg:flex-col 2xl:flex-row sm:items-start lg:items-start 2xl:items-start justify-between gap-2">
@@ -105,21 +114,23 @@ const hasRecentItems = recentItems !== undefined;
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <CollapsibleTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-8 w-8 p-0"
-                    aria-label="Toggle collapse"
-                  >
-                    <ChevronDown
-                      className={cn(
-                        "h-4 w-4 transition-transform",
-                        isOpen ? "" : "transform rotate-180"
-                      )} 
-                    />
-                  </Button>
-                </CollapsibleTrigger>
+                {!compact && (
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      aria-label="Toggle collapse"
+                    >
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 transition-transform",
+                          isOpen ? "" : "transform rotate-180"
+                        )}
+                      />
+                    </Button>
+                  </CollapsibleTrigger>
+                )}
                 {action && (
                   <Button
                     size="sm"

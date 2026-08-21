@@ -347,12 +347,12 @@ html {
 /* Hide scrollbar on carousel track (all browsers) */
 #pain-carousel::-webkit-scrollbar { display: none; }
 
-/* Dashboard stat rails remain swipeable without adding a competing scrollbar. */
-.dashboard-stat-rail {
+/* Dashboard card rails remain swipeable without adding a competing scrollbar. */
+.dashboard-card-rail {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
-.dashboard-stat-rail::-webkit-scrollbar {
+.dashboard-card-rail::-webkit-scrollbar {
   display: none;
 }
