@@ -86,6 +86,12 @@ export default function FieldPlacementCanvas<TField extends FieldPlacementField>
   }, [numPages, pageNumber]);
 
   useEffect(() => {
+    if (roles.length > 0 && !roles.includes(roleName)) {
+      setRoleName(roles[0]);
+    }
+  }, [roleName, roles]);
+
+  useEffect(() => {
     if (!readOnly) return;
     setPreviewPageCount((prev) => Math.min(Math.max(prev, 1), numPages || 1));
   }, [numPages, readOnly]);

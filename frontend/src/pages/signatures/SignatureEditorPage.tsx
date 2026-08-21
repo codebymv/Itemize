@@ -111,9 +111,10 @@ export default function SignatureEditorPage() {
     ])
       .then(([invoice, pdf]) => {
         const recipientEmail = invoice.customer_email || invoice.contact_email;
+        const invoiceFilename = `${invoice.invoice_number.replace(/[^A-Za-z0-9._-]+/g, '_')}.pdf`;
         setTitle((current) => current || `Invoice ${invoice.invoice_number} - Signature`);
         setMessage((current) => current || 'Please review and sign the attached invoice.');
-        setFile(new File([pdf.blob], pdf.filename, {
+        setFile(new File([pdf.blob], invoiceFilename || pdf.filename, {
           type: pdf.blob.type || 'application/pdf',
         }));
         if (recipientEmail) {
