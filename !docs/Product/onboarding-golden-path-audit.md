@@ -129,9 +129,12 @@ Application safeguards added during this pass:
   than internal plan keys.
 
 No live charge was created during this preflight. Stripe's hosted billing
-portal currently has no live configuration, so portal setup and a deliberately
-authorized low-value checkout/refund canary remain required before declaring
-the paid path production-complete.
+portal is now live and active as the Itemize default configuration
+(`bpc_1U710SRxBJaRlFvtwSY1dRrY`). It allows payment-method updates, invoice
+history, monthly Solo/Studio plan changes with prorations disclosed by Stripe,
+and end-of-period cancellation. A deliberately authorized low-value
+checkout/refund canary remains required before declaring the paid path
+production-complete.
 
 The targeted frontend, billing service, webhook worker, legacy PostgreSQL
 integration, and production builds pass. The broader backend-v2 integration
@@ -142,10 +145,9 @@ release gate.
 
 ### Remaining matrix extensions
 
-- A live Stripe checkout/payment remains intentionally deferred until the
-  Itemize billing portal is configured and an action-time confirmation is given
-  for the charge/refund canary. The matrix did not access or mutate any
-  client-owned Stripe account.
+- A live Stripe checkout/payment remains intentionally deferred until an
+  action-time confirmation is given for the charge/refund canary. The matrix
+  did not access or mutate any client-owned Stripe account.
 - Estimate decline and signature decline are covered by renderer/service tests;
   add production canaries when destructive fixture coverage is next scheduled.
 
