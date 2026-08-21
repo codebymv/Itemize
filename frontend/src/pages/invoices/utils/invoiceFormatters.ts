@@ -61,6 +61,34 @@ export function getTodayDateString(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
+/**
+ * Formats a calendar date without allowing the viewer's timezone to shift it.
+ *
+ * API date fields may arrive as either YYYY-MM-DD or an ISO timestamp at UTC
+ * midnight. In both cases, the first ten characters are the intended calendar
+ * date rather than an instant that should be converted to local time.
+ */
+export function formatDateOnly(dateString: string, locale = 'en-US'): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateString);
+  if (!match) return dateString;
+
+  const [, yearString, monthString, dayString] = match;
+  const year = Number(yearString);
+  const month = Number(monthString);
+  const day = Number(dayString);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return dateString;
+  }
+
+  return new Intl.DateTimeFormat(locale, { timeZone: 'UTC' }).format(date);
+}
+
 export const DEFAULT_INVOICE_FOOTER = 'Thank you for your business!';
 
 /**

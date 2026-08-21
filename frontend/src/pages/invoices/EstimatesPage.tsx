@@ -43,6 +43,7 @@ import { StatCard } from '@/components/StatCard';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
+import { formatDateOnly } from './utils/invoiceFormatters';
 
 export function EstimatesPage() {
     const navigate = useNavigate();
@@ -382,7 +383,7 @@ export function EstimatesPage() {
                                             </Badge>
                                         )}
                                         <span className="text-xs text-muted-foreground">
-                                            Valid until {new Date(estimate.valid_until).toLocaleDateString()}
+                                            Valid until {formatDateOnly(estimate.valid_until)}
                                         </span>
                                     </div>
                                     <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
