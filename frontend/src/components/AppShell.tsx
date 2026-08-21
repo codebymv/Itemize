@@ -1,7 +1,6 @@
 import React, { useEffect, useState, createContext, useContext } from 'react';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
-import { GlobalSearch } from '@/components/GlobalSearch';
 import { useAuthActions, useAuthState } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
@@ -34,6 +33,10 @@ import { useSessionWarning } from '@/hooks/useSessionExpiration';
 import { HeaderProvider, useHeader } from '@/contexts/HeaderContext';
 import { cn } from '@/lib/utils';
 import { OrganizationSwitcher } from '@/components/OrganizationSwitcher';
+
+const GlobalSearch = React.lazy(() =>
+  import('@/components/GlobalSearch').then((module) => ({ default: module.GlobalSearch }))
+);
 
 const SearchContext = createContext<{
   searchOpen: boolean;
@@ -349,11 +352,15 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                     {children}
                 </main>
             </SidebarInset>
-            <GlobalSearch
-                open={searchOpen}
-                onClose={() => setSearchOpen(false)}
-                hasPaidAccess={isSubscribed}
-            />
+            {searchOpen && (
+                <React.Suspense fallback={null}>
+                    <GlobalSearch
+                        open
+                        onClose={() => setSearchOpen(false)}
+                        hasPaidAccess={isSubscribed}
+                    />
+                </React.Suspense>
+            )}
         </SidebarProvider>
     </SearchContext.Provider>
     );
