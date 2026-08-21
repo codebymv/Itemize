@@ -39,6 +39,24 @@ describe('DashboardCardRail', () => {
     expect(rail.firstElementChild).toHaveClass('flex-[0_0_88%]');
   });
 
+  it('supports dense performance cards with a smaller next-card preview', () => {
+    render(
+      <DashboardCardRail
+        label="Performance analytics"
+        isMobile
+        desktopColumns="md:grid-cols-2 md:gap-6"
+        mobileCardClassName="flex-[0_0_92%]"
+      >
+        <div>Conversion Rates</div>
+        <div>Communication</div>
+      </DashboardCardRail>,
+    );
+
+    const rail = screen.getByRole('region', { name: 'Performance analytics' });
+    expect(rail.children).toHaveLength(2);
+    expect(rail.firstElementChild).toHaveClass('flex-[0_0_92%]');
+  });
+
   it('keeps the desktop grid out of the keyboard tab order', () => {
     render(
       <DashboardCardRail

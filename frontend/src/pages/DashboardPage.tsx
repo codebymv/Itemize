@@ -507,8 +507,13 @@ export function DashboardPage() {
                         </CardContent>
                     </Card>
 
-                    {/* Conversion Rates & Communication Stats */}
-                    <div className="grid gap-6 md:grid-cols-2 mb-8 items-stretch">
+                    {/* Performance analytics: swipeable rail on mobile, grid on desktop */}
+                    <DashboardCardRail
+                        label="Performance analytics"
+                        isMobile={isMobile}
+                        desktopColumns="md:grid-cols-2 md:gap-6"
+                        mobileCardClassName="flex-[0_0_92%]"
+                    >
                         {/* Conversion Rates */}
                         <Card className="bg-muted/10 h-full flex flex-col">
                             <CardHeader>
@@ -603,7 +608,7 @@ export function DashboardPage() {
                                 />
                             </CardContent>
                         </Card>
-                    </div>
+                    </DashboardCardRail>
 
                     {/* Quick Actions */}
                     <div className="mb-8">
