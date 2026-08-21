@@ -273,24 +273,16 @@ export class BillingService {
     if (customer.existed) {
       const active = await this.stripe.activeSubscription(customer.customerId);
       if (active) {
-        if (active.priceId && active.priceId !== priceId) {
-          try {
-            await this.stripe.changeSubscriptionPrice(active.id, priceId);
-            return { url: successUrl };
-          } catch (error) {
-            this.logger.warn(
-              `In-place subscription update failed (${this.providerErrorCode(error)}); opening checkout`,
-            );
-          }
-        } else {
-          return {
-            url: await this.stripe.createPortalSession(
-              customer.customerId,
-              successUrl,
-              `billing-portal:${organizationId}:${idempotencyKey}`,
-            ),
-          };
-        }
+        // Never change an active subscription from an application CTA. The
+        // Stripe portal presents the amount and proration before the customer
+        // explicitly confirms a plan change.
+        return {
+          url: await this.stripe.createPortalSession(
+            customer.customerId,
+            successUrl,
+            `billing-portal:${organizationId}:${idempotencyKey}`,
+          ),
+        };
       }
     }
     return {

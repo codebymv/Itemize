@@ -27,12 +27,36 @@ describe('subscription webhook notification jobs', () => {
       organization_name: '<Example>',
       previous_plan: 'starter',
       new_plan: 'unlimited',
+      notification_type: 'subscription_upgraded',
     }, emailService)).resolves.toMatchObject({ success: true, id: 'email_1' });
     expect(emailService.sendEmail).toHaveBeenCalledWith(expect.objectContaining({
       idempotencyKey: 'subscription-upgrade-evt_upgrade_1',
       to: 'owner@example.com',
     }));
     expect(emailService.sendEmail.mock.calls[0][0].html).toContain('&lt;Example&gt;');
+    expect(emailService.sendEmail.mock.calls[0][0].html).toContain('Solo');
+    expect(emailService.sendEmail.mock.calls[0][0].html).toContain('Studio');
+    expect(emailService.sendEmail.mock.calls[0][0].html).not.toContain('starter');
+    expect(emailService.sendEmail.mock.calls[0][0].html).not.toContain('unlimited');
+  });
+
+  test('sends a branded activation notice for a trial-to-paid conversion', async () => {
+    const emailService = { sendEmail: jest.fn().mockResolvedValue({ success: true, id: 'email_2' }) };
+    await sendUpgradeNotification({
+      stripe_event_id: 'evt_activation_1',
+      owner_email: 'owner@example.com',
+      organization_name: 'Example',
+      previous_plan: 'starter',
+      new_plan: 'starter',
+      notification_type: 'subscription_activated',
+    }, emailService);
+
+    expect(emailService.sendEmail).toHaveBeenCalledWith(expect.objectContaining({
+      subject: 'Your Itemize subscription is active',
+      idempotencyKey: 'subscription-activation-evt_activation_1',
+      text: 'Example is now on Solo.',
+    }));
+    expect(emailService.sendEmail.mock.calls[0][0].html).toContain('Subscription active');
   });
 
   test('passes idempotency keys through to the Resend request options', async () => {

@@ -244,7 +244,7 @@ function AccountInfo({
             canSubscribeCurrentTrial={canSubscribeCurrentTrial}
             onUpgrade={handleUpgrade}
             isLoading={isLoading}
-            showYearlyToggle={true}
+            showYearlyToggle={false}
             billingPeriod={billingPeriod}
             onBillingPeriodChange={setBillingPeriod}
           />
@@ -361,10 +361,11 @@ function PreferencesSettings() {
   );
 }
 
-function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutSuccess }: {
+function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutSuccess, onCheckoutConfirmed }: {
   setSaveButton?: (button: React.ReactNode) => void;
   showCheckoutSuccess?: boolean;
   onCloseCheckoutSuccess?: () => void;
+  onCheckoutConfirmed?: () => void | Promise<void>;
 }) {
   const { toast } = useToast();
   const location = useLocation();
@@ -485,6 +486,7 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
       <CheckoutSuccessModal
         open={!!showCheckoutSuccess}
         onClose={() => onCloseCheckoutSuccess?.()}
+        onConfirmed={onCheckoutConfirmed}
       />
       <div>
         <h3 className="text-lg font-medium">Payments</h3>
@@ -582,6 +584,7 @@ export function SettingsPage() {
             setSaveButton={setSaveButton}
             showCheckoutSuccess={showCheckoutSuccess}
             onCloseCheckoutSuccess={() => setShowCheckoutSuccess(false)}
+            onCheckoutConfirmed={refreshSubscription}
           />
         )}
         {location.pathname === '/settings' && <AccountSettings />}

@@ -165,7 +165,7 @@ describe('BillingService', () => {
     );
   });
 
-  it('switches an existing subscription to the selected price instead of opening the portal', async () => {
+  it('routes a plan change through the portal instead of silently repricing an active subscription', async () => {
     repository.ensureCustomer.mockResolvedValue({
       customerId: 'cus_existing',
       existed: true,
@@ -175,22 +175,23 @@ describe('BillingService', () => {
       status: 'active',
       priceId: 'price_1U5ypmRxBJaRlFvtCDKzCKSC',
     });
-    provider.changeSubscriptionPrice.mockResolvedValue(undefined);
+    provider.createPortalSession.mockResolvedValue('https://stripe.test/portal');
 
     await expect(
       service.checkout(4, { ...checkout, planId: 'unlimited' }),
     ).resolves.toEqual({
-      url: 'https://itemize.test/success',
+      url: 'https://stripe.test/portal',
     });
-    expect(provider.changeSubscriptionPrice).toHaveBeenCalledWith(
-      'sub_active',
-      'price_1U5yqFRxBJaRlFvtcC8I6bbo',
+    expect(provider.createPortalSession).toHaveBeenCalledWith(
+      'cus_existing',
+      'https://itemize.test/success',
+      'billing-portal:4:checkout-unit-test-key-0001',
     );
-    expect(provider.createPortalSession).not.toHaveBeenCalled();
+    expect(provider.changeSubscriptionPrice).not.toHaveBeenCalled();
     expect(provider.createCheckoutSession).not.toHaveBeenCalled();
   });
 
-  it('opens checkout when an in-place price change is rejected', async () => {
+  it('does not fall back to a second checkout for an active subscription', async () => {
     repository.ensureCustomer.mockResolvedValue({
       customerId: 'cus_existing',
       existed: true,
@@ -200,21 +201,15 @@ describe('BillingService', () => {
       status: 'active',
       priceId: 'price_1U5ypmRxBJaRlFvtCDKzCKSC',
     });
-    provider.changeSubscriptionPrice.mockRejectedValue({
-      type: 'StripeInvalidRequestError',
-      code: 'resource_missing',
-      message: 'This customer has no attached payment source',
-    });
-    provider.createCheckoutSession.mockResolvedValue(
-      'https://stripe.test/checkout',
-    );
+    provider.createPortalSession.mockResolvedValue('https://stripe.test/portal');
 
     await expect(
       service.checkout(4, { ...checkout, planId: 'unlimited' }),
     ).resolves.toEqual({
-      url: 'https://stripe.test/checkout',
+      url: 'https://stripe.test/portal',
     });
-    expect(provider.createCheckoutSession).toHaveBeenCalled();
+    expect(provider.changeSubscriptionPrice).not.toHaveBeenCalled();
+    expect(provider.createCheckoutSession).not.toHaveBeenCalled();
   });
 
   it('replaces a missing Stripe customer and retries checkout', async () => {

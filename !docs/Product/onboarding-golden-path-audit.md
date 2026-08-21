@@ -108,11 +108,44 @@ than becoming a disabled conversion dead end. The post-activation display uses
 the customer-facing `Solo` name and the persisted trial start date rather than
 the internal `starter` key or an `N/A` placeholder.
 
+### Paid-conversion preflight
+
+The non-charging production preflight verified the live Stripe account, active
+monthly Solo and Studio prices, and the subscription webhook endpoint and event
+set. The annual price environment values are still placeholders, so annual
+billing controls are hidden until real live prices exist.
+
+Application safeguards added during this pass:
+
+- A `checkout=success` URL no longer claims that a plan is active. The success
+  modal polls authoritative billing state and requires both a Stripe
+  subscription ID and an `active` or `trialing` provider status.
+- Existing subscribers are sent to Stripe's hosted billing portal for plan
+  changes, where amount and proration can be reviewed. The application no
+  longer silently replaces an active subscription's price.
+- A same-plan Solo trial-to-paid transition queues the branded subscription
+  activation email; true tier upgrades retain their separate notification.
+- Customer communications use `Free`, `Solo`, `Studio`, and `Studio+` rather
+  than internal plan keys.
+
+No live charge was created during this preflight. Stripe's hosted billing
+portal currently has no live configuration, so portal setup and a deliberately
+authorized low-value checkout/refund canary remain required before declaring
+the paid path production-complete.
+
+The targeted frontend, billing service, webhook worker, legacy PostgreSQL
+integration, and production builds pass. The broader backend-v2 integration
+suite still contains older fixtures with `subscription_status=none`; those
+fixtures now fail the hardened entitlement guard and must be migrated to valid
+active or trialing subscriptions before the full suite can serve as a green
+release gate.
+
 ### Remaining matrix extensions
 
-- A live Stripe checkout/payment is intentionally deferred until the Itemize
-  Stripe account review and connection are complete. The matrix did not access
-  or mutate any client-owned Stripe account.
+- A live Stripe checkout/payment remains intentionally deferred until the
+  Itemize billing portal is configured and an action-time confirmation is given
+  for the charge/refund canary. The matrix did not access or mutate any
+  client-owned Stripe account.
 - Estimate decline and signature decline are covered by renderer/service tests;
   add production canaries when destructive fixture coverage is next scheduled.
 

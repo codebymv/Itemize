@@ -365,7 +365,7 @@ export function BillingPanel() {
                     variant="dashboard"
                     onUpgrade={handleUpgrade}
                     isLoading={processing}
-                    showYearlyToggle={true}
+                    showYearlyToggle={false}
                     billingPeriod={billingPeriod}
                     onBillingPeriodChange={setBillingPeriod}
                 />

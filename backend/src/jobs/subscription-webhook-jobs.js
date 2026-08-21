@@ -12,6 +12,12 @@ const DEFAULT_LEASE_SECONDS = 300;
 const DEFAULT_MAX_ATTEMPTS = 5;
 const DEFAULT_BASE_DELAY_MS = 60_000;
 const DEFAULT_MAX_DELAY_MS = 86_400_000;
+const PLAN_DISPLAY_NAMES = {
+  free: 'Free',
+  starter: 'Solo',
+  unlimited: 'Studio',
+  pro: 'Studio+',
+};
 
 function boundedInteger(value, fallback, min, max) {
   const parsed = Number(value);
@@ -44,7 +50,7 @@ async function claimNotification(pool, leaseSeconds) {
       WITH candidate AS (
         SELECT stripe_event_id
         FROM stripe_subscription_webhook_events
-        WHERE notification_type = 'subscription_upgraded'
+        WHERE notification_type IN ('subscription_upgraded', 'subscription_activated')
           AND (
             (
               notification_status IN ('pending', 'retry')
@@ -97,21 +103,38 @@ async function loadNotificationRecipient(pool, organizationId) {
 async function sendUpgradeNotification(job, emailService) {
   if (!job.owner_email) throw new Error('Subscription notification has no owner recipient');
   const organizationName = escapeHtml(job.organization_name || 'your organization');
-  const previousPlan = escapeHtml(job.previous_plan || 'previous');
-  const newPlan = escapeHtml(job.new_plan || 'new');
+  const previousPlan = escapeHtml(
+    PLAN_DISPLAY_NAMES[job.previous_plan] || job.previous_plan || 'previous',
+  );
+  const newPlan = escapeHtml(
+    PLAN_DISPLAY_NAMES[job.new_plan] || job.new_plan || 'new',
+  );
+  const isActivation = job.notification_type === 'subscription_activated';
+  const subject = isActivation
+    ? 'Your Itemize subscription is active'
+    : 'Your Itemize plan was updated';
+  const heading = isActivation ? 'Subscription active' : 'Subscription updated';
+  const bodyHtml = isActivation
+    ? `<p style="margin:0">${organizationName} is now on <strong>${newPlan}</strong>.</p>`
+    : `<p style="margin:0">${organizationName} has been upgraded from <strong>${previousPlan}</strong> to <strong>${newPlan}</strong>.</p>`;
+  const text = isActivation
+    ? `${job.organization_name || 'Your organization'} is now on ${PLAN_DISPLAY_NAMES[job.new_plan] || job.new_plan || 'its new plan'}.`
+    : `${job.organization_name || 'Your organization'} has been upgraded from ${PLAN_DISPLAY_NAMES[job.previous_plan] || job.previous_plan || 'the previous plan'} to ${PLAN_DISPLAY_NAMES[job.new_plan] || job.new_plan || 'the new plan'}.`;
   const result = await emailService.sendEmail({
     to: job.owner_email,
-    subject: 'Subscription upgrade successful',
+    subject,
     html: brandedTransactionalEmail({
       assetOrigin: transactionalEmailAssetOrigin(),
-      previewText: `${job.organization_name || 'Your workspace'} is now on the ${job.new_plan || 'new'} plan.`,
-      heading: 'Subscription updated',
-      bodyHtml: `<p style="margin:0">${organizationName} has been upgraded from <strong>${previousPlan}</strong> to <strong>${newPlan}</strong>.</p>`,
+      previewText: `${job.organization_name || 'Your workspace'} is now on ${PLAN_DISPLAY_NAMES[job.new_plan] || job.new_plan || 'its new plan'}.`,
+      heading,
+      bodyHtml,
       footerText: 'Billing notification from Itemize.',
     }),
-    text: `${job.organization_name || 'Your organization'} has been upgraded from ${job.previous_plan || 'the previous plan'} to ${job.new_plan || 'the new plan'}.`,
-    tags: [{ name: 'notification_type', value: 'subscription_upgraded' }],
-    idempotencyKey: `subscription-upgrade-${job.stripe_event_id}`,
+    text,
+    tags: [{ name: 'notification_type', value: job.notification_type }],
+    idempotencyKey: isActivation
+      ? `subscription-activation-${job.stripe_event_id}`
+      : `subscription-upgrade-${job.stripe_event_id}`,
   });
   if (!result?.success) throw new Error(result?.error || 'Subscription notification delivery failed');
   return result;

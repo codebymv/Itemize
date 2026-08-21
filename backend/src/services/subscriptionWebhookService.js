@@ -199,7 +199,7 @@ async function markEvent(client, normalized, status, details = {}) {
 async function findOrganization(client, customerId, subscriptionId) {
   if (!customerId && !subscriptionId) return [];
   const result = await client.query(`
-    SELECT id, plan, billing_period_start, subscription_provider_updated_at,
+    SELECT id, plan, subscription_status, billing_period_start, subscription_provider_updated_at,
            subscription_provider_event_id
     FROM organizations
     WHERE ($1::varchar IS NOT NULL AND stripe_customer_id = $1)
@@ -372,9 +372,14 @@ async function processSubscriptionUpdate(client, normalized, org) {
   });
   await recordAuditEvent(client, normalized, org.id, org.plan, plan);
   const isUpgrade = (PLAN_TIER_ORDER[plan] ?? -1) > (PLAN_TIER_ORDER[org.plan] ?? -1);
+  const isActivation = object.status === 'active' && org.subscription_status !== 'active';
   return markEvent(client, normalized, 'processed', {
     newPlan: plan,
-    notificationType: isUpgrade ? 'subscription_upgraded' : null,
+    notificationType: isUpgrade
+      ? 'subscription_upgraded'
+      : isActivation
+        ? 'subscription_activated'
+        : null,
     organizationId: org.id,
     previousPlan: org.plan,
   });

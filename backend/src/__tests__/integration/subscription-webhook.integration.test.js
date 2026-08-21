@@ -157,6 +157,41 @@ describe('Stripe subscription webhook PostgreSQL contract', () => {
     expect(audit.rows[0].count).toBe(1);
   });
 
+  test('a same-plan trial-to-paid conversion queues an activation notice', async () => {
+    const customerId = `cus_activation_${Date.now()}`;
+    const subscriptionId = `sub_activation_${Date.now()}`;
+    const user = await createBillingOrganization('activation', customerId);
+    const event = subscriptionEvent({
+      customerId,
+      eventId: `evt_activation_${Date.now()}`,
+      priceId: 'price_starter_monthly',
+      subscriptionId,
+    });
+
+    expect((await signedPost(app, event)).status).toBe(200);
+    const [organization, claim] = await Promise.all([
+      dbHelper.pool.query(
+        'SELECT plan, subscription_status, stripe_subscription_id FROM organizations WHERE id = $1',
+        [user.org.id]
+      ),
+      dbHelper.pool.query(`
+        SELECT notification_type, notification_status
+        FROM stripe_subscription_webhook_events
+        WHERE stripe_event_id = $1
+      `, [event.id]),
+    ]);
+
+    expect(organization.rows[0]).toMatchObject({
+      plan: 'starter',
+      subscription_status: 'active',
+      stripe_subscription_id: subscriptionId,
+    });
+    expect(claim.rows[0]).toMatchObject({
+      notification_type: 'subscription_activated',
+      notification_status: 'pending',
+    });
+  });
+
   test('an older deletion is recorded without regressing newer active state', async () => {
     const customerId = `cus_order_${Date.now()}`;
     const subscriptionId = `sub_order_${Date.now()}`;
