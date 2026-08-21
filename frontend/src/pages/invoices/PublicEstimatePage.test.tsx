@@ -72,6 +72,11 @@ describe('PublicEstimatePage', () => {
       screen.getByAltText('Itemize'),
     );
     expect(container.querySelector('img[src="/icon.png"]')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Try Itemize' })).toHaveAttribute(
+      'href',
+      '/register?mode=trial',
+    );
+    expect(screen.queryByText('Private estimate')).not.toBeInTheDocument();
     expect(container.querySelector('main')).toHaveClass('bg-background', 'text-foreground');
     expect(screen.getByText('EST-00007').parentElement).toHaveClass(
       'bg-primary',

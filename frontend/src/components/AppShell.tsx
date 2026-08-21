@@ -11,6 +11,7 @@ import { useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { PLAN_METADATA, type Plan } from '@/lib/subscription';
 import { TrialBanner } from '@/components/trial/TrialBanner';
 import { TrialBadge } from '@/components/trial/TrialBadge';
+import { useTrialStatus } from '@/hooks/useTrialStatus';
 import { TrialEndedBillingActiveModal } from '@/components/subscription/TrialEndedBillingActiveModal';
 import { TrialExpiredModal } from '@/components/subscription/TrialExpiredModal';
 import { useBillingStatus } from '@/hooks/useBillingStatus';
@@ -70,6 +71,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     const [showTrialEndedBilling, setShowTrialEndedBilling] = useState(false);
     const [showTrialExpired, setShowTrialExpired] = useState(false);
     const { data: billingStatus } = useBillingStatus();
+    const trialStatus = useTrialStatus(billingStatus?.trial_ends_at || null);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -180,12 +182,6 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                     <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                         <OrganizationSwitcher />
 
-                        {/* Trial Badge - Compact indicator */}
-                        <TrialBadge
-                            trialEndsAt={billingStatus?.trial_ends_at || null}
-                            compact={true}
-                        />
-
                         {/* Theme toggle - only visible on desktop */}
                         <Button
                             variant="ghost"
@@ -221,6 +217,23 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                                             </div>
                                         </div>
                                     </DropdownMenuLabel>
+
+                                    {trialStatus.isInTrial && (
+                                        <>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem
+                                                onClick={() => navigate('/payment-settings')}
+                                                className="cursor-pointer"
+                                            >
+                                                <span className="flex-1">Trial access</span>
+                                                <TrialBadge
+                                                    trialEndsAt={billingStatus?.trial_ends_at || null}
+                                                    compact={true}
+                                                    className="ml-3 shrink-0"
+                                                />
+                                            </DropdownMenuItem>
+                                        </>
+                                    )}
 
                                     {/* Theme toggle - only visible on mobile */}
                                     <div className="md:hidden">

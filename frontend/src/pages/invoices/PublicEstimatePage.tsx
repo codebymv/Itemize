@@ -56,10 +56,9 @@ function RecipientHeader() {
           <img src="/textwhite.png" alt="" aria-hidden="true" className="hidden h-6 w-auto dark:block" />
         </a>
         <div className="flex items-center gap-1 sm:gap-2">
-          <div className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex">
-            <ShieldCheck className="h-4 w-4 text-primary" />
-            Private estimate
-          </div>
+          <Button asChild size="sm" className="h-9 px-3 sm:px-4">
+            <a href="/register?mode=trial">Try Itemize</a>
+          </Button>
           <Button
             type="button"
             variant="ghost"

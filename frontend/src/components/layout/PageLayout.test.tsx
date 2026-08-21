@@ -31,7 +31,9 @@ describe('PageLayout', () => {
     expect(heading.tagName).toBe('H1');
     expect(heading).toHaveClass(...PAGE_TITLE_CLASS.split(' '));
     expect(screen.getByTestId('app-header')).toContainElement(heading);
-    expect(screen.getByTestId('page-icon')).toBeInTheDocument();
+    const icon = screen.getByTestId('page-icon');
+    expect(icon).toBeInTheDocument();
+    expect(icon.parentElement).toHaveClass('hidden', 'md:inline-flex');
     expect(screen.getByText('Body')).toBeInTheDocument();
   });
 

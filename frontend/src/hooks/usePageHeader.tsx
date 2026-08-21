@@ -25,7 +25,11 @@ export const usePageHeader = ({
             <div className="flex items-center justify-between w-full min-w-0">
                 <div className="flex items-center gap-2 ml-2 min-w-0">
                     {leading}
-                    {icon}
+                    {icon ? (
+                        <span className="hidden shrink-0 md:inline-flex" data-page-header-icon>
+                            {icon}
+                        </span>
+                    ) : null}
                     {title ? (
                         <h1 className={PAGE_TITLE_CLASS}>
                             {title}
