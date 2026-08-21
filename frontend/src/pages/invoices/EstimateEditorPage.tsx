@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     ArrowLeft,
     Save,
@@ -32,7 +32,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { getContacts } from '@/services/contactsApi';
+import { getContact, getContacts } from '@/services/contactsApi';
 import { useOrganization } from '@/hooks/useOrganization';
 import { getProducts, Product } from '@/services/invoicesApi';
 import {
@@ -59,6 +59,7 @@ interface Contact {
     id: number;
     first_name?: string;
     last_name?: string;
+    company?: string;
     email?: string;
     phone?: string;
     address?: string | {
@@ -70,9 +71,25 @@ interface Contact {
     } | JsonRecord;
 }
 
+const getContactName = (contact: Contact): string => {
+    const fullName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
+    return fullName || contact.company || contact.email || '';
+};
+
+const getContactAddress = (contact: Contact): string => {
+    if (typeof contact.address === 'string') return contact.address;
+    if (!contact.address || typeof contact.address !== 'object') return '';
+
+    return ['street', 'city', 'state', 'zip', 'country']
+        .map((key) => contact.address?.[key])
+        .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+        .join(', ');
+};
+
 export function EstimateEditorPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { toast } = useToast();
     const isNew = id === 'new' || !id;
 
@@ -102,6 +119,14 @@ export function EstimateEditorPage() {
         declinedAt?: string | null;
     }>({});
 
+    const populateContact = useCallback((selectedContact: Contact) => {
+        setContactId(selectedContact.id);
+        setCustomerName(getContactName(selectedContact));
+        setCustomerEmail(selectedContact.email || '');
+        setCustomerPhone(selectedContact.phone || '');
+        setCustomerAddress(getContactAddress(selectedContact));
+    }, []);
+
     // Set default valid until (30 days from now)
     useEffect(() => {
         if (isNew && !validUntil) {
@@ -120,7 +145,10 @@ export function EstimateEditorPage() {
                     getContacts({}, organizationId),
                     getProducts({}, organizationId)
                 ]);
-                setContacts(Array.isArray(contactsData) ? contactsData : contactsData.contacts || []);
+                const contactList = Array.isArray(contactsData)
+                    ? contactsData
+                    : contactsData.contacts || [];
+                setContacts(contactList);
                 setProducts(productsData || []);
 
                 // Load existing estimate if editing
@@ -154,6 +182,39 @@ export function EstimateEditorPage() {
                             tax_rate: item.tax_rate || 0,
                         })));
                     }
+                } else {
+                    const contactIdParam = searchParams.get('contactId');
+                    const contactIdCandidate = contactIdParam
+                        ? Number(contactIdParam)
+                        : Number.NaN;
+                    const parsedContactId = Number.isSafeInteger(contactIdCandidate)
+                        && contactIdCandidate > 0
+                        ? contactIdCandidate
+                        : undefined;
+
+                    if (parsedContactId) {
+                        let selectedContact = contactList.find(
+                            (contact) => contact.id === parsedContactId,
+                        );
+
+                        if (!selectedContact) {
+                            try {
+                                selectedContact = await getContact(
+                                    parsedContactId,
+                                    organizationId,
+                                ) as Contact;
+                                setContacts([selectedContact, ...contactList]);
+                            } catch {
+                                toast({
+                                    title: 'Contact unavailable',
+                                    description: toastMessages.failedToLoad('contact'),
+                                    variant: 'destructive',
+                                });
+                            }
+                        }
+
+                        if (selectedContact) populateContact(selectedContact);
+                    }
                 }
             } catch (error) {
                 toast({ title: 'Error', description: toastMessages.failedToLoad('estimate data'), variant: 'destructive' });
@@ -162,7 +223,7 @@ export function EstimateEditorPage() {
             }
         };
         init();
-    }, [organizationId, id, isNew, toast]);
+    }, [organizationId, id, isNew, populateContact, searchParams, toast]);
 
     // Handle contact selection
     const handleContactChange = (contactIdStr: string) => {
@@ -172,11 +233,7 @@ export function EstimateEditorPage() {
         }
         const selectedContact = contacts.find(c => c.id === parseInt(contactIdStr));
         if (selectedContact) {
-            setContactId(selectedContact.id);
-            setCustomerName(`${selectedContact.first_name || ''} ${selectedContact.last_name || ''}`.trim());
-            setCustomerEmail(selectedContact.email || '');
-            setCustomerPhone(selectedContact.phone || '');
-            setCustomerAddress(typeof selectedContact.address === 'string' ? selectedContact.address : '');
+            populateContact(selectedContact);
         }
     };
 

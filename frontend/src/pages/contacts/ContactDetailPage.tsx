@@ -13,6 +13,7 @@ import {
   MessageSquare,
   CheckSquare,
   FileText,
+  Receipt,
   FileSignature,
   Palette,
   ListChecks,
@@ -123,7 +124,7 @@ export function ContactDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [id, organizationId, navigate]);
+  }, [id, organizationId, navigate, toast]);
 
   useEffect(() => {
     fetchContact();
@@ -563,6 +564,18 @@ export function ContactDetailPage() {
             </CardHeader>
             <CardContent className="space-y-2">
               <Button
+                className="w-full justify-start"
+                onClick={() => {
+                  const params = new URLSearchParams({
+                    contactId: String(contact.id),
+                  });
+                  navigate(`/estimates/new?${params.toString()}`);
+                }}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Create Estimate
+              </Button>
+              <Button
                 variant="outline"
                 className="w-full justify-start"
                 onClick={() => {
@@ -574,7 +587,7 @@ export function ContactDetailPage() {
                   navigate(`/invoices/new?${params.toString()}`);
                 }}
               >
-                <FileText className="h-4 w-4 mr-2" />
+                <Receipt className="h-4 w-4 mr-2" />
                 Create Invoice
               </Button>
               <Button
