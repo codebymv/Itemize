@@ -1,6 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ActivationService } from '../activation/activation.service';
-import { brandedTransactionalEmail } from '../common/branded-transactional-email';
+import {
+  brandedTransactionalEmail,
+  transactionalEmailAssetOrigin,
+} from '../common/branded-transactional-email';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import {
   ESTIMATE_EMAIL_PROVIDER,
@@ -14,6 +17,7 @@ import {
   EstimateEmailDeliveryRow,
   EstimateEmailPayload,
   EstimateEmailPreparation,
+  EstimateResponseEmailPayload,
   EstimatesRepository,
 } from './estimates.repository';
 import { estimateDeliveryToken } from './estimate-public.token';
@@ -101,13 +105,15 @@ export class EstimateEmailDeliveryService {
       const completed = await this.estimates.completeEmailDelivery(
         organizationId, deliveryId, providerResult.providerId,
       );
-      await this.activation.recordArtifactSent({
-        organizationId,
-        userId,
-        artifactType: 'estimate',
-        artifactId: Number(claimed.estimate_id),
-        source: 'estimate_email_delivered',
-      });
+      if (claimed.delivery_type === 'estimate_sent') {
+        await this.activation.recordArtifactSent({
+          organizationId,
+          userId,
+          artifactType: 'estimate',
+          artifactId: Number(claimed.estimate_id),
+          source: 'estimate_email_delivered',
+        });
+      }
       return this.result(completed, replayed);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown provider failure';
@@ -147,7 +153,15 @@ export class EstimateEmailDeliveryService {
   }
 
   private html(delivery: EstimateEmailDeliveryRow): string {
-    const payload: EstimateEmailPayload = delivery.payload;
+    return delivery.delivery_type === 'estimate_sent'
+      ? this.estimateHtml(delivery, delivery.payload as EstimateEmailPayload)
+      : this.responseHtml(delivery, delivery.payload as EstimateResponseEmailPayload);
+  }
+
+  private estimateHtml(
+    delivery: EstimateEmailDeliveryRow,
+    payload: EstimateEmailPayload,
+  ): string {
     const customer = payload.customerName?.trim() || 'Valued Customer';
     const business = payload.businessName?.trim() || 'Itemize workspace';
     const amount = new Intl.NumberFormat('en-US', {
@@ -169,14 +183,50 @@ export class EstimateEmailDeliveryService {
       `<tr><td style="padding:0 18px 16px;color:#64748b;font-size:13px">Valid until</td><td align="right" style="padding:0 18px 16px;color:#334155;font-size:13px;font-weight:600">${escapeHtml(payload.validUntil)}</td></tr>` +
       `</table>${businessEmail}`;
     return brandedTransactionalEmail({
-      assetOrigin: this.frontendOrigin(),
-      previewText: `${business} sent estimate ${payload.estimateNumber} for ${amount}.`,
-      eyebrow: 'Estimate',
-      reference: payload.estimateNumber,
+      assetOrigin: transactionalEmailAssetOrigin(),
+      previewText: `${business} sent you an estimate for ${amount}.`,
       heading: `A new estimate from ${business}`,
       bodyHtml,
       cta: { label: 'Review estimate', url: publicUrl },
       footerText: 'This private link provides access to your estimate. Please do not forward it.',
+    });
+  }
+
+  private responseHtml(
+    delivery: EstimateEmailDeliveryRow,
+    payload: EstimateResponseEmailPayload,
+  ): string {
+    const accepted = delivery.delivery_type === 'estimate_accepted';
+    const response = accepted ? 'accepted' : 'declined';
+    const customer = payload.customerName?.trim() || 'Your customer';
+    const recipient = payload.recipientName?.trim();
+    const amount = new Intl.NumberFormat('en-US', {
+      style: 'currency', currency: payload.currency || 'USD',
+    }).format(Number(payload.total));
+    const responseTime = new Intl.DateTimeFormat('en-US', {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: 'numeric', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short',
+    }).format(new Date(payload.respondedAt));
+    const greeting = recipient
+      ? `<p style="margin:0 0 16px">Hi ${escapeHtml(recipient)},</p>`
+      : '';
+    const bodyHtml = greeting
+      + `<p style="margin:0 0 22px"><strong>${escapeHtml(customer)}</strong> ${response} your estimate.</p>`
+      + `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;margin:0;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px">`
+      + `<tr><td style="padding:16px 18px;color:#64748b;font-size:13px">Status</td><td align="right" style="padding:16px 18px;color:#0f172a;font-size:15px;font-weight:700;text-transform:capitalize">${response}</td></tr>`
+      + `<tr><td style="padding:0 18px 12px;color:#64748b;font-size:13px">Total</td><td align="right" style="padding:0 18px 12px;color:#0f172a;font-size:15px;font-weight:700">${escapeHtml(amount)}</td></tr>`
+      + `<tr><td style="padding:0 18px 16px;color:#64748b;font-size:13px">Received</td><td align="right" style="padding:0 18px 16px;color:#334155;font-size:13px;font-weight:600">${escapeHtml(responseTime)}</td></tr>`
+      + `</table>`;
+    return brandedTransactionalEmail({
+      assetOrigin: transactionalEmailAssetOrigin(),
+      previewText: `${customer} ${response} your estimate for ${amount}.`,
+      heading: `Estimate ${response}`,
+      bodyHtml,
+      cta: {
+        label: 'View estimate',
+        url: `${this.frontendOrigin()}/estimates/${delivery.estimate_id}`,
+      },
+      footerText: `This response was recorded for ${payload.businessName || 'your workspace'}.`,
     });
   }
 
@@ -193,4 +243,5 @@ export class EstimateEmailDeliveryService {
       return fallback;
     }
   }
+
 }

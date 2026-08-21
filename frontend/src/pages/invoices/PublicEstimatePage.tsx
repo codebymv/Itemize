@@ -363,8 +363,8 @@ export default function PublicEstimatePage() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirming === 'accept'
-                ? `This records your approval of estimate ${estimate.number} for ${currency.format(Number(estimate.total))}.`
-                : `This records that you do not approve estimate ${estimate.number}.`}
+                ? `This records your approval of estimate ${estimate.number} for ${currency.format(Number(estimate.total))} and notifies ${data.business.name}.`
+                : `This records that you do not approve estimate ${estimate.number} and notifies ${data.business.name}.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

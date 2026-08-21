@@ -101,9 +101,27 @@ describe('PublicEstimatePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Accept estimate' }));
     const dialog = screen.getByRole('alertdialog');
     expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText(
+      'This records your approval of estimate EST-00007 for $100.00 and notifies Analytical Studio.',
+    )).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Accept estimate' }));
 
     await waitFor(() => expect(api.acceptPublicEstimate).toHaveBeenCalledWith('test-token'));
     expect(await screen.findByText('Estimate accepted')).toBeInTheDocument();
+  });
+
+  it('explains who is notified before a decline', async () => {
+    api.declinePublicEstimate.mockResolvedValue({
+      ...estimate,
+      estimate: { ...estimate.estimate, status: 'declined' },
+    });
+    renderPage();
+    await screen.findByText('Analytical Studio');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Decline' }));
+    const dialog = screen.getByRole('alertdialog');
+    expect(within(dialog).getByText(
+      'This records that you do not approve estimate EST-00007 and notifies Analytical Studio.',
+    )).toBeInTheDocument();
   });
 });

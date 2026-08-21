@@ -18,8 +18,11 @@ describe('EstimatePublicService', () => {
   const token = 'a'.repeat(43);
   const capability: PublicEstimateCapability = {
     capability_id: 19,
+    delivery_id: 23,
     organization_id: 3,
     estimate_id: 7,
+    estimate_created_by: 5,
+    requested_by_user_id: 5,
     estimate_number: 'EST-00007',
     organization_name: 'Studio workspace',
     status: 'sent',

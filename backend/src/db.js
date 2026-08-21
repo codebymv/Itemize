@@ -66,6 +66,9 @@ const {
   runEstimateEmailDeliveryMigration,
 } = require('./db_estimate_email_delivery_migrations');
 const {
+  runEstimateResponseNotificationMigration,
+} = require('./db_estimate_response_notification_migrations');
+const {
   runEstimatePublicCapabilityMigration,
 } = require('./db_estimate_public_capability_migrations');
 const {
@@ -484,11 +487,11 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'feature_wireframes', runWireframesMigration);
     await runMigrationOnce(pool, 'feature_wireframes_dimensions', runWireframesDimensionsMigration);
     await runMigrationOnce(pool, 'feature_onboarding', runOnboardingMigration);
-    await runMigrationOnce(pool, 'feature_get_started', runGetStartedMigration);
-    await runMigrationOnce(pool, 'activation_events_v1', runActivationEventsMigration);
 
     // Module migrations (each module handles its own tables)
     await runMigrationOnce(pool, 'module_crm', runAllCRMMigrations);
+    await runMigrationOnce(pool, 'feature_get_started', runGetStartedMigration);
+    await runMigrationOnce(pool, 'activation_events_v1', runActivationEventsMigration);
     await runMigrationOnce(pool, 'module_automation', runAllAutomationMigrations);
     await runMigrationOnce(pool, 'workflow_registry', runWorkflowRegistryMigration);
     await runMigrationOnce(pool, 'workflow_webhook_secrets', async (p) => {
@@ -557,6 +560,11 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'module_estimates_recurring', runEstimatesRecurringMigrations);
     await runMigrationOnce(pool, 'estimates_business_column', addBusinessIdToEstimates);
     await runMigrationOnce(pool, 'estimate_email_deliveries', runEstimateEmailDeliveryMigration);
+    await runMigrationOnce(
+      pool,
+      'estimate_response_notifications',
+      runEstimateResponseNotificationMigration,
+    );
     await runMigrationOnce(
       pool,
       'estimate_public_capabilities',

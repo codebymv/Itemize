@@ -1,6 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ActivationService } from '../activation/activation.service';
-import { brandedTransactionalEmail } from '../common/branded-transactional-email';
+import {
+  brandedTransactionalEmail,
+  transactionalEmailAssetOrigin,
+} from '../common/branded-transactional-email';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { SendInvoiceInput } from './invoice.inputs';
 import {
@@ -237,13 +240,10 @@ export class InvoiceEmailDeliveryService {
 
   private html(delivery: InvoiceEmailDeliveryRow, paymentUrl: string | null): string {
     const message = escapeHtml(delivery.payload.message);
-    const number = String(delivery.payload.invoice.invoice_number || 'Invoice');
     return brandedTransactionalEmail({
-      assetOrigin: this.frontendOrigin(),
-      previewText: `Invoice ${number} is ready.`,
-      eyebrow: 'Invoice',
-      reference: number,
-      heading: `Invoice ${number}`,
+      assetOrigin: transactionalEmailAssetOrigin(),
+      previewText: 'Your invoice is ready.',
+      heading: 'Your invoice',
       bodyHtml: `<div style="white-space:pre-wrap">${message}</div>`,
       cta: paymentUrl ? { label: 'Pay invoice', url: paymentUrl } : undefined,
       footerText: 'Your invoice PDF is attached. Sent securely with Itemize.',

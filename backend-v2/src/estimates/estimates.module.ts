@@ -4,6 +4,7 @@ import { EstimatesRepository } from './estimates.repository';
 import { EstimatesResolver } from './estimates.resolver';
 import { EstimatesService } from './estimates.service';
 import { EstimateEmailDeliveryService } from './estimate-email-delivery.service';
+import { EstimateEmailDeliverySchedulerService } from './estimate-email-delivery-scheduler.service';
 import {
   ESTIMATE_EMAIL_PROVIDER,
   ResendEstimateEmailProvider,
@@ -21,6 +22,7 @@ import { EstimatePublicService } from './estimate-public.service';
     EstimatesService,
     EstimatePublicService,
     EstimateEmailDeliveryService,
+    EstimateEmailDeliverySchedulerService,
     EstimatesResolver,
     ResendEstimateEmailProvider,
     {

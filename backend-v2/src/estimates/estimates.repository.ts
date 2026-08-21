@@ -137,15 +137,32 @@ export type EstimateEmailPayload = {
   }>;
 };
 
+export type EstimateResponseEmailPayload = {
+  response: 'accepted' | 'declined';
+  estimateNumber: string;
+  customerName: string | null;
+  total: string;
+  currency: string;
+  businessName: string;
+  recipientName: string | null;
+  respondedAt: string;
+};
+
+export type EstimateEmailDeliveryType =
+  | 'estimate_sent'
+  | 'estimate_accepted'
+  | 'estimate_declined';
+
 export type EstimateEmailDeliveryRow = {
   id: number;
   organization_id: number;
   estimate_id: number;
   requested_by_user_id: number | null;
+  delivery_type: EstimateEmailDeliveryType;
   idempotency_key: string;
   recipient_email: string;
   subject: string;
-  payload: EstimateEmailPayload;
+  payload: EstimateEmailPayload | EstimateResponseEmailPayload;
   status: string;
   attempt_count: number;
   next_attempt_at: Date;
@@ -573,7 +590,7 @@ export class EstimatesRepository {
       const existing = await client.query<EstimateEmailDeliveryRow>(
         `SELECT * FROM estimate_email_deliveries
          WHERE organization_id = $1 AND estimate_id = $2
-           AND idempotency_key = $3`,
+           AND delivery_type = 'estimate_sent' AND idempotency_key = $3`,
         [organizationId, estimateId, idempotencyKey],
       );
       if (existing.rows[0]) {
@@ -585,8 +602,7 @@ export class EstimatesRepository {
       if (!estimate.customer_email?.trim()) return { kind: 'missing-email' };
 
       const businessName = estimate.business_name || 'Itemize workspace';
-      const subject = `Estimate ${estimate.estimate_number} from ${businessName}`
-        .slice(0, 255);
+      const subject = 'Your estimate';
       const items = await client.query<{
         name: string;
         description: string | null;
@@ -630,8 +646,8 @@ export class EstimatesRepository {
       const inserted = await client.query<EstimateEmailDeliveryRow>(
         `INSERT INTO estimate_email_deliveries (
            organization_id, estimate_id, requested_by_user_id,
-           idempotency_key, recipient_email, subject, payload
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+           delivery_type, idempotency_key, recipient_email, subject, payload
+         ) VALUES ($1, $2, $3, 'estimate_sent', $4, $5, $6, $7::jsonb)
          RETURNING *`,
         [
           organizationId, estimateId, userId, idempotencyKey,
@@ -673,7 +689,10 @@ export class EstimatesRepository {
       `SELECT delivery.id, delivery.organization_id
        FROM estimate_email_deliveries delivery
        JOIN organizations organization ON organization.id=delivery.organization_id
-       WHERE ${paidEntitlementSql('organization')} AND ((
+       WHERE (
+         delivery.delivery_type <> 'estimate_sent'
+         OR ${paidEntitlementSql('organization')}
+       ) AND ((
          delivery.status IN ('queued', 'retry') AND delivery.next_attempt_at <= CURRENT_TIMESTAMP
        ) OR (
          delivery.status = 'processing' AND delivery.lease_expires_at <= CURRENT_TIMESTAMP
@@ -700,7 +719,11 @@ export class EstimatesRepository {
            updated_at = CURRENT_TIMESTAMP
        FROM organizations organization
        WHERE delivery.id = $1 AND delivery.organization_id = $2
-         AND organization.id=delivery.organization_id AND ${paidEntitlementSql('organization')}
+         AND organization.id=delivery.organization_id
+         AND (
+           delivery.delivery_type <> 'estimate_sent'
+           OR ${paidEntitlementSql('organization')}
+         )
          AND (
            (delivery.status IN ('queued', 'retry') AND delivery.next_attempt_at <= CURRENT_TIMESTAMP)
            OR (delivery.status = 'processing' AND delivery.lease_expires_at <= CURRENT_TIMESTAMP)
@@ -726,6 +749,18 @@ export class EstimatesRepository {
       const delivery = locked.rows[0];
       if (!delivery) throw new Error('Estimate email delivery not found');
       if (delivery.status === 'sent') return delivery;
+      if (delivery.delivery_type !== 'estimate_sent') {
+        const completed = await client.query<EstimateEmailDeliveryRow>(
+          `UPDATE estimate_email_deliveries
+           SET status = 'sent', provider_id = $3, sent_at = CURRENT_TIMESTAMP,
+               lease_expires_at = NULL, claimed_by = NULL, last_error = NULL,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $1 AND organization_id = $2
+           RETURNING *`,
+          [deliveryId, organizationId, providerId],
+        );
+        return completed.rows[0];
+      }
       const estimate = await client.query<{ status: string }>(
         `SELECT status FROM estimates
          WHERE id = $1 AND organization_id = $2

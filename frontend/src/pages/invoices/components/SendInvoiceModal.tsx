@@ -83,10 +83,10 @@ export function SendInvoiceModal({
     useEffect(() => {
         if (open) {
             const businessName = business?.name || 'Our Business';
-            setSubject(`Invoice ${invoiceNumber || ''} from ${businessName}`);
+            setSubject('Your invoice');
             setMessage(
                 `Hi ${customerName || 'there'},\n\n` +
-                `Please find attached invoice ${invoiceNumber || ''} for ${formatCurrency(total)}.\n\n` +
+                `Please find your invoice for ${formatCurrency(total)} attached.\n\n` +
                 `Payment is due by ${formatDate(dueDate)}.\n\n` +
                 `If you have any questions, please don't hesitate to reach out.\n\n` +
                 `Thank you for your business!\n\n` +

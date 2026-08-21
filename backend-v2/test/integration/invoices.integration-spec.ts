@@ -25,6 +25,7 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
   let outsiderOrganizationId: number;
   let memberToken: string;
   let outsiderToken: string;
+  let memberEmail: string;
   let contactId: number;
   let outsiderContactId: number;
   let businessId: number;
@@ -49,20 +50,22 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       ssl: process.env.TEST_DATABASE_SSL === 'true',
     });
     const suffix = `${Date.now()}-${process.pid}`;
+    memberEmail = `invoice-member-${suffix}@test.itemize`;
     const users = await pool.query<{ id: number }>(
       `INSERT INTO users (email, name, provider, email_verified)
        VALUES ($1, 'Invoice Member', 'email', true),
               ($2, 'Invoice Outsider', 'email', true)
        RETURNING id`,
       [
-        `invoice-member-${suffix}@test.itemize`,
+        memberEmail,
         `invoice-outsider-${suffix}@test.itemize`,
       ],
     );
     [memberId, outsiderId] = users.rows.map((row) => Number(row.id));
     const organizations = await pool.query<{ id: number }>(
-      `INSERT INTO organizations (name, slug)
-       VALUES ('Invoice Primary', $1), ('Invoice Other', $2)
+      `INSERT INTO organizations (name, slug, plan, subscription_status)
+       VALUES ('Invoice Primary', $1, 'starter', 'active'),
+              ('Invoice Other', $2, 'starter', 'active')
        RETURNING id`,
       [`invoice-primary-${suffix}`, `invoice-other-${suffix}`],
     );
@@ -482,6 +485,12 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       filename: expect.stringMatching(/^.+\.pdf$/),
       pdf: Buffer.from('invoice-pdf'),
     }));
+    expect(invoiceEmailProvider.send.mock.calls[0][0].html)
+      .toContain('Your invoice');
+    expect(invoiceEmailProvider.send.mock.calls[0][0].html)
+      .not.toContain(created.body.data.createInvoice.invoiceNumber);
+    expect(invoiceEmailProvider.send.mock.calls[0][0].html)
+      .not.toContain('border-radius:999px');
     const committed = await pool.query(
       `SELECT i.status, i.sent_at IS NOT NULL AS sent,
               i.stripe_payment_intent_id, i.stripe_hosted_invoice_url,
@@ -1657,7 +1666,15 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       idempotencyKey: `estimate-email:${organizationId}:${sent.body.data.sendEstimate.deliveryId}`,
     });
     expect(estimateEmailProvider.send.mock.calls[0][0].html)
-      .toContain('Estimate');
+      .toContain('A new estimate');
+    expect(estimateEmailProvider.send.mock.calls[0][0].subject)
+      .toBe('Your estimate');
+    expect(estimateEmailProvider.send.mock.calls[0][0].html)
+      .not.toContain(created.body.data.createEstimate.estimateNumber);
+    expect(estimateEmailProvider.send.mock.calls[0][0].html)
+      .toContain('https://itemize.cloud/cover.png');
+    expect(estimateEmailProvider.send.mock.calls[0][0].html)
+      .not.toContain('http://localhost:5173/cover.png');
     expect(estimateEmailProvider.send.mock.calls[0][0].html)
       .toContain('Ada &lt;script&gt;alert(1)&lt;/script&gt;');
     expect(estimateEmailProvider.send.mock.calls[0][0].html)
@@ -1699,7 +1716,7 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
         total: '26.00',
       },
       customer: { name: 'Ada <script>alert(1)</script>' },
-      business: { name: 'Primary Business' },
+      business: { name: 'Settings Studio' },
       items: [expect.objectContaining({ name: 'Consulting' })],
     });
     expect(JSON.stringify(opened.body.data)).not.toContain('organization_id');
@@ -1725,6 +1742,180 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     expect(recipientState.rows[0]).toEqual({
       status: 'accepted', viewed: true, accepted: true, declined_at: null,
     });
+    const queuedNotice = await pool.query<{
+      delivery_type: string; recipient_email: string; status: string;
+      requested_by_user_id: number; payload: Record<string, unknown>;
+    }>(
+      `SELECT delivery_type,recipient_email,status,requested_by_user_id,payload
+       FROM estimate_email_deliveries
+       WHERE organization_id=$1 AND estimate_id=$2
+         AND delivery_type='estimate_accepted'`,
+      [organizationId, id],
+    );
+    expect(queuedNotice.rows).toHaveLength(1);
+    expect(queuedNotice.rows[0]).toMatchObject({
+      delivery_type: 'estimate_accepted',
+      recipient_email: memberEmail,
+      status: 'queued',
+      requested_by_user_id: memberId,
+      payload: {
+        response: 'accepted',
+        estimateNumber: created.body.data.createEstimate.estimateNumber,
+        customerName: 'Ada <script>alert(1)</script>',
+        total: '26.00',
+        currency: 'USD',
+        businessName: 'Settings Studio',
+        recipientName: 'Invoice Member',
+      },
+    });
+    await pool.query(
+      `UPDATE organizations SET subscription_status='none'
+       WHERE id=$1`,
+      [organizationId],
+    );
+    try {
+      await estimateEmailDeliveryService.runDue(10);
+    } finally {
+      await pool.query(
+        `UPDATE organizations SET subscription_status='active'
+         WHERE id=$1`,
+        [organizationId],
+      );
+    }
+    expect(estimateEmailProvider.send).toHaveBeenCalledTimes(2);
+    expect(estimateEmailProvider.send.mock.calls[1][0]).toMatchObject({
+      to: memberEmail,
+      subject: 'Your estimate was accepted',
+    });
+    expect(estimateEmailProvider.send.mock.calls[1][0].html)
+      .toContain('Estimate accepted');
+    expect(estimateEmailProvider.send.mock.calls[1][0].html)
+      .not.toContain(created.body.data.createEstimate.estimateNumber);
+    expect(estimateEmailProvider.send.mock.calls[1][0].html)
+      .not.toContain('border-radius:999px');
+    expect(estimateEmailProvider.send.mock.calls[1][0].html)
+      .toContain('https://itemize.cloud/cover.png');
+    expect(estimateEmailProvider.send.mock.calls[1][0].html)
+      .toContain('/estimates/');
+    expect(estimateEmailProvider.send.mock.calls[1][0].html)
+      .not.toContain(`/estimate/${publicToken}`);
+    const deliveredNotice = await pool.query<{ status: string; provider_id: string }>(
+      `SELECT status,provider_id FROM estimate_email_deliveries
+       WHERE organization_id=$1 AND estimate_id=$2
+         AND delivery_type='estimate_accepted'`,
+      [organizationId, id],
+    );
+    expect(deliveredNotice.rows[0]).toEqual({
+      status: 'sent', provider_id: 'email-provider-1',
+    });
+  });
+
+  it('queues and delivers one declined-estimate notification', async () => {
+    estimateEmailProvider.send.mockReset();
+    estimateEmailProvider.send.mockResolvedValue({
+      kind: 'sent', providerId: 'email-provider-declined',
+    });
+    const created = await graphql(
+      memberToken, organizationId, estimateMutation,
+      { input: { ...estimateInput(), customerEmail: 'decline@example.com' } },
+    ).expect(200);
+    const id = Number(created.body.data.createEstimate.id);
+    await graphql(
+      memberToken,
+      organizationId,
+      sendEstimateMutation,
+      { id, idempotencyKey: `estimate-decline-${id}` },
+    ).expect(200);
+    const html = String(estimateEmailProvider.send.mock.calls[0][0].html);
+    const publicToken = /\/estimate\/([A-Za-z0-9_-]{32,128})/.exec(html)?.[1];
+    expect(publicToken).toBeTruthy();
+
+    await request(app.getHttpServer())
+      .post(`/api/public/estimates/${publicToken}/decline`)
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/api/public/estimates/${publicToken}/decline`)
+      .expect(200);
+    const notices = await pool.query<{ status: string }>(
+      `SELECT status FROM estimate_email_deliveries
+       WHERE organization_id=$1 AND estimate_id=$2
+         AND delivery_type='estimate_declined'`,
+      [organizationId, id],
+    );
+    expect(notices.rows).toEqual([{ status: 'queued' }]);
+
+    await estimateEmailDeliveryService.runDue(10);
+    expect(estimateEmailProvider.send).toHaveBeenCalledTimes(2);
+    expect(estimateEmailProvider.send.mock.calls[1][0]).toMatchObject({
+      to: memberEmail,
+      subject: 'Your estimate was declined',
+    });
+    expect(estimateEmailProvider.send.mock.calls[1][0].html)
+      .toContain('Estimate declined');
+    expect(estimateEmailProvider.send.mock.calls[1][0].html)
+      .not.toContain(created.body.data.createEstimate.estimateNumber);
+    expect(estimateEmailProvider.send.mock.calls[1][0].html)
+      .not.toContain('border-radius:999px');
+    expect(estimateEmailProvider.send.mock.calls[1][0].html)
+      .toContain('https://itemize.cloud/cover.png');
+  });
+
+  it('keeps a recorded response when its notification retries', async () => {
+    estimateEmailProvider.send.mockReset();
+    estimateEmailProvider.send
+      .mockResolvedValueOnce({ kind: 'sent', providerId: 'email-provider-response-source' })
+      .mockResolvedValueOnce({ kind: 'rejected', message: 'Provider unavailable' })
+      .mockResolvedValueOnce({ kind: 'sent', providerId: 'email-provider-response-retry' });
+    const created = await graphql(
+      memberToken, organizationId, estimateMutation,
+      { input: { ...estimateInput(), customerEmail: 'response-retry@example.com' } },
+    ).expect(200);
+    const id = Number(created.body.data.createEstimate.id);
+    await graphql(
+      memberToken,
+      organizationId,
+      sendEstimateMutation,
+      { id, idempotencyKey: `estimate-response-retry-${id}` },
+    ).expect(200);
+    const html = String(estimateEmailProvider.send.mock.calls[0][0].html);
+    const publicToken = /\/estimate\/([A-Za-z0-9_-]{32,128})/.exec(html)?.[1];
+    expect(publicToken).toBeTruthy();
+
+    await request(app.getHttpServer())
+      .post(`/api/public/estimates/${publicToken}/accept`)
+      .expect(200);
+    await estimateEmailDeliveryService.runDue(10);
+    const failed = await pool.query<{
+      estimate_status: string; delivery_status: string; attempt_count: number;
+    }>(
+      `SELECT estimate.status AS estimate_status,
+              delivery.status AS delivery_status,delivery.attempt_count
+       FROM estimates estimate
+       JOIN estimate_email_deliveries delivery
+         ON delivery.estimate_id=estimate.id
+        AND delivery.organization_id=estimate.organization_id
+       WHERE estimate.id=$1 AND estimate.organization_id=$2
+         AND delivery.delivery_type='estimate_accepted'`,
+      [id, organizationId],
+    );
+    expect(failed.rows[0]).toEqual({
+      estimate_status: 'accepted', delivery_status: 'retry', attempt_count: 1,
+    });
+
+    await pool.query(
+      `UPDATE estimate_email_deliveries SET next_attempt_at=CURRENT_TIMESTAMP
+       WHERE organization_id=$1 AND estimate_id=$2
+         AND delivery_type='estimate_accepted'`,
+      [organizationId, id],
+    );
+    await estimateEmailDeliveryService.runDue(10);
+    const retried = await pool.query<{ status: string; attempt_count: number }>(
+      `SELECT status,attempt_count FROM estimate_email_deliveries
+       WHERE organization_id=$1 AND estimate_id=$2
+         AND delivery_type='estimate_accepted'`,
+      [organizationId, id],
+    );
+    expect(retried.rows[0]).toEqual({ status: 'sent', attempt_count: 2 });
   });
 
   it('keeps failed and ambiguous estimate deliveries honest and retryable', async () => {
