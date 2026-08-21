@@ -489,10 +489,10 @@ const invoicePdfFilename = (contentDisposition: unknown, invoiceId: number): str
     return candidate || `invoice-${invoiceId}.pdf`;
 };
 
-export const downloadInvoicePdf = async (
+export const getInvoicePdf = async (
     invoiceId: number,
     organizationId?: number
-): Promise<void> => {
+): Promise<{ blob: Blob; filename: string }> => {
     const response = await api.get(`/api/invoices/${invoiceId}/pdf`, {
         headers: organizationId ? { 'x-organization-id': organizationId.toString() } : {},
         responseType: 'blob'
@@ -502,13 +502,21 @@ export const downloadInvoicePdf = async (
         : new Blob([response.data], {
             type: response.headers?.['content-type'] || 'application/pdf'
         });
+    return {
+        blob,
+        filename: invoicePdfFilename(response.headers?.['content-disposition'], invoiceId),
+    };
+};
+
+export const downloadInvoicePdf = async (
+    invoiceId: number,
+    organizationId?: number
+): Promise<void> => {
+    const { blob, filename } = await getInvoicePdf(invoiceId, organizationId);
     const objectUrl = window.URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = objectUrl;
-    anchor.download = invoicePdfFilename(
-        response.headers?.['content-disposition'],
-        invoiceId
-    );
+    anchor.download = filename;
     try {
         document.body.appendChild(anchor);
         anchor.click();
@@ -534,6 +542,7 @@ export default {
     recordPayment,
     createPaymentLink,
     createRecurringTemplateFromInvoice,
+    getInvoicePdf,
     downloadInvoicePdf,
     // Settings
     getPaymentSettings,

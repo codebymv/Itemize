@@ -12,6 +12,8 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthState } from '@/contexts/AuthContext';
+import { useOrganization } from '@/hooks/useOrganization';
+import { getInvoice, getInvoicePdf } from '@/services/invoicesApi';
 import {
   SignatureDocument,
   SignatureRecipient,
@@ -32,6 +34,7 @@ export default function SignatureEditorPage() {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { currentUser } = useAuthState();
+  const { organizationId } = useOrganization();
 
   const [document, setDocument] = useState<SignatureDocument | null>(null);
   const [title, setTitle] = useState('');
@@ -45,6 +48,7 @@ export default function SignatureEditorPage() {
   const [showSendModal, setShowSendModal] = useState(false);
   const roleChoices = useMemo(() => ['Signer', 'Witness', 'Approver', 'Observer'], []);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const invoicePrefillStartedRef = useRef(false);
   const roleOptions = useMemo(
     () => recipients.map((recipient) => recipient.role_name).filter((role): role is string => Boolean(role)),
     [recipients]
@@ -71,12 +75,11 @@ export default function SignatureEditorPage() {
       .finally(() => setLoading(false));
   }, [id, toast]);
 
-  // Pre-fill recipient from URL (e.g. from Contact "Send Document" or Invoice "Send for Signature")
+  // Pre-fill recipient from URL (e.g. from Contact "Send Document").
   useEffect(() => {
     if (id) return;
     const contactName = searchParams.get('contactName');
     const contactEmail = searchParams.get('contactEmail');
-    const invoiceIdParam = searchParams.get('invoiceId');
     if (contactName || contactEmail) {
       setRecipients((prev) => {
         if (prev.length > 0) return prev;
@@ -91,10 +94,51 @@ export default function SignatureEditorPage() {
         ];
       });
     }
-    if (invoiceIdParam) {
-      setTitle((t) => t || `Invoice #${invoiceIdParam} - Signature`);
-    }
   }, [searchParams, id]);
+
+  // An invoice handoff should arrive as a ready-to-place document, not a bare ID.
+  useEffect(() => {
+    const invoiceIdParam = searchParams.get('invoiceId');
+    const invoiceId = Number(invoiceIdParam);
+    if (id || !organizationId || !Number.isSafeInteger(invoiceId) || invoiceId < 1) return;
+    if (invoicePrefillStartedRef.current) return;
+    invoicePrefillStartedRef.current = true;
+
+    setLoading(true);
+    Promise.all([
+      getInvoice(invoiceId, organizationId),
+      getInvoicePdf(invoiceId, organizationId),
+    ])
+      .then(([invoice, pdf]) => {
+        const recipientEmail = invoice.customer_email || invoice.contact_email;
+        setTitle((current) => current || `Invoice ${invoice.invoice_number} - Signature`);
+        setMessage((current) => current || 'Please review and sign the attached invoice.');
+        setFile(new File([pdf.blob], pdf.filename, {
+          type: pdf.blob.type || 'application/pdf',
+        }));
+        if (recipientEmail) {
+          setRecipients((current) => current.length > 0 ? current : [{
+            id: 0,
+            document_id: 0,
+            organization_id: organizationId,
+            name: invoice.customer_name || [invoice.contact_first_name, invoice.contact_last_name].filter(Boolean).join(' '),
+            email: recipientEmail,
+            role_name: 'Signer',
+            status: 'pending',
+            signing_order: 1,
+          } as SignatureRecipient]);
+        }
+      })
+      .catch(() => {
+        invoicePrefillStartedRef.current = false;
+        toast({
+          title: 'Invoice could not be prepared',
+          description: 'Return to the invoice and try Send for Signature again.',
+          variant: 'destructive',
+        });
+      })
+      .finally(() => setLoading(false));
+  }, [id, organizationId, searchParams, toast]);
 
   const canUpload = useMemo(() => Boolean(document?.id), [document]);
 
@@ -103,7 +147,10 @@ export default function SignatureEditorPage() {
       setLoading(true);
       if (!document) {
         const created = await createSignatureDocument({ title, description, message, routing_mode: routingMode });
-        setDocument(created);
+        const readyDocument = file
+          ? await uploadSignatureDocument(created.id, file)
+          : created;
+        setDocument(readyDocument);
         toast({ title: 'Draft created' });
       } else {
         const updated = await updateSignatureDocument(document.id, {

@@ -6,6 +6,7 @@ import {
   createRecurringTemplateFromInvoice,
   deleteInvoice,
   downloadInvoicePdf,
+  getInvoicePdf,
   getInvoice,
   getInvoices,
   sendInvoice,
@@ -179,5 +180,25 @@ describe('core invoice API transport selection', () => {
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:invoice-pdf');
     expect(document.body.contains(anchor)).toBe(false);
     createElement.mockRestore();
+  });
+
+  it('returns the retained invoice PDF for document handoffs', async () => {
+    const pdf = new Blob(['%PDF-1.7\nsignature-test'], { type: 'application/pdf' });
+    vi.mocked(api.get).mockResolvedValue({
+      data: pdf,
+      headers: {
+        'content-disposition': 'attachment; filename="INV-00012.pdf"',
+        'content-type': 'application/pdf',
+      },
+    });
+
+    await expect(getInvoicePdf(12, 4)).resolves.toEqual({
+      blob: pdf,
+      filename: 'INV-00012.pdf',
+    });
+    expect(api.get).toHaveBeenCalledWith('/api/invoices/12/pdf', {
+      headers: { 'x-organization-id': '4' },
+      responseType: 'blob',
+    });
   });
 });
