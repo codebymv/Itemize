@@ -69,16 +69,17 @@ This checklist outlines essential security measures to be verified and implement
 
 ## Dependency Audit — August 21, 2026
 
-- Production dependency findings were reduced from three moderate advisories to one.
-- Development dependency findings were reduced from one critical, two high, and five moderate advisories to the same single residual advisory.
+- Production dependency findings were reduced from three moderate advisories to zero.
+- Development dependency findings were reduced from one critical, two high, and five moderate advisories to zero.
 - Removed the unused Sequelize/pg-hstore model layer and its vulnerable UUID dependency.
 - Upgraded direct UUID usage to 11.1.1; Itemize uses only `v4()` for correlation IDs.
 - Upgraded Vite to 6.4.3 and the matched Vitest toolchain to 3.2.6.
 - Pinned brace-expansion 1.1.18 for the legacy minimatch development path.
-- Residual advisory: DOMPurify 3.4.12 is flagged by GHSA-55q2-fjhq-7xh7. The patched
-  3.4.13 release is not yet available from npm. Itemize does not use the required
-  non-default `IN_PLACE` mode or element-removal hooks, so the vulnerable execution
-  path is not reachable. Upgrade immediately when 3.4.13 is published to npm.
+- Upgraded DOMPurify to the patched 3.4.14 release after confirming Itemize does not
+  depend on the affected non-default `IN_PLACE` behavior.
+- Added an independent frontend lockfile, pinned the safe PDF.js 5.4.624 release,
+  moved Railway to Node 22, and changed production builds from `npm install` to
+  reproducible `npm ci` installs.
 
 ## Priority Items for Next Phase
 

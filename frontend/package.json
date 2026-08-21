@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -70,7 +73,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
-    "dompurify": "^3.2.6",
+    "dompurify": "3.4.14",
     "embla-carousel-react": "^8.3.0",
     "hash-wasm": "^4.12.0",
     "input-otp": "^1.2.4",
@@ -78,7 +81,7 @@
     "lucide-react": "^0.462.0",
     "markdown-it": "^14.1.0",
     "next-themes": "^0.3.0",
-    "pdfjs-dist": "^5.4.624",
+    "pdfjs-dist": "5.4.624",
     "react": "^18.3.1",
     "react-colorful": "^5.6.1",
     "react-day-picker": "^8.10.1",
