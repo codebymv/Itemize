@@ -95,6 +95,14 @@ function RegisterForm() {
   };
 
   const handleGoogleLogin = () => {
+    if (!acceptedTerms) {
+      toast({
+        title: 'Terms required',
+        description: 'Please accept the Terms of Service and Privacy Policy.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setGoogleLoading(true);
     googleSignIn('/', signupMode);
     setTimeout(() => setGoogleLoading(false), 1000);
@@ -280,7 +288,7 @@ function RegisterForm() {
               variant="outline"
               className="w-full"
               onClick={handleGoogleLogin}
-              disabled={googleLoading}
+              disabled={googleLoading || !acceptedTerms}
             >
               {googleLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
