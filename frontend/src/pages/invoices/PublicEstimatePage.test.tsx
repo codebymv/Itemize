@@ -77,6 +77,7 @@ describe('PublicEstimatePage', () => {
       '/register?mode=trial',
     );
     expect(screen.queryByText('Private estimate')).not.toBeInTheDocument();
+    expect(screen.getByText('your response is shared immediately')).toBeInTheDocument();
     expect(container.querySelector('main')).toHaveClass('bg-background', 'text-foreground');
     expect(screen.getByText('EST-00007').parentElement).toHaveClass(
       'bg-primary',
