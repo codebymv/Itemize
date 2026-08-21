@@ -35,7 +35,7 @@ describe('signature delivery capabilities and email rendering', () => {
       message: 'Please <img src=x onerror=alert(1)> sign',
       expiresAt: '2026-08-01T00:00:00.000Z',
     });
-    expect(rendered.subject).toBe('Alice & Bob wants your signature');
+    expect(rendered.subject).toBe('Your signature is requested');
     expect(rendered.html).toContain('Please &lt;img src=x onerror=alert(1)&gt; sign');
     expect(rendered.html).toContain('&lt;b&gt;NDA&lt;/b&gt;');
     expect(rendered.html).toContain(`https://itemize.cloud/sign/${signatureDeliveryToken('request-1')}`);

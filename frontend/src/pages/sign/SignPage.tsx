@@ -12,6 +12,12 @@ import { useToast } from '@/hooks/use-toast';
 import { getPublicSigningData, submitPublicSignature, declinePublicSignature } from '@/services/signaturesApi';
 import type { PublicSigningData } from '@/services/signaturesApi';
 import { getAssetUrl, getApiUrl } from '@/lib/api';
+import {
+  BrandedPublicCard,
+  BrandedPublicContainer,
+  BrandedPublicPage,
+  PublicPrivateLinkNotice,
+} from '@/components/public/BrandedPublicPage';
 
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -267,36 +273,52 @@ export default function SignPage() {
   };
 
   if (loading) {
-    return <div className="p-6">Loading...</div>;
+    return (
+      <BrandedPublicPage>
+        <BrandedPublicContainer>
+          <BrandedPublicCard contentClassName="p-6 text-sm text-muted-foreground">
+            Loading signature request...
+          </BrandedPublicCard>
+        </BrandedPublicContainer>
+      </BrandedPublicPage>
+    );
   }
 
   if (!data) {
-    return <div className="p-6">Signing link invalid or expired.</div>;
+    return (
+      <BrandedPublicPage>
+        <BrandedPublicContainer>
+          <BrandedPublicCard contentClassName="p-6">
+            <h1 className="text-lg font-semibold">Signing link unavailable</h1>
+            <p className="mt-2 text-sm text-muted-foreground">This signing link is invalid or has expired.</p>
+          </BrandedPublicCard>
+        </BrandedPublicContainer>
+      </BrandedPublicPage>
+    );
   }
 
   if (terminalState) {
     return (
-      <div className="max-w-xl mx-auto p-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>
+      <BrandedPublicPage>
+        <BrandedPublicContainer className="max-w-xl">
+          <BrandedPublicCard contentClassName="p-6 sm:p-8">
+            <h1 className="text-xl font-semibold">
               {terminalState === 'signed' ? 'Signing complete' : 'Signature declined'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground">
               {terminalState === 'signed'
                 ? 'Your signature was submitted successfully. You can close this page.'
                 : 'Your response was recorded. You can close this page.'}
             </p>
-          </CardContent>
-        </Card>
-      </div>
+          </BrandedPublicCard>
+        </BrandedPublicContainer>
+      </BrandedPublicPage>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
+    <BrandedPublicPage>
+      <BrandedPublicContainer>
       <Card>
         <CardHeader>
           <CardTitle>{data.document.title}</CardTitle>
@@ -528,6 +550,8 @@ export default function SignPage() {
           </Tabs>
         </DialogContent>
       </Dialog>
-    </div>
+        <PublicPrivateLinkNotice contentLabel="signature request" sensitive />
+      </BrandedPublicContainer>
+    </BrandedPublicPage>
   );
 }

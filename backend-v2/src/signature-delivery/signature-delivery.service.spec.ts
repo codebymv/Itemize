@@ -52,7 +52,7 @@ describe('SignatureDeliveryService', () => {
       expiresAt: new Date('2026-08-01T23:00:00-07:00'),
     });
 
-    expect(preview.subject).toBe('Alice & Bob wants your signature');
+    expect(preview.subject).toBe('Your signature is requested');
     expect(preview.html).toContain('Please &lt;script&gt;alert(1)&lt;/script&gt; sign');
     expect(preview.html).toContain('&lt;b&gt;NDA&lt;/b&gt;');
     expect(preview.html).toContain('Expires on August 2, 2026');

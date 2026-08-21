@@ -46,10 +46,9 @@ const requestEmail = (
   payload: SignatureDeliveryPayload,
   options: { reminder: boolean; signingUrl: string; preview: boolean },
 ): RenderedSignatureEmail => {
-  const sender = payload.senderEmail || payload.senderName || 'Itemize';
   const subject = options.reminder
-    ? `Reminder: Please sign ${payload.documentTitle || 'Document'}`
-    : `${sender} wants your signature`;
+    ? 'Reminder: your signature is requested'
+    : 'Your signature is requested';
   const heading = options.reminder ? 'Signature reminder' : 'Signature requested';
   const expires = formattedExpiry(payload.expiresAt);
   const greeting = `<p style="margin:0 0 16px">Hi ${escapeHtml(payload.recipientName || 'there')},</p>`;
