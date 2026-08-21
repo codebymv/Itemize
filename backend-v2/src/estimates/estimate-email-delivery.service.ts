@@ -171,7 +171,8 @@ export class EstimateEmailDeliveryService {
     return brandedTransactionalEmail({
       assetOrigin: this.frontendOrigin(),
       previewText: `${business} sent estimate ${payload.estimateNumber} for ${amount}.`,
-      eyebrow: `Estimate · ${payload.estimateNumber}`,
+      eyebrow: 'Estimate',
+      reference: payload.estimateNumber,
       heading: `A new estimate from ${business}`,
       bodyHtml,
       cta: { label: 'Review estimate', url: publicUrl },

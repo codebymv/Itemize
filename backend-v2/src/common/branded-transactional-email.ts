@@ -2,6 +2,7 @@ export type BrandedTransactionalEmailInput = {
   assetOrigin: string;
   previewText: string;
   eyebrow: string;
+  reference?: string;
   heading: string;
   bodyHtml: string;
   cta?: { label: string; url: string };
@@ -18,6 +19,11 @@ export const brandedTransactionalEmail = (
   const origin = input.assetOrigin.replace(/\/$/, '');
   const iconUrl = escapeHtml(`${origin}/icon.png`);
   const wordmarkUrl = escapeHtml(`${origin}/textblack.png`);
+  const reference = input.reference
+    ? `<td align="right" style="padding-left:16px;white-space:nowrap">` +
+      `<span style="display:inline-block;background:#2563eb;color:#ffffff;border-radius:999px;padding:7px 11px;font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase">${escapeHtml(input.reference)}</span>` +
+      `</td>`
+    : '';
   const cta = input.cta
     ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:28px 0 8px"><tr><td align="center">` +
       `<a href="${escapeHtml(input.cta.url)}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:14px 24px;border-radius:8px;font-size:15px;font-weight:700;line-height:20px">${escapeHtml(input.cta.label)}</a>` +
@@ -40,7 +46,8 @@ export const brandedTransactionalEmail = (
     `<td><img src="${wordmarkUrl}" height="24" alt="Itemize" style="display:block;height:24px;width:auto;max-width:120px;border:0"></td>` +
     `</tr></table></td></tr>` +
     `<tr><td style="padding:32px 28px 28px">` +
-    `<div style="margin:0 0 10px;color:#2563eb;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase">${escapeHtml(input.eyebrow)}</div>` +
+    `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;margin:0 0 14px"><tr>` +
+    `<td style="color:#2563eb;font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase">${escapeHtml(input.eyebrow)}</td>${reference}</tr></table>` +
     `<h1 style="margin:0 0 20px;color:#0f172a;font-size:26px;line-height:1.25;font-weight:700;letter-spacing:-0.02em">${escapeHtml(input.heading)}</h1>` +
     `<div style="color:#334155;font-size:15px;line-height:1.65">${input.bodyHtml}</div>${cta}` +
     `</td></tr>` +

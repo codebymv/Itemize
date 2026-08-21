@@ -5,7 +5,8 @@ describe('brandedTransactionalEmail', () => {
     const html = brandedTransactionalEmail({
       assetOrigin: 'https://itemize.cloud/',
       previewText: 'Estimate ready',
-      eyebrow: 'Estimate · EST-00001',
+      eyebrow: 'Estimate',
+      reference: 'EST-00001',
       heading: 'A new estimate from Studio',
       bodyHtml: '<p>Safe, pre-escaped content</p>',
       cta: { label: 'Review <estimate>', url: 'https://itemize.cloud/estimate/a&b' },
@@ -16,6 +17,9 @@ describe('brandedTransactionalEmail', () => {
     expect(html).toContain('name="color-scheme" content="light only"');
     expect(html).toContain('Review &lt;estimate&gt;');
     expect(html).toContain('/estimate/a&amp;b');
+    expect(html).toContain('background:#2563eb;color:#ffffff;border-radius:999px');
+    expect(html.indexOf('Estimate')).toBeLessThan(html.indexOf('EST-00001'));
+    expect(html.indexOf('EST-00001')).toBeLessThan(html.indexOf('<h1'));
     expect(html).not.toContain('bg-blue-600');
   });
 });

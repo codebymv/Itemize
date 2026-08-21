@@ -73,6 +73,10 @@ describe('PublicEstimatePage', () => {
     );
     expect(container.querySelector('img[src="/icon.png"]')).toBeInTheDocument();
     expect(container.querySelector('main')).toHaveClass('bg-background', 'text-foreground');
+    expect(screen.getByText('EST-00007').parentElement).toHaveClass(
+      'bg-primary',
+      'text-primary-foreground',
+    );
     screen.getAllByText('Discovery session').forEach((element) => {
       expect(element).toHaveClass('text-muted-foreground');
     });

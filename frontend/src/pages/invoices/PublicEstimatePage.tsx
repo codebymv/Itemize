@@ -193,11 +193,8 @@ export default function PublicEstimatePage() {
         <Card className="overflow-hidden shadow-sm">
           <div className="h-1 bg-primary" aria-hidden="true" />
           <CardContent className="p-0">
-            <section className="flex flex-col gap-6 border-b border-border bg-muted/25 p-6 sm:flex-row sm:items-start sm:justify-between sm:p-8">
-              <div>
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary">
-                  <FileText className="h-3.5 w-3.5" />Estimate
-                </div>
+            <section className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 border-b border-border bg-muted/25 p-6 sm:gap-8 sm:p-8">
+              <div className="min-w-0">
                 <p className="text-sm text-muted-foreground">Prepared by</p>
                 <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{data.business.name}</h1>
                 {data.business.email && (
@@ -209,14 +206,22 @@ export default function PublicEstimatePage() {
                   </a>
                 )}
               </div>
-              <div className="sm:text-right">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Estimate number</p>
-                <p className="text-lg font-semibold tabular-nums">{estimate.number}</p>
-                <dl className="mt-3 grid grid-cols-[auto_auto] gap-x-4 gap-y-1 text-sm">
+              <div className="flex flex-col items-end text-right">
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-primary-foreground shadow-sm sm:text-xs">
+                  <FileText className="h-3.5 w-3.5" />
+                  <span>Estimate</span>
+                  <span aria-hidden="true" className="opacity-70">·</span>
+                  <span className="tabular-nums">{estimate.number}</span>
+                </div>
+                <dl className="mt-4 hidden grid-cols-[auto_auto] gap-x-4 gap-y-1 text-sm sm:grid">
                   <dt className="text-muted-foreground">Issued</dt><dd>{date(estimate.issue_date)}</dd>
                   <dt className="text-muted-foreground">Valid until</dt><dd>{date(estimate.valid_until)}</dd>
                 </dl>
               </div>
+              <dl className="col-span-2 grid grid-cols-[auto_auto] justify-start gap-x-4 gap-y-1 text-sm sm:hidden">
+                <dt className="text-muted-foreground">Issued</dt><dd>{date(estimate.issue_date)}</dd>
+                <dt className="text-muted-foreground">Valid until</dt><dd>{date(estimate.valid_until)}</dd>
+              </dl>
             </section>
 
             {data.customer.name && (

@@ -8,8 +8,8 @@ import {
     Trash2,
     FileText,
     User,
-    Calendar,
     DollarSign,
+    StickyNote,
     ArrowRight,
     CheckCircle,
     Eye,
@@ -328,10 +328,10 @@ export function EstimateEditorPage() {
         return (
             <PageLayout
                 title={(isNew ? 'New Estimate' : 'Estimate').toUpperCase()}
-                icon={<FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+                icon={<FileText className="h-5 w-5 text-primary flex-shrink-0" />}
                 leading={
                     <Button variant="ghost" size="icon" onClick={() => navigate('/estimates')}>
-                        <ArrowLeft className="h-5 w-5" />
+                        <ArrowLeft className="h-5 w-5 text-muted-foreground" />
                     </Button>
                 }
             >
@@ -347,10 +347,10 @@ export function EstimateEditorPage() {
     return (
         <PageLayout
             title={(isNew ? 'New Estimate' : 'Estimate').toUpperCase()}
-            icon={<FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            icon={<FileText className="h-5 w-5 text-primary flex-shrink-0" />}
             leading={
                 <Button variant="ghost" size="icon" onClick={() => navigate('/estimates')}>
-                    <ArrowLeft className="h-5 w-5" />
+                    <ArrowLeft className="h-5 w-5 text-muted-foreground" />
                 </Button>
             }
             headerActions={
@@ -367,7 +367,6 @@ export function EstimateEditorPage() {
                     {!isNew && status === 'draft' && (
                         <Button
                             size="sm"
-                            variant="outline"
                             onClick={handleSendEstimate}
                             disabled={saving}
                         >
@@ -378,7 +377,6 @@ export function EstimateEditorPage() {
                     {!isNew && ['sent', 'accepted'].includes(status) && (
                         <Button
                             size="sm"
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
                             onClick={handleConvertToInvoice}
                             disabled={saving}
                         >
@@ -403,7 +401,6 @@ export function EstimateEditorPage() {
                     {!isNew && status === 'draft' && (
                         <Button
                             size="sm"
-                            variant="outline"
                             onClick={handleSendEstimate}
                             disabled={saving}
                             className="flex-1"
@@ -415,7 +412,7 @@ export function EstimateEditorPage() {
                     {!isNew && ['sent', 'accepted'].includes(status) && (
                         <Button
                             size="sm"
-                            className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
+                            className="flex-1"
                             onClick={handleConvertToInvoice}
                             disabled={saving}
                         >
@@ -428,8 +425,8 @@ export function EstimateEditorPage() {
         >
                 <div className="space-y-6">
                 {!isNew && (lifecycle.viewedAt || lifecycle.acceptedAt || lifecycle.declinedAt) && (
-                    <Card className="border-slate-200">
-                        <CardContent className="py-4 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
+                    <Card className="border-border/80 bg-muted/20 shadow-none">
+                        <CardContent className="flex flex-wrap items-center gap-x-6 gap-y-3 p-4 text-sm sm:px-6">
                             {lifecycle.viewedAt && (
                                 <span className="inline-flex items-center gap-2 text-muted-foreground">
                                     <Eye className="h-4 w-4" />
@@ -437,7 +434,7 @@ export function EstimateEditorPage() {
                                 </span>
                             )}
                             {lifecycle.acceptedAt && (
-                                <span className="inline-flex items-center gap-2 text-emerald-700 font-medium">
+                                <span className="inline-flex items-center gap-2 font-medium text-emerald-700 dark:text-emerald-300">
                                     <CheckCircle className="h-4 w-4" />
                                     Accepted {new Date(lifecycle.acceptedAt).toLocaleString()}
                                 </span>
@@ -452,21 +449,23 @@ export function EstimateEditorPage() {
                     </Card>
                 )}
                     {/* Customer Details */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <User className="h-5 w-5" />
-                            Customer Details
+                <Card className="overflow-hidden border-border/80 shadow-none">
+                    <CardHeader className="border-b bg-muted/20 px-4 py-4 sm:px-6">
+                        <CardTitle className="flex items-center gap-3 text-base sm:text-lg">
+                            <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
+                                <User className="h-4 w-4" />
+                            </span>
+                            <span>Customer details</span>
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div>
-                            <Label>Select Contact</Label>
+                    <CardContent className="space-y-5 p-4 sm:p-6">
+                        <div className="space-y-2">
+                            <Label htmlFor="estimate-contact">Select contact</Label>
                             <Select
                                 value={contactId?.toString() || 'none'}
                                 onValueChange={handleContactChange}
                             >
-                                <SelectTrigger>
+                                <SelectTrigger id="estimate-contact" className="bg-card">
                                     <SelectValue placeholder="Select a contact or enter manually" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -479,18 +478,22 @@ export function EstimateEditorPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label>Name</Label>
+                        <div className="grid gap-5 md:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="estimate-customer-name">Name</Label>
                                 <Input
+                                    id="estimate-customer-name"
+                                    className="bg-card"
                                     value={customerName}
                                     onChange={(e) => setCustomerName(e.target.value)}
                                     placeholder="Customer name"
                                 />
                             </div>
-                            <div>
-                                <Label>Email</Label>
+                            <div className="space-y-2">
+                                <Label htmlFor="estimate-customer-email">Email</Label>
                                 <Input
+                                    id="estimate-customer-email"
+                                    className="bg-card"
                                     type="email"
                                     value={customerEmail}
                                     onChange={(e) => setCustomerEmail(e.target.value)}
@@ -498,27 +501,33 @@ export function EstimateEditorPage() {
                                 />
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label>Phone</Label>
+                        <div className="grid gap-5 md:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="estimate-customer-phone">Phone</Label>
                                 <Input
+                                    id="estimate-customer-phone"
+                                    className="bg-card"
                                     value={customerPhone}
                                     onChange={(e) => setCustomerPhone(e.target.value)}
                                     placeholder="Phone number"
                                 />
                             </div>
-                            <div>
-                                <Label>Valid Until</Label>
+                            <div className="space-y-2">
+                                <Label htmlFor="estimate-valid-until">Valid until</Label>
                                 <Input
+                                    id="estimate-valid-until"
+                                    className="bg-card"
                                     type="date"
                                     value={validUntil}
                                     onChange={(e) => setValidUntil(e.target.value)}
                                 />
                             </div>
                         </div>
-                        <div>
-                            <Label>Address</Label>
+                        <div className="space-y-2">
+                            <Label htmlFor="estimate-customer-address">Address</Label>
                             <Textarea
+                                id="estimate-customer-address"
+                                className="bg-card"
                                 value={customerAddress}
                                 onChange={(e) => setCustomerAddress(e.target.value)}
                                 placeholder="Customer address"
@@ -529,45 +538,51 @@ export function EstimateEditorPage() {
                 </Card>
 
                 {/* Line Items */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center justify-between">
-                            <span className="flex items-center gap-2">
-                                <FileText className="h-5 w-5" />
-                                Line Items
+                <Card className="overflow-hidden border-border/80 shadow-none">
+                    <CardHeader className="flex-row items-center justify-between space-y-0 border-b bg-muted/20 px-4 py-4 sm:px-6">
+                        <CardTitle className="flex items-center gap-3 text-base sm:text-lg">
+                            <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
+                                <FileText className="h-4 w-4" />
                             </span>
-                            <Button variant="outline" size="sm" onClick={addLineItem}>
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Item
-                            </Button>
+                            <span>Line items</span>
                         </CardTitle>
+                        <Button size="sm" onClick={addLineItem}>
+                            <Plus className="h-4 w-4" />
+                            <span className="hidden sm:inline">Add item</span>
+                            <span className="sm:hidden">Add</span>
+                        </Button>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 p-4 sm:p-6">
                         {lineItems.map((item, index) => (
-                            <div key={item.id} className="p-4 border rounded-lg space-y-3">
+                            <div key={item.id} className="space-y-5 rounded-lg border border-border/80 bg-background/50 p-4 sm:p-5">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium text-muted-foreground">
-                                        Item {index + 1}
+                                    <span className="inline-flex items-center gap-2 text-sm font-semibold">
+                                        <span className="grid h-7 w-7 place-items-center rounded-full bg-primary/10 text-xs text-primary">
+                                            {index + 1}
+                                        </span>
+                                        Line item
                                     </span>
                                     {lineItems.length > 1 && (
                                         <Button
                                             variant="ghost"
                                             size="icon"
                                             onClick={() => removeLineItem(item.id)}
+                                            aria-label={`Remove item ${index + 1}`}
+                                            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                                         >
-                                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                                            <Trash2 className="h-4 w-4" />
                                         </Button>
                                     )}
                                 </div>
                                 
                                 {products.length > 0 && (
-                                    <div>
+                                    <div className="space-y-2">
                                         <Label>Product</Label>
                                         <Select
                                             value={item.product_id?.toString() || 'custom'}
                                             onValueChange={(v) => handleProductSelect(item.id, v)}
                                         >
-                                            <SelectTrigger>
+                                            <SelectTrigger className="bg-card">
                                                 <SelectValue placeholder="Select product or custom" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -582,10 +597,11 @@ export function EstimateEditorPage() {
                                     </div>
                                 )}
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="col-span-2">
+                                <div>
+                                    <div className="space-y-2">
                                         <Label>Name *</Label>
                                         <Input
+                                            className="bg-card"
                                             value={item.name}
                                             onChange={(e) => updateLineItem(item.id, { name: e.target.value })}
                                             placeholder="Item name"
@@ -593,28 +609,31 @@ export function EstimateEditorPage() {
                                     </div>
                                 </div>
 
-                                <div>
+                                <div className="space-y-2">
                                     <Label>Description</Label>
                                     <Input
+                                        className="bg-card"
                                         value={item.description}
                                         onChange={(e) => updateLineItem(item.id, { description: e.target.value })}
                                         placeholder="Optional description"
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div>
+                                <div className="grid gap-4 sm:grid-cols-3">
+                                    <div className="space-y-2">
                                         <Label>Quantity</Label>
                                         <Input
+                                            className="bg-card"
                                             type="number"
                                             min="1"
                                             value={item.quantity || ''}
                                             onChange={(e) => updateLineItem(item.id, { quantity: e.target.value === '' ? 1 : parseInt(e.target.value) })}
                                         />
                                     </div>
-                                    <div>
+                                    <div className="space-y-2">
                                         <Label>Unit Price</Label>
                                         <Input
+                                            className="bg-card"
                                             type="number"
                                             min="0"
                                             step="0.01"
@@ -622,9 +641,10 @@ export function EstimateEditorPage() {
                                             onChange={(e) => updateLineItem(item.id, { unit_price: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
                                         />
                                     </div>
-                                    <div>
+                                    <div className="space-y-2">
                                         <Label>Tax %</Label>
                                         <Input
+                                            className="bg-card"
                                             type="number"
                                             min="0"
                                             max="100"
@@ -635,7 +655,7 @@ export function EstimateEditorPage() {
                                     </div>
                                 </div>
 
-                                <div className="text-right text-sm">
+                                <div className="rounded-md bg-primary/5 px-3 py-2 text-right text-sm">
                                     <span className="text-muted-foreground">Line Total: </span>
                                     <span className="font-medium">
                                         {formatCurrency(item.quantity * item.unit_price * (1 + item.tax_rate / 100))}
@@ -647,13 +667,19 @@ export function EstimateEditorPage() {
                 </Card>
 
                 {/* Totals & Notes */}
-                <div className="grid grid-cols-2 gap-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Notes</CardTitle>
+                <div className="grid gap-6 lg:grid-cols-2">
+                    <Card className="overflow-hidden border-border/80 shadow-none">
+                        <CardHeader className="border-b bg-muted/20 px-4 py-4 sm:px-6">
+                            <CardTitle className="flex items-center gap-3 text-base sm:text-lg">
+                                <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
+                                    <StickyNote className="h-4 w-4" />
+                                </span>
+                                <span>Customer notes</span>
+                            </CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="p-4 sm:p-6">
                             <Textarea
+                                className="min-h-32 bg-card"
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
                                 placeholder="Notes for the customer..."
@@ -662,14 +688,16 @@ export function EstimateEditorPage() {
                         </CardContent>
                     </Card>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <DollarSign className="h-5 w-5" />
-                                Summary
+                    <Card className="overflow-hidden border-border/80 shadow-none">
+                        <CardHeader className="border-b bg-muted/20 px-4 py-4 sm:px-6">
+                            <CardTitle className="flex items-center gap-3 text-base sm:text-lg">
+                                <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
+                                    <DollarSign className="h-4 w-4" />
+                                </span>
+                                <span>Summary</span>
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="space-y-4 p-4 sm:p-6">
                             <div className="flex justify-between">
                                 <span>Subtotal</span>
                                 <span>{formatCurrency(subtotal)}</span>
@@ -678,13 +706,13 @@ export function EstimateEditorPage() {
                                 <span>Tax</span>
                                 <span>{formatCurrency(taxAmount)}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span>Discount</span>
+                            <div className="grid grid-cols-[auto_auto_1fr] items-center gap-2 sm:grid-cols-[1fr_auto_auto_auto]">
+                                <span className="col-span-3 sm:col-span-1">Discount</span>
                                 <Select
                                     value={discountType}
                                     onValueChange={(v) => setDiscountType(v as 'fixed' | 'percent')}
                                 >
-                                    <SelectTrigger className="w-24 h-8">
+                                    <SelectTrigger className="h-9 w-24 bg-card">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -695,11 +723,11 @@ export function EstimateEditorPage() {
                                 <Input
                                     type="number"
                                     min="0"
-                                    className="w-20 h-8"
+                                    className="h-9 w-24 bg-card"
                                     value={discountValue}
                                     onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
                                 />
-                                <span className="ml-auto">-{formatCurrency(discountAmount)}</span>
+                                <span className="col-span-3 text-right text-sm text-muted-foreground sm:col-span-1 sm:text-foreground">-{formatCurrency(discountAmount)}</span>
                             </div>
                             <Separator />
                             <div className="flex justify-between text-lg font-bold">
@@ -711,14 +739,13 @@ export function EstimateEditorPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex justify-end gap-4">
+                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                     <Button variant="outline" onClick={() => navigate('/estimates')}>
                         Cancel
                     </Button>
                     <Button
                         onClick={handleSave}
                         disabled={saving || lineItems.filter(i => i.name).length === 0}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
                         <Save className="h-4 w-4 mr-2" />
                         {saving ? 'Saving...' : isNew ? 'Create Estimate' : 'Save Changes'}

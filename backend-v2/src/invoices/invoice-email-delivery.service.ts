@@ -241,7 +241,8 @@ export class InvoiceEmailDeliveryService {
     return brandedTransactionalEmail({
       assetOrigin: this.frontendOrigin(),
       previewText: `Invoice ${number} is ready.`,
-      eyebrow: `Invoice · ${number}`,
+      eyebrow: 'Invoice',
+      reference: number,
       heading: `Invoice ${number}`,
       bodyHtml: `<div style="white-space:pre-wrap">${message}</div>`,
       cta: paymentUrl ? { label: 'Pay invoice', url: paymentUrl } : undefined,
