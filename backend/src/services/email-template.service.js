@@ -3,6 +3,12 @@
  * Handles template variable replacement and email branding
  */
 
+const {
+    brandedTransactionalEmail,
+    escapeHtml,
+    transactionalEmailAssetOrigin,
+} = require('./branded-transactional-email');
+
 // CSS class to inline style mapping for email compatibility
 const CSS_CLASS_STYLES = {
     // Buttons
@@ -184,7 +190,9 @@ function transformCssToInline(html) {
  * @returns {object} - Template variables
  */
 function getDefaultVariables(recipient = {}) {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    // Outbound email links must remain usable outside the local browser even
+    // when a deployment omits the optional FRONTEND_URL variable.
+    const frontendUrl = process.env.FRONTEND_URL || process.env.PROD_URL || 'https://itemize.cloud';
 
     return {
         userName: recipient.name || recipient.email?.split('@')[0] || 'User',
@@ -229,6 +237,34 @@ function wrapInBrandedTemplate(bodyHtml, options = {}) {
     // If content already looks like a complete HTML document, return as-is
     if (bodyHtml.toLowerCase().includes('<!doctype') || bodyHtml.toLowerCase().includes('<html')) {
         return bodyHtml;
+    }
+
+    // All retained app-generated messages use the same shell and tokens as the
+    // GraphQL transactional senders. The fallback below exists only for an
+    // explicitly requested legacy preview while old editor previews are phased
+    // out; no delivery path opts into it.
+    if (options.useCanonicalShell !== false) {
+        const styledBody = transformCssToInline(bodyHtml);
+        const resolvedBaseUrl = normalizeBaseUrl(
+            baseUrl || (isPreview ? FRONTEND_URL : PROD_URL) || PROD_URL || FRONTEND_URL || 'https://itemize.cloud'
+        );
+        const footerHtml = showUnsubscribe
+            ? `<a href="{{unsubscribeUrl}}" style="color:#2563eb;text-decoration:none">Unsubscribe</a>` +
+              ` &middot; <a href="${escapeHtml(resolvedBaseUrl)}" style="color:#2563eb;text-decoration:none">Visit Itemize</a>`
+            : `Sent securely with <a href="${escapeHtml(resolvedBaseUrl)}" style="color:#2563eb;text-decoration:none">Itemize</a>.`;
+
+        return brandedTransactionalEmail({
+            assetOrigin: isPreview
+                ? resolvedBaseUrl
+                : transactionalEmailAssetOrigin({
+                    EMAIL_ASSET_ORIGIN: resolvedBaseUrl,
+                    PROD_URL: resolvedBaseUrl,
+                }),
+            previewText: subject,
+            heading: subject,
+            bodyHtml: styledBody,
+            footerHtml,
+        });
     }
 
     // Transform CSS classes to inline styles

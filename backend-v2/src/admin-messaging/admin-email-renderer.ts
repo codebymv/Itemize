@@ -30,13 +30,13 @@ export const wrapAdminEmail = (
   subject: string,
   baseUrl: string,
 ): string => {
-  if (/<!doctype|<html[\s>]/i.test(bodyHtml)) return bodyHtml;
   const safeBaseUrl = escapeHtml(baseUrl);
+  const documentBody = bodyHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] ?? bodyHtml;
   return brandedTransactionalEmail({
     assetOrigin: baseUrl,
     previewText: subject,
     heading: subject,
-    bodyHtml,
+    bodyHtml: documentBody,
     footerHtml:
       `<a href="{{unsubscribeUrl}}" style="color:#2563eb;text-decoration:none">Unsubscribe</a> &middot; ` +
       `<a href="${safeBaseUrl}" style="color:#2563eb;text-decoration:none">Visit Itemize</a>`,

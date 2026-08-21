@@ -51,3 +51,24 @@ The PostgreSQL GraphQL integration test covers:
    conversion in the administrator funnel.
 5. Browser-test fresh Free and Solo accounts at desktop and mobile widths after
    deployment, including Google and email verification exits.
+
+## Production matrix status — August 21, 2026
+
+The matrix is intentionally halted, not passed.
+
+- [x] Free desktop email signup was accepted and created the correct Free
+  workspace/navigation state.
+- [x] The post-verification exit resolved to Canvas and presented the focused
+  workspace onboarding choice.
+- [ ] The received signup email met the branded-email contract. The initial run
+  failed because the deployed GraphQL authentication service was older than the
+  renderer in source.
+- [x] The corrected GraphQL deployment produced a provider-confirmed branded
+  verification payload in a disposable canary.
+- [ ] Visually inspect a newly received verification email after deployment.
+- [ ] Complete Free mobile, Solo desktop/mobile, Google signup, first artifact,
+  provider-confirmed send, and recipient-response rows.
+
+The interrupted Free account, the email-brand canary, and both personal
+organizations were removed. See [outbound-email-brand-audit.md](outbound-email-brand-audit.md)
+for the sender inventory, production cause, and regression gates.

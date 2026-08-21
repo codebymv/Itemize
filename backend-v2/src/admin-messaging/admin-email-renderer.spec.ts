@@ -24,9 +24,16 @@ describe('admin email renderer', () => {
     expect(rendered.html).not.toContain('{{unsubscribeUrl}}');
   });
 
-  it('preserves intentionally complete customer HTML and rejects unsafe origins', () => {
-    expect(wrapAdminEmail('<html><body>Custom</body></html>', 'Custom', 'https://itemize.cloud'))
-      .toBe('<html><body>Custom</body></html>');
+  it('does not let complete admin HTML bypass the system shell and rejects unsafe origins', () => {
+    const wrapped = wrapAdminEmail(
+      '<html><body>Custom</body></html>',
+      'Custom',
+      'https://itemize.cloud',
+    );
+    expect(wrapped).toContain('height:4px;background:#2563eb');
+    expect(wrapped).toContain('https://itemize.cloud/cover.png');
+    expect(wrapped).toContain('>Custom</div>');
+    expect(wrapped.match(/<html/gi)).toHaveLength(1);
     expect(() => normalizeAdminEmailBaseUrl('javascript:alert(1)'))
       .toThrow('INVALID_BASE_URL');
   });
