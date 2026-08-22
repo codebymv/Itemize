@@ -18,6 +18,12 @@ describe('Stripe invoice webhook retained HTTP contract', () => {
   const secret = 'whsec_invoice_webhook_integration';
   const stripe = new Stripe('sk_test_invoice_webhook_integration');
   const originalSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const fixtureEventIds = [
+    'evt_nest_invoice',
+    'evt_exact_body',
+    'evt_oversized',
+    'evt_nest_rollback',
+  ];
 
   beforeAll(async () => {
     const connectionString = process.env.TEST_DATABASE_URL;
@@ -30,6 +36,10 @@ describe('Stripe invoice webhook retained HTTP contract', () => {
       connectionString,
       ssl: process.env.TEST_DATABASE_SSL === 'true',
     });
+    await pool.query(
+      'DELETE FROM stripe_webhook_events WHERE event_id = ANY($1::text[])',
+      [fixtureEventIds],
+    );
     const suffix = `${Date.now()}-${process.pid}`;
     userId = Number((await pool.query<{ id: number }>(
       `INSERT INTO users (email, name, provider, email_verified)
@@ -87,6 +97,12 @@ describe('Stripe invoice webhook retained HTTP contract', () => {
   });
 
   afterAll(async () => {
+    if (pool) {
+      await pool.query(
+        'DELETE FROM stripe_webhook_events WHERE event_id = ANY($1::text[])',
+        [fixtureEventIds],
+      );
+    }
     if (pool && organizationId) {
       await pool.query('DELETE FROM organizations WHERE id = $1', [organizationId]);
     }

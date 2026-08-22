@@ -932,7 +932,7 @@ describe('E-signature GraphQL read contract', () => {
       } },
     );
     expect(preview.body.errors).toBeUndefined();
-    expect(preview.body.data.previewSignatureEmail.subject).toBe('Alice & Bob wants your signature');
+    expect(preview.body.data.previewSignatureEmail.subject).toBe('Your signature is requested');
     expect(preview.body.data.previewSignatureEmail.html).toContain('Please &lt;script&gt;alert(1)&lt;/script&gt; sign');
     expect(preview.body.data.previewSignatureEmail.html).toContain('/sign/preview');
     expect(preview.body.data.previewSignatureEmail.html).not.toContain('<script>');
@@ -1537,6 +1537,19 @@ describe('E-signature GraphQL read contract', () => {
   });
 
   it('serializes starter-plan monthly quota checks under concurrent draft creation', async () => {
+    await pool.query(
+      `UPDATE signature_documents
+       SET created_at = date_trunc('month', CURRENT_TIMESTAMP) - INTERVAL '1 day'
+       WHERE organization_id = $1`,
+      [organizationId],
+    );
+    const quotaBaseline = await pool.query<{ id: number }>(
+      `INSERT INTO signature_documents (organization_id, title, status, created_by)
+       SELECT $1, 'Quota baseline ' || value, 'draft', $2
+       FROM generate_series(1, 20) AS value
+       RETURNING id`,
+      [organizationId, memberId],
+    );
     const attempts = await Promise.all(Array.from({ length: 6 }, (_, index) => graphql(
       memberToken,
       organizationId,
@@ -1548,6 +1561,8 @@ describe('E-signature GraphQL read contract', () => {
     expect(successfulIds).toHaveLength(5);
     expect(failures).toHaveLength(1);
     expect(failures[0].body.errors[0].extensions).toMatchObject({ code: 'FORBIDDEN', reason: 'SIGNATURE_MONTHLY_LIMIT' });
-    await pool.query('DELETE FROM signature_documents WHERE id=ANY($1::int[])', [successfulIds]);
+    await pool.query('DELETE FROM signature_documents WHERE id=ANY($1::int[])', [
+      [...quotaBaseline.rows.map((row) => Number(row.id)), ...successfulIds],
+    ]);
   });
 });

@@ -15,6 +15,8 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
   let pool: Pool;
   let memberId: number;
   let outsiderId: number;
+  let memberOrganizationId: number;
+  let outsiderOrganizationId: number;
   let memberToken: string;
   let outsiderToken: string;
   let workCategoryId: number;
@@ -51,6 +53,36 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       ],
     );
     [memberId, outsiderId] = users.rows.map((row) => Number(row.id));
+    const organizations = await pool.query<{ id: number }>(
+      `INSERT INTO organizations (name, slug)
+       VALUES ('Workspace Primary', $1), ('Workspace Other', $2)
+       RETURNING id`,
+      [`workspace-primary-${suffix}`, `workspace-other-${suffix}`],
+    );
+    [memberOrganizationId, outsiderOrganizationId] = organizations.rows.map(
+      (row) => Number(row.id),
+    );
+    await pool.query(
+      `INSERT INTO organization_members (organization_id, user_id, role, joined_at)
+       VALUES ($1, $3, 'owner', NOW()), ($2, $4, 'owner', NOW())`,
+      [memberOrganizationId, outsiderOrganizationId, memberId, outsiderId],
+    );
+    await pool.query(
+      `UPDATE users
+       SET default_organization_id = CASE id
+         WHEN $3 THEN $1
+         WHEN $4 THEN $2
+         ELSE default_organization_id
+       END
+       WHERE id = ANY($5::int[])`,
+      [
+        memberOrganizationId,
+        outsiderOrganizationId,
+        memberId,
+        outsiderId,
+        [memberId, outsiderId],
+      ],
+    );
     memberToken = await jwt.signAsync(
       { id: memberId },
       { secret: process.env.JWT_SECRET, expiresIn: '15m' },
@@ -201,6 +233,9 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
           mutationWireframeId || 0,
         ],
       );
+      await pool.query('DELETE FROM organizations WHERE id = ANY($1::int[])', [
+        [memberOrganizationId, outsiderOrganizationId].filter(Boolean),
+      ]);
       await pool.query('DELETE FROM users WHERE id = ANY($1::int[])', [
         [memberId, outsiderId].filter(Boolean),
       ]);

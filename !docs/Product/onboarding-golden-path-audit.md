@@ -128,15 +128,15 @@ Application safeguards added during this pass:
 - Customer communications use `Free`, `Solo`, `Studio`, and `Studio+` rather
   than internal plan keys.
 
-No live charge was created during this preflight. The authorized checkout
-canary was halted before card entry because the configured live Stripe account
-is the shared CodeByMV account: it also contains active TLM and GLEAM products,
-and Checkout identifies the merchant as `Matt Valentine` with the `CODEBYMV`
-statement descriptor. Itemize must not globally rebrand or share a billing
-boundary with those products. The portal configuration created during the
-preflight cannot be deactivated because Stripe made it the account default, so
-it was neutralized: Itemize branding and product mappings were removed, and
-subscription changes and cancellation were disabled.
+The authorized live conversion canary completed on August 22, 2026 against the
+isolated Itemize billing boundary. A $29 monthly Solo Checkout completed, both
+signed billing webhook deliveries returned `200`, and the application exposed
+the paid entitlement. The subscription was then cancelled and the complete $29
+charge was refunded immediately. Stripe ended with one fully refunded canary
+charge, zero active subscriptions, and one cancelled canary subscription. The
+application returned the workspace to Free, and reopening the upgrade flow did
+not create another charge. No client account or non-Itemize catalog was read or
+mutated during this canary.
 
 Checkout also exposed that new Stripe customers used a synthetic
 `org-{id}@itemize.cloud` address. Customer creation now selects the
@@ -144,22 +144,23 @@ organization owner's verified account email instead. The aborted attempt
 created only an Itemize-labeled customer and Checkout session; that session was
 explicitly expired while still unpaid. No payment, subscription, refund, or
 TLM/GLEAM product or customer mutation occurred during the canary. Production
-subscription Checkout now fails closed unless
-`ITEMIZE_SUBSCRIPTION_BILLING_ENABLED=true` is set after account isolation.
+subscription Checkout remains fail-closed unless
+`ITEMIZE_SUBSCRIPTION_BILLING_ENABLED=true`; it is enabled only for the isolated
+Itemize live catalog and webhook configuration.
 
 The targeted frontend, billing service, webhook worker, legacy PostgreSQL
-integration, and production builds pass. The broader backend-v2 integration
-suite still contains older fixtures with `subscription_status=none`; those
-fixtures now fail the hardened entitlement guard and must be migrated to valid
-active or trialing subscriptions before the full suite can serve as a green
-release gate.
+integration, and production builds pass. On August 22, the complete backend-v2
+PostgreSQL gate also passed 36/36 suites and 273/273 assertions. Feature specs
+now receive an explicit active test entitlement from disposable-schema setup,
+while billing and authentication specs continue to create their exact Free,
+trialing, active, cancelled, and expired states. The production entitlement
+guard remains fail-closed.
 
 ### Remaining matrix extensions
 
-- Create or select a dedicated Itemize Stripe account, install its live secret
-  and webhook signing secret, recreate the Solo/Studio monthly catalog and
-  Itemize portal configuration there, then rerun the authorized charge/refund
-  canary. Do not reuse the shared account containing TLM/GLEAM products.
+- Replace the placeholder annual price environment values with isolated live
+  Itemize prices before exposing annual billing controls, then repeat the same
+  immediate-cancellation/refund canary for each annual tier.
 - Estimate decline and signature decline are covered by renderer/service tests;
   add production canaries when destructive fixture coverage is next scheduled.
 

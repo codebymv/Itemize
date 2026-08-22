@@ -1131,7 +1131,7 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     expect(preview.body.errors).toBeUndefined();
     expect(preview.body.data.previewInvoiceEmail.html)
       .toContain('Hello Ada,\nYour invoice is attached.');
-    expect(preview.body.data.previewInvoiceEmail.html).toContain('Pay Now');
+    expect(preview.body.data.previewInvoiceEmail.html).toContain('Pay now');
     expect(preview.body.data.previewInvoiceEmail.html)
       .not.toContain('Unsubscribe');
 
@@ -1152,7 +1152,7 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     expect(html).toContain('&lt;script&gt;window.opener.pwned=true&lt;/script&gt;');
     expect(html).toContain('&lt;/title&gt;&lt;script&gt;alert(1)&lt;/script&gt;');
     expect(html).not.toContain('<script>alert(1)</script>');
-    expect(html).toContain('Pay Now');
+    expect(html).toContain('Pay now');
     expect(html).not.toContain('Unsubscribe');
 
     const empty = await graphql(

@@ -18,7 +18,7 @@ export class SmsTemplatesResolver {
   smsTemplate(@Args('id', { type: () => Int }) id: number) { return this.templates.detail(this.organizationId(), id); }
   @OrganizationScoped() @Query(() => [SmsTemplateCategory])
   smsTemplateCategories() { return this.templates.categories(this.organizationId()); }
-  @Query(() => SmsMessageInfo)
+  @OrganizationScoped() @Query(() => SmsMessageInfo)
   smsMessageInfo(@Args('message') message: string) { this.userId(); return this.templates.messageInfo(message); }
   @CsrfProtected() @OrganizationScoped() @Mutation(() => SmsTemplate)
   createSmsTemplate(@Args('input') input: CreateSmsTemplateInput) { return this.templates.create(this.organizationId(), this.userId(), input); }

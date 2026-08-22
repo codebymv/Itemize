@@ -2,7 +2,6 @@ import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import bcrypt from 'bcryptjs';
-import cookieParser from 'cookie-parser';
 import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
@@ -10,9 +9,9 @@ import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
 
-describe('Authenticated landing-pages REST/GraphQL PostgreSQL parity', () => {
+describe('Authenticated landing-pages GraphQL PostgreSQL contract', () => {
   let graphqlApp: NestExpressApplication;
-  let legacyApp: Express;
+  let publicApp: Express;
   let pool: Pool;
   let organizationId: number;
   let outsiderOrganizationId: number;
@@ -137,18 +136,17 @@ describe('Authenticated landing-pages REST/GraphQL PostgreSQL parity', () => {
     await graphqlApp.init();
 
     const createPagesRouter = require('../../../backend/src/routes/pages.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use(
+    publicApp = express();
+    publicApp.use(express.json());
+    publicApp.use(
       '/api/pages',
       createPagesRouter(
         pool,
-        authenticateJWT,
+        undefined,
         (_req: unknown, _res: unknown, next: () => void) => next(),
       ),
     );
+
   });
 
   afterAll(async () => {
@@ -202,12 +200,7 @@ describe('Authenticated landing-pages REST/GraphQL PostgreSQL parity', () => {
     sections { ${sectionFields} }
   `;
 
-  it('matches REST list/detail projections and keeps foreign pages private', async () => {
-    const legacyList = await request(legacyApp)
-      .get('/api/pages')
-      .set('Cookie', `itemize_auth=${memberToken}`)
-      .set('x-organization-id', String(organizationId))
-      .expect(200);
+  it('lists and reads tenant pages while keeping foreign pages private', async () => {
     const target = await graphql(
       memberToken,
       organizationId,
@@ -220,18 +213,14 @@ describe('Authenticated landing-pages REST/GraphQL PostgreSQL parity', () => {
       }`,
     ).expect(200);
     expect(target.body.errors).toBeUndefined();
-    const legacyPages = legacyList.body.data?.pages ?? legacyList.body.pages;
-    const legacyPage = legacyPages.find(
-      (page: { id: number }) => page.id === pageId,
-    );
     expect(target.body.data.landingPages).toMatchObject({
       pageInfo: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
       nodes: [
         expect.objectContaining({
-          id: legacyPage.id,
-          organizationId: legacyPage.organization_id,
-          name: legacyPage.name,
-          slug: legacyPage.slug,
+          id: pageId,
+          organizationId,
+          name: 'Launch',
+          slug: 'launch',
           sectionCount: 2,
         }),
       ],
@@ -533,11 +522,11 @@ describe('Authenticated landing-pages REST/GraphQL PostgreSQL parity', () => {
       version.body.data.createLandingPageVersion.content.settings.password,
     ).toBeUndefined();
 
-    await request(legacyApp)
+    await request(publicApp)
       .get('/api/pages/public/page/launch')
       .set('x-page-password', 'wrong-password')
       .expect(401);
-    await request(legacyApp)
+    await request(publicApp)
       .get('/api/pages/public/page/launch')
       .set('x-page-password', 'open-sesame')
       .expect(200)

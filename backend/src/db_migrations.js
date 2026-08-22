@@ -737,15 +737,30 @@ const runWireframesMigration = async (pool) => {
     `);
     console.log('✅ index idx_wireframes_is_public created');
 
-    // Create trigger for wireframes table to automatically update updated_at
+    // Canvas position is layout state and must not invalidate the optimistic
+    // content revision used by the wireframe editor.
     await pool.query(`
       DROP TRIGGER IF EXISTS trigger_wireframes_updated_at ON wireframes;
     `);
     await pool.query(`
+      CREATE OR REPLACE FUNCTION update_wireframe_content_updated_at()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        IF (to_jsonb(NEW) - ARRAY['position_x', 'position_y', 'updated_at'])
+           IS DISTINCT FROM
+           (to_jsonb(OLD) - ARRAY['position_x', 'position_y', 'updated_at']) THEN
+          NEW.updated_at = NOW();
+        ELSE
+          NEW.updated_at = OLD.updated_at;
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+
       CREATE TRIGGER trigger_wireframes_updated_at
       BEFORE UPDATE ON wireframes
       FOR EACH ROW
-      EXECUTE FUNCTION update_updated_at_column();
+      EXECUTE FUNCTION update_wireframe_content_updated_at();
     `);
     console.log('✅ trigger_wireframes_updated_at created');
 

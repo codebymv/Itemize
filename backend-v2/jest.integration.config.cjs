@@ -3,8 +3,9 @@ module.exports = {
   rootDir: '.',
   testMatch: ['<rootDir>/test/integration/**/*.integration-spec.ts'],
   transform: {
-    '^.+\\.(t|j)s$': ['ts-jest', { tsconfig: 'tsconfig.json' }],
+    '^.+\\.ts$': ['ts-jest', { tsconfig: 'tsconfig.json' }],
   },
+  globalSetup: '<rootDir>/test/integration/global-setup.cjs',
   testEnvironment: 'node',
   testTimeout: 30000,
 };
