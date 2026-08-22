@@ -222,6 +222,45 @@ describe('Stripe subscription webhook PostgreSQL contract', () => {
     expect(claim.rows[0].processing_status).toBe('stale');
   });
 
+  test('a current deletion revokes the paid plan and clears paid limits', async () => {
+    const customerId = `cus_canceled_${Date.now()}`;
+    const subscriptionId = `sub_canceled_${Date.now()}`;
+    const user = await createBillingOrganization('canceled', customerId, subscriptionId);
+    const deleted = subscriptionEvent({
+      created: 1900000250,
+      customerId,
+      eventId: `evt_canceled_${Date.now()}`,
+      priceId: 'price_starter_monthly',
+      status: 'canceled',
+      subscriptionId,
+      type: 'customer.subscription.deleted',
+    });
+
+    expect((await signedPost(app, deleted)).status).toBe(200);
+    const org = await dbHelper.pool.query(`
+      SELECT plan, subscription_status, stripe_subscription_id,
+             emails_limit, sms_limit, api_calls_limit, contacts_limit,
+             users_limit, workflows_limit, landing_pages_limit,
+             forms_limit, calendars_limit
+      FROM organizations
+      WHERE id = $1
+    `, [user.org.id]);
+    expect(org.rows[0]).toMatchObject({
+      plan: 'free',
+      subscription_status: 'canceled',
+      stripe_subscription_id: null,
+      emails_limit: 0,
+      sms_limit: 0,
+      api_calls_limit: 0,
+      contacts_limit: 0,
+      users_limit: 0,
+      workflows_limit: 0,
+      landing_pages_limit: 0,
+      forms_limit: 0,
+      calendars_limit: 0,
+    });
+  });
+
   test('quarantines a Stripe customer mapped to multiple organizations', async () => {
     const customerId = `cus_ambiguous_${Date.now()}`;
     const first = await createBillingOrganization('ambiguous-a', customerId);

@@ -134,6 +134,7 @@ const PLAN_TO_STRIPE_PRICES = {
  * -1 = unlimited
  */
 const ORGANIZATION_LIMITS = {
+    [PLANS.FREE]: 0,
     [PLANS.STARTER]: 3,
     [PLANS.UNLIMITED]: Infinity,
     [PLANS.PRO]: Infinity
@@ -143,6 +144,7 @@ const ORGANIZATION_LIMITS = {
  * Contacts per organization limits
  */
 const CONTACTS_LIMITS = {
+    [PLANS.FREE]: 0,
     [PLANS.STARTER]: 5000,
     [PLANS.UNLIMITED]: 25000,
     [PLANS.PRO]: Infinity
@@ -152,6 +154,7 @@ const CONTACTS_LIMITS = {
  * Users per organization limits
  */
 const USERS_LIMITS = {
+    [PLANS.FREE]: 0,
     [PLANS.STARTER]: 3,
     [PLANS.UNLIMITED]: 10,
     [PLANS.PRO]: Infinity
@@ -161,6 +164,7 @@ const USERS_LIMITS = {
  * Workflow limits
  */
 const WORKFLOW_LIMITS = {
+    [PLANS.FREE]: 0,
     [PLANS.STARTER]: 5,
     [PLANS.UNLIMITED]: 25,
     [PLANS.PRO]: Infinity
@@ -170,6 +174,7 @@ const WORKFLOW_LIMITS = {
  * Emails per month limits
  */
 const EMAIL_LIMITS = {
+    [PLANS.FREE]: 0,
     [PLANS.STARTER]: 1000,
     [PLANS.UNLIMITED]: 10000,
     [PLANS.PRO]: 50000
@@ -179,6 +184,7 @@ const EMAIL_LIMITS = {
  * SMS per month limits
  */
 const SMS_LIMITS = {
+    [PLANS.FREE]: 0,
     [PLANS.STARTER]: 500,
     [PLANS.UNLIMITED]: 5000,
     [PLANS.PRO]: 25000
@@ -188,6 +194,7 @@ const SMS_LIMITS = {
  * Landing page limits
  */
 const LANDING_PAGE_LIMITS = {
+    [PLANS.FREE]: 0,
     [PLANS.STARTER]: 10,
     [PLANS.UNLIMITED]: 50,
     [PLANS.PRO]: Infinity
@@ -197,6 +204,7 @@ const LANDING_PAGE_LIMITS = {
  * Form limits
  */
 const FORM_LIMITS = {
+    [PLANS.FREE]: 0,
     [PLANS.STARTER]: 10,
     [PLANS.UNLIMITED]: 50,
     [PLANS.PRO]: Infinity
@@ -206,6 +214,7 @@ const FORM_LIMITS = {
  * Calendar limits
  */
 const CALENDAR_LIMITS = {
+    [PLANS.FREE]: 0,
     [PLANS.STARTER]: 3,
     [PLANS.UNLIMITED]: Infinity,
     [PLANS.PRO]: Infinity
@@ -215,6 +224,7 @@ const CALENDAR_LIMITS = {
  * Signature documents per month limits
  */
 const SIGNATURE_LIMITS = {
+    [PLANS.FREE]: 0,
     [PLANS.STARTER]: 25,
     [PLANS.UNLIMITED]: Infinity,
     [PLANS.PRO]: Infinity
@@ -224,6 +234,7 @@ const SIGNATURE_LIMITS = {
  * API calls per day limits
  */
 const API_LIMITS = {
+    [PLANS.FREE]: 0,
     [PLANS.STARTER]: 0,  // No API access
     [PLANS.UNLIMITED]: 10000,
     [PLANS.PRO]: 100000
@@ -233,6 +244,7 @@ const API_LIMITS = {
  * Storage limits in MB
  */
 const STORAGE_LIMITS = {
+    [PLANS.FREE]: 0,
     [PLANS.STARTER]: 1024,    // 1GB
     [PLANS.UNLIMITED]: 10240, // 10GB
     [PLANS.PRO]: Infinity

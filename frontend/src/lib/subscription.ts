@@ -117,6 +117,15 @@ export const PLAN_PRICING: Record<Plan, {
     }
 };
 
+export const shouldStartSoloTrial = (
+    currentPlan: Plan | undefined,
+    targetPlan: Plan,
+    starterTrialEligible: boolean,
+): boolean =>
+    currentPlan === PLANS.FREE
+    && targetPlan === PLANS.STARTER
+    && starterTrialEligible;
+
 // ============================================
 // Feature Definitions
 // ============================================

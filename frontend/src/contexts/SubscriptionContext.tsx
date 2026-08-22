@@ -35,6 +35,7 @@ export interface Subscription {
     start: string;
     end: string;
   };
+  trialStartedAt?: string | null;
   trial?: {
     startsAt: string | null;
     endsAt: string;
@@ -235,6 +236,7 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
           displayName: PLAN_METADATA[status.plan as Plan]?.displayName,
           tierLevel: getPlanTier(status.plan as Plan),
           billingPeriod: status.billing_period,
+          trialStartedAt: status.trial_started_at,
           currentPeriod: status.billing_period_start && status.billing_period_end ? {
             start: status.billing_period_start,
             end: status.billing_period_end

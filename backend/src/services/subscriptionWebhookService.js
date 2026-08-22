@@ -386,15 +386,45 @@ async function processSubscriptionUpdate(client, normalized, org) {
 }
 
 async function processTerminalEvent(client, normalized, org, status) {
+  const canceled = status === 'canceled';
+  const terminalPlan = canceled ? PLANS.FREE : org.plan;
   await client.query(`
     UPDATE organizations SET
-      subscription_status = $1::varchar,
-      canceled_at = CASE WHEN $1::varchar = 'canceled' THEN $2 ELSE canceled_at END,
-      subscription_provider_updated_at = $2,
-      subscription_provider_event_id = $3,
+      plan = $1,
+      subscription_status = $3::varchar,
+      stripe_subscription_id = CASE WHEN $2 THEN NULL ELSE stripe_subscription_id END,
+      cancel_at_period_end = CASE WHEN $2 THEN FALSE ELSE cancel_at_period_end END,
+      emails_limit = CASE WHEN $2 THEN $4 ELSE emails_limit END,
+      sms_limit = CASE WHEN $2 THEN $5 ELSE sms_limit END,
+      api_calls_limit = CASE WHEN $2 THEN $6 ELSE api_calls_limit END,
+      contacts_limit = CASE WHEN $2 THEN $7 ELSE contacts_limit END,
+      users_limit = CASE WHEN $2 THEN $8 ELSE users_limit END,
+      workflows_limit = CASE WHEN $2 THEN $9 ELSE workflows_limit END,
+      landing_pages_limit = CASE WHEN $2 THEN $10 ELSE landing_pages_limit END,
+      forms_limit = CASE WHEN $2 THEN $11 ELSE forms_limit END,
+      calendars_limit = CASE WHEN $2 THEN $12 ELSE calendars_limit END,
+      canceled_at = CASE WHEN $2 THEN $13 ELSE canceled_at END,
+      subscription_provider_updated_at = $13,
+      subscription_provider_event_id = $14,
       updated_at = CURRENT_TIMESTAMP
-    WHERE id = $4
-  `, [status, normalized.eventCreatedAt, normalized.eventId, org.id]);
+    WHERE id = $15
+  `, [
+    terminalPlan,
+    canceled,
+    status,
+    finiteLimit(EMAIL_LIMITS, PLANS.FREE),
+    finiteLimit(SMS_LIMITS, PLANS.FREE),
+    finiteLimit(API_LIMITS, PLANS.FREE),
+    finiteLimit(CONTACTS_LIMITS, PLANS.FREE),
+    finiteLimit(USERS_LIMITS, PLANS.FREE),
+    finiteLimit(WORKFLOW_LIMITS, PLANS.FREE),
+    finiteLimit(LANDING_PAGE_LIMITS, PLANS.FREE),
+    finiteLimit(FORM_LIMITS, PLANS.FREE),
+    finiteLimit(CALENDAR_LIMITS, PLANS.FREE),
+    normalized.eventCreatedAt,
+    normalized.eventId,
+    org.id,
+  ]);
   await client.query(`
     UPDATE subscriptions SET
       status = $1::varchar,
@@ -402,9 +432,9 @@ async function processTerminalEvent(client, normalized, org, status) {
       updated_at = CURRENT_TIMESTAMP
     WHERE organization_id = $3
   `, [status, normalized.eventCreatedAt, org.id]);
-  await recordAuditEvent(client, normalized, org.id, org.plan, org.plan);
+  await recordAuditEvent(client, normalized, org.id, org.plan, terminalPlan);
   return markEvent(client, normalized, 'processed', {
-    newPlan: org.plan,
+    newPlan: terminalPlan,
     organizationId: org.id,
     previousPlan: org.plan,
   });

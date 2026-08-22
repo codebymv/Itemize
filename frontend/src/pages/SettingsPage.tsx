@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { PricingCards } from '@/components/subscription';
 import { SubscriptionStatus } from '@/components/subscription/SubscriptionStatus';
 import { CheckoutSuccessModal } from '@/components/subscription/CheckoutSuccessModal';
-import { Plan } from '@/lib/subscription';
+import { Plan, shouldStartSoloTrial } from '@/lib/subscription';
 import { TrialStatusCard } from '@/components/trial/TrialStatusCard';
 import { UsageIndicator, UsageIndicatorGrid } from '@/components/trial/UsageIndicator';
 import { useUsageStats } from '@/hooks/useUsageStats';
@@ -150,7 +150,7 @@ function AccountInfo({
 
     setIsLoading(true);
     try {
-      if (currentPlan === 'free' && planId === 'starter') {
+      if (shouldStartSoloTrial(currentPlan, planId, starterTrialEligible)) {
         await startSoloTrial();
         toast({
           title: 'Solo trial started',
@@ -257,7 +257,7 @@ function AccountInfo({
 function AccountSettings() {
   const { planName, subscription } = useSubscriptionState();
   const navigate = useNavigate();
-  const starterTrialEligible = planName === 'free' && !subscription?.trial?.endsAt;
+  const starterTrialEligible = planName === 'free' && !subscription?.trialStartedAt;
   const canSubscribeCurrentTrial =
     planName === 'starter' &&
     subscription?.status === 'trialing' &&
