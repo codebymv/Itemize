@@ -86,7 +86,7 @@ export const PLAN_METADATA: Record<Plan, {
 
 /**
  * Checkout uses Nest `STRIPE_PRICE_STARTER_MONTHLY` / `STRIPE_PRICE_UNLIMITED_MONTHLY`
- * (defaults: Solo `price_1U5ypmRxBJaRlFvtCDKzCKSC`, Studio `price_1U5yqFRxBJaRlFvtcC8I6bbo`).
+ * (defaults: Solo `price_1U78itEHPD0TpM72ybhQuqwH`, Studio `price_1U78jKEHPD0TpM72XLrdBuO5`).
  */
 export const PLAN_PRICING: Record<Plan, {
     monthly: number;

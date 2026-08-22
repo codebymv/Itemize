@@ -96,8 +96,8 @@ const PLAN_PRICING = {
  */
 const STRIPE_PRICE_TO_PLAN = {
     // Live monthly catalog
-    'price_1U5ypmRxBJaRlFvtCDKzCKSC': PLANS.STARTER,
-    'price_1U5yqFRxBJaRlFvtcC8I6bbo': PLANS.UNLIMITED,
+    'price_1U78itEHPD0TpM72ybhQuqwH': PLANS.STARTER,
+    'price_1U78jKEHPD0TpM72XLrdBuO5': PLANS.UNLIMITED,
     // Placeholders kept for local/webhook tests
     'price_starter_monthly': PLANS.STARTER,
     'price_unlimited_monthly': PLANS.UNLIMITED,
@@ -112,11 +112,11 @@ const STRIPE_PRICE_TO_PLAN = {
  */
 const PLAN_TO_STRIPE_PRICES = {
     [PLANS.STARTER]: {
-        monthly: 'price_1U5ypmRxBJaRlFvtCDKzCKSC',
+        monthly: 'price_1U78itEHPD0TpM72ybhQuqwH',
         yearly: 'price_starter_yearly'
     },
     [PLANS.UNLIMITED]: {
-        monthly: 'price_1U5yqFRxBJaRlFvtcC8I6bbo',
+        monthly: 'price_1U78jKEHPD0TpM72XLrdBuO5',
         yearly: 'price_unlimited_yearly'
     },
     [PLANS.PRO]: {

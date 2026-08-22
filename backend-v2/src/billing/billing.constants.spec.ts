@@ -29,10 +29,10 @@ describe('billingPrices', () => {
     process.env.STRIPE_PRICE_UNLIMITED_YEARLY = '  ';
 
     expect(billingPrices().starter.monthly).toBe(
-      'price_1U5ypmRxBJaRlFvtCDKzCKSC',
+      'price_1U78itEHPD0TpM72ybhQuqwH',
     );
     expect(billingPrices().unlimited.monthly).toBe(
-      'price_1U5yqFRxBJaRlFvtcC8I6bbo',
+      'price_1U78jKEHPD0TpM72XLrdBuO5',
     );
     expect(isPurchasableStripePriceId(billingPrices().unlimited.yearly)).toBe(
       false,

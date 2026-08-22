@@ -201,7 +201,7 @@ describe('BillingService', () => {
     provider.activeSubscription.mockResolvedValue({
       id: 'sub_active',
       status: 'active',
-      priceId: 'price_1U5ypmRxBJaRlFvtCDKzCKSC',
+      priceId: 'price_1U78itEHPD0TpM72ybhQuqwH',
     });
     provider.createPortalSession.mockResolvedValue('https://stripe.test/portal');
 
@@ -224,7 +224,7 @@ describe('BillingService', () => {
     provider.activeSubscription.mockResolvedValue({
       id: 'sub_active',
       status: 'active',
-      priceId: 'price_1U5ypmRxBJaRlFvtCDKzCKSC',
+      priceId: 'price_1U78itEHPD0TpM72ybhQuqwH',
     });
     provider.createPortalSession.mockResolvedValue('https://stripe.test/portal');
 
@@ -250,7 +250,7 @@ describe('BillingService', () => {
     provider.activeSubscription.mockResolvedValue({
       id: 'sub_active',
       status: 'active',
-      priceId: 'price_1U5ypmRxBJaRlFvtCDKzCKSC',
+      priceId: 'price_1U78itEHPD0TpM72ybhQuqwH',
     });
     provider.createPortalSession.mockResolvedValue('https://stripe.test/portal');
 
@@ -328,7 +328,7 @@ describe('BillingService', () => {
       type: 'StripeInvalidRequestError',
       code: 'resource_missing',
       message:
-        "No such price: 'price_1U5yqFRxBJaRlFvtcC8I6bbo'; a similar object exists in live mode, but a test mode key was used to make this request.",
+        "No such price: 'price_1U78jKEHPD0TpM72XLrdBuO5'; a similar object exists in live mode, but a test mode key was used to make this request.",
     });
 
     await expect(

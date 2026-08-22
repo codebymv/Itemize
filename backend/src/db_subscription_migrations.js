@@ -358,9 +358,9 @@ const seedSubscriptionPlans = async (pool) => {
         
         // Get Stripe price IDs from environment
         const stripePriceStarter =
-            process.env.STRIPE_PRICE_STARTER || 'price_1U5ypmRxBJaRlFvtCDKzCKSC';
+            process.env.STRIPE_PRICE_STARTER || 'price_1U78itEHPD0TpM72ybhQuqwH';
         const stripePriceGrowth =
-            process.env.STRIPE_PRICE_GROWTH || 'price_1U5yqFRxBJaRlFvtcC8I6bbo';
+            process.env.STRIPE_PRICE_GROWTH || 'price_1U78jKEHPD0TpM72XLrdBuO5';
         const stripePriceEnterprise = process.env.STRIPE_PRICE_ENTERPRISE || null;
 
         // Insert default plans

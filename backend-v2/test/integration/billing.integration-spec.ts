@@ -262,7 +262,7 @@ describe('Billing GraphQL PostgreSQL contract', () => {
     expect(provider.createCheckoutSession).toHaveBeenCalledWith(
       expect.objectContaining({
         organizationId,
-        priceId: 'price_1U5ypmRxBJaRlFvtCDKzCKSC',
+        priceId: 'price_1U78itEHPD0TpM72ybhQuqwH',
       }),
     );
     const stored = await pool.query<{ stripe_customer_id: string }>(

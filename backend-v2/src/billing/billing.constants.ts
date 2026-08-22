@@ -118,11 +118,11 @@ export const BILLING_PLANS: readonly PlanDefinition[] = [
 
 const defaultPrices: Record<BillingPlanId, Record<BillingPeriod, string>> = {
   starter: {
-    monthly: 'price_1U5ypmRxBJaRlFvtCDKzCKSC',
+    monthly: 'price_1U78itEHPD0TpM72ybhQuqwH',
     yearly: 'price_starter_yearly',
   },
   unlimited: {
-    monthly: 'price_1U5yqFRxBJaRlFvtcC8I6bbo',
+    monthly: 'price_1U78jKEHPD0TpM72XLrdBuO5',
     yearly: 'price_unlimited_yearly',
   },
   pro: {
