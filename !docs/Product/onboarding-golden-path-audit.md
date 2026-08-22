@@ -156,13 +156,35 @@ while billing and authentication specs continue to create their exact Free,
 trialing, active, cancelled, and expired states. The production entitlement
 guard remains fail-closed.
 
+### August 22 production regression canaries
+
+The wireframe conflict regression passed through the production UI and
+database boundary. A disposable Solo workspace created a wireframe and saved
+its first node. A canvas-only position update then changed `position_x` while
+preserving the wireframe's content `updated_at` revision. A second editor node
+saved afterward, and both nodes survived a full page reload with no conflict
+or error notification.
+
+The recipient-decline paths also passed with provider-confirmed email evidence:
+
+- Estimate `EST-00001` for $125 reached `declined`, recorded `declined_at`, and
+  queued a branded owner notification that completed as `sent` with a provider
+  ID.
+- The signature request email completed as `sent` with a provider ID. Its
+  public capability recorded the recipient as `declined`, retained the
+  `Recipient declined` reason, closed the document as `cancelled`, and sent the
+  branded owner decline notification with a provider ID.
+
+These tests used only the isolated `codebymv+itemize-release-*` organization.
+The disposable signature PDF was deleted from S3 and confirmed absent before
+the canary organization and user were deleted; both database counts returned
+zero after cleanup.
+
 ### Remaining matrix extensions
 
 - Replace the placeholder annual price environment values with isolated live
   Itemize prices before exposing annual billing controls, then repeat the same
   immediate-cancellation/refund canary for each annual tier.
-- Estimate decline and signature decline are covered by renderer/service tests;
-  add production canaries when destructive fixture coverage is next scheduled.
 
 Earlier disposable golden-path fixtures were removed after their evidence was
 recorded. The fresh OAuth account is retained as the sole production user for
