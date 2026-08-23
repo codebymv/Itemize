@@ -18,6 +18,21 @@ export type AdminActivationFunnelRow = {
   organizations_trial_to_paid: number;
 };
 
+export type AdminPlanEntitlement = {
+  status: 'active' | 'none';
+  limits: {
+    emails: number;
+    sms: number;
+    apiCalls: number;
+    contacts: number;
+    users: number;
+    workflows: number;
+    landingPages: number;
+    forms: number;
+    calendars: number;
+  };
+};
+
 @Injectable()
 export class AdminOperationsRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
@@ -137,31 +152,101 @@ export class AdminOperationsRepository {
     return result.rows[0];
   }
 
-  async updateOwnPlan(userId: number, plan: string): Promise<'updated' | 'no_organization' | 'plan_not_found'> {
+  async updateOwnPlan(
+    userId: number,
+    plan: string,
+    entitlement: AdminPlanEntitlement,
+  ): Promise<'updated' | 'no_organization' | 'plan_not_found'> {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
       const user = await client.query<{ default_organization_id: number | null }>(
-        'SELECT default_organization_id FROM users WHERE id = $1 FOR UPDATE', [userId],
+        'SELECT default_organization_id FROM users WHERE id = $1 FOR UPDATE',
+        [userId],
       );
       const organizationId = user.rows[0]?.default_organization_id;
       if (!organizationId) { await client.query('ROLLBACK'); return 'no_organization'; }
+      const organization = await client.query<{ current_plan_id: number | null }>(
+        'SELECT current_plan_id FROM organizations WHERE id = $1 FOR UPDATE',
+        [organizationId],
+      );
+      if (!organization.rows[0]) { await client.query('ROLLBACK'); return 'no_organization'; }
       const selected = await client.query<{ id: number }>(
         'SELECT id FROM subscription_plans WHERE name = $1 AND is_active = true LIMIT 1', [plan],
       );
-      const planId = selected.rows[0]?.id;
-      if (!planId) { await client.query('ROLLBACK'); return 'plan_not_found'; }
-      await client.query(
-        `INSERT INTO subscriptions (organization_id, plan_id, status, created_at, updated_at)
-         VALUES ($1, $2, 'active', NOW(), NOW())
-         ON CONFLICT (organization_id) DO UPDATE SET plan_id = EXCLUDED.plan_id,
-           status = 'active', updated_at = NOW()`, [organizationId, planId],
-      );
+      const planId = selected.rows[0]?.id ?? null;
+      if (!planId && plan !== 'free') { await client.query('ROLLBACK'); return 'plan_not_found'; }
+
+      let subscriptionId: number | null = null;
+      if (entitlement.status === 'active') {
+        const subscription = await client.query<{ id: number }>(
+          `INSERT INTO subscriptions (organization_id, plan_id, status, created_at, updated_at)
+           VALUES ($1, $2, 'active', NOW(), NOW())
+           ON CONFLICT (organization_id) DO UPDATE SET plan_id = EXCLUDED.plan_id,
+             status = 'active', updated_at = NOW()
+           RETURNING id`,
+          [organizationId, planId],
+        );
+        subscriptionId = subscription.rows[0]?.id ?? null;
+      } else {
+        const subscription = await client.query<{ id: number }>(
+          `UPDATE subscriptions
+           SET plan_id = COALESCE($2, plan_id), status = 'canceled',
+               canceled_at = NOW(), updated_at = NOW()
+           WHERE organization_id = $1
+           RETURNING id`,
+          [organizationId, planId],
+        );
+        subscriptionId = subscription.rows[0]?.id ?? null;
+      }
+
       const updated = await client.query(
-        'UPDATE organizations SET current_plan_id = $1, updated_at = NOW() WHERE id = $2',
-        [planId, organizationId],
+        `UPDATE organizations SET
+           current_plan_id = $1, plan = $2, subscription_status = $3,
+           emails_limit = $4, sms_limit = $5, api_calls_limit = $6,
+           contacts_limit = $7, users_limit = $8, workflows_limit = $9,
+           landing_pages_limit = $10, forms_limit = $11, calendars_limit = $12,
+           trial_ends_at = NULL, trial_end_acknowledged_at = NULL,
+           cancel_at_period_end = FALSE, canceled_at = NULL, updated_at = NOW()
+         WHERE id = $13`,
+        [
+          planId,
+          plan,
+          entitlement.status,
+          entitlement.limits.emails,
+          entitlement.limits.sms,
+          entitlement.limits.apiCalls,
+          entitlement.limits.contacts,
+          entitlement.limits.users,
+          entitlement.limits.workflows,
+          entitlement.limits.landingPages,
+          entitlement.limits.forms,
+          entitlement.limits.calendars,
+          organizationId,
+        ],
       );
       if (updated.rowCount !== 1) throw new Error('Default organization disappeared during plan update');
+
+      await client.query(
+        `INSERT INTO subscription_events (
+           subscription_id, organization_id, event_type, previous_plan_id,
+           new_plan_id, metadata, created_at
+         ) VALUES ($1, $2, 'admin_plan_override', $3, $4,
+           jsonb_build_object(
+             'actor_user_id', $5::int,
+             'plan', $6::text,
+             'source', 'admin_tier_selector'
+           ),
+           NOW())`,
+        [
+          subscriptionId,
+          organizationId,
+          organization.rows[0].current_plan_id,
+          planId,
+          userId,
+          plan,
+        ],
+      );
       await client.query('COMMIT');
       return 'updated';
     } catch (error) {

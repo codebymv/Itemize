@@ -42,6 +42,10 @@ describe('AdminOperationsService', () => {
   it('returns an atomic plan result and maps missing references to safe input errors', async () => {
     repository.updateOwnPlan.mockResolvedValueOnce('updated').mockResolvedValueOnce('no_organization');
     await expect(service.updateOwnPlan(8, ' Pro ')).resolves.toEqual({ message: 'Plan updated to pro', plan: 'pro' });
+    expect(repository.updateOwnPlan).toHaveBeenNthCalledWith(1, 8, 'pro', {
+      status: 'active',
+      limits: expect.objectContaining({ contacts: -1, users: -1, forms: -1 }),
+    });
     await expect(service.updateOwnPlan(8, 'starter')).rejects.toMatchObject<Partial<GraphQLError>>({ extensions: expect.objectContaining({ code: 'BAD_USER_INPUT' }) });
     await expect(service.updateOwnPlan(8, 'enterprise')).rejects.toMatchObject<Partial<GraphQLError>>({ extensions: expect.objectContaining({ code: 'BAD_USER_INPUT' }) });
   });

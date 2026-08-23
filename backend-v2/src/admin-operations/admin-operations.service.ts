@@ -1,10 +1,22 @@
 import { Injectable } from '@nestjs/common';
+import { BillingPlanId, planDefinition } from '../billing/billing.constants';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { AdminUserIdsInput, AdminUserSearchInput } from './admin-operations.inputs';
 import { AdminOperationsRepository, AdminUserRow } from './admin-operations.repository';
 import { AdminActivationFunnel, AdminPlanUpdate, AdminSystemStats, AdminUser, AdminUserCount, AdminUserIds, AdminUserSearchResult } from './admin-operations.types';
 
 const PLANS = new Set(['free', 'starter', 'unlimited', 'pro']);
+const FREE_LIMITS = {
+  emails: 0,
+  sms: 0,
+  apiCalls: 0,
+  contacts: 0,
+  users: 0,
+  workflows: 0,
+  landingPages: 0,
+  forms: 0,
+  calendars: 0,
+};
 
 @Injectable()
 export class AdminOperationsService {
@@ -66,7 +78,26 @@ export class AdminOperationsService {
 
   async updateOwnPlan(userId: number, requestedPlan: string): Promise<AdminPlanUpdate> {
     const plan = this.plan(requestedPlan, false)!;
-    const result = await this.repository.updateOwnPlan(userId, plan);
+    const definition = plan === 'free'
+      ? undefined
+      : planDefinition(plan as BillingPlanId);
+    if (plan !== 'free' && !definition) this.bad(`Plan "${plan}" is unavailable`, 'plan');
+    const result = await this.repository.updateOwnPlan(userId, plan, {
+      status: plan === 'free' ? 'none' : 'active',
+      limits: definition
+        ? {
+            emails: definition.limits.emails,
+            sms: definition.limits.sms,
+            apiCalls: definition.limits.apiCalls,
+            contacts: definition.limits.contacts,
+            users: definition.limits.users,
+            workflows: definition.limits.workflows,
+            landingPages: definition.limits.landingPages,
+            forms: definition.limits.forms,
+            calendars: definition.limits.calendars,
+          }
+        : FREE_LIMITS,
+    });
     if (result === 'no_organization') this.bad('No organization associated with user', 'plan');
     if (result === 'plan_not_found') this.bad(`Plan "${plan}" is unavailable`, 'plan');
     return { message: `Plan updated to ${plan}`, plan };

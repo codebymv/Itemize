@@ -165,7 +165,7 @@ interface SubscriptionFeaturesContextType {
   } | null;
   requiresUpgrade: (feature: FeatureName) => boolean;
   getRequiredTier: (feature: FeatureName) => number;
-  refreshSubscription: () => Promise<void>;
+  refreshSubscription: () => Promise<Subscription | null>;
   refreshUsage: () => Promise<void>;
   startSoloTrial: () => Promise<void>;
   startCheckout: (planName: 'starter' | 'unlimited' | 'pro', billingPeriod: 'monthly' | 'yearly') => Promise<void>;
@@ -222,7 +222,7 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
     if (!isAuthenticated) {
       setSubscription(null);
       subscriptionLimitsRef.current = undefined;
-      return;
+      return null;
     }
 
     try {
@@ -262,14 +262,18 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
         };
         subscriptionLimitsRef.current = legacySub.limits;
         setSubscription(legacySub);
+        setError(null);
+        return legacySub;
       }
-      setError(null);
+      setError(response.error || 'Failed to load subscription');
+      return null;
     } catch (err: unknown) {
       console.error('Failed to fetch subscription:', err);
       const status = getErrorStatus(err);
       if (status !== 401 && status !== 403) {
         setError(getErrorMessage(err, 'Failed to load subscription'));
       }
+      return null;
     }
   }, [isAuthenticated]);
 

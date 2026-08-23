@@ -39,7 +39,14 @@ function ChangeTierSection() {
         setLoadingPlan(planId);
         try {
             await adminApi.updateMyPlan(planId);
-            await refreshSubscription();
+            const refreshed = await refreshSubscription();
+            const expectedStatus = planId === 'free' ? 'none' : 'active';
+            if (
+                refreshed?.planName?.toLowerCase() !== planId
+                || refreshed.status !== expectedStatus
+            ) {
+                throw new Error('The plan update was accepted but the entitlement state did not refresh.');
+            }
             const planDisplayName = PLAN_METADATA[planId]?.displayName || planId;
             toast({
                 title: 'Plan Updated',
