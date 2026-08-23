@@ -29,6 +29,18 @@ unique public identifiers, ambiguous legacy-slug denial, bounded typed
 validation, safe redirects, transactional contact reuse/submission persistence,
 and durable workflow and notification intents.
 
+NestJS `PublicFormsModule` now owns an identical implementation of both
+routes, including a faithful port of the public-form validation contract
+with its exact error messages, codes, and field attribution. A
+dual-runtime fresh-PostgreSQL parity suite
+(`backend-v2/test/integration/public-forms.integration-spec.ts`) proves
+both runtimes identical across identifier resolution, the validation
+matrix, conditional requirements, contact reuse, and durable
+trigger/notification fan-out. The legacy origin routes both paths
+through a default-off proxy (`PUBLIC_FORMS_NESTJS_ENABLED`) that falls
+through to the retained handlers and replicates the dedicated
+submission rate limit on the proxied path.
+
 ## Retirement proof
 
 The legacy Express router declares only the two public routes. All nine former

@@ -116,7 +116,7 @@
       "targetOperation": "getPublicForm",
       "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retained anonymous rate-limited HTTP for embeds uses the global public identifier, with ambiguous legacy slugs failing closed."
+      "notes": "Retained anonymous rate-limited HTTP for embeds uses the global public identifier, with ambiguous legacy slugs failing closed. NestJS now owns an identical implementation (PublicFormsModule, including a faithful port of the public-form validation contract) proven by a dual-runtime PostgreSQL parity suite covering the validation matrix, conditional requirements, contact reuse, and durable trigger/notification fan-out; the legacy origin routes this path through a default-off proxy (PUBLIC_FORMS_NESTJS_ENABLED) that falls through to the retained handler and replicates the dedicated submission rate limit on the proxied path."
     },
     "POST /api/forms/public/form/:identifier": {
       "disposition": "retain-http",
@@ -125,7 +125,7 @@
       "targetOperation": "submitPublicForm",
       "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retained anonymous rate-limited HTTP commits contact reuse and submission transactionally with same-email serialization, complete field validation, and durable notification/event delivery."
+      "notes": "Retained anonymous rate-limited HTTP commits contact reuse and submission transactionally with same-email serialization, complete field validation, and durable notification/event delivery. NestJS now owns an identical implementation (PublicFormsModule, including a faithful port of the public-form validation contract) proven by a dual-runtime PostgreSQL parity suite covering the validation matrix, conditional requirements, contact reuse, and durable trigger/notification fan-out; the legacy origin routes this path through a default-off proxy (PUBLIC_FORMS_NESTJS_ENABLED) that falls through to the retained handler and replicates the dedicated submission rate limit on the proxied path."
     },
     "GET /api/bookings/public/book/:slug": {
       "disposition": "retain-http",

@@ -34,6 +34,7 @@ import { SignatureDocumentsModule } from './signature-documents/signature-docume
 import { SignatureDeliveryModule } from './signature-delivery/signature-delivery.module';
 import { SignatureFilesModule } from './signature-files/signature-files.module';
 import { PublicBookingsModule } from './public-bookings/public-bookings.module';
+import { PublicFormsModule } from './public-forms/public-forms.module';
 import { PublicLandingPagesModule } from './public-landing-pages/public-landing-pages.module';
 import { PublicReputationModule } from './public-reputation/public-reputation.module';
 import { PublicSharingModule } from './public-sharing/public-sharing.module';
@@ -112,6 +113,7 @@ const observabilityPlugins = [
     SignatureDeliveryModule,
     SignatureFilesModule,
     PublicBookingsModule,
+    PublicFormsModule,
     PublicLandingPagesModule,
     PublicReputationModule,
     PublicSharingModule,

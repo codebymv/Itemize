@@ -42,6 +42,11 @@ const {
     createPublicLandingPagesProxy,
     publicLandingPagesEnabled,
 } = require('../public-landing-pages-proxy');
+const {
+    createPublicFormsProxy,
+    publicFormsEnabled,
+} = require('../public-forms-proxy');
+const rateLimit = require('express-rate-limit');
 const webhooksRoutes = require('../routes/webhooks.routes');
 const calendarIntegrationsRoutes = require('../routes/calendar-integrations.routes');
 const invoiceIntegrationsRoutes = require('../routes/invoice-integrations.routes');
@@ -231,6 +236,32 @@ function registerApiRoutes({
 
     app.use('/api/bookings', bookingsRoutes(pool, publicRateLimit));
     logger.info('Bookings routes initialized');
+    // Mirrors the retained router's dedicated submission limiter so the
+    // abuse boundary survives when the proxy bypasses the legacy handler.
+    const publicFormSubmissionRateLimit = rateLimit({
+        windowMs: 15 * 60 * 1000,
+        max: 60,
+        standardHeaders: true,
+        legacyHeaders: false,
+        message: {
+            success: false,
+            error: {
+                message: 'Too many form submissions from this IP',
+                code: 'RATE_LIMIT_EXCEEDED',
+            },
+        },
+    });
+    const publicFormsRoute = (action) => {
+        const proxy = createPublicFormsProxy({ action, logger });
+        if (!publicFormsEnabled()) return [proxy];
+        return action === 'submit'
+            ? [publicRateLimit, publicFormSubmissionRateLimit, proxy]
+            : [publicRateLimit, proxy];
+    };
+    app.get('/api/forms/public/form/:identifier', ...publicFormsRoute('read'));
+    app.post('/api/forms/public/form/:identifier', ...publicFormsRoute('submit'));
+    logger.info('Public forms proxy routes initialized');
+
     app.use('/api/forms', formsRoutes(pool, authenticateJWT, publicRateLimit));
     logger.info('Forms routes initialized');
     app.post(

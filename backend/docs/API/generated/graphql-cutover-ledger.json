@@ -104,7 +104,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 226
+          "line": 231
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -203,7 +203,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 228
+          "line": 233
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -356,7 +356,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 229
+          "line": 234
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -479,7 +479,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 227
+          "line": 232
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -875,7 +875,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 165
+          "line": 170
         }
       ],
       "consumerCallsites": [
@@ -934,7 +934,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 166
+          "line": 171
         }
       ],
       "consumerCallsites": [
@@ -1023,6 +1023,10 @@
       "path": "/api/forms/public/form/:identifier",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 261
+        },
+        {
           "source": "backend/src/routes/forms.routes.js",
           "line": 88
         }
@@ -1041,6 +1045,30 @@
       "testCallsites": [
         {
           "method": "GET",
+          "path": "/api/forms/public/form/:identifier",
+          "source": "backend-v2/test/integration/public-forms.integration-spec.ts",
+          "line": 174
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/:identifier",
+          "source": "backend-v2/test/integration/public-forms.integration-spec.ts",
+          "line": 175
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/never-existed",
+          "source": "backend-v2/test/integration/public-forms.integration-spec.ts",
+          "line": 189
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/never-existed",
+          "source": "backend-v2/test/integration/public-forms.integration-spec.ts",
+          "line": 190
+        },
+        {
+          "method": "GET",
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
           "line": 162
@@ -1056,6 +1084,36 @@
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
           "line": 177
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/:identifier",
+          "source": "backend/src/__tests__/public-forms-proxy.test.js",
+          "line": 20
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/frm_abc",
+          "source": "backend/src/__tests__/public-forms-proxy.test.js",
+          "line": 34
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/frm_abc",
+          "source": "backend/src/__tests__/public-forms-proxy.test.js",
+          "line": 41
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/frm_abc",
+          "source": "backend/src/__tests__/public-forms-proxy.test.js",
+          "line": 83
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/frm_abc",
+          "source": "backend/src/__tests__/public-forms-proxy.test.js",
+          "line": 88
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -1065,7 +1123,7 @@
       "targetOperation": "getPublicForm",
       "targetModule": "PublicFormsModule",
       "parityStatus": "implemented",
-      "notes": "Retained anonymous rate-limited HTTP for embeds uses the global public identifier, with ambiguous legacy slugs failing closed.",
+      "notes": "Retained anonymous rate-limited HTTP for embeds uses the global public identifier, with ambiguous legacy slugs failing closed. NestJS now owns an identical implementation (PublicFormsModule, including a faithful port of the public-form validation contract) proven by a dual-runtime PostgreSQL parity suite covering the validation matrix, conditional requirements, contact reuse, and durable trigger/notification fan-out; the legacy origin routes this path through a default-off proxy (PUBLIC_FORMS_NESTJS_ENABLED) that falls through to the retained handler and replicates the dedicated submission rate limit on the proxied path.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -1075,6 +1133,10 @@
       "method": "POST",
       "path": "/api/forms/public/form/:identifier",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 262
+        },
         {
           "source": "backend/src/routes/forms.routes.js",
           "line": 123
@@ -1092,6 +1154,36 @@
         }
       ],
       "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend-v2/test/integration/public-forms.integration-spec.ts",
+          "line": 235
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend-v2/test/integration/public-forms.integration-spec.ts",
+          "line": 238
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend-v2/test/integration/public-forms.integration-spec.ts",
+          "line": 255
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend-v2/test/integration/public-forms.integration-spec.ts",
+          "line": 261
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend-v2/test/integration/public-forms.integration-spec.ts",
+          "line": 345
+        },
         {
           "method": "POST",
           "path": "/api/forms/public/form/:public_id",
@@ -1121,6 +1213,24 @@
           "path": "/api/forms/public/form/:public_id",
           "source": "backend/src/__tests__/integration/forms.integration.test.js",
           "line": 315
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:identifier",
+          "source": "backend/src/__tests__/public-forms-proxy.test.js",
+          "line": 21
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/frm_abc",
+          "source": "backend/src/__tests__/public-forms-proxy.test.js",
+          "line": 52
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/frm_abc",
+          "source": "backend/src/__tests__/public-forms-proxy.test.js",
+          "line": 73
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -1130,7 +1240,7 @@
       "targetOperation": "submitPublicForm",
       "targetModule": "PublicFormsModule",
       "parityStatus": "implemented",
-      "notes": "Retained anonymous rate-limited HTTP commits contact reuse and submission transactionally with same-email serialization, complete field validation, and durable notification/event delivery.",
+      "notes": "Retained anonymous rate-limited HTTP commits contact reuse and submission transactionally with same-email serialization, complete field validation, and durable notification/event delivery. NestJS now owns an identical implementation (PublicFormsModule, including a faithful port of the public-form validation contract) proven by a dual-runtime PostgreSQL parity suite covering the validation matrix, conditional requirements, contact reuse, and durable trigger/notification fan-out; the legacy origin routes this path through a default-off proxy (PUBLIC_FORMS_NESTJS_ENABLED) that falls through to the retained handler and replicates the dedicated submission rate limit on the proxied path.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -1291,7 +1401,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 193
+          "line": 198
         },
         {
           "source": "backend/src/routes/invoices/pdf.routes.js",
@@ -1402,7 +1512,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 185
+          "line": 190
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -1495,7 +1605,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 189
+          "line": 194
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -1533,7 +1643,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 181
+          "line": 186
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -1640,7 +1750,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 215
+          "line": 220
         },
         {
           "source": "backend/src/routes/pages/public.routes.js",
@@ -1727,7 +1837,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 216
+          "line": 221
         },
         {
           "source": "backend/src/routes/pages/public.routes.js",
@@ -1802,7 +1912,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 296
+          "line": 327
         }
       ],
       "consumerCallsites": [
@@ -1861,7 +1971,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 300
+          "line": 331
         }
       ],
       "consumerCallsites": [],
@@ -1904,7 +2014,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 304
+          "line": 335
         }
       ],
       "consumerCallsites": [],
@@ -1947,7 +2057,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 268
+          "line": 299
         }
       ],
       "consumerCallsites": [
@@ -2024,7 +2134,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 288
+          "line": 319
         }
       ],
       "consumerCallsites": [
@@ -2077,7 +2187,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 284
+          "line": 315
         }
       ],
       "consumerCallsites": [
@@ -2118,7 +2228,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 276
+          "line": 307
         }
       ],
       "consumerCallsites": [],
@@ -2142,7 +2252,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 272
+          "line": 303
         }
       ],
       "consumerCallsites": [],
@@ -2173,7 +2283,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 280
+          "line": 311
         }
       ],
       "consumerCallsites": [],
@@ -2197,7 +2307,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 203
+          "line": 208
         },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
@@ -2260,7 +2370,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 204
+          "line": 209
         },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
@@ -2365,7 +2475,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 202
+          "line": 207
         },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
@@ -2448,7 +2558,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 155
+          "line": 160
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2544,7 +2654,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 156
+          "line": 161
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2591,7 +2701,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 159
+          "line": 164
         },
         {
           "source": "backend/src/routes/vaults/sharing.routes.js",
@@ -2642,7 +2752,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 157
+          "line": 162
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2705,7 +2815,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 158
+          "line": 163
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2765,7 +2875,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 254
+          "line": 285
         }
       ],
       "consumerCallsites": [],
@@ -2802,7 +2912,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 250
+          "line": 281
         }
       ],
       "consumerCallsites": [],
@@ -2839,7 +2949,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 236
+          "line": 267
         }
       ],
       "consumerCallsites": [
@@ -2934,7 +3044,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 258
+          "line": 289
         }
       ],
       "consumerCallsites": [],
@@ -2958,7 +3068,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 243
+          "line": 274
         }
       ],
       "consumerCallsites": [
@@ -3228,7 +3338,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 74
+          "line": 79
         }
       ],
       "consumerCallsites": [
