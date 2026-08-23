@@ -66,15 +66,13 @@ const AppScreenshot = memo(function AppScreenshot({
         <picture>
           {src.endsWith('.webp') ? (
             <source type="image/webp" srcSet={src} />
-          ) : src.endsWith('.png') ? (
-            <source type="image/webp" srcSet={src.replace(/\.png$/i, '.webp')} />
           ) : null}
           <img
             src={src.endsWith('.webp') ? src.replace(/\.webp$/i, '.png') : src}
             alt={alt || label}
             className={`w-full h-auto object-contain object-top`}
-            loading={priority ? undefined : "lazy"}
-            fetchPriority={priority ? "high" : undefined}
+            loading={priority ? "eager" : "lazy"}
+            {...(priority ? { fetchpriority: "high" } : {})}
           />
         </picture>
       ) : (

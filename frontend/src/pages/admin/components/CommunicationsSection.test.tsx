@@ -27,6 +27,11 @@ describe('CommunicationsSection', () => {
         const emailLogsTab = screen.getByRole('tab', { name: 'Email Logs' });
 
         expect(usersTab).toHaveClass('group/tab');
+        expect(usersTab).toHaveClass(
+            'hover:bg-blue-50',
+            'dark:hover:bg-blue-900/40',
+            'data-[state=active]:hover:bg-background',
+        );
         expect(usersTab.querySelector('svg')).toHaveClass('text-blue-600', 'transition-colors');
         expect(usersTab.querySelector('svg')).not.toHaveClass('group-hover/tab:text-blue-600');
 

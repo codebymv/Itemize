@@ -151,7 +151,7 @@ const Home: React.FC = () => {
                 }}
               >
                 The CRM that works{' '}
-                <span className="lh-accent text-blue-600 dark:text-blue-400">
+                <span className="lh-accent inline-block whitespace-nowrap text-blue-600 dark:text-blue-400">
                   for you
                 </span>
                 <br />
