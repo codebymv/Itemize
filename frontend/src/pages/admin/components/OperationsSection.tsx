@@ -19,6 +19,8 @@ import {
 import { Badge, type BadgeProps } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { RefreshButton } from '@/components/ui/refresh-button';
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import {
     Table,
     TableBody,
@@ -451,19 +453,14 @@ export default function OperationsSection() {
                 <p className="text-sm text-muted-foreground">
                     Last checked {new Date(snapshot.asOf).toLocaleString()}
                 </p>
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={refreshing}
-                    onClick={() => void load(true)}
-                >
-                    <RefreshCw className={cn('mr-2 h-4 w-4', refreshing && 'animate-spin')} />
-                    Refresh
-                </Button>
+                <RefreshButton refreshing={refreshing} onClick={() => void load(true)} />
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <ResponsiveCardRail
+                label="Operations summary"
+                desktopColumns="md:grid-cols-2 xl:grid-cols-4"
+                className="mb-0"
+            >
                 <MetricCard
                     label="System status"
                     value={labels[snapshot.status]}
@@ -473,11 +470,15 @@ export default function OperationsSection() {
                 <MetricCard label="Outstanding jobs" value={snapshot.activeJobs} icon={Activity} tone="blue" />
                 <MetricCard label="Retrying" value={snapshot.retryingJobs} icon={RefreshCw} tone="orange" />
                 <MetricCard label="Needs review" value={snapshot.actionRequiredJobs} icon={AlertTriangle} tone="red" />
-            </div>
+            </ResponsiveCardRail>
 
             <section aria-labelledby="provider-health-heading" className="space-y-3">
                 <h2 id="provider-health-heading" className="text-lg font-semibold font-raleway">Providers</h2>
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <ResponsiveCardRail
+                    label="Provider health"
+                    desktopColumns="md:grid-cols-2 xl:grid-cols-3"
+                    className="mb-0"
+                >
                     {snapshot.providers.map((provider) => {
                         const Icon = providerIcons[provider.id] || Activity;
                         return (
@@ -493,20 +494,16 @@ export default function OperationsSection() {
                                                 {labels[provider.status]}
                                             </Badge>
                                         </div>
-                                        <p className="mt-1 text-sm text-muted-foreground">{provider.detail}</p>
                                     </div>
                                 </CardContent>
                             </Card>
                         );
                     })}
-                </div>
+                </ResponsiveCardRail>
             </section>
 
             <section aria-labelledby="job-health-heading" className="space-y-3">
-                <div>
-                    <h2 id="job-health-heading" className="text-lg font-semibold font-raleway">Background jobs</h2>
-                    <p className="text-sm text-muted-foreground">Outstanding work older than 15 minutes is degraded. Open a queue to inspect safe operational details.</p>
-                </div>
+                <h2 id="job-health-heading" className="text-lg font-semibold font-raleway">Background jobs</h2>
 
                 <Card className="hidden 2xl:block">
                     <Table>

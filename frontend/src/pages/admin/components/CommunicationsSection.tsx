@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { RefreshButton } from '@/components/ui/refresh-button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +13,6 @@ import {
     Users,
     Mail,
     Search,
-    RefreshCw,
     Loader2,
     User as UserIcon,
     Zap,
@@ -307,14 +307,10 @@ export default function CommunicationsSection() {
                                             : `${totalUsers} users`
                                         }
                                     </span>
-                                    <Button
-                                        variant="outline"
-                                        size="icon"
+                                    <RefreshButton
                                         onClick={() => fetchUsers(0, false, true)}
-                                        disabled={refreshing}
-                                    >
-                                        <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                                    </Button>
+                                        refreshing={refreshing}
+                                    />
                                 </div>
                             </div>
                         </CardContent>

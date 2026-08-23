@@ -10,13 +10,13 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  RefreshCw,
   ChevronDown,
   ChevronRight,
   ArrowLeft,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { RefreshButton } from '@/components/ui/refresh-button';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { PUBLIC_SHELL_WIDTH } from '@/components/layout/PageContainer';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -110,15 +110,12 @@ const StatusPage: React.FC = () => {
   }, []);
 
   const renderRefreshButton = () => (
-    <Button
+    <RefreshButton
       onClick={fetchStatus}
-      disabled={isRefreshing}
-      size="sm"
-      className="bg-blue-600 hover:bg-blue-700 text-white font-light whitespace-nowrap"
-    >
-      <RefreshCw className={cn("h-4 w-4 mr-2", isRefreshing && "animate-spin")} />
-      Refresh
-    </Button>
+      refreshing={isRefreshing}
+      variant="default"
+      className="font-light"
+    />
   );
 
   const toggleSection = (section: string) => {

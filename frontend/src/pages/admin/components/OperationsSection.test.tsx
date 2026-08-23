@@ -44,7 +44,10 @@ describe('OperationsSection', () => {
         await waitFor(() => expect(screen.getByText('PostgreSQL')).toBeInTheDocument());
         expect(screen.getAllByText('Action required').length).toBeGreaterThan(0);
         expect(screen.getAllByText('Direct messages').length).toBeGreaterThan(0);
-        expect(screen.getByText('Operations query completed successfully')).toBeInTheDocument();
+        expect(screen.queryByText('Operations query completed successfully')).not.toBeInTheDocument();
+        expect(screen.getByRole('region', { name: 'Operations summary' })).toBeInTheDocument();
+        expect(screen.getByRole('region', { name: 'Provider health' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
     });
 
     it('shows an explicit error state instead of zeroes', async () => {

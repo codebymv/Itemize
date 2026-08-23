@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { RefreshButton } from '@/components/ui/refresh-button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, RefreshCw, Loader2 } from 'lucide-react';
+import { Mail, Loader2 } from 'lucide-react';
 import { getEmailLog, getEmailLogs, EmailLog } from '@/services/adminEmailApi';
 
 export function EmailLogsView() {
@@ -69,9 +70,7 @@ export function EmailLogsView() {
                             {total} emails sent
                         </CardDescription>
                     </div>
-                    <Button variant="outline" size="icon" onClick={() => fetchLogs(page)}>
-                        <RefreshCw className="h-4 w-4" />
-                    </Button>
+                    <RefreshButton onClick={() => fetchLogs(page)} />
                 </div>
             </CardHeader>
             <CardContent>
