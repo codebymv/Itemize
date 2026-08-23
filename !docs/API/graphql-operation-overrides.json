@@ -427,47 +427,47 @@
     "GET /api/reputation/public/widget/:widgetKey": {
       "disposition": "retain-http",
       "owner": "reputation",
-      "targetModule": "PublicReputationWidgetModule",
-      "targetOperation": "getPublicReputationWidget",
-      "parityStatus": "characterized",
+      "targetModule": "PublicReputationModule",
+      "targetOperation": "getPublicWidget",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain credential-free rate-limited HTTP for third-party embedding. Exact 128-bit keys, no-store revocation, active-only configuration, tenant isolation, bounded review selection, and hidden/flagged exclusion are required."
+      "notes": "Retain credential-free rate-limited HTTP for third-party embedding. Exact 128-bit keys, no-store revocation, active-only configuration, tenant isolation, bounded review selection, and hidden/flagged exclusion are required. NestJS now owns an identical implementation (PublicReputationModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_REPUTATION_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler. The credential-free Access-Control-Allow-Origin: * boundary is still emitted by the legacy origin's CORS delegate ahead of the proxy; the NestJS CORS options must add the widget wildcard before any direct-origin cutover."
     },
     "GET /api/reputation/public/review/:token": {
       "disposition": "retain-http",
       "owner": "reputation",
-      "targetModule": "PublicReputationReviewModule",
+      "targetModule": "PublicReputationModule",
       "targetOperation": "getPublicReviewRequest",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain anonymous no-store capability HTTP with an exact 256-bit token, expiry, and minimal token-free projection."
+      "notes": "Retain anonymous no-store capability HTTP with an exact 256-bit token, expiry, and minimal token-free projection. NestJS now owns an identical implementation (PublicReputationModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_REPUTATION_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler."
     },
     "POST /api/reputation/public/review/:token": {
       "disposition": "retain-http",
       "owner": "reputation",
-      "targetModule": "PublicReputationReviewModule",
+      "targetModule": "PublicReputationModule",
       "targetOperation": "submitPublicReview",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain anonymous rate-limited capability HTTP; row locking makes submission one-time and rating, text, platform, and redirect behavior are validated server-side."
+      "notes": "Retain anonymous rate-limited capability HTTP; row locking makes submission one-time and rating, text, platform, and redirect behavior are validated server-side. NestJS now owns an identical implementation (PublicReputationModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_REPUTATION_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler."
     },
     "GET /api/pages/public/page/:slug": {
       "disposition": "retain-http",
       "owner": "growth",
       "targetModule": "PublicLandingPagesModule",
-      "targetOperation": "getPublicLandingPage",
-      "parityStatus": "characterized",
+      "targetOperation": "getPublicPage",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain anonymous page delivery over HTTP for browser navigation, password capability checks, expiry enforcement, cache policy, and public rendering."
+      "notes": "Retain anonymous page delivery over HTTP for browser navigation, password capability checks, expiry enforcement, cache policy, and public rendering. NestJS now owns an identical implementation (PublicLandingPagesModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_LANDING_PAGES_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler."
     },
     "POST /api/pages/public/page/:slug/analytics": {
       "disposition": "retain-http",
       "owner": "growth",
       "targetModule": "PublicLandingPagesModule",
-      "targetOperation": "recordPublicLandingPageAnalytics",
-      "parityStatus": "characterized",
+      "targetOperation": "recordPublicPageAnalytics",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain the anonymous rate-limited analytics beacon over HTTP; it validates the published page and records request-derived device and attribution evidence."
+      "notes": "Retain the anonymous rate-limited analytics beacon over HTTP; it validates the published page and records request-derived device and attribution evidence. NestJS now owns an identical implementation (PublicLandingPagesModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_LANDING_PAGES_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler."
     },
     "GET /api/invoice-integrations/stripe/connect": {
       "disposition": "retain-http",

@@ -11,7 +11,7 @@
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 45,
     "operationsWithFrontendConsumers": 40,
-    "operationsWithBackendTests": 44,
+    "operationsWithBackendTests": 45,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
@@ -104,7 +104,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 201
+          "line": 226
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -203,7 +203,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 203
+          "line": 228
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -356,7 +356,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 204
+          "line": 229
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -479,7 +479,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 202
+          "line": 227
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -875,7 +875,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 157
+          "line": 165
         }
       ],
       "consumerCallsites": [
@@ -934,7 +934,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 158
+          "line": 166
         }
       ],
       "consumerCallsites": [
@@ -1291,7 +1291,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 185
+          "line": 193
         },
         {
           "source": "backend/src/routes/invoices/pdf.routes.js",
@@ -1402,7 +1402,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 177
+          "line": 185
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -1495,7 +1495,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 181
+          "line": 189
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -1533,7 +1533,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 173
+          "line": 181
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -1639,6 +1639,10 @@
       "path": "/api/pages/public/page/:slug",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 215
+        },
+        {
           "source": "backend/src/routes/pages/public.routes.js",
           "line": 18
         }
@@ -1666,16 +1670,52 @@
           "path": "/api/pages/public/page/launch",
           "source": "backend-v2/test/integration/landing-pages.integration-spec.ts",
           "line": 530
+        },
+        {
+          "method": "GET",
+          "path": "/api/pages/public/page/:slug",
+          "source": "backend/src/__tests__/public-landing-pages-proxy.test.js",
+          "line": 22
+        },
+        {
+          "method": "GET",
+          "path": "/api/pages/public/page/launch",
+          "source": "backend/src/__tests__/public-landing-pages-proxy.test.js",
+          "line": 36
+        },
+        {
+          "method": "GET",
+          "path": "/api/pages/public/page/launch",
+          "source": "backend/src/__tests__/public-landing-pages-proxy.test.js",
+          "line": 43
+        },
+        {
+          "method": "GET",
+          "path": "/api/pages/public/page/launch",
+          "source": "backend/src/__tests__/public-landing-pages-proxy.test.js",
+          "line": 63
+        },
+        {
+          "method": "GET",
+          "path": "/api/pages/public/page/launch",
+          "source": "backend/src/__tests__/public-landing-pages-proxy.test.js",
+          "line": 87
+        },
+        {
+          "method": "GET",
+          "path": "/api/pages/public/page/launch",
+          "source": "backend/src/__tests__/public-landing-pages-proxy.test.js",
+          "line": 92
         }
       ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "retain-http",
       "owner": "growth",
-      "targetOperation": "getPublicLandingPage",
+      "targetOperation": "getPublicPage",
       "targetModule": "PublicLandingPagesModule",
-      "parityStatus": "characterized",
-      "notes": "Retain anonymous page delivery over HTTP for browser navigation, password capability checks, expiry enforcement, cache policy, and public rendering.",
+      "parityStatus": "implemented",
+      "notes": "Retain anonymous page delivery over HTTP for browser navigation, password capability checks, expiry enforcement, cache policy, and public rendering. NestJS now owns an identical implementation (PublicLandingPagesModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_LANDING_PAGES_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -1685,6 +1725,10 @@
       "method": "POST",
       "path": "/api/pages/public/page/:slug/analytics",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 216
+        },
         {
           "source": "backend/src/routes/pages/public.routes.js",
           "line": 141
@@ -1701,15 +1745,52 @@
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/pages/public/page/:open/analytics",
+          "source": "backend-v2/test/integration/public-landing-pages.integration-spec.ts",
+          "line": 247
+        },
+        {
+          "method": "POST",
+          "path": "/api/pages/public/page/:open/analytics",
+          "source": "backend-v2/test/integration/public-landing-pages.integration-spec.ts",
+          "line": 250
+        },
+        {
+          "method": "POST",
+          "path": "/api/pages/public/page/:open/analytics",
+          "source": "backend-v2/test/integration/public-landing-pages.integration-spec.ts",
+          "line": 266
+        },
+        {
+          "method": "POST",
+          "path": "/api/pages/public/page/:open/analytics",
+          "source": "backend-v2/test/integration/public-landing-pages.integration-spec.ts",
+          "line": 292
+        },
+        {
+          "method": "POST",
+          "path": "/api/pages/public/page/:slug/analytics",
+          "source": "backend/src/__tests__/public-landing-pages-proxy.test.js",
+          "line": 23
+        },
+        {
+          "method": "POST",
+          "path": "/api/pages/public/page/launch/analytics",
+          "source": "backend/src/__tests__/public-landing-pages-proxy.test.js",
+          "line": 71
+        }
+      ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "retain-http",
       "owner": "growth",
-      "targetOperation": "recordPublicLandingPageAnalytics",
+      "targetOperation": "recordPublicPageAnalytics",
       "targetModule": "PublicLandingPagesModule",
-      "parityStatus": "characterized",
-      "notes": "Retain the anonymous rate-limited analytics beacon over HTTP; it validates the published page and records request-derived device and attribution evidence.",
+      "parityStatus": "implemented",
+      "notes": "Retain the anonymous rate-limited analytics beacon over HTTP; it validates the published page and records request-derived device and attribution evidence. NestJS now owns an identical implementation (PublicLandingPagesModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_LANDING_PAGES_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -1721,7 +1802,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 271
+          "line": 296
         }
       ],
       "consumerCallsites": [
@@ -1780,7 +1861,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 275
+          "line": 300
         }
       ],
       "consumerCallsites": [],
@@ -1823,7 +1904,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 279
+          "line": 304
         }
       ],
       "consumerCallsites": [],
@@ -1866,7 +1947,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 243
+          "line": 268
         }
       ],
       "consumerCallsites": [
@@ -1943,7 +2024,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 263
+          "line": 288
         }
       ],
       "consumerCallsites": [
@@ -1996,7 +2077,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 259
+          "line": 284
         }
       ],
       "consumerCallsites": [
@@ -2037,7 +2118,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 251
+          "line": 276
         }
       ],
       "consumerCallsites": [],
@@ -2061,7 +2142,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 247
+          "line": 272
         }
       ],
       "consumerCallsites": [],
@@ -2092,7 +2173,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 255
+          "line": 280
         }
       ],
       "consumerCallsites": [],
@@ -2114,6 +2195,10 @@
       "method": "GET",
       "path": "/api/reputation/public/review/:token",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 203
+        },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
           "line": 102
@@ -2142,6 +2227,18 @@
           "path": "/api/reputation/public/review/not-a-token",
           "source": "backend-v2/test/integration/reputation-reviews.integration-spec.ts",
           "line": 532
+        },
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/review/:token",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 23
+        },
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/review/not-a-token",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 61
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -2149,9 +2246,9 @@
       "disposition": "retain-http",
       "owner": "reputation",
       "targetOperation": "getPublicReviewRequest",
-      "targetModule": "PublicReputationReviewModule",
-      "parityStatus": "characterized",
-      "notes": "Retain anonymous no-store capability HTTP with an exact 256-bit token, expiry, and minimal token-free projection.",
+      "targetModule": "PublicReputationModule",
+      "parityStatus": "implemented",
+      "notes": "Retain anonymous no-store capability HTTP with an exact 256-bit token, expiry, and minimal token-free projection. NestJS now owns an identical implementation (PublicReputationModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_REPUTATION_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2161,6 +2258,10 @@
       "method": "POST",
       "path": "/api/reputation/public/review/:token",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 204
+        },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
           "line": 156
@@ -2180,6 +2281,42 @@
       "testCallsites": [
         {
           "method": "POST",
+          "path": "/api/reputation/public/review/:nestSubmit",
+          "source": "backend-v2/test/integration/public-reputation.integration-spec.ts",
+          "line": 188
+        },
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/:legacySubmit",
+          "source": "backend-v2/test/integration/public-reputation.integration-spec.ts",
+          "line": 191
+        },
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/:nestSubmit",
+          "source": "backend-v2/test/integration/public-reputation.integration-spec.ts",
+          "line": 202
+        },
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/:legacySubmit",
+          "source": "backend-v2/test/integration/public-reputation.integration-spec.ts",
+          "line": 211
+        },
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/:nestSubmit",
+          "source": "backend-v2/test/integration/public-reputation.integration-spec.ts",
+          "line": 242
+        },
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/:nestSubmit",
+          "source": "backend-v2/test/integration/public-reputation.integration-spec.ts",
+          "line": 245
+        },
+        {
+          "method": "POST",
           "path": "/api/reputation/public/review/:deliveryRequestToken",
           "source": "backend-v2/test/integration/reputation-reviews.integration-spec.ts",
           "line": 519
@@ -2189,6 +2326,24 @@
           "path": "/api/reputation/public/review/:deliveryRequestToken",
           "source": "backend-v2/test/integration/reputation-reviews.integration-spec.ts",
           "line": 521
+        },
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/:token",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 24
+        },
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/not-a-token",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 64
+        },
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/:TOKEN",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 73
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -2196,9 +2351,9 @@
       "disposition": "retain-http",
       "owner": "reputation",
       "targetOperation": "submitPublicReview",
-      "targetModule": "PublicReputationReviewModule",
-      "parityStatus": "characterized",
-      "notes": "Retain anonymous rate-limited capability HTTP; row locking makes submission one-time and rating, text, platform, and redirect behavior are validated server-side.",
+      "targetModule": "PublicReputationModule",
+      "parityStatus": "implemented",
+      "notes": "Retain anonymous rate-limited capability HTTP; row locking makes submission one-time and rating, text, platform, and redirect behavior are validated server-side. NestJS now owns an identical implementation (PublicReputationModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_REPUTATION_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2208,6 +2363,10 @@
       "method": "GET",
       "path": "/api/reputation/public/widget/:widgetKey",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 202
+        },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
           "line": 20
@@ -2232,16 +2391,52 @@
           "path": "/api/reputation/public/widget/:widgetKey",
           "source": "backend-v2/test/integration/reputation-configuration.integration-spec.ts",
           "line": 307
+        },
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/widget/:widgetKey",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 22
+        },
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/widget/:WIDGET_KEY",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 38
+        },
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/widget/:WIDGET_KEY",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 45
+        },
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/widget/not-a-key",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 57
+        },
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/widget/:WIDGET_KEY",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 85
+        },
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/widget/:WIDGET_KEY",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 90
         }
       ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "retain-http",
       "owner": "reputation",
-      "targetOperation": "getPublicReputationWidget",
-      "targetModule": "PublicReputationWidgetModule",
-      "parityStatus": "characterized",
-      "notes": "Retain credential-free rate-limited HTTP for third-party embedding. Exact 128-bit keys, no-store revocation, active-only configuration, tenant isolation, bounded review selection, and hidden/flagged exclusion are required.",
+      "targetOperation": "getPublicWidget",
+      "targetModule": "PublicReputationModule",
+      "parityStatus": "implemented",
+      "notes": "Retain credential-free rate-limited HTTP for third-party embedding. Exact 128-bit keys, no-store revocation, active-only configuration, tenant isolation, bounded review selection, and hidden/flagged exclusion are required. NestJS now owns an identical implementation (PublicReputationModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_REPUTATION_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler. The credential-free Access-Control-Allow-Origin: * boundary is still emitted by the legacy origin's CORS delegate ahead of the proxy; the NestJS CORS options must add the widget wildcard before any direct-origin cutover.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2253,7 +2448,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 147
+          "line": 155
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2349,7 +2544,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 148
+          "line": 156
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2396,7 +2591,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 151
+          "line": 159
         },
         {
           "source": "backend/src/routes/vaults/sharing.routes.js",
@@ -2447,7 +2642,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 149
+          "line": 157
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2510,7 +2705,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 150
+          "line": 158
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2570,7 +2765,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 229
+          "line": 254
         }
       ],
       "consumerCallsites": [],
@@ -2607,7 +2802,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 225
+          "line": 250
         }
       ],
       "consumerCallsites": [],
@@ -2644,7 +2839,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 211
+          "line": 236
         }
       ],
       "consumerCallsites": [
@@ -2739,7 +2934,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 233
+          "line": 258
         }
       ],
       "consumerCallsites": [],
@@ -2763,7 +2958,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 218
+          "line": 243
         }
       ],
       "consumerCallsites": [
@@ -3033,7 +3228,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 66
+          "line": 74
         }
       ],
       "consumerCallsites": [

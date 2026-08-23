@@ -9,7 +9,7 @@ The public rendering boundary remains HTTP:
 - `GET /api/pages/public/page/:slug`
 - `POST /api/pages/public/page/:slug/analytics`
 
-Those endpoints are anonymous browser-navigation and telemetry protocols. The page-delivery response itself performs any password check, so there is no separate public password oracle. Published `/p/:slug` pages render that retained public JSON contract inside an isolated document. Authenticated version preview reads the organization-qualified snapshot through `landingPageVersion`; there is no public numeric-ID preview endpoint.
+Those endpoints are anonymous browser-navigation and telemetry protocols. The page-delivery response itself performs any password check, so there is no separate public password oracle. NestJS `PublicLandingPagesModule` now owns an identical implementation — published-only delivery, hashed and legacy plaintext password checks, expiry, analytics opt-out, visit recording with device/UTM evidence, and the beacon update — proven by a dual-runtime fresh-PostgreSQL parity suite (`backend-v2/test/integration/public-landing-pages.integration-spec.ts`); the legacy origin routes both paths through a default-off proxy (`PUBLIC_LANDING_PAGES_NESTJS_ENABLED`) that falls through to the retained handlers for rollback. Published `/p/:slug` pages render that retained public JSON contract inside an isolated document. Authenticated version preview reads the organization-qualified snapshot through `landingPageVersion`; there is no public numeric-ID preview endpoint.
 
 ## GraphQL operations
 

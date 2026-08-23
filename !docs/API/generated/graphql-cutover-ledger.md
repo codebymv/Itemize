@@ -9,7 +9,7 @@
 - Non-API registered operations: 7
 - Static frontend callsites: 45
 - Operations with frontend consumers: 40
-- Operations referenced by backend tests: 44
+- Operations referenced by backend tests: 45
 - Recommended GraphQL queries: 0
 - Recommended GraphQL mutations: 1
 - Recommended retained HTTP endpoints: 58
@@ -58,8 +58,8 @@
 | POST | `/api/invoices/businesses/:id/logo` | 1 | 9 | retain-http | high | billing / InvoiceBusinessesModule / uploadInvoiceBusinessLogo |
 | POST | `/api/invoices/settings/logo` | 1 | 0 | retain-http | high | billing / InvoiceSettingsModule / uploadInvoiceSettingsLogo |
 | POST | `/api/invoices/webhook/stripe` | 0 | 13 | retain-http | medium | billing / InvoiceWebhooksModule / stripeInvoiceWebhook |
-| GET | `/api/pages/public/page/:slug` | 1 | 2 | retain-http | high | growth / PublicLandingPagesModule / getPublicLandingPage |
-| POST | `/api/pages/public/page/:slug/analytics` | 1 | 0 | retain-http | high | growth / PublicLandingPagesModule / recordPublicLandingPageAnalytics |
+| GET | `/api/pages/public/page/:slug` | 1 | 8 | retain-http | high | growth / PublicLandingPagesModule / getPublicPage |
+| POST | `/api/pages/public/page/:slug/analytics` | 1 | 6 | retain-http | high | growth / PublicLandingPagesModule / recordPublicPageAnalytics |
 | GET | `/api/public/estimates/:token` | 1 | 4 | retain-http | medium | billing / EstimatesModule / open |
 | POST | `/api/public/estimates/:token/accept` | 0 | 3 | retain-http | medium | billing / EstimatesModule / accept |
 | POST | `/api/public/estimates/:token/decline` | 0 | 3 | retain-http | medium | billing / EstimatesModule / decline |
@@ -69,9 +69,9 @@
 | GET | `/api/public/sign/:token/download` | 0 | 0 | retain-http | high | esignatures / SignatureFilesModule / downloadSigningPdf |
 | GET | `/api/public/sign/:token/file` | 0 | 1 | retain-http | high | esignatures / SignatureFilesModule / streamSigningPdf |
 | POST | `/api/public/sign/:token/verify` | 0 | 0 | retain-http | high | esignatures / PublicSigningModule / verifySigner |
-| GET | `/api/reputation/public/review/:token` | 1 | 2 | retain-http | high | reputation / PublicReputationReviewModule / getPublicReviewRequest |
-| POST | `/api/reputation/public/review/:token` | 1 | 2 | retain-http | high | reputation / PublicReputationReviewModule / submitPublicReview |
-| GET | `/api/reputation/public/widget/:widgetKey` | 0 | 3 | retain-http | high | reputation / PublicReputationWidgetModule / getPublicReputationWidget |
+| GET | `/api/reputation/public/review/:token` | 1 | 4 | retain-http | high | reputation / PublicReputationModule / getPublicReviewRequest |
+| POST | `/api/reputation/public/review/:token` | 1 | 11 | retain-http | high | reputation / PublicReputationModule / submitPublicReview |
+| GET | `/api/reputation/public/widget/:widgetKey` | 0 | 9 | retain-http | high | reputation / PublicReputationModule / getPublicWidget |
 | GET | `/api/shared/list/:token` | 2 | 8 | retain-http | high | sharing / PublicSharingModule / sharedList |
 | GET | `/api/shared/note/:token` | 2 | 0 | retain-http | high | sharing / PublicSharingModule / sharedNote |
 | GET | `/api/shared/vault/:token` | 1 | 2 | retain-http | high | sharing / PublicSharingModule / sharedVault |

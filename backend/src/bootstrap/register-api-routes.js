@@ -34,6 +34,14 @@ const {
     createPublicBookingsProxy,
     publicBookingsEnabled,
 } = require('../public-bookings-proxy');
+const {
+    createPublicReputationProxy,
+    publicReputationEnabled,
+} = require('../public-reputation-proxy');
+const {
+    createPublicLandingPagesProxy,
+    publicLandingPagesEnabled,
+} = require('../public-landing-pages-proxy');
 const webhooksRoutes = require('../routes/webhooks.routes');
 const calendarIntegrationsRoutes = require('../routes/calendar-integrations.routes');
 const invoiceIntegrationsRoutes = require('../routes/invoice-integrations.routes');
@@ -187,10 +195,27 @@ function registerApiRoutes({
     logger.info('Invoicing routes initialized');
     app.use('/api/billing', billingRoutes(pool, authenticateJWT));
     logger.info('Billing routes initialized');
+    const publicReputationRoute = (action) => {
+        const proxy = createPublicReputationProxy({ action, logger });
+        return publicReputationEnabled() ? [publicRateLimit, proxy] : [proxy];
+    };
+    app.get('/api/reputation/public/widget/:widgetKey', ...publicReputationRoute('widget'));
+    app.get('/api/reputation/public/review/:token', ...publicReputationRoute('review-read'));
+    app.post('/api/reputation/public/review/:token', ...publicReputationRoute('review-submit'));
+    logger.info('Public reputation proxy routes initialized');
+
     app.use('/api/reputation', reputationRoutes(pool, authenticateJWT, publicRateLimit));
     logger.info('Reputation Management routes initialized');
     app.use('/api/social', socialRoutes(pool, authenticateJWT, publicRateLimit, io));
     logger.info('Social Media Integration routes initialized');
+    const publicLandingPagesRoute = (action) => {
+        const proxy = createPublicLandingPagesProxy({ action, logger });
+        return publicLandingPagesEnabled() ? [publicRateLimit, proxy] : [proxy];
+    };
+    app.get('/api/pages/public/page/:slug', ...publicLandingPagesRoute('page'));
+    app.post('/api/pages/public/page/:slug/analytics', ...publicLandingPagesRoute('analytics'));
+    logger.info('Public landing pages proxy routes initialized');
+
     app.use('/api/pages', pagesRoutes(pool, authenticateJWT, publicRateLimit));
     logger.info('Landing Pages routes initialized');
 
