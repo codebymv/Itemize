@@ -245,12 +245,26 @@ export default function CommunicationsSection() {
         <div className="space-y-6">
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'users' | 'logs')}>
                 <TabsList>
-                    <TabsTrigger value="users">
-                        <Users className={cn("h-4 w-4 mr-2", activeTab === 'users' && "text-blue-600")} />
+                    <TabsTrigger value="users" className="group/tab">
+                        <Users
+                            className={cn(
+                                "h-4 w-4 mr-2 transition-colors",
+                                activeTab === 'users'
+                                    ? "text-blue-600"
+                                    : "text-gray-600 dark:text-gray-400 group-hover/tab:text-blue-600",
+                            )}
+                        />
                         Users
                     </TabsTrigger>
-                    <TabsTrigger value="logs">
-                        <Mail className={cn("h-4 w-4 mr-2", activeTab === 'logs' && "text-blue-600")} />
+                    <TabsTrigger value="logs" className="group/tab">
+                        <Mail
+                            className={cn(
+                                "h-4 w-4 mr-2 transition-colors",
+                                activeTab === 'logs'
+                                    ? "text-blue-600"
+                                    : "text-gray-600 dark:text-gray-400 group-hover/tab:text-blue-600",
+                            )}
+                        />
                         Email Logs
                     </TabsTrigger>
                 </TabsList>
