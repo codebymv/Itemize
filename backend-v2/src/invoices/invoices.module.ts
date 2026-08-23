@@ -21,6 +21,7 @@ import {
   StripeInvoicePaymentLinkProvider,
 } from './invoice-delivery.providers';
 import { PdfLibInvoiceRenderer } from './invoice-pdf.renderer';
+import { InvoicePdfBrandAssets } from './invoice-pdf-brand-assets';
 
 @Module({
   imports: [ActivationModule, AuthModule, BillingModule, GetStartedModule, OrganizationsModule],
@@ -35,6 +36,7 @@ import { PdfLibInvoiceRenderer } from './invoice-pdf.renderer';
     InvoicePdfService,
     ResendInvoiceEmailProvider,
     StripeInvoicePaymentLinkProvider,
+    InvoicePdfBrandAssets,
     PdfLibInvoiceRenderer,
     { provide: INVOICE_EMAIL_PROVIDER, useExisting: ResendInvoiceEmailProvider },
     { provide: INVOICE_PAYMENT_LINK_PROVIDER, useExisting: StripeInvoicePaymentLinkProvider },

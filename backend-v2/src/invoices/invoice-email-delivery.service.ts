@@ -247,7 +247,7 @@ export class InvoiceEmailDeliveryService {
       heading: 'Your invoice',
       bodyHtml: `<div style="white-space:pre-wrap">${message}</div>`,
       cta: paymentUrl ? { label: 'Pay invoice', url: paymentUrl } : undefined,
-      footerText: 'Your invoice PDF is attached. Sent securely with Itemize.',
+      showFooter: false,
     });
   }
 
@@ -255,7 +255,6 @@ export class InvoiceEmailDeliveryService {
     return [
       delivery.payload.message,
       paymentUrl ? `Pay invoice: ${paymentUrl}` : null,
-      'Your invoice PDF is attached.',
     ].filter(Boolean).join('\n\n');
   }
 

@@ -54,7 +54,7 @@ export class InvoiceEmailPreviewService {
         ...(input.includePaymentLink
           ? { cta: { label: 'Pay now', url: '#' } }
           : {}),
-        footerText: 'Your invoice PDF will be attached. Sent securely with Itemize.',
+        showFooter: false,
       }),
     };
   }

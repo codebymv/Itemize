@@ -25,6 +25,9 @@ describe('InvoiceEmailPreviewService', () => {
     expect(result.html).toContain('Pay now');
     expect(result.html).toContain('height:4px;background:#2563eb');
     expect(result.html).not.toContain('Unsubscribe');
+    expect(result.html).not.toContain('Your invoice PDF');
+    expect(result.html).not.toContain('Sent securely with Itemize');
+    expect(result.html).not.toContain('background:#f8fafc;border-top:1px');
   });
 
   it('treats user content as plain text and ignores unsafe configured URLs', () => {
