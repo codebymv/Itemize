@@ -35,7 +35,7 @@ export const AdminNav = () => {
     );
 
     const desktopNav = (
-        <nav className="hidden md:flex flex-col gap-1">
+        <nav aria-label="Admin sections" className="hidden md:flex flex-col gap-1">
             {adminNav.map((item) => {
                 const isActive = location.pathname === item.path ||
                     (item.path === '/admin' && location.pathname === '/admin/');
@@ -43,10 +43,16 @@ export const AdminNav = () => {
                     <Button
                         key={item.path}
                         variant={isActive ? 'secondary' : 'ghost'}
-                        className="justify-start text-muted-foreground hover:text-foreground font-raleway"
+                        className="group/item justify-start text-muted-foreground hover:text-foreground font-raleway"
                         onClick={() => navigate(item.path)}
                     >
-                        <item.icon className={`mr-2 h-4 w-4 ${isActive ? 'text-blue-600' : ''}`} />
+                        <item.icon
+                            className={`mr-2 h-4 w-4 transition-colors ${
+                                isActive
+                                    ? 'text-blue-600'
+                                    : 'text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600'
+                            }`}
+                        />
                         {item.title}
                     </Button>
                 );
