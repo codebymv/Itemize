@@ -2,25 +2,21 @@ import { Fragment, useCallback, useEffect, useState } from 'react';
 import {
     Activity,
     AlertTriangle,
+    Check,
     CheckCircle2,
     ChevronDown,
     ChevronRight,
     Clock3,
-    CreditCard,
-    Database,
-    HardDrive,
     Loader2,
-    Mail,
-    MessageSquare,
     RefreshCw,
-    ShieldCheck,
-    Sparkles,
+    X,
 } from 'lucide-react';
 import { Badge, type BadgeProps } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { RefreshButton } from '@/components/ui/refresh-button';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { ServiceMark, type ServiceMarkName } from '@/components/brand/ServiceMark';
 import {
     Table,
     TableBody,
@@ -32,14 +28,15 @@ import {
 import { cn } from '@/lib/utils';
 import * as adminApi from '@/services/adminApi';
 
-const providerIcons: Record<string, typeof Activity> = {
-    database: Database,
-    resend: Mail,
-    stripe: CreditCard,
-    s3: HardDrive,
-    twilio: MessageSquare,
-    clamav: ShieldCheck,
-    gemini: Sparkles,
+const providerMarks: Record<string, ServiceMarkName> = {
+    database: 'postgresql',
+    resend: 'resend',
+    stripe: 'stripe',
+    s3: 'amazon-s3',
+    twilio: 'twilio',
+    clamav: 'clamav',
+    gemini: 'gemini',
+    gleam: 'gleam',
 };
 
 const labels: Record<string, string> = {
@@ -69,12 +66,15 @@ const detailBuckets: { id: adminApi.JobQueueBucket; label: string }[] = [
 
 function badgeVariant(
     status: adminApi.AdminOperationalStatus,
-    required = false,
 ): BadgeProps['variant'] {
     if (status === 'healthy' || status === 'operational' || status === 'configured') return 'success';
-    if (status === 'action_required' || (status === 'incomplete' && required)) return 'destructive';
+    if (status === 'action_required') return 'destructive';
     if (status === 'degraded' || status === 'incomplete') return 'warning';
     return 'secondary';
+}
+
+function isProviderOperational(status: adminApi.AdminOperationalStatus): boolean {
+    return status === 'healthy' || status === 'operational' || status === 'configured';
 }
 
 function jobBadgeVariant(status: string): BadgeProps['variant'] {
@@ -476,25 +476,42 @@ export default function OperationsSection() {
                 <h2 id="provider-health-heading" className="text-lg font-semibold font-raleway">Providers</h2>
                 <ResponsiveCardRail
                     label="Provider health"
-                    desktopColumns="md:grid-cols-2 xl:grid-cols-3"
+                    desktopColumns="md:grid-cols-2 lg:grid-cols-6"
                     className="mb-0"
+                    mobileCardClassName="flex-[0_0_calc(50%-0.5rem)]"
+                    desktopCardClassName={cn(
+                        'lg:col-span-2',
+                        snapshot.providers.length % 3 === 2
+                            && 'lg:[&:nth-last-child(2)]:col-[2/span_2] lg:[&:last-child]:col-[4/span_2]',
+                    )}
                 >
                     {snapshot.providers.map((provider) => {
-                        const Icon = providerIcons[provider.id] || Activity;
+                        const mark = providerMarks[provider.id];
+                        const operational = isProviderOperational(provider.status);
+                        const statusLabel = labels[provider.status] || provider.status;
                         return (
                             <Card key={provider.id}>
-                                <CardContent className="flex gap-3 p-4">
-                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300">
-                                        <Icon className="h-4 w-4" />
-                                    </span>
+                                <CardContent className="flex items-center gap-2.5 p-3">
+                                    {mark ? (
+                                        <ServiceMark service={mark} className="h-7 w-7" />
+                                    ) : (
+                                        <Activity aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                    )}
                                     <div className="min-w-0 flex-1">
-                                        <div className="flex flex-wrap items-center justify-between gap-2">
-                                            <p className="font-medium">{provider.name}</p>
-                                            <Badge variant={badgeVariant(provider.status, provider.required)}>
-                                                {labels[provider.status]}
-                                            </Badge>
-                                        </div>
+                                        <p className="truncate text-sm font-medium" title={provider.name}>{provider.name}</p>
                                     </div>
+                                    <span
+                                        role="img"
+                                        aria-label={`${provider.name}: ${statusLabel}`}
+                                        title={statusLabel}
+                                        className="shrink-0"
+                                    >
+                                        {operational ? (
+                                            <Check aria-hidden="true" className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                        ) : (
+                                            <X aria-hidden="true" className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                        )}
+                                    </span>
                                 </CardContent>
                             </Card>
                         );

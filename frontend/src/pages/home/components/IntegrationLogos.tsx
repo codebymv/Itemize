@@ -1,4 +1,5 @@
 import React from 'react';
+import { ServiceMark } from '@/components/brand/ServiceMark';
 
 interface IntegrationLogoProps {
   name: string;
@@ -32,18 +33,15 @@ const IntegrationLogo = React.memo(function IntegrationLogo({ name, comingSoon, 
 });
 
 /**
- * Renders integration logos as inline SVGs for maximum quality and theme-awareness.
- * These are simplified brand marks (not full logos to avoid trademark issues).
+ * Renders integrations with the shared service-mark registry where available,
+ * plus product-specific inline artwork for the remaining homepage integrations.
  */
 export const IntegrationGrid = React.memo(function IntegrationGrid() {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
       {/* Stripe */}
       <IntegrationLogo name="Stripe">
-        <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10">
-          <rect width="40" height="40" rx="8" className="fill-[#635BFF]/10 dark:fill-[#7B73FF]/10" />
-          <path d="M18.5 15.2c0-.9.7-1.3 1.9-1.3 1.7 0 3.8.5 5.5 1.4V10c-1.8-.7-3.7-1-5.5-1-4.5 0-7.5 2.3-7.5 6.2 0 6.1 8.4 5.1 8.4 7.7 0 1.1-.9 1.4-2.2 1.4-1.9 0-4.3-.8-6.2-1.8v5.4c2.1.9 4.2 1.3 6.2 1.3 4.6 0 7.7-2.3 7.7-6.2-.1-6.5-8.3-5.4-8.3-7.8z" className="fill-[#635BFF] dark:fill-[#7B73FF]" />
-        </svg>
+        <ServiceMark service="stripe" />
       </IntegrationLogo>
 
       {/* Google Calendar */}
@@ -74,14 +72,7 @@ export const IntegrationGrid = React.memo(function IntegrationGrid() {
 
       {/* Twilio */}
       <IntegrationLogo name="Twilio">
-        <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10">
-          <rect width="40" height="40" rx="8" fill="#F22F46" fillOpacity="0.1" />
-          <circle cx="20" cy="20" r="10" stroke="#F22F46" strokeWidth="1.5" fill="none" />
-          <circle cx="16.5" cy="16.5" r="2" fill="#F22F46" />
-          <circle cx="23.5" cy="16.5" r="2" fill="#F22F46" />
-          <circle cx="16.5" cy="23.5" r="2" fill="#F22F46" />
-          <circle cx="23.5" cy="23.5" r="2" fill="#F22F46" />
-        </svg>
+        <ServiceMark service="twilio" />
       </IntegrationLogo>
 
       {/* Webhooks */}
@@ -97,9 +88,7 @@ export const IntegrationGrid = React.memo(function IntegrationGrid() {
 
       {/* Gleam */}
       <IntegrationLogo name="Gleam">
-        <div className="w-10 h-10 rounded-lg flex items-center justify-center p-2" style={{ backgroundColor: 'rgba(0, 169, 143, 0.1)' }}>
-          <img src="/gleam-favicon.png" alt="Gleam" className="w-full h-full object-contain drop-shadow" />
-        </div>
+        <ServiceMark service="gleam" />
       </IntegrationLogo>
     </div>
   );

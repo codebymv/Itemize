@@ -257,6 +257,10 @@ export class AdminOperationsService {
       process.env.GEMINI_API_KEY?.trim()
         ? { id: 'gemini', name: 'Gemini', required: false, status: 'configured', detail: 'AI credentials are configured' }
         : { id: 'gemini', name: 'Gemini', required: false, status: geminiEnabled ? 'incomplete' : 'disabled', detail: geminiEnabled ? 'AI credentials are missing' : 'Marketing AI is disabled' },
+      {
+        id: 'gleam', name: 'Gleam', required: false,
+        status: 'disabled', detail: 'Gleam integration is not implemented',
+      },
     ];
   }
 

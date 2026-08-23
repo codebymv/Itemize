@@ -101,6 +101,7 @@ describe('AdminOperationsService', () => {
     ]);
     expect(result.providers).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: 'database', status: 'operational', required: true }),
+      expect.objectContaining({ id: 'gleam', status: 'disabled', required: false }),
     ]));
   });
 

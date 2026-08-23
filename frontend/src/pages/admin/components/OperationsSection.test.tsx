@@ -29,6 +29,19 @@ describe('OperationsSection', () => {
                     id: 'database', name: 'PostgreSQL', status: 'operational',
                     detail: 'Operations query completed successfully', required: true,
                 },
+                {
+                    id: 'resend', name: 'Resend', status: 'incomplete',
+                    detail: 'Email credentials are missing', required: true,
+                },
+                {
+                    id: 'gleam', name: 'Gleam', status: 'disabled',
+                    detail: 'Gleam integration is not implemented', required: false,
+                },
+                { id: 'stripe', name: 'Stripe', status: 'configured', detail: '', required: true },
+                { id: 's3', name: 'Amazon S3', status: 'configured', detail: '', required: true },
+                { id: 'twilio', name: 'Twilio', status: 'configured', detail: '', required: false },
+                { id: 'clamav', name: 'ClamAV', status: 'configured', detail: '', required: false },
+                { id: 'gemini', name: 'Gemini', status: 'configured', detail: '', required: false },
             ],
             queues: [
                 {
@@ -46,8 +59,19 @@ describe('OperationsSection', () => {
         expect(screen.getAllByText('Direct messages').length).toBeGreaterThan(0);
         expect(screen.queryByText('Operations query completed successfully')).not.toBeInTheDocument();
         expect(screen.getByRole('region', { name: 'Operations summary' })).toBeInTheDocument();
-        expect(screen.getByRole('region', { name: 'Provider health' })).toBeInTheDocument();
+        const providerRail = screen.getByRole('region', { name: 'Provider health' });
+        expect(providerRail.firstElementChild).toHaveClass('flex-[0_0_calc(50%-0.5rem)]');
+        expect(providerRail.children.item(6)).toHaveClass('lg:[&:nth-last-child(2)]:col-[2/span_2]');
+        expect(providerRail.children.item(7)).toHaveClass('lg:[&:last-child]:col-[4/span_2]');
         expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+        const operational = screen.getByRole('img', { name: 'PostgreSQL: Operational' });
+        const unavailable = screen.getByRole('img', { name: 'Resend: Incomplete' });
+        const notImplemented = screen.getByRole('img', { name: 'Gleam: Disabled' });
+        expect(operational.querySelector('svg')).toHaveClass('text-green-600');
+        expect(unavailable.querySelector('svg')).toHaveClass('text-red-600');
+        expect(notImplemented.querySelector('svg')).toHaveClass('text-red-600');
+        expect(screen.queryByText('Operational')).not.toBeInTheDocument();
+        expect(screen.queryByText('Incomplete')).not.toBeInTheDocument();
     });
 
     it('shows an explicit error state instead of zeroes', async () => {

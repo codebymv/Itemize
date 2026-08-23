@@ -8,6 +8,7 @@ interface ResponsiveCardRailProps {
   children: React.ReactNode;
   className?: string;
   mobileCardClassName?: string;
+  desktopCardClassName?: string;
   showIndicators?: boolean;
 }
 
@@ -27,6 +28,7 @@ export function ResponsiveCardRail({
   children,
   className,
   mobileCardClassName = 'flex-[0_0_82%]',
+  desktopCardClassName,
   showIndicators,
 }: ResponsiveCardRailProps) {
   const railRef = useRef<HTMLDivElement>(null);
@@ -85,6 +87,7 @@ export function ResponsiveCardRail({
             className={cn(
               'min-w-0 snap-start md:flex-auto [&>*]:h-full',
               mobileCardClassName,
+              desktopCardClassName,
             )}
           >
             {child}
