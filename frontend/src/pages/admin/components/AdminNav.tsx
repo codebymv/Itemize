@@ -2,12 +2,13 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Mail, BarChart3, Zap } from 'lucide-react';
+import { Activity, Mail, BarChart3, Zap } from 'lucide-react';
 
 // Admin navigation items - Communications is now the default
 const adminNav = [
     { title: 'Communications', path: '/admin', icon: Mail },
     { title: 'Statistics', path: '/admin/stats', icon: BarChart3 },
+    { title: 'Operations', path: '/admin/operations', icon: Activity },
     { title: 'Change Tier', path: '/admin/change-tier', icon: Zap },
 ];
 
@@ -18,7 +19,7 @@ export const AdminNav = () => {
 
     const mobileTabs = (
         <Tabs value={activePath} onValueChange={(value) => navigate(value)} className="w-full md:hidden">
-            <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsList className="grid w-full grid-cols-4 mb-4">
                 {adminNav.map((item) => (
                     <TabsTrigger
                         key={item.path}

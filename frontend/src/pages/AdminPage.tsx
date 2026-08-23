@@ -1,13 +1,14 @@
 import React, { useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthState } from '@/contexts/AuthContext';
-import { Loader2 } from 'lucide-react';
+import { Activity, BarChart3, Mail, Zap } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
 import { PageLayout } from '@/components/layout/PageLayout';
 import {
     AdminNav,
     CommunicationsSection,
     StatisticsSection,
+    OperationsSection,
     ChangeTierSection
 } from './admin';
 
@@ -17,10 +18,13 @@ export function AdminPage() {
     const location = useLocation();
 
     const activeNavItem = [
-        { title: 'Communications', path: '/admin' },
-        { title: 'Statistics', path: '/admin/stats' },
-        { title: 'Change Tier', path: '/admin/change-tier' },
-    ].find(item => item.path === location.pathname) || { title: 'Communications', path: '/admin' };
+        { title: 'Communications', path: '/admin', icon: Mail },
+        { title: 'Statistics', path: '/admin/stats', icon: BarChart3 },
+        { title: 'Operations', path: '/admin/operations', icon: Activity },
+        { title: 'Change Tier', path: '/admin/change-tier', icon: Zap },
+    ].find(item => item.path === location.pathname)
+        || { title: 'Communications', path: '/admin', icon: Mail };
+    const ActiveIcon = activeNavItem.icon;
 
     useEffect(() => {
         if (currentUser && currentUser.role !== 'ADMIN') {
@@ -32,7 +36,7 @@ export function AdminPage() {
         return (
             <PageLayout
                 title={activeNavItem.title.toUpperCase()}
-                icon={<Loader2 className="h-5 w-5 text-blue-600 flex-shrink-0 animate-spin" />}
+                icon={<ActiveIcon className="h-5 w-5 shrink-0 text-primary" />}
                 nav={<AdminNav />}
             >
                 <div className="flex items-center justify-center h-96">
@@ -49,12 +53,13 @@ export function AdminPage() {
     return (
         <PageLayout
             title={activeNavItem.title.toUpperCase()}
-            icon={<Loader2 className="h-5 w-5 text-blue-600 flex-shrink-0 animate-spin" />}
+            icon={<ActiveIcon className="h-5 w-5 shrink-0 text-primary" />}
             nav={<AdminNav />}
         >
             <Routes>
                 <Route index element={<CommunicationsSection />} />
                 <Route path="stats" element={<StatisticsSection />} />
+                <Route path="operations" element={<OperationsSection />} />
                 <Route path="change-tier" element={<ChangeTierSection />} />
             </Routes>
         </PageLayout>

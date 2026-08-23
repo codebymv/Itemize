@@ -3,7 +3,7 @@ import { BillingPlanId, planDefinition } from '../billing/billing.constants';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { AdminUserIdsInput, AdminUserSearchInput } from './admin-operations.inputs';
 import { AdminOperationsRepository, AdminUserRow } from './admin-operations.repository';
-import { AdminActivationFunnel, AdminPlanUpdate, AdminSystemStats, AdminUser, AdminUserCount, AdminUserIds, AdminUserSearchResult } from './admin-operations.types';
+import { AdminActivationFunnel, AdminJobQueueHealth, AdminOperationsSnapshot, AdminPlanUpdate, AdminProviderHealth, AdminSystemStats, AdminUser, AdminUserCount, AdminUserIds, AdminUserSearchResult } from './admin-operations.types';
 
 const PLANS = new Set(['free', 'starter', 'unlimited', 'pro']);
 const FREE_LIMITS = {
@@ -47,6 +47,53 @@ export class AdminOperationsService {
   }
 
   stats(): Promise<AdminSystemStats> { return this.repository.stats(); }
+
+  async operationsSnapshot(): Promise<AdminOperationsSnapshot> {
+    const snapshot = await this.repository.operationsSnapshot();
+    const now = snapshot.asOf.getTime();
+    const staleAfterMs = 15 * 60 * 1000;
+    const queues: AdminJobQueueHealth[] = snapshot.queues.map((queue) => {
+      const active = queue.queued + queue.processing + queue.retrying;
+      const stale = queue.oldest_pending_at !== null
+        && now - queue.oldest_pending_at.getTime() > staleAfterMs;
+      const status = !queue.available || queue.action_required > 0
+        ? 'action_required'
+        : queue.retrying > 0 || stale
+          ? 'degraded'
+          : 'healthy';
+      return {
+        id: queue.id,
+        name: queue.name,
+        status,
+        available: queue.available,
+        queued: queue.queued,
+        processing: queue.processing,
+        retrying: queue.retrying,
+        actionRequired: queue.action_required,
+        active,
+        oldestPendingAt: queue.oldest_pending_at,
+      };
+    });
+    const providers = this.providers();
+    const actionRequiredJobs = queues.reduce((total, queue) => total + queue.actionRequired, 0);
+    const retryingJobs = queues.reduce((total, queue) => total + queue.retrying, 0);
+    const activeJobs = queues.reduce((total, queue) => total + queue.active, 0);
+    const status = queues.some((queue) => queue.status === 'action_required')
+      || providers.some((provider) => provider.required && provider.status === 'incomplete')
+      ? 'action_required'
+      : queues.some((queue) => queue.status === 'degraded')
+        ? 'degraded'
+        : 'healthy';
+    return {
+      asOf: snapshot.asOf,
+      status,
+      activeJobs,
+      retryingJobs,
+      actionRequiredJobs,
+      providers,
+      queues,
+    };
+  }
 
   async activationFunnel(days = 30): Promise<AdminActivationFunnel> {
     if (!Number.isSafeInteger(days) || days < 1 || days > 365) {
@@ -107,6 +154,61 @@ export class AdminOperationsService {
     id: row.id, email: row.email, name: row.name, role: row.role || 'USER',
     plan: row.plan || 'free', createdAt: row.created_at,
   });
+
+  private providers(): AdminProviderHealth[] {
+    const configured = (
+      id: string,
+      name: string,
+      required: boolean,
+      ready: boolean,
+      configuredDetail: string,
+      missingDetail: string,
+    ): AdminProviderHealth => ({
+      id,
+      name,
+      required,
+      status: ready ? 'configured' : 'incomplete',
+      detail: ready ? configuredDetail : missingDetail,
+    });
+    const malwareRequired = process.env.SIGNATURE_MALWARE_SCAN_REQUIRED === 'true';
+    const malwareHost = Boolean(process.env.SIGNATURE_CLAMAV_HOST?.trim());
+    const geminiEnabled = process.env.MARKETING_CHAT_AI_ENABLED !== 'false';
+    return [
+      {
+        id: 'database', name: 'PostgreSQL', required: true,
+        status: 'operational', detail: 'Operations query completed successfully',
+      },
+      configured(
+        'resend', 'Resend', true, Boolean(process.env.RESEND_API_KEY?.trim()),
+        'Email credentials are configured', 'Email credentials are missing',
+      ),
+      configured(
+        'stripe', 'Stripe', true,
+        Boolean(process.env.STRIPE_SECRET_KEY?.trim())
+          && Boolean((process.env.STRIPE_INVOICE_WEBHOOK_SECRET || process.env.STRIPE_WEBHOOK_SECRET)?.trim()),
+        'API and webhook credentials are configured', 'API or webhook credentials are missing',
+      ),
+      configured(
+        's3', 'Amazon S3', true,
+        Boolean(process.env.AWS_ACCESS_KEY_ID?.trim())
+          && Boolean(process.env.AWS_SECRET_ACCESS_KEY?.trim()),
+        'Object storage credentials are configured', 'Object storage credentials are missing',
+      ),
+      configured(
+        'twilio', 'Twilio', false,
+        Boolean(process.env.TWILIO_ACCOUNT_SID?.trim())
+          && Boolean(process.env.TWILIO_AUTH_TOKEN?.trim())
+          && Boolean(process.env.TWILIO_PHONE_NUMBER?.trim()),
+        'SMS credentials and sender are configured', 'SMS is not fully configured',
+      ),
+      malwareHost
+        ? { id: 'clamav', name: 'ClamAV', required: malwareRequired, status: 'configured', detail: 'Malware scanner endpoint is configured' }
+        : { id: 'clamav', name: 'ClamAV', required: malwareRequired, status: malwareRequired ? 'incomplete' : 'disabled', detail: malwareRequired ? 'Required scanner endpoint is missing' : 'Malware scanning is optional and disabled' },
+      process.env.GEMINI_API_KEY?.trim()
+        ? { id: 'gemini', name: 'Gemini', required: false, status: 'configured', detail: 'AI credentials are configured' }
+        : { id: 'gemini', name: 'Gemini', required: false, status: geminiEnabled ? 'incomplete' : 'disabled', detail: geminiEnabled ? 'AI credentials are missing' : 'Marketing AI is disabled' },
+    ];
+  }
 
   private query(value?: string): string | undefined {
     const query = value?.trim();

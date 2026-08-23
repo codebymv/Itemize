@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,7 +20,8 @@ import {
     Building2,
     Check,
     X,
-    Send
+    Send,
+    Globe2
 } from 'lucide-react';
 import * as adminApi from '@/services/adminApi';
 import { cn } from '@/lib/utils';
@@ -243,17 +243,6 @@ export default function CommunicationsSection() {
 
     return (
         <div className="space-y-6">
-            <div>
-                <h2 className="text-2xl font-semibold font-raleway">
-                    Communications
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                    Select users and send emails
-                </p>
-            </div>
-
-            <Separator />
-
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'users' | 'logs')}>
                 <TabsList>
                     <TabsTrigger value="users">
@@ -291,7 +280,7 @@ export default function CommunicationsSection() {
                                         onClick={() => setPlanFilter(null)}
                                         className={planFilter === null ? 'bg-blue-600 hover:bg-blue-700' : ''}
                                     >
-                                        <Users className="h-3 w-3 mr-1" />
+                                        <Globe2 className="h-3 w-3 mr-1" />
                                         All
                                     </Button>
                                     {Object.entries(PLAN_METADATA).map(([planId, planMeta]) => {

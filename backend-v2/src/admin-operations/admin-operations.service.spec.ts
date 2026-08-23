@@ -6,7 +6,7 @@ describe('AdminOperationsService', () => {
   const repository = {
     userCount: jest.fn(), searchUsers: jest.fn(), userIds: jest.fn(),
     usersByIds: jest.fn(), stats: jest.fn(), activationFunnel: jest.fn(),
-    updateOwnPlan: jest.fn(),
+    operationsSnapshot: jest.fn(), updateOwnPlan: jest.fn(),
   } as unknown as jest.Mocked<AdminOperationsRepository>;
   const service = new AdminOperationsService(repository);
 
@@ -72,5 +72,35 @@ describe('AdminOperationsService', () => {
     await expect(service.activationFunnel(0)).rejects.toMatchObject<Partial<GraphQLError>>({
       extensions: expect.objectContaining({ code: 'BAD_USER_INPUT' }),
     });
+  });
+
+  it('summarizes provider configuration and actionable queue health', async () => {
+    repository.operationsSnapshot.mockResolvedValue({
+      asOf: new Date('2026-08-22T12:00:00.000Z'),
+      queues: [
+        {
+          id: 'messages', name: 'Direct messages', available: true,
+          queued: 2, processing: 1, retrying: 1, action_required: 0,
+          oldest_pending_at: new Date('2026-08-22T11:00:00.000Z'),
+        },
+        {
+          id: 'invoices', name: 'Invoice emails', available: true,
+          queued: 0, processing: 0, retrying: 0, action_required: 2,
+          oldest_pending_at: null,
+        },
+      ],
+    });
+    const result = await service.operationsSnapshot();
+    expect(result).toMatchObject({
+      status: 'action_required', activeJobs: 4, retryingJobs: 1,
+      actionRequiredJobs: 2,
+    });
+    expect(result.queues).toEqual([
+      expect.objectContaining({ id: 'messages', status: 'degraded', active: 4 }),
+      expect.objectContaining({ id: 'invoices', status: 'action_required', actionRequired: 2 }),
+    ]);
+    expect(result.providers).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'database', status: 'operational', required: true }),
+    ]));
   });
 });

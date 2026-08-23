@@ -33,6 +33,58 @@ export type AdminPlanEntitlement = {
   };
 };
 
+export type AdminJobQueueRow = {
+  id: string;
+  name: string;
+  available: boolean;
+  queued: number;
+  processing: number;
+  retrying: number;
+  action_required: number;
+  oldest_pending_at: Date | null;
+};
+
+const queue = (id: string, name: string, table: string) => ({
+  id, name, table, statusColumn: 'status', createdColumn: 'created_at',
+  queuedStatuses: ['queued'], processingStatuses: ['processing'],
+  retryingStatuses: ['retry'],
+  actionStatuses: ['dead_letter', 'failed', 'reconciliation_required'],
+});
+
+const ADMIN_JOB_QUEUES = [
+  queue('messages', 'Direct messages', 'message_delivery_jobs'),
+  queue('estimates', 'Estimate emails', 'estimate_email_deliveries'),
+  queue('invoices', 'Invoice emails', 'invoice_email_deliveries'),
+  queue('campaign-tests', 'Campaign test emails', 'campaign_test_email_deliveries'),
+  queue('admin-email', 'Admin email', 'admin_email_deliveries'),
+  queue('review-requests', 'Review requests', 'review_request_deliveries'),
+  queue('signatures', 'Signature delivery', 'signature_delivery_outbox'),
+  queue('signature-completion', 'Signature completion', 'signature_completion_jobs'),
+  queue('calendar-sync', 'Calendar sync', 'calendar_sync_jobs'),
+  queue('workflows', 'Workflow side effects', 'workflow_side_effect_outbox'),
+  queue('social-messages', 'Social messages', 'social_message_delivery_jobs'),
+  queue('campaigns', 'Campaign delivery', 'campaign_delivery_jobs'),
+  queue('realtime', 'Realtime events', 'realtime_event_outbox'),
+  {
+    id: 'email-webhooks', name: 'Email webhook reconciliation', table: 'email_webhook_events',
+    statusColumn: 'reconciliation_status', createdColumn: 'received_at',
+    queuedStatuses: ['pending'], processingStatuses: ['processing'],
+    retryingStatuses: ['retry'], actionStatuses: ['dead_letter'],
+  },
+  {
+    id: 'stripe-notifications', name: 'Stripe notifications', table: 'stripe_subscription_webhook_events',
+    statusColumn: 'notification_status', createdColumn: 'received_at',
+    queuedStatuses: ['pending'], processingStatuses: ['processing'],
+    retryingStatuses: ['retry'], actionStatuses: ['failed', 'dead_letter'],
+  },
+  {
+    id: 'stripe-reconciliation', name: 'Stripe reconciliation', table: 'stripe_subscription_webhook_events',
+    statusColumn: 'reconciliation_status', createdColumn: 'received_at',
+    queuedStatuses: ['pending'], processingStatuses: ['processing'],
+    retryingStatuses: ['retry'], actionStatuses: ['dead_letter'],
+  },
+] as const;
+
 @Injectable()
 export class AdminOperationsRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
@@ -95,6 +147,89 @@ export class AdminOperationsRepository {
               (SELECT COUNT(*) FROM invoices)::int AS invoices`,
     );
     return result.rows[0];
+  }
+
+  async operationsSnapshot(): Promise<{ asOf: Date; queues: AdminJobQueueRow[] }> {
+    const availability = await this.pool.query<{
+      table_name: string; status_column: string; created_column: string; available: boolean;
+    }>(
+      `SELECT requested.table_name, requested.status_column, requested.created_column,
+              to_regclass('public.' || requested.table_name) IS NOT NULL
+              AND EXISTS (
+                SELECT 1 FROM information_schema.columns column_info
+                WHERE column_info.table_schema = 'public'
+                  AND column_info.table_name = requested.table_name
+                  AND column_info.column_name = requested.status_column
+              )
+              AND EXISTS (
+                SELECT 1 FROM information_schema.columns column_info
+                WHERE column_info.table_schema = 'public'
+                  AND column_info.table_name = requested.table_name
+                  AND column_info.column_name = requested.created_column
+              ) AS available
+       FROM unnest($1::text[], $2::text[], $3::text[])
+         AS requested(table_name, status_column, created_column)`,
+      [
+        ADMIN_JOB_QUEUES.map((entry) => entry.table),
+        ADMIN_JOB_QUEUES.map((entry) => entry.statusColumn),
+        ADMIN_JOB_QUEUES.map((entry) => entry.createdColumn),
+      ],
+    );
+    const existing = new Set(
+      availability.rows
+        .filter((row) => row.available)
+        .map((row) => `${row.table_name}:${row.status_column}:${row.created_column}`),
+    );
+
+    const queues = await Promise.all(ADMIN_JOB_QUEUES.map(async (queue): Promise<AdminJobQueueRow> => {
+      if (!existing.has(`${queue.table}:${queue.statusColumn}:${queue.createdColumn}`)) {
+        return {
+          id: queue.id, name: queue.name, available: false, queued: 0,
+          processing: 0, retrying: 0, action_required: 0, oldest_pending_at: null,
+        };
+      }
+      const result = await this.pool.query<{
+        queued: number; processing: number; retrying: number;
+        action_required: number; oldest_pending_at: Date | null;
+      }>(
+        `SELECT
+           COUNT(*) FILTER (WHERE ${queue.statusColumn} = ANY($1::text[]))::int AS queued,
+           COUNT(*) FILTER (WHERE ${queue.statusColumn} = ANY($2::text[]))::int AS processing,
+           COUNT(*) FILTER (WHERE ${queue.statusColumn} = ANY($3::text[]))::int AS retrying,
+           COUNT(*) FILTER (WHERE ${queue.statusColumn} = ANY($4::text[]))::int AS action_required,
+           MIN(${queue.createdColumn}) FILTER (
+             WHERE ${queue.statusColumn} = ANY($5::text[])
+           ) AS oldest_pending_at
+         FROM ${queue.table}
+         WHERE ${queue.statusColumn} = ANY($6::text[])`,
+        [
+          queue.queuedStatuses,
+          queue.processingStatuses,
+          queue.retryingStatuses,
+          queue.actionStatuses,
+          [...queue.queuedStatuses, ...queue.processingStatuses, ...queue.retryingStatuses],
+          [
+            ...queue.queuedStatuses,
+            ...queue.processingStatuses,
+            ...queue.retryingStatuses,
+            ...queue.actionStatuses,
+          ],
+        ],
+      );
+      const row = result.rows[0];
+      return {
+        id: queue.id,
+        name: queue.name,
+        available: true,
+        queued: Number(row?.queued ?? 0),
+        processing: Number(row?.processing ?? 0),
+        retrying: Number(row?.retrying ?? 0),
+        action_required: Number(row?.action_required ?? 0),
+        oldest_pending_at: row?.oldest_pending_at ?? null,
+      };
+    }));
+
+    return { asOf: new Date(), queues };
   }
 
   async activationFunnel(days: number): Promise<AdminActivationFunnelRow> {

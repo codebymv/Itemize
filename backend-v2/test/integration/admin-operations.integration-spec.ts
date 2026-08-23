@@ -116,6 +116,28 @@ describe('Admin operations GraphQL PostgreSQL contract', () => {
     expect(ids.body.data.adminUserIds.ids).toEqual([userId]);
   });
 
+  it('returns a read-only provider and background-job health snapshot', async () => {
+    const result = await graphql(`{
+      adminOperationsSnapshot {
+        asOf status activeJobs retryingJobs actionRequiredJobs
+        providers { id name status detail required }
+        queues {
+          id name status available queued processing retrying actionRequired active oldestPendingAt
+        }
+      }
+    }`).expect(200);
+    expect(result.body.errors).toBeUndefined();
+    expect(result.body.data.adminOperationsSnapshot).toMatchObject({
+      providers: expect.arrayContaining([
+        expect.objectContaining({ id: 'database', status: 'operational', required: true }),
+      ]),
+      queues: expect.arrayContaining([
+        expect.objectContaining({ id: 'messages' }),
+        expect.objectContaining({ id: 'stripe-reconciliation' }),
+      ]),
+    });
+  });
+
   it('preserves requested batch order, deduplicates IDs, and validates bounds', async () => {
     const batch = await graphql(
       'query Batch($ids:[Int!]!){adminUsersByIds(ids:$ids){id email role plan}}',

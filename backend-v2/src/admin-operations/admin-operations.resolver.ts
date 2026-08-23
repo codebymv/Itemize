@@ -5,7 +5,7 @@ import { RequestContextService } from '../request-context/request-context.servic
 import { AdminAccessGuard } from './admin-access.guard';
 import { AdminUserIdsInput, AdminUserSearchInput } from './admin-operations.inputs';
 import { AdminOperationsService } from './admin-operations.service';
-import { AdminActivationFunnel, AdminPlanUpdate, AdminSystemStats, AdminUser, AdminUserCount, AdminUserIds, AdminUserSearchResult } from './admin-operations.types';
+import { AdminActivationFunnel, AdminOperationsSnapshot, AdminPlanUpdate, AdminSystemStats, AdminUser, AdminUserCount, AdminUserIds, AdminUserSearchResult } from './admin-operations.types';
 
 @UseGuards(AdminAccessGuard)
 @Resolver()
@@ -17,6 +17,9 @@ export class AdminOperationsResolver {
   @Query(() => AdminUserIds) adminUserIds(@Args('input', { nullable: true }) input?: AdminUserIdsInput): Promise<AdminUserIds> { return this.service.ids(input); }
   @Query(() => [AdminUser]) adminUsersByIds(@Args('ids', { type: () => [Int] }) ids: number[]): Promise<AdminUser[]> { return this.service.byIds(ids); }
   @Query(() => AdminSystemStats) adminSystemStats(): Promise<AdminSystemStats> { return this.service.stats(); }
+  @Query(() => AdminOperationsSnapshot) adminOperationsSnapshot(): Promise<AdminOperationsSnapshot> {
+    return this.service.operationsSnapshot();
+  }
   @Query(() => AdminActivationFunnel) adminActivationFunnel(
     @Args('days', { type: () => Int, nullable: true }) days?: number,
   ): Promise<AdminActivationFunnel> { return this.service.activationFunnel(days); }

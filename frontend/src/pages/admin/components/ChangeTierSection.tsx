@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useSubscriptionFeatures, useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { type Plan, PLAN_METADATA } from '@/lib/subscription';
 import { Loader2, User as UserIcon, Zap, Crown, Building2 } from 'lucide-react';
@@ -65,17 +64,6 @@ function ChangeTierSection() {
 
     return (
         <div className="space-y-6">
-            <div>
-                <h2 className="text-2xl font-semibold font-raleway">
-                    Change Tier
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                    Testing and development tools
-                </p>
-            </div>
-
-            <Separator />
-
             <Card>
                 <CardContent className="pt-6">
                     <div className="grid grid-cols-2 gap-4">

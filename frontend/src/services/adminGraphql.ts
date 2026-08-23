@@ -1,5 +1,5 @@
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
-import type { ActivationFunnel, AdminUser, SearchUsersResponse, SystemStats, UserCountResponse } from './adminApi';
+import type { ActivationFunnel, AdminUser, OperationsSnapshot, SearchUsersResponse, SystemStats, UserCountResponse } from './adminApi';
 
 type GraphqlAdminUser = {
   id: number; email: string; name: string | null; role: 'USER' | 'ADMIN';
@@ -61,6 +61,21 @@ export const getAdminActivationFunnelViaGraphql = async (
     }
   }`, { days });
   return data.adminActivationFunnel;
+};
+
+export const getAdminOperationsSnapshotViaGraphql = async (): Promise<OperationsSnapshot> => {
+  const data = await graphqlRequest<
+    { adminOperationsSnapshot: OperationsSnapshot }, Record<string, never>
+  >(`query AdminOperationsSnapshot {
+    adminOperationsSnapshot {
+      asOf status activeJobs retryingJobs actionRequiredJobs
+      providers { id name status detail required }
+      queues {
+        id name status available queued processing retrying actionRequired active oldestPendingAt
+      }
+    }
+  }`, {});
+  return data.adminOperationsSnapshot;
 };
 
 export const updateAdminOwnPlanViaGraphql = async (plan: string): Promise<{ message: string; plan: string }> => {

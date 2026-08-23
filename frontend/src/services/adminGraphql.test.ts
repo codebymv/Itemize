@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
-import { getAdminActivationFunnelViaGraphql, getAdminUserIdsViaGraphql, searchAdminUsersViaGraphql, updateAdminOwnPlanViaGraphql } from './adminGraphql';
+import { getAdminActivationFunnelViaGraphql, getAdminOperationsSnapshotViaGraphql, getAdminUserIdsViaGraphql, searchAdminUsersViaGraphql, updateAdminOwnPlanViaGraphql } from './adminGraphql';
 
 vi.mock('./graphqlClient', async (importOriginal) => ({
   ...await importOriginal<typeof import('./graphqlClient')>(), graphqlRequest: vi.fn(), graphqlMutationRequest: vi.fn(),
@@ -36,6 +36,18 @@ describe('admin GraphQL adapters', () => {
     await expect(getAdminActivationFunnelViaGraphql(30)).resolves.toEqual(funnel);
     expect(graphqlRequest).toHaveBeenCalledWith(
       expect.stringContaining('AdminActivationFunnel'), { days: 30 },
+    );
+  });
+
+  it('requests the complete read-only operations snapshot', async () => {
+    const snapshot = {
+      asOf: '2026-08-22T12:00:00.000Z', status: 'healthy', activeJobs: 0,
+      retryingJobs: 0, actionRequiredJobs: 0, providers: [], queues: [],
+    };
+    vi.mocked(graphqlRequest).mockResolvedValue({ adminOperationsSnapshot: snapshot });
+    await expect(getAdminOperationsSnapshotViaGraphql()).resolves.toEqual(snapshot);
+    expect(graphqlRequest).toHaveBeenCalledWith(
+      expect.stringContaining('adminOperationsSnapshot'), {},
     );
   });
 });

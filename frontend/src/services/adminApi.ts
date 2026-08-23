@@ -5,6 +5,7 @@
 
 import {
     getAdminActivationFunnelViaGraphql,
+    getAdminOperationsSnapshotViaGraphql,
     getAdminStatsViaGraphql,
     getAdminUserCountViaGraphql,
     getAdminUserIdsViaGraphql,
@@ -58,6 +59,46 @@ export interface UserCountResponse {
     count: number;
 }
 
+export type AdminOperationalStatus =
+    | 'healthy'
+    | 'degraded'
+    | 'action_required'
+    | 'operational'
+    | 'configured'
+    | 'incomplete'
+    | 'disabled';
+
+export interface ProviderHealth {
+    id: string;
+    name: string;
+    status: AdminOperationalStatus;
+    detail: string;
+    required: boolean;
+}
+
+export interface JobQueueHealth {
+    id: string;
+    name: string;
+    status: AdminOperationalStatus;
+    available: boolean;
+    queued: number;
+    processing: number;
+    retrying: number;
+    actionRequired: number;
+    active: number;
+    oldestPendingAt: string | null;
+}
+
+export interface OperationsSnapshot {
+    asOf: string;
+    status: AdminOperationalStatus;
+    activeJobs: number;
+    retryingJobs: number;
+    actionRequiredJobs: number;
+    providers: ProviderHealth[];
+    queues: JobQueueHealth[];
+}
+
 // ============================================
 // API Methods
 // ============================================
@@ -105,6 +146,10 @@ export async function getStats(): Promise<SystemStats> {
 
 export async function getActivationFunnel(days = 30): Promise<ActivationFunnel> {
     return getAdminActivationFunnelViaGraphql(days);
+}
+
+export async function getOperationsSnapshot(): Promise<OperationsSnapshot> {
+    return getAdminOperationsSnapshotViaGraphql();
 }
 
 /**

@@ -56,3 +56,38 @@ export class AdminActivationFunnel {
   @Field(() => Float) returnRate: number;
   @Field(() => Float) trialToPaidRate: number;
 }
+
+@ObjectType()
+export class AdminProviderHealth {
+  @Field() id: string;
+  @Field() name: string;
+  @Field() status: string;
+  @Field() detail: string;
+  @Field() required: boolean;
+}
+
+@ObjectType()
+export class AdminJobQueueHealth {
+  @Field() id: string;
+  @Field() name: string;
+  @Field() status: string;
+  @Field() available: boolean;
+  @Field(() => Int) queued: number;
+  @Field(() => Int) processing: number;
+  @Field(() => Int) retrying: number;
+  @Field(() => Int) actionRequired: number;
+  @Field(() => Int) active: number;
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  oldestPendingAt: Date | null;
+}
+
+@ObjectType()
+export class AdminOperationsSnapshot {
+  @Field(() => GraphQLISODateTime) asOf: Date;
+  @Field() status: string;
+  @Field(() => Int) activeJobs: number;
+  @Field(() => Int) retryingJobs: number;
+  @Field(() => Int) actionRequiredJobs: number;
+  @Field(() => [AdminProviderHealth]) providers: AdminProviderHealth[];
+  @Field(() => [AdminJobQueueHealth]) queues: AdminJobQueueHealth[];
+}

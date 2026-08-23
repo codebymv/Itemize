@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Separator } from '@/components/ui/separator';
 import { Activity, BarChart3, CreditCard, Loader2, RotateCcw, Send, Users } from 'lucide-react';
 import { StatCard } from '@/components/StatCard';
 import * as adminApi from '@/services/adminApi';
@@ -35,17 +34,6 @@ function StatisticsSection() {
 
     return (
         <div className="space-y-6">
-            <div>
-                <h2 className="text-2xl font-semibold font-raleway">
-                    System Statistics
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                    System totals and the last 30 days of signup activation
-                </p>
-            </div>
-
-            <Separator />
-
             {loading ? (
                 <div className="flex items-center justify-center h-48">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
