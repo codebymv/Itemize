@@ -50,7 +50,7 @@
 | POST | `/api/email/webhook/resend` | 0 | 10 | retain-http | high | messaging / EmailWebhooksModule / processResendEmailEvent |
 | GET | `/api/forms/public/form/:identifier` | 1 | 12 | retain-http | high | crm / PublicFormsModule / getPublicForm |
 | POST | `/api/forms/public/form/:identifier` | 1 | 13 | retain-http | high | crm / PublicFormsModule / submitPublicForm |
-| GET | `/api/health` | 0 | 0 | retain-http | low | platform-operations / HealthBoundary / readiness |
+| GET | `/api/health` | 0 | 0 | retain-http | low | platform-operations / FoundationModule / health |
 | GET | `/api/invoice-integrations/stripe/callback` | 0 | 3 | retain-http | medium | billing-integrations / InvoiceStripeOAuthModule / completeStripeInvoiceConnection |
 | GET | `/api/invoice-integrations/stripe/connect` | 1 | 1 | retain-http | medium | billing-integrations / InvoiceStripeOAuthModule / beginStripeInvoiceConnection |
 | POST | `/api/invoice-integrations/stripe/disconnect` | 1 | 1 | graphql-mutation | medium | billing-integrations / InvoiceStripeOAuthModule / disconnectStripeInvoiceIntegration |
@@ -88,7 +88,7 @@
 | GET | `/api/social/connect/facebook` | 1 | 0 | retain-http | high | social-integrations / SocialOAuthModule / beginFacebookConnection |
 | GET | `/api/social/webhook` | 0 | 2 | retain-http | high | social-integrations / SocialWebhooksModule / verifyMetaWebhook |
 | POST | `/api/social/webhook` | 0 | 1 | retain-http | high | social-integrations / SocialWebhooksModule / processMetaMessagingWebhook |
-| GET | `/api/status` | 1 | 0 | retain-http | low | platform-operations / HealthBoundary / status |
+| GET | `/api/status` | 1 | 0 | retain-http | low | platform-operations / FoundationModule / status |
 | POST | `/api/webhooks/:workflowId` | 0 | 13 | retain-http | high | automation / WorkflowWebhooksModule / processWorkflowWebhook |
 | GET | `/docs/content` | 1 | 0 | non-api | low | _unassigned_ |
 | GET | `/docs/search` | 1 | 0 | non-api | low | _unassigned_ |
