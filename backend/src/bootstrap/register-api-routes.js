@@ -54,6 +54,10 @@ const {
     createSmsWebhookProxy,
     smsWebhooksEnabled,
 } = require('../sms-webhooks-proxy');
+const {
+    createWorkflowWebhookProxy,
+    workflowWebhooksEnabled,
+} = require('../workflow-webhooks-proxy');
 const rateLimit = require('express-rate-limit');
 const webhooksRoutes = require('../routes/webhooks.routes');
 const calendarIntegrationsRoutes = require('../routes/calendar-integrations.routes');
@@ -362,6 +366,14 @@ function registerApiRoutes({
         ...publicEstimateRoute('decline'),
     );
     logger.info('Signature file and public signing routes initialized');
+    {
+        const workflowWebhookProxy = createWorkflowWebhookProxy({ logger });
+        const stack = workflowWebhooksEnabled()
+            ? [publicRateLimit, workflowWebhookProxy]
+            : [workflowWebhookProxy];
+        app.post('/api/webhooks/:workflowId', ...stack);
+        logger.info('Workflow webhook proxy route initialized');
+    }
     app.use('/api/webhooks', webhooksRoutes);
     logger.info('Webhooks routes initialized');
     app.use('/api/calendar-integrations', calendarIntegrationsRoutes(pool, authenticateJWT));

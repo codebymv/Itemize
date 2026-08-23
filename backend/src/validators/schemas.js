@@ -184,7 +184,7 @@ module.exports.validate = (schema) => {
       if (error instanceof z.ZodError) {
         return res.status(400).json({
           error: 'Validation failed',
-          details: error.errors.map(e => ({
+          details: error.issues.map(e => ({
             field: e.path[0],
             message: e.message,
           })),
@@ -205,7 +205,7 @@ module.exports.validateQuery = (schema) => {
       if (error instanceof z.ZodError) {
         return res.status(400).json({
           error: 'Query validation failed',
-          details: error.errors.map(e => ({
+          details: error.issues.map(e => ({
             field: e.path[0],
             message: e.message,
           })),

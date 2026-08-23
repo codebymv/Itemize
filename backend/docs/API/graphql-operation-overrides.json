@@ -60,9 +60,9 @@
       "owner": "automation",
       "targetModule": "WorkflowWebhooksModule",
       "targetOperation": "processWorkflowWebhook",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain raw-body HMAC HTTP delivery with timestamp tolerance, canonical trigger matching, and durable replay claims. The adapter returns execution=durably_queued and feeds the same leased trigger matcher as first-party producers."
+      "notes": "Retain raw-body HMAC HTTP delivery with timestamp tolerance, canonical trigger matching, and durable replay claims. The adapter returns execution=durably_queued and feeds the same leased trigger matcher as first-party producers. NestJS now owns an identical implementation (WorkflowWebhooksModule) mirroring the raw-body HMAC verification with timestamp tolerance, canonical trigger normalization, and the durable delivery-key/event-key replay claim, proven by a dual-runtime PostgreSQL parity suite with genuinely signed payloads and cross-runtime replay deduplication; the legacy origin routes the path through a default-off proxy (WORKFLOW_WEBHOOKS_NESTJS_ENABLED) forwarding the exact raw bytes and signature headers. The port also repaired the retained validation middleware, whose 400 details had broken under the zod v4 upgrade (ZodError.errors removed) and returned an HTML error page instead of the documented JSON."
     },
     "POST /api/email/webhook/resend": {
       "disposition": "retain-http",

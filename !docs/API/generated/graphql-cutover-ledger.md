@@ -89,7 +89,7 @@
 | GET | `/api/social/webhook` | 0 | 2 | retain-http | high | social-integrations / SocialWebhooksModule / verifyMetaWebhook |
 | POST | `/api/social/webhook` | 0 | 1 | retain-http | high | social-integrations / SocialWebhooksModule / processMetaMessagingWebhook |
 | GET | `/api/status` | 1 | 0 | retain-http | low | platform-operations / HealthBoundary / status |
-| POST | `/api/webhooks/:workflowId` | 0 | 6 | retain-http | high | automation / WorkflowWebhooksModule / processWorkflowWebhook |
+| POST | `/api/webhooks/:workflowId` | 0 | 13 | retain-http | high | automation / WorkflowWebhooksModule / processWorkflowWebhook |
 | GET | `/docs/content` | 1 | 0 | non-api | low | _unassigned_ |
 | GET | `/docs/search` | 1 | 0 | non-api | low | _unassigned_ |
 | GET | `/docs/structure` | 1 | 0 | non-api | low | _unassigned_ |

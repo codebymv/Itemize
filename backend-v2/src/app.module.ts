@@ -35,6 +35,7 @@ import { SignatureDeliveryModule } from './signature-delivery/signature-delivery
 import { SignatureFilesModule } from './signature-files/signature-files.module';
 import { EmailWebhooksModule } from './email-webhooks/email-webhooks.module';
 import { SmsWebhooksModule } from './sms-webhooks/sms-webhooks.module';
+import { WorkflowWebhooksModule } from './workflow-webhooks/workflow-webhooks.module';
 import { PublicBookingsModule } from './public-bookings/public-bookings.module';
 import { PublicFormsModule } from './public-forms/public-forms.module';
 import { PublicLandingPagesModule } from './public-landing-pages/public-landing-pages.module';
@@ -116,6 +117,7 @@ const observabilityPlugins = [
     SignatureFilesModule,
     EmailWebhooksModule,
     SmsWebhooksModule,
+    WorkflowWebhooksModule,
     PublicBookingsModule,
     PublicFormsModule,
     PublicLandingPagesModule,
