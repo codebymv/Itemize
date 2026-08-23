@@ -46,6 +46,7 @@ const {
   runWhiteboardRealtimeOutboxMigration,
   runWireframeRealtimeOutboxMigration,
   runSharedRevocationRealtimeOutboxMigration,
+  runRealtimeOutboxExpirationMigration,
 } = require('./db_realtime_outbox_migrations');
 
 // Import Calendar migrations
@@ -539,6 +540,11 @@ const initializeDatabase = async (pool) => {
       pool,
       'workspace_shared_revocation_realtime_outbox',
       runSharedRevocationRealtimeOutboxMigration,
+    );
+    await runMigrationOnce(
+      pool,
+      'realtime_outbox_expiration',
+      runRealtimeOutboxExpirationMigration,
     );
     await runMigrationOnce(pool, 'workflow_lifecycle', runWorkflowLifecycleMigration);
     await runMigrationOnce(pool, 'workflow_sms_reconciliation', runWorkflowSmsReconciliationMigration);

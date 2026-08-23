@@ -113,7 +113,13 @@ REALTIME_OUTBOX_POLL_INTERVAL_MS=500
 REALTIME_OUTBOX_BATCH_SIZE=25
 REALTIME_OUTBOX_LEASE_SECONDS=30
 REALTIME_OUTBOX_MAX_ATTEMPTS=5
+REALTIME_OUTBOX_MAX_EVENT_AGE_SECONDS=900
 ```
+
+Realtime projection updates older than `REALTIME_OUTBOX_MAX_EVENT_AGE_SECONDS`
+are marked `expired` because reconnecting clients refetch authoritative state.
+Deletion, revocation, and chat events remain deliverable regardless of age. Set the
+value to `0` only when temporarily diagnosing expiration behavior.
 
 ## Package.json Scripts
 

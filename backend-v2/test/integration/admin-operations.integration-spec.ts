@@ -136,6 +136,18 @@ describe('Admin operations GraphQL PostgreSQL contract', () => {
         expect.objectContaining({ id: 'stripe-reconciliation' }),
       ]),
     });
+
+    const details = await graphql(`{
+      adminJobQueueDetails(queueId: "realtime", bucket: "all", limit: 10, offset: 0) {
+        queueId name bucket available total hasMore
+        kindCounts { kind count }
+        items { id status createdAt attemptCount nextAttemptAt leaseExpiresAt kind reference lastError }
+      }
+    }`).expect(200);
+    expect(details.body.errors).toBeUndefined();
+    expect(details.body.data.adminJobQueueDetails).toMatchObject({
+      queueId: 'realtime', name: 'Realtime events', bucket: 'all', available: true,
+    });
   });
 
   it('preserves requested batch order, deduplicates IDs, and validates bounds', async () => {

@@ -58,6 +58,7 @@ describe('test database schema contract', () => {
             'realtime_event_outbox',
             'shared_revocation_realtime_outbox',
             'workspace_shared_revocation_realtime_outbox',
+            'realtime_outbox_expiration',
             'email_webhook_events',
             'email_webhook_reconciliation',
             'workflow_webhook_idempotency',
@@ -356,6 +357,21 @@ describe('test database schema contract', () => {
         expect(sql).toContain(
             "aggregate_type IN ('list', 'note', 'whiteboard', 'wireframe')"
         );
+    });
+
+    test('production migration stream adds realtime projection expiration', async () => {
+        const migration = require('../../../scripts/migrations/062_realtime_outbox_expiration');
+        const {
+            runRealtimeOutboxExpirationMigration,
+        } = require('../../db_realtime_outbox_migrations');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        expect(migration.up).toBe(runRealtimeOutboxExpirationMigration);
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('expired_at');
+        expect(sql).toContain("'expired'");
+        expect(sql).toContain('idx_realtime_event_outbox_expirable');
     });
 
     test('production migration stream installs landing-page version storage', async () => {

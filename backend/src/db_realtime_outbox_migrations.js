@@ -15,7 +15,7 @@ async function runRealtimeOutboxMigration(pool) {
       payload JSONB NOT NULL
         CHECK (jsonb_typeof(payload) = 'object'),
       status VARCHAR(20) NOT NULL DEFAULT 'queued'
-        CHECK (status IN ('queued', 'processing', 'retry', 'sent', 'dead_letter')),
+        CHECK (status IN ('queued', 'processing', 'retry', 'sent', 'dead_letter', 'expired')),
       attempt_count INTEGER NOT NULL DEFAULT 0
         CHECK (attempt_count >= 0),
       next_attempt_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -25,6 +25,7 @@ async function runRealtimeOutboxMigration(pool) {
       occurred_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
       created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
       delivered_at TIMESTAMP WITH TIME ZONE,
+      expired_at TIMESTAMP WITH TIME ZONE,
       CONSTRAINT realtime_event_outbox_channel_event_check CHECK (
         (channel = 'user_canvas' AND event_name IN ('userListUpdated', 'userListDeleted'))
         OR (channel = 'shared_list' AND event_name = 'listUpdated')
@@ -69,6 +70,27 @@ async function runRealtimeOutboxMigration(pool) {
       ON realtime_event_outbox(aggregate_type, aggregate_id, occurred_at, id)
   `);
 
+  return true;
+}
+
+async function runRealtimeOutboxExpirationMigration(pool) {
+  await pool.query(`
+    ALTER TABLE realtime_event_outbox
+      ADD COLUMN IF NOT EXISTS expired_at TIMESTAMP WITH TIME ZONE;
+
+    ALTER TABLE realtime_event_outbox
+      DROP CONSTRAINT IF EXISTS realtime_event_outbox_status_check;
+
+    ALTER TABLE realtime_event_outbox
+      ADD CONSTRAINT realtime_event_outbox_status_check
+        CHECK (status IN (
+          'queued', 'processing', 'retry', 'sent', 'dead_letter', 'expired'
+        ));
+
+    CREATE INDEX IF NOT EXISTS idx_realtime_event_outbox_expirable
+      ON realtime_event_outbox(occurred_at, id)
+      WHERE status IN ('queued', 'retry');
+  `);
   return true;
 }
 
@@ -219,4 +241,5 @@ module.exports = {
   runWhiteboardRealtimeOutboxMigration,
   runWireframeRealtimeOutboxMigration,
   runSharedRevocationRealtimeOutboxMigration,
+  runRealtimeOutboxExpirationMigration,
 };

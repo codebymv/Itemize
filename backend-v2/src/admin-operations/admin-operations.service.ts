@@ -3,9 +3,10 @@ import { BillingPlanId, planDefinition } from '../billing/billing.constants';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { AdminUserIdsInput, AdminUserSearchInput } from './admin-operations.inputs';
 import { AdminOperationsRepository, AdminUserRow } from './admin-operations.repository';
-import { AdminActivationFunnel, AdminJobQueueHealth, AdminOperationsSnapshot, AdminPlanUpdate, AdminProviderHealth, AdminSystemStats, AdminUser, AdminUserCount, AdminUserIds, AdminUserSearchResult } from './admin-operations.types';
+import { AdminActivationFunnel, AdminJobQueueDetails, AdminJobQueueHealth, AdminOperationsSnapshot, AdminPlanUpdate, AdminProviderHealth, AdminSystemStats, AdminUser, AdminUserCount, AdminUserIds, AdminUserSearchResult } from './admin-operations.types';
 
 const PLANS = new Set(['free', 'starter', 'unlimited', 'pro']);
+const JOB_BUCKETS = new Set(['all', 'queued', 'processing', 'retrying', 'action_required']);
 const FREE_LIMITS = {
   emails: 0,
   sms: 0,
@@ -92,6 +93,55 @@ export class AdminOperationsService {
       actionRequiredJobs,
       providers,
       queues,
+    };
+  }
+
+  async jobQueueDetails(
+    queueId: string,
+    requestedBucket = 'all',
+    requestedLimit = 25,
+    requestedOffset = 0,
+  ): Promise<AdminJobQueueDetails> {
+    const normalizedQueueId = queueId.trim().toLowerCase();
+    if (!/^[a-z0-9-]{1,64}$/.test(normalizedQueueId)) {
+      this.bad('Queue ID is invalid', 'queueId');
+    }
+    const bucket = requestedBucket.trim().toLowerCase();
+    if (!JOB_BUCKETS.has(bucket)) {
+      this.bad('Bucket must be one of: all, queued, processing, retrying, action_required', 'bucket');
+    }
+    if (!Number.isSafeInteger(requestedLimit) || requestedLimit < 1 || requestedLimit > 50) {
+      this.bad('Limit must be between 1 and 50', 'limit');
+    }
+    if (!Number.isSafeInteger(requestedOffset) || requestedOffset < 0 || requestedOffset > 10_000) {
+      this.bad('Offset must be between 0 and 10000', 'offset');
+    }
+    const details = await this.repository.jobQueueDetails(
+      normalizedQueueId,
+      bucket,
+      requestedLimit,
+      requestedOffset,
+    );
+    if (!details) this.bad('Queue was not found', 'queueId');
+    return {
+      queueId: details.queueId,
+      name: details.name,
+      bucket,
+      available: details.available,
+      total: details.total,
+      hasMore: requestedOffset + details.items.length < details.total,
+      kindCounts: details.kindCounts,
+      items: details.items.map((item) => ({
+        id: item.id,
+        status: item.status,
+        createdAt: item.created_at,
+        attemptCount: item.attempt_count,
+        nextAttemptAt: item.next_attempt_at,
+        leaseExpiresAt: item.lease_expires_at,
+        kind: item.kind,
+        reference: item.reference,
+        lastError: this.redactOperationalError(item.last_error),
+      })),
     };
   }
 
@@ -230,5 +280,16 @@ export class AdminOperationsService {
 
   private rate(numerator: number, denominator: number): number {
     return denominator === 0 ? 0 : Number((numerator / denominator).toFixed(4));
+  }
+
+  private redactOperationalError(value: string | null): string | null {
+    if (!value) return null;
+    return value
+      .replace(/\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+\b/gi, '[redacted-authorization]')
+      .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, '[redacted-email]')
+      .replace(/https?:\/\/\S+/gi, '[redacted-url]')
+      .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi, '[redacted-id]')
+      .replace(/\b(?:re|sk|pk|whsec)_[A-Za-z0-9_-]+\b/g, '[redacted-secret]')
+      .slice(0, 280);
   }
 }

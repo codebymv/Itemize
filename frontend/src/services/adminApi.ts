@@ -5,6 +5,7 @@
 
 import {
     getAdminActivationFunnelViaGraphql,
+    getAdminJobQueueDetailsViaGraphql,
     getAdminOperationsSnapshotViaGraphql,
     getAdminStatsViaGraphql,
     getAdminUserCountViaGraphql,
@@ -99,6 +100,31 @@ export interface OperationsSnapshot {
     queues: JobQueueHealth[];
 }
 
+export type JobQueueBucket = 'all' | 'queued' | 'processing' | 'retrying' | 'action_required';
+
+export interface JobQueueItem {
+    id: string;
+    status: string;
+    createdAt: string;
+    attemptCount: number;
+    nextAttemptAt: string | null;
+    leaseExpiresAt: string | null;
+    kind: string | null;
+    reference: string | null;
+    lastError: string | null;
+}
+
+export interface JobQueueDetails {
+    queueId: string;
+    name: string;
+    bucket: JobQueueBucket;
+    available: boolean;
+    total: number;
+    hasMore: boolean;
+    kindCounts: { kind: string; count: number }[];
+    items: JobQueueItem[];
+}
+
 // ============================================
 // API Methods
 // ============================================
@@ -150,6 +176,15 @@ export async function getActivationFunnel(days = 30): Promise<ActivationFunnel> 
 
 export async function getOperationsSnapshot(): Promise<OperationsSnapshot> {
     return getAdminOperationsSnapshotViaGraphql();
+}
+
+export async function getJobQueueDetails(
+    queueId: string,
+    bucket: JobQueueBucket = 'all',
+    limit = 25,
+    offset = 0,
+): Promise<JobQueueDetails> {
+    return getAdminJobQueueDetailsViaGraphql(queueId, bucket, limit, offset);
 }
 
 /**

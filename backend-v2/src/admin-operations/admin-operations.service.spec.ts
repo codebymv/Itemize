@@ -6,7 +6,7 @@ describe('AdminOperationsService', () => {
   const repository = {
     userCount: jest.fn(), searchUsers: jest.fn(), userIds: jest.fn(),
     usersByIds: jest.fn(), stats: jest.fn(), activationFunnel: jest.fn(),
-    operationsSnapshot: jest.fn(), updateOwnPlan: jest.fn(),
+    operationsSnapshot: jest.fn(), jobQueueDetails: jest.fn(), updateOwnPlan: jest.fn(),
   } as unknown as jest.Mocked<AdminOperationsRepository>;
   const service = new AdminOperationsService(repository);
 
@@ -102,5 +102,45 @@ describe('AdminOperationsService', () => {
     expect(result.providers).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: 'database', status: 'operational', required: true }),
     ]));
+  });
+
+  it('returns bounded queue details and redacts sensitive diagnostics', async () => {
+    repository.jobQueueDetails.mockResolvedValue({
+      queueId: 'realtime',
+      name: 'Realtime events',
+      available: true,
+      total: 2,
+      kindCounts: [{ kind: 'CONTENT_CHANGED', count: 2 }],
+      items: [{
+        id: '42',
+        status: 'retry',
+        created_at: new Date('2026-08-22T11:00:00.000Z'),
+        attempt_count: 2,
+        next_attempt_at: new Date('2026-08-22T11:05:00.000Z'),
+        lease_expires_at: null,
+        kind: 'noteUpdated',
+        reference: null,
+        last_error: 'Delivery to person@example.com failed with Bearer secret-token',
+      }],
+    });
+    await expect(service.jobQueueDetails(' REALTIME ', 'retrying', 1, 0)).resolves.toMatchObject({
+      queueId: 'realtime',
+      bucket: 'retrying',
+      total: 2,
+      hasMore: true,
+      kindCounts: [{ kind: 'CONTENT_CHANGED', count: 2 }],
+      items: [expect.objectContaining({
+        id: '42',
+        attemptCount: 2,
+        lastError: 'Delivery to [redacted-email] failed with [redacted-authorization]',
+      })],
+    });
+    expect(repository.jobQueueDetails).toHaveBeenCalledWith('realtime', 'retrying', 1, 0);
+    await expect(service.jobQueueDetails('../users')).rejects.toMatchObject<Partial<GraphQLError>>({
+      extensions: expect.objectContaining({ code: 'BAD_USER_INPUT', field: 'queueId' }),
+    });
+    await expect(service.jobQueueDetails('realtime', 'sent')).rejects.toMatchObject<Partial<GraphQLError>>({
+      extensions: expect.objectContaining({ code: 'BAD_USER_INPUT', field: 'bucket' }),
+    });
   });
 });

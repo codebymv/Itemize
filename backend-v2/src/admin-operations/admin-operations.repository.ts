@@ -44,46 +44,135 @@ export type AdminJobQueueRow = {
   oldest_pending_at: Date | null;
 };
 
-const queue = (id: string, name: string, table: string) => ({
+export type AdminJobQueueItemRow = {
+  id: string;
+  status: string;
+  created_at: Date;
+  attempt_count: number;
+  next_attempt_at: Date | null;
+  lease_expires_at: Date | null;
+  kind: string | null;
+  reference: string | null;
+  last_error: string | null;
+};
+
+export type AdminJobQueueKindCountRow = {
+  kind: string;
+  count: number;
+};
+
+type AdminJobQueueDefinition = {
+  id: string;
+  name: string;
+  table: string;
+  statusColumn: string;
+  createdColumn: string;
+  idColumn: string;
+  queuedStatuses: readonly string[];
+  processingStatuses: readonly string[];
+  retryingStatuses: readonly string[];
+  actionStatuses: readonly string[];
+  attemptColumns: readonly string[];
+  nextAttemptColumns: readonly string[];
+  leaseColumns: readonly string[];
+  errorColumns: readonly string[];
+  kindColumns: readonly string[];
+  referenceColumns: readonly { column: string; label: string }[];
+};
+
+const queue = (
+  id: string,
+  name: string,
+  table: string,
+  overrides: Partial<AdminJobQueueDefinition> = {},
+): AdminJobQueueDefinition => ({
   id, name, table, statusColumn: 'status', createdColumn: 'created_at',
+  idColumn: 'id',
   queuedStatuses: ['queued'], processingStatuses: ['processing'],
   retryingStatuses: ['retry'],
   actionStatuses: ['dead_letter', 'failed', 'reconciliation_required'],
+  attemptColumns: ['attempt_count'],
+  nextAttemptColumns: ['next_attempt_at'],
+  leaseColumns: ['lease_expires_at'],
+  errorColumns: ['last_error'],
+  kindColumns: ['event_name', 'effect_type', 'direction', 'event_type'],
+  referenceColumns: [],
+  ...overrides,
 });
 
 const ADMIN_JOB_QUEUES = [
-  queue('messages', 'Direct messages', 'message_delivery_jobs'),
-  queue('estimates', 'Estimate emails', 'estimate_email_deliveries'),
-  queue('invoices', 'Invoice emails', 'invoice_email_deliveries'),
-  queue('campaign-tests', 'Campaign test emails', 'campaign_test_email_deliveries'),
-  queue('admin-email', 'Admin email', 'admin_email_deliveries'),
-  queue('review-requests', 'Review requests', 'review_request_deliveries'),
-  queue('signatures', 'Signature delivery', 'signature_delivery_outbox'),
-  queue('signature-completion', 'Signature completion', 'signature_completion_jobs'),
-  queue('calendar-sync', 'Calendar sync', 'calendar_sync_jobs'),
-  queue('workflows', 'Workflow side effects', 'workflow_side_effect_outbox'),
-  queue('social-messages', 'Social messages', 'social_message_delivery_jobs'),
-  queue('campaigns', 'Campaign delivery', 'campaign_delivery_jobs'),
-  queue('realtime', 'Realtime events', 'realtime_event_outbox'),
-  {
-    id: 'email-webhooks', name: 'Email webhook reconciliation', table: 'email_webhook_events',
+  queue('messages', 'Direct messages', 'message_delivery_jobs', {
+    referenceColumns: [{ column: 'message_id', label: 'Message' }],
+  }),
+  queue('estimates', 'Estimate emails', 'estimate_email_deliveries', {
+    referenceColumns: [{ column: 'estimate_id', label: 'Estimate' }],
+  }),
+  queue('invoices', 'Invoice emails', 'invoice_email_deliveries', {
+    referenceColumns: [{ column: 'invoice_id', label: 'Invoice' }],
+  }),
+  queue('campaign-tests', 'Campaign test emails', 'campaign_test_email_deliveries', {
+    referenceColumns: [{ column: 'campaign_id', label: 'Campaign' }],
+  }),
+  queue('admin-email', 'Admin email', 'admin_email_deliveries', {
+    referenceColumns: [{ column: 'batch_id', label: 'Batch' }],
+  }),
+  queue('review-requests', 'Review requests', 'review_request_deliveries', {
+    referenceColumns: [{ column: 'review_request_id', label: 'Review request' }],
+  }),
+  queue('signatures', 'Signature delivery', 'signature_delivery_outbox', {
+    referenceColumns: [{ column: 'document_id', label: 'Document' }],
+  }),
+  queue('signature-completion', 'Signature completion', 'signature_completion_jobs', {
+    referenceColumns: [{ column: 'document_id', label: 'Document' }],
+  }),
+  queue('calendar-sync', 'Calendar sync', 'calendar_sync_jobs', {
+    referenceColumns: [{ column: 'connection_id', label: 'Connection' }],
+  }),
+  queue('workflows', 'Workflow side effects', 'workflow_side_effect_outbox', {
+    referenceColumns: [{ column: 'enrollment_id', label: 'Enrollment' }],
+  }),
+  queue('social-messages', 'Social messages', 'social_message_delivery_jobs', {
+    referenceColumns: [{ column: 'message_id', label: 'Message' }],
+  }),
+  queue('campaigns', 'Campaign delivery', 'campaign_delivery_jobs', {
+    referenceColumns: [{ column: 'campaign_id', label: 'Campaign' }],
+  }),
+  queue('realtime', 'Realtime events', 'realtime_event_outbox', {
+    kindColumns: ['event_type', 'event_name'],
+  }),
+  queue('email-webhooks', 'Email webhook reconciliation', 'email_webhook_events', {
     statusColumn: 'reconciliation_status', createdColumn: 'received_at',
+    idColumn: 'svix_id',
     queuedStatuses: ['pending'], processingStatuses: ['processing'],
     retryingStatuses: ['retry'], actionStatuses: ['dead_letter'],
-  },
-  {
-    id: 'stripe-notifications', name: 'Stripe notifications', table: 'stripe_subscription_webhook_events',
+    attemptColumns: ['reconciliation_attempt_count'],
+    nextAttemptColumns: ['reconciliation_next_attempt_at'],
+    leaseColumns: ['reconciliation_lease_expires_at'],
+    errorColumns: ['reconciliation_last_error', 'reconciliation_error'],
+  }),
+  queue('stripe-notifications', 'Stripe notifications', 'stripe_subscription_webhook_events', {
     statusColumn: 'notification_status', createdColumn: 'received_at',
+    idColumn: 'stripe_event_id',
     queuedStatuses: ['pending'], processingStatuses: ['processing'],
     retryingStatuses: ['retry'], actionStatuses: ['failed', 'dead_letter'],
-  },
-  {
-    id: 'stripe-reconciliation', name: 'Stripe reconciliation', table: 'stripe_subscription_webhook_events',
+    attemptColumns: ['notification_attempt_count'],
+    nextAttemptColumns: ['notification_next_attempt_at'],
+    leaseColumns: ['notification_lease_expires_at'],
+    errorColumns: ['notification_last_error', 'notification_error'],
+    kindColumns: ['event_type'],
+  }),
+  queue('stripe-reconciliation', 'Stripe reconciliation', 'stripe_subscription_webhook_events', {
     statusColumn: 'reconciliation_status', createdColumn: 'received_at',
+    idColumn: 'stripe_event_id',
     queuedStatuses: ['pending'], processingStatuses: ['processing'],
     retryingStatuses: ['retry'], actionStatuses: ['dead_letter'],
-  },
-] as const;
+    attemptColumns: ['reconciliation_attempt_count'],
+    nextAttemptColumns: ['reconciliation_next_attempt_at'],
+    leaseColumns: ['reconciliation_lease_expires_at'],
+    errorColumns: ['reconciliation_last_error', 'reconciliation_error'],
+    kindColumns: ['event_type'],
+  }),
+];
 
 @Injectable()
 export class AdminOperationsRepository {
@@ -230,6 +319,121 @@ export class AdminOperationsRepository {
     }));
 
     return { asOf: new Date(), queues };
+  }
+
+  async jobQueueDetails(
+    queueId: string,
+    bucket: string,
+    limit: number,
+    offset: number,
+  ): Promise<{
+    queueId: string;
+    name: string;
+    available: boolean;
+    total: number;
+    kindCounts: AdminJobQueueKindCountRow[];
+    items: AdminJobQueueItemRow[];
+  } | null> {
+    const queueDefinition = ADMIN_JOB_QUEUES.find((queue) => queue.id === queueId);
+    if (!queueDefinition) return null;
+
+    const columns = await this.pool.query<{ column_name: string }>(
+      `SELECT column_name
+       FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = $1`,
+      [queueDefinition.table],
+    );
+    const availableColumns = new Set(columns.rows.map((row) => row.column_name));
+    const requiredColumns = [
+      queueDefinition.idColumn,
+      queueDefinition.statusColumn,
+      queueDefinition.createdColumn,
+    ];
+    if (requiredColumns.some((column) => !availableColumns.has(column))) {
+      return {
+        queueId: queueDefinition.id,
+        name: queueDefinition.name,
+        available: false,
+        total: 0,
+        kindCounts: [],
+        items: [],
+      };
+    }
+
+    const firstAvailable = (candidates: readonly string[]): string | null =>
+      candidates.find((column) => availableColumns.has(column)) ?? null;
+    const attemptColumn = firstAvailable(queueDefinition.attemptColumns);
+    const nextAttemptColumn = firstAvailable(queueDefinition.nextAttemptColumns);
+    const leaseColumn = firstAvailable(queueDefinition.leaseColumns);
+    const errorColumn = firstAvailable(queueDefinition.errorColumns);
+    const kindColumn = firstAvailable(queueDefinition.kindColumns);
+    const referenceColumn = queueDefinition.referenceColumns.find(
+      (candidate) => availableColumns.has(candidate.column),
+    ) ?? null;
+    const bucketStatuses: Record<string, readonly string[]> = {
+      all: [
+        ...queueDefinition.queuedStatuses,
+        ...queueDefinition.processingStatuses,
+        ...queueDefinition.retryingStatuses,
+        ...queueDefinition.actionStatuses,
+      ],
+      queued: queueDefinition.queuedStatuses,
+      processing: queueDefinition.processingStatuses,
+      retrying: queueDefinition.retryingStatuses,
+      action_required: queueDefinition.actionStatuses,
+    };
+    const statuses = bucketStatuses[bucket] ?? bucketStatuses.all;
+    const valueOrNull = (column: string | null): string => column ?? 'NULL';
+    const referenceExpression = referenceColumn
+      ? `CASE WHEN ${referenceColumn.column} IS NULL THEN NULL
+           ELSE '${referenceColumn.label} #' || ${referenceColumn.column}::text END`
+      : 'NULL';
+
+    return this.readTransaction(async (client) => {
+      const count = await client.query<{ total: number }>(
+        `SELECT COUNT(*)::int AS total
+         FROM ${queueDefinition.table}
+         WHERE ${queueDefinition.statusColumn} = ANY($1::text[])`,
+        [statuses],
+      );
+      const items = await client.query<AdminJobQueueItemRow>(
+        `SELECT
+           ${queueDefinition.idColumn}::text AS id,
+           ${queueDefinition.statusColumn}::text AS status,
+           ${queueDefinition.createdColumn} AS created_at,
+           COALESCE(${valueOrNull(attemptColumn)}, 0)::int AS attempt_count,
+           ${valueOrNull(nextAttemptColumn)} AS next_attempt_at,
+           ${valueOrNull(leaseColumn)} AS lease_expires_at,
+           ${kindColumn ? `${kindColumn}::text` : 'NULL'} AS kind,
+           ${referenceExpression} AS reference,
+           ${errorColumn ? `${errorColumn}::text` : 'NULL'} AS last_error
+         FROM ${queueDefinition.table}
+         WHERE ${queueDefinition.statusColumn} = ANY($1::text[])
+         ORDER BY ${queueDefinition.createdColumn} ASC, ${queueDefinition.idColumn} ASC
+         LIMIT $2 OFFSET $3`,
+        [statuses, limit, offset],
+      );
+      const kindCounts = kindColumn
+        ? await client.query<AdminJobQueueKindCountRow>(
+          `SELECT COALESCE(${kindColumn}::text, 'Unknown') AS kind,
+                  COUNT(*)::int AS count
+           FROM ${queueDefinition.table}
+           WHERE ${queueDefinition.statusColumn} = ANY($1::text[])
+           GROUP BY 1
+           ORDER BY count DESC, kind ASC
+           LIMIT 12`,
+          [statuses],
+        )
+        : { rows: [] as AdminJobQueueKindCountRow[] };
+      return {
+        queueId: queueDefinition.id,
+        name: queueDefinition.name,
+        available: true,
+        total: Number(count.rows[0]?.total ?? 0),
+        kindCounts: kindCounts.rows,
+        items: items.rows,
+      };
+    });
   }
 
   async activationFunnel(days: number): Promise<AdminActivationFunnelRow> {

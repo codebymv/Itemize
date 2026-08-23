@@ -1,5 +1,5 @@
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
-import type { ActivationFunnel, AdminUser, OperationsSnapshot, SearchUsersResponse, SystemStats, UserCountResponse } from './adminApi';
+import type { ActivationFunnel, AdminUser, JobQueueBucket, JobQueueDetails, OperationsSnapshot, SearchUsersResponse, SystemStats, UserCountResponse } from './adminApi';
 
 type GraphqlAdminUser = {
   id: number; email: string; name: string | null; role: 'USER' | 'ADMIN';
@@ -76,6 +76,27 @@ export const getAdminOperationsSnapshotViaGraphql = async (): Promise<Operations
     }
   }`, {});
   return data.adminOperationsSnapshot;
+};
+
+export const getAdminJobQueueDetailsViaGraphql = async (
+  queueId: string,
+  bucket: JobQueueBucket,
+  limit: number,
+  offset: number,
+): Promise<JobQueueDetails> => {
+  const variables = { queueId, bucket, limit, offset };
+  const data = await graphqlRequest<
+    { adminJobQueueDetails: JobQueueDetails }, typeof variables
+  >(`query AdminJobQueueDetails($queueId: String!, $bucket: String, $limit: Int, $offset: Int) {
+    adminJobQueueDetails(queueId: $queueId, bucket: $bucket, limit: $limit, offset: $offset) {
+      queueId name bucket available total hasMore
+      kindCounts { kind count }
+      items {
+        id status createdAt attemptCount nextAttemptAt leaseExpiresAt kind reference lastError
+      }
+    }
+  }`, variables);
+  return data.adminJobQueueDetails;
 };
 
 export const updateAdminOwnPlanViaGraphql = async (plan: string): Promise<{ message: string; plan: string }> => {

@@ -1,17 +1,20 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as adminApi from '@/services/adminApi';
 import OperationsSection from './OperationsSection';
 
 vi.mock('@/services/adminApi', () => ({
     getOperationsSnapshot: vi.fn(),
+    getJobQueueDetails: vi.fn(),
 }));
 
 const getOperationsSnapshot = vi.mocked(adminApi.getOperationsSnapshot);
+const getJobQueueDetails = vi.mocked(adminApi.getJobQueueDetails);
 
 describe('OperationsSection', () => {
     beforeEach(() => {
         getOperationsSnapshot.mockReset();
+        getJobQueueDetails.mockReset();
     });
 
     it('renders provider configuration and actionable queue state', async () => {
@@ -49,5 +52,43 @@ describe('OperationsSection', () => {
         render(<OperationsSection />);
         await waitFor(() => expect(screen.getByText('Unable to load operations')).toBeInTheDocument());
         expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+    });
+
+    it('loads bounded queue details on demand and explains an unclaimed backlog', async () => {
+        getOperationsSnapshot.mockResolvedValue({
+            asOf: '2026-08-22T12:00:00.000Z', status: 'degraded',
+            activeJobs: 70, retryingJobs: 0, actionRequiredJobs: 0, providers: [],
+            queues: [{
+                id: 'realtime', name: 'Realtime events', status: 'degraded', available: true,
+                queued: 70, processing: 0, retrying: 0, actionRequired: 0, active: 70,
+                oldestPendingAt: '2026-08-18T00:00:00.000Z',
+            }],
+        });
+        getJobQueueDetails.mockResolvedValue({
+            queueId: 'realtime', name: 'Realtime events', bucket: 'all', available: true,
+            total: 70, hasMore: true,
+            kindCounts: [
+                { kind: 'CONTENT_CHANGED', count: 19 },
+                { kind: 'POSITION_UPDATE', count: 7 },
+            ],
+            items: [{
+                id: '42', status: 'queued', createdAt: '2026-08-18T00:00:00.000Z',
+                attemptCount: 0, nextAttemptAt: '2026-08-18T00:00:00.000Z',
+                leaseExpiresAt: null, kind: 'noteUpdated', reference: null, lastError: null,
+            }],
+        });
+
+        render(<OperationsSection />);
+        const detailsButtons = await screen.findAllByRole('button', { name: 'Details' });
+        fireEvent.click(detailsButtons[0]);
+
+        await waitFor(() => expect(screen.getAllByText('Realtime events details').length).toBeGreaterThan(0));
+        expect(getJobQueueDetails).toHaveBeenCalledWith('realtime', 'all', 25, 0);
+        expect((await screen.findAllByText(/No delivery attempts are recorded/)).length).toBeGreaterThan(0);
+        expect(screen.getAllByText('noteUpdated').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('By event type').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Content Changed').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('19').length).toBeGreaterThan(0);
+        expect(screen.getByText('Outstanding jobs')).toBeInTheDocument();
     });
 });

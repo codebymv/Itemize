@@ -5,7 +5,7 @@ import { RequestContextService } from '../request-context/request-context.servic
 import { AdminAccessGuard } from './admin-access.guard';
 import { AdminUserIdsInput, AdminUserSearchInput } from './admin-operations.inputs';
 import { AdminOperationsService } from './admin-operations.service';
-import { AdminActivationFunnel, AdminOperationsSnapshot, AdminPlanUpdate, AdminSystemStats, AdminUser, AdminUserCount, AdminUserIds, AdminUserSearchResult } from './admin-operations.types';
+import { AdminActivationFunnel, AdminJobQueueDetails, AdminOperationsSnapshot, AdminPlanUpdate, AdminSystemStats, AdminUser, AdminUserCount, AdminUserIds, AdminUserSearchResult } from './admin-operations.types';
 
 @UseGuards(AdminAccessGuard)
 @Resolver()
@@ -19,6 +19,14 @@ export class AdminOperationsResolver {
   @Query(() => AdminSystemStats) adminSystemStats(): Promise<AdminSystemStats> { return this.service.stats(); }
   @Query(() => AdminOperationsSnapshot) adminOperationsSnapshot(): Promise<AdminOperationsSnapshot> {
     return this.service.operationsSnapshot();
+  }
+  @Query(() => AdminJobQueueDetails) adminJobQueueDetails(
+    @Args('queueId') queueId: string,
+    @Args('bucket', { nullable: true }) bucket?: string,
+    @Args('limit', { type: () => Int, nullable: true }) limit?: number,
+    @Args('offset', { type: () => Int, nullable: true }) offset?: number,
+  ): Promise<AdminJobQueueDetails> {
+    return this.service.jobQueueDetails(queueId, bucket, limit, offset);
   }
   @Query(() => AdminActivationFunnel) adminActivationFunnel(
     @Args('days', { type: () => Int, nullable: true }) days?: number,

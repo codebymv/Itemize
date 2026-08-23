@@ -196,4 +196,40 @@ describe('Realtime outbox PostgreSQL boundary', () => {
     );
     expect(stored.rows[0]).toMatchObject({ status: 'sent', attempt_count: 2 });
   });
+
+  test('expires stale projection updates but preserves deletion delivery', async () => {
+    const staleUpdate = event('stale-projection', { eventType: 'CONTENT_CHANGED' });
+    const staleDeletion = event('stale-deletion', { eventType: 'noteDeleted' });
+    await enqueueRealtimeEvent(dbHelper.pool, staleUpdate);
+    await enqueueRealtimeEvent(dbHelper.pool, staleDeletion);
+    await dbHelper.pool.query(`
+      UPDATE realtime_event_outbox
+      SET occurred_at = CURRENT_TIMESTAMP - INTERVAL '20 minutes',
+          created_at = CURRENT_TIMESTAMP - INTERVAL '20 minutes'
+      WHERE event_key = ANY($1::text[])
+    `, [[staleUpdate.eventKey, staleDeletion.eventKey]]);
+
+    const deliver = jest.fn().mockResolvedValue(undefined);
+    const summary = await runRealtimeOutboxJobs(dbHelper.pool, null, {
+      batchSize: 5,
+      deliver,
+      maxEventAgeSeconds: 900,
+      workerId: 'socket-host-expiration',
+    });
+
+    expect(summary).toMatchObject({ expired: 1, claimed: 1, sent: 1 });
+    expect(deliver).toHaveBeenCalledTimes(1);
+    expect(deliver.mock.calls[0][0]).toMatchObject({ event_key: staleDeletion.eventKey });
+    const stored = await dbHelper.pool.query(
+      `SELECT event_key, status, expired_at
+       FROM realtime_event_outbox
+       WHERE event_key = ANY($1::text[])
+       ORDER BY event_key`,
+      [[staleUpdate.eventKey, staleDeletion.eventKey]]
+    );
+    const byKey = Object.fromEntries(stored.rows.map(row => [row.event_key, row]));
+    expect(byKey[staleUpdate.eventKey]).toMatchObject({ status: 'expired' });
+    expect(byKey[staleUpdate.eventKey].expired_at).toBeTruthy();
+    expect(byKey[staleDeletion.eventKey]).toMatchObject({ status: 'sent', expired_at: null });
+  });
 });

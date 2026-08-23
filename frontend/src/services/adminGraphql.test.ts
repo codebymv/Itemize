@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
-import { getAdminActivationFunnelViaGraphql, getAdminOperationsSnapshotViaGraphql, getAdminUserIdsViaGraphql, searchAdminUsersViaGraphql, updateAdminOwnPlanViaGraphql } from './adminGraphql';
+import { getAdminActivationFunnelViaGraphql, getAdminJobQueueDetailsViaGraphql, getAdminOperationsSnapshotViaGraphql, getAdminUserIdsViaGraphql, searchAdminUsersViaGraphql, updateAdminOwnPlanViaGraphql } from './adminGraphql';
 
 vi.mock('./graphqlClient', async (importOriginal) => ({
   ...await importOriginal<typeof import('./graphqlClient')>(), graphqlRequest: vi.fn(), graphqlMutationRequest: vi.fn(),
@@ -48,6 +48,20 @@ describe('admin GraphQL adapters', () => {
     await expect(getAdminOperationsSnapshotViaGraphql()).resolves.toEqual(snapshot);
     expect(graphqlRequest).toHaveBeenCalledWith(
       expect.stringContaining('adminOperationsSnapshot'), {},
+    );
+  });
+
+  it('requests bounded queue details with an explicit status bucket', async () => {
+    const details = {
+      queueId: 'realtime', name: 'Realtime events', bucket: 'queued' as const,
+      available: true, total: 1, hasMore: false,
+      kindCounts: [{ kind: 'CONTENT_CHANGED', count: 1 }], items: [],
+    };
+    vi.mocked(graphqlRequest).mockResolvedValue({ adminJobQueueDetails: details });
+    await expect(getAdminJobQueueDetailsViaGraphql('realtime', 'queued', 25, 0)).resolves.toEqual(details);
+    expect(graphqlRequest).toHaveBeenCalledWith(
+      expect.stringContaining('adminJobQueueDetails'),
+      { queueId: 'realtime', bucket: 'queued', limit: 25, offset: 0 },
     );
   });
 });

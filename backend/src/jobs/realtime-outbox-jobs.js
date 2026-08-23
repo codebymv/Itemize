@@ -9,6 +9,7 @@ const DEFAULT_MAX_ATTEMPTS = 5;
 const DEFAULT_BASE_DELAY_MS = 1_000;
 const DEFAULT_MAX_DELAY_MS = 60_000;
 const DEFAULT_POLL_INTERVAL_MS = 500;
+const DEFAULT_MAX_EVENT_AGE_SECONDS = 15 * 60;
 
 function boundedInteger(value, fallback, min, max) {
   const parsed = Number(value);
@@ -32,6 +33,12 @@ function workerOptions(options = {}) {
     batchSize: boundedInteger(options.batchSize, DEFAULT_BATCH_SIZE, 1, 100),
     leaseSeconds: boundedInteger(options.leaseSeconds, DEFAULT_LEASE_SECONDS, 1, 300),
     maxAttempts: boundedInteger(options.maxAttempts, DEFAULT_MAX_ATTEMPTS, 1, 20),
+    maxEventAgeSeconds: boundedInteger(
+      options.maxEventAgeSeconds,
+      DEFAULT_MAX_EVENT_AGE_SECONDS,
+      0,
+      7 * 24 * 60 * 60
+    ),
     maxDelayMs: boundedInteger(options.maxDelayMs, DEFAULT_MAX_DELAY_MS, 1, 3_600_000),
     pollIntervalMs: boundedInteger(
       options.pollIntervalMs,
@@ -46,6 +53,33 @@ function workerOptions(options = {}) {
     normalized.maxDelayMs = normalized.baseDelayMs;
   }
   return normalized;
+}
+
+async function expireStaleRealtimeEvents(pool, options, outboxId = null) {
+  if (options.maxEventAgeSeconds === 0) return 0;
+  const result = await pool.query(`
+    UPDATE realtime_event_outbox SET
+      status = 'expired',
+      expired_at = CURRENT_TIMESTAMP,
+      lease_expires_at = NULL,
+      claimed_by = NULL,
+      last_error = NULL
+    WHERE ($2::bigint IS NULL OR id = $2)
+      AND status IN ('queued', 'retry')
+      AND occurred_at < CURRENT_TIMESTAMP - ($1::integer * INTERVAL '1 second')
+      AND event_name IN (
+        'userListUpdated',
+        'listUpdated',
+        'noteUpdated',
+        'whiteboardUpdated',
+        'wireframeUpdated',
+        'userWireframeUpdated'
+      )
+      AND LOWER(event_type) NOT LIKE '%deleted%'
+      AND LOWER(event_type) NOT LIKE '%revoked%'
+    RETURNING id
+  `, [options.maxEventAgeSeconds, outboxId]);
+  return result.rowCount || result.rows.length;
 }
 
 async function claimRealtimeEvent(pool, options, outboxId = null) {
@@ -243,8 +277,15 @@ async function runRealtimeOutboxJobs(pool, broadcast, suppliedOptions = {}) {
     sent: 0,
     retry: 0,
     deadLetter: 0,
+    expired: 0,
     stale: 0,
   };
+
+  summary.expired = await expireStaleRealtimeEvents(
+    pool,
+    options,
+    suppliedOptions.outboxId || null
+  );
 
   for (let index = 0; index < options.batchSize; index += 1) {
     const claim = await claimRealtimeEvent(pool, options, suppliedOptions.outboxId || null);
@@ -282,7 +323,7 @@ function startRealtimeOutboxWorker(pool, broadcast, suppliedOptions = {}) {
     running = true;
     try {
       const summary = await runRealtimeOutboxJobs(pool, broadcast, options);
-      if (summary.claimed > 0) {
+      if (summary.claimed > 0 || summary.expired > 0) {
         logger.info('[Realtime outbox] Delivery cycle completed', summary);
       }
     } catch (error) {
@@ -309,6 +350,7 @@ function startRealtimeOutboxWorker(pool, broadcast, suppliedOptions = {}) {
 module.exports = {
   claimRealtimeEvent,
   dispatchRealtimeEvent,
+  expireStaleRealtimeEvents,
   markRealtimeEventFailure,
   redactRealtimeError,
   realtimeBackoffMs,

@@ -82,6 +82,37 @@ export class AdminJobQueueHealth {
 }
 
 @ObjectType()
+export class AdminJobQueueItem {
+  @Field() id: string;
+  @Field() status: string;
+  @Field(() => GraphQLISODateTime) createdAt: Date;
+  @Field(() => Int) attemptCount: number;
+  @Field(() => GraphQLISODateTime, { nullable: true }) nextAttemptAt: Date | null;
+  @Field(() => GraphQLISODateTime, { nullable: true }) leaseExpiresAt: Date | null;
+  @Field(() => String, { nullable: true }) kind: string | null;
+  @Field(() => String, { nullable: true }) reference: string | null;
+  @Field(() => String, { nullable: true }) lastError: string | null;
+}
+
+@ObjectType()
+export class AdminJobQueueKindCount {
+  @Field() kind: string;
+  @Field(() => Int) count: number;
+}
+
+@ObjectType()
+export class AdminJobQueueDetails {
+  @Field() queueId: string;
+  @Field() name: string;
+  @Field() bucket: string;
+  @Field() available: boolean;
+  @Field(() => Int) total: number;
+  @Field() hasMore: boolean;
+  @Field(() => [AdminJobQueueKindCount]) kindCounts: AdminJobQueueKindCount[];
+  @Field(() => [AdminJobQueueItem]) items: AdminJobQueueItem[];
+}
+
+@ObjectType()
 export class AdminOperationsSnapshot {
   @Field(() => GraphQLISODateTime) asOf: Date;
   @Field() status: string;

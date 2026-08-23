@@ -84,6 +84,7 @@ function initScheduler(pool, io, broadcast) {
             batchSize: process.env.REALTIME_OUTBOX_BATCH_SIZE,
             leaseSeconds: process.env.REALTIME_OUTBOX_LEASE_SECONDS,
             maxAttempts: process.env.REALTIME_OUTBOX_MAX_ATTEMPTS,
+            maxEventAgeSeconds: process.env.REALTIME_OUTBOX_MAX_EVENT_AGE_SECONDS,
             pollIntervalMs: process.env.REALTIME_OUTBOX_POLL_INTERVAL_MS,
         });
         logger.info('Realtime outbox worker initialized');
