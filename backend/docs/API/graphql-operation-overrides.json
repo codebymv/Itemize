@@ -78,18 +78,18 @@
       "owner": "messaging",
       "targetModule": "SmsWebhooksModule",
       "targetOperation": "processInboundSmsWebhook",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain Twilio-signed form HTTP, fail closed in production, and claim MessageSid durably. The globally unique normalized To number selects one owning organization before From is matched only among that tenant's contacts; unmatched receivers and ambiguous or missing tenant-local senders are quarantined without attribution."
+      "notes": "Retain Twilio-signed form HTTP, fail closed in production, and claim MessageSid durably. The globally unique normalized To number selects one owning organization before From is matched only among that tenant's contacts; unmatched receivers and ambiguous or missing tenant-local senders are quarantined without attribution. NestJS now owns an identical implementation (SmsWebhooksModule) mirroring the Twilio form-signature decision table over the public URL, the durable event-key claim, the provider-to-domain status map, receiving-number routing, tenant-local sender matching, and quarantine reasons, proven by a dual-runtime PostgreSQL parity suite including cross-runtime claim deduplication; the legacy origin routes both paths through a default-off proxy (SMS_WEBHOOKS_NESTJS_ENABLED) that forwards the raw form bytes, the Twilio signature, and the original protocol/host so URL-bound validation still succeeds upstream."
     },
     "POST /api/sms-templates/webhook/status": {
       "disposition": "retain-http",
       "owner": "messaging",
       "targetModule": "SmsWebhooksModule",
       "targetOperation": "processSmsStatusWebhook",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain Twilio-signed form HTTP with durable MessageSid/status claims and an explicit provider-to-domain status map."
+      "notes": "Retain Twilio-signed form HTTP with durable MessageSid/status claims and an explicit provider-to-domain status map. NestJS now owns an identical implementation (SmsWebhooksModule) mirroring the Twilio form-signature decision table over the public URL, the durable event-key claim, the provider-to-domain status map, receiving-number routing, tenant-local sender matching, and quarantine reasons, proven by a dual-runtime PostgreSQL parity suite including cross-runtime claim deduplication; the legacy origin routes both paths through a default-off proxy (SMS_WEBHOOKS_NESTJS_ENABLED) that forwards the raw form bytes, the Twilio signature, and the original protocol/host so URL-bound validation still succeeds upstream."
     },
     "GET /api/contacts/export/csv": {
       "disposition": "retain-http",

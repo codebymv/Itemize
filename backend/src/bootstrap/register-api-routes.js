@@ -50,6 +50,10 @@ const {
     createEmailWebhookProxy,
     emailWebhooksEnabled,
 } = require('../email-webhooks-proxy');
+const {
+    createSmsWebhookProxy,
+    smsWebhooksEnabled,
+} = require('../sms-webhooks-proxy');
 const rateLimit = require('express-rate-limit');
 const webhooksRoutes = require('../routes/webhooks.routes');
 const calendarIntegrationsRoutes = require('../routes/calendar-integrations.routes');
@@ -184,6 +188,15 @@ function registerApiRoutes({
     app.use('/api/email', emailWebhooksRoutes(pool, publicRateLimit));
     logger.info('Email Webhook routes initialized');
     logger.info('Workflows routes initialized');
+    {
+        const smsWebhookStack = (action) => {
+            const proxy = createSmsWebhookProxy({ action, logger });
+            return smsWebhooksEnabled() ? [publicRateLimit, proxy] : [proxy];
+        };
+        app.post('/api/sms-templates/webhook/status', ...smsWebhookStack('status'));
+        app.post('/api/sms-templates/webhook/inbound', ...smsWebhookStack('inbound'));
+        logger.info('SMS webhook proxy routes initialized');
+    }
     app.use('/api/sms-templates', smsWebhooksRoutes(pool, publicRateLimit));
     logger.info('SMS webhook routes initialized');
     app.use('/api/chat-widget', chatWidgetRoutes(

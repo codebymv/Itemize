@@ -82,8 +82,8 @@
 | POST | `/api/signatures/documents/upload` | 1 | 10 | retain-http | high | esignatures / SignatureFilesModule / uploadSignatureDraftPdf |
 | GET | `/api/signatures/templates/:id/file` | 0 | 0 | retain-http | high | esignatures / SignatureFilesModule / streamSignatureTemplatePdf |
 | POST | `/api/signatures/templates/upload` | 1 | 0 | retain-http | high | esignatures / SignatureFilesModule / uploadSignatureTemplatePdf |
-| POST | `/api/sms-templates/webhook/inbound` | 0 | 6 | retain-http | high | messaging / SmsWebhooksModule / processInboundSmsWebhook |
-| POST | `/api/sms-templates/webhook/status` | 0 | 4 | retain-http | high | messaging / SmsWebhooksModule / processSmsStatusWebhook |
+| POST | `/api/sms-templates/webhook/inbound` | 0 | 7 | retain-http | high | messaging / SmsWebhooksModule / processInboundSmsWebhook |
+| POST | `/api/sms-templates/webhook/status` | 0 | 8 | retain-http | high | messaging / SmsWebhooksModule / processSmsStatusWebhook |
 | GET | `/api/social/callback/facebook` | 0 | 0 | retain-http | high | social-integrations / SocialOAuthModule / completeFacebookConnection |
 | GET | `/api/social/connect/facebook` | 1 | 0 | retain-http | high | social-integrations / SocialOAuthModule / beginFacebookConnection |
 | GET | `/api/social/webhook` | 0 | 2 | retain-http | high | social-integrations / SocialWebhooksModule / verifyMetaWebhook |
@@ -102,7 +102,7 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 38
+- Unmatched backend test calls: 39
 - Orphaned manual overrides: 0
 - Orphaned runtime-expression overrides: 0
 
@@ -167,3 +167,4 @@
 | GET | `/api/shared/:kind/:token` | `backend/src/__tests__/public-sharing-proxy.test.js:12` |
 | GET | `/api/shared/:kind/:token` | `backend/src/__tests__/public-sharing-proxy.test.js:55` |
 | POST | `/api/invoices/email/preview` | `backend/src/__tests__/routes/invoice-email-preview-retirement.routes.test.js:18` |
+| POST | `/api/sms-templates/webhook/:action` | `backend/src/__tests__/sms-webhooks-proxy.test.js:19` |

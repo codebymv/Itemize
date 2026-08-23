@@ -15,7 +15,7 @@
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 38,
+    "unmatchedBackendTestCallCount": 39,
     "retainHttpCount": 58,
     "graphqlQueryCount": 0,
     "graphqlMutationCount": 1,
@@ -104,7 +104,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 243
+          "line": 256
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -203,7 +203,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 245
+          "line": 258
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -356,7 +356,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 246
+          "line": 259
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -479,7 +479,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 244
+          "line": 257
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -875,7 +875,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 174
+          "line": 178
         }
       ],
       "consumerCallsites": [
@@ -934,7 +934,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 175
+          "line": 179
         }
       ],
       "consumerCallsites": [
@@ -993,7 +993,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 181
+          "line": 185
         },
         {
           "source": "backend/src/routes/email-webhooks.routes.js",
@@ -1082,7 +1082,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 273
+          "line": 286
         },
         {
           "source": "backend/src/routes/forms.routes.js",
@@ -1193,7 +1193,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 274
+          "line": 287
         },
         {
           "source": "backend/src/routes/forms.routes.js",
@@ -1459,7 +1459,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 210
+          "line": 223
         },
         {
           "source": "backend/src/routes/invoices/pdf.routes.js",
@@ -1570,7 +1570,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 202
+          "line": 215
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -1663,7 +1663,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 206
+          "line": 219
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -1701,7 +1701,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 198
+          "line": 211
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -1808,7 +1808,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 232
+          "line": 245
         },
         {
           "source": "backend/src/routes/pages/public.routes.js",
@@ -1895,7 +1895,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 233
+          "line": 246
         },
         {
           "source": "backend/src/routes/pages/public.routes.js",
@@ -1970,7 +1970,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 339
+          "line": 352
         }
       ],
       "consumerCallsites": [
@@ -2029,7 +2029,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 343
+          "line": 356
         }
       ],
       "consumerCallsites": [],
@@ -2072,7 +2072,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 347
+          "line": 360
         }
       ],
       "consumerCallsites": [],
@@ -2115,7 +2115,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 311
+          "line": 324
         }
       ],
       "consumerCallsites": [
@@ -2192,7 +2192,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 331
+          "line": 344
         }
       ],
       "consumerCallsites": [
@@ -2245,7 +2245,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 327
+          "line": 340
         }
       ],
       "consumerCallsites": [
@@ -2286,7 +2286,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 319
+          "line": 332
         }
       ],
       "consumerCallsites": [],
@@ -2310,7 +2310,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 315
+          "line": 328
         }
       ],
       "consumerCallsites": [],
@@ -2341,7 +2341,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 323
+          "line": 336
         }
       ],
       "consumerCallsites": [],
@@ -2365,7 +2365,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 220
+          "line": 233
         },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
@@ -2428,7 +2428,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 221
+          "line": 234
         },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
@@ -2533,7 +2533,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 219
+          "line": 232
         },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
@@ -2616,7 +2616,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 164
+          "line": 168
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2712,7 +2712,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 165
+          "line": 169
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2759,7 +2759,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 168
+          "line": 172
         },
         {
           "source": "backend/src/routes/vaults/sharing.routes.js",
@@ -2810,7 +2810,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 166
+          "line": 170
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2873,7 +2873,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 167
+          "line": 171
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2933,7 +2933,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 297
+          "line": 310
         }
       ],
       "consumerCallsites": [],
@@ -2970,7 +2970,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 293
+          "line": 306
         }
       ],
       "consumerCallsites": [],
@@ -3007,7 +3007,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 279
+          "line": 292
         }
       ],
       "consumerCallsites": [
@@ -3102,7 +3102,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 301
+          "line": 314
         }
       ],
       "consumerCallsites": [],
@@ -3126,7 +3126,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 286
+          "line": 299
         }
       ],
       "consumerCallsites": [
@@ -3158,6 +3158,10 @@
       "method": "POST",
       "path": "/api/sms-templates/webhook/inbound",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 197
+        },
         {
           "source": "backend/src/routes/sms-webhooks.routes.js",
           "line": 121
@@ -3200,6 +3204,12 @@
           "path": "/api/sms-templates/webhook/inbound",
           "source": "backend/src/__tests__/routes/sms-webhooks.routes.test.js",
           "line": 55
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/inbound",
+          "source": "backend/src/__tests__/sms-webhooks-proxy.test.js",
+          "line": 70
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -3208,8 +3218,8 @@
       "owner": "messaging",
       "targetOperation": "processInboundSmsWebhook",
       "targetModule": "SmsWebhooksModule",
-      "parityStatus": "characterized",
-      "notes": "Retain Twilio-signed form HTTP, fail closed in production, and claim MessageSid durably. The globally unique normalized To number selects one owning organization before From is matched only among that tenant's contacts; unmatched receivers and ambiguous or missing tenant-local senders are quarantined without attribution.",
+      "parityStatus": "implemented",
+      "notes": "Retain Twilio-signed form HTTP, fail closed in production, and claim MessageSid durably. The globally unique normalized To number selects one owning organization before From is matched only among that tenant's contacts; unmatched receivers and ambiguous or missing tenant-local senders are quarantined without attribution. NestJS now owns an identical implementation (SmsWebhooksModule) mirroring the Twilio form-signature decision table over the public URL, the durable event-key claim, the provider-to-domain status map, receiving-number routing, tenant-local sender matching, and quarantine reasons, proven by a dual-runtime PostgreSQL parity suite including cross-runtime claim deduplication; the legacy origin routes both paths through a default-off proxy (SMS_WEBHOOKS_NESTJS_ENABLED) that forwards the raw form bytes, the Twilio signature, and the original protocol/host so URL-bound validation still succeeds upstream.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -3219,6 +3229,10 @@
       "method": "POST",
       "path": "/api/sms-templates/webhook/status",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 196
+        },
         {
           "source": "backend/src/routes/sms-webhooks.routes.js",
           "line": 51
@@ -3249,6 +3263,30 @@
           "path": "/api/sms-templates/webhook/status",
           "source": "backend/src/__tests__/routes/sms-webhooks.routes.test.js",
           "line": 43
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/status",
+          "source": "backend/src/__tests__/sms-webhooks-proxy.test.js",
+          "line": 35
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/status",
+          "source": "backend/src/__tests__/sms-webhooks-proxy.test.js",
+          "line": 50
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/status",
+          "source": "backend/src/__tests__/sms-webhooks-proxy.test.js",
+          "line": 82
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/status",
+          "source": "backend/src/__tests__/sms-webhooks-proxy.test.js",
+          "line": 87
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -3257,8 +3295,8 @@
       "owner": "messaging",
       "targetOperation": "processSmsStatusWebhook",
       "targetModule": "SmsWebhooksModule",
-      "parityStatus": "characterizing",
-      "notes": "Retain Twilio-signed form HTTP with durable MessageSid/status claims and an explicit provider-to-domain status map.",
+      "parityStatus": "implemented",
+      "notes": "Retain Twilio-signed form HTTP with durable MessageSid/status claims and an explicit provider-to-domain status map. NestJS now owns an identical implementation (SmsWebhooksModule) mirroring the Twilio form-signature decision table over the public URL, the durable event-key claim, the provider-to-domain status map, receiving-number routing, tenant-local sender matching, and quarantine reasons, proven by a dual-runtime PostgreSQL parity suite including cross-runtime claim deduplication; the legacy origin routes both paths through a default-off proxy (SMS_WEBHOOKS_NESTJS_ENABLED) that forwards the raw form bytes, the Twilio signature, and the original protocol/host so URL-bound validation still succeeds upstream.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -3396,7 +3434,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 83
+          "line": 87
         }
       ],
       "consumerCallsites": [
@@ -3906,6 +3944,12 @@
       "path": "/api/invoices/email/preview",
       "source": "backend/src/__tests__/routes/invoice-email-preview-retirement.routes.test.js",
       "line": 18
+    },
+    {
+      "method": "POST",
+      "path": "/api/sms-templates/webhook/:action",
+      "source": "backend/src/__tests__/sms-webhooks-proxy.test.js",
+      "line": 19
     }
   ],
   "orphanedOverrides": [],
