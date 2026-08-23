@@ -4,16 +4,16 @@
 
 ## Summary
 
-- Registered method/path operations: 63
-- API operations under `/api`: 56
+- Registered method/path operations: 66
+- API operations under `/api`: 59
 - Non-API registered operations: 7
-- Static frontend callsites: 44
-- Operations with frontend consumers: 39
-- Operations referenced by backend tests: 40
-- Recommended GraphQL queries: 1
+- Static frontend callsites: 45
+- Operations with frontend consumers: 40
+- Operations referenced by backend tests: 44
+- Recommended GraphQL queries: 0
 - Recommended GraphQL mutations: 1
-- Recommended retained HTTP endpoints: 54
-- High-risk operations: 49
+- Recommended retained HTTP endpoints: 58
+- High-risk operations: 48
 - Unmatched frontend calls: 0
 - Runtime URL expressions requiring review: 0
 - Acknowledged generic runtime URL helpers: 2
@@ -51,15 +51,18 @@
 | GET | `/api/forms/public/form/:identifier` | 1 | 3 | retain-http | high | crm / PublicFormsModule / getPublicForm |
 | POST | `/api/forms/public/form/:identifier` | 1 | 5 | retain-http | high | crm / PublicFormsModule / submitPublicForm |
 | GET | `/api/health` | 0 | 0 | retain-http | low | platform-operations / HealthBoundary / readiness |
-| GET | `/api/invoice-integrations/stripe/callback` | 0 | 3 | retain-http | medium | _unassigned_ |
-| GET | `/api/invoice-integrations/stripe/connect` | 1 | 1 | graphql-query | medium | _unassigned_ |
-| POST | `/api/invoice-integrations/stripe/disconnect` | 1 | 1 | graphql-mutation | medium | _unassigned_ |
+| GET | `/api/invoice-integrations/stripe/callback` | 0 | 3 | retain-http | medium | billing-integrations / InvoiceStripeOAuthModule / completeStripeInvoiceConnection |
+| GET | `/api/invoice-integrations/stripe/connect` | 1 | 1 | retain-http | medium | billing-integrations / InvoiceStripeOAuthModule / beginStripeInvoiceConnection |
+| POST | `/api/invoice-integrations/stripe/disconnect` | 1 | 1 | graphql-mutation | medium | billing-integrations / InvoiceStripeOAuthModule / disconnectStripeInvoiceIntegration |
 | GET | `/api/invoices/:id/pdf` | 1 | 12 | retain-http | high | billing / InvoicesModule / invoicePdf |
 | POST | `/api/invoices/businesses/:id/logo` | 1 | 9 | retain-http | high | billing / InvoiceBusinessesModule / uploadInvoiceBusinessLogo |
 | POST | `/api/invoices/settings/logo` | 1 | 0 | retain-http | high | billing / InvoiceSettingsModule / uploadInvoiceSettingsLogo |
 | POST | `/api/invoices/webhook/stripe` | 0 | 13 | retain-http | medium | billing / InvoiceWebhooksModule / stripeInvoiceWebhook |
 | GET | `/api/pages/public/page/:slug` | 1 | 2 | retain-http | high | growth / PublicLandingPagesModule / getPublicLandingPage |
 | POST | `/api/pages/public/page/:slug/analytics` | 1 | 0 | retain-http | high | growth / PublicLandingPagesModule / recordPublicLandingPageAnalytics |
+| GET | `/api/public/estimates/:token` | 1 | 4 | retain-http | medium | billing / EstimatesModule / open |
+| POST | `/api/public/estimates/:token/accept` | 0 | 3 | retain-http | medium | billing / EstimatesModule / accept |
+| POST | `/api/public/estimates/:token/decline` | 0 | 3 | retain-http | medium | billing / EstimatesModule / decline |
 | GET | `/api/public/sign/:token` | 1 | 7 | retain-http | high | esignatures / PublicSigningModule / getSigningSession |
 | POST | `/api/public/sign/:token` | 1 | 3 | retain-http | high | esignatures / PublicSigningModule / submitSignature |
 | POST | `/api/public/sign/:token/decline` | 1 | 1 | retain-http | high | esignatures / PublicSigningModule / declineSignature |
@@ -69,11 +72,11 @@
 | GET | `/api/reputation/public/review/:token` | 1 | 2 | retain-http | high | reputation / PublicReputationReviewModule / getPublicReviewRequest |
 | POST | `/api/reputation/public/review/:token` | 1 | 2 | retain-http | high | reputation / PublicReputationReviewModule / submitPublicReview |
 | GET | `/api/reputation/public/widget/:widgetKey` | 0 | 3 | retain-http | high | reputation / PublicReputationWidgetModule / getPublicReputationWidget |
-| GET | `/api/shared/list/:token` | 2 | 0 | retain-http | high | sharing / PublicSharingModule / getSharedList |
-| GET | `/api/shared/note/:token` | 2 | 0 | retain-http | high | sharing / PublicSharingModule / getSharedNote |
-| GET | `/api/shared/vault/:token` | 1 | 1 | retain-http | high | sharing / VaultModule / getSharedVault |
-| GET | `/api/shared/whiteboard/:token` | 3 | 1 | retain-http | high | sharing / PublicSharingModule / getSharedWhiteboard |
-| GET | `/api/shared/wireframe/:token` | 2 | 2 | retain-http | high | sharing / PublicSharingModule / getSharedWireframe |
+| GET | `/api/shared/list/:token` | 2 | 8 | retain-http | high | sharing / PublicSharingModule / sharedList |
+| GET | `/api/shared/note/:token` | 2 | 0 | retain-http | high | sharing / PublicSharingModule / sharedNote |
+| GET | `/api/shared/vault/:token` | 1 | 2 | retain-http | high | sharing / PublicSharingModule / sharedVault |
+| GET | `/api/shared/whiteboard/:token` | 3 | 1 | retain-http | high | sharing / PublicSharingModule / sharedWhiteboard |
+| GET | `/api/shared/wireframe/:token` | 2 | 2 | retain-http | high | sharing / PublicSharingModule / sharedWireframe |
 | GET | `/api/signatures/documents/:id/download` | 0 | 2 | retain-http | high | esignatures / SignatureFilesModule / downloadCompletedSignaturePdf |
 | GET | `/api/signatures/documents/:id/file` | 0 | 2 | retain-http | high | esignatures / SignatureFilesModule / streamSignatureDraftPdf |
 | POST | `/api/signatures/documents/upload` | 1 | 10 | retain-http | high | esignatures / SignatureFilesModule / uploadSignatureDraftPdf |
@@ -85,7 +88,7 @@
 | GET | `/api/social/connect/facebook` | 1 | 0 | retain-http | high | social-integrations / SocialOAuthModule / beginFacebookConnection |
 | GET | `/api/social/webhook` | 0 | 2 | retain-http | high | social-integrations / SocialWebhooksModule / verifyMetaWebhook |
 | POST | `/api/social/webhook` | 0 | 1 | retain-http | high | social-integrations / SocialWebhooksModule / processMetaMessagingWebhook |
-| GET | `/api/status` | 1 | 0 | retain-http | high | _unassigned_ |
+| GET | `/api/status` | 1 | 0 | retain-http | low | platform-operations / HealthBoundary / status |
 | POST | `/api/webhooks/:workflowId` | 0 | 6 | retain-http | high | automation / WorkflowWebhooksModule / processWorkflowWebhook |
 | GET | `/docs/content` | 1 | 0 | non-api | low | _unassigned_ |
 | GET | `/docs/search` | 1 | 0 | non-api | low | _unassigned_ |
@@ -99,7 +102,7 @@
 - Unmatched frontend calls: 0
 - Runtime URL expressions: 0
 - Acknowledged generic runtime URL helpers: 2
-- Unmatched backend test calls: 36
+- Unmatched backend test calls: 38
 - Orphaned manual overrides: 0
 - Orphaned runtime-expression overrides: 0
 
@@ -154,11 +157,13 @@
 | POST | `/api/pipelines/deals/1/won` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:465` |
 | POST | `/api/pipelines/deals/1/lost` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:466` |
 | POST | `/api/pipelines/deals/1/reopen` | `backend-v2/test/integration/crm-vocabulary.integration-spec.ts:467` |
-| GET | `/api/pages` | `backend-v2/test/integration/landing-pages.integration-spec.ts:207` |
-| GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:983` |
-| GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1005` |
-| PUT | `/api/wireframes/:mutationWireframeId` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1370` |
+| GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1018` |
+| GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1040` |
+| PUT | `/api/wireframes/:mutationWireframeId` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1405` |
 | POST | `/api/chat-widget/sessions/:id/messages` | `backend/src/__tests__/integration/realtime.integration.test.js:265` |
 | GET | `/api/shared/:kind/:kind` | `backend/src/__tests__/integration/sharing.integration.test.js:110` |
 | GET | `/api/shared/:kind/not-a-token` | `backend/src/__tests__/integration/sharing.integration.test.js:144` |
+| POST | `/api/public/estimates/:token/:action` | `backend/src/__tests__/public-estimate-proxy.test.js:63` |
+| GET | `/api/shared/:kind/:token` | `backend/src/__tests__/public-sharing-proxy.test.js:12` |
+| GET | `/api/shared/:kind/:token` | `backend/src/__tests__/public-sharing-proxy.test.js:55` |
 | POST | `/api/invoices/email/preview` | `backend/src/__tests__/routes/invoice-email-preview-retirement.routes.test.js:18` |

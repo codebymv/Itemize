@@ -6,20 +6,20 @@
     "!docs/API/graphql-operation-overrides.json"
   ],
   "summary": {
-    "operationCount": 63,
-    "apiOperationCount": 56,
+    "operationCount": 66,
+    "apiOperationCount": 59,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 44,
-    "operationsWithFrontendConsumers": 39,
-    "operationsWithBackendTests": 40,
+    "frontendCallsiteCount": 45,
+    "operationsWithFrontendConsumers": 40,
+    "operationsWithBackendTests": 44,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
-    "unmatchedBackendTestCallCount": 36,
-    "retainHttpCount": 54,
-    "graphqlQueryCount": 1,
+    "unmatchedBackendTestCallCount": 38,
+    "retainHttpCount": 58,
+    "graphqlQueryCount": 0,
     "graphqlMutationCount": 1,
-    "highRiskCount": 49,
+    "highRiskCount": 48,
     "literalInterpolationRiskCount": 0
   },
   "caveats": [
@@ -685,7 +685,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 134
+          "line": 153
         }
       ],
       "consumerCallsites": [
@@ -744,7 +744,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 135
+          "line": 154
         }
       ],
       "consumerCallsites": [
@@ -1003,11 +1003,11 @@
       "recommendedDisposition": "retain-http",
       "dispositionReason": "Browser/provider callback endpoint.",
       "disposition": "retain-http",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
+      "owner": "billing-integrations",
+      "targetOperation": "completeStripeInvoiceConnection",
+      "targetModule": "InvoiceStripeOAuthModule",
       "parityStatus": "not-started",
-      "notes": null,
+      "notes": "Retain the browser redirect callback over HTTP. It validates signed state, exchanges the code with Stripe, persists the connected account for the organization, and redirects back to the frontend return path with success or error markers; provider errors and invalid state must fail closed to the fallback path without persisting a connection.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -1042,13 +1042,13 @@
         }
       ],
       "recommendedDisposition": "graphql-query",
-      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
-      "disposition": "graphql-query",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
+      "dispositionReason": "OAuth begin endpoint; part of the retained provider-OAuth protocol trio with its callback.",
+      "disposition": "retain-http",
+      "owner": "billing-integrations",
+      "targetOperation": "beginStripeInvoiceConnection",
+      "targetModule": "InvoiceStripeOAuthModule",
       "parityStatus": "not-started",
-      "notes": null,
+      "notes": "Retain as the authenticated OAuth begin step, matching the calendar and social provider-connection precedent: it mints signed state bound to the user and organization and returns the provider authorization URL. Keeping begin and callback in one HTTP module keeps state signing, expiry, and return-path rules in one place.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -1083,13 +1083,13 @@
         }
       ],
       "recommendedDisposition": "graphql-mutation",
-      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "dispositionReason": "Authenticated tenant-scoped state change with a JSON envelope; matches the calendar provider connection-management mutations.",
       "disposition": "graphql-mutation",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
+      "owner": "billing-integrations",
+      "targetOperation": "disconnectStripeInvoiceIntegration",
+      "targetModule": "InvoiceStripeOAuthModule",
       "parityStatus": "not-started",
-      "notes": null,
+      "notes": "Migrate to a GraphQL mutation following the calendar provider-connection management precedent: authenticated, organization-scoped removal of the Stripe connection with an idempotent already-disconnected outcome. The retained REST route stays as rollback until the frontend consumer passes the per-slice exit gate.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -1101,7 +1101,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 162
+          "line": 181
         },
         {
           "source": "backend/src/routes/invoices/pdf.routes.js",
@@ -1124,37 +1124,37 @@
           "method": "GET",
           "path": "/api/invoices/:id/pdf",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 369
+          "line": 372
         },
         {
           "method": "GET",
           "path": "/api/invoices/not-an-id/pdf",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 375
+          "line": 378
         },
         {
           "method": "GET",
           "path": "/api/invoices/:id/pdf",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 382
+          "line": 385
         },
         {
           "method": "GET",
           "path": "/api/invoices/:id/pdf",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 392
+          "line": 395
         },
         {
           "method": "GET",
           "path": "/api/invoices/:id/pdf",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 423
+          "line": 426
         },
         {
           "method": "GET",
           "path": "/api/invoices/:id/pdf",
           "source": "backend-v2/test/integration/invoices.integration-spec.ts",
-          "line": 433
+          "line": 436
         },
         {
           "method": "GET",
@@ -1212,7 +1212,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 154
+          "line": 173
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -1305,7 +1305,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 158
+          "line": 177
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -1343,7 +1343,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 150
+          "line": 169
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -1356,7 +1356,7 @@
           "method": "POST",
           "path": "/api/invoices/webhook/stripe",
           "source": "backend-v2/test/integration/invoice-webhooks.integration-spec.ts",
-          "line": 130
+          "line": 146
         },
         {
           "method": "POST",
@@ -1368,25 +1368,25 @@
           "method": "POST",
           "path": "/api/invoices/webhook/stripe",
           "source": "backend/src/__tests__/routes/stripe-webhook.routes.test.js",
-          "line": 94
-        },
-        {
-          "method": "POST",
-          "path": "/api/invoices/webhook/stripe",
-          "source": "backend/src/__tests__/routes/stripe-webhook.routes.test.js",
           "line": 98
         },
         {
           "method": "POST",
           "path": "/api/invoices/webhook/stripe",
           "source": "backend/src/__tests__/routes/stripe-webhook.routes.test.js",
-          "line": 117
+          "line": 102
         },
         {
           "method": "POST",
           "path": "/api/invoices/webhook/stripe",
           "source": "backend/src/__tests__/routes/stripe-webhook.routes.test.js",
-          "line": 146
+          "line": 121
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/routes/stripe-webhook.routes.test.js",
+          "line": 151
         },
         {
           "method": "POST",
@@ -1469,13 +1469,13 @@
           "method": "GET",
           "path": "/api/pages/public/page/launch",
           "source": "backend-v2/test/integration/landing-pages.integration-spec.ts",
-          "line": 537
+          "line": 526
         },
         {
           "method": "GET",
           "path": "/api/pages/public/page/launch",
           "source": "backend-v2/test/integration/landing-pages.integration-spec.ts",
-          "line": 541
+          "line": 530
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -1524,6 +1524,151 @@
       "risk": "high"
     },
     {
+      "id": "GET /api/public/estimates/:token",
+      "key": "GET /api/public/estimates/:*",
+      "method": "GET",
+      "path": "/api/public/estimates/:token",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 257
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/public/estimates/:token:suffix",
+          "rawPath": "${getApiUrl()}/api/public/estimates/${encodeURIComponent(token)}${suffix}",
+          "source": "frontend/src/services/publicEstimatesApi.ts",
+          "line": 47,
+          "client": "fetch",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/public/estimates/:publicToken",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 1709
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/estimates/:token",
+          "source": "backend/src/__tests__/public-estimate-proxy.test.js",
+          "line": 27
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/estimates/:token",
+          "source": "backend/src/__tests__/public-estimate-proxy.test.js",
+          "line": 41
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/estimates/not-a-token",
+          "source": "backend/src/__tests__/public-estimate-proxy.test.js",
+          "line": 79
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Anonymous token-capability endpoint; part of the retained public-estimate protocol, matching public signing.",
+      "disposition": "retain-http",
+      "owner": "billing",
+      "targetOperation": "open",
+      "targetModule": "EstimatesModule",
+      "parityStatus": "implemented",
+      "notes": "Retain anonymous token-scoped estimate delivery over HTTP for recipient browsers, matching the public-signing precedent. NestJS owns the implementation; the legacy origin routes this path through the rate-limited public-estimate proxy.",
+      "literalInterpolationRisk": false,
+      "risk": "medium"
+    },
+    {
+      "id": "POST /api/public/estimates/:token/accept",
+      "key": "POST /api/public/estimates/:*/accept",
+      "method": "POST",
+      "path": "/api/public/estimates/:token/accept",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 261
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/public/estimates/:publicToken/accept",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 1726
+        },
+        {
+          "method": "POST",
+          "path": "/api/public/estimates/:publicToken/accept",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 1730
+        },
+        {
+          "method": "POST",
+          "path": "/api/public/estimates/:publicToken/accept",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 1885
+        }
+      ],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "billing",
+      "targetOperation": "accept",
+      "targetModule": "EstimatesModule",
+      "parityStatus": "implemented",
+      "notes": "Retain the anonymous token-capability accept action over HTTP. NestJS owns the implementation behind the legacy origin's rate-limited public-estimate proxy; terminal-state estimates must deny repeated transitions.",
+      "literalInterpolationRisk": false,
+      "risk": "medium"
+    },
+    {
+      "id": "POST /api/public/estimates/:token/decline",
+      "key": "POST /api/public/estimates/:*/decline",
+      "method": "POST",
+      "path": "/api/public/estimates/:token/decline",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 265
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/public/estimates/:publicToken/decline",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 1733
+        },
+        {
+          "method": "POST",
+          "path": "/api/public/estimates/:publicToken/decline",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 1834
+        },
+        {
+          "method": "POST",
+          "path": "/api/public/estimates/:publicToken/decline",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 1837
+        }
+      ],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "billing",
+      "targetOperation": "decline",
+      "targetModule": "EstimatesModule",
+      "parityStatus": "implemented",
+      "notes": "Retain the anonymous token-capability decline action over HTTP. NestJS owns the implementation behind the legacy origin's rate-limited public-estimate proxy; terminal-state estimates must deny repeated transitions.",
+      "literalInterpolationRisk": false,
+      "risk": "medium"
+    },
+    {
       "id": "GET /api/public/sign/:token",
       "key": "GET /api/public/sign/:*",
       "method": "GET",
@@ -1531,7 +1676,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 210
+          "line": 229
         }
       ],
       "consumerCallsites": [
@@ -1608,7 +1753,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 230
+          "line": 249
         }
       ],
       "consumerCallsites": [
@@ -1661,7 +1806,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 226
+          "line": 245
         }
       ],
       "consumerCallsites": [
@@ -1702,7 +1847,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 218
+          "line": 237
         }
       ],
       "consumerCallsites": [],
@@ -1726,7 +1871,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 214
+          "line": 233
         }
       ],
       "consumerCallsites": [],
@@ -1757,7 +1902,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 222
+          "line": 241
         }
       ],
       "consumerCallsites": [],
@@ -1917,6 +2062,10 @@
       "path": "/api/shared/list/:token",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 143
+        },
+        {
           "source": "backend/src/routes/sharing.routes.js",
           "line": 53
         }
@@ -1941,15 +2090,64 @@
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/shared/list/:token",
+          "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+          "line": 25
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/list/not-a-token",
+          "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+          "line": 76
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/list/:token",
+          "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+          "line": 96
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/list/:token",
+          "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+          "line": 112
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/list/:token",
+          "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+          "line": 127
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/list/:token",
+          "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+          "line": 150
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/list/:token",
+          "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+          "line": 165
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/list/:token",
+          "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+          "line": 173
+        }
+      ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "retain-http",
       "owner": "sharing",
-      "targetOperation": "getSharedList",
+      "targetOperation": "sharedList",
       "targetModule": "PublicSharingModule",
-      "parityStatus": "characterized",
-      "notes": "Rate-limited non-enumerating capability read with recursive sanitization and no-store/noindex headers.",
+      "parityStatus": "implemented",
+      "notes": "Rate-limited non-enumerating capability read with recursive sanitization and no-store/noindex headers. NestJS now owns an identical implementation (PublicSharingModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_SHARING_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -1959,6 +2157,10 @@
       "method": "GET",
       "path": "/api/shared/note/:token",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 144
+        },
         {
           "source": "backend/src/routes/sharing.routes.js",
           "line": 98
@@ -1989,10 +2191,10 @@
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "retain-http",
       "owner": "sharing",
-      "targetOperation": "getSharedNote",
+      "targetOperation": "sharedNote",
       "targetModule": "PublicSharingModule",
-      "parityStatus": "characterized",
-      "notes": "Rate-limited non-enumerating capability read; executable markup is sanitized and the response cannot be cached or indexed.",
+      "parityStatus": "implemented",
+      "notes": "Rate-limited non-enumerating capability read; executable markup is sanitized and the response cannot be cached or indexed. NestJS now owns an identical implementation (PublicSharingModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_SHARING_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2002,6 +2204,10 @@
       "method": "GET",
       "path": "/api/shared/vault/:token",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 147
+        },
         {
           "source": "backend/src/routes/vaults/sharing.routes.js",
           "line": 18
@@ -2024,16 +2230,22 @@
           "path": "/api/shared/vault/:vault",
           "source": "backend/src/__tests__/integration/sharing.integration.test.js",
           "line": 135
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/vault/not-a-token",
+          "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+          "line": 82
         }
       ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "retain-http",
       "owner": "sharing",
-      "targetOperation": "getSharedVault",
-      "targetModule": "VaultModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Intentional rate-limited no-store public-link boundary. It rejects malformed, unknown, revoked, and locked capabilities; returns an allowlisted decrypted projection; and fails the complete response closed on any item decryption error. Hash-at-rest and browser telemetry verification remain security hardening.",
+      "targetOperation": "sharedVault",
+      "targetModule": "PublicSharingModule",
+      "parityStatus": "implemented",
+      "notes": "Intentional rate-limited no-store public-link boundary. It rejects malformed, unknown, revoked, and locked capabilities; returns an allowlisted decrypted projection; and fails the complete response closed on any item decryption error. Hash-at-rest and browser telemetry verification remain security hardening. NestJS now owns an identical implementation (PublicSharingModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_SHARING_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2043,6 +2255,10 @@
       "method": "GET",
       "path": "/api/shared/whiteboard/:token",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 145
+        },
         {
           "source": "backend/src/routes/sharing.routes.js",
           "line": 139
@@ -2089,10 +2305,10 @@
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "retain-http",
       "owner": "sharing",
-      "targetOperation": "getSharedWhiteboard",
+      "targetOperation": "sharedWhiteboard",
       "targetModule": "PublicSharingModule",
-      "parityStatus": "characterizing",
-      "notes": "Rate-limited capability read with recursive sanitization; canvas node and external-resource schemas still need an exact allowlist.",
+      "parityStatus": "implemented",
+      "notes": "Rate-limited capability read with recursive sanitization; canvas node and external-resource schemas still need an exact allowlist. NestJS now owns an identical implementation (PublicSharingModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_SHARING_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2102,6 +2318,10 @@
       "method": "GET",
       "path": "/api/shared/wireframe/:token",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 146
+        },
         {
           "source": "backend/src/routes/sharing.routes.js",
           "line": 190
@@ -2113,7 +2333,7 @@
           "path": "/api/shared/wireframe/:token",
           "rawPath": "/api/shared/wireframe/${token}",
           "source": "frontend/src/pages/SharedWireframePage.tsx",
-          "line": 51,
+          "line": 52,
           "client": "api",
           "literalInterpolation": false
         },
@@ -2122,7 +2342,7 @@
           "path": "/api/shared/wireframe/:token",
           "rawPath": "/api/shared/wireframe/${token}",
           "source": "frontend/src/pages/SharedWireframePage.tsx",
-          "line": 92,
+          "line": 100,
           "client": "api",
           "literalInterpolation": false
         }
@@ -2132,23 +2352,23 @@
           "method": "GET",
           "path": "/api/shared/wireframe/:sharedWireframeToken",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1140
+          "line": 1175
         },
         {
           "method": "GET",
           "path": "/api/shared/wireframe/:sharedWireframeToken",
           "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-          "line": 1296
+          "line": 1331
         }
       ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "retain-http",
       "owner": "sharing",
-      "targetOperation": "getSharedWireframe",
+      "targetOperation": "sharedWireframe",
       "targetModule": "PublicSharingModule",
-      "parityStatus": "consumer-cutover-complete",
-      "notes": "Intentional public-link protocol boundary. The rate-limited non-enumerating capability read returns an allowlisted recursively sanitized projection with no-store/noindex/no-referrer headers; the shipped read-only viewer handles live updates, deletion, and durable revocation.",
+      "parityStatus": "implemented",
+      "notes": "Intentional public-link protocol boundary. The rate-limited non-enumerating capability read returns an allowlisted recursively sanitized projection with no-store/noindex/no-referrer headers; the shipped read-only viewer handles live updates, deletion, and durable revocation. NestJS now owns an identical implementation (PublicSharingModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_SHARING_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -2160,7 +2380,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 196
+          "line": 215
         }
       ],
       "consumerCallsites": [],
@@ -2197,7 +2417,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 192
+          "line": 211
         }
       ],
       "consumerCallsites": [],
@@ -2234,7 +2454,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 178
+          "line": 197
         }
       ],
       "consumerCallsites": [
@@ -2329,7 +2549,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 200
+          "line": 219
         }
       ],
       "consumerCallsites": [],
@@ -2353,7 +2573,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 185
+          "line": 204
         }
       ],
       "consumerCallsites": [
@@ -2623,7 +2843,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 54
+          "line": 62
         }
       ],
       "consumerCallsites": [
@@ -2641,13 +2861,13 @@
       "recommendedDisposition": "retain-http",
       "dispositionReason": "Infrastructure health/status endpoint.",
       "disposition": "retain-http",
-      "owner": null,
-      "targetOperation": null,
-      "targetModule": null,
+      "owner": "platform-operations",
+      "targetOperation": "status",
+      "targetModule": "HealthBoundary",
       "parityStatus": "not-started",
-      "notes": null,
+      "notes": "Retain as the verbose operational status endpoint alongside the readiness probe. The NestJS implementation should keep the response cheap and unauthenticated, and must not leak configuration beyond the current environment, uptime, version, and coarse health booleans.",
       "literalInterpolationRisk": false,
-      "risk": "high"
+      "risk": "low"
     },
     {
       "id": "POST /api/webhooks/:workflowId",
@@ -3076,27 +3296,21 @@
     },
     {
       "method": "GET",
-      "path": "/api/pages",
-      "source": "backend-v2/test/integration/landing-pages.integration-spec.ts",
-      "line": 207
+      "path": "/api/shared/:kind/:shareToken",
+      "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
+      "line": 1018
     },
     {
       "method": "GET",
       "path": "/api/shared/:kind/:shareToken",
       "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-      "line": 983
-    },
-    {
-      "method": "GET",
-      "path": "/api/shared/:kind/:shareToken",
-      "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-      "line": 1005
+      "line": 1040
     },
     {
       "method": "PUT",
       "path": "/api/wireframes/:mutationWireframeId",
       "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
-      "line": 1370
+      "line": 1405
     },
     {
       "method": "POST",
@@ -3115,6 +3329,24 @@
       "path": "/api/shared/:kind/not-a-token",
       "source": "backend/src/__tests__/integration/sharing.integration.test.js",
       "line": 144
+    },
+    {
+      "method": "POST",
+      "path": "/api/public/estimates/:token/:action",
+      "source": "backend/src/__tests__/public-estimate-proxy.test.js",
+      "line": 63
+    },
+    {
+      "method": "GET",
+      "path": "/api/shared/:kind/:token",
+      "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+      "line": 12
+    },
+    {
+      "method": "GET",
+      "path": "/api/shared/:kind/:token",
+      "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+      "line": 55
     },
     {
       "method": "POST",

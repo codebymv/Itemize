@@ -26,6 +26,10 @@ const {
     createPublicEstimateProxy,
     publicEstimatesEnabled,
 } = require('../public-estimate-proxy');
+const {
+    createPublicSharingProxy,
+    publicSharingEnabled,
+} = require('../public-sharing-proxy');
 const webhooksRoutes = require('../routes/webhooks.routes');
 const calendarIntegrationsRoutes = require('../routes/calendar-integrations.routes');
 const invoiceIntegrationsRoutes = require('../routes/invoice-integrations.routes');
@@ -131,6 +135,17 @@ function registerApiRoutes({
     logger
 }) {
     logger.info('Mounting route modules...');
+
+    const publicSharingRoute = (kind) => {
+        const proxy = createPublicSharingProxy({ kind, logger });
+        return publicSharingEnabled() ? [publicRateLimit, proxy] : [proxy];
+    };
+    app.get('/api/shared/list/:token', ...publicSharingRoute('list'));
+    app.get('/api/shared/note/:token', ...publicSharingRoute('note'));
+    app.get('/api/shared/whiteboard/:token', ...publicSharingRoute('whiteboard'));
+    app.get('/api/shared/wireframe/:token', ...publicSharingRoute('wireframe'));
+    app.get('/api/shared/vault/:token', ...publicSharingRoute('vault'));
+    logger.info('Public sharing proxy routes initialized');
 
     app.use('/api', vaultsRoutes(pool, authenticateJWT, broadcast, publicRateLimit));
     logger.info('Vaults routes initialized');
