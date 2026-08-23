@@ -30,6 +30,10 @@ const {
     createPublicSharingProxy,
     publicSharingEnabled,
 } = require('../public-sharing-proxy');
+const {
+    createPublicBookingsProxy,
+    publicBookingsEnabled,
+} = require('../public-bookings-proxy');
 const webhooksRoutes = require('../routes/webhooks.routes');
 const calendarIntegrationsRoutes = require('../routes/calendar-integrations.routes');
 const invoiceIntegrationsRoutes = require('../routes/invoice-integrations.routes');
@@ -189,6 +193,16 @@ function registerApiRoutes({
     logger.info('Social Media Integration routes initialized');
     app.use('/api/pages', pagesRoutes(pool, authenticateJWT, publicRateLimit));
     logger.info('Landing Pages routes initialized');
+
+    const publicBookingsRoute = (action) => {
+        const proxy = createPublicBookingsProxy({ action, logger });
+        return publicBookingsEnabled() ? [publicRateLimit, proxy] : [proxy];
+    };
+    app.get('/api/bookings/public/book/:slug', ...publicBookingsRoute('page'));
+    app.get('/api/bookings/public/book/:slug/slots', ...publicBookingsRoute('slots'));
+    app.post('/api/bookings/public/book/:slug', ...publicBookingsRoute('create'));
+    app.post('/api/bookings/public/book/:slug/cancel/:token', ...publicBookingsRoute('cancel'));
+    logger.info('Public bookings proxy routes initialized');
 
     app.use('/api/bookings', bookingsRoutes(pool, publicRateLimit));
     logger.info('Bookings routes initialized');

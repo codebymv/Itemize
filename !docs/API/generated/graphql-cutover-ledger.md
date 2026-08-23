@@ -32,10 +32,10 @@
 | --- | --- | ---: | ---: | --- | --- | --- |
 | GET | `/*` | 0 | 0 | non-api | low | _unassigned_ |
 | POST | `/api/billing/webhook` | 0 | 3 | retain-http | high | billing / SubscriptionWebhooksModule / processStripeSubscriptionEvent |
-| GET | `/api/bookings/public/book/:slug` | 1 | 5 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingPage |
-| POST | `/api/bookings/public/book/:slug` | 1 | 7 | retain-http | high | scheduling / PublicBookingsModule / createPublicBooking |
-| POST | `/api/bookings/public/book/:slug/cancel/:token` | 1 | 4 | retain-http | high | scheduling / PublicBookingsModule / cancelPublicBooking |
-| GET | `/api/bookings/public/book/:slug/slots` | 1 | 2 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingSlots |
+| GET | `/api/bookings/public/book/:slug` | 1 | 10 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingPage |
+| POST | `/api/bookings/public/book/:slug` | 1 | 19 | retain-http | high | scheduling / PublicBookingsModule / createPublicBooking |
+| POST | `/api/bookings/public/book/:slug/cancel/:token` | 1 | 14 | retain-http | high | scheduling / PublicBookingsModule / cancelPublicBooking |
+| GET | `/api/bookings/public/book/:slug/slots` | 1 | 4 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingSlots |
 | GET | `/api/calendar-integrations/google/auth` | 1 | 1 | retain-http | high | scheduling-integrations / CalendarOAuthModule / beginGoogleCalendarConnection |
 | GET | `/api/calendar-integrations/google/calendars/:connectionId` | 1 | 0 | retain-http | high | scheduling-integrations / CalendarProviderHttpModule / providerCalendars |
 | GET | `/api/calendar-integrations/google/callback` | 0 | 3 | retain-http | high | scheduling-integrations / CalendarOAuthModule / googleCalendarCallback |
@@ -160,7 +160,7 @@
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1018` |
 | GET | `/api/shared/:kind/:shareToken` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1040` |
 | PUT | `/api/wireframes/:mutationWireframeId` | `backend-v2/test/integration/workspace-content.integration-spec.ts:1405` |
-| POST | `/api/chat-widget/sessions/:id/messages` | `backend/src/__tests__/integration/realtime.integration.test.js:265` |
+| POST | `/api/chat-widget/sessions/:id/messages` | `backend/src/__tests__/integration/realtime.integration.test.js:267` |
 | GET | `/api/shared/:kind/:kind` | `backend/src/__tests__/integration/sharing.integration.test.js:110` |
 | GET | `/api/shared/:kind/not-a-token` | `backend/src/__tests__/integration/sharing.integration.test.js:144` |
 | POST | `/api/public/estimates/:token/:action` | `backend/src/__tests__/public-estimate-proxy.test.js:63` |

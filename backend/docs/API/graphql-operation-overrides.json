@@ -132,36 +132,36 @@
       "owner": "scheduling",
       "targetModule": "PublicBookingsModule",
       "targetOperation": "getPublicBookingPage",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Anonymous rate-limited embed protocol resolves a globally unique cal_ public ID first and retains slug compatibility only when exactly one active calendar matches. Authenticated REST/GraphQL projections and the calendar link UI expose the stable public ID."
+      "notes": "Anonymous rate-limited embed protocol resolves a globally unique cal_ public ID first and retains slug compatibility only when exactly one active calendar matches. Authenticated REST/GraphQL projections and the calendar link UI expose the stable public ID. NestJS now owns an identical implementation (PublicBookingsModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_BOOKINGS_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler."
     },
     "GET /api/bookings/public/book/:slug/slots": {
       "disposition": "retain-http",
       "owner": "scheduling",
       "targetModule": "PublicBookingsModule",
       "targetOperation": "getPublicBookingSlots",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Resolves the global public ID with an exactly-one-match legacy slug fallback and returns only concrete timezone-aware slots for a bounded 31-day range. Generation and every booking write share one PostgreSQL policy for effective windows, overrides, activity, duration, buffers, notice, horizon, DST, booking collisions, and normalized external busy intervals."
+      "notes": "Resolves the global public ID with an exactly-one-match legacy slug fallback and returns only concrete timezone-aware slots for a bounded 31-day range. Generation and every booking write share one PostgreSQL policy for effective windows, overrides, activity, duration, buffers, notice, horizon, DST, booking collisions, and normalized external busy intervals. NestJS now owns an identical implementation (PublicBookingsModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_BOOKINGS_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler."
     },
     "POST /api/bookings/public/book/:slug": {
       "disposition": "retain-http",
       "owner": "scheduling",
       "targetModule": "PublicBookingsModule",
       "targetOperation": "createPublicBooking",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Anonymous rate-limited booking resolves the global public ID, transactionally rechecks the shared authoritative slot policy after the calendar lock, serializes case-insensitive contact reuse, returns a 256-bit cancellation capability once, and stores only its SHA-256 hash with end-plus-one-day expiry."
+      "notes": "Anonymous rate-limited booking resolves the global public ID, transactionally rechecks the shared authoritative slot policy after the calendar lock, serializes case-insensitive contact reuse, returns a 256-bit cancellation capability once, and stores only its SHA-256 hash with end-plus-one-day expiry. NestJS now owns an identical implementation (PublicBookingsModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_BOOKINGS_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler."
     },
     "POST /api/bookings/public/book/:slug/cancel/:token": {
       "disposition": "retain-http",
       "owner": "scheduling",
       "targetModule": "PublicBookingsModule",
       "targetOperation": "cancelPublicBooking",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Hashes the supplied 256-bit capability, binds it to the resolved calendar and confirmed booking, requires unexpired end-plus-one-day capability state, and clears hash/expiry on success. Malformed, wrong-calendar, expired, and replay attempts share a non-enumerating miss; raw tokens are forbidden in PostgreSQL and excluded from authenticated REST/GraphQL projections."
+      "notes": "Hashes the supplied 256-bit capability, binds it to the resolved calendar and confirmed booking, requires unexpired end-plus-one-day capability state, and clears hash/expiry on success. Malformed, wrong-calendar, expired, and replay attempts share a non-enumerating miss; raw tokens are forbidden in PostgreSQL and excluded from authenticated REST/GraphQL projections. NestJS now owns an identical implementation (PublicBookingsModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_BOOKINGS_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler."
     },
     "GET /api/calendar-integrations/google/auth": {
       "disposition": "retain-http",

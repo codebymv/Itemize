@@ -103,6 +103,10 @@
       "path": "/api/bookings/public/book/:slug",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 201
+        },
+        {
           "source": "backend/src/routes/bookings.routes.js",
           "line": 106
         }
@@ -148,6 +152,36 @@
           "path": "/api/bookings/public/book/:calendarPublicId",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
           "line": 614
+        },
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/:slug",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 20
+        },
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/cal_abc",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 36
+        },
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/cal_abc",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 48
+        },
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/cal_abc",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 125
+        },
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/cal_abc",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 133
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -156,8 +190,8 @@
       "owner": "scheduling",
       "targetOperation": "getPublicBookingPage",
       "targetModule": "PublicBookingsModule",
-      "parityStatus": "characterized",
-      "notes": "Anonymous rate-limited embed protocol resolves a globally unique cal_ public ID first and retains slug compatibility only when exactly one active calendar matches. Authenticated REST/GraphQL projections and the calendar link UI expose the stable public ID.",
+      "parityStatus": "implemented",
+      "notes": "Anonymous rate-limited embed protocol resolves a globally unique cal_ public ID first and retains slug compatibility only when exactly one active calendar matches. Authenticated REST/GraphQL projections and the calendar link UI expose the stable public ID. NestJS now owns an identical implementation (PublicBookingsModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_BOOKINGS_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -167,6 +201,10 @@
       "method": "POST",
       "path": "/api/bookings/public/book/:slug",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 203
+        },
         {
           "source": "backend/src/routes/bookings.routes.js",
           "line": 225
@@ -184,6 +222,60 @@
         }
       ],
       "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 213
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 216
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 232
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 241
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 322
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 328
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 331
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 346
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 417
+        },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/:calendarPublicId",
@@ -225,6 +317,24 @@
           "path": "/api/bookings/public/book/:calendarSlug",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
           "line": 475
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:slug",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 22
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/cal_abc",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 76
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/cal_abc",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 112
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -233,8 +343,8 @@
       "owner": "scheduling",
       "targetOperation": "createPublicBooking",
       "targetModule": "PublicBookingsModule",
-      "parityStatus": "characterized",
-      "notes": "Anonymous rate-limited booking resolves the global public ID, transactionally rechecks the shared authoritative slot policy after the calendar lock, serializes case-insensitive contact reuse, returns a 256-bit cancellation capability once, and stores only its SHA-256 hash with end-plus-one-day expiry.",
+      "parityStatus": "implemented",
+      "notes": "Anonymous rate-limited booking resolves the global public ID, transactionally rechecks the shared authoritative slot policy after the calendar lock, serializes case-insensitive contact reuse, returns a 256-bit cancellation capability once, and stores only its SHA-256 hash with end-plus-one-day expiry. NestJS now owns an identical implementation (PublicBookingsModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_BOOKINGS_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -244,6 +354,10 @@
       "method": "POST",
       "path": "/api/bookings/public/book/:slug/cancel/:token",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 204
+        },
         {
           "source": "backend/src/routes/bookings.routes.js",
           "line": 422
@@ -261,6 +375,48 @@
         }
       ],
       "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id/cancel/not-a-token",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 357
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id/cancel/not-a-token",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 360
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id/cancel/:token",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 368
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id/cancel/:token",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 373
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id/cancel/:token",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 403
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id/cancel/:token",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 406
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id/cancel/:cancellation_token",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 425
+        },
         {
           "method": "POST",
           "path": "/api/bookings/public/book/not-:calendarSlug/cancel/:token",
@@ -284,6 +440,24 @@
           "path": "/api/bookings/public/book/:calendarPublicId/cancel/:token",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
           "line": 335
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:slug/cancel/:token",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 23
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/cal_abc/cancel/:token",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 90
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/cal_abc/cancel/not-a-token",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 99
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -292,8 +466,8 @@
       "owner": "scheduling",
       "targetOperation": "cancelPublicBooking",
       "targetModule": "PublicBookingsModule",
-      "parityStatus": "characterized",
-      "notes": "Hashes the supplied 256-bit capability, binds it to the resolved calendar and confirmed booking, requires unexpired end-plus-one-day capability state, and clears hash/expiry on success. Malformed, wrong-calendar, expired, and replay attempts share a non-enumerating miss; raw tokens are forbidden in PostgreSQL and excluded from authenticated REST/GraphQL projections.",
+      "parityStatus": "implemented",
+      "notes": "Hashes the supplied 256-bit capability, binds it to the resolved calendar and confirmed booking, requires unexpired end-plus-one-day capability state, and clears hash/expiry on success. Malformed, wrong-calendar, expired, and replay attempts share a non-enumerating miss; raw tokens are forbidden in PostgreSQL and excluded from authenticated REST/GraphQL projections. NestJS now owns an identical implementation (PublicBookingsModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_BOOKINGS_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -303,6 +477,10 @@
       "method": "GET",
       "path": "/api/bookings/public/book/:slug/slots",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 202
+        },
         {
           "source": "backend/src/routes/bookings.routes.js",
           "line": 155
@@ -331,6 +509,18 @@
           "path": "/api/bookings/public/book/:calendarSlug/slots",
           "source": "backend/src/__tests__/integration/bookings.integration.test.js",
           "line": 450
+        },
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/:slug/slots",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 21
+        },
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/cal_abc/slots",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 61
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -339,8 +529,8 @@
       "owner": "scheduling",
       "targetOperation": "getPublicBookingSlots",
       "targetModule": "PublicBookingsModule",
-      "parityStatus": "characterized",
-      "notes": "Resolves the global public ID with an exactly-one-match legacy slug fallback and returns only concrete timezone-aware slots for a bounded 31-day range. Generation and every booking write share one PostgreSQL policy for effective windows, overrides, activity, duration, buffers, notice, horizon, DST, booking collisions, and normalized external busy intervals.",
+      "parityStatus": "implemented",
+      "notes": "Resolves the global public ID with an exactly-one-match legacy slug fallback and returns only concrete timezone-aware slots for a bounded 31-day range. Generation and every booking write share one PostgreSQL policy for effective windows, overrides, activity, duration, buffers, notice, horizon, DST, booking collisions, and normalized external busy intervals. NestJS now owns an identical implementation (PublicBookingsModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_BOOKINGS_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -523,7 +713,7 @@
           "method": "POST",
           "path": "/api/chat-widget/public/end-session",
           "source": "backend/src/__tests__/integration/realtime.integration.test.js",
-          "line": 238
+          "line": 240
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -598,7 +788,7 @@
           "method": "GET",
           "path": "/api/chat-widget/public/messages/:CHAT_TOKEN",
           "source": "backend/src/__tests__/integration/realtime.integration.test.js",
-          "line": 270
+          "line": 272
         }
       ],
       "recommendedDisposition": "graphql-query",
@@ -663,7 +853,7 @@
           "method": "POST",
           "path": "/api/chat-widget/public/typing",
           "source": "backend/src/__tests__/integration/realtime.integration.test.js",
-          "line": 260
+          "line": 262
         }
       ],
       "recommendedDisposition": "graphql-mutation",
@@ -685,7 +875,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 153
+          "line": 157
         }
       ],
       "consumerCallsites": [
@@ -744,7 +934,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 154
+          "line": 158
         }
       ],
       "consumerCallsites": [
@@ -1101,7 +1291,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 181
+          "line": 185
         },
         {
           "source": "backend/src/routes/invoices/pdf.routes.js",
@@ -1212,7 +1402,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 173
+          "line": 177
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -1305,7 +1495,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 177
+          "line": 181
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -1343,7 +1533,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 169
+          "line": 173
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -1531,7 +1721,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 257
+          "line": 271
         }
       ],
       "consumerCallsites": [
@@ -1590,7 +1780,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 261
+          "line": 275
         }
       ],
       "consumerCallsites": [],
@@ -1633,7 +1823,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 265
+          "line": 279
         }
       ],
       "consumerCallsites": [],
@@ -1676,7 +1866,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 229
+          "line": 243
         }
       ],
       "consumerCallsites": [
@@ -1753,7 +1943,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 249
+          "line": 263
         }
       ],
       "consumerCallsites": [
@@ -1806,7 +1996,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 245
+          "line": 259
         }
       ],
       "consumerCallsites": [
@@ -1847,7 +2037,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 237
+          "line": 251
         }
       ],
       "consumerCallsites": [],
@@ -1871,7 +2061,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 233
+          "line": 247
         }
       ],
       "consumerCallsites": [],
@@ -1902,7 +2092,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 241
+          "line": 255
         }
       ],
       "consumerCallsites": [],
@@ -2063,7 +2253,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 143
+          "line": 147
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2159,7 +2349,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 144
+          "line": 148
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2206,7 +2396,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 147
+          "line": 151
         },
         {
           "source": "backend/src/routes/vaults/sharing.routes.js",
@@ -2257,7 +2447,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 145
+          "line": 149
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2320,7 +2510,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 146
+          "line": 150
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2380,7 +2570,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 215
+          "line": 229
         }
       ],
       "consumerCallsites": [],
@@ -2417,7 +2607,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 211
+          "line": 225
         }
       ],
       "consumerCallsites": [],
@@ -2454,7 +2644,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 197
+          "line": 211
         }
       ],
       "consumerCallsites": [
@@ -2549,7 +2739,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 219
+          "line": 233
         }
       ],
       "consumerCallsites": [],
@@ -2573,7 +2763,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 204
+          "line": 218
         }
       ],
       "consumerCallsites": [
@@ -2843,7 +3033,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 62
+          "line": 66
         }
       ],
       "consumerCallsites": [
@@ -3316,7 +3506,7 @@
       "method": "POST",
       "path": "/api/chat-widget/sessions/:id/messages",
       "source": "backend/src/__tests__/integration/realtime.integration.test.js",
-      "line": 265
+      "line": 267
     },
     {
       "method": "GET",

@@ -33,6 +33,7 @@ import { SocialModule } from './social/social.module';
 import { SignatureDocumentsModule } from './signature-documents/signature-documents.module';
 import { SignatureDeliveryModule } from './signature-delivery/signature-delivery.module';
 import { SignatureFilesModule } from './signature-files/signature-files.module';
+import { PublicBookingsModule } from './public-bookings/public-bookings.module';
 import { PublicSharingModule } from './public-sharing/public-sharing.module';
 import { PublicSigningModule } from './public-signing/public-signing.module';
 import { SignatureTemplatesModule } from './signature-templates/signature-templates.module';
@@ -108,6 +109,7 @@ const observabilityPlugins = [
     SignatureDocumentsModule,
     SignatureDeliveryModule,
     SignatureFilesModule,
+    PublicBookingsModule,
     PublicSharingModule,
     PublicSigningModule,
     SignatureTemplatesModule,
