@@ -46,6 +46,10 @@ const {
     createPublicFormsProxy,
     publicFormsEnabled,
 } = require('../public-forms-proxy');
+const {
+    createEmailWebhookProxy,
+    emailWebhooksEnabled,
+} = require('../email-webhooks-proxy');
 const rateLimit = require('express-rate-limit');
 const webhooksRoutes = require('../routes/webhooks.routes');
 const calendarIntegrationsRoutes = require('../routes/calendar-integrations.routes');
@@ -169,6 +173,14 @@ function registerApiRoutes({
     const contactTransferProxy = createContactTransferProxy({ logger });
     app.get('/api/contacts/export/csv', contactTransferProxy);
     app.post('/api/contacts/import/csv', contactTransferProxy);
+    {
+        const emailWebhookProxy = createEmailWebhookProxy({ logger });
+        const stack = emailWebhooksEnabled()
+            ? [publicRateLimit, emailWebhookProxy]
+            : [emailWebhookProxy];
+        app.post('/api/email/webhook/resend', ...stack);
+        logger.info('Email webhook proxy route initialized');
+    }
     app.use('/api/email', emailWebhooksRoutes(pool, publicRateLimit));
     logger.info('Email Webhook routes initialized');
     logger.info('Workflows routes initialized');

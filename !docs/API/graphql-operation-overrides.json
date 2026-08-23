@@ -69,9 +69,9 @@
       "owner": "messaging",
       "targetModule": "EmailWebhooksModule",
       "targetOperation": "processResendEmailEvent",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain raw-body Svix verification and fail closed without the signing secret. Durable svix-id claims deduplicate delivery, provider occurrence timestamps prevent status regression, and matched logs/campaign recipients update engagement and contact suppression. Unmatched or cross-tenant ambiguous events are leased and retried from bounded claim fields until exactly one organization mapping exists; exhausted attempts become redacted dead letters."
+      "notes": "Retain raw-body Svix verification and fail closed without the signing secret. Durable svix-id claims deduplicate delivery, provider occurrence timestamps prevent status regression, and matched logs/campaign recipients update engagement and contact suppression. Unmatched or cross-tenant ambiguous events are leased and retried from bounded claim fields until exactly one organization mapping exists; exhausted attempts become redacted dead letters. NestJS now owns an identical implementation (EmailWebhooksModule) with the same Resend SDK signature verification over the captured raw bytes and a faithful port of the durable svix-id claim, status-regression, suppression, and quarantine semantics, proven by a dual-runtime PostgreSQL parity suite using genuinely signed payloads (including cross-runtime deduplication through the shared claim table); the legacy origin routes the path through a default-off proxy (EMAIL_WEBHOOKS_NESTJS_ENABLED) that forwards the exact raw bytes and svix headers and falls through to the retained handler. The legacy reconciliation worker continues to drain the shared email_webhook_events table until the scheduler moves."
     },
     "POST /api/sms-templates/webhook/inbound": {
       "disposition": "retain-http",

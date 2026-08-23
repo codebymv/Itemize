@@ -47,7 +47,7 @@
 | POST | `/api/chat-widget/public/typing` | 0 | 1 | retain-http | medium | chat-widget / PublicChatWidgetHttpModule / sendPublicChatTyping |
 | GET | `/api/contacts/export/csv` | 1 | 4 | retain-http | high | crm / ContactTransfersModule / exportContactsCsv |
 | POST | `/api/contacts/import/csv` | 1 | 4 | retain-http | high | crm / ContactTransfersModule / importContactsCsv |
-| POST | `/api/email/webhook/resend` | 0 | 1 | retain-http | high | messaging / EmailWebhooksModule / processResendEmailEvent |
+| POST | `/api/email/webhook/resend` | 0 | 10 | retain-http | high | messaging / EmailWebhooksModule / processResendEmailEvent |
 | GET | `/api/forms/public/form/:identifier` | 1 | 12 | retain-http | high | crm / PublicFormsModule / getPublicForm |
 | POST | `/api/forms/public/form/:identifier` | 1 | 13 | retain-http | high | crm / PublicFormsModule / submitPublicForm |
 | GET | `/api/health` | 0 | 0 | retain-http | low | platform-operations / HealthBoundary / readiness |
