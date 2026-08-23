@@ -74,8 +74,22 @@ class TestDbHelper {
 
         // Create personal org via the shared helper (it also sets default_org on user)
         const { createPersonalOrganization } = require('../../auth/helpers');
-        const org = await createPersonalOrganization(this.pool, user.id, user.name);
-        this._orgIds.push(org.id);
+        const created = await createPersonalOrganization(this.pool, user.id, user.name);
+        this._orgIds.push(created.id);
+
+        // Mirror the production signup trial (backend-v2 auth grants 14 days of
+        // 'trialing') so entitlement-gated background workers see the same
+        // state as a real new workspace. Suites exercising the unentitled path
+        // must override subscription_status explicitly.
+        const org = (await this.pool.query(
+            `UPDATE organizations
+             SET subscription_status = 'trialing',
+                 trial_started_at = NOW(),
+                 trial_ends_at = NOW() + INTERVAL '14 days'
+             WHERE id = $1
+             RETURNING *`,
+            [created.id]
+        )).rows[0];
 
         // Re-fetch user to pick up default_organization_id
         const fullUser = (await this.pool.query(

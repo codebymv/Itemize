@@ -123,7 +123,9 @@ describe('Socket.IO PostgreSQL authorization contract', () => {
         client.emit('joinSharedNote', SHARE_TOKEN);
         await joined;
 
-        const occurredAt = new Date('2026-07-18T12:34:56.000Z');
+        // A fresh timestamp: content-update events older than maxEventAgeSeconds
+        // are expired before claiming, so a hardcoded date rots this test.
+        const occurredAt = new Date(Date.now() - 1000);
         const update = once(client, 'noteUpdated');
         const queued = await enqueueRealtimeEvent(dbHelper.pool, {
             eventKey: `realtime-socket:${Date.now()}:${Math.random()}`,
