@@ -38,11 +38,15 @@ async function runChatWidgetGraphqlMigration(pool) {
 
     ALTER TABLE realtime_event_outbox
       ADD CONSTRAINT realtime_event_outbox_aggregate_type_check
-        CHECK (aggregate_type IN ('list', 'note', 'whiteboard', 'wireframe', 'chat_session')),
+        CHECK (aggregate_type IN (
+          'list', 'note', 'whiteboard', 'wireframe', 'chat_session',
+          'notification'
+        )),
       ADD CONSTRAINT realtime_event_outbox_channel_check
         CHECK (channel IN (
           'user_canvas', 'shared_list', 'shared_note', 'shared_whiteboard',
-          'shared_wireframe', 'user_wireframe', 'shared_revocation', 'chat_session'
+          'shared_wireframe', 'user_wireframe', 'shared_revocation',
+          'chat_session', 'user_notification'
         )),
       ADD CONSTRAINT realtime_event_outbox_channel_event_check CHECK (
         (channel = 'user_canvas' AND event_name IN ('userListUpdated', 'userListDeleted'))
@@ -53,6 +57,7 @@ async function runChatWidgetGraphqlMigration(pool) {
         OR (channel = 'user_wireframe' AND event_name = 'userWireframeUpdated')
         OR (channel = 'shared_revocation' AND event_name = 'sharedContentRevoked')
         OR (channel = 'chat_session' AND event_name = 'newChatMessage')
+        OR (channel = 'user_notification' AND event_name = 'notificationCreated')
       ),
       ADD CONSTRAINT realtime_event_outbox_channel_aggregate_check CHECK (
         (channel IN ('user_canvas', 'shared_list') AND aggregate_type = 'list')
@@ -67,10 +72,13 @@ async function runChatWidgetGraphqlMigration(pool) {
           AND aggregate_type IN ('list', 'note', 'whiteboard', 'wireframe')
         )
         OR (channel = 'chat_session' AND aggregate_type = 'chat_session')
+        OR (
+          channel = 'user_notification' AND aggregate_type = 'notification'
+        )
       ),
       ADD CONSTRAINT realtime_event_outbox_recipient_check CHECK (
         (
-          channel IN ('user_canvas', 'user_wireframe')
+          channel IN ('user_canvas', 'user_wireframe', 'user_notification')
           AND recipient_key ~ '^[1-9][0-9]*$'
         )
         OR (

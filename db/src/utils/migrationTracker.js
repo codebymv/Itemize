@@ -74,7 +74,7 @@ const recordMigration = async (pool, migrationName) => {
  */
 const runMigrationOnce = async (pool, migrationName, migrationFn) => {
   // Ensure tracking table exists
-  await ensureMigrationsTable(pool);
+  if (!await ensureMigrationsTable(pool)) return false;
   
   // Check if already run
   if (await hasMigrationRun(pool, migrationName)) {
@@ -93,7 +93,8 @@ const runMigrationOnce = async (pool, migrationName, migrationFn) => {
     
     if (succeeded) {
       // Record successful migration
-      await recordMigration(pool, migrationName);
+      const recorded = await recordMigration(pool, migrationName);
+      if (!recorded) return false;
       logger.info(`✅ Migration completed: ${migrationName}`);
       console.log(`✅ Migration completed: ${migrationName}`);
     } else if (reportedFailures) {
@@ -118,7 +119,9 @@ const runMigrationOnce = async (pool, migrationName, migrationFn) => {
  * @returns {Promise<{success: number, skipped: number, failed: number}>}
  */
 const runMigrationsOnce = async (pool, migrations) => {
-  await ensureMigrationsTable(pool);
+  if (!await ensureMigrationsTable(pool)) {
+    return { success: 0, skipped: 0, failed: migrations.length };
+  }
   
   const stats = { success: 0, skipped: 0, failed: 0 };
   

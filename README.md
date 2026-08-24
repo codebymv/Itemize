@@ -16,8 +16,8 @@ itemize.cloud/
 │   ├── src/              # Nest modules: GraphQL resolvers + retained HTTP controllers
 │   ├── test/integration/ # Integration specs (run against a Dockerized Postgres)
 │   ├── pdf-service/      # Invoice PDF renderer (puppeteer, ported from Express)
-│   ├── Dockerfile        # Railway production image (includes Chrome for PDFs)
-│   └── railway.json      # Railway deploy config
+│   ├── Dockerfile        # Isolated backend image (includes Chrome for PDFs)
+│   └── Dockerfile.railway# Shared-monorepo image with the DB migration gate
 ├── db/                   # Database workspace: schema authority
 │   ├── migrations/       # Numbered migration stream (the schema source of truth)
 │   ├── src/              # Migration modules + shared db utilities
@@ -65,7 +65,7 @@ npm run dev:frontend   # frontend only
 
 ## 🗄️ Database
 
-The `db/` workspace owns the schema: `db/migrations/` is the numbered migration stream, applied by `npm run migrate` (tracked in `schema_migrations`). The integration gate (`npm run release:integration`) boots a disposable Postgres in Docker, applies every migration from zero, and runs the backend integration specs against it.
+The `db/` workspace owns the schema. `npm run migrate` applies the ordered stream in `db/src/db.js`, records each completed step in `_migrations`, and verifies the required schema contract. The integration gate (`npm run release:integration`) boots a disposable Postgres in Docker, applies the same stream from zero, and runs the backend integration specs against it.
 
 For local development, copy `backend/.env.example` to `backend/.env` and set `DATABASE_URL`.
 
@@ -73,9 +73,9 @@ For local development, copy `backend/.env.example` to `backend/.env` and set `DA
 
 Production runs as separate Railway services:
 
-- **GraphQL backend** (`backend/`): built from its `Dockerfile` (includes Chrome for invoice PDF rendering). Serves `api.itemize.cloud` on port 3100. Deployed with `railway up` from a staged copy of `backend/` (the CLI must not walk up to the repo root).
+- **GraphQL backend**: connected to the repository root so its Railway image can include both `backend/` and the canonical `db/` migration workspace. `backend/Dockerfile.railway` includes Chrome for invoice PDF rendering; the tracked schema gate runs before Railway replaces the live app. Serves `api.itemize.cloud` on port 3100.
 - **Frontend** (`frontend/`): Vite build, serves `itemize.cloud`.
-- **PostgreSQL**: Railway Postgres; migrations run via `npm run migrate` with `DATABASE_URL` pointed at it.
+- **PostgreSQL**: Railway Postgres; every GraphQL deployment runs `npm run migrate` as a fail-closed pre-deploy gate.
 
 Backend environment variables are enumerated in `backend/.env.example`; `npm run build` enforces that contract (`config:check`). Leave `COOKIE_DOMAIN` unset on `*.railway.app`; set `.itemize.cloud` only when serving from an `itemize.cloud` subdomain.
 
