@@ -135,5 +135,8 @@
     "typescript-eslint": "^8.0.1",
     "vite": "6.4.3",
     "vitest": "3.2.6"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.62.4"
   }
 }
