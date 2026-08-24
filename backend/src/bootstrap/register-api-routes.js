@@ -62,6 +62,11 @@ const {
     createSubscriptionWebhookProxy,
     subscriptionWebhooksEnabled,
 } = require('../subscription-webhooks-proxy');
+const {
+    createSocialWebhookProxy,
+    socialWebhooksEnabled,
+} = require('../social-webhooks-proxy');
+const express = require('express');
 const rateLimit = require('express-rate-limit');
 const webhooksRoutes = require('../routes/webhooks.routes');
 const calendarIntegrationsRoutes = require('../routes/calendar-integrations.routes');
@@ -252,6 +257,25 @@ function registerApiRoutes({
 
     app.use('/api/reputation', reputationRoutes(pool, authenticateJWT, publicRateLimit));
     logger.info('Reputation Management routes initialized');
+    {
+        const verifyProxy = createSocialWebhookProxy({ method: 'verify', logger });
+        const receiveProxy = createSocialWebhookProxy({ method: 'receive', logger });
+        if (socialWebhooksEnabled()) {
+            // The raw reader only mounts on the proxied path; when the flag is
+            // off the legacy router's own parser must see the untouched stream.
+            app.get('/api/social/webhook', publicRateLimit, verifyProxy);
+            app.post(
+                '/api/social/webhook',
+                publicRateLimit,
+                express.raw({ type: () => true, limit: '1mb' }),
+                receiveProxy,
+            );
+        } else {
+            app.get('/api/social/webhook', verifyProxy);
+            app.post('/api/social/webhook', receiveProxy);
+        }
+        logger.info('Social webhook proxy routes initialized');
+    }
     app.use('/api/social', socialRoutes(pool, authenticateJWT, publicRateLimit, io));
     logger.info('Social Media Integration routes initialized');
     const publicLandingPagesRoute = (action) => {

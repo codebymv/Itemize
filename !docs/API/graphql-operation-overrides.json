@@ -411,18 +411,18 @@
       "owner": "social-integrations",
       "targetModule": "SocialWebhooksModule",
       "targetOperation": "verifyMetaWebhook",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain the Meta challenge protocol, compare the verify token in constant time, use dedicated configuration, and fail closed when it is absent."
+      "notes": "Retain the Meta challenge protocol, compare the verify token in constant time, use dedicated configuration, and fail closed when it is absent. NestJS now owns the receiver (SocialWebhooksModule) with identical challenge verification, raw-byte HMAC checking, normalization, and the durable batch claim, proven by a dual-runtime PostgreSQL parity suite with genuinely signed payloads and cross-runtime deduplication. The NestJS receiver deliberately performs no inline processing: the retained design already treats inline work as best-effort, and the legacy scheduler worker — which owns the Socket.IO host — processes every claim and emits the agent-room event, so outcomes are identical with inline latency deferred to worker cadence until the scheduler moves. The legacy origin routes both methods through a default-off proxy (SOCIAL_WEBHOOKS_NESTJS_ENABLED)."
     },
     "POST /api/social/webhook": {
       "disposition": "retain-http",
       "owner": "social-integrations",
       "targetModule": "SocialWebhooksModule",
       "targetOperation": "processMetaMessagingWebhook",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain exact-body X-Hub-Signature-256 verification and fail closed without the app secret. One normalized durable batch claim precedes bounded inline processing; leased workers drain overflow and reconcile unmatched or ambiguous page/account mappings only when exactly one active organization remains. Durable message IDs prevent replay, Facebook and Instagram identities route separately, and socket delivery occurs only after commit."
+      "notes": "Retain exact-body X-Hub-Signature-256 verification and fail closed without the app secret. One normalized durable batch claim precedes bounded inline processing; leased workers drain overflow and reconcile unmatched or ambiguous page/account mappings only when exactly one active organization remains. Durable message IDs prevent replay, Facebook and Instagram identities route separately, and socket delivery occurs only after commit. NestJS now owns the receiver (SocialWebhooksModule) with identical challenge verification, raw-byte HMAC checking, normalization, and the durable batch claim, proven by a dual-runtime PostgreSQL parity suite with genuinely signed payloads and cross-runtime deduplication. The NestJS receiver deliberately performs no inline processing: the retained design already treats inline work as best-effort, and the legacy scheduler worker — which owns the Socket.IO host — processes every claim and emits the agent-room event, so outcomes are identical with inline latency deferred to worker cadence until the scheduler moves. The legacy origin routes both methods through a default-off proxy (SOCIAL_WEBHOOKS_NESTJS_ENABLED)."
     },
     "GET /api/reputation/public/widget/:widgetKey": {
       "disposition": "retain-http",

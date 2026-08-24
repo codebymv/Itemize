@@ -86,8 +86,8 @@
 | POST | `/api/sms-templates/webhook/status` | 0 | 8 | retain-http | high | messaging / SmsWebhooksModule / processSmsStatusWebhook |
 | GET | `/api/social/callback/facebook` | 0 | 0 | retain-http | high | social-integrations / SocialOAuthModule / completeFacebookConnection |
 | GET | `/api/social/connect/facebook` | 1 | 0 | retain-http | high | social-integrations / SocialOAuthModule / beginFacebookConnection |
-| GET | `/api/social/webhook` | 0 | 2 | retain-http | high | social-integrations / SocialWebhooksModule / verifyMetaWebhook |
-| POST | `/api/social/webhook` | 0 | 1 | retain-http | high | social-integrations / SocialWebhooksModule / processMetaMessagingWebhook |
+| GET | `/api/social/webhook` | 0 | 11 | retain-http | high | social-integrations / SocialWebhooksModule / verifyMetaWebhook |
+| POST | `/api/social/webhook` | 0 | 6 | retain-http | high | social-integrations / SocialWebhooksModule / processMetaMessagingWebhook |
 | GET | `/api/status` | 1 | 0 | retain-http | low | platform-operations / FoundationModule / status |
 | POST | `/api/webhooks/:workflowId` | 0 | 13 | retain-http | high | automation / WorkflowWebhooksModule / processWorkflowWebhook |
 | GET | `/docs/content` | 1 | 0 | non-api | low | _unassigned_ |
