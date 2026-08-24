@@ -95,6 +95,10 @@ the runtime clients actually connect to (at direct-origin cutover). A
 live Socket.IO integration suite proves capability joins, exact-shape
 outbox delivery, organization admission, bidirectional typing
 authorization, and revocation eviction against the NestJS host.
+The ported public chat widget protocol (`ChatWidgetPublicModule`,
+`CHAT_WIDGET_PUBLIC_NESTJS_ENABLED`) emits its agent-room events and
+visitor eviction through this host, so that flag rides with
+`REALTIME_HOST_NESTJS_ENABLED` in the same socket-origin runtime.
 
 NestJS exposes `RealtimeOutboxModule`; resolvers never call Socket.IO rooms
 directly. A mutation repository writes its domain rows and every required

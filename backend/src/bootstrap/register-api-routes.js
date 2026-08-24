@@ -71,6 +71,10 @@ const {
     createSocialOAuthProxies,
     createStripeConnectProxies,
 } = require('../provider-oauth-proxies');
+const {
+    createChatWidgetPublicProxy,
+    chatWidgetPublicEnabled,
+} = require('../chat-widget-public-proxy');
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const webhooksRoutes = require('../routes/webhooks.routes');
@@ -217,6 +221,19 @@ function registerApiRoutes({
     }
     app.use('/api/sms-templates', smsWebhooksRoutes(pool, publicRateLimit));
     logger.info('SMS webhook routes initialized');
+    {
+        const chatWidgetRoute = (action) => {
+            const proxy = createChatWidgetPublicProxy({ action, logger });
+            return chatWidgetPublicEnabled() ? [publicRateLimit, proxy] : [proxy];
+        };
+        app.get('/api/chat-widget/public/config/:widgetKey', ...chatWidgetRoute('config'));
+        app.post('/api/chat-widget/public/session', ...chatWidgetRoute('session'));
+        app.get('/api/chat-widget/public/messages/:sessionToken', ...chatWidgetRoute('messages-read'));
+        app.post('/api/chat-widget/public/messages', ...chatWidgetRoute('messages-send'));
+        app.post('/api/chat-widget/public/end-session', ...chatWidgetRoute('end-session'));
+        app.post('/api/chat-widget/public/typing', ...chatWidgetRoute('typing'));
+        logger.info('Chat widget public proxy routes initialized');
+    }
     app.use('/api/chat-widget', chatWidgetRoutes(
         pool,
         authenticateJWT,

@@ -337,56 +337,56 @@
     "GET /api/chat-widget/public/config/:widgetKey": {
       "disposition": "retain-http",
       "owner": "chat-widget",
-      "targetModule": "PublicChatWidgetHttpModule",
+      "targetModule": "ChatWidgetPublicModule",
       "targetOperation": "getPublicChatWidgetConfig",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain the rate-limited public embed bootstrap over HTTP. The widget key selects an allowlisted active configuration projection; authenticated management and provider capabilities are absent."
+      "notes": "Retain the rate-limited public embed bootstrap over HTTP. The widget key selects an allowlisted active configuration projection; authenticated management and provider capabilities are absent. NestJS now owns an identical implementation (ChatWidgetPublicModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (CHAT_WIDGET_PUBLIC_NESTJS_ENABLED) that falls through to the retained handler. During the port both runtimes received the same defect fix: the business-hours evaluation used the invalid Intl weekday option 'lowercase' and threw, failing every widget with configured hours closed; both now lowercase the valid long-form weekday."
     },
     "POST /api/chat-widget/public/session": {
       "disposition": "retain-http",
       "owner": "chat-widget",
-      "targetModule": "PublicChatWidgetHttpModule",
+      "targetModule": "ChatWidgetPublicModule",
       "targetOperation": "createPublicChatSession",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain public visitor session creation over HTTP. It validates the widget capability and allowed-domain policy, then issues the opaque session capability used by the browser embed."
+      "notes": "Retain public visitor session creation over HTTP. It validates the widget capability and allowed-domain policy, then issues the opaque session capability used by the browser embed. NestJS now owns an identical implementation (ChatWidgetPublicModule) proven by a dual-runtime parity suite that resumes a NestJS-created session through the legacy runtime; agent-room announcement flows through the NestJS realtime host, so CHAT_WIDGET_PUBLIC_NESTJS_ENABLED must only be enabled in the runtime where REALTIME_HOST_NESTJS_ENABLED is on."
     },
     "GET /api/chat-widget/public/messages/:sessionToken": {
       "disposition": "retain-http",
       "owner": "chat-widget",
-      "targetModule": "PublicChatWidgetHttpModule",
+      "targetModule": "ChatWidgetPublicModule",
       "targetOperation": "getPublicChatMessages",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain rate-limited visitor polling over the opaque session capability. The authenticated GraphQL schema never exposes that bearer token; live delivery remains on the established Socket.IO protocol."
+      "notes": "Retain rate-limited visitor polling over the opaque session capability. The authenticated GraphQL schema never exposes that bearer token; live delivery remains on the established Socket.IO protocol. NestJS now owns an identical implementation (ChatWidgetPublicModule, including the after-timestamp polling parameter and last-seen presence refresh) proven by a dual-runtime parity suite behind the default-off CHAT_WIDGET_PUBLIC_NESTJS_ENABLED proxy."
     },
     "POST /api/chat-widget/public/messages": {
       "disposition": "retain-http",
       "owner": "chat-widget",
-      "targetModule": "PublicChatWidgetHttpModule",
+      "targetModule": "ChatWidgetPublicModule",
       "targetOperation": "sendPublicChatMessage",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain rate-limited public visitor message submission over the session capability. Agent replies originate in CSRF-protected GraphQL and reach this visitor protocol through the durable realtime outbox."
+      "notes": "Retain rate-limited public visitor message submission over the session capability. Agent replies originate in CSRF-protected GraphQL and reach this visitor protocol through the durable realtime outbox. NestJS now owns an identical implementation (ChatWidgetPublicModule) proven by a dual-runtime parity suite that asserts the agent-room newChatMessage delivery through the NestJS realtime host; enable CHAT_WIDGET_PUBLIC_NESTJS_ENABLED only alongside REALTIME_HOST_NESTJS_ENABLED."
     },
     "POST /api/chat-widget/public/end-session": {
       "disposition": "retain-http",
       "owner": "chat-widget",
-      "targetModule": "PublicChatWidgetHttpModule",
+      "targetModule": "ChatWidgetPublicModule",
       "targetOperation": "endPublicChatSession",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Retain the public terminal session action over the visitor capability. It is part of the externally embedded widget protocol rather than the authenticated operator API."
+      "notes": "Retain the public terminal session action over the visitor capability. It is part of the externally embedded widget protocol rather than the authenticated operator API. NestJS now owns an identical implementation (ChatWidgetPublicModule) proven by a dual-runtime parity suite covering the agent-room notification and the visitor-socket eviction broadcast through the NestJS realtime host."
     },
     "POST /api/chat-widget/public/typing": {
       "disposition": "retain-http",
       "owner": "chat-widget",
-      "targetModule": "PublicChatWidgetHttpModule",
+      "targetModule": "ChatWidgetPublicModule",
       "targetOperation": "sendPublicChatTyping",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Retain ephemeral public typing signals over the visitor capability and Socket.IO. This realtime transport boundary is intentionally not modeled as a GraphQL mutation."
+      "notes": "Retain ephemeral public typing signals over the visitor capability and Socket.IO. This realtime transport boundary is intentionally not modeled as a GraphQL mutation. NestJS now owns an identical implementation (ChatWidgetPublicModule) proven by a dual-runtime parity suite asserting visitorTyping delivery to the agent room through the NestJS realtime host."
     },
     "GET /api/social/connect/facebook": {
       "disposition": "retain-http",

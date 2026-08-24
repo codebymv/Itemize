@@ -17,6 +17,27 @@ typing remain HTTP because they are rate-limited, bearer-capability operations
 used by externally embedded visitors. Socket.IO remains the live visitor
 delivery protocol.
 
+## Retained public visitor protocol (NestJS port)
+
+`ChatWidgetPublicModule` now owns an identical implementation of all six
+retained public routes. The legacy origin mounts a default-off proxy
+(`CHAT_WIDGET_PUBLIC_NESTJS_ENABLED`) ahead of the retained handlers; while the
+flag is off every request falls through to legacy unchanged, preserving
+rollback.
+
+Agent-room notifications (`newChatSession`, `newChatMessage`, `visitorTyping`,
+`chatSessionEnded`) and visitor-socket eviction on session end are emitted
+through the NestJS realtime host, so `CHAT_WIDGET_PUBLIC_NESTJS_ENABLED` must
+only be enabled in the runtime where `REALTIME_HOST_NESTJS_ENABLED` is on —
+the same socket-origin runtime clients connect to. Enabling the chat flag
+without the host would silently drop agent notifications.
+
+During the port both runtimes received the same defect fix: the config route's
+business-hours evaluation used the invalid `Intl` weekday option `'lowercase'`
+and threw, which failed every widget with configured business hours closed.
+Both runtimes now lowercase the valid long-form weekday, and the dual-runtime
+parity suite pins the open/closed evaluation.
+
 ## Security and tenancy
 
 - Every widget, session, message, contact, conversation, and assignee lookup is
@@ -63,3 +84,9 @@ the contact, conversation, or transcript.
 - Realtime unit coverage proves the new channel contract and delivery mapping.
 - The generated API ledger explicitly retains all six public visitor protocol
   operations and contains no authenticated Chat Widget REST operation.
+- A dual-runtime fresh-PostgreSQL parity suite drives the NestJS port and the
+  retained legacy handlers with identical requests (config with business-hours
+  variants, session start/validation, cross-runtime session resume, message
+  polling with `after`, visitor submission, end-session replay denial, typing),
+  and asserts the agent-room events and visitor eviction through a live
+  Socket.IO client connected to the NestJS realtime host.

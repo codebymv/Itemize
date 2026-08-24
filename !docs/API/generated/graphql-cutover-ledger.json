@@ -11,7 +11,7 @@
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 45,
     "operationsWithFrontendConsumers": 40,
-    "operationsWithBackendTests": 48,
+    "operationsWithBackendTests": 51,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
@@ -61,7 +61,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 249
+          "line": 266
         },
         {
           "source": "backend/src/routes/billing.routes.js",
@@ -150,7 +150,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 307
+          "line": 324
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -249,7 +249,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 309
+          "line": 326
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -402,7 +402,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 310
+          "line": 327
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -525,7 +525,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 308
+          "line": 325
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -588,7 +588,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 429
+          "line": 446
         },
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
@@ -687,7 +687,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 431
+          "line": 448
         },
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
@@ -756,7 +756,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 430
+          "line": 447
         },
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
@@ -862,6 +862,10 @@
       "path": "/api/chat-widget/public/config/:widgetKey",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 229
+        },
+        {
           "source": "backend/src/routes/chat-widget/public.routes.js",
           "line": 14
         }
@@ -877,15 +881,34 @@
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/chat-widget/public/config/:widgetKey",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 20
+        },
+        {
+          "method": "GET",
+          "path": "/api/chat-widget/public/config/cw_abc",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 43
+        },
+        {
+          "method": "GET",
+          "path": "/api/chat-widget/public/config/cw_abc",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 50
+        }
+      ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "retain-http",
       "owner": "chat-widget",
       "targetOperation": "getPublicChatWidgetConfig",
-      "targetModule": "PublicChatWidgetHttpModule",
-      "parityStatus": "characterized",
-      "notes": "Retain the rate-limited public embed bootstrap over HTTP. The widget key selects an allowlisted active configuration projection; authenticated management and provider capabilities are absent.",
+      "targetModule": "ChatWidgetPublicModule",
+      "parityStatus": "implemented",
+      "notes": "Retain the rate-limited public embed bootstrap over HTTP. The widget key selects an allowlisted active configuration projection; authenticated management and provider capabilities are absent. NestJS now owns an identical implementation (ChatWidgetPublicModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (CHAT_WIDGET_PUBLIC_NESTJS_ENABLED) that falls through to the retained handler. During the port both runtimes received the same defect fix: the business-hours evaluation used the invalid Intl weekday option 'lowercase' and threw, failing every widget with configured hours closed; both now lowercase the valid long-form weekday.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -896,8 +919,12 @@
       "path": "/api/chat-widget/public/end-session",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 233
+        },
+        {
           "source": "backend/src/routes/chat-widget/public.routes.js",
-          "line": 338
+          "line": 340
         }
       ],
       "consumerCallsites": [
@@ -915,6 +942,36 @@
         {
           "method": "POST",
           "path": "/api/chat-widget/public/end-session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 325
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/end-session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 333
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/end-session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 334
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/end-session",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 24
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/end-session",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 110
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/end-session",
           "source": "backend/src/__tests__/integration/realtime.integration.test.js",
           "line": 240
         }
@@ -924,9 +981,9 @@
       "disposition": "retain-http",
       "owner": "chat-widget",
       "targetOperation": "endPublicChatSession",
-      "targetModule": "PublicChatWidgetHttpModule",
-      "parityStatus": "characterized",
-      "notes": "Retain the public terminal session action over the visitor capability. It is part of the externally embedded widget protocol rather than the authenticated operator API.",
+      "targetModule": "ChatWidgetPublicModule",
+      "parityStatus": "implemented",
+      "notes": "Retain the public terminal session action over the visitor capability. It is part of the externally embedded widget protocol rather than the authenticated operator API. NestJS now owns an identical implementation (ChatWidgetPublicModule) proven by a dual-runtime parity suite covering the agent-room notification and the visitor-socket eviction broadcast through the NestJS realtime host.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -937,8 +994,12 @@
       "path": "/api/chat-widget/public/messages",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 232
+        },
+        {
           "source": "backend/src/routes/chat-widget/public.routes.js",
-          "line": 265
+          "line": 267
         }
       ],
       "consumerCallsites": [
@@ -952,15 +1013,40 @@
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/messages",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 249
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/messages",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 250
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/messages",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 258
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/messages",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 23
+        }
+      ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "retain-http",
       "owner": "chat-widget",
       "targetOperation": "sendPublicChatMessage",
-      "targetModule": "PublicChatWidgetHttpModule",
-      "parityStatus": "characterized",
-      "notes": "Retain rate-limited public visitor message submission over the session capability. Agent replies originate in CSRF-protected GraphQL and reach this visitor protocol through the durable realtime outbox.",
+      "targetModule": "ChatWidgetPublicModule",
+      "parityStatus": "implemented",
+      "notes": "Retain rate-limited public visitor message submission over the session capability. Agent replies originate in CSRF-protected GraphQL and reach this visitor protocol through the durable realtime outbox. NestJS now owns an identical implementation (ChatWidgetPublicModule) proven by a dual-runtime parity suite that asserts the agent-room newChatMessage delivery through the NestJS realtime host; enable CHAT_WIDGET_PUBLIC_NESTJS_ENABLED only alongside REALTIME_HOST_NESTJS_ENABLED.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -971,8 +1057,12 @@
       "path": "/api/chat-widget/public/messages/:sessionToken",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 231
+        },
+        {
           "source": "backend/src/routes/chat-widget/public.routes.js",
-          "line": 208
+          "line": 210
         }
       ],
       "consumerCallsites": [
@@ -989,6 +1079,30 @@
       "testCallsites": [
         {
           "method": "GET",
+          "path": "/api/chat-widget/public/messages/:sessionToken",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 265
+        },
+        {
+          "method": "GET",
+          "path": "/api/chat-widget/public/messages/:sessionToken",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 266
+        },
+        {
+          "method": "GET",
+          "path": "/api/chat-widget/public/messages/:sessionToken",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 22
+        },
+        {
+          "method": "GET",
+          "path": "/api/chat-widget/public/messages/:token",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 81
+        },
+        {
+          "method": "GET",
           "path": "/api/chat-widget/public/messages/:CHAT_TOKEN",
           "source": "backend/src/__tests__/integration/realtime.integration.test.js",
           "line": 272
@@ -999,9 +1113,9 @@
       "disposition": "retain-http",
       "owner": "chat-widget",
       "targetOperation": "getPublicChatMessages",
-      "targetModule": "PublicChatWidgetHttpModule",
-      "parityStatus": "characterized",
-      "notes": "Retain rate-limited visitor polling over the opaque session capability. The authenticated GraphQL schema never exposes that bearer token; live delivery remains on the established Socket.IO protocol.",
+      "targetModule": "ChatWidgetPublicModule",
+      "parityStatus": "implemented",
+      "notes": "Retain rate-limited visitor polling over the opaque session capability. The authenticated GraphQL schema never exposes that bearer token; live delivery remains on the established Socket.IO protocol. NestJS now owns an identical implementation (ChatWidgetPublicModule, including the after-timestamp polling parameter and last-seen presence refresh) proven by a dual-runtime parity suite behind the default-off CHAT_WIDGET_PUBLIC_NESTJS_ENABLED proxy.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -1012,8 +1126,12 @@
       "path": "/api/chat-widget/public/session",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 230
+        },
+        {
           "source": "backend/src/routes/chat-widget/public.routes.js",
-          "line": 78
+          "line": 80
         }
       ],
       "consumerCallsites": [
@@ -1027,15 +1145,88 @@
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 201
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 202
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 209
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 212
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 223
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 231
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 244
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 282
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 306
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 21
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 65
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 93
+        }
+      ],
       "recommendedDisposition": "graphql-mutation",
       "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
       "disposition": "retain-http",
       "owner": "chat-widget",
       "targetOperation": "createPublicChatSession",
-      "targetModule": "PublicChatWidgetHttpModule",
-      "parityStatus": "characterized",
-      "notes": "Retain public visitor session creation over HTTP. It validates the widget capability and allowed-domain policy, then issues the opaque session capability used by the browser embed.",
+      "targetModule": "ChatWidgetPublicModule",
+      "parityStatus": "implemented",
+      "notes": "Retain public visitor session creation over HTTP. It validates the widget capability and allowed-domain policy, then issues the opaque session capability used by the browser embed. NestJS now owns an identical implementation (ChatWidgetPublicModule) proven by a dual-runtime parity suite that resumes a NestJS-created session through the legacy runtime; agent-room announcement flows through the NestJS realtime host, so CHAT_WIDGET_PUBLIC_NESTJS_ENABLED must only be enabled in the runtime where REALTIME_HOST_NESTJS_ENABLED is on.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -1046,12 +1237,46 @@
       "path": "/api/chat-widget/public/typing",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 234
+        },
+        {
           "source": "backend/src/routes/chat-widget/public.routes.js",
-          "line": 381
+          "line": 383
         }
       ],
       "consumerCallsites": [],
       "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/typing",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 289
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/typing",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 296
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/typing",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 297
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/typing",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 25
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/typing",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 104
+        },
         {
           "method": "POST",
           "path": "/api/chat-widget/public/typing",
@@ -1064,9 +1289,9 @@
       "disposition": "retain-http",
       "owner": "chat-widget",
       "targetOperation": "sendPublicChatTyping",
-      "targetModule": "PublicChatWidgetHttpModule",
-      "parityStatus": "characterized",
-      "notes": "Retain ephemeral public typing signals over the visitor capability and Socket.IO. This realtime transport boundary is intentionally not modeled as a GraphQL mutation.",
+      "targetModule": "ChatWidgetPublicModule",
+      "parityStatus": "implemented",
+      "notes": "Retain ephemeral public typing signals over the visitor capability and Socket.IO. This realtime transport boundary is intentionally not modeled as a GraphQL mutation. NestJS now owns an identical implementation (ChatWidgetPublicModule) proven by a dual-runtime parity suite asserting visitorTyping delivery to the agent room through the NestJS realtime host.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -1078,7 +1303,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 196
+          "line": 200
         }
       ],
       "consumerCallsites": [
@@ -1137,7 +1362,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 197
+          "line": 201
         }
       ],
       "consumerCallsites": [
@@ -1196,7 +1421,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 203
+          "line": 207
         },
         {
           "source": "backend/src/routes/email-webhooks.routes.js",
@@ -1285,7 +1510,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 337
+          "line": 354
         },
         {
           "source": "backend/src/routes/forms.routes.js",
@@ -1396,7 +1621,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 338
+          "line": 355
         },
         {
           "source": "backend/src/routes/forms.routes.js",
@@ -1537,7 +1762,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 439
+          "line": 456
         },
         {
           "source": "backend/src/routes/invoice-integrations.routes.js",
@@ -1626,7 +1851,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 438
+          "line": 455
         },
         {
           "source": "backend/src/routes/invoice-integrations.routes.js",
@@ -1719,7 +1944,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 440
+          "line": 457
         },
         {
           "source": "backend/src/routes/invoice-integrations.routes.js",
@@ -1782,7 +2007,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 241
+          "line": 258
         },
         {
           "source": "backend/src/routes/invoices/pdf.routes.js",
@@ -1893,7 +2118,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 233
+          "line": 250
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -1986,7 +2211,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 237
+          "line": 254
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -2024,7 +2249,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 229
+          "line": 246
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -2131,7 +2356,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 296
+          "line": 313
         },
         {
           "source": "backend/src/routes/pages/public.routes.js",
@@ -2218,7 +2443,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 297
+          "line": 314
         },
         {
           "source": "backend/src/routes/pages/public.routes.js",
@@ -2293,7 +2518,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 403
+          "line": 420
         }
       ],
       "consumerCallsites": [
@@ -2352,7 +2577,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 407
+          "line": 424
         }
       ],
       "consumerCallsites": [],
@@ -2395,7 +2620,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 411
+          "line": 428
         }
       ],
       "consumerCallsites": [],
@@ -2438,7 +2663,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 375
+          "line": 392
         }
       ],
       "consumerCallsites": [
@@ -2515,7 +2740,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 395
+          "line": 412
         }
       ],
       "consumerCallsites": [
@@ -2568,7 +2793,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 391
+          "line": 408
         }
       ],
       "consumerCallsites": [
@@ -2609,7 +2834,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 383
+          "line": 400
         }
       ],
       "consumerCallsites": [],
@@ -2633,7 +2858,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 379
+          "line": 396
         }
       ],
       "consumerCallsites": [],
@@ -2664,7 +2889,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 387
+          "line": 404
         }
       ],
       "consumerCallsites": [],
@@ -2688,7 +2913,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 259
+          "line": 276
         },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
@@ -2751,7 +2976,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 260
+          "line": 277
         },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
@@ -2856,7 +3081,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 258
+          "line": 275
         },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
@@ -2939,7 +3164,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 186
+          "line": 190
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -3035,7 +3260,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 187
+          "line": 191
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -3082,7 +3307,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 190
+          "line": 194
         },
         {
           "source": "backend/src/routes/vaults/sharing.routes.js",
@@ -3133,7 +3358,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 188
+          "line": 192
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -3196,7 +3421,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 189
+          "line": 193
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -3256,7 +3481,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 361
+          "line": 378
         }
       ],
       "consumerCallsites": [],
@@ -3293,7 +3518,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 357
+          "line": 374
         }
       ],
       "consumerCallsites": [],
@@ -3330,7 +3555,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 343
+          "line": 360
         }
       ],
       "consumerCallsites": [
@@ -3425,7 +3650,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 365
+          "line": 382
         }
       ],
       "consumerCallsites": [],
@@ -3449,7 +3674,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 350
+          "line": 367
         }
       ],
       "consumerCallsites": [
@@ -3483,7 +3708,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 215
+          "line": 219
         },
         {
           "source": "backend/src/routes/sms-webhooks.routes.js",
@@ -3554,7 +3779,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 214
+          "line": 218
         },
         {
           "source": "backend/src/routes/sms-webhooks.routes.js",
@@ -3631,7 +3856,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 287
+          "line": 304
         },
         {
           "source": "backend/src/routes/social/oauth.routes.js",
@@ -3720,7 +3945,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 286
+          "line": 303
         },
         {
           "source": "backend/src/routes/social/oauth.routes.js",
@@ -3801,11 +4026,11 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 271
+          "line": 288
         },
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 279
+          "line": 296
         },
         {
           "source": "backend/src/routes/social/webhook.routes.js",
@@ -3900,11 +4125,11 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 272
+          "line": 289
         },
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 280
+          "line": 297
         },
         {
           "source": "backend/src/routes/social/webhook.routes.js",
@@ -3969,7 +4194,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 105
+          "line": 109
         }
       ],
       "consumerCallsites": [
@@ -4003,7 +4228,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 421
+          "line": 438
         },
         {
           "source": "backend/src/routes/webhooks.routes.js",

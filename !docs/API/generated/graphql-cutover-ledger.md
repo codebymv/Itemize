@@ -9,7 +9,7 @@
 - Non-API registered operations: 7
 - Static frontend callsites: 45
 - Operations with frontend consumers: 40
-- Operations referenced by backend tests: 48
+- Operations referenced by backend tests: 51
 - Recommended GraphQL queries: 0
 - Recommended GraphQL mutations: 1
 - Recommended retained HTTP endpoints: 58
@@ -39,12 +39,12 @@
 | GET | `/api/calendar-integrations/google/auth` | 1 | 10 | retain-http | high | scheduling-integrations / CalendarOAuthModule / begin |
 | GET | `/api/calendar-integrations/google/calendars/:connectionId` | 1 | 5 | retain-http | high | scheduling-integrations / CalendarOAuthModule / providerCalendars |
 | GET | `/api/calendar-integrations/google/callback` | 0 | 13 | retain-http | high | scheduling-integrations / CalendarOAuthModule / callback |
-| GET | `/api/chat-widget/public/config/:widgetKey` | 1 | 0 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / getPublicChatWidgetConfig |
-| POST | `/api/chat-widget/public/end-session` | 1 | 1 | retain-http | medium | chat-widget / PublicChatWidgetHttpModule / endPublicChatSession |
-| POST | `/api/chat-widget/public/messages` | 1 | 0 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / sendPublicChatMessage |
-| GET | `/api/chat-widget/public/messages/:sessionToken` | 1 | 1 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / getPublicChatMessages |
-| POST | `/api/chat-widget/public/session` | 1 | 0 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / createPublicChatSession |
-| POST | `/api/chat-widget/public/typing` | 0 | 1 | retain-http | medium | chat-widget / PublicChatWidgetHttpModule / sendPublicChatTyping |
+| GET | `/api/chat-widget/public/config/:widgetKey` | 1 | 3 | retain-http | high | chat-widget / ChatWidgetPublicModule / getPublicChatWidgetConfig |
+| POST | `/api/chat-widget/public/end-session` | 1 | 6 | retain-http | medium | chat-widget / ChatWidgetPublicModule / endPublicChatSession |
+| POST | `/api/chat-widget/public/messages` | 1 | 4 | retain-http | high | chat-widget / ChatWidgetPublicModule / sendPublicChatMessage |
+| GET | `/api/chat-widget/public/messages/:sessionToken` | 1 | 5 | retain-http | high | chat-widget / ChatWidgetPublicModule / getPublicChatMessages |
+| POST | `/api/chat-widget/public/session` | 1 | 12 | retain-http | high | chat-widget / ChatWidgetPublicModule / createPublicChatSession |
+| POST | `/api/chat-widget/public/typing` | 0 | 6 | retain-http | medium | chat-widget / ChatWidgetPublicModule / sendPublicChatTyping |
 | GET | `/api/contacts/export/csv` | 1 | 4 | retain-http | high | crm / ContactTransfersModule / exportContactsCsv |
 | POST | `/api/contacts/import/csv` | 1 | 4 | retain-http | high | crm / ContactTransfersModule / importContactsCsv |
 | POST | `/api/email/webhook/resend` | 0 | 10 | retain-http | high | messaging / EmailWebhooksModule / processResendEmailEvent |

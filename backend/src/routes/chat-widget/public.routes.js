@@ -49,7 +49,9 @@ module.exports = (pool, publicRateLimit, io, broadcast) => {
 
             if (widget.business_hours) {
                 const now = new Date();
-                const dayOfWeek = now.toLocaleDateString('en-US', { weekday: 'lowercase' });
+                // 'lowercase' is not a valid weekday option and threw, failing
+                // any widget with business hours closed; lowercase the long form.
+                const dayOfWeek = now.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
                 const currentTime = now.getHours() * 60 + now.getMinutes();
 
                 const todayHours = widget.business_hours[dayOfWeek];

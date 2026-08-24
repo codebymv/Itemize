@@ -105,6 +105,19 @@ export class RealtimeHostService
     return this.host?.broadcast ?? null;
   }
 
+  /**
+   * Agent-room notification used by the retained public chat routes.
+   * A no-op while this process is not the socket origin; the chat
+   * widget flag is only enabled together with the host flag.
+   */
+  emitToOrgChat(
+    organizationId: number,
+    event: string,
+    payload: Record<string, unknown>,
+  ): void {
+    this.io?.to(`org-chat-${organizationId}`).emit(event, payload);
+  }
+
   viewers(): RealtimeHost['viewers'] | null {
     return this.host?.viewers ?? null;
   }
