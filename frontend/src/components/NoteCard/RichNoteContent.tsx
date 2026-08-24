@@ -6,7 +6,6 @@ import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import Placeholder from '@tiptap/extension-placeholder';
 import TextStyle from '@tiptap/extension-text-style';
-import { Extension } from '@tiptap/core';
 import { Sparkles } from 'lucide-react';
 import { RichTextToolbar } from './RichTextToolbar';
 import { SuggestionActions } from '@/components/ai/SuggestionActions';
@@ -19,38 +18,7 @@ import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import logger from '@/lib/logger';
 import { migrateNoteContentToHtml, shouldApplyExternalNoteHtml } from './noteEditorHtml';
 import { formatNoteSuggestion } from './noteSuggestionText';
-import { createAutocompleteStorage, type AutocompleteStorage } from './autocompleteStorage';
-
-// TipTap extension for autocomplete keyboard shortcuts
-const AutocompleteExtension = Extension.create({
-  name: 'autocomplete',
-
-  addStorage() {
-    return {
-      autocomplete: createAutocompleteStorage(),
-    };
-  },
-
-  addKeyboardShortcuts() {
-    const acceptCurrentSuggestion = () => {
-      if (!this.editor.isFocused) return false;
-      const autocomplete = this.storage.autocomplete as AutocompleteStorage | undefined;
-      if (!autocomplete?.suggestion || !autocomplete.acceptSuggestion) return false;
-      autocomplete.acceptSuggestion();
-      return true;
-    };
-
-    return {
-      Tab: acceptCurrentSuggestion,
-      ArrowRight: acceptCurrentSuggestion,
-      'Mod-Space': () => {
-        const autocomplete = this.storage.autocomplete as AutocompleteStorage | undefined;
-        autocomplete?.triggerSuggestions?.();
-        return Boolean(autocomplete?.triggerSuggestions);
-      },
-    };
-  },
-});
+import { AutocompleteExtension, type AutocompleteStorage } from './autocompleteStorage';
 
 interface RichNoteContentProps {
   content: string;
