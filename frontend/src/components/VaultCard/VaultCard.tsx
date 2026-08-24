@@ -239,6 +239,10 @@ export const VaultCard: React.FC<VaultCardProps> = ({
     }
   };
 
+  const displayedItemCount = isVaultLocked && !isUnlockedForSession
+    ? (vault.item_count ?? items.length)
+    : items.length;
+
   // Load items when collapsible opens
   useEffect(() => {
     if (
@@ -467,7 +471,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
             {/* Items count and add button - fixed header */}
             <div className="flex items-center justify-between mb-3 flex-shrink-0">
               <span className="text-sm text-muted-foreground">
-                {items.length} {items.length === 1 ? 'item' : 'items'}
+                {displayedItemCount} {displayedItemCount === 1 ? 'item' : 'items'}
               </span>
               <Button
                 size="sm"
