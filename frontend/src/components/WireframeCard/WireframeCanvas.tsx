@@ -748,6 +748,7 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
           )}
           <Controls showInteractive={!readOnly} />
           <MiniMap
+            className="hidden sm:block"
             nodeColor={(node) => {
               if (node.type === 'stickyNote') return '#FCD34D';
               if (node.type === 'step') return 'hsl(var(--primary))';
