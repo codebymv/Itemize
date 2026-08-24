@@ -252,7 +252,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
                 </div>
                 <div className="flex">
                   <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="Toggle note details">
                       <ChevronDown className={cn(
                         "h-4 w-4 transition-transform",
                         isCollapsibleOpen ? "" : "transform rotate-180"

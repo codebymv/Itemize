@@ -84,6 +84,7 @@ import {
 } from '@/services/workspaceWireframeMutationsGraphql';
 import { ErrorState } from '@/components/ErrorState';
 import { useWorkspaceContent } from './hooks/useWorkspaceContent';
+import { useResponsiveContentCollapse } from '@/hooks/useResponsiveContentCollapse';
 
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
 type SortOption = 'updated' | 'created' | 'title';
@@ -169,61 +170,7 @@ export function ContentsPage() {
     }
   };
 
-  const [collapsedListIds, setCollapsedListIds] = useState<Set<string>>(new Set());
-  const [collapsedNoteIds, setCollapsedNoteIds] = useState<Set<number>>(new Set());
-  const [collapsedWhiteboardIds, setCollapsedWhiteboardIds] = useState<Set<number>>(new Set());
-  const [collapsedWireframeIds, setCollapsedWireframeIds] = useState<Set<number>>(new Set());
-  const [collapsedVaultIds, setCollapsedVaultIds] = useState<Set<number>>(new Set());
-
-  const isListCollapsed = (id: string) => collapsedListIds.has(id);
-  const toggleListCollapsed = useCallback((id: string) => {
-    setCollapsedListIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) newSet.delete(id);
-      else newSet.add(id);
-      return newSet;
-    });
-  }, []);
-
-  const isNoteCollapsed = (id: number) => collapsedNoteIds.has(id);
-  const toggleNoteCollapsed = useCallback((id: number) => {
-    setCollapsedNoteIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) newSet.delete(id);
-      else newSet.add(id);
-      return newSet;
-    });
-  }, []);
-
-  const isWhiteboardCollapsed = (id: number) => collapsedWhiteboardIds.has(id);
-  const toggleWhiteboardCollapsed = useCallback((id: number) => {
-    setCollapsedWhiteboardIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) newSet.delete(id);
-      else newSet.add(id);
-      return newSet;
-    });
-  }, []);
-
-  const isWireframeCollapsed = (id: number) => collapsedWireframeIds.has(id);
-  const toggleWireframeCollapsed = useCallback((id: number) => {
-    setCollapsedWireframeIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) newSet.delete(id);
-      else newSet.add(id);
-      return newSet;
-    });
-  }, []);
-
-  const isVaultCollapsed = (id: number) => collapsedVaultIds.has(id);
-  const toggleVaultCollapsed = useCallback((id: number) => {
-    setCollapsedVaultIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) newSet.delete(id);
-      else newSet.add(id);
-      return newSet;
-    });
-  }, []);
+  const contentCollapse = useResponsiveContentCollapse(isMobile);
 
   const handleListUpdate = useCallback(async (list: List) => {
     try {
@@ -806,8 +753,8 @@ export function ContentsPage() {
                       onDelete={handleListDelete}
                       onShare={handleListShare}
                       existingCategories={dbCategories}
-                      isCollapsed={isListCollapsed(list.id)}
-                      onToggleCollapsed={() => toggleListCollapsed(list.id)}
+                      isCollapsed={contentCollapse.isCollapsed('list', list.id)}
+                      onToggleCollapsed={() => contentCollapse.toggle('list', list.id)}
                       addCategory={addCategory}
                       updateCategory={editCategory}
                     />
@@ -828,8 +775,8 @@ export function ContentsPage() {
                       onDelete={handleNoteDelete}
                       onShare={handleNoteShare}
                       existingCategories={dbCategories}
-                      isCollapsed={isNoteCollapsed(note.id)}
-                      onToggleCollapsed={() => toggleNoteCollapsed(note.id)}
+                      isCollapsed={contentCollapse.isCollapsed('note', note.id)}
+                      onToggleCollapsed={() => contentCollapse.toggle('note', note.id)}
                       updateCategory={editCategory}
                     />
                   ))}
@@ -849,8 +796,8 @@ export function ContentsPage() {
                       onDelete={handleWhiteboardDelete}
                       onShare={handleWhiteboardShare}
                       existingCategories={dbCategories}
-                      isCollapsed={isWhiteboardCollapsed(wb.id)}
-                      onToggleCollapsed={() => toggleWhiteboardCollapsed(wb.id)}
+                      isCollapsed={contentCollapse.isCollapsed('whiteboard', wb.id)}
+                      onToggleCollapsed={() => contentCollapse.toggle('whiteboard', wb.id)}
                       updateCategory={editCategory}
                     />
                   ))}
@@ -870,8 +817,8 @@ export function ContentsPage() {
                       onDelete={handleWireframeDelete}
                       onShare={handleWireframeShare}
                       existingCategories={dbCategories}
-                      isCollapsed={isWireframeCollapsed(wf.id)}
-                      onToggleCollapsed={() => toggleWireframeCollapsed(wf.id)}
+                      isCollapsed={contentCollapse.isCollapsed('wireframe', wf.id)}
+                      onToggleCollapsed={() => contentCollapse.toggle('wireframe', wf.id)}
                       updateCategory={editCategory}
                     />
                   ))}
@@ -891,8 +838,8 @@ export function ContentsPage() {
                       onDelete={handleVaultDelete}
                       onShare={handleVaultShare}
                       existingCategories={dbCategories}
-                      isCollapsed={isVaultCollapsed(vault.id)}
-                      onToggleCollapsed={() => toggleVaultCollapsed(vault.id)}
+                      isCollapsed={contentCollapse.isCollapsed('vault', vault.id)}
+                      onToggleCollapsed={() => contentCollapse.toggle('vault', vault.id)}
                       updateCategory={editCategory}
                     />
                   ))}
