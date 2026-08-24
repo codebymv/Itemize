@@ -92,6 +92,14 @@ export function ContactDetailPage() {
     return c.email || c.company || 'Contact';
   };
 
+  const handleCreateEstimate = () => {
+    if (!contact) return;
+    const params = new URLSearchParams({
+      contactId: String(contact.id),
+    });
+    navigate(`/estimates/new?${params.toString()}`);
+  };
+
   useEffect(() => {
     if (!organizationId) {
       setLoading(false);
@@ -320,20 +328,30 @@ export function ContactDetailPage() {
           <Button
             size="sm"
             className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
-            onClick={() => setShowEditModal(true)}
+            onClick={handleCreateEstimate}
           >
-            <Edit className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Edit</span>
+            <FileText className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Create estimate</span>
           </Button>
         </>
       }
       mobileActions={
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full">
-            <TabsTrigger value="activity" className="flex-1">Activity</TabsTrigger>
-            <TabsTrigger value="content" className="flex-1">Related Content</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <>
+          <Button
+            size="sm"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-light"
+            onClick={handleCreateEstimate}
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            Create estimate
+          </Button>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="w-full">
+              <TabsTrigger value="activity" className="flex-1">Activity</TabsTrigger>
+              <TabsTrigger value="content" className="flex-1">Related Content</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </>
       }
     >
         {/* Contact profile card */}
@@ -419,12 +437,6 @@ export function ContactDetailPage() {
 
           {/* Activity tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            {/* Mobile only TabsList */}
-            <TabsList className="md:hidden">
-              <TabsTrigger value="activity">Activity</TabsTrigger>
-              <TabsTrigger value="content">Related Content</TabsTrigger>
-            </TabsList>
-
             <TabsContent value="activity" className="mt-4">
               {/* Add note form */}
               <Card className="mb-4">
@@ -565,12 +577,7 @@ export function ContactDetailPage() {
             <CardContent className="space-y-2">
               <Button
                 className="w-full justify-start"
-                onClick={() => {
-                  const params = new URLSearchParams({
-                    contactId: String(contact.id),
-                  });
-                  navigate(`/estimates/new?${params.toString()}`);
-                }}
+                onClick={handleCreateEstimate}
               >
                 <FileText className="h-4 w-4 mr-2" />
                 Create Estimate

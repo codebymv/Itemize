@@ -37,20 +37,25 @@ The PostgreSQL GraphQL integration test covers:
 4. A provider-confirmed `artifact_sent` event completes `first_send`.
 5. The checklist routes back to the type of artifact already created.
 
-## Next audit batch
+## Batch 2 findings and corrections
 
-1. Reduce empty-dashboard cost: five analytics families currently load before a
-   new workspace has data. Defer secondary analytics until first send or until
-   the relevant source data exists.
-2. Audit sidebar disclosure during the trial. Growth and automation modules
-   should not compete with Clients and Documents during first-run.
-3. Add a contextual `Create estimate` action to the client detail page. It
-   currently offers `Create Invoice` but skips the default low-commitment path.
-4. Measure time and abandonment between first client, first artifact, queued
-   delivery, provider-confirmed delivery, recipient response, and paid
-   conversion in the administrator funnel.
-5. Browser-test fresh Free and Solo accounts at desktop and mobile widths after
-   deployment, including Google and email verification exits.
+| Finding | Correction | Evidence |
+| --- | --- | --- |
+| Empty workspaces loaded secondary analytics that could not contain useful data | The dashboard now loads its primary snapshot first and defers conversion, communication, pipeline-age, and revenue reports until the organization has meaningful activity | Focused dashboard-query tests and the production release gate |
+| Trial navigation gave expansion modules the same weight as the first client-facing send | Before the first provider-confirmed send, the sidebar keeps Dashboard, Workspace, Contacts, Sales & Payments, and Documents visible and places the remaining paid modules under `More tools`; completing `first_send` restores the full navigation automatically | Focused sidebar disclosure tests use the authoritative get-started progress response |
+| The default low-commitment artifact was buried on the client page, especially on mobile | `Create estimate` is the primary responsive header action and retains an additional Quick Actions entry; the editor loads the tenant-owned contact by ID and prefills the recipient fields | Contact-to-estimate handoff tests cover responsive placement, authoritative prefill, and malformed IDs |
+| Activation abandonment could not be measured beyond first send | The administrator funnel now measures verification, workspace/trial/client/artifact milestones, provider-confirmed send, recipient advancement, return, Checkout start, and webhook-confirmed subscription activation with explicit denominators and median timing | Activation repository/service/GraphQL/frontend tests plus the administrator operations view |
+
+The trial disclosure changes navigation emphasis only. Every paid route remains
+available through `More tools`, and authorization continues to come from the
+server-side entitlement contract rather than the sidebar.
+
+## Next production check
+
+Browser-test one fresh Solo trial at desktop and mobile widths after deployment:
+confirm the focused navigation, open an expansion module through `More tools`,
+create an estimate from a client, send it, and verify the full navigation returns
+after the provider-confirmed `first_send` milestone is refreshed.
 
 ## Production matrix status — August 21, 2026
 

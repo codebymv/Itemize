@@ -1,6 +1,10 @@
 # Itemize.cloud Security Checklist Before Production
 
-## Current Status: ~35% Complete
+## Current status
+
+Living checklist. Checked items are backed by the current NestJS production
+runtime or release gate; unchecked items remain explicit release or
+post-launch hardening work.
 
 This checklist outlines essential security measures to be verified and implemented before deploying Itemize.cloud to a production environment.
 
@@ -15,8 +19,8 @@ This checklist outlines essential security measures to be verified and implement
 - [ ] **Implement Multi-Factor Authentication (MFA)**: For all administrative and sensitive user accounts.
 - [x] **Set up rate limiting**: 100 requests/hour on public endpoints (implemented in backend).
 - [x] **Configure proper session timeouts**: JWT tokens have expiration times.
-- [ ] **Review JWT secret management**: Ensure JWT secrets are strong, unique, and securely stored (check if using environment variable properly).
-- [ ] **Move JWT from localStorage**: Consider httpOnly cookies for better XSS protection.
+- [x] **Review JWT secret management**: Production startup requires a Railway-provided `JWT_SECRET` of at least 32 characters.
+- [x] **Keep session JWTs out of browser storage**: Access and refresh tokens use secure HttpOnly cookies; protected mutations also require the CSRF cookie/header pair.
 - [ ] **Implement IP-based restrictions**: For sensitive administrative routes or services.
 
 ### 3. Data Protection
@@ -42,14 +46,14 @@ This checklist outlines essential security measures to be verified and implement
 - [x] **Rate limiting**: Implemented on public endpoints (100 req/hour).
 - [x] **Authentication middleware**: JWT verification on protected routes.
 - [x] **API retry with backoff**: Implemented in frontend API client.
-- [ ] **Request size limits**: Verify body-parser limits are appropriate.
+- [x] **Request size limits**: JSON and URL-encoded application requests are bounded to 1 MB; specialized binary routes enforce their own contracts.
 - [ ] **API versioning**: Consider implementing for future compatibility.
 
 ### 6. Frontend Security
 - [x] **XSS Prevention**: DOMPurify sanitization on user content.
 - [x] **Error Boundary**: Graceful error handling without exposing internals.
 - [x] **Logger utility**: Debug logs stripped in production builds.
-- [ ] **CSP Headers**: Content Security Policy headers (verify configuration).
+- [ ] **CSP Headers**: Public capability responses have restrictive policies, but the static application shell still needs one explicit tested production policy.
 - [ ] **Subresource Integrity**: For external scripts/styles if any.
 
 ### 7. Compliance & Policies
@@ -57,7 +61,7 @@ This checklist outlines essential security measures to be verified and implement
 - [ ] **Implement relevant regulatory requirements**: (e.g., GDPR, CCPA, HIPAA) if applicable.
 - [ ] **Set up data breach response procedures**: A clear plan for identifying, containing, and responding to data breaches.
 - [ ] **Document security processes**: Maintain up-to-date documentation of all security policies and procedures.
-- [ ] **Cookie consent**: Implement if required for your user base.
+- [x] **Cookie consent**: The deferred consent control separates essential session cookies from optional preferences.
 
 ## Implemented Improvements (This Session)
 
@@ -84,9 +88,9 @@ This checklist outlines essential security measures to be verified and implement
 ## Priority Items for Next Phase
 
 1. **High Priority**:
-   - Move JWT from localStorage to httpOnly cookie
    - Set up centralized logging
    - Implement MFA for admin accounts
+   - Add and regression-test the production application-shell CSP
    - Complete security code review
 
 2. **Medium Priority**:

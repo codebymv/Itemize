@@ -16,6 +16,7 @@ import { useStatStyles } from '@/hooks/useStatStyles';
 import { cn } from '@/lib/utils';
 import {
   dismissGetStartedViaGraphql,
+  getStartedProgressQueryKey,
   getStartedProgressViaGraphql,
   type GetStartedStep,
 } from '@/services/getStartedGraphql';
@@ -64,7 +65,7 @@ export function GetStartedCard() {
   const navigate = useNavigate();
   const { organizationId } = useOrganization();
   const queryClient = useQueryClient();
-  const queryKey = ['get-started-progress', organizationId];
+  const queryKey = getStartedProgressQueryKey(organizationId);
   const { iconBgClass, iconClass } = useStatStyles('blue');
 
   const { data, isLoading } = useQuery({

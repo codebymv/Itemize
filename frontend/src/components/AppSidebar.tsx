@@ -1,4 +1,5 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
@@ -42,11 +43,17 @@ import {
     Receipt,
     Search,
     FileSignature,
+    Ellipsis,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSearch } from '@/components/AppShell';
 import { useSubscriptionState } from '@/contexts/SubscriptionContext';
+import { useOrganization } from '@/hooks/useOrganization';
+import {
+    getStartedProgressQueryKey,
+    getStartedProgressViaGraphql,
+} from '@/services/getStartedGraphql';
 
 // Navigation items for the sidebar
 interface NavItem {
@@ -239,6 +246,14 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
+const FIRST_RUN_PRIMARY_NAV = new Set([
+    'Dashboard',
+    'Workspace',
+    'Contacts',
+    'Sales & Payments',
+    'Documents',
+]);
+
 const secondaryNavItems: NavItem[] = [
     {
         title: 'Settings',
@@ -291,8 +306,22 @@ export function AppSidebar() {
     const navigate = useNavigate();
     const { state, toggleSidebar, isMobile, setOpenMobile } = useSidebar();
     const { setSearchOpen } = useSearch();
-    const { isLoading: isSubscriptionLoading, isSubscribed, tierLevel } = useSubscriptionState();
+    const { organizationId } = useOrganization();
+    const {
+        isLoading: isSubscriptionLoading,
+        isSubscribed,
+        isTrialing,
+        tierLevel,
+    } = useSubscriptionState();
     const [searchShortcutHint, setSearchShortcutHint] = React.useState<'apple' | 'other' | null>(null);
+    const [isMoreToolsOpen, setIsMoreToolsOpen] = React.useState(false);
+
+    const { data: getStartedProgress } = useQuery({
+        queryKey: getStartedProgressQueryKey(organizationId),
+        queryFn: getStartedProgressViaGraphql,
+        enabled: isTrialing && !!organizationId,
+        staleTime: 30_000,
+    });
 
     const isCollapsed = state === 'collapsed';
 
@@ -302,10 +331,19 @@ export function AppSidebar() {
         : mainNavItems.map((item) => item.title === 'Communications' && item.items
             ? { ...item, items: item.items.filter((subItem) => subItem.title !== 'Social') }
             : item);
+    const firstSendCompleted = getStartedProgress?.steps
+        .find((step) => step.id === 'first_send')?.completed === true;
+    const shouldFocusTrialNavigation = isTrialing && !firstSendCompleted;
+    const focusedPaidItems = shouldFocusTrialNavigation
+        ? paidItems.filter((item) => FIRST_RUN_PRIMARY_NAV.has(item.title))
+        : paidItems;
+    const moreToolsItems = shouldFocusTrialNavigation
+        ? paidItems.filter((item) => !FIRST_RUN_PRIMARY_NAV.has(item.title))
+        : [];
     const filteredMainNavItems = isSubscriptionLoading
         ? workspaceItems
         : isSubscribed
-            ? paidItems
+            ? focusedPaidItems
             : [
                 ...workspaceItems,
                 { title: 'Unlock business tools', icon: Zap, path: '/settings' },
@@ -317,6 +355,17 @@ export function AppSidebar() {
             : item);
     const homePath = isSubscribed ? '/dashboard' : '/canvas';
 
+    const isNavItemActive = React.useCallback((item: NavItem) => (
+        location.pathname === item.path
+        || (item.path !== '/' && location.pathname.startsWith(item.path))
+        || Boolean(item.items?.some((subItem) => (
+            location.pathname === subItem.path
+            || location.pathname.startsWith(`${subItem.path}/`)
+        )))
+    ), [location.pathname]);
+
+    const isMoreToolsRouteActive = moreToolsItems.some(isNavItemActive);
+
     // Auto-close sidebar on mobile when route changes
     React.useEffect(() => {
         if (isMobile) {
@@ -327,6 +376,12 @@ export function AppSidebar() {
     React.useEffect(() => {
         setSearchShortcutHint(isAppleModifierPlatform() ? 'apple' : 'other');
     }, []);
+
+    React.useEffect(() => {
+        if (isMoreToolsRouteActive) {
+            setIsMoreToolsOpen(true);
+        }
+    }, [isMoreToolsRouteActive]);
 
     const handleNavigate = (path: string, disabled?: boolean) => {
         if (disabled) return;
@@ -341,6 +396,84 @@ export function AppSidebar() {
         } else {
             navigate(item.path);
         }
+    };
+
+    const renderMainNavItem = (item: NavItem) => {
+        const isActive = isNavItemActive(item);
+
+        if (item.items && item.items.length > 0) {
+            return (
+                <Collapsible
+                    key={item.title}
+                    asChild
+                    open={isActive}
+                    onOpenChange={(open) => {
+                        if (open && !isActive && item.items && item.items.length > 0) {
+                            navigate(item.items[0].path);
+                        }
+                    }}
+                    className="group/collapsible"
+                >
+                    <SidebarMenuItem className={cn(isCollapsed && "flex justify-center")}>
+                        <CollapsibleTrigger asChild>
+                            <SidebarMenuButton
+                                tooltip={item.title}
+                                isActive={isActive}
+                                className="h-10 group/item font-raleway"
+                                onClick={(event) => {
+                                    if (isCollapsed) {
+                                        event.preventDefault();
+                                        handleItemClick(item, item.disabled);
+                                    }
+                                }}
+                            >
+                                <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
+                                <span>{item.title}</span>
+                                <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-gray-600 dark:text-gray-400" />
+                            </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                            <SidebarMenuSub>
+                                {item.items.map((subItem) => (
+                                    <SidebarMenuSubItem key={subItem.title}>
+                                        <SidebarMenuSubButton
+                                            asChild
+                                            isActive={location.pathname === subItem.path}
+                                            className="font-raleway"
+                                        >
+                                            <div onClick={() => handleNavigate(subItem.path)} className="cursor-pointer">
+                                                <span>{subItem.title}</span>
+                                            </div>
+                                        </SidebarMenuSubButton>
+                                    </SidebarMenuSubItem>
+                                ))}
+                            </SidebarMenuSub>
+                        </CollapsibleContent>
+                    </SidebarMenuItem>
+                </Collapsible>
+            );
+        }
+
+        return (
+            <SidebarMenuItem key={item.title} className={cn(isCollapsed && "flex justify-center")}>
+                <SidebarMenuButton
+                    tooltip={item.title}
+                    isActive={isActive}
+                    onClick={() => handleItemClick(item, item.disabled)}
+                    className={cn(
+                        "h-10 group/item font-raleway",
+                        item.disabled ? 'opacity-50 cursor-not-allowed' : '',
+                        isActive ? 'text-gray-900 dark:text-white font-medium' : '',
+                    )}
+                >
+                    <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
+                    <span>{item.title}</span>
+                    {item.disabled && (
+                        <span className="ml-auto text-xs text-muted-foreground">Soon</span>
+                    )}
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+        );
     };
 
     const brandIcon = (sizeClass: string) => (
@@ -430,88 +563,42 @@ export function AppSidebar() {
                     <SidebarGroupLabel className="font-raleway">Main</SidebarGroupLabel>
                     <SidebarGroupContent className={cn(isCollapsed && "w-full flex items-center justify-center")}>
                         <SidebarMenu className={cn("gap-3", isCollapsed && "w-full items-center")}>
-                            {filteredMainNavItems.map((item) => {
-                                // Check if any child route is active for grouped items
-                                const isActive = location.pathname === item.path ||
-                                    (item.path !== '/' && location.pathname.startsWith(item.path)) ||
-                                    (item.items?.some(sub => location.pathname === sub.path || location.pathname.startsWith(sub.path + '/')));
-
-                                if (item.items && item.items.length > 0) {
-                                    return (
-                                        <Collapsible
-                                            key={item.title}
-                                            asChild
-                                            open={!!isActive}
-                                            onOpenChange={(open) => {
-                                                // When opening, navigate to first sub-item
-                                                if (open && !isActive && item.items && item.items.length > 0) {
-                                                    navigate(item.items[0].path);
-                                                }
-                                            }}
-                                            className="group/collapsible"
-                                        >
-                                            <SidebarMenuItem className={cn(isCollapsed && "flex justify-center")}>
-                                                <CollapsibleTrigger asChild>
-                                                    <SidebarMenuButton
-                                                        tooltip={item.title}
-                                                        isActive={isActive}
-                                                        className="h-10 group/item font-raleway"
-                                                        onClick={(e) => {
-                                                            if (isCollapsed) {
-                                                                e.preventDefault();
-                                                                handleItemClick(item, item.disabled);
-                                                            }
-                                                            // When expanded, CollapsibleTrigger handles toggle via onOpenChange
-                                                        }}
-                                                    >
-                                                        <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
-                                                        <span>{item.title}</span>
-                                                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-gray-600 dark:text-gray-400" />
-                                                    </SidebarMenuButton>
-                                                </CollapsibleTrigger>
-                                                <CollapsibleContent>
-                                                    <SidebarMenuSub>
-                                                        {item.items.map((subItem) => (
-                                                            <SidebarMenuSubItem key={subItem.title}>
-                                                                <SidebarMenuSubButton
-                                                                    asChild
-                                                                    isActive={location.pathname === subItem.path}
-                                                                    className="font-raleway"
-                                                                >
-                                                                    <div onClick={() => handleNavigate(subItem.path)} className="cursor-pointer">
-                                                                        <span>{subItem.title}</span>
-                                                                    </div>
-                                                                </SidebarMenuSubButton>
-                                                            </SidebarMenuSubItem>
-                                                        ))}
-                                                    </SidebarMenuSub>
-                                                </CollapsibleContent>
-                                            </SidebarMenuItem>
-                                        </Collapsible>
-                                    );
-                                }
-
-                                return (
-                                    <SidebarMenuItem key={item.title} className={cn(isCollapsed && "flex justify-center")}>
-                                        <SidebarMenuButton
-                                            tooltip={item.title}
-                                            isActive={isActive}
-                                            onClick={() => handleItemClick(item, item.disabled)}
-                                        className={cn(
-                                            "h-10 group/item font-raleway",
-                                            item.disabled ? 'opacity-50 cursor-not-allowed' : '',
-                                            isActive ? 'text-gray-900 dark:text-white font-medium' : ''
-                                        )}
-                                        >
-                                            <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
-                                            <span>{item.title}</span>
-                                            {item.disabled && (
-                                                <span className="ml-auto text-xs text-muted-foreground">Soon</span>
-                                            )}
-                                        </SidebarMenuButton>
+                            {filteredMainNavItems.map(renderMainNavItem)}
+                            {moreToolsItems.length > 0 && (
+                                <Collapsible
+                                    asChild
+                                    open={isMoreToolsOpen}
+                                    onOpenChange={setIsMoreToolsOpen}
+                                    className="group/more-tools"
+                                >
+                                    <SidebarMenuItem className={cn(isCollapsed && "flex justify-center")}>
+                                        <CollapsibleTrigger asChild>
+                                            <SidebarMenuButton
+                                                tooltip="More tools"
+                                                isActive={isMoreToolsRouteActive}
+                                                className="h-10 group/item font-raleway"
+                                                aria-label="More tools"
+                                                onClick={(event) => {
+                                                    if (isCollapsed) {
+                                                        event.preventDefault();
+                                                        toggleSidebar();
+                                                        setIsMoreToolsOpen(true);
+                                                    }
+                                                }}
+                                            >
+                                                <Ellipsis className={cn("h-4 w-4 transition-colors", isMoreToolsRouteActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
+                                                <span>More tools</span>
+                                                <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/more-tools:rotate-90 text-gray-600 dark:text-gray-400" />
+                                            </SidebarMenuButton>
+                                        </CollapsibleTrigger>
+                                        <CollapsibleContent>
+                                            <SidebarMenu className="mt-2 gap-3 pl-2">
+                                                {moreToolsItems.map(renderMainNavItem)}
+                                            </SidebarMenu>
+                                        </CollapsibleContent>
                                     </SidebarMenuItem>
-                                );
-                            })}
+                                </Collapsible>
+                            )}
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>

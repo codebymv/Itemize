@@ -14,6 +14,9 @@ export type GetStartedProgress = {
   steps: GetStartedStep[];
 };
 
+export const getStartedProgressQueryKey = (organizationId: number | null | undefined) =>
+  ['get-started-progress', organizationId] as const;
+
 const progressFields = `
   dismissed
   completedCount

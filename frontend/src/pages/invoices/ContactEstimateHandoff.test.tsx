@@ -37,7 +37,21 @@ vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({ toast }),
 }));
 vi.mock('@/components/layout/PageLayout', () => ({
-  PageLayout: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  PageLayout: ({
+    children,
+    headerActions,
+    mobileActions,
+  }: {
+    children: React.ReactNode;
+    headerActions?: React.ReactNode;
+    mobileActions?: React.ReactNode;
+  }) => (
+    <>
+      <div data-testid="header-actions">{headerActions}</div>
+      <div data-testid="mobile-actions">{mobileActions}</div>
+      {children}
+    </>
+  ),
 }));
 
 const contact = {
@@ -83,7 +97,7 @@ describe('contact to estimate handoff', () => {
     invoicesApi.getProducts.mockResolvedValue([]);
   });
 
-  it('makes Create Estimate the primary contact action and passes only contactId', async () => {
+  it('promotes Create Estimate across responsive actions and passes only contactId', async () => {
     render(
       <MemoryRouter initialEntries={['/contacts/17']}>
         <Routes>
@@ -93,12 +107,14 @@ describe('contact to estimate handoff', () => {
       </MemoryRouter>,
     );
 
-    const createEstimate = await screen.findByRole('button', {
-      name: 'Create Estimate',
+    const createEstimateActions = await screen.findAllByRole('button', {
+      name: /create estimate/i,
     });
-    expect(createEstimate).toHaveClass('bg-primary');
+    expect(createEstimateActions).toHaveLength(3);
+    expect(screen.getByTestId('header-actions')).toContainElement(createEstimateActions[0]);
+    expect(screen.getByTestId('mobile-actions')).toContainElement(createEstimateActions[1]);
 
-    fireEvent.click(createEstimate);
+    fireEvent.click(createEstimateActions[1]);
 
     expect(await screen.findByTestId('location')).toHaveTextContent(
       '/estimates/new?contactId=17',
