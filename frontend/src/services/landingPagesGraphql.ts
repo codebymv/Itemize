@@ -265,29 +265,36 @@ const landingPagePasswordMutation = async (
   password: string | undefined,
   organizationId?: number,
 ): Promise<{ pageId: number; passwordProtected: boolean }> => {
-  const field =
-    operation === 'set'
-      ? 'setLandingPagePassword'
-      : 'removeLandingPagePassword';
-  const variables = {
-    pageId,
-    ...(password === undefined ? {} : { password }),
-  };
+  if (operation === 'set' && password !== undefined) {
+    const variables = { pageId, password };
+    const data = await graphqlMutationRequest<
+      { setLandingPagePassword: { pageId: number; passwordProtected: boolean } },
+      typeof variables
+    >(
+      `mutation SetLandingPagePassword($pageId: Int!, $password: String!) {
+        setLandingPagePassword(pageId: $pageId, password: $password) {
+          pageId passwordProtected
+        }
+      }`,
+      variables,
+      organizationId,
+    );
+    return data.setLandingPagePassword;
+  }
+  const variables = { pageId };
   const data = await graphqlMutationRequest<
-    Record<string, { pageId: number; passwordProtected: boolean }>,
+    { removeLandingPagePassword: { pageId: number; passwordProtected: boolean } },
     typeof variables
   >(
-    `mutation ${operation === 'set' ? 'Set' : 'Remove'}LandingPagePassword(
-      $pageId: Int!${operation === 'set' ? ', $password: String!' : ''}
-    ) {
-      ${field}(
-        pageId: $pageId${operation === 'set' ? ', password: $password' : ''}
-      ) { pageId passwordProtected }
+    `mutation RemoveLandingPagePassword($pageId: Int!) {
+      removeLandingPagePassword(pageId: $pageId) {
+        pageId passwordProtected
+      }
     }`,
     variables,
     organizationId,
   );
-  return data[field];
+  return data.removeLandingPagePassword;
 };
 
 export const setLandingPagePasswordViaGraphql = (

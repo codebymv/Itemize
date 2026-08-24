@@ -32,7 +32,6 @@ interface ShareModalProps<TId extends string | number = string | number> {
   existingShareData?: { shareToken: string; shareUrl: string } | null;
   isLocked?: boolean;
   showWarning?: boolean;
-  autoGenerate?: boolean;
 }
 
 const shareConfig = {
@@ -98,8 +97,7 @@ export const ShareModal = <TId extends string | number>({
   onUnshare,
   existingShareData,
   isLocked,
-  showWarning = false,
-  autoGenerate = true
+  showWarning = false
 }: ShareModalProps<TId>) => {
   const [shareData, setShareData] = useState<{ shareToken: string; shareUrl: string } | null>(
     existingShareData || null
@@ -194,10 +192,7 @@ export const ShareModal = <TId extends string | number>({
     setCopied(false);
     setShowWarningState(showWarning && !existingShareData);
 
-    if (autoGenerate && !existingShareData && !isLocked) {
-      handleShare();
-    }
-  }, [open, existingShareData, autoGenerate, isLocked, showWarning]);
+  }, [open, existingShareData, showWarning]);
 
   if (!open) return null;
 

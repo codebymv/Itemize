@@ -21,6 +21,7 @@ import { CampaignDeliveryModule } from './campaign-delivery/campaign-delivery.mo
 import { CategoriesModule } from './categories/categories.module';
 import { CalendarsModule } from './calendars/calendars.module';
 import { formatItemizeGraphqlError } from './common/graphql-error';
+import { RuntimeConfigModule } from './common/runtime-config.module';
 import { ContactTransfersModule } from './contact-transfers/contact-transfers.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { ConversationsModule } from './conversations/conversations.module';
@@ -54,6 +55,7 @@ import { SignatureJobsSchedulerService } from './signature-jobs/signature-jobs-s
 import { FoundationModule } from './foundation/foundation.module';
 import { FormsModule } from './forms/forms.module';
 import { InvoiceBusinessesModule } from './invoice-businesses/invoice-businesses.module';
+import { InvoiceJobsModule } from './invoice-jobs/invoice-jobs.module';
 import { InvoiceLogoCleanupModule } from './invoice-logo-cleanup/invoice-logo-cleanup.module';
 import { InvoiceLogoUploadsModule } from './invoice-logo-uploads/invoice-logo-uploads.module';
 import { InvoiceSettingsModule } from './invoice-settings/invoice-settings.module';
@@ -76,6 +78,7 @@ import { RequestContextMiddleware } from './request-context/request-context.midd
 import { RequestContextModule } from './request-context/request-context.module';
 import { SegmentsModule } from './segments/segments.module';
 import { TagsModule } from './tags/tags.module';
+import { TrialRemindersModule } from './trial-reminders/trial-reminders.module';
 import { VaultModule } from './vaults/vault.module';
 import { WorkspaceContentModule } from './workspace-content/workspace-content.module';
 import { RealtimeOutboxModule } from './realtime-outbox/realtime-outbox.module';
@@ -91,6 +94,7 @@ const observabilityPlugins = [
 
 @Module({
   imports: [
+    RuntimeConfigModule,
     RequestContextModule,
     DatabaseModule,
     AuthModule,
@@ -148,8 +152,10 @@ const observabilityPlugins = [
     ReputationReviewsModule,
     ReputationRequestsModule,
     TagsModule,
+    TrialRemindersModule,
     FormsModule,
     InvoiceBusinessesModule,
+    InvoiceJobsModule,
     InvoiceLogoCleanupModule,
     InvoiceLogoUploadsModule,
     InvoiceSettingsModule,

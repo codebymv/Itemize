@@ -162,16 +162,31 @@ export const updateWorkflowViaGraphql = async (
   return mapWorkflow(data.updateWorkflow);
 };
 
-const lifecycleMutation = async (operation: 'activateWorkflow' | 'deactivateWorkflow' | 'duplicateWorkflow', id: number, organizationId: number) => {
+const activateWorkflowMutation = `mutation ActivateWorkflow($id: Int!) {
+  activateWorkflow(id: $id) { ${fields} }
+}`;
+const deactivateWorkflowMutation = `mutation DeactivateWorkflow($id: Int!) {
+  deactivateWorkflow(id: $id) { ${fields} }
+}`;
+const duplicateWorkflowMutation = `mutation DuplicateWorkflow($id: Int!) {
+  duplicateWorkflow(id: $id) { ${fields} }
+}`;
+
+const lifecycleMutation = async (
+  document: string,
+  operation: 'activateWorkflow' | 'deactivateWorkflow' | 'duplicateWorkflow',
+  id: number,
+  organizationId: number,
+) => {
   const data = await graphqlMutationRequest<Record<string, GraphqlWorkflow>, { id: number }>(
-    `mutation WorkflowLifecycle($id: Int!) { ${operation}(id: $id) { ${fields} } }`, { id }, organizationId,
+    document, { id }, organizationId,
   );
   return mapWorkflow(data[operation]);
 };
 
-export const activateWorkflowViaGraphql = (id: number, organizationId: number) => lifecycleMutation('activateWorkflow', id, organizationId);
-export const deactivateWorkflowViaGraphql = (id: number, organizationId: number) => lifecycleMutation('deactivateWorkflow', id, organizationId);
-export const duplicateWorkflowViaGraphql = (id: number, organizationId: number) => lifecycleMutation('duplicateWorkflow', id, organizationId);
+export const activateWorkflowViaGraphql = (id: number, organizationId: number) => lifecycleMutation(activateWorkflowMutation, 'activateWorkflow', id, organizationId);
+export const deactivateWorkflowViaGraphql = (id: number, organizationId: number) => lifecycleMutation(deactivateWorkflowMutation, 'deactivateWorkflow', id, organizationId);
+export const duplicateWorkflowViaGraphql = (id: number, organizationId: number) => lifecycleMutation(duplicateWorkflowMutation, 'duplicateWorkflow', id, organizationId);
 
 export const deleteWorkflowViaGraphql = async (id: number, organizationId: number): Promise<void> => {
   const data = await graphqlMutationRequest<{ deleteWorkflow: { deletedId: number; success: boolean } }, { id: number }>(
@@ -233,25 +248,37 @@ export const enrollContactInWorkflowViaGraphql = async (
   return mapEnrollment(data.enrollContactInWorkflow);
 };
 
+const pauseWorkflowEnrollmentMutation = `mutation PauseWorkflowEnrollment($workflowId: Int!, $enrollmentId: Int!) {
+  pauseWorkflowEnrollment(workflowId: $workflowId, enrollmentId: $enrollmentId) { ${enrollmentFields} }
+}`;
+const resumeWorkflowEnrollmentMutation = `mutation ResumeWorkflowEnrollment($workflowId: Int!, $enrollmentId: Int!) {
+  resumeWorkflowEnrollment(workflowId: $workflowId, enrollmentId: $enrollmentId) { ${enrollmentFields} }
+}`;
+const retryWorkflowEnrollmentMutation = `mutation RetryWorkflowEnrollment($workflowId: Int!, $enrollmentId: Int!) {
+  retryWorkflowEnrollment(workflowId: $workflowId, enrollmentId: $enrollmentId) { ${enrollmentFields} }
+}`;
+const cancelWorkflowEnrollmentMutation = `mutation CancelWorkflowEnrollment($workflowId: Int!, $enrollmentId: Int!) {
+  cancelWorkflowEnrollment(workflowId: $workflowId, enrollmentId: $enrollmentId) { ${enrollmentFields} }
+}`;
+
 const enrollmentLifecycleMutation = async (
+  document: string,
   operation: 'pauseWorkflowEnrollment' | 'resumeWorkflowEnrollment' | 'retryWorkflowEnrollment' | 'cancelWorkflowEnrollment',
   workflowId: number,
   enrollmentId: number,
   organizationId: number,
 ): Promise<WorkflowEnrollment> => {
   const data = await graphqlMutationRequest<Record<string, GraphqlWorkflowEnrollment>, { workflowId: number; enrollmentId: number }>(
-    `mutation WorkflowEnrollmentLifecycle($workflowId: Int!, $enrollmentId: Int!) {
-      ${operation}(workflowId: $workflowId, enrollmentId: $enrollmentId) { ${enrollmentFields} }
-    }`, { workflowId, enrollmentId }, organizationId,
+    document, { workflowId, enrollmentId }, organizationId,
   );
   return mapEnrollment(data[operation]);
 };
 
 export const pauseWorkflowEnrollmentViaGraphql = (workflowId: number, enrollmentId: number, organizationId: number) =>
-  enrollmentLifecycleMutation('pauseWorkflowEnrollment', workflowId, enrollmentId, organizationId);
+  enrollmentLifecycleMutation(pauseWorkflowEnrollmentMutation, 'pauseWorkflowEnrollment', workflowId, enrollmentId, organizationId);
 export const resumeWorkflowEnrollmentViaGraphql = (workflowId: number, enrollmentId: number, organizationId: number) =>
-  enrollmentLifecycleMutation('resumeWorkflowEnrollment', workflowId, enrollmentId, organizationId);
+  enrollmentLifecycleMutation(resumeWorkflowEnrollmentMutation, 'resumeWorkflowEnrollment', workflowId, enrollmentId, organizationId);
 export const retryWorkflowEnrollmentViaGraphql = (workflowId: number, enrollmentId: number, organizationId: number) =>
-  enrollmentLifecycleMutation('retryWorkflowEnrollment', workflowId, enrollmentId, organizationId);
+  enrollmentLifecycleMutation(retryWorkflowEnrollmentMutation, 'retryWorkflowEnrollment', workflowId, enrollmentId, organizationId);
 export const cancelWorkflowEnrollmentViaGraphql = (workflowId: number, enrollmentId: number, organizationId: number) =>
-  enrollmentLifecycleMutation('cancelWorkflowEnrollment', workflowId, enrollmentId, organizationId);
+  enrollmentLifecycleMutation(cancelWorkflowEnrollmentMutation, 'cancelWorkflowEnrollment', workflowId, enrollmentId, organizationId);

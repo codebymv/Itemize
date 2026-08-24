@@ -5,6 +5,7 @@
 
 const cron = require('node-cron');
 const { runAllInvoiceJobs } = require('./jobs/invoice-jobs');
+const { legacyInvoiceJobsEnabled } = require('./jobs/invoice-worker-ownership');
 const { runSignatureReminderJobs } = require('./jobs/signature-jobs');
 const {
     runSubscriptionWebhookNotificationJobs,
@@ -45,17 +46,21 @@ function initScheduler(pool, io, broadcast) {
 
     // Run invoice jobs daily at 6:00 AM
     // Cron format: minute hour day-of-month month day-of-week
-    cron.schedule('0 6 * * *', async () => {
-        logger.info('Running scheduled invoice jobs (daily 6:00 AM)...');
-        try {
-            await runAllInvoiceJobs(pool);
-            logger.info('Scheduled invoice jobs completed successfully');
-        } catch (error) {
-            logger.error('Error in scheduled invoice jobs:', error);
-        }
-    }, {
-        timezone: 'America/New_York' // Adjust timezone as needed
-    });
+    if (legacyInvoiceJobsEnabled()) {
+        cron.schedule('0 6 * * *', async () => {
+            logger.info('Running scheduled invoice jobs (daily 6:00 AM)...');
+            try {
+                await runAllInvoiceJobs(pool);
+                logger.info('Scheduled invoice jobs completed successfully');
+            } catch (error) {
+                logger.error('Error in scheduled invoice jobs:', error);
+            }
+        }, {
+            timezone: 'America/New_York' // Adjust timezone as needed
+        });
+    } else {
+        logger.info('Legacy invoice scheduler disabled');
+    }
 
     if (legacySignatureReminderJobsEnabled()) {
         // Run signature reminder jobs hourly until durable NestJS delivery owns them.
@@ -201,7 +206,7 @@ function initScheduler(pool, io, broadcast) {
     }
 
     // Also run immediately on startup in development to catch any missed jobs
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' && legacyInvoiceJobsEnabled()) {
         logger.info('Development mode: Running invoice jobs on startup...');
         // Delay slightly to ensure database is fully ready
         setTimeout(async () => {
@@ -215,7 +220,9 @@ function initScheduler(pool, io, broadcast) {
     }
 
     schedulerInitialized = true;
-    logger.info('Scheduler initialized - invoice jobs will run daily at 6:00 AM');
+    logger.info('Scheduler initialized', {
+        legacyInvoiceJobsEnabled: legacyInvoiceJobsEnabled(),
+    });
 }
 
 /**

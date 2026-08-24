@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutGrid,
@@ -32,11 +32,6 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuthState } from '@/contexts/AuthContext';
 import {
-  fetchCanvasLists,
-  getNotes,
-  getWhiteboards,
-  getWireframes,
-  getVaults,
   createList as apiCreateList,
   createNote as apiCreateNote,
   createWhiteboard as apiCreateWhiteboard,
@@ -87,6 +82,8 @@ import {
   disableWorkspaceWireframeSharingViaGraphql,
   enableWorkspaceWireframeSharingViaGraphql,
 } from '@/services/workspaceWireframeMutationsGraphql';
+import { ErrorState } from '@/components/ErrorState';
+import { useWorkspaceContent } from './hooks/useWorkspaceContent';
 
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
 type SortOption = 'updated' | 'created' | 'title';
@@ -119,13 +116,21 @@ export function ContentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('updated');
 
-  const [lists, setLists] = useState<List[]>([]);
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [whiteboards, setWhiteboards] = useState<Whiteboard[]>([]);
-  const [wireframes, setWireframes] = useState<Wireframe[]>([]);
-  const [vaults, setVaults] = useState<Vault[]>([]);
-
-  const [loading, setLoading] = useState(true);
+  const {
+    lists,
+    notes,
+    whiteboards,
+    wireframes,
+    vaults,
+    setLists,
+    setNotes,
+    setWhiteboards,
+    setWireframes,
+    setVaults,
+    loading,
+    error: contentError,
+    refresh: fetchAllContent,
+  } = useWorkspaceContent(token);
 
   const [showNewNoteModal, setShowNewNoteModal] = useState(false);
   const [showNewListModal, setShowNewListModal] = useState(false);
@@ -219,38 +224,6 @@ export function ContentsPage() {
       return newSet;
     });
   }, []);
-
-  const fetchAllContent = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [listsRes, notesRes, whiteboardsRes, wireframesRes, vaultsRes] = await Promise.all([
-        fetchCanvasLists(token).catch(() => []),
-        getNotes(token).catch(() => ({ notes: [] })),
-        getWhiteboards(token).catch(() => ({ whiteboards: [] })),
-        getWireframes(token).catch(() => ({ wireframes: [] })),
-        getVaults(token).catch(() => ({ vaults: [] })),
-      ]);
-
-      setLists(listsRes || []);
-      setNotes(notesRes?.notes || []);
-      setWhiteboards(whiteboardsRes?.whiteboards || []);
-      setWireframes(wireframesRes?.wireframes || []);
-      setVaults(vaultsRes?.vaults || []);
-    } catch (error) {
-      console.error('Error fetching content:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load content',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [token, toast]);
-
-  useEffect(() => {
-    fetchAllContent();
-  }, [fetchAllContent]);
 
   const handleListUpdate = useCallback(async (list: List) => {
     try {
@@ -529,7 +502,7 @@ export function ContentsPage() {
         }
       : vault));
     return result;
-  }, [token, vaults]);
+  }, [setVaults, token, vaults]);
 
   const disableSelectedVaultSharing = useCallback(async (id: number) => {
     await unshareVault(id, token);
@@ -541,7 +514,7 @@ export function ContentsPage() {
           shared_at: undefined,
         }
       : vault));
-  }, [token]);
+  }, [setVaults, token]);
 
   const filteredAndSortedLists = useMemo(() => {
     let filtered = [...lists];
@@ -786,6 +759,13 @@ export function ContentsPage() {
           <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4' : 'space-y-2'} p-6`}>
             {[...Array(8)].map((_, i) => <Skeleton key={i} className={viewMode === 'grid' ? 'h-32' : 'h-16'} />)}
           </div>
+        ) : contentError ? (
+          <ErrorState
+            title="Unable to load workspace"
+            description={contentError}
+            actionLabel="Try again"
+            onAction={() => void fetchAllContent()}
+          />
         ) : totalItems === 0 ? (
           <EmptyState
             icon={LayoutGrid}
@@ -944,7 +924,6 @@ export function ContentsPage() {
                 shareUrl: `${window.location.origin}/shared/${workspaceShareTarget.itemType}/${workspaceShareTarget.shareToken}`,
               }
             : undefined}
-          autoGenerate={false}
         />
       )}
       {vaultToShare && (
@@ -966,7 +945,6 @@ export function ContentsPage() {
             : undefined}
           isLocked={vaultToShare.is_locked && !isVaultZke(vaultToShare)}
           showWarning
-          autoGenerate={false}
         />
       )}
 

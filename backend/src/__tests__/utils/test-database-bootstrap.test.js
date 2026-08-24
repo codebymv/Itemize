@@ -145,6 +145,23 @@ describe('test database schema contract', () => {
         });
     });
 
+    test('fresh integration runs can target either runtime explicitly', () => {
+        const { parseTestSelection } = require('../../../scripts/run-integration-tests-fresh');
+
+        expect(parseTestSelection(['--nestjs-only', 'trial-reminders'])).toEqual({
+            runLegacy: false,
+            runNest: true,
+            legacyJestArgs: [],
+            nestJestArgs: ['trial-reminders'],
+        });
+        expect(parseTestSelection(['--legacy-only', 'auth'])).toEqual({
+            runLegacy: true,
+            runNest: false,
+            legacyJestArgs: ['auth'],
+            nestJestArgs: [],
+        });
+    });
+
     test('production migration stream creates the Stripe event claim table', async () => {
         const migration = require('../../../scripts/migrations/006_stripe_webhook_idempotency');
         const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
@@ -372,6 +389,22 @@ describe('test database schema contract', () => {
         expect(sql).toContain('expired_at');
         expect(sql).toContain("'expired'");
         expect(sql).toContain('idx_realtime_event_outbox_expirable');
+    });
+
+    test('production migration stream creates durable trial reminder deliveries', async () => {
+        const migration = require('../../../scripts/migrations/063_trial_reminder_deliveries');
+        const {
+            runTrialReminderDeliveryMigration,
+        } = require('../../db_trial_reminder_delivery_migrations');
+        const pool = { query: jest.fn().mockResolvedValue({ rows: [] }) };
+
+        expect(migration.up).toBe(runTrialReminderDeliveryMigration);
+        await migration.up(pool);
+        const sql = pool.query.mock.calls.map(([statement]) => statement).join('\n');
+        expect(sql).toContain('CREATE TABLE IF NOT EXISTS trial_reminder_deliveries');
+        expect(sql).toContain('trial_reminder_delivery_identity');
+        expect(sql).toContain('idx_trial_reminder_deliveries_claim');
+        expect(sql).toContain('lease_expires_at');
     });
 
     test('production migration stream installs landing-page version storage', async () => {

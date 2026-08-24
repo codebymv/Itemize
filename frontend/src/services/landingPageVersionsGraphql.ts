@@ -110,23 +110,35 @@ const versionMutation = async (
   versionId: number,
   organizationId?: number,
 ): Promise<PageVersion> => {
-  const field =
-    operation === 'publish'
-      ? 'publishLandingPageVersion'
-      : 'restoreLandingPageVersion';
+  const variables = { pageId, versionId };
+  if (operation === 'publish') {
+    const data = await graphqlMutationRequest<
+      { publishLandingPageVersion: GqlPageVersion },
+      typeof variables
+    >(
+      `mutation PublishLandingPageVersion($pageId: Int!, $versionId: Int!) {
+        publishLandingPageVersion(pageId: $pageId, versionId: $versionId) {
+          ${versionFields}
+        }
+      }`,
+      variables,
+      organizationId,
+    );
+    return mapVersion(data.publishLandingPageVersion);
+  }
   const data = await graphqlMutationRequest<
-    Record<string, GqlPageVersion>,
-    { pageId: number; versionId: number }
+    { restoreLandingPageVersion: GqlPageVersion },
+    typeof variables
   >(
-    `mutation ${operation === 'publish' ? 'Publish' : 'Restore'}LandingPageVersion(
-      $pageId: Int!, $versionId: Int!
-    ) {
-      ${field}(pageId: $pageId, versionId: $versionId) { ${versionFields} }
+    `mutation RestoreLandingPageVersion($pageId: Int!, $versionId: Int!) {
+      restoreLandingPageVersion(pageId: $pageId, versionId: $versionId) {
+        ${versionFields}
+      }
     }`,
-    { pageId, versionId },
+    variables,
     organizationId,
   );
-  return mapVersion(data[field]);
+  return mapVersion(data.restoreLandingPageVersion);
 };
 
 export const publishLandingPageVersionViaGraphql = (

@@ -180,8 +180,29 @@ The disposable signature PDF was deleted from S3 and confirmed absent before
 the canary organization and user were deleted; both database counts returned
 zero after cleanup.
 
+### August 23 workspace release hardening
+
+The local workspace golden path now uses one atomic content loader across Canvas,
+Contents, and Shared. A failure in any one of the five workspace resource queries
+preserves the last complete snapshot and presents an in-app retry instead of
+silently replacing failed resources with empty arrays. Overlapping refreshes are
+fenced so an older response cannot overwrite newer state.
+
+Workspace publishing now always requires an explicit confirmation. Successful
+share and revoke actions update the local item state, so reopening the modal does
+not regenerate a link or display a revoked one. Vault publishing also reads the
+latest vault state before choosing the zero-knowledge snapshot path, preserving
+the client-side URL fragment. Creation now retains valid zero coordinates and
+uses a safe center fallback when no position is supplied or returned.
+
+The focused frontend regression suite passes 7/7 assertions, and the full
+release contract/build/bundle-budget gate passes. Production confirmation remains
+pending until these changes are deployed.
+
 ### Remaining matrix extensions
 
+- After deployment, repeat create, edit, reload, share, open, revoke, and delete
+  coverage for each workspace content type against the production GraphQL path.
 - Replace the placeholder annual price environment values with isolated live
   Itemize prices before exposing annual billing controls, then repeat the same
   immediate-cancellation/refund canary for each annual tier.

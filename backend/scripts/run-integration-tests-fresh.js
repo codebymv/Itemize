@@ -8,7 +8,32 @@ const graphqlRoot = path.resolve(backendRoot, '..', 'backend-v2');
 const composeFile = path.join(backendRoot, 'docker-compose.integration.yml');
 const port = process.env.ITEMIZE_TEST_DB_PORT || '55432';
 const projectName = process.env.ITEMIZE_INTEGRATION_PROJECT || `itemize-integration-${process.pid}`;
-const requestedLegacyJestArgs = process.argv.slice(2);
+function parseTestSelection(args = []) {
+    if (args[0] === '--nestjs-only') {
+        return {
+            runLegacy: false,
+            runNest: true,
+            legacyJestArgs: [],
+            nestJestArgs: args.slice(1),
+        };
+    }
+    if (args[0] === '--legacy-only') {
+        return {
+            runLegacy: true,
+            runNest: false,
+            legacyJestArgs: args.slice(1),
+            nestJestArgs: [],
+        };
+    }
+    return {
+        runLegacy: true,
+        runNest: true,
+        legacyJestArgs: args,
+        nestJestArgs: [],
+    };
+}
+
+const testSelection = parseTestSelection(process.argv.slice(2));
 
 function buildTestEnvironment(environment = process.env) {
     return {
@@ -75,22 +100,27 @@ async function main() {
             '--confirm-reset',
         ]);
 
-        await run(process.execPath, [
-            require.resolve('jest/bin/jest'),
-            '--testPathIgnorePatterns=/node_modules/|/dist/',
-            '--testMatch=**/src/__tests__/integration/**/*.test.js',
-            '--runInBand',
-            '--testTimeout=60000',
-            '--globalSetup=./src/__tests__/integration/global-setup.js',
-            '--globalTeardown=./src/__tests__/integration/global-teardown.js',
-            ...requestedLegacyJestArgs,
-        ]);
+        if (testSelection.runLegacy) {
+            await run(process.execPath, [
+                require.resolve('jest/bin/jest'),
+                '--testPathIgnorePatterns=/node_modules/|/dist/',
+                '--testMatch=**/src/__tests__/integration/**/*.test.js',
+                '--runInBand',
+                '--testTimeout=60000',
+                '--globalSetup=./src/__tests__/integration/global-setup.js',
+                '--globalTeardown=./src/__tests__/integration/global-teardown.js',
+                ...testSelection.legacyJestArgs,
+            ]);
+        }
 
-        await run(process.execPath, [
-            require.resolve('jest/bin/jest'),
-            '--config=jest.integration.config.cjs',
-            '--runInBand',
-        ], graphqlRoot);
+        if (testSelection.runNest) {
+            await run(process.execPath, [
+                require.resolve('jest/bin/jest'),
+                '--config=jest.integration.config.cjs',
+                '--runInBand',
+                ...testSelection.nestJestArgs,
+            ], graphqlRoot);
+        }
     } finally {
         if (composeAttempted) {
             await run('docker', composeArgs('down', '--volumes', '--remove-orphans'))
@@ -106,4 +136,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { buildTestEnvironment };
+module.exports = { buildTestEnvironment, parseTestSelection };

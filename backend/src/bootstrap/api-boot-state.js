@@ -1,4 +1,4 @@
-const REQUIRED_PRODUCTION_MIGRATION = '057_estimate_public_capabilities';
+const REQUIRED_PRODUCTION_MIGRATION = '063_trial_reminder_deliveries';
 
 function createApiBootState() {
     return {

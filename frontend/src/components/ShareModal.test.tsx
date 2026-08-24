@@ -18,7 +18,6 @@ describe('ShareModal', () => {
         itemTitle="Release readiness note"
         onShare={onShare}
         onUnshare={vi.fn()}
-        autoGenerate={false}
       />,
     );
 

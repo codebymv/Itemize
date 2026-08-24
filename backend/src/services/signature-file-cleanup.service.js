@@ -124,9 +124,13 @@ class SignatureFileCleanupService {
     async fail(claim, error, retryable, maxAttempts) {
         const status = !retryable || Number(claim.attempt_count) >= maxAttempts
             ? 'dead_letter' : 'retry';
+        // $3 must be cast: PostgreSQL deduces conflicting parameter types
+        // when the same parameter is both assigned to a varchar column and
+        // compared to a text literal, which made every failure marking
+        // throw and left claims stuck in 'processing' until lease expiry.
         await this.updateClaim(
             claim,
-            `status=$3,next_attempt_at=CASE WHEN $3='retry'
+            `status=$3::varchar,next_attempt_at=CASE WHEN $3::varchar='retry'
                THEN CURRENT_TIMESTAMP+(LEAST(3600,POWER(2,GREATEST(attempt_count-1)))*
                  INTERVAL '1 minute') ELSE next_attempt_at END,
              lease_expires_at=NULL,claimed_by=NULL,last_error=$4,updated_at=CURRENT_TIMESTAMP`,

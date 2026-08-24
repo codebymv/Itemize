@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Share2,
@@ -50,11 +50,6 @@ import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { useAuthState } from '@/contexts/AuthContext';
 import {
-  fetchCanvasLists,
-  getNotes,
-  getWhiteboards,
-  getWireframes,
-  getVaults,
   unshareList as apiUnshareList,
   unshareNote as apiUnshareNote,
   unshareWhiteboard as apiUnshareWhiteboard,
@@ -66,6 +61,8 @@ import { EmptyState } from '@/components/EmptyState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
+import { ErrorState } from '@/components/ErrorState';
+import { useWorkspaceContent } from './hooks/useWorkspaceContent';
 
 // Content type definitions
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
@@ -101,52 +98,24 @@ export function SharedPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'recent' | 'title'>('recent');
 
-  // Data states
-  const [lists, setLists] = useState<List[]>([]);
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [whiteboards, setWhiteboards] = useState<Whiteboard[]>([]);
-  const [wireframes, setWireframes] = useState<Wireframe[]>([]);
-  const [vaults, setVaults] = useState<Vault[]>([]);
-
-  // Loading states
-  const [loading, setLoading] = useState(true);
+  const {
+    lists,
+    notes,
+    whiteboards,
+    wireframes,
+    vaults,
+    setLists,
+    setNotes,
+    setWhiteboards,
+    setVaults,
+    loading,
+    error: contentError,
+    refresh: fetchAllContent,
+  } = useWorkspaceContent(token);
 
   // Unshare confirmation dialog
   const [unshareDialogOpen, setUnshareDialogOpen] = useState(false);
   const [contentToUnshare, setContentToUnshare] = useState<SharedContent | null>(null);
-
-  // Fetch all content
-  const fetchAllContent = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [listsRes, notesRes, whiteboardsRes, wireframesRes, vaultsRes] = await Promise.all([
-        fetchCanvasLists(token).catch(() => []),
-        getNotes(token).catch(() => ({ notes: [] })),
-        getWhiteboards(token).catch(() => ({ whiteboards: [] })),
-        getWireframes(token).catch(() => ({ wireframes: [] })),
-        getVaults(token).catch(() => ({ vaults: [] })),
-      ]);
-
-      setLists(listsRes || []);
-      setNotes(notesRes?.notes || []);
-      setWhiteboards(whiteboardsRes?.whiteboards || []);
-      setWireframes(wireframesRes?.wireframes || []);
-      setVaults(vaultsRes?.vaults || []);
-    } catch (error) {
-      console.error('Error fetching content:', error);
-      toast({
-        title: 'Error',
-        description: toastMessages.failedToLoad('shared content'),
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [token, toast]);
-
-  useEffect(() => {
-    fetchAllContent();
-  }, [fetchAllContent]);
 
   // Build the base URL for share links
   const baseUrl = useMemo(() => {
@@ -493,6 +462,13 @@ export function SharedPage() {
                 <Skeleton key={i} className="h-16" />
               ))}
             </div>
+          ) : contentError ? (
+            <ErrorState
+              title="Unable to load shared content"
+              description={contentError}
+              actionLabel="Try again"
+              onAction={() => void fetchAllContent()}
+            />
           ) : filteredContent.length === 0 ? (
             <EmptyState
               icon={Share2}

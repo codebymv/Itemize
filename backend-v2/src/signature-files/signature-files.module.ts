@@ -11,6 +11,12 @@ import {
   ClamAvSignatureMalwareScanner,
   SIGNATURE_MALWARE_SCANNER,
 } from './signature-malware-scanner.provider';
+import {
+  DefaultSignatureCleanupStorage,
+  SIGNATURE_CLEANUP_STORAGE,
+  SignatureFileCleanupService,
+} from './signature-file-cleanup.service';
+import { SignatureFileCleanupSchedulerService } from './signature-file-cleanup-scheduler.service';
 import { SignatureFilesController } from './signature-files.controller';
 import { SignatureFilesRepository } from './signature-files.repository';
 import { SignatureFilesService } from './signature-files.service';
@@ -22,11 +28,17 @@ import { SignatureFilesService } from './signature-files.service';
     SignatureFileGuard,
     SignatureFilesRepository,
     SignatureFilesService,
+    SignatureFileCleanupService,
+    SignatureFileCleanupSchedulerService,
     LegacySignatureFileStorage,
     ClamAvSignatureMalwareScanner,
     {
       provide: SIGNATURE_FILE_STORAGE,
       useExisting: LegacySignatureFileStorage,
+    },
+    {
+      provide: SIGNATURE_CLEANUP_STORAGE,
+      useClass: DefaultSignatureCleanupStorage,
     },
     {
       provide: SIGNATURE_MALWARE_SCANNER,

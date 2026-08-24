@@ -4,7 +4,8 @@
   "private": true,
   "description": "Side-by-side NestJS GraphQL cutover service for Itemize",
   "scripts": {
-    "build": "nest build",
+    "build": "npm run config:check && nest build",
+    "config:check": "node ../scripts/check-backend-v2-env-contract.js",
     "start": "node dist/main.js",
     "start:dev": "nest start --watch",
     "jobs:recurring-invoices": "node dist/run-recurring-invoice-generation.js",
@@ -22,6 +23,7 @@
     "jobs:signature-deliveries": "node dist/run-signature-deliveries.js",
     "test": "jest --runInBand",
     "test:integration": "jest --config jest.integration.config.cjs --runInBand",
+    "test:contract": "jest --runInBand --runTestsByPath src/common/graphql-consumer-contract.spec.ts",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --runInBand"
   },

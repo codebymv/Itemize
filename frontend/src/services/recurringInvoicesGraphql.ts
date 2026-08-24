@@ -356,17 +356,30 @@ const lifecycleMutation = async (
   id: number,
   organizationId?: number,
 ): Promise<RecurringInvoice> => {
+  if (operation === 'pauseRecurringInvoice') {
+    const data = await graphqlMutationRequest<
+      { pauseRecurringInvoice: GraphqlRecurringInvoice },
+      { id: number }
+    >(
+      `mutation PauseRecurringInvoice($id: Int!) {
+        pauseRecurringInvoice(id: $id) { ${detailFields} }
+      }`,
+      { id },
+      organizationId,
+    );
+    return mapRecurringInvoice(data.pauseRecurringInvoice);
+  }
   const data = await graphqlMutationRequest<
-    Record<typeof operation, GraphqlRecurringInvoice>,
+    { resumeRecurringInvoice: GraphqlRecurringInvoice },
     { id: number }
   >(
-    `mutation RecurringInvoiceLifecycle($id: Int!) {
-      ${operation}(id: $id) { ${detailFields} }
+    `mutation ResumeRecurringInvoice($id: Int!) {
+      resumeRecurringInvoice(id: $id) { ${detailFields} }
     }`,
     { id },
     organizationId,
   );
-  return mapRecurringInvoice(data[operation]);
+  return mapRecurringInvoice(data.resumeRecurringInvoice);
 };
 
 export const pauseRecurringInvoiceViaGraphql = (

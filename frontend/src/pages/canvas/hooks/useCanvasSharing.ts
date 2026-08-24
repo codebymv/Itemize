@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, type Dispatch, type SetStateAction } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { List, Note, Whiteboard, Wireframe, Vault } from '@/types';
@@ -35,20 +35,46 @@ interface ShareItem {
   shareData?: { shareToken: string; shareUrl: string };
 }
 
+interface CanvasSharingState {
+  setLists: Dispatch<SetStateAction<List[]>>;
+  setNotes: Dispatch<SetStateAction<Note[]>>;
+  setWhiteboards: Dispatch<SetStateAction<Whiteboard[]>>;
+  setWireframes: Dispatch<SetStateAction<Wireframe[]>>;
+  setVaults: Dispatch<SetStateAction<Vault[]>>;
+}
+
+const sharedFields = (result: { shareToken: string }) => ({
+  share_token: result.shareToken,
+  is_public: true,
+  shared_at: new Date().toISOString(),
+});
+
+const unsharedFields = {
+  share_token: undefined,
+  is_public: false,
+  shared_at: undefined,
+};
+
 export function useCanvasSharing(
   lists: List[],
   notes: Note[],
   whiteboards: Whiteboard[],
   wireframes: Wireframe[],
   vaults: Vault[],
+  updateState: CanvasSharingState,
 ) {
   const { toast } = useToast();
   const [showShareModal, setShowShareModal] = useState(false);
   const [currentShareItem, setCurrentShareItem] = useState<ShareItem | null>(null);
+  const { setLists, setNotes, setWhiteboards, setWireframes, setVaults } = updateState;
 
   const handleListShare = async (listId: string): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
-      return await enableListSharingViaGraphql(Number(listId));
+      const result = await enableListSharingViaGraphql(Number(listId));
+      setLists((current) => current.map((list) => (
+        list.id === listId ? { ...list, ...sharedFields(result) } : list
+      )));
+      return result;
     } catch (error) {
       logger.error('Error sharing list:', error);
       throw error;
@@ -58,6 +84,9 @@ export function useCanvasSharing(
   const handleListUnshare = async (listId: string): Promise<void> => {
     try {
       await disableListSharingViaGraphql(Number(listId));
+      setLists((current) => current.map((list) => (
+        list.id === listId ? { ...list, ...unsharedFields } : list
+      )));
     } catch (error) {
       logger.error('Error unsharing list:', error);
       throw error;
@@ -66,7 +95,11 @@ export function useCanvasSharing(
 
   const handleNoteShare = async (noteId: number): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
-      return await enableNoteSharingViaGraphql(noteId);
+      const result = await enableNoteSharingViaGraphql(noteId);
+      setNotes((current) => current.map((note) => (
+        note.id === noteId ? { ...note, ...sharedFields(result) } : note
+      )));
+      return result;
     } catch (error) {
       logger.error('Error sharing note:', error);
       throw error;
@@ -76,6 +109,9 @@ export function useCanvasSharing(
   const handleNoteUnshare = async (noteId: number): Promise<void> => {
     try {
       await disableNoteSharingViaGraphql(noteId);
+      setNotes((current) => current.map((note) => (
+        note.id === noteId ? { ...note, ...unsharedFields } : note
+      )));
     } catch (error) {
       logger.error('Error unsharing note:', error);
       throw error;
@@ -84,7 +120,11 @@ export function useCanvasSharing(
 
   const handleWhiteboardShare = async (whiteboardId: number): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
-      return await enableWhiteboardSharingViaGraphql(whiteboardId);
+      const result = await enableWhiteboardSharingViaGraphql(whiteboardId);
+      setWhiteboards((current) => current.map((whiteboard) => (
+        whiteboard.id === whiteboardId ? { ...whiteboard, ...sharedFields(result) } : whiteboard
+      )));
+      return result;
     } catch (error) {
       logger.error('Error sharing whiteboard:', error);
       throw error;
@@ -94,6 +134,9 @@ export function useCanvasSharing(
   const handleWhiteboardUnshare = async (whiteboardId: number): Promise<void> => {
     try {
       await disableWhiteboardSharingViaGraphql(whiteboardId);
+      setWhiteboards((current) => current.map((whiteboard) => (
+        whiteboard.id === whiteboardId ? { ...whiteboard, ...unsharedFields } : whiteboard
+      )));
     } catch (error) {
       logger.error('Error unsharing whiteboard:', error);
       throw error;
@@ -102,7 +145,11 @@ export function useCanvasSharing(
 
   const handleWireframeShare = async (wireframeId: number): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
-      return await enableWorkspaceWireframeSharingViaGraphql(wireframeId);
+      const result = await enableWorkspaceWireframeSharingViaGraphql(wireframeId);
+      setWireframes((current) => current.map((wireframe) => (
+        wireframe.id === wireframeId ? { ...wireframe, ...sharedFields(result) } : wireframe
+      )));
+      return result;
     } catch (error) {
       logger.error('Error sharing wireframe:', error);
       throw error;
@@ -112,6 +159,9 @@ export function useCanvasSharing(
   const handleWireframeUnshare = async (wireframeId: number): Promise<void> => {
     try {
       await disableWorkspaceWireframeSharingViaGraphql(wireframeId);
+      setWireframes((current) => current.map((wireframe) => (
+        wireframe.id === wireframeId ? { ...wireframe, ...unsharedFields } : wireframe
+      )));
     } catch (error) {
       logger.error('Error unsharing wireframe:', error);
       throw error;
@@ -129,12 +179,20 @@ export function useCanvasSharing(
           ciphertext: snapshot.ciphertext,
           iv: snapshot.iv,
         });
-        return {
+        const shareData = {
           shareToken: result.shareToken,
           shareUrl: appendShareFragment(result.shareUrl, snapshot.shareSecret),
         };
+        setVaults((current) => current.map((candidate) => (
+          candidate.id === vaultId ? { ...candidate, ...sharedFields(result) } : candidate
+        )));
+        return shareData;
       }
-      return await enableVaultSharingViaGraphql(vaultId);
+      const result = await enableVaultSharingViaGraphql(vaultId);
+      setVaults((current) => current.map((candidate) => (
+        candidate.id === vaultId ? { ...candidate, ...sharedFields(result) } : candidate
+      )));
+      return result;
     } catch (error) {
       logger.error('Error sharing vault:', error);
       throw error;
@@ -144,6 +202,9 @@ export function useCanvasSharing(
   const handleVaultUnshare = async (vaultId: number): Promise<void> => {
     try {
       await disableVaultSharingViaGraphql(vaultId);
+      setVaults((current) => current.map((vault) => (
+        vault.id === vaultId ? { ...vault, ...unsharedFields } : vault
+      )));
     } catch (error) {
       logger.error('Error unsharing vault:', error);
       throw error;
@@ -241,13 +302,15 @@ export function useCanvasSharing(
     setShowShareModal(true);
   };
 
-  const shareHandlers = useMemo(() => ({
+  // Keep these handlers tied to the latest canvas state. Vault sharing in
+  // particular must inspect the current encryption mode before publishing.
+  const shareHandlers = {
     list: { onShare: handleListShare, onUnshare: handleListUnshare },
     note: { onShare: handleNoteShare, onUnshare: handleNoteUnshare },
     whiteboard: { onShare: handleWhiteboardShare, onUnshare: handleWhiteboardUnshare },
     vault: { onShare: handleVaultShare, onUnshare: handleVaultUnshare },
     wireframe: { onShare: handleWireframeShare, onUnshare: handleWireframeUnshare }
-  }), []);
+  };
 
   return {
     showShareModal,

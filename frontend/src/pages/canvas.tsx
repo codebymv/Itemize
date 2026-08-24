@@ -57,11 +57,6 @@ const CanvasPage: React.FC = () => {
     setWhiteboards,
     setWireframes,
     setVaults,
-    loadingLists,
-    loadingNotes,
-    loadingWhiteboards,
-    loadingWireframes,
-    loadingVaults,
     isLoading,
     error,
   } = canvasData;
@@ -133,7 +128,13 @@ const { currentUser } = useAuthState();
     handleShareWhiteboard,
     handleShareWireframe,
     handleShareVault,
-  } = useCanvasSharing(lists, notes, whiteboards, wireframes, vaults);
+  } = useCanvasSharing(lists, notes, whiteboards, wireframes, vaults, {
+    setLists,
+    setNotes,
+    setWhiteboards,
+    setWireframes,
+    setVaults,
+  });
 
 
   // Database-backed category management
@@ -566,7 +567,8 @@ const { currentUser } = useAuthState();
           <ErrorState
             title="Unable to load canvas"
             description={error}
-            onAction={() => window.location.reload()}
+            actionLabel="Try again"
+            onAction={() => void canvasData.refresh()}
           />
         ) : (
           // Conditional Rendering based on viewport size
@@ -793,7 +795,6 @@ const { currentUser } = useAuthState();
             existingShareData={currentShareItem.shareData}
             isLocked={currentShareItem.itemType === 'vault' ? currentShareItem.isLocked : undefined}
             showWarning={currentShareItem.itemType === 'vault'}
-            autoGenerate={currentShareItem.itemType !== 'vault'}
           />
         )}
 

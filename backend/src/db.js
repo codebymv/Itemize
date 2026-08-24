@@ -105,6 +105,9 @@ const {
 const {
   runSignatureEvidenceRetentionMigration,
 } = require('./db_signature_evidence_retention_migrations');
+const {
+  runTrialReminderDeliveryMigration,
+} = require('./db_trial_reminder_delivery_migrations');
 
 // Import Forms migrations
 const { runAllFormsMigrations } = require('./db_forms_migrations');
@@ -579,6 +582,11 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'invoice_email_deliveries', runInvoiceEmailDeliveryMigration);
     await runMigrationOnce(pool, 'invoice_payment_link_intents', runInvoicePaymentLinkMigration);
     await runMigrationOnce(pool, 'invoice_logo_deletion_jobs', runInvoiceLogoDeletionMigration);
+    await runMigrationOnce(
+      pool,
+      'trial_reminder_deliveries',
+      runTrialReminderDeliveryMigration,
+    );
     await runMigrationOnce(pool, 'campaign_test_email_deliveries', runCampaignTestEmailDeliveryMigration);
     await runMigrationOnce(pool, 'campaign_deliveries', runCampaignDeliveryMigration);
     

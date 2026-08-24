@@ -73,8 +73,8 @@ export function useCanvasCRUD(
         title: title || 'Untitled Note',
         content: '',
         color_value: color,
-        position_x: position?.x || 2000,
-        position_y: position?.y || 2000,
+        position_x: position?.x ?? 2000,
+        position_y: position?.y ?? 2000,
         width: 570,
         height: 350,
         z_index: 0,
@@ -173,8 +173,8 @@ export function useCanvasCRUD(
         canvas_width: 750,
         canvas_height: 620,
         background_color: '#FFFFFF',
-        position_x: position?.x || 2000,
-        position_y: position?.y || 2000,
+        position_x: position?.x ?? 2000,
+        position_y: position?.y ?? 2000,
         z_index: 0,
         color_value: color,
       };
@@ -267,8 +267,8 @@ export function useCanvasCRUD(
         title: title || 'Untitled Wireframe',
         category: category,
         flow_data: '{"nodes": [], "edges": [], "viewport": {"x": 0, "y": 0, "zoom": 1}}',
-        position_x: position?.x || 2000,
-        position_y: position?.y || 2000,
+        position_x: position?.x ?? 2000,
+        position_y: position?.y ?? 2000,
         z_index: 0,
         color_value: color,
       };
@@ -348,8 +348,8 @@ export function useCanvasCRUD(
       const payloadWithDefaults: CreateVaultPayload = {
         title: title || 'Untitled Vault',
         category: category,
-        position_x: position?.x || 2000,
-        position_y: position?.y || 2000,
+        position_x: position?.x ?? 2000,
+        position_y: position?.y ?? 2000,
         z_index: 0,
         color_value: color,
       };
@@ -544,8 +544,8 @@ export function useCanvasCRUD(
         title: title || 'Untitled List',
         type,
         items: [],
-        position_x: position?.x || 2000,
-        position_y: position?.y || 2000,
+        position_x: position?.x ?? 2000,
+        position_y: position?.y ?? 2000,
         color_value: color
       }, token);
 
@@ -556,8 +556,8 @@ export function useCanvasCRUD(
         items: response.items || [],
         createdAt: response.createdAt ? new Date(response.createdAt) : undefined,
         updated_at: response.updated_at,
-        position_x: response.position_x || position.x,
-        position_y: response.position_y || position.y,
+        position_x: response.position_x ?? position?.x ?? 2000,
+        position_y: response.position_y ?? position?.y ?? 2000,
         width: response.width,
         height: response.height,
         color_value: response.color_value || color,
