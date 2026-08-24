@@ -34,10 +34,13 @@ async function main() {
     await client.query('SELECT pg_advisory_lock(hashtext($1))', [MIGRATION_LOCK]);
     locked = true;
 
-    const initialized = await initializeDatabase(client);
+    // Keep the dedicated client checked out only to own the session-scoped
+    // advisory lock. Individual migrations receive the pool because some of
+    // them legitimately acquire their own clients/transactions.
+    const initialized = await initializeDatabase(pool);
     if (!initialized) throw new Error('Schema initializer reported failure.');
 
-    const result = await verifySchema(client);
+    const result = await verifySchema(pool);
     console.log(
       `Migration gate passed: ${result.verifiedMigrationCount} markers and ${result.verifiedTableCount} required tables verified.`,
     );

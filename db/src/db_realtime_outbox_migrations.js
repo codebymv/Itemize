@@ -94,7 +94,7 @@ async function runRealtimeOutboxExpirationMigration(pool) {
   return true;
 }
 
-async function runWhiteboardRealtimeOutboxMigration(pool) {
+async function applyCurrentRealtimeOutboxConstraints(pool) {
   await pool.query(`
     ALTER TABLE realtime_event_outbox
       DROP CONSTRAINT IF EXISTS realtime_event_outbox_aggregate_type_check,
@@ -105,97 +105,15 @@ async function runWhiteboardRealtimeOutboxMigration(pool) {
 
     ALTER TABLE realtime_event_outbox
       ADD CONSTRAINT realtime_event_outbox_aggregate_type_check
-        CHECK (aggregate_type IN ('list', 'note', 'whiteboard')),
-      ADD CONSTRAINT realtime_event_outbox_channel_check
-        CHECK (channel IN ('user_canvas', 'shared_list', 'shared_note', 'shared_whiteboard')),
-      ADD CONSTRAINT realtime_event_outbox_channel_event_check CHECK (
-        (channel = 'user_canvas' AND event_name IN ('userListUpdated', 'userListDeleted'))
-        OR (channel = 'shared_list' AND event_name = 'listUpdated')
-        OR (channel = 'shared_note' AND event_name = 'noteUpdated')
-        OR (channel = 'shared_whiteboard' AND event_name = 'whiteboardUpdated')
-      ),
-      ADD CONSTRAINT realtime_event_outbox_channel_aggregate_check CHECK (
-        (channel IN ('user_canvas', 'shared_list') AND aggregate_type = 'list')
-        OR (channel = 'shared_note' AND aggregate_type = 'note')
-        OR (channel = 'shared_whiteboard' AND aggregate_type = 'whiteboard')
-      ),
-      ADD CONSTRAINT realtime_event_outbox_recipient_check CHECK (
-        (channel = 'user_canvas' AND recipient_key ~ '^[1-9][0-9]*$')
-        OR (
-          channel IN ('shared_list', 'shared_note', 'shared_whiteboard')
-          AND recipient_key ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
-        )
-      )
-  `);
-  return true;
-}
-
-async function runWireframeRealtimeOutboxMigration(pool) {
-  await pool.query(`
-    ALTER TABLE realtime_event_outbox
-      DROP CONSTRAINT IF EXISTS realtime_event_outbox_aggregate_type_check,
-      DROP CONSTRAINT IF EXISTS realtime_event_outbox_channel_check,
-      DROP CONSTRAINT IF EXISTS realtime_event_outbox_channel_event_check,
-      DROP CONSTRAINT IF EXISTS realtime_event_outbox_channel_aggregate_check,
-      DROP CONSTRAINT IF EXISTS realtime_event_outbox_recipient_check;
-
-    ALTER TABLE realtime_event_outbox
-      ADD CONSTRAINT realtime_event_outbox_aggregate_type_check
-        CHECK (aggregate_type IN ('list', 'note', 'whiteboard', 'wireframe')),
-      ADD CONSTRAINT realtime_event_outbox_channel_check
-        CHECK (channel IN (
-          'user_canvas', 'shared_list', 'shared_note', 'shared_whiteboard',
-          'shared_wireframe', 'user_wireframe'
+        CHECK (aggregate_type IN (
+          'list', 'note', 'whiteboard', 'wireframe', 'chat_session',
+          'notification'
         )),
-      ADD CONSTRAINT realtime_event_outbox_channel_event_check CHECK (
-        (channel = 'user_canvas' AND event_name IN ('userListUpdated', 'userListDeleted'))
-        OR (channel = 'shared_list' AND event_name = 'listUpdated')
-        OR (channel = 'shared_note' AND event_name = 'noteUpdated')
-        OR (channel = 'shared_whiteboard' AND event_name = 'whiteboardUpdated')
-        OR (channel = 'shared_wireframe' AND event_name = 'wireframeUpdated')
-        OR (channel = 'user_wireframe' AND event_name = 'userWireframeUpdated')
-      ),
-      ADD CONSTRAINT realtime_event_outbox_channel_aggregate_check CHECK (
-        (channel IN ('user_canvas', 'shared_list') AND aggregate_type = 'list')
-        OR (channel = 'shared_note' AND aggregate_type = 'note')
-        OR (channel = 'shared_whiteboard' AND aggregate_type = 'whiteboard')
-        OR (
-          channel IN ('shared_wireframe', 'user_wireframe')
-          AND aggregate_type = 'wireframe'
-        )
-      ),
-      ADD CONSTRAINT realtime_event_outbox_recipient_check CHECK (
-        (
-          channel IN ('user_canvas', 'user_wireframe')
-          AND recipient_key ~ '^[1-9][0-9]*$'
-        )
-        OR (
-          channel IN (
-            'shared_list', 'shared_note', 'shared_whiteboard', 'shared_wireframe'
-          )
-          AND recipient_key ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
-        )
-      )
-  `);
-  return true;
-}
-
-async function runSharedRevocationRealtimeOutboxMigration(pool) {
-  await pool.query(`
-    ALTER TABLE realtime_event_outbox
-      DROP CONSTRAINT IF EXISTS realtime_event_outbox_aggregate_type_check,
-      DROP CONSTRAINT IF EXISTS realtime_event_outbox_channel_check,
-      DROP CONSTRAINT IF EXISTS realtime_event_outbox_channel_event_check,
-      DROP CONSTRAINT IF EXISTS realtime_event_outbox_channel_aggregate_check,
-      DROP CONSTRAINT IF EXISTS realtime_event_outbox_recipient_check;
-
-    ALTER TABLE realtime_event_outbox
-      ADD CONSTRAINT realtime_event_outbox_aggregate_type_check
-        CHECK (aggregate_type IN ('list', 'note', 'whiteboard', 'wireframe')),
       ADD CONSTRAINT realtime_event_outbox_channel_check
         CHECK (channel IN (
           'user_canvas', 'shared_list', 'shared_note', 'shared_whiteboard',
-          'shared_wireframe', 'user_wireframe', 'shared_revocation'
+          'shared_wireframe', 'user_wireframe', 'shared_revocation',
+          'chat_session', 'user_notification'
         )),
       ADD CONSTRAINT realtime_event_outbox_channel_event_check CHECK (
         (channel = 'user_canvas' AND event_name IN ('userListUpdated', 'userListDeleted'))
@@ -205,6 +123,8 @@ async function runSharedRevocationRealtimeOutboxMigration(pool) {
         OR (channel = 'shared_wireframe' AND event_name = 'wireframeUpdated')
         OR (channel = 'user_wireframe' AND event_name = 'userWireframeUpdated')
         OR (channel = 'shared_revocation' AND event_name = 'sharedContentRevoked')
+        OR (channel = 'chat_session' AND event_name = 'newChatMessage')
+        OR (channel = 'user_notification' AND event_name = 'notificationCreated')
       ),
       ADD CONSTRAINT realtime_event_outbox_channel_aggregate_check CHECK (
         (channel IN ('user_canvas', 'shared_list') AND aggregate_type = 'list')
@@ -218,10 +138,12 @@ async function runSharedRevocationRealtimeOutboxMigration(pool) {
           channel = 'shared_revocation'
           AND aggregate_type IN ('list', 'note', 'whiteboard', 'wireframe')
         )
+        OR (channel = 'chat_session' AND aggregate_type = 'chat_session')
+        OR (channel = 'user_notification' AND aggregate_type = 'notification')
       ),
       ADD CONSTRAINT realtime_event_outbox_recipient_check CHECK (
         (
-          channel IN ('user_canvas', 'user_wireframe')
+          channel IN ('user_canvas', 'user_wireframe', 'user_notification')
           AND recipient_key ~ '^[1-9][0-9]*$'
         )
         OR (
@@ -231,9 +153,25 @@ async function runSharedRevocationRealtimeOutboxMigration(pool) {
           )
           AND recipient_key ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
         )
+        OR (channel = 'chat_session' AND recipient_key ~ '^cs_[0-9a-f]{48}$')
       )
   `);
   return true;
+}
+
+async function runWhiteboardRealtimeOutboxMigration(pool) {
+  // Historical databases can already contain later wireframe, chat, or
+  // notification events while lacking this marker. Reconciliation must never
+  // narrow the live constraint back to the schema that existed at this step.
+  return applyCurrentRealtimeOutboxConstraints(pool);
+}
+
+async function runWireframeRealtimeOutboxMigration(pool) {
+  return applyCurrentRealtimeOutboxConstraints(pool);
+}
+
+async function runSharedRevocationRealtimeOutboxMigration(pool) {
+  return applyCurrentRealtimeOutboxConstraints(pool);
 }
 
 module.exports = {
