@@ -9,7 +9,7 @@
 - Non-API registered operations: 7
 - Static frontend callsites: 45
 - Operations with frontend consumers: 40
-- Operations referenced by backend tests: 46
+- Operations referenced by backend tests: 48
 - Recommended GraphQL queries: 0
 - Recommended GraphQL mutations: 1
 - Recommended retained HTTP endpoints: 58
@@ -51,9 +51,9 @@
 | GET | `/api/forms/public/form/:identifier` | 1 | 12 | retain-http | high | crm / PublicFormsModule / getPublicForm |
 | POST | `/api/forms/public/form/:identifier` | 1 | 13 | retain-http | high | crm / PublicFormsModule / submitPublicForm |
 | GET | `/api/health` | 0 | 0 | retain-http | low | platform-operations / FoundationModule / health |
-| GET | `/api/invoice-integrations/stripe/callback` | 0 | 3 | retain-http | medium | billing-integrations / InvoiceStripeOAuthModule / completeStripeInvoiceConnection |
-| GET | `/api/invoice-integrations/stripe/connect` | 1 | 1 | retain-http | medium | billing-integrations / InvoiceStripeOAuthModule / beginStripeInvoiceConnection |
-| POST | `/api/invoice-integrations/stripe/disconnect` | 1 | 1 | graphql-mutation | medium | billing-integrations / InvoiceStripeOAuthModule / disconnectStripeInvoiceIntegration |
+| GET | `/api/invoice-integrations/stripe/callback` | 0 | 10 | retain-http | medium | billing-integrations / StripeConnectModule / callback |
+| GET | `/api/invoice-integrations/stripe/connect` | 1 | 9 | retain-http | medium | billing-integrations / StripeConnectModule / connect |
+| POST | `/api/invoice-integrations/stripe/disconnect` | 1 | 4 | graphql-mutation | medium | billing-integrations / StripeConnectModule / disconnect |
 | GET | `/api/invoices/:id/pdf` | 1 | 12 | retain-http | high | billing / InvoicesModule / invoicePdf |
 | POST | `/api/invoices/businesses/:id/logo` | 1 | 9 | retain-http | high | billing / InvoiceBusinessesModule / uploadInvoiceBusinessLogo |
 | POST | `/api/invoices/settings/logo` | 1 | 0 | retain-http | high | billing / InvoiceSettingsModule / uploadInvoiceSettingsLogo |
@@ -84,8 +84,8 @@
 | POST | `/api/signatures/templates/upload` | 1 | 0 | retain-http | high | esignatures / SignatureFilesModule / uploadSignatureTemplatePdf |
 | POST | `/api/sms-templates/webhook/inbound` | 0 | 7 | retain-http | high | messaging / SmsWebhooksModule / processInboundSmsWebhook |
 | POST | `/api/sms-templates/webhook/status` | 0 | 8 | retain-http | high | messaging / SmsWebhooksModule / processSmsStatusWebhook |
-| GET | `/api/social/callback/facebook` | 0 | 0 | retain-http | high | social-integrations / SocialOAuthModule / completeFacebookConnection |
-| GET | `/api/social/connect/facebook` | 1 | 0 | retain-http | high | social-integrations / SocialOAuthModule / beginFacebookConnection |
+| GET | `/api/social/callback/facebook` | 0 | 10 | retain-http | high | social-integrations / SocialOAuthModule / callback |
+| GET | `/api/social/connect/facebook` | 1 | 7 | retain-http | high | social-integrations / SocialOAuthModule / connect |
 | GET | `/api/social/webhook` | 0 | 11 | retain-http | high | social-integrations / SocialWebhooksModule / verifyMetaWebhook |
 | POST | `/api/social/webhook` | 0 | 6 | retain-http | high | social-integrations / SocialWebhooksModule / processMetaMessagingWebhook |
 | GET | `/api/status` | 1 | 0 | retain-http | low | platform-operations / FoundationModule / status |

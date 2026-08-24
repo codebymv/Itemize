@@ -392,19 +392,19 @@
       "disposition": "retain-http",
       "owner": "social-integrations",
       "targetModule": "SocialOAuthModule",
-      "targetOperation": "beginFacebookConnection",
-      "parityStatus": "characterized",
+      "targetOperation": "connect",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain browser OAuth initiation over HTTP. The authenticated organization context is bound to a short-lived server-side state record before redirecting to Meta; the frontend uses this endpoint only for top-level navigation."
+      "notes": "Retain browser OAuth initiation over HTTP. The authenticated organization context is bound to a short-lived server-side state record before redirecting to Meta; the frontend uses this endpoint only for top-level navigation. NestJS now owns an identical implementation (SocialOAuthModule) with the single-use expiring database state, injectable Graph client, and verbatim social-channel upserts, proven by a dual-runtime PostgreSQL parity suite including a legacy-stored state completing through the NestJS callback; the legacy origin routes both paths through a default-off proxy (SOCIAL_OAUTH_NESTJS_ENABLED)."
     },
     "GET /api/social/callback/facebook": {
       "disposition": "retain-http",
       "owner": "social-integrations",
       "targetModule": "SocialOAuthModule",
-      "targetOperation": "completeFacebookConnection",
-      "parityStatus": "characterized",
+      "targetOperation": "callback",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain the provider callback and browser redirect over HTTP. Single-use state selects the organization and actor before token exchange and channel persistence; GraphQL never receives provider authorization codes or access tokens."
+      "notes": "Retain the provider callback and browser redirect over HTTP. Single-use state selects the organization and actor before token exchange and channel persistence; GraphQL never receives provider authorization codes or access tokens. NestJS now owns an identical implementation (SocialOAuthModule) with the single-use expiring database state, injectable Graph client, and verbatim social-channel upserts, proven by a dual-runtime PostgreSQL parity suite including a legacy-stored state completing through the NestJS callback; the legacy origin routes both paths through a default-off proxy (SOCIAL_OAUTH_NESTJS_ENABLED)."
     },
     "GET /api/social/webhook": {
       "disposition": "retain-http",
@@ -473,30 +473,30 @@
       "disposition": "retain-http",
       "dispositionReason": "OAuth begin endpoint; part of the retained provider-OAuth protocol trio with its callback.",
       "owner": "billing-integrations",
-      "targetModule": "InvoiceStripeOAuthModule",
-      "targetOperation": "beginStripeInvoiceConnection",
-      "parityStatus": "not-started",
+      "targetModule": "StripeConnectModule",
+      "targetOperation": "connect",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Retain as the authenticated OAuth begin step, matching the calendar and social provider-connection precedent: it mints signed state bound to the user and organization and returns the provider authorization URL. Keeping begin and callback in one HTTP module keeps state signing, expiry, and return-path rules in one place."
+      "notes": "Retain as the authenticated OAuth begin step, matching the calendar and social provider-connection precedent: it mints signed state bound to the user and organization and returns the provider authorization URL. Keeping begin and callback in one HTTP module keeps state signing, expiry, and return-path rules in one place. NestJS now owns an identical implementation (StripeConnectModule) with a faithful port of the signed expiring state (cross-runtime verified), the Connect token exchange and deauthorize client behind an injectable token, and the payment_settings persistence, proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes the trio through a default-off proxy (STRIPE_CONNECT_NESTJS_ENABLED)."
     },
     "GET /api/invoice-integrations/stripe/callback": {
       "disposition": "retain-http",
       "owner": "billing-integrations",
-      "targetModule": "InvoiceStripeOAuthModule",
-      "targetOperation": "completeStripeInvoiceConnection",
-      "parityStatus": "not-started",
+      "targetModule": "StripeConnectModule",
+      "targetOperation": "callback",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Retain the browser redirect callback over HTTP. It validates signed state, exchanges the code with Stripe, persists the connected account for the organization, and redirects back to the frontend return path with success or error markers; provider errors and invalid state must fail closed to the fallback path without persisting a connection."
+      "notes": "Retain the browser redirect callback over HTTP. It validates signed state, exchanges the code with Stripe, persists the connected account for the organization, and redirects back to the frontend return path with success or error markers; provider errors and invalid state must fail closed to the fallback path without persisting a connection. NestJS now owns an identical implementation (StripeConnectModule) with a faithful port of the signed expiring state (cross-runtime verified), the Connect token exchange and deauthorize client behind an injectable token, and the payment_settings persistence, proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes the trio through a default-off proxy (STRIPE_CONNECT_NESTJS_ENABLED)."
     },
     "POST /api/invoice-integrations/stripe/disconnect": {
       "disposition": "graphql-mutation",
       "dispositionReason": "Authenticated tenant-scoped state change with a JSON envelope; matches the calendar provider connection-management mutations.",
       "owner": "billing-integrations",
-      "targetModule": "InvoiceStripeOAuthModule",
-      "targetOperation": "disconnectStripeInvoiceIntegration",
-      "parityStatus": "not-started",
+      "targetModule": "StripeConnectModule",
+      "targetOperation": "disconnect",
+      "parityStatus": "implemented",
       "risk": "medium",
-      "notes": "Migrate to a GraphQL mutation following the calendar provider-connection management precedent: authenticated, organization-scoped removal of the Stripe connection with an idempotent already-disconnected outcome. The retained REST route stays as rollback until the frontend consumer passes the per-slice exit gate."
+      "notes": "Migrate to a GraphQL mutation following the calendar provider-connection management precedent: authenticated, organization-scoped removal of the Stripe connection with an idempotent already-disconnected outcome. The retained REST route stays as rollback until the frontend consumer passes the per-slice exit gate. NestJS now owns an identical retained REST implementation (StripeConnectModule.disconnect) behind the same default-off proxy, proven by the dual-runtime parity suite; the planned GraphQL mutation and its frontend adapter remain the final consumer cutover step for this row."
     },
     "GET /api/public/estimates/:token": {
       "disposition": "retain-http",

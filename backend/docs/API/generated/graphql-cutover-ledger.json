@@ -11,7 +11,7 @@
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 45,
     "operationsWithFrontendConsumers": 40,
-    "operationsWithBackendTests": 46,
+    "operationsWithBackendTests": 48,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
@@ -61,7 +61,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 248
+          "line": 249
         },
         {
           "source": "backend/src/routes/billing.routes.js",
@@ -150,7 +150,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 300
+          "line": 307
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -249,7 +249,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 302
+          "line": 309
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -402,7 +402,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 303
+          "line": 310
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -525,7 +525,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 301
+          "line": 308
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -588,7 +588,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 422
+          "line": 429
         },
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
@@ -687,7 +687,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 424
+          "line": 431
         },
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
@@ -756,7 +756,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 423
+          "line": 430
         },
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
@@ -1078,7 +1078,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 195
+          "line": 196
         }
       ],
       "consumerCallsites": [
@@ -1137,7 +1137,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 196
+          "line": 197
         }
       ],
       "consumerCallsites": [
@@ -1196,7 +1196,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 202
+          "line": 203
         },
         {
           "source": "backend/src/routes/email-webhooks.routes.js",
@@ -1285,7 +1285,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 330
+          "line": 337
         },
         {
           "source": "backend/src/routes/forms.routes.js",
@@ -1396,7 +1396,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 331
+          "line": 338
         },
         {
           "source": "backend/src/routes/forms.routes.js",
@@ -1536,12 +1536,58 @@
       "path": "/api/invoice-integrations/stripe/callback",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 439
+        },
+        {
           "source": "backend/src/routes/invoice-integrations.routes.js",
           "line": 43
         }
       ],
       "consumerCallsites": [],
       "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 310
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 350
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 351
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 358
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 361
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 377
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 380
+        },
         {
           "method": "GET",
           "path": "/api/invoice-integrations/stripe/callback",
@@ -1565,10 +1611,10 @@
       "dispositionReason": "Browser/provider callback endpoint.",
       "disposition": "retain-http",
       "owner": "billing-integrations",
-      "targetOperation": "completeStripeInvoiceConnection",
-      "targetModule": "InvoiceStripeOAuthModule",
-      "parityStatus": "not-started",
-      "notes": "Retain the browser redirect callback over HTTP. It validates signed state, exchanges the code with Stripe, persists the connected account for the organization, and redirects back to the frontend return path with success or error markers; provider errors and invalid state must fail closed to the fallback path without persisting a connection.",
+      "targetOperation": "callback",
+      "targetModule": "StripeConnectModule",
+      "parityStatus": "implemented",
+      "notes": "Retain the browser redirect callback over HTTP. It validates signed state, exchanges the code with Stripe, persists the connected account for the organization, and redirects back to the frontend return path with success or error markers; provider errors and invalid state must fail closed to the fallback path without persisting a connection. NestJS now owns an identical implementation (StripeConnectModule) with a faithful port of the signed expiring state (cross-runtime verified), the Connect token exchange and deauthorize client behind an injectable token, and the payment_settings persistence, proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes the trio through a default-off proxy (STRIPE_CONNECT_NESTJS_ENABLED).",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -1578,6 +1624,10 @@
       "method": "GET",
       "path": "/api/invoice-integrations/stripe/connect",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 438
+        },
         {
           "source": "backend/src/routes/invoice-integrations.routes.js",
           "line": 27
@@ -1598,6 +1648,54 @@
         {
           "method": "GET",
           "path": "/api/invoice-integrations/stripe/connect",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 277
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 281
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 77
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 81
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 102
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 103
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 112
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 113
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
           "source": "backend/src/__tests__/routes/invoice-integrations.routes.test.js",
           "line": 51
         }
@@ -1606,10 +1704,10 @@
       "dispositionReason": "OAuth begin endpoint; part of the retained provider-OAuth protocol trio with its callback.",
       "disposition": "retain-http",
       "owner": "billing-integrations",
-      "targetOperation": "beginStripeInvoiceConnection",
-      "targetModule": "InvoiceStripeOAuthModule",
-      "parityStatus": "not-started",
-      "notes": "Retain as the authenticated OAuth begin step, matching the calendar and social provider-connection precedent: it mints signed state bound to the user and organization and returns the provider authorization URL. Keeping begin and callback in one HTTP module keeps state signing, expiry, and return-path rules in one place.",
+      "targetOperation": "connect",
+      "targetModule": "StripeConnectModule",
+      "parityStatus": "implemented",
+      "notes": "Retain as the authenticated OAuth begin step, matching the calendar and social provider-connection precedent: it mints signed state bound to the user and organization and returns the provider authorization URL. Keeping begin and callback in one HTTP module keeps state signing, expiry, and return-path rules in one place. NestJS now owns an identical implementation (StripeConnectModule) with a faithful port of the signed expiring state (cross-runtime verified), the Connect token exchange and deauthorize client behind an injectable token, and the payment_settings persistence, proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes the trio through a default-off proxy (STRIPE_CONNECT_NESTJS_ENABLED).",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -1619,6 +1717,10 @@
       "method": "POST",
       "path": "/api/invoice-integrations/stripe/disconnect",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 440
+        },
         {
           "source": "backend/src/routes/invoice-integrations.routes.js",
           "line": 93
@@ -1639,6 +1741,24 @@
         {
           "method": "POST",
           "path": "/api/invoice-integrations/stripe/disconnect",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 330
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoice-integrations/stripe/disconnect",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 78
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoice-integrations/stripe/disconnect",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 89
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoice-integrations/stripe/disconnect",
           "source": "backend/src/__tests__/routes/invoice-integrations.routes.test.js",
           "line": 134
         }
@@ -1647,10 +1767,10 @@
       "dispositionReason": "Authenticated tenant-scoped state change with a JSON envelope; matches the calendar provider connection-management mutations.",
       "disposition": "graphql-mutation",
       "owner": "billing-integrations",
-      "targetOperation": "disconnectStripeInvoiceIntegration",
-      "targetModule": "InvoiceStripeOAuthModule",
-      "parityStatus": "not-started",
-      "notes": "Migrate to a GraphQL mutation following the calendar provider-connection management precedent: authenticated, organization-scoped removal of the Stripe connection with an idempotent already-disconnected outcome. The retained REST route stays as rollback until the frontend consumer passes the per-slice exit gate.",
+      "targetOperation": "disconnect",
+      "targetModule": "StripeConnectModule",
+      "parityStatus": "implemented",
+      "notes": "Migrate to a GraphQL mutation following the calendar provider-connection management precedent: authenticated, organization-scoped removal of the Stripe connection with an idempotent already-disconnected outcome. The retained REST route stays as rollback until the frontend consumer passes the per-slice exit gate. NestJS now owns an identical retained REST implementation (StripeConnectModule.disconnect) behind the same default-off proxy, proven by the dual-runtime parity suite; the planned GraphQL mutation and its frontend adapter remain the final consumer cutover step for this row.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },
@@ -1662,7 +1782,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 240
+          "line": 241
         },
         {
           "source": "backend/src/routes/invoices/pdf.routes.js",
@@ -1773,7 +1893,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 232
+          "line": 233
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -1866,7 +1986,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 236
+          "line": 237
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -1904,7 +2024,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 228
+          "line": 229
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -2011,7 +2131,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 289
+          "line": 296
         },
         {
           "source": "backend/src/routes/pages/public.routes.js",
@@ -2098,7 +2218,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 290
+          "line": 297
         },
         {
           "source": "backend/src/routes/pages/public.routes.js",
@@ -2173,7 +2293,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 396
+          "line": 403
         }
       ],
       "consumerCallsites": [
@@ -2232,7 +2352,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 400
+          "line": 407
         }
       ],
       "consumerCallsites": [],
@@ -2275,7 +2395,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 404
+          "line": 411
         }
       ],
       "consumerCallsites": [],
@@ -2318,7 +2438,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 368
+          "line": 375
         }
       ],
       "consumerCallsites": [
@@ -2395,7 +2515,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 388
+          "line": 395
         }
       ],
       "consumerCallsites": [
@@ -2448,7 +2568,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 384
+          "line": 391
         }
       ],
       "consumerCallsites": [
@@ -2489,7 +2609,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 376
+          "line": 383
         }
       ],
       "consumerCallsites": [],
@@ -2513,7 +2633,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 372
+          "line": 379
         }
       ],
       "consumerCallsites": [],
@@ -2544,7 +2664,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 380
+          "line": 387
         }
       ],
       "consumerCallsites": [],
@@ -2568,7 +2688,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 258
+          "line": 259
         },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
@@ -2631,7 +2751,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 259
+          "line": 260
         },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
@@ -2736,7 +2856,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 257
+          "line": 258
         },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
@@ -2819,7 +2939,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 185
+          "line": 186
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2915,7 +3035,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 186
+          "line": 187
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2962,7 +3082,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 189
+          "line": 190
         },
         {
           "source": "backend/src/routes/vaults/sharing.routes.js",
@@ -3013,7 +3133,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 187
+          "line": 188
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -3076,7 +3196,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 188
+          "line": 189
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -3136,7 +3256,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 354
+          "line": 361
         }
       ],
       "consumerCallsites": [],
@@ -3173,7 +3293,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 350
+          "line": 357
         }
       ],
       "consumerCallsites": [],
@@ -3210,7 +3330,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 336
+          "line": 343
         }
       ],
       "consumerCallsites": [
@@ -3305,7 +3425,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 358
+          "line": 365
         }
       ],
       "consumerCallsites": [],
@@ -3329,7 +3449,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 343
+          "line": 350
         }
       ],
       "consumerCallsites": [
@@ -3363,7 +3483,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 214
+          "line": 215
         },
         {
           "source": "backend/src/routes/sms-webhooks.routes.js",
@@ -3434,7 +3554,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 213
+          "line": 214
         },
         {
           "source": "backend/src/routes/sms-webhooks.routes.js",
@@ -3510,20 +3630,85 @@
       "path": "/api/social/callback/facebook",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 287
+        },
+        {
           "source": "backend/src/routes/social/oauth.routes.js",
           "line": 61
         }
       ],
       "consumerCallsites": [],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 198
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 199
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 206
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 209
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 217
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 220
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 237
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 268
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 43
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 58
+        }
+      ],
       "recommendedDisposition": "retain-http",
       "dispositionReason": "Browser/provider callback endpoint.",
       "disposition": "retain-http",
       "owner": "social-integrations",
-      "targetOperation": "completeFacebookConnection",
+      "targetOperation": "callback",
       "targetModule": "SocialOAuthModule",
-      "parityStatus": "characterized",
-      "notes": "Retain the provider callback and browser redirect over HTTP. Single-use state selects the organization and actor before token exchange and channel persistence; GraphQL never receives provider authorization codes or access tokens.",
+      "parityStatus": "implemented",
+      "notes": "Retain the provider callback and browser redirect over HTTP. Single-use state selects the organization and actor before token exchange and channel persistence; GraphQL never receives provider authorization codes or access tokens. NestJS now owns an identical implementation (SocialOAuthModule) with the single-use expiring database state, injectable Graph client, and verbatim social-channel upserts, proven by a dual-runtime PostgreSQL parity suite including a legacy-stored state completing through the NestJS callback; the legacy origin routes both paths through a default-off proxy (SOCIAL_OAUTH_NESTJS_ENABLED).",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -3533,6 +3718,10 @@
       "method": "GET",
       "path": "/api/social/connect/facebook",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 286
+        },
         {
           "source": "backend/src/routes/social/oauth.routes.js",
           "line": 17
@@ -3549,15 +3738,58 @@
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/social/connect/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 165
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/connect/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 169
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/connect/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 231
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/connect/facebook",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 29
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/connect/facebook",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 30
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/connect/facebook",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 42
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/connect/facebook",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 46
+        }
+      ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "retain-http",
       "owner": "social-integrations",
-      "targetOperation": "beginFacebookConnection",
+      "targetOperation": "connect",
       "targetModule": "SocialOAuthModule",
-      "parityStatus": "characterized",
-      "notes": "Retain browser OAuth initiation over HTTP. The authenticated organization context is bound to a short-lived server-side state record before redirecting to Meta; the frontend uses this endpoint only for top-level navigation.",
+      "parityStatus": "implemented",
+      "notes": "Retain browser OAuth initiation over HTTP. The authenticated organization context is bound to a short-lived server-side state record before redirecting to Meta; the frontend uses this endpoint only for top-level navigation. NestJS now owns an identical implementation (SocialOAuthModule) with the single-use expiring database state, injectable Graph client, and verbatim social-channel upserts, proven by a dual-runtime PostgreSQL parity suite including a legacy-stored state completing through the NestJS callback; the legacy origin routes both paths through a default-off proxy (SOCIAL_OAUTH_NESTJS_ENABLED).",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -3569,11 +3801,11 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 270
+          "line": 271
         },
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 278
+          "line": 279
         },
         {
           "source": "backend/src/routes/social/webhook.routes.js",
@@ -3668,11 +3900,11 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 271
+          "line": 272
         },
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 279
+          "line": 280
         },
         {
           "source": "backend/src/routes/social/webhook.routes.js",
@@ -3737,7 +3969,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 104
+          "line": 105
         }
       ],
       "consumerCallsites": [
@@ -3771,7 +4003,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 414
+          "line": 421
         },
         {
           "source": "backend/src/routes/webhooks.routes.js",

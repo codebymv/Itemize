@@ -36,7 +36,9 @@ import { SignatureFilesModule } from './signature-files/signature-files.module';
 import { CalendarOAuthModule } from './calendar-oauth/calendar-oauth.module';
 import { EmailWebhooksModule } from './email-webhooks/email-webhooks.module';
 import { SmsWebhooksModule } from './sms-webhooks/sms-webhooks.module';
+import { SocialOAuthModule } from './social-oauth/social-oauth.module';
 import { SocialWebhooksModule } from './social-webhooks/social-webhooks.module';
+import { StripeConnectModule } from './stripe-connect/stripe-connect.module';
 import { SubscriptionWebhooksModule } from './subscription-webhooks/subscription-webhooks.module';
 import { WorkflowWebhooksModule } from './workflow-webhooks/workflow-webhooks.module';
 import { PublicBookingsModule } from './public-bookings/public-bookings.module';
@@ -121,7 +123,9 @@ const observabilityPlugins = [
     CalendarOAuthModule,
     EmailWebhooksModule,
     SmsWebhooksModule,
+    SocialOAuthModule,
     SocialWebhooksModule,
+    StripeConnectModule,
     SubscriptionWebhooksModule,
     WorkflowWebhooksModule,
     PublicBookingsModule,

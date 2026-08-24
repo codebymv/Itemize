@@ -67,6 +67,10 @@ const {
     socialWebhooksEnabled,
 } = require('../social-webhooks-proxy');
 const { createCalendarOAuthProxy } = require('../calendar-oauth-proxy');
+const {
+    createSocialOAuthProxies,
+    createStripeConnectProxies,
+} = require('../provider-oauth-proxies');
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const webhooksRoutes = require('../routes/webhooks.routes');
@@ -277,6 +281,12 @@ function registerApiRoutes({
         }
         logger.info('Social webhook proxy routes initialized');
     }
+    {
+        const socialOAuthProxies = createSocialOAuthProxies({ logger });
+        app.get('/api/social/connect/facebook', socialOAuthProxies.connect);
+        app.get('/api/social/callback/facebook', socialOAuthProxies.callback);
+        logger.info('Social OAuth proxy routes initialized');
+    }
     app.use('/api/social', socialRoutes(pool, authenticateJWT, publicRateLimit, io));
     logger.info('Social Media Integration routes initialized');
     const publicLandingPagesRoute = (action) => {
@@ -423,6 +433,13 @@ function registerApiRoutes({
     }
     app.use('/api/calendar-integrations', calendarIntegrationsRoutes(pool, authenticateJWT));
     logger.info('Calendar Integrations routes initialized');
+    {
+        const stripeConnectProxies = createStripeConnectProxies({ logger });
+        app.get('/api/invoice-integrations/stripe/connect', stripeConnectProxies.connect);
+        app.get('/api/invoice-integrations/stripe/callback', stripeConnectProxies.callback);
+        app.post('/api/invoice-integrations/stripe/disconnect', stripeConnectProxies.disconnect);
+        logger.info('Stripe Connect proxy routes initialized');
+    }
     app.use('/api/invoice-integrations', invoiceIntegrationsRoutes(pool, authenticateJWT));
     logger.info('Invoice Integrations routes initialized');
     app.use('/api', sharingRoutes(pool, authenticateJWT, publicRateLimit, broadcast));
