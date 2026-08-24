@@ -16,8 +16,7 @@ describe('findOpenCanvasPosition', () => {
 
     const next = findOpenCanvasPosition(occupied, { width: 600, height: 600 });
 
-    expect(next).not.toEqual({ x: 2000, y: 2000 });
-    expect(next.x + 600 + 50 <= 2000 || next.x >= 2800).toBe(true);
+    expect(next).toEqual({ x: 1180, y: 2000 });
   });
 
   it('ignores records without usable coordinates', () => {

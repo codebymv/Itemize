@@ -42,16 +42,27 @@ export function findOpenCanvasPosition(
   size: CanvasItemSize = DEFAULT_ITEM_SIZE,
 ): { x: number; y: number } {
   for (let ring = 0; ring <= 24; ring += 1) {
-    for (let row = -ring; row <= ring; row += 1) {
-      for (let column = -ring; column <= ring; column += 1) {
-        if (ring > 0 && Math.max(Math.abs(row), Math.abs(column)) !== ring) continue;
-        const candidate = {
-          x: CANVAS_CENTER.x + column * HORIZONTAL_STEP,
-          y: CANVAS_CENTER.y + row * VERTICAL_STEP,
-        };
-        if (candidate.x < 0 || candidate.y < 0) continue;
-        if (!items.some((item) => overlaps(candidate, size, item))) return candidate;
+    const offsets: Array<[number, number]> = ring === 0
+      ? [[0, 0]]
+      : [[-ring, 0], [ring, 0], [0, ring], [0, -ring]];
+
+    if (ring > 0) {
+      for (let row = -ring; row <= ring; row += 1) {
+        for (let column = -ring; column <= ring; column += 1) {
+          if (Math.max(Math.abs(row), Math.abs(column)) !== ring) continue;
+          if ((row === 0 || column === 0) && Math.abs(row + column) === ring) continue;
+          offsets.push([column, row]);
+        }
       }
+    }
+
+    for (const [column, row] of offsets) {
+      const candidate = {
+        x: CANVAS_CENTER.x + column * HORIZONTAL_STEP,
+        y: CANVAS_CENTER.y + row * VERTICAL_STEP,
+      };
+      if (candidate.x < 0 || candidate.y < 0) continue;
+      if (!items.some((item) => overlaps(candidate, size, item))) return candidate;
     }
   }
 
