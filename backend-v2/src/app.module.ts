@@ -46,6 +46,7 @@ import { PublicFormsModule } from './public-forms/public-forms.module';
 import { PublicLandingPagesModule } from './public-landing-pages/public-landing-pages.module';
 import { PublicReputationModule } from './public-reputation/public-reputation.module';
 import { PublicSharingModule } from './public-sharing/public-sharing.module';
+import { RealtimeHostModule } from './realtime-host/realtime-host.module';
 import { PublicSigningModule } from './public-signing/public-signing.module';
 import { SignatureTemplatesModule } from './signature-templates/signature-templates.module';
 import { SignatureJobsSchedulerService } from './signature-jobs/signature-jobs-scheduler.service';
@@ -134,6 +135,7 @@ const observabilityPlugins = [
     PublicReputationModule,
     PublicSharingModule,
     PublicSigningModule,
+    RealtimeHostModule,
     SignatureTemplatesModule,
     EstimatesModule,
     PipelinesModule,

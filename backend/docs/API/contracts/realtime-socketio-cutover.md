@@ -84,6 +84,18 @@ The following block multi-instance realtime cutover, but not a single-instance G
 
 ## GraphQL/NestJS ownership
 
+NestJS now also carries a faithful port of the retained socket host and
+its outbox delivery worker (`RealtimeHostModule`): identical room names,
+event names, capability validation, per-socket limits, viewer tracking,
+typing authorization, revocation eviction, and the channel/event
+dispatch map with leases, retries, expiry, and dead letters. Both are
+default-off behind `REALTIME_HOST_NESTJS_ENABLED` and are one unit — the
+worker emits into this process's rooms, so the flag is enabled only in
+the runtime clients actually connect to (at direct-origin cutover). A
+live Socket.IO integration suite proves capability joins, exact-shape
+outbox delivery, organization admission, bidirectional typing
+authorization, and revocation eviction against the NestJS host.
+
 NestJS exposes `RealtimeOutboxModule`; resolvers never call Socket.IO rooms
 directly. A mutation repository writes its domain rows and every required
 audience row with the same `PoolClient`, then commits. Reusing an event key with
