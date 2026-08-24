@@ -6,6 +6,7 @@ import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
+import { NotificationsService } from '../../src/notifications/notifications.service';
 
 describe('Notification center GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
@@ -18,6 +19,7 @@ describe('Notification center GraphQL PostgreSQL contract', () => {
   let outsiderToken: string;
   let firstNotificationId: string;
   let outsiderNotificationId: string;
+  let notificationsService: NotificationsService;
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -122,6 +124,7 @@ describe('Notification center GraphQL PostgreSQL contract', () => {
     });
     configureApp(app);
     await app.init();
+    notificationsService = app.get(NotificationsService);
   });
 
   afterAll(async () => {
@@ -290,5 +293,46 @@ describe('Notification center GraphQL PostgreSQL contract', () => {
       true,
     ).expect(200);
     expect(forbidden.body.errors[0].extensions.code).toBe('NOT_FOUND');
+  });
+
+  it('returns a newly inserted notification and enqueues its realtime event', async () => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const notification = await notificationsService.createWithClient(client, {
+        organizationId,
+        recipientUserId: memberId,
+        eventType: 'estimate.accepted',
+        entityType: 'estimate',
+        entityId: 142,
+        dedupeKey: `estimate:142:accepted:${Date.now()}`,
+        payload: { estimateNumber: 'EST-00142' },
+        category: 'business',
+        priority: 'normal',
+        title: 'Estimate accepted',
+        body: 'A customer accepted EST-00142.',
+        href: '/estimates/142',
+      });
+      expect(notification).toEqual(expect.objectContaining({
+        id: expect.stringMatching(/^[1-9]\d*$/),
+        eventType: 'estimate.accepted',
+        href: '/estimates/142',
+      }));
+      const outbox = await client.query(
+        `SELECT event_name,payload
+         FROM realtime_event_outbox
+         WHERE event_key=$1`,
+        [`notification-created:${notification?.id}`],
+      );
+      expect(outbox.rows).toEqual([
+        expect.objectContaining({ event_name: 'notificationCreated' }),
+      ]);
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   });
 });

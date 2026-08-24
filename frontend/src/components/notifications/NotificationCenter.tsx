@@ -65,25 +65,31 @@ function NotificationIcon({ notification }: { notification: AppNotification }) {
 }
 
 function NotificationPanel({
+  reserveCloseSpace,
   filter,
   setFilter,
   notifications,
   unreadCount,
   isLoading,
+  isError,
   isFetchingNextPage,
   hasNextPage,
   fetchNextPage,
+  onRetry,
   onRead,
   onMarkAllRead,
 }: {
+  reserveCloseSpace?: boolean;
   filter: NotificationFilter;
   setFilter: (filter: NotificationFilter) => void;
   notifications: AppNotification[];
   unreadCount: number;
   isLoading: boolean;
+  isError: boolean;
   isFetchingNextPage: boolean;
   hasNextPage: boolean;
   fetchNextPage: () => void;
+  onRetry: () => void;
   onRead: (notification: AppNotification) => void;
   onMarkAllRead: () => void;
 }) {
@@ -103,11 +109,18 @@ function NotificationPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
-      <div className="flex items-center justify-between border-b px-4 py-3">
+      <div className={cn(
+        'flex items-center justify-between border-b px-4 py-3',
+        reserveCloseSpace && 'pr-12',
+      )}>
         <div>
           <h2 className="text-base font-semibold">Notifications</h2>
           <p className="text-xs text-muted-foreground" aria-live="polite">
-            {unreadCount === 0 ? 'You are all caught up' : `${unreadCount} unread`}
+            {isError
+              ? 'Unable to load'
+              : unreadCount === 0
+                ? 'You are all caught up'
+                : `${unreadCount} unread`}
           </p>
         </div>
         <Button
@@ -137,6 +150,19 @@ function NotificationPanel({
         {isLoading ? (
           <div className="flex min-h-56 items-center justify-center text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" aria-label="Loading notifications" />
+          </div>
+        ) : isError ? (
+          <div className="flex min-h-56 flex-col items-center justify-center gap-3 px-6 text-center">
+            <span className="rounded-full bg-destructive/10 p-3">
+              <AlertTriangle className="h-5 w-5 text-destructive" aria-hidden="true" />
+            </span>
+            <div>
+              <p className="text-sm font-medium">Notifications unavailable</p>
+              <p className="mt-1 max-w-64 text-xs text-muted-foreground">
+                We could not load your activity. Please try again.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={onRetry}>Try again</Button>
           </div>
         ) : notifications.length === 0 ? (
           <div className="flex min-h-56 flex-col items-center justify-center gap-2 px-6 text-center">
@@ -344,16 +370,19 @@ export function NotificationCenter() {
     </Button>
   );
 
-  const panel = (
+  const renderPanel = (reserveCloseSpace = false) => (
     <NotificationPanel
+      reserveCloseSpace={reserveCloseSpace}
       filter={filter}
       setFilter={setFilter}
       notifications={notifications}
       unreadCount={unreadCount}
       isLoading={query.isLoading}
+      isError={query.isError}
       isFetchingNextPage={query.isFetchingNextPage}
       hasNextPage={Boolean(query.hasNextPage)}
       fetchNextPage={() => { void query.fetchNextPage(); }}
+      onRetry={() => { void query.refetch(); }}
       onRead={handleRead}
       onMarkAllRead={() => markAllMutation.mutate()}
     />
@@ -364,7 +393,7 @@ export function NotificationCenter() {
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetTrigger asChild>{trigger}</SheetTrigger>
         <SheetContent side="right" className="w-full max-w-none p-0 sm:max-w-sm">
-          {panel}
+          {renderPanel(true)}
         </SheetContent>
       </Sheet>
     );
@@ -374,7 +403,7 @@ export function NotificationCenter() {
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent align="end" sideOffset={8} className="h-[min(620px,calc(100vh-5rem))] w-[400px] overflow-hidden p-0">
-        {panel}
+        {renderPanel()}
       </PopoverContent>
     </Popover>
   );

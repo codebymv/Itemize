@@ -51,11 +51,13 @@ export class NotificationsRepository {
            dedupe_key,payload,occurred_at
          ) VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,COALESCE($8,CURRENT_TIMESTAMP))
          ON CONFLICT (organization_id,dedupe_key) DO NOTHING
-         RETURNING id
+         RETURNING id,event_type,entity_type,entity_id,payload,occurred_at
        ), resolved_event AS (
-         SELECT id FROM inserted_event
+         SELECT id,event_type,entity_type,entity_id,payload,occurred_at
+         FROM inserted_event
          UNION ALL
-         SELECT id FROM notification_events
+         SELECT id,event_type,entity_type,entity_id,payload,occurred_at
+         FROM notification_events
          WHERE organization_id=$1 AND dedupe_key=$6
          LIMIT 1
        ), inserted_notification AS (
@@ -74,7 +76,7 @@ export class NotificationsRepository {
               event.occurred_at,notification.seen_at,notification.read_at,
               notification.created_at
        FROM inserted_notification notification
-       JOIN notification_events event ON event.id=notification.event_id`,
+       JOIN resolved_event event ON event.id=notification.event_id`,
       [
         input.organizationId,
         input.actorUserId ?? null,
