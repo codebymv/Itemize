@@ -167,7 +167,7 @@ export function CampaignsPage() {
                 <ErrorState
                     title="Unable to load campaigns"
                     description={initError}
-                    onAction={() => window.location.reload()}
+                    onAction={() => void fetchCampaigns()}
                 />
             </PageLayout>
         );

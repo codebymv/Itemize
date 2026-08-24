@@ -99,18 +99,19 @@ export function UpgradeCTA({
     };
 
     return (
-        <Link 
-            to="/settings"
-            onClick={onClick}
-            title={showTooltip && featureDescription ? `${featureDescription} - Available on ${planMeta.name} and above` : undefined}
+        <Button
+            asChild
+            size={size}
+            className={cn(
+                variantStyles[variant],
+                'transition-all duration-200',
+                className
+            )}
         >
-            <Button
-                size={size}
-                className={cn(
-                    variantStyles[variant],
-                    'transition-all duration-200',
-                    className
-                )}
+            <Link
+                to="/settings"
+                onClick={onClick}
+                title={showTooltip && featureDescription ? `${featureDescription} - Available on ${planMeta.name} and above` : undefined}
             >
                 <IconComponent className={cn(
                     'flex-shrink-0',
@@ -118,8 +119,8 @@ export function UpgradeCTA({
                     size !== 'icon' && 'mr-2'
                 )} />
                 {size !== 'icon' && buttonText}
-            </Button>
-        </Link>
+            </Link>
+        </Button>
     );
 }
 

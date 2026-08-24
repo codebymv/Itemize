@@ -122,9 +122,10 @@ export const VaultItemRow: React.FC<VaultItemRowProps> = ({
       isDragging && "opacity-50 bg-muted/50"
     )}>
       {/* Drag handle */}
-      <div 
+      <div
         {...dragHandleProps}
-        className="cursor-grab active:cursor-grabbing p-1 opacity-0 group-hover:opacity-50 hover:opacity-100 transition-opacity"
+        className="cursor-grab active:cursor-grabbing p-1 opacity-60 sm:opacity-0 sm:group-hover:opacity-50 sm:group-focus-within:opacity-100 hover:opacity-100 transition-opacity"
+        aria-label={`Reorder ${item.label}`}
       >
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
@@ -169,13 +170,14 @@ export const VaultItemRow: React.FC<VaultItemRowProps> = ({
       </div>
       
       {/* Actions */}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity">
         <Button
           size="sm"
           variant="ghost"
           onClick={onToggleVisibility}
           className="h-7 w-7 p-0"
           title={isVisible ? "Hide value" : "Show value"}
+          aria-label={`${isVisible ? 'Hide' : 'Show'} ${item.label}`}
         >
           {isVisible ? (
             <EyeOff className="h-3.5 w-3.5" />
@@ -190,6 +192,7 @@ export const VaultItemRow: React.FC<VaultItemRowProps> = ({
           onClick={onCopy}
           className="h-7 w-7 p-0"
           title="Copy value"
+          aria-label={`Copy ${item.label}`}
         >
           <Copy className="h-3.5 w-3.5" />
         </Button>
@@ -200,6 +203,7 @@ export const VaultItemRow: React.FC<VaultItemRowProps> = ({
           onClick={onStartEdit}
           className="h-7 w-7 p-0"
           title="Edit item"
+          aria-label={`Edit ${item.label}`}
         >
           <Pencil className="h-3.5 w-3.5" />
         </Button>
@@ -210,6 +214,7 @@ export const VaultItemRow: React.FC<VaultItemRowProps> = ({
           onClick={onDelete}
           className="h-7 w-7 p-0 text-destructive hover:text-destructive"
           title="Delete item"
+          aria-label={`Delete ${item.label}`}
         >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>

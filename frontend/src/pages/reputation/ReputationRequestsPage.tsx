@@ -164,7 +164,7 @@ export function ReputationRequestsPage() {
                 <ErrorState
                     title="Unable to load requests"
                     description={initError}
-                    onAction={() => window.location.reload()}
+                    onAction={() => void fetchRequests()}
                 />
             </PageLayout>
         );

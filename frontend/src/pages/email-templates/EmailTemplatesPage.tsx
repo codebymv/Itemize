@@ -129,7 +129,7 @@ export function EmailTemplatesPage() {
                 <ErrorState
                     description={initError}
                     icon={FileText}
-                    onAction={() => window.location.reload()}
+                    onAction={() => void fetchTemplates()}
                 />
             </PageLayout>
         );

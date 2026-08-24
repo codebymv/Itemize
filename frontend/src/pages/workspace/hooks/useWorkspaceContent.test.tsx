@@ -77,4 +77,32 @@ describe('useWorkspaceContent', () => {
     expect(result.current.lists).toEqual([list]);
     expect(result.current.notes).toEqual([note]);
   });
+
+  it('keeps the current snapshot visible during a background refresh', async () => {
+    const { result } = renderHook(() => useWorkspaceContent('token'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    let resolveNotes: ((value: { notes: Note[] }) => void) | undefined;
+    vi.mocked(getNotes).mockImplementationOnce(() => new Promise((resolve) => {
+      resolveNotes = resolve;
+    }));
+
+    let refreshPromise: Promise<boolean> | undefined;
+    act(() => {
+      refreshPromise = result.current.refresh();
+    });
+
+    await waitFor(() => expect(result.current.refreshing).toBe(true));
+    expect(result.current.loading).toBe(false);
+    expect(result.current.lists).toEqual([list]);
+    expect(result.current.notes).toEqual([note]);
+
+    resolveNotes?.({ notes: [note] });
+    await act(async () => {
+      await refreshPromise;
+    });
+
+    expect(result.current.refreshing).toBe(false);
+    expect(result.current.loading).toBe(false);
+  });
 });

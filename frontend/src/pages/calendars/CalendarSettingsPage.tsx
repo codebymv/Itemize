@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Calendar as CalendarIcon, Loader2, Plus, Save, Trash2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { ErrorState } from '@/components/ErrorState';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import {
     getCalendar,
     updateCalendar,
@@ -86,6 +87,13 @@ const sortWindows = (windows: AvailabilityWindow[]): AvailabilityWindow[] =>
         || left.start_time.localeCompare(right.start_time),
     );
 
+const comparableWindows = (windows: AvailabilityWindow[]) => sortWindows(windows).map(window => ({
+    dayOfWeek: window.day_of_week,
+    startTime: window.start_time.slice(0, 5),
+    endTime: window.end_time.slice(0, 5),
+    isActive: window.is_active !== false,
+}));
+
 const apiErrorMessage = (error: unknown, fallback: string): string => {
     const data = (error as { response?: { data?: { error?: string; message?: string } } })
         ?.response?.data;
@@ -110,6 +118,19 @@ export function CalendarSettingsPage() {
     const [loadError, setLoadError] = useState<string | null>(null);
     const [savingSettings, setSavingSettings] = useState(false);
     const [savingAvailability, setSavingAvailability] = useState(false);
+
+    const settingsDirty = useMemo(() => Boolean(
+        calendar && draft && JSON.stringify(draft) !== JSON.stringify(makeDraft(calendar)),
+    ), [calendar, draft]);
+    const availabilityDirty = useMemo(() => Boolean(
+        calendar && JSON.stringify(comparableWindows(availability)) !== JSON.stringify(
+            comparableWindows(calendar.availability_windows ?? []),
+        ),
+    ), [availability, calendar]);
+    const { confirmLeave } = useUnsavedChangesGuard({
+        when: settingsDirty || availabilityDirty || savingSettings || savingAvailability,
+        message: 'This calendar has unsaved changes. Leave without saving them?',
+    });
 
     const loadCalendar = useCallback(async () => {
         if (organizationLoading) return;
@@ -261,7 +282,9 @@ export function CalendarSettingsPage() {
             variant="ghost"
             size="icon"
             aria-label="Back to calendars"
-            onClick={() => navigate('/calendars')}
+            onClick={() => {
+                if (confirmLeave()) navigate('/calendars');
+            }}
         >
             <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -457,7 +480,7 @@ export function CalendarSettingsPage() {
                                     </div>
                                 </div>
                                 <div className="flex justify-end">
-                                    <Button type="submit" disabled={savingSettings}>
+                                    <Button type="submit" disabled={savingSettings || !settingsDirty}>
                                         {savingSettings
                                             ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                             : <Save className="h-4 w-4 mr-2" />}
@@ -474,7 +497,7 @@ export function CalendarSettingsPage() {
                             <Button
                                 type="button"
                                 onClick={() => void saveAvailability()}
-                                disabled={savingAvailability}
+                                disabled={savingAvailability || !availabilityDirty}
                             >
                                 {savingAvailability
                                     ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />

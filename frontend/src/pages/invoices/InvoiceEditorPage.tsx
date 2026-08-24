@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
     ArrowLeft,
@@ -35,8 +35,11 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { ErrorState } from '@/components/ErrorState';
 import { getAssetUrl } from '@/lib/api';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useDirtyState } from '@/hooks/useDirtyState';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { getContacts } from '@/services/contactsApi';
 import type { JsonRecord } from '@/types';
 import {
@@ -82,7 +85,10 @@ export function InvoiceEditorPage() {
     const { toast } = useToast();
     const isNew = id === 'new' || !id;
 
-    const [loading, setLoading] = useState(!isNew);
+    const [loading, setLoading] = useState(true);
+    const [initialized, setInitialized] = useState(false);
+    const [loadError, setLoadError] = useState(false);
+    const [loadAttempt, setLoadAttempt] = useState(0);
     const { organizationId } = useOrganization();
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
@@ -165,6 +171,53 @@ export function InvoiceEditorPage() {
         invoiceId: id,
     });
 
+    const invoiceDraft = useMemo(() => ({
+        contactId,
+        selectedBusinessId,
+        customerName,
+        customerEmail,
+        customerPhone,
+        customerAddress,
+        invoiceSummary,
+        issueDate,
+        dueDate,
+        paymentTerms,
+        currency,
+        taxRate,
+        discountType,
+        discountValue,
+        notes,
+        termsAndConditions,
+        lineItems: lineItems.map(({ id: _id, ...item }) => item),
+    }), [
+        contactId,
+        currency,
+        customerAddress,
+        customerEmail,
+        customerName,
+        customerPhone,
+        discountType,
+        discountValue,
+        dueDate,
+        invoiceSummary,
+        issueDate,
+        lineItems,
+        notes,
+        paymentTerms,
+        selectedBusinessId,
+        taxRate,
+        termsAndConditions,
+    ]);
+    const { isDirty } = useDirtyState({
+        value: invoiceDraft,
+        ready: initialized,
+        resetKey: id ?? 'new',
+    });
+    const { confirmLeave } = useUnsavedChangesGuard({
+        when: isDirty || saving,
+        message: 'This invoice has unsaved changes. Leave without saving them?',
+    });
+
     // Refs for auto-resizing textareas
     const notesRef = useRef<HTMLTextAreaElement>(null);
     const footerRef = useRef<HTMLTextAreaElement>(null);
@@ -225,6 +278,9 @@ export function InvoiceEditorPage() {
     useEffect(() => {
         if (!organizationId) return;
         const init = async () => {
+            setLoading(true);
+            setInitialized(false);
+            setLoadError(false);
             try {
                 const [contactsData, productsData, businessesData, settingsData] = await Promise.all([
                     getContacts({}, organizationId),
@@ -285,12 +341,26 @@ export function InvoiceEditorPage() {
                 }
             } catch (error) {
                 toast({ title: 'Error', description: toastMessages.failedToLoad('invoice data'), variant: 'destructive' });
+                if (!isNew) setLoadError(true);
             } finally {
                 setLoading(false);
+                setInitialized(true);
             }
         };
         init();
-    }, [organizationId, id, isNew, toast, loadInvoiceData, loadContactData, setLineItems, setSelectedBusinessId]);
+    }, [
+        organizationId,
+        id,
+        isNew,
+        toast,
+        loadInvoiceData,
+        loadContactData,
+        setLineItems,
+        setSelectedBusinessId,
+        setContactId,
+        searchParams,
+        loadAttempt,
+    ]);
 
 
 
@@ -300,7 +370,9 @@ export function InvoiceEditorPage() {
                 title={(isNew ? 'New Invoice' : 'Invoice').toUpperCase()}
                 icon={<Receipt className="h-5 w-5 text-blue-600 flex-shrink-0" />}
                 leading={
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/invoices')}>
+                    <Button variant="ghost" size="icon" onClick={() => {
+                        if (confirmLeave()) navigate('/invoices');
+                    }}>
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                 }
@@ -314,12 +386,34 @@ export function InvoiceEditorPage() {
         );
     }
 
+    if (loadError) {
+        return (
+            <PageLayout
+                title="INVOICE"
+                icon={<Receipt className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+                leading={
+                    <Button variant="ghost" size="icon" onClick={() => navigate('/invoices')}>
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                }
+            >
+                <ErrorState
+                    title="Invoice unavailable"
+                    description="We could not load this invoice. Your data has not been changed."
+                    onAction={() => setLoadAttempt(current => current + 1)}
+                />
+            </PageLayout>
+        );
+    }
+
     return (
         <PageLayout
             title={(isNew ? 'New Invoice' : 'Invoice').toUpperCase()}
             icon={<Receipt className="h-5 w-5 text-blue-600 flex-shrink-0" />}
             leading={
-                <Button variant="ghost" size="icon" onClick={() => navigate('/invoices')}>
+                <Button variant="ghost" size="icon" onClick={() => {
+                    if (confirmLeave()) navigate('/invoices');
+                }}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
             }
@@ -337,7 +431,7 @@ export function InvoiceEditorPage() {
                         variant="outline"
                         size="sm"
                         onClick={handleSave}
-                        disabled={saving || lineItems.filter(i => i.name).length === 0}
+                        disabled={saving || !isDirty || lineItems.filter(i => i.name).length === 0}
                     >
                         <Save className="h-4 w-4 mr-2" />
                         {saving ? 'Saving...' : 'Save Draft'}
@@ -348,7 +442,7 @@ export function InvoiceEditorPage() {
                                 size="sm"
                                 className="bg-blue-600 hover:bg-blue-700 text-white"
                                 onClick={() => setShowSendModal(true)}
-                                disabled={saving}
+                                disabled={saving || isDirty}
                             >
                                 <Send className="h-4 w-4 mr-2" />
                                 Send Invoice
@@ -358,7 +452,7 @@ export function InvoiceEditorPage() {
                                 variant="outline"
                                 className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
                                 onClick={() => navigate(`/documents/new?invoiceId=${id}`)}
-                                disabled={saving}
+                                disabled={saving || isDirty}
                             >
                                 <FileSignature className="h-4 w-4 mr-2" />
                                 Send for Signature
@@ -382,7 +476,7 @@ export function InvoiceEditorPage() {
                         variant="outline"
                         size="sm"
                         onClick={handleSave}
-                        disabled={saving || lineItems.filter(i => i.name).length === 0}
+                        disabled={saving || !isDirty || lineItems.filter(i => i.name).length === 0}
                         className="flex-1"
                     >
                         <Save className="h-4 w-4 mr-2" />
@@ -394,7 +488,7 @@ export function InvoiceEditorPage() {
                                 size="sm"
                                 className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
                                 onClick={() => setShowSendModal(true)}
-                                disabled={saving}
+                                disabled={saving || isDirty}
                             >
                                 <Send className="h-4 w-4 mr-2" />
                                 Send
@@ -404,7 +498,7 @@ export function InvoiceEditorPage() {
                                 variant="outline"
                                 className="flex-1 border-blue-600 text-blue-600"
                                 onClick={() => navigate(`/documents/new?invoiceId=${id}`)}
-                                disabled={saving}
+                                disabled={saving || isDirty}
                             >
                                 <FileSignature className="h-4 w-4 mr-2" />
                                 Sign
@@ -832,12 +926,14 @@ export function InvoiceEditorPage() {
 
                 {/* Actions */}
                 <div className="flex justify-end gap-4">
-                    <Button variant="outline" onClick={() => navigate('/invoices')}>
+                    <Button variant="outline" onClick={() => {
+                        if (confirmLeave()) navigate('/invoices');
+                    }}>
                         Cancel
                     </Button>
                     <Button
                         onClick={handleSave}
-                        disabled={saving || lineItems.filter(i => i.name).length === 0}
+                        disabled={saving || !isDirty || lineItems.filter(i => i.name).length === 0}
                         className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
                         <Save className="h-4 w-4 mr-2" />

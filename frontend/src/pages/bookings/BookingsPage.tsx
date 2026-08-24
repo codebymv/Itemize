@@ -146,7 +146,7 @@ export function BookingsPage() {
                 <ErrorState
                     description={initError}
                     icon={CalendarCheck}
-                    onAction={() => window.location.reload()}
+                    onAction={() => void fetchBookings()}
                 />
             </PageLayout>
         );

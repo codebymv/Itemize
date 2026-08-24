@@ -152,7 +152,7 @@ export function SocialPage() {
                 <ErrorState
                     title="Unable to load social"
                     description={initError}
-                    onAction={() => window.location.reload()}
+                    onAction={() => void fetchData()}
                 />
             </PageLayout>
         );

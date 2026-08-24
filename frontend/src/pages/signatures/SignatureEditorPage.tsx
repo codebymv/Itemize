@@ -13,6 +13,8 @@ import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthState } from '@/contexts/AuthContext';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useDirtyState } from '@/hooks/useDirtyState';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { getInvoice, getInvoicePdf } from '@/services/invoicesApi';
 import {
   SignatureDocument,
@@ -45,6 +47,7 @@ export default function SignatureEditorPage() {
   const [fields, setFields] = useState<SignatureField[]>([]);
   const [routingMode, setRoutingMode] = useState<'parallel' | 'sequential'>('parallel');
   const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(!id);
   const [showSendModal, setShowSendModal] = useState(false);
   const roleChoices = useMemo(() => ['Signer', 'Witness', 'Approver', 'Observer'], []);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -72,7 +75,10 @@ export default function SignatureEditorPage() {
       .catch(() => {
         toast({ title: 'Error', description: 'Failed to load document', variant: 'destructive' });
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setInitialized(true);
+      });
   }, [id, toast]);
 
   // Pre-fill recipient from URL (e.g. from Contact "Send Document").
@@ -142,6 +148,28 @@ export default function SignatureEditorPage() {
   }, [id, organizationId, searchParams, toast]);
 
   const canUpload = useMemo(() => Boolean(document?.id), [document]);
+  const documentDraft = useMemo(() => ({
+    title,
+    description,
+    message,
+    routingMode,
+    recipients,
+    fields,
+    pendingFile: file ? {
+      name: file.name,
+      size: file.size,
+      lastModified: file.lastModified,
+    } : null,
+  }), [description, fields, file, message, recipients, routingMode, title]);
+  const { isDirty, markClean } = useDirtyState({
+    value: documentDraft,
+    ready: initialized,
+    resetKey: id ?? 'new',
+  });
+  const { confirmLeave } = useUnsavedChangesGuard({
+    when: isDirty,
+    message: 'This signature document has unsaved changes. Leave without saving them?',
+  });
 
   const handleCreateOrSave = async () => {
     try {
@@ -151,7 +179,19 @@ export default function SignatureEditorPage() {
         const readyDocument = file
           ? await uploadSignatureDocument(created.id, file)
           : created;
-        setDocument(readyDocument);
+        const updated = await updateSignatureDocument(readyDocument.id, {
+          title,
+          description,
+          message,
+          sender_name: currentUser?.name || readyDocument.sender_name || undefined,
+          sender_email: currentUser?.email || readyDocument.sender_email || undefined,
+          routing_mode: routingMode,
+          recipients,
+          fields,
+        });
+        setDocument(updated);
+        setFile(null);
+        markClean({ ...documentDraft, pendingFile: null });
         toast({ title: 'Draft created' });
       } else {
         const updated = await updateSignatureDocument(document.id, {
@@ -165,6 +205,8 @@ export default function SignatureEditorPage() {
           fields
         });
         setDocument(updated);
+        setFile(null);
+        markClean({ ...documentDraft, pendingFile: null });
         toast({ title: 'Document updated' });
       }
     } catch (error) {
@@ -195,6 +237,7 @@ export default function SignatureEditorPage() {
       }
       const updated = await uploadSignatureDocument(targetDocument.id, activeFile);
       setDocument(updated);
+      setFile(null);
       toast({ title: 'File uploaded' });
     } catch (error) {
       toast({ title: 'Upload failed', variant: 'destructive' });
@@ -274,13 +317,15 @@ export default function SignatureEditorPage() {
       title={isEditing ? 'EDIT SIGNATURE DOCUMENT' : 'NEW SIGNATURE DOCUMENT'}
       icon={<FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />}
       leading={
-        <Button variant="ghost" size="icon" onClick={() => navigate('/documents')}>
+        <Button variant="ghost" size="icon" onClick={() => {
+          if (confirmLeave()) navigate('/documents');
+        }}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
       }
       headerActions={
         <>
-          <Button variant="outline" onClick={handleCreateOrSave} disabled={loading}>
+          <Button variant="outline" onClick={handleCreateOrSave} disabled={loading || !isDirty}>
             <Save className="h-4 w-4 mr-2" />
             Save
           </Button>
@@ -292,7 +337,7 @@ export default function SignatureEditorPage() {
       }
       mobileActions={
         <>
-          <Button variant="outline" onClick={handleCreateOrSave} disabled={loading} className="flex-1">
+          <Button variant="outline" onClick={handleCreateOrSave} disabled={loading || !isDirty} className="flex-1">
             <Save className="h-4 w-4 mr-2" />
             Save
           </Button>

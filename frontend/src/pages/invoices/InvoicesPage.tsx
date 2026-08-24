@@ -628,7 +628,7 @@ export function InvoicesPage() {
                 <ErrorState
                     title="Failed to initialize"
                     description={initError}
-                    onAction={() => window.location.reload()}
+                    onAction={() => void fetchInvoices()}
                 />
             </PageLayout>
         );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     ArrowLeft,
@@ -32,8 +32,11 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { ErrorState } from '@/components/ErrorState';
 import { getContact, getContacts } from '@/services/contactsApi';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useDirtyState } from '@/hooks/useDirtyState';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { getProducts, Product } from '@/services/invoicesApi';
 import {
     convertEstimateToInvoice,
@@ -93,7 +96,10 @@ export function EstimateEditorPage() {
     const { toast } = useToast();
     const isNew = id === 'new' || !id;
 
-    const [loading, setLoading] = useState(!isNew);
+    const [loading, setLoading] = useState(true);
+    const [initialized, setInitialized] = useState(false);
+    const [loadError, setLoadError] = useState(false);
+    const [loadAttempt, setLoadAttempt] = useState(0);
     const [saving, setSaving] = useState(false);
     const { organizationId } = useOrganization();
     const [contacts, setContacts] = useState<Contact[]>([]);
@@ -119,6 +125,39 @@ export function EstimateEditorPage() {
         declinedAt?: string | null;
     }>({});
 
+    const estimateDraft = useMemo(() => ({
+        contactId,
+        customerName,
+        customerEmail,
+        customerPhone,
+        customerAddress,
+        validUntil,
+        notes,
+        discountType,
+        discountValue,
+        lineItems: lineItems.map(({ id: _id, ...item }) => item),
+    }), [
+        contactId,
+        customerAddress,
+        customerEmail,
+        customerName,
+        customerPhone,
+        discountType,
+        discountValue,
+        lineItems,
+        notes,
+        validUntil,
+    ]);
+    const { isDirty, markClean } = useDirtyState({
+        value: estimateDraft,
+        ready: initialized,
+        resetKey: id ?? 'new',
+    });
+    const { confirmLeave } = useUnsavedChangesGuard({
+        when: isDirty || saving,
+        message: 'This estimate has unsaved changes. Leave without saving them?',
+    });
+
     const populateContact = useCallback((selectedContact: Contact) => {
         setContactId(selectedContact.id);
         setCustomerName(getContactName(selectedContact));
@@ -140,6 +179,9 @@ export function EstimateEditorPage() {
     useEffect(() => {
         if (!organizationId) return;
         const init = async () => {
+            setLoading(true);
+            setInitialized(false);
+            setLoadError(false);
             try {
                 const [contactsData, productsData] = await Promise.all([
                     getContacts({}, organizationId),
@@ -218,12 +260,14 @@ export function EstimateEditorPage() {
                 }
             } catch (error) {
                 toast({ title: 'Error', description: toastMessages.failedToLoad('estimate data'), variant: 'destructive' });
+                if (!isNew) setLoadError(true);
             } finally {
                 setLoading(false);
+                setInitialized(true);
             }
         };
         init();
-    }, [organizationId, id, isNew, populateContact, searchParams, toast]);
+    }, [organizationId, id, isNew, loadAttempt, populateContact, searchParams, toast]);
 
     // Handle contact selection
     const handleContactChange = (contactIdStr: string) => {
@@ -333,6 +377,7 @@ export function EstimateEditorPage() {
                 navigate(`/estimates/${response.id}`);
             } else if (id) {
                 await updateEstimate(Number(id), estimateData, organizationId);
+                markClean();
                 toast({ title: 'Saved', description: toastMessages.saved('estimate') });
             }
         } catch (error) {
@@ -387,7 +432,9 @@ export function EstimateEditorPage() {
                 title={(isNew ? 'New Estimate' : 'Estimate').toUpperCase()}
                 icon={<FileText className="h-5 w-5 text-primary flex-shrink-0" />}
                 leading={
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/estimates')}>
+                    <Button variant="ghost" size="icon" onClick={() => {
+                        if (confirmLeave()) navigate('/estimates');
+                    }}>
                         <ArrowLeft className="h-5 w-5 text-muted-foreground" />
                     </Button>
                 }
@@ -401,12 +448,34 @@ export function EstimateEditorPage() {
         );
     }
 
+    if (loadError) {
+        return (
+            <PageLayout
+                title="ESTIMATE"
+                icon={<FileText className="h-5 w-5 text-primary flex-shrink-0" />}
+                leading={
+                    <Button variant="ghost" size="icon" onClick={() => navigate('/estimates')}>
+                        <ArrowLeft className="h-5 w-5 text-muted-foreground" />
+                    </Button>
+                }
+            >
+                <ErrorState
+                    title="Estimate unavailable"
+                    description="We could not load this estimate. Your data has not been changed."
+                    onAction={() => setLoadAttempt(current => current + 1)}
+                />
+            </PageLayout>
+        );
+    }
+
     return (
         <PageLayout
             title={(isNew ? 'New Estimate' : 'Estimate').toUpperCase()}
             icon={<FileText className="h-5 w-5 text-primary flex-shrink-0" />}
             leading={
-                <Button variant="ghost" size="icon" onClick={() => navigate('/estimates')}>
+                <Button variant="ghost" size="icon" onClick={() => {
+                    if (confirmLeave()) navigate('/estimates');
+                }}>
                     <ArrowLeft className="h-5 w-5 text-muted-foreground" />
                 </Button>
             }
@@ -416,7 +485,7 @@ export function EstimateEditorPage() {
                         variant="outline"
                         size="sm"
                         onClick={handleSave}
-                        disabled={saving || lineItems.filter(i => i.name).length === 0}
+                        disabled={saving || !isDirty || lineItems.filter(i => i.name).length === 0}
                     >
                         <Save className="h-4 w-4 mr-2" />
                         {saving ? 'Saving...' : 'Save Draft'}
@@ -425,7 +494,7 @@ export function EstimateEditorPage() {
                         <Button
                             size="sm"
                             onClick={handleSendEstimate}
-                            disabled={saving}
+                            disabled={saving || isDirty}
                         >
                             <Send className="h-4 w-4 mr-2" />
                             Send
@@ -435,7 +504,7 @@ export function EstimateEditorPage() {
                         <Button
                             size="sm"
                             onClick={handleConvertToInvoice}
-                            disabled={saving}
+                            disabled={saving || isDirty}
                         >
                             <ArrowRight className="h-4 w-4 mr-2" />
                             Convert to Invoice
@@ -449,7 +518,7 @@ export function EstimateEditorPage() {
                         variant="outline"
                         size="sm"
                         onClick={handleSave}
-                        disabled={saving || lineItems.filter(i => i.name).length === 0}
+                        disabled={saving || !isDirty || lineItems.filter(i => i.name).length === 0}
                         className="flex-1"
                     >
                         <Save className="h-4 w-4 mr-2" />
@@ -459,7 +528,7 @@ export function EstimateEditorPage() {
                         <Button
                             size="sm"
                             onClick={handleSendEstimate}
-                            disabled={saving}
+                            disabled={saving || isDirty}
                             className="flex-1"
                         >
                             <Send className="h-4 w-4 mr-2" />
@@ -471,7 +540,7 @@ export function EstimateEditorPage() {
                             size="sm"
                             className="flex-1"
                             onClick={handleConvertToInvoice}
-                            disabled={saving}
+                            disabled={saving || isDirty}
                         >
                             <ArrowRight className="h-4 w-4 mr-2" />
                             Convert
@@ -797,12 +866,14 @@ export function EstimateEditorPage() {
 
                 {/* Actions */}
                 <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                    <Button variant="outline" onClick={() => navigate('/estimates')}>
+                    <Button variant="outline" onClick={() => {
+                        if (confirmLeave()) navigate('/estimates');
+                    }}>
                         Cancel
                     </Button>
                     <Button
                         onClick={handleSave}
-                        disabled={saving || lineItems.filter(i => i.name).length === 0}
+                        disabled={saving || !isDirty || lineItems.filter(i => i.name).length === 0}
                     >
                         <Save className="h-4 w-4 mr-2" />
                         {saving ? 'Saving...' : isNew ? 'Create Estimate' : 'Save Changes'}

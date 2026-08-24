@@ -200,7 +200,7 @@ export function AutomationsPage() {
           title="Automations Not Ready"
           description={initError}
           icon={Zap}
-          onAction={() => window.location.reload()}
+          onAction={() => void fetchWorkflows()}
         />
       </PageLayout>
     );

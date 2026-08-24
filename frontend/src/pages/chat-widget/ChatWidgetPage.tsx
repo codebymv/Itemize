@@ -151,7 +151,7 @@ export function ChatWidgetPage() {
                 <ErrorState
                     title="Unable to load chat widget"
                     description={initError}
-                    onAction={() => window.location.reload()}
+                    onAction={() => void fetchConfig()}
                 />
             </PageLayout>
         );

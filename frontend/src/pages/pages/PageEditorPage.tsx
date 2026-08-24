@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft,
@@ -80,6 +80,8 @@ import { ErrorState } from '@/components/ErrorState';
 import { EmptyState } from '@/components/EmptyState';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useDirtyState } from '@/hooks/useDirtyState';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import {
     getPage,
     updatePage,
@@ -160,6 +162,23 @@ export function PageEditorPage() {
     const [previewVersionId, setPreviewVersionId] = useState<number | undefined>();
     const [showVersionHistory, setShowVersionHistory] = useState(false);
 
+    const pageDraft = useMemo(() => ({
+        name: editedName,
+        slug: editedSlug,
+        description: editedDescription,
+        seoTitle: editedSeoTitle,
+        seoDescription: editedSeoDescription,
+    }), [editedDescription, editedName, editedSeoDescription, editedSeoTitle, editedSlug]);
+    const { isDirty, markClean } = useDirtyState({
+        value: pageDraft,
+        ready: !loading && Boolean(page),
+        resetKey: id ?? 'page',
+    });
+    const { confirmLeave } = useUnsavedChangesGuard({
+        when: isDirty || saving,
+        message: 'This page has unsaved changes. Leave without saving them?',
+    });
+
     useEffect(() => {
         if (!organizationId) {
             setLoading(false);
@@ -202,6 +221,7 @@ export function PageEditorPage() {
                 seo_title: editedSeoTitle || undefined,
                 seo_description: editedSeoDescription || undefined,
             }, organizationId);
+            markClean();
             toast({ title: 'Saved', description: 'Page updated successfully' });
             loadPage();
         } catch (error: unknown) {
@@ -292,7 +312,13 @@ export function PageEditorPage() {
     };
 
     const backButton = (
-        <Button variant="ghost" size="icon" onClick={() => navigate('/pages')}>
+        <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+                if (confirmLeave()) navigate('/pages');
+            }}
+        >
             <ArrowLeft className="h-5 w-5" />
         </Button>
     );
@@ -329,7 +355,9 @@ export function PageEditorPage() {
                     title="Page not found"
                     description="This page could not be loaded."
                     actionLabel="Back to Pages"
-                    onAction={() => navigate('/pages')}
+                    onAction={() => {
+                        if (confirmLeave()) navigate('/pages');
+                    }}
                 />
             </PageLayout>
         );
@@ -352,7 +380,7 @@ export function PageEditorPage() {
                         size="sm"
                         className="bg-blue-600 hover:bg-blue-700 text-white"
                         onClick={handleSave}
-                        disabled={saving}
+                        disabled={saving || !isDirty}
                     >
                         <Save className="h-4 w-4 mr-2" />
                         {saving ? 'Saving...' : 'Save'}
@@ -371,7 +399,7 @@ export function PageEditorPage() {
                         size="sm"
                         className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
                         onClick={handleSave}
-                        disabled={saving}
+                        disabled={saving || !isDirty}
                     >
                         <Save className="h-4 w-4 mr-2" />
                         {saving ? 'Saving...' : 'Save'}
@@ -526,6 +554,7 @@ export function PageEditorPage() {
                                         size="sm"
                                         className="bg-blue-600 hover:bg-blue-700 text-white"
                                         onClick={handleTogglePublish}
+                                        disabled={saving || isDirty}
                                     >
                                         {page.status === 'published' ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
                                         {page.status === 'published' ? 'Unpublish' : 'Publish'}

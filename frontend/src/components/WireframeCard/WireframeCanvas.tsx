@@ -45,6 +45,7 @@ import {
   LayoutTemplate,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SaveStatus, type SaveState } from '@/components/ui/save-status';
 import { Separator } from '@/components/ui/separator';
 import {
   Tooltip,
@@ -53,6 +54,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { nodeTypes } from './nodes';
 import {
   cloneWireframeFlow,
@@ -71,7 +73,7 @@ interface WireframeCanvasProps {
     edges: Edge[];
     viewport?: { x: number; y: number; zoom: number };
   };
-  onFlowDataChange?: (flowData: { nodes: Node[]; edges: Edge[]; viewport: { x: number; y: number; zoom: number } }) => void;
+  onFlowDataChange?: (flowData: { nodes: Node[]; edges: Edge[]; viewport: { x: number; y: number; zoom: number } }) => Promise<void> | void;
   readOnly?: boolean;
   height?: number;
 }
@@ -137,6 +139,7 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
   ]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [spacePan, setSpacePan] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
   
   const initialNodes = useMemo(() => flowData?.nodes || [], []);
   const initialEdges = useMemo(() => flowData?.edges || [], []);
@@ -154,11 +157,18 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
   const edgesRef = useRef(edges);
   const historyRef = useRef(history);
   const historyIndexRef = useRef(historyIndex);
+  const saveVersionRef = useRef(0);
+  const hasObservedFlowRef = useRef(false);
   flowDataRef.current = flowData;
   nodesRef.current = nodes;
   edgesRef.current = edges;
   historyRef.current = history;
   historyIndexRef.current = historyIndex;
+
+  useUnsavedChangesGuard({
+    when: saveState === 'dirty' || saveState === 'saving' || saveState === 'error',
+    message: 'This wireframe still has unsaved changes. Leave this page anyway?',
+  });
 
   const commitHistory = useCallback((nextNodes: Node[], nextEdges: Edge[]) => {
     const snapshot = cloneWireframeFlow(nextNodes, nextEdges);
@@ -174,21 +184,36 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
     commitHistory(nodesRef.current, edgesRef.current);
   }, [commitHistory]);
 
-  const persistNow = useCallback(() => {
-    if (!onFlowDataChange) return;
-    if (nodesRef.current.some((node) => node.dragging)) return;
+  const persistNow = useCallback(async (): Promise<boolean> => {
+    if (!onFlowDataChange) return true;
+    if (nodesRef.current.some((node) => node.dragging)) return false;
     const sanitizedNodes = stripWireframeSelection(nodesRef.current);
     const sanitizedEdges = stripWireframeEdgeSelection(edgesRef.current);
     let viewport = { x: 0, y: 0, zoom: 1 };
     try {
       viewport = getViewport();
     } catch {
-      return;
+      return false;
     }
     const serialized = JSON.stringify({ nodes: sanitizedNodes, edges: sanitizedEdges, viewport });
-    if (serialized === lastPersistedRef.current) return;
-    lastPersistedRef.current = serialized;
-    onFlowDataChange({ nodes: sanitizedNodes, edges: sanitizedEdges, viewport });
+    if (serialized === lastPersistedRef.current) {
+      setSaveState('idle');
+      return true;
+    }
+
+    const requestVersion = ++saveVersionRef.current;
+    setSaveState('saving');
+    try {
+      await onFlowDataChange({ nodes: sanitizedNodes, edges: sanitizedEdges, viewport });
+      if (requestVersion === saveVersionRef.current) {
+        lastPersistedRef.current = serialized;
+        setSaveState('saved');
+      }
+      return true;
+    } catch {
+      if (requestVersion === saveVersionRef.current) setSaveState('error');
+      return false;
+    }
   }, [getViewport, onFlowDataChange]);
 
   const persistNowRef = useRef(persistNow);
@@ -196,6 +221,7 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
+      setSaveState((current) => current === 'saving' ? current : 'dirty');
       onNodesChange(changes);
     },
     [onNodesChange]
@@ -203,6 +229,7 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
 
   const handleEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
+      setSaveState((current) => current === 'saving' ? current : 'dirty');
       onEdgesChange(changes);
     },
     [onEdgesChange]
@@ -210,12 +237,23 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
 
   useEffect(() => {
     if (nodes.some((node) => node.dragging)) return;
-    const timeout = window.setTimeout(() => persistNowRef.current(), 300);
+    if (hasObservedFlowRef.current) {
+      setSaveState((current) => current === 'saving' ? current : 'dirty');
+    } else {
+      hasObservedFlowRef.current = true;
+    }
+    const timeout = window.setTimeout(() => { void persistNowRef.current(); }, 300);
     return () => window.clearTimeout(timeout);
   }, [nodes, edges]);
 
   useEffect(() => {
-    const flush = () => persistNowRef.current();
+    if (saveState !== 'saved') return;
+    const timeout = window.setTimeout(() => setSaveState('idle'), 1600);
+    return () => window.clearTimeout(timeout);
+  }, [saveState]);
+
+  useEffect(() => {
+    const flush = () => { void persistNowRef.current(); };
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') flush();
     };
@@ -533,7 +571,7 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
   return (
     <div
       ref={reactFlowWrapper}
-      className="w-full h-full flex-1 flex flex-col rounded-lg overflow-hidden border border-border"
+      className="relative w-full h-full flex-1 flex flex-col rounded-lg overflow-hidden border border-border"
       style={{ height: height || '100%', minHeight: '300px' }}
       onPointerEnter={() => {
         pointerInsideRef.current = true;
@@ -723,7 +761,7 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
           onEdgesChange={readOnly ? undefined : handleEdgesChange}
           onPaneClick={readOnly ? undefined : handlePaneClick}
           onNodeClick={readOnly ? undefined : handleNodeClick}
-          onMoveEnd={readOnly ? undefined : persistNow}
+          onMoveEnd={readOnly ? undefined : () => { void persistNow(); }}
           nodeTypes={nodeTypes}
           fitView={!hasCustomViewport}
           defaultViewport={savedViewport}
@@ -761,6 +799,11 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
           />
         </ReactFlow>
       </div>
+      {!readOnly && saveState !== 'idle' && (
+        <div className="absolute bottom-0 left-0 right-0 z-10 flex min-h-8 items-center border-t border-border bg-card/95 px-3 py-1 backdrop-blur-sm">
+          <SaveStatus state={saveState} onRetry={() => { void persistNow(); }} />
+        </div>
+      )}
     </div>
   );
 };

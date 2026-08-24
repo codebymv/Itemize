@@ -281,7 +281,6 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
               onCanvasChange={handleCanvasChange}
               onSave={handleCanvasSave}
               whiteboardColor={whiteboardDisplayColor}
-              onAutoSave={handleCanvasSave}
               isMobile={isMobile}
               onScaledHeightChange={setScaledCanvasHeight}
               updatedAt={whiteboard.updated_at}

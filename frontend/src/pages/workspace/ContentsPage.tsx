@@ -2,7 +2,6 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutGrid,
-  List as ListIcon,
   Search,
   Map,
   CheckSquare,
@@ -11,6 +10,7 @@ import {
   GitBranch,
   KeyRound,
   Plus,
+  RotateCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -88,7 +88,6 @@ import { useResponsiveContentCollapse } from '@/hooks/useResponsiveContentCollap
 
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
 type SortOption = 'updated' | 'created' | 'title';
-type ViewMode = 'grid' | 'list';
 type WorkspaceShareTarget = {
   itemType: 'list' | 'note' | 'whiteboard' | 'wireframe';
   itemId: string | number;
@@ -111,7 +110,6 @@ export function ContentsPage() {
     featureKey: onboardingFeatureKey,
   } = useRouteOnboarding();
 
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [typeFilter, setTypeFilter] = useState<ContentType>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -129,6 +127,7 @@ export function ContentsPage() {
     setWireframes,
     setVaults,
     loading,
+    refreshing,
     error: contentError,
     refresh: fetchAllContent,
   } = useWorkspaceContent(token);
@@ -164,7 +163,23 @@ export function ContentsPage() {
         throw new Error('Failed to update category');
       }
 
-      fetchAllContent();
+      const nextName = updatedCategory.name || categoryName;
+      const nextColor = updatedCategory.color_value || existingCategory.color_value;
+      setLists((current) => current.map((list) => list.type === categoryName
+        ? { ...list, type: nextName, color_value: nextColor }
+        : list));
+      setNotes((current) => current.map((note) => (note.category || 'General') === categoryName
+        ? { ...note, category: nextName, color_value: nextColor || note.color_value }
+        : note));
+      setWhiteboards((current) => current.map((whiteboard) => (whiteboard.category || 'General') === categoryName
+        ? { ...whiteboard, category: nextName, color_value: nextColor || whiteboard.color_value }
+        : whiteboard));
+      setWireframes((current) => current.map((wireframe) => (wireframe.category || 'General') === categoryName
+        ? { ...wireframe, category: nextName, color_value: nextColor || wireframe.color_value }
+        : wireframe));
+      setVaults((current) => current.map((vault) => (vault.category || 'General') === categoryName
+        ? { ...vault, category: nextName, color_value: nextColor || vault.color_value }
+        : vault));
     } catch (error) {
       console.error('Error updating category:', error);
     }
@@ -173,9 +188,11 @@ export function ContentsPage() {
   const contentCollapse = useResponsiveContentCollapse(isMobile);
 
   const handleListUpdate = useCallback(async (list: List) => {
+    const previous = lists.find((candidate) => candidate.id === list.id);
+    setLists((current) => current.map((candidate) => candidate.id === list.id ? list : candidate));
     try {
       const updated = await apiUpdateList(list, token);
-      fetchAllContent();
+      setLists((current) => current.map((candidate) => candidate.id === list.id ? updated : candidate));
       return updated;
     } catch (error) {
       console.error('Failed to update list:', error);
@@ -184,15 +201,18 @@ export function ContentsPage() {
         description: 'Failed to update list',
         variant: 'destructive',
       });
+      if (previous) {
+        setLists((current) => current.map((candidate) => candidate.id === list.id ? previous : candidate));
+      }
       return null;
     }
-  }, [token, toast, fetchAllContent]);
+  }, [lists, setLists, token, toast]);
 
   const handleListDelete = useCallback(async (id: string): Promise<boolean> => {
     try {
       await apiDeleteList(id, token);
       toast({ title: 'List deleted', description: 'List removed successfully' });
-      fetchAllContent();
+      setLists((current) => current.filter((list) => list.id !== id));
       return true;
     } catch (error) {
       console.error('Failed to delete list:', error);
@@ -203,7 +223,7 @@ export function ContentsPage() {
       });
       return false;
     }
-  }, [token, toast, fetchAllContent]);
+  }, [token, toast, setLists]);
 
   const handleListShare = useCallback((id: string) => {
     const list = lists.find((candidate) => candidate.id === id);
@@ -217,9 +237,13 @@ export function ContentsPage() {
   }, [lists]);
 
   const handleNoteUpdate = useCallback(async (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at'>>) => {
+    const previous = notes.find((note) => note.id === noteId);
+    setNotes((current) => current.map((note) => note.id === noteId
+      ? { ...note, ...updatedData, updated_at: new Date().toISOString() }
+      : note));
     try {
-      await apiUpdateNote(noteId, updatedData, token);
-      fetchAllContent();
+      const updated = await apiUpdateNote(noteId, updatedData, token);
+      setNotes((current) => current.map((note) => note.id === noteId ? updated as Note : note));
     } catch (error) {
       console.error('Failed to update note:', error);
       toast({
@@ -227,14 +251,18 @@ export function ContentsPage() {
         description: 'Failed to update note',
         variant: 'destructive',
       });
+      if (previous) {
+        setNotes((current) => current.map((note) => note.id === noteId ? previous : note));
+      }
+      throw error;
     }
-  }, [token, toast, fetchAllContent]);
+  }, [notes, token, toast, setNotes]);
 
   const handleNoteDelete = useCallback(async (id: number): Promise<void> => {
     try {
       await apiDeleteNote(id, token);
       toast({ title: 'Note deleted', description: 'Note removed successfully' });
-      fetchAllContent();
+      setNotes((current) => current.filter((note) => note.id !== id));
     } catch (error) {
       console.error('Failed to delete note:', error);
       toast({
@@ -243,7 +271,7 @@ export function ContentsPage() {
         variant: 'destructive',
       });
     }
-  }, [token, toast, fetchAllContent]);
+  }, [token, toast, setNotes]);
 
   const handleNoteShare = useCallback((id: number) => {
     const note = notes.find((candidate) => candidate.id === id);
@@ -259,7 +287,9 @@ export function ContentsPage() {
   const handleWhiteboardUpdate = useCallback(async (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
     try {
       const result = await apiUpdateWhiteboard(whiteboardId, updatedData, token);
-      fetchAllContent();
+      setWhiteboards((current) => current.map((whiteboard) =>
+        whiteboard.id === whiteboardId ? result as Whiteboard : whiteboard
+      ));
       return result as Whiteboard;
     } catch (error) {
       console.error('Failed to update whiteboard:', error);
@@ -268,9 +298,9 @@ export function ContentsPage() {
         description: 'Failed to update whiteboard',
         variant: 'destructive',
       });
-      return null;
+      throw error;
     }
-  }, [token, toast, fetchAllContent]);
+  }, [token, toast, setWhiteboards]);
 
   const handleWireframeUpdate = useCallback(async (wireframeId: number, updatedData: Partial<Omit<Wireframe, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
     try {
@@ -286,14 +316,16 @@ export function ContentsPage() {
         description: 'Failed to update wireframe',
         variant: 'destructive',
       });
-      return null;
+      throw error;
     }
   }, [token, toast, setWireframes]);
 
   const handleVaultUpdate = useCallback(async (vaultId: number, updatedData: Partial<Omit<Vault, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
     try {
       const result = await apiUpdateVault(vaultId, updatedData, token);
-      fetchAllContent();
+      setVaults((current) => current.map((vault) =>
+        vault.id === vaultId ? result as Vault : vault
+      ));
       return result as Vault;
     } catch (error) {
       console.error('Failed to update vault:', error);
@@ -304,13 +336,13 @@ export function ContentsPage() {
       });
       return null;
     }
-  }, [token, toast, fetchAllContent]);
+  }, [token, toast, setVaults]);
 
   const handleWhiteboardDelete = useCallback(async (id: number): Promise<boolean> => {
     try {
       await apiDeleteWhiteboard(id, token);
       toast({ title: 'Whiteboard deleted', description: 'Whiteboard removed successfully' });
-      fetchAllContent();
+      setWhiteboards((current) => current.filter((whiteboard) => whiteboard.id !== id));
       return true;
     } catch (error) {
       console.error('Failed to delete whiteboard:', error);
@@ -321,7 +353,7 @@ export function ContentsPage() {
       });
       return false;
     }
-  }, [token, toast, fetchAllContent]);
+  }, [token, toast, setWhiteboards]);
 
   const handleWhiteboardShare = useCallback((id: number) => {
     const whiteboard = whiteboards.find((candidate) => candidate.id === id);
@@ -338,7 +370,7 @@ export function ContentsPage() {
     try {
       await apiDeleteWireframe(id, token);
       toast({ title: 'Wireframe deleted', description: 'Wireframe removed successfully' });
-      fetchAllContent();
+      setWireframes((current) => current.filter((wireframe) => wireframe.id !== id));
       return true;
     } catch (error) {
       console.error('Failed to delete wireframe:', error);
@@ -349,7 +381,7 @@ export function ContentsPage() {
       });
       return false;
     }
-  }, [token, toast, fetchAllContent]);
+  }, [token, toast, setWireframes]);
 
   const handleWireframeShare = useCallback((id: number) => {
     const wireframe = wireframes.find((candidate) => candidate.id === id);
@@ -379,9 +411,26 @@ export function ContentsPage() {
         result = await enableWorkspaceWireframeSharingViaGraphql(Number(id));
         break;
     }
-    await fetchAllContent();
+    const sharedAt = new Date().toISOString();
+    if (workspaceShareTarget.itemType === 'list') {
+      setLists((current) => current.map((item) => String(item.id) === String(id)
+        ? { ...item, is_public: true, share_token: result.shareToken, shared_at: sharedAt }
+        : item));
+    } else if (workspaceShareTarget.itemType === 'note') {
+      setNotes((current) => current.map((item) => item.id === Number(id)
+        ? { ...item, is_public: true, share_token: result.shareToken, shared_at: sharedAt }
+        : item));
+    } else if (workspaceShareTarget.itemType === 'whiteboard') {
+      setWhiteboards((current) => current.map((item) => item.id === Number(id)
+        ? { ...item, is_public: true, share_token: result.shareToken, shared_at: sharedAt }
+        : item));
+    } else {
+      setWireframes((current) => current.map((item) => item.id === Number(id)
+        ? { ...item, is_public: true, share_token: result.shareToken, shared_at: sharedAt }
+        : item));
+    }
     return result;
-  }, [fetchAllContent, token, workspaceShareTarget]);
+  }, [setLists, setNotes, setWhiteboards, setWireframes, token, workspaceShareTarget]);
 
   const disableSelectedWorkspaceSharing = useCallback(async (id: string | number) => {
     if (!workspaceShareTarget) throw new Error('No workspace item selected');
@@ -399,14 +448,21 @@ export function ContentsPage() {
         await disableWorkspaceWireframeSharingViaGraphql(Number(id));
         break;
     }
-    await fetchAllContent();
-  }, [fetchAllContent, token, workspaceShareTarget]);
+    const clearSharing = <T extends { id: string | number; is_public?: boolean; share_token?: string; shared_at?: string | Date }>(item: T): T =>
+      String(item.id) === String(id)
+        ? { ...item, is_public: false, share_token: undefined, shared_at: undefined }
+        : item;
+    if (workspaceShareTarget.itemType === 'list') setLists((current) => current.map(clearSharing));
+    else if (workspaceShareTarget.itemType === 'note') setNotes((current) => current.map(clearSharing));
+    else if (workspaceShareTarget.itemType === 'whiteboard') setWhiteboards((current) => current.map(clearSharing));
+    else setWireframes((current) => current.map(clearSharing));
+  }, [setLists, setNotes, setWhiteboards, setWireframes, token, workspaceShareTarget]);
 
   const handleVaultDelete = useCallback(async (id: number): Promise<boolean> => {
     try {
       await apiDeleteVault(id, token);
       toast({ title: 'Vault deleted', description: 'Vault removed successfully' });
-      fetchAllContent();
+      setVaults((current) => current.filter((vault) => vault.id !== id));
       return true;
     } catch (error) {
       console.error('Failed to delete vault:', error);
@@ -417,7 +473,7 @@ export function ContentsPage() {
       });
       return false;
     }
-  }, [token, toast, fetchAllContent]);
+  }, [token, toast, setVaults]);
 
   const handleVaultShare = useCallback((id: number) => {
     const vault = vaults.find((candidate) => candidate.id === id);
@@ -468,7 +524,14 @@ export function ContentsPage() {
   const filteredAndSortedLists = useMemo(() => {
     let filtered = [...lists];
     if (categoryFilter !== 'all') filtered = filtered.filter(l => (l.type || 'General') === categoryFilter);
-    if (searchQuery) filtered = filtered.filter(l => l.title?.toLowerCase().includes(searchQuery.toLowerCase()));
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((list) =>
+        list.title?.toLowerCase().includes(query)
+        || list.type?.toLowerCase().includes(query)
+        || list.items.some((item) => item.text.toLowerCase().includes(query))
+      );
+    }
 
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -485,7 +548,14 @@ export function ContentsPage() {
   const filteredAndSortedNotes = useMemo(() => {
     let filtered = [...notes];
     if (categoryFilter !== 'all') filtered = filtered.filter(n => (n.category || 'General') === categoryFilter);
-    if (searchQuery) filtered = filtered.filter(n => n.title?.toLowerCase().includes(searchQuery.toLowerCase()));
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((note) =>
+        note.title?.toLowerCase().includes(query)
+        || note.category?.toLowerCase().includes(query)
+        || note.content?.toLowerCase().includes(query)
+      );
+    }
 
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -502,7 +572,13 @@ export function ContentsPage() {
   const filteredAndSortedWhiteboards = useMemo(() => {
     let filtered = [...whiteboards];
     if (categoryFilter !== 'all') filtered = filtered.filter(w => (w.category || 'General') === categoryFilter);
-    if (searchQuery) filtered = filtered.filter(w => w.title?.toLowerCase().includes(searchQuery.toLowerCase()));
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((whiteboard) =>
+        whiteboard.title?.toLowerCase().includes(query)
+        || whiteboard.category?.toLowerCase().includes(query)
+      );
+    }
 
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -519,7 +595,13 @@ export function ContentsPage() {
   const filteredAndSortedWireframes = useMemo(() => {
     let filtered = [...wireframes];
     if (categoryFilter !== 'all') filtered = filtered.filter(w => (w.category || 'General') === categoryFilter);
-    if (searchQuery) filtered = filtered.filter(w => w.title?.toLowerCase().includes(searchQuery.toLowerCase()));
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((wireframe) =>
+        wireframe.title?.toLowerCase().includes(query)
+        || wireframe.category?.toLowerCase().includes(query)
+      );
+    }
 
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -536,7 +618,14 @@ export function ContentsPage() {
   const filteredAndSortedVaults = useMemo(() => {
     let filtered = [...vaults];
     if (categoryFilter !== 'all') filtered = filtered.filter(v => (v.category || 'General') === categoryFilter);
-    if (searchQuery) filtered = filtered.filter(v => v.title?.toLowerCase().includes(searchQuery.toLowerCase()));
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((vault) =>
+        vault.title?.toLowerCase().includes(query)
+        || vault.category?.toLowerCase().includes(query)
+        || vault.items?.some((item) => item.label.toLowerCase().includes(query))
+      );
+    }
 
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -561,35 +650,70 @@ export function ContentsPage() {
   }, [lists, notes, whiteboards, wireframes, vaults]);
 
   const createNote = async (title: string, category: string, color: string) => {
-    await apiCreateNote({ title, content: '', category, color_value: color, width: 570, height: 350, z_index: 0 }, token);
-    fetchAllContent();
+    const created = await apiCreateNote({ title, content: '', category, color_value: color, width: 570, height: 350, z_index: 0 }, token);
+    setNotes((current) => [created as Note, ...current]);
+    return created;
   };
 
   const createList = async (title: string, type: string, color: string) => {
-    await apiCreateList({ title, type, items: [], color_value: color }, token);
-    fetchAllContent();
+    const created = await apiCreateList({ title, type, items: [], color_value: color }, token);
+    setLists((current) => [created, ...current]);
+    return created;
   };
 
   const createWhiteboard = async (title: string, category: string, color: string) => {
-    await apiCreateWhiteboard({ title, category, color_value: color, z_index: 0 }, token);
-    fetchAllContent();
+    const created = await apiCreateWhiteboard({ title, category, color_value: color, z_index: 0 }, token);
+    setWhiteboards((current) => [created as Whiteboard, ...current]);
+    return created;
   };
 
   const createWireframe = async (title: string, category: string, color: string) => {
-    await apiCreateWireframe({ title, category, color_value: color, z_index: 0 }, token);
-    fetchAllContent();
+    const created = await apiCreateWireframe({ title, category, color_value: color, z_index: 0 }, token);
+    setWireframes((current) => [created as Wireframe, ...current]);
+    return created;
   };
 
   const createVault = async (title: string, category: string, color: string) => {
-    await apiCreateVault({ title, category, color_value: color, z_index: 0 }, token);
-    fetchAllContent();
+    const created = await apiCreateVault({ title, category, color_value: color, z_index: 0 }, token);
+    setVaults((current) => [created as Vault, ...current]);
+    return created;
   };
 
   const categoriesForModal = useMemo(() => {
     return dbCategories.map(cat => ({ name: cat.name, color_value: cat.color_value }));
   }, [dbCategories]);
 
+  const allItemsCount = lists.length + notes.length + whiteboards.length + wireframes.length + vaults.length;
   const totalItems = filteredAndSortedLists.length + filteredAndSortedNotes.length + filteredAndSortedWhiteboards.length + filteredAndSortedWireframes.length + filteredAndSortedVaults.length;
+  const hasActiveFilters = typeFilter !== 'all' || categoryFilter !== 'all' || searchQuery.trim().length > 0;
+
+  const clearFilters = () => {
+    setTypeFilter('all');
+    setCategoryFilter('all');
+    setSearchQuery('');
+  };
+
+  const addContentMenu = (compact = false) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          size="sm"
+          className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-3 whitespace-nowrap font-light"
+          aria-label={compact ? 'Add content' : undefined}
+        >
+          <Plus className="h-4 w-4" />
+          {!compact && <span>Add Content</span>}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem onClick={() => setShowNewListModal(true)}><CheckSquare className="h-4 w-4 mr-2" />List</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setShowNewNoteModal(true)}><StickyNote className="h-4 w-4 mr-2" />Note</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setShowNewWhiteboardModal(true)}><Palette className="h-4 w-4 mr-2" />Whiteboard</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setShowNewWireframeModal(true)}><GitBranch className="h-4 w-4 mr-2" />Wireframe</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setShowNewVaultModal(true)}><KeyRound className="h-4 w-4 mr-2" />Vault</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
     <PageLayout
@@ -598,14 +722,6 @@ export function ContentsPage() {
       mobileClassName="flex-col items-stretch gap-3"
       headerActions={
         <>
-          <div className="flex border rounded-md">
-            <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="sm" className="h-9 px-3 rounded-r-none" onClick={() => setViewMode('grid')}>
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" className="h-9 px-3 rounded-l-none" onClick={() => setViewMode('list')}>
-              <ListIcon className="h-4 w-4" />
-            </Button>
-          </div>
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50"><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>
@@ -638,6 +754,7 @@ export function ContentsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background font-raleway" />
           </div>
+          {addContentMenu()}
           <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light" onClick={() => navigate('/canvas')}>
             <Map className="h-4 w-4 mr-2" />
             Canvas
@@ -654,21 +771,7 @@ export function ContentsPage() {
           <span className="text-xs text-muted-foreground whitespace-nowrap">
             {totalItems} {totalItems === 1 ? 'item' : 'items'}
           </span>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-3">
-                <Plus className="h-4 w-4" />
-                {!isMobile && <span className="ml-1.5">Add</span>}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => setShowNewListModal(true)}><CheckSquare className="h-4 w-4 mr-2" />List</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowNewNoteModal(true)}><StickyNote className="h-4 w-4 mr-2" />Note</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowNewWhiteboardModal(true)}><Palette className="h-4 w-4 mr-2" />Whiteboard</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowNewWireframeModal(true)}><GitBranch className="h-4 w-4 mr-2" />Wireframe</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowNewVaultModal(true)}><KeyRound className="h-4 w-4 mr-2" />Vault</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {addContentMenu(true)}
         </div>
         <div className="flex items-center gap-2">
           <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
@@ -689,14 +792,14 @@ export function ContentsPage() {
               {uniqueCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
             </SelectContent>
           </Select>
-          <div className="flex border rounded-md">
-            <Button variant={viewMode === 'grid' ? 'secondary' : 'ghost'} size="sm" className="h-9 px-3 rounded-r-none" onClick={() => setViewMode('grid')}>
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" className="h-9 px-3 rounded-l-none" onClick={() => setViewMode('list')}>
-              <ListIcon className="h-4 w-4" />
-            </Button>
-          </div>
+          <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+            <SelectTrigger className="flex-1 flex-shrink h-9 pr-8 min-w-0" style={{ paddingLeft: '0.375rem', flexBasis: 0 }}><SelectValue placeholder="Sort" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="updated">Updated</SelectItem>
+              <SelectItem value="created">Created</SelectItem>
+              <SelectItem value="title">Title A-Z</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         </>
       }
@@ -705,11 +808,11 @@ export function ContentsPage() {
           <span className="text-sm text-muted-foreground">{totalItems} {totalItems === 1 ? 'item' : 'items'}</span>
         </div>
 
-        <Card>
+        <Card aria-busy={refreshing}>
           <CardContent className="p-0">
         {loading ? (
-          <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4' : 'space-y-2'} p-6`}>
-            {[...Array(8)].map((_, i) => <Skeleton key={i} className={viewMode === 'grid' ? 'h-32' : 'h-16'} />)}
+          <div className="space-y-2 p-6">
+            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-16" />)}
           </div>
         ) : contentError ? (
           <ErrorState
@@ -721,10 +824,17 @@ export function ContentsPage() {
         ) : totalItems === 0 ? (
           <EmptyState
             icon={LayoutGrid}
-            title="No content"
-            description="Get started by creating content"
+            title={allItemsCount > 0 && hasActiveFilters ? 'No matches' : 'No content'}
+            description={allItemsCount > 0 && hasActiveFilters
+              ? 'Try changing or clearing your search and filters.'
+              : 'Get started by creating content.'}
             className="p-12"
-            action={
+            action={allItemsCount > 0 && hasActiveFilters ? (
+              <Button variant="outline" onClick={clearFilters}>
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Clear filters
+              </Button>
+            ) : (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button className="bg-blue-600 hover:bg-blue-700 text-white">
@@ -740,7 +850,7 @@ export function ContentsPage() {
                   <DropdownMenuItem onClick={() => setShowNewVaultModal(true)}><KeyRound className="h-4 w-4 mr-2" />Vault</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            }
+            )}
           />
         ) : (
           <div className="space-y-6 p-6">
@@ -854,11 +964,11 @@ export function ContentsPage() {
           </CardContent>
         </Card>
 
-      {showNewNoteModal && <CreateItemModal open={showNewNoteModal} onOpenChange={(open) => { setShowNewNoteModal(open); if (!open) fetchAllContent(); }} itemType="note" onCreate={createNote} existingCategories={categoriesForModal} />}
-      {showNewListModal && <CreateItemModal open={showNewListModal} onOpenChange={(open) => { setShowNewListModal(open); if (!open) fetchAllContent(); }} itemType="list" onCreate={createList} existingCategories={categoriesForModal} />}
-      {showNewWhiteboardModal && <CreateItemModal open={showNewWhiteboardModal} onOpenChange={(open) => { setShowNewWhiteboardModal(open); if (!open) fetchAllContent(); }} itemType="whiteboard" onCreate={createWhiteboard} existingCategories={categoriesForModal} />}
-      {showNewWireframeModal && <CreateItemModal open={showNewWireframeModal} onOpenChange={(open) => { setShowNewWireframeModal(open); if (!open) fetchAllContent(); }} itemType="wireframe" onCreate={createWireframe} existingCategories={categoriesForModal} />}
-      {showNewVaultModal && <CreateItemModal open={showNewVaultModal} onOpenChange={(open) => { setShowNewVaultModal(open); if (!open) fetchAllContent(); }} itemType="vault" onCreate={createVault} existingCategories={categoriesForModal} />}
+      {showNewNoteModal && <CreateItemModal open={showNewNoteModal} onOpenChange={setShowNewNoteModal} itemType="note" onCreate={createNote} existingCategories={categoriesForModal} />}
+      {showNewListModal && <CreateItemModal open={showNewListModal} onOpenChange={setShowNewListModal} itemType="list" onCreate={createList} existingCategories={categoriesForModal} />}
+      {showNewWhiteboardModal && <CreateItemModal open={showNewWhiteboardModal} onOpenChange={setShowNewWhiteboardModal} itemType="whiteboard" onCreate={createWhiteboard} existingCategories={categoriesForModal} />}
+      {showNewWireframeModal && <CreateItemModal open={showNewWireframeModal} onOpenChange={setShowNewWireframeModal} itemType="wireframe" onCreate={createWireframe} existingCategories={categoriesForModal} />}
+      {showNewVaultModal && <CreateItemModal open={showNewVaultModal} onOpenChange={setShowNewVaultModal} itemType="vault" onCreate={createVault} existingCategories={categoriesForModal} />}
       {workspaceShareTarget && (
         <ShareModal
           open

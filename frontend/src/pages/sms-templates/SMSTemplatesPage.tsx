@@ -142,7 +142,7 @@ export function SMSTemplatesPage() {
                 <ErrorState
                     description={initError}
                     icon={MessageSquare}
-                    onAction={() => window.location.reload()}
+                    onAction={() => void fetchTemplates()}
                 />
             </PageLayout>
         );

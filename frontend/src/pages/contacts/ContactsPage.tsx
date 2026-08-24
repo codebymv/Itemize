@@ -240,7 +240,7 @@ export function ContactsPage() {
           title="CRM Not Ready"
           description={initError}
           icon={UserPlus}
-          onAction={() => window.location.reload()}
+          onAction={() => void fetchContacts()}
         />
       </PageLayout>
     );

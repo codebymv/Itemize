@@ -232,7 +232,7 @@ export function useCanvasCRUD(
         description: errorMessage,
         variant: "destructive"
       });
-      return null;
+      throw error;
     }
   };
 
@@ -303,7 +303,7 @@ export function useCanvasCRUD(
         description: errorMessage,
         variant: "destructive"
       });
-      return null;
+      throw error;
     }
   };
 

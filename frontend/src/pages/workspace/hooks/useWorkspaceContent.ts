@@ -25,12 +25,16 @@ export function useWorkspaceContent(token?: string | null) {
   const [wireframes, setWireframes] = useState<Wireframe[]>([]);
   const [vaults, setVaults] = useState<Vault[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestSequence = useRef(0);
+  const hasLoadedSnapshot = useRef(false);
 
   const refresh = useCallback(async (): Promise<boolean> => {
     const requestId = ++requestSequence.current;
-    setLoading(true);
+    const isInitialLoad = !hasLoadedSnapshot.current;
+    if (isInitialLoad) setLoading(true);
+    else setRefreshing(true);
     setError(null);
 
     try {
@@ -51,6 +55,7 @@ export function useWorkspaceContent(token?: string | null) {
       setWhiteboards(rowsFrom<Whiteboard>(whiteboardsResponse, 'whiteboards'));
       setWireframes(rowsFrom<Wireframe>(wireframesResponse, 'wireframes'));
       setVaults(rowsFrom<Vault>(vaultsResponse, 'vaults'));
+      hasLoadedSnapshot.current = true;
       return true;
     } catch (loadError) {
       logger.error('Failed to load workspace content:', loadError);
@@ -59,7 +64,10 @@ export function useWorkspaceContent(token?: string | null) {
       }
       return false;
     } finally {
-      if (requestId === requestSequence.current) setLoading(false);
+      if (requestId === requestSequence.current) {
+        if (isInitialLoad) setLoading(false);
+        else setRefreshing(false);
+      }
     }
   }, [token]);
 
@@ -80,6 +88,8 @@ export function useWorkspaceContent(token?: string | null) {
     setVaults,
     loading,
     isLoading: loading,
+    refreshing,
+    isRefreshing: refreshing,
     error,
     refresh,
   };

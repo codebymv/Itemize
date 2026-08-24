@@ -200,7 +200,7 @@ export function CalendarIntegrationsPage() {
                 <ErrorState
                     title="Unable to load integrations"
                     description={initError}
-                    onAction={() => window.location.reload()}
+                    onAction={() => void fetchStatus()}
                 />
             </PageLayout>
         );

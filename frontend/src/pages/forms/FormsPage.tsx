@@ -145,7 +145,7 @@ export function FormsPage() {
                 <ErrorState
                     description={initError}
                     icon={FileText}
-                    onAction={() => window.location.reload()}
+                    onAction={() => void fetchForms()}
                 />
             </PageLayout>
         );

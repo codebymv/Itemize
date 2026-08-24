@@ -122,13 +122,9 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
       logger.debug('whiteboard', 'Canvas save completed successfully');
     } catch (error) {
       logger.error('Failed to save canvas data:', error);
-      toast({
-        title: "Error",
-        description: "Could not save your drawing. Please try again.",
-        variant: "destructive"
-      });
+      throw error;
     }
-  }, [whiteboard.id, onUpdate, toast]);
+  }, [whiteboard.id, onUpdate]);
   
   return {
     // Title for display

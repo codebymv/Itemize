@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { ReactSketchCanvas, ReactSketchCanvasRef } from 'react-sketch-canvas';
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { SaveStatus, type SaveState } from '@/components/ui/save-status';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,15 +22,15 @@ import { logger } from '@/lib/logger';
 import { debounce } from 'lodash';
 import { normalizeWhiteboardCanvasData, sanitizeWhiteboardPaths } from '@/lib/whiteboardCanvasData';
 import { attachSketchCanvasPointerFix } from '@/utils/sketchCanvasPointer';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 // TODO: Integrate coordinate normalization for mobile canvas support
 // import { processCanvasDataForLoad, processCanvasDataForSave } from '@/utils/canvasCoordinates';
 
 interface WhiteboardCanvasProps {
   whiteboard: Whiteboard;
   onCanvasChange: (canvasData: unknown) => void;
-  onSave: (data: { canvas_data: unknown; updated_at: string }) => void;
+  onSave: (data: { canvas_data: unknown; updated_at: string }) => Promise<void>;
   whiteboardColor: string;
-  onAutoSave: (canvasData: unknown) => Promise<void>;
   isMobile?: boolean;
   onScaledHeightChange?: (height: number) => void;
   updatedAt?: string;
@@ -58,7 +59,6 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   onCanvasChange,
   onSave,
   whiteboardColor,
-  onAutoSave,
   isMobile = false,
   onScaledHeightChange,
   updatedAt,
@@ -75,14 +75,12 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const [contentScale, setContentScale] = useState(1);
   
   // Auto-save state
-  const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [lastSaveTime, setLastSaveTime] = useState<number>(0);
   const [isCanvasLoaded, setIsCanvasLoaded] = useState(false);
   const [lastLoadedData, setLastLoadedData] = useState<unknown[]>([]);
   const [canvasLoadTime, setCanvasLoadTime] = useState<number>(0);
   const [isIntentionalClear, setIsIntentionalClear] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [saveState, setSaveState] = useState<SaveState>('idle');
 
   // Mobile touch state
   const [isMultiTouch, setIsMultiTouch] = useState(false);
@@ -100,8 +98,12 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   // References for direct DOM manipulation to prevent flashing
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const pendingPathsRef = useRef<unknown[] | null>(null);
-  const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadedWhiteboardIdRef = useRef(whiteboard.id);
+
+  useUnsavedChangesGuard({
+    when: saveState === 'dirty' || saveState === 'saving' || saveState === 'error',
+    message: 'This whiteboard still has unsaved strokes. Leave this page anyway?',
+  });
   
 
   // Load existing canvas data on mount
@@ -129,11 +131,6 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       setLastLoadedData(dataToLoad);
       setCanvasLoadTime(Date.now());
 
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-        autoSaveTimeoutRef.current = null;
-        setAutoSaveTimeout(null);
-      }
     } catch (error) {
       logger.error('Failed to load canvas data; leaving the saved drawing untouched', error);
       toast({
@@ -220,26 +217,30 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     logger.log('🎨 Canvas dimensions updated:', canvasDimensions);
   }, [canvasDimensions]);
 
+  const persistCanvasData = useCallback(async (canvasData: unknown[]) => {
+    try {
+      const sanitizedCanvasData = sanitizeWhiteboardPaths(canvasData);
+      setSaveState('saving');
+      await onSave({ canvas_data: sanitizedCanvasData, updated_at: new Date().toISOString() });
+      if (pendingPathsRef.current === canvasData) pendingPathsRef.current = null;
+      setSaveState('saved');
+    } catch (error) {
+      logger.error('Canvas auto-save failed:', error);
+      setSaveState('error');
+      toast({
+        title: 'Could not save drawing',
+        description: 'Your last strokes are still on the board. Retry when your connection is restored.',
+        variant: 'destructive',
+      });
+    }
+  }, [onSave, toast]);
+
   // Debounced auto-save function (reduced delay for faster saves)
   const debouncedAutoSave = useCallback(
-    debounce(async (canvasData: unknown[]) => {
-      try {
-        const sanitizedCanvasData = sanitizeWhiteboardPaths(canvasData);
-        pendingPathsRef.current = null;
-        setSaveState('saving');
-        await onSave({ canvas_data: sanitizedCanvasData, updated_at: new Date().toISOString() });
-        setSaveState('saved');
-      } catch (error) {
-        logger.error('Canvas auto-save failed:', error);
-        setSaveState('error');
-        toast({
-          title: 'Could not save drawing',
-          description: 'Your last strokes are still on the board and were not overwritten.',
-          variant: 'destructive',
-        });
-      }
+    debounce((canvasData: unknown[]) => {
+      void persistCanvasData(canvasData);
     }, 500),
-    [onSave, toast]
+    [persistCanvasData]
   );
 
   // Handle drawing end with auto-save trigger
@@ -327,6 +328,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         }
         
         pendingPathsRef.current = currentCanvasData;
+        setSaveState('dirty');
         debouncedAutoSave(currentCanvasData);
       } else {
         logger.log('🎨 No canvas changes detected, skipping auto-save');
@@ -334,28 +336,14 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     } catch (error) {
       console.error('Failed to check canvas changes:', error);
     }
-  }, [autoSaveTimeout, debouncedAutoSave, whiteboard.canvas_data, canvasRef, lastLoadedData, canvasLoadTime, isIntentionalClear]);
-
-  useEffect(() => {
-    autoSaveTimeoutRef.current = autoSaveTimeout;
-  }, [autoSaveTimeout]);
+  }, [debouncedAutoSave, whiteboard.canvas_data, canvasRef, lastLoadedData, canvasLoadTime, isIntentionalClear]);
 
   useEffect(() => {
     const persistPending = () => {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
-        autoSaveTimeoutRef.current = null;
-      }
       debouncedAutoSave.cancel();
       const pending = pendingPathsRef.current;
       if (!pending) return;
-      pendingPathsRef.current = null;
-      try {
-        const sanitized = sanitizeWhiteboardPaths(pending);
-        void onSave({ canvas_data: sanitized, updated_at: new Date().toISOString() });
-      } catch (error) {
-        logger.error('Failed to flush pending whiteboard strokes:', error);
-      }
+      void persistCanvasData(pending);
     };
 
     const onHide = () => {
@@ -369,7 +357,12 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       window.removeEventListener('beforeunload', persistPending);
       document.removeEventListener('visibilitychange', onHide);
     };
-  }, [debouncedAutoSave, onSave]);
+  }, [debouncedAutoSave, persistCanvasData]);
+
+  const retrySave = useCallback(() => {
+    const pending = pendingPathsRef.current;
+    if (pending) void persistCanvasData(pending);
+  }, [persistCanvasData]);
 
   // Handle tool change
   const handleToolChange = (tool: 'pen' | 'eraser') => {
@@ -422,7 +415,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     canvasRef.current.clearCanvas();
     pendingPathsRef.current = [];
     try {
+      setSaveState('saving');
       await onSave({ canvas_data: [], updated_at: new Date().toISOString() });
+      pendingPathsRef.current = null;
       setLastLoadedData([]);
       setSaveState('saved');
     } catch (error) {
@@ -763,7 +758,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         </div>
 
         {/* Footer - positioned absolutely at bottom of this container */}
-        {updatedAt && (
+        {(updatedAt || saveState !== 'idle') && (
           <div 
             className="absolute bottom-0 left-0 right-0 px-2 md:px-3 py-1 md:py-2 z-10 border-t bg-card border-border"
             style={{
@@ -777,19 +772,15 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   fontSize: 'inherit'
                 }}
               >
-                {saveState === 'saving' ? (
-                  'Saving…'
-                ) : saveState === 'error' ? (
-                  'Save failed'
-                ) : saveState === 'saved' ? (
-                  'Saved'
-                ) : (
+                {saveState !== 'idle' ? (
+                  <SaveStatus state={saveState} onRetry={retrySave} />
+                ) : updatedAt ? (
                   <>
                     <span className="hidden sm:inline">Last edited: </span>
                     <span className="sm:hidden">Edited: </span>
                     {formatRelativeTime(updatedAt)}
                   </>
-                )}
+                ) : null}
               </div>
               {/* TODO: Re-enable when adding AI functionality to whiteboards
               {aiEnabled && (

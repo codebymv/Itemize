@@ -133,7 +133,7 @@ export function ReputationWidgetsPage() {
                 <ErrorState
                     title="Unable to load widgets"
                     description={initError}
-                    onAction={() => window.location.reload()}
+                    onAction={() => void fetchWidgets()}
                 />
             </PageLayout>
         );

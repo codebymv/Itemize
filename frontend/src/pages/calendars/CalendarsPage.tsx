@@ -159,7 +159,7 @@ export function CalendarsPage() {
                     title="Calendars Not Ready"
                     description={initError}
                     icon={CalendarIcon}
-                    onAction={() => window.location.reload()}
+                    onAction={() => void fetchCalendars()}
                 />
             </PageLayout>
         );

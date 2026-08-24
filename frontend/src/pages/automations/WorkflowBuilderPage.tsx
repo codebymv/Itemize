@@ -56,6 +56,8 @@ import {
 import { PageLayout } from '@/components/layout/PageLayout';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useDirtyState } from '@/hooks/useDirtyState';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import {
   getWorkflow,
   createWorkflow,
@@ -191,6 +193,30 @@ export function WorkflowBuilderPage() {
 
   const isNewWorkflow = !id || id === 'new';
 
+  const workflowDraft = useMemo(() => ({
+    name,
+    description,
+    triggerType,
+    triggerConfig,
+    steps: nodes
+      .filter((node) => node.type === 'step')
+      .map((node) => ({
+        id: node.id,
+        y: node.position.y,
+        stepType: node.data.step_type,
+        stepConfig: node.data.step_config || {},
+      })),
+  }), [description, name, nodes, triggerConfig, triggerType]);
+  const { isDirty, markClean } = useDirtyState({
+    value: workflowDraft,
+    ready: !loading,
+    resetKey: id || 'new',
+  });
+  const { confirmLeave } = useUnsavedChangesGuard({
+    when: isDirty || saving,
+    message: 'This workflow has unsaved changes. Leave this page anyway?',
+  });
+
 
   useEffect(() => {
     if (!organizationId) {
@@ -241,6 +267,7 @@ export function WorkflowBuilderPage() {
           trigger_config: triggerConfig,
           steps,
         });
+        markClean();
         toast({ title: 'Saved', description: 'Workflow saved successfully' });
       }
     } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -252,7 +279,7 @@ export function WorkflowBuilderPage() {
     } finally {
       setSaving(false);
     }
-  }, [organizationId, name, description, triggerType, triggerConfig, nodes, isNewWorkflow, id, navigate, toast]);
+  }, [organizationId, name, description, triggerType, triggerConfig, nodes, isNewWorkflow, id, navigate, toast, markClean]);
 
   const handleToggleActive = useCallback(async () => {
     if (!organizationId || !id) return;
@@ -493,7 +520,7 @@ export function WorkflowBuilderPage() {
             variant="ghost"
             size="icon"
             className="h-9 w-9"
-            onClick={() => navigate('/automations')}
+            onClick={() => { if (confirmLeave()) navigate('/automations'); }}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -514,7 +541,7 @@ export function WorkflowBuilderPage() {
           variant="ghost"
           size="icon"
           className="h-9 w-9"
-          onClick={() => navigate('/automations')}
+          onClick={() => { if (confirmLeave()) navigate('/automations'); }}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -546,7 +573,7 @@ export function WorkflowBuilderPage() {
             size="sm"
             className="bg-blue-600 hover:bg-blue-700 text-white"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || !isDirty}
           >
             <Save className="h-4 w-4 mr-2" />
             {saving ? 'Saving...' : 'Save'}
@@ -582,7 +609,7 @@ export function WorkflowBuilderPage() {
             size="sm"
             className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || !isDirty}
           >
             <Save className="h-4 w-4 mr-2" />
             {saving ? 'Saving...' : 'Save'}

@@ -146,7 +146,7 @@ export function ReputationPage() {
                 <ErrorState
                     title="Unable to load reviews"
                     description={initError}
-                    onAction={() => window.location.reload()}
+                    onAction={() => void fetchData()}
                 />
             </PageLayout>
         );

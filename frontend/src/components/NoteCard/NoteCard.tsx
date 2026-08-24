@@ -16,9 +16,6 @@ import { CategorySelector } from '../CategorySelector';
 
 import { Category } from '@/types';
 import { DeleteDialog } from '../ui/delete-dialog';
-import { updateNoteContent } from '@/services/api';
-import { useAuthState } from '@/contexts/AuthContext';
-import logger from '@/lib/logger';
 
 interface NoteCardProps {
   note: Note;
@@ -46,9 +43,6 @@ const NoteCard: React.FC<NoteCardProps> = ({
   // State for delete confirmation modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   
-  // Get auth token
-  const { token } = useAuthState();
-
   const {
     // Title for display
     noteTitle,
@@ -261,7 +255,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
                   </CollapsibleTrigger>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
+                      <Button variant="ghost" className="h-8 w-8 p-0" aria-label="Note actions">
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -322,14 +316,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
               noteCategory={note.category}
               noteColor={noteDisplayColor}
               noteId={note.id}
-              onAutoSave={async (content: string) => {
-                try {
-                  await updateNoteContent(note.id, content, token);
-                } catch (error) {
-                  logger.error('Granular content update failed:', error);
-                  await onUpdate(note.id, { content, updated_at: new Date().toISOString() });
-                }
-              }}
+              onAutoSave={(content: string) => onUpdate(note.id, { content })}
               updatedAt={note.updated_at}
             />
           </div>

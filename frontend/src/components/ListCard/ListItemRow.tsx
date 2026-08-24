@@ -72,6 +72,7 @@ const ListItemRow: React.FC<ListItemRowProps> = ({
             variant="ghost"
             onClick={handleEditItem}
             className="h-8 w-8 p-0"
+            aria-label={`Save changes to ${item.text}`}
           >
             <Check className="h-4 w-4" />
           </Button>
@@ -80,6 +81,7 @@ const ListItemRow: React.FC<ListItemRowProps> = ({
             variant="ghost"
             onClick={() => setEditingItemText('')}
             className="h-8 w-8 p-0"
+            aria-label={`Cancel editing ${item.text}`}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -90,14 +92,19 @@ const ListItemRow: React.FC<ListItemRowProps> = ({
           <div 
             {...attributes}
             {...listeners}
-            className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing mr-2 p-1"
+            className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity cursor-grab active:cursor-grabbing mr-2 p-1"
             data-sortable-handle
+            aria-label={`Reorder ${item.text}`}
           >
             <GripVertical className="h-4 w-4 text-gray-400 dark:text-gray-300" data-lucide="grip-vertical" />
           </div>
           
-          <div 
-            className="flex items-center flex-grow cursor-pointer"
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={item.completed}
+            aria-label={`${item.completed ? 'Mark incomplete' : 'Mark complete'}: ${item.text}`}
+            className="flex items-center flex-grow min-w-0 cursor-pointer text-left rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             onClick={() => toggleItemCompleted(item.id)}
           >
             <div 
@@ -110,13 +117,14 @@ const ListItemRow: React.FC<ListItemRowProps> = ({
             <span className={`${item.completed ? 'line-through text-gray-400 dark:text-gray-300' : ''}`} style={{ fontFamily: '"Raleway", sans-serif' }}>
               {item.text}
             </span>
-          </div>
-          <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
+          </button>
+          <div className="flex opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity">
             <Button
               size="sm"
               variant="ghost"
               onClick={() => startEditingItem(item)}
               className="h-8 w-8 p-0"
+              aria-label={`Edit ${item.text}`}
             >
               <Edit3 className="h-4 w-4" />
             </Button>
@@ -125,6 +133,7 @@ const ListItemRow: React.FC<ListItemRowProps> = ({
               variant="ghost"
               onClick={() => removeItem(item.id)}
               className="h-8 w-8 p-0 text-red-600"
+              aria-label={`Delete ${item.text}`}
             >
               <Trash2 className="h-4 w-4" />
             </Button>

@@ -43,6 +43,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import {
     deleteFormSubmission,
     getForm,
@@ -186,6 +187,19 @@ export default function FormEditorPage() {
     const [loadingSubmissions, setLoadingSubmissions] = useState(false);
     const [submissionToDelete, setSubmissionToDelete] = useState<FormSubmission | null>(null);
     const [deletingSubmission, setDeletingSubmission] = useState(false);
+
+    const settingsDirty = useMemo(() => Boolean(
+        form && settings && JSON.stringify(settings) !== JSON.stringify(settingsDraft(form)),
+    ), [form, settings]);
+    const fieldsDirty = useMemo(() => Boolean(
+        form && JSON.stringify(apiFields(fields)) !== JSON.stringify(
+            apiFields(editableFields(form.fields ?? [])),
+        ),
+    ), [fields, form]);
+    const { confirmLeave } = useUnsavedChangesGuard({
+        when: settingsDirty || fieldsDirty || savingSettings || savingFields,
+        message: 'This form has unsaved changes. Leave without saving them?',
+    });
 
     const loadForm = useCallback(async () => {
         if (organizationLoading) return;
@@ -448,7 +462,9 @@ export default function FormEditorPage() {
             variant="ghost"
             size="icon"
             aria-label="Back to forms"
-            onClick={() => navigate('/forms')}
+            onClick={() => {
+                if (confirmLeave()) navigate('/forms');
+            }}
         >
             <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -471,7 +487,7 @@ export default function FormEditorPage() {
             <Button
                 variant={form.status === 'published' ? 'outline' : 'default'}
                 onClick={() => void changeStatus()}
-                disabled={changingStatus}
+                disabled={changingStatus || settingsDirty || fieldsDirty}
             >
                 {changingStatus && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 {form.status === 'published' ? 'Unpublish' : 'Publish'}
@@ -681,7 +697,10 @@ export default function FormEditorPage() {
                                     )}
 
                                     <div className="flex justify-end">
-                                        <Button onClick={() => void saveSettings()} disabled={savingSettings}>
+                                        <Button
+                                            onClick={() => void saveSettings()}
+                                            disabled={savingSettings || !settingsDirty}
+                                        >
                                             {savingSettings
                                                 ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                                 : <Save className="h-4 w-4 mr-2" />}
@@ -840,7 +859,10 @@ export default function FormEditorPage() {
                                         {fieldValidationError && (
                                             <p className="text-sm text-destructive">{fieldValidationError}</p>
                                         )}
-                                        <Button onClick={() => void saveFields()} disabled={savingFields}>
+                                        <Button
+                                            onClick={() => void saveFields()}
+                                            disabled={savingFields || !fieldsDirty}
+                                        >
                                             {savingFields
                                                 ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                                 : <Save className="h-4 w-4 mr-2" />}

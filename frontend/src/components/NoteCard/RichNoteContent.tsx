@@ -9,9 +9,12 @@ import TextStyle from '@tiptap/extension-text-style';
 import { Extension } from '@tiptap/core';
 import { Sparkles } from 'lucide-react';
 import { RichTextToolbar } from './RichTextToolbar';
+import { SaveStatus } from '@/components/ui/save-status';
 import { useNoteSuggestions } from '../../hooks/use-note-suggestions';
 import { formatRelativeTime } from '../../utils/timeUtils';
 import { useAISuggest } from '@/context/AISuggestContext';
+import { useAutosave } from '@/hooks/useAutosave';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { storage } from '@/lib/storage';
 import logger from '@/lib/logger';
 import { migrateNoteContentToHtml, shouldApplyExternalNoteHtml } from './noteEditorHtml';
@@ -219,14 +222,12 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
   editContent,
   setEditContent,
   setIsEditingContent,
-  handleEditContent,
   noteCategory,
   noteColor = '#FFFFE0',
   noteId,
   onAutoSave,
   updatedAt
 }) => {
-  const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isUpdatingFromProps = useRef(false);
   const measureRef = useRef<HTMLDivElement>(null);
   
@@ -238,6 +239,24 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
   
   // Use global AI enabled state from context
   const { aiEnabled } = useAISuggest();
+
+  const {
+    state: saveState,
+    flush: flushAutosave,
+    retry: retryAutosave,
+    hasUnsavedChanges,
+  } = useAutosave({
+    value: editContent,
+    savedValue: content,
+    onSave: onAutoSave,
+    enabled: isEditingContent,
+    delay: 1000,
+  });
+
+  useUnsavedChangesGuard({
+    when: hasUnsavedChanges || saveState === 'saving',
+    message: 'This note still has unsaved changes. Leave this page anyway?',
+  });
 
   // Initialize editor with extensions
   const editor = useEditor({
@@ -326,15 +345,6 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
         logger.debug('tiptap', 'Auto-enabling editing mode because content changed');
         setIsEditingContent(true);
       }
-      
-      if (autosaveTimeoutRef.current) {
-        clearTimeout(autosaveTimeoutRef.current);
-      }
-      
-      autosaveTimeoutRef.current = setTimeout(() => {
-        logger.debug('tiptap', 'Auto-saving rich note content...');
-        void onAutoSave(htmlContent);
-      }, 1000);
     },
   });
 
@@ -561,11 +571,9 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
           }
         };
         globalAutocompleteStorage.handleSave = () => {
-          // Clear autosave timeout since we're manually saving
-          if (autosaveTimeoutRef.current) {
-            clearTimeout(autosaveTimeoutRef.current);
-          }
-          handleEditContent();
+          void flushAutosave().then((saved) => {
+            if (saved) setIsEditingContent(false);
+          });
         };
         
         // Also update local storage for backward compatibility (but this might get reset)
@@ -592,7 +600,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
       // Update global storage immediately (no need to wait for local storage)
       updateStorage();
     }
-  }, [editor, currentAutocomplete, fetchAISuggestions, handleEditContent]); // Removed isEditingContent from dependencies
+  }, [editor, currentAutocomplete, fetchAISuggestions, flushAutosave, setIsEditingContent]); // Removed isEditingContent from dependencies
 
   // Simplified debug logging for note autocomplete
   useEffect(() => {
@@ -659,12 +667,9 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
         !editorElement.contains(event.target as Node) &&
         (!toolbarElement || !toolbarElement.contains(event.target as Node))
       ) {
-        if (autosaveTimeoutRef.current) {
-          clearTimeout(autosaveTimeoutRef.current);
-          autosaveTimeoutRef.current = null;
-        }
-        void onAutoSave(editor.getHTML());
-        setIsEditingContent(false);
+        void flushAutosave().then((saved) => {
+          if (saved) setIsEditingContent(false);
+        });
       }
     };
 
@@ -672,17 +677,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isEditingContent, editor, onAutoSave, setIsEditingContent]);
-
-  // Cleanup autosave timeout on component unmount to prevent stale calls
-  useEffect(() => {
-    return () => {
-      if (autosaveTimeoutRef.current) {
-        logger.debug('tiptap', 'Cleaning up autosave timeout on component unmount');
-        clearTimeout(autosaveTimeoutRef.current);
-      }
-    };
-  }, []);
+  }, [isEditingContent, editor, flushAutosave, setIsEditingContent]);
 
   if (!editor) {
     return <div className="p-4">Loading editor...</div>;
@@ -747,8 +742,8 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
         </div>
       </div>
 
-      {/* Footer with Last edited and AI sparkle - Always visible at bottom */}
-      {updatedAt && (
+      {/* Footer with persistence state and last edited time */}
+      {(updatedAt || saveState !== 'idle') && (
         <div
           className="absolute bottom-0 left-0 right-0 flex-shrink-0 px-2 md:px-3 py-1 md:py-2"
           style={{
@@ -758,17 +753,21 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
           }}
         >
           <div className="flex items-center justify-between">
-            <div
-              className="text-muted-foreground truncate text-xs md:text-xs"
-              style={{
-                fontFamily: '"Raleway", sans-serif',
-                fontSize: 'inherit'
-              }}
-            >
-              <span className="hidden sm:inline">Last edited: </span>
-              <span className="sm:hidden">Edited: </span>
-              {formatRelativeTime(updatedAt)}
-            </div>
+            {saveState !== 'idle' ? (
+              <SaveStatus state={saveState} onRetry={() => { void retryAutosave(); }} />
+            ) : updatedAt ? (
+              <div
+                className="text-muted-foreground truncate text-xs md:text-xs"
+                style={{
+                  fontFamily: '"Raleway", sans-serif',
+                  fontSize: 'inherit'
+                }}
+              >
+                <span className="hidden sm:inline">Last edited: </span>
+                <span className="sm:hidden">Edited: </span>
+                {formatRelativeTime(updatedAt)}
+              </div>
+            ) : null}
             {aiEnabled && (
               <div title="AI-powered suggestions enabled" className="flex-shrink-0 ml-1 md:ml-2">
                 <Sparkles 

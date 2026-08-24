@@ -181,7 +181,7 @@ const handleDuplicate = async (id: number) => {
                 <ErrorState
                     description={initError}
                     icon={Layout}
-                    onAction={() => window.location.reload()}
+                    onAction={() => void fetchPages()}
                 />
             </PageLayout>
         );

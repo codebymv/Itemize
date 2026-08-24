@@ -221,7 +221,7 @@ export function PipelinesPage() {
           title="CRM Not Ready"
           description={initError}
           icon={TrendingUp}
-          onAction={() => window.location.reload()}
+          onAction={() => void fetchPipeline()}
         />
       </PageLayout>
     );

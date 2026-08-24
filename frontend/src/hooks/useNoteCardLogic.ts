@@ -1,8 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Note, Category } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { updateNoteTitle, updateNoteCategory, updateNoteContent } from '@/services/api';
 import { useCardTitleEditing } from '@/hooks/useCardTitleEditing';
 import { useCardColorManagement } from '@/hooks/useCardColorManagement';
 import { useCardCategoryManagement } from '@/hooks/useCardCategoryManagement';
@@ -20,8 +18,6 @@ interface UseNoteCardLogicProps {
 
 export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onToggleCollapsed, updateCategory, addCategory }: UseNoteCardLogicProps) => {
   const { toast } = useToast();
-  const { token } = useAuth();
-  
   // Collapsible state - use external collapsible state if provided, otherwise use internal state
   const [internalCollapsibleOpen, setInternalCollapsibleOpen] = useState(true);
   
@@ -52,13 +48,7 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
     compareTitle: note.title,
     onSave: async (nextTitle) => {
       if (nextTitle !== note.title) {
-        try {
-          await updateNoteTitle(note.id, nextTitle, token);
-          logger.debug('note', 'Granular title update successful');
-        } catch (error) {
-          logger.error('Granular title update failed, falling back:', error);
-          await onUpdate(note.id, { title: nextTitle });
-        }
+        await onUpdate(note.id, { title: nextTitle });
       }
     }
   });
@@ -66,16 +56,10 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
   // Content editing handlers - updates note.content using granular API
   const handleEditContent = useCallback(async () => {
     if (editContent !== note.content) {
-      try {
-        await updateNoteContent(note.id, editContent, token);
-        logger.debug('note', 'Granular content update successful');
-      } catch (error) {
-        logger.error('Granular content update failed, falling back:', error);
-        await onUpdate(note.id, { content: editContent, updated_at: new Date().toISOString() });
-      }
+      await onUpdate(note.id, { content: editContent });
     }
     setIsEditingContent(false);
-  }, [editContent, note.content, note.id, onUpdate, token]);
+  }, [editContent, note.content, note.id, onUpdate]);
   
   // Note operations
   const handleDeleteNote = useCallback(async () => {
@@ -105,22 +89,10 @@ export const useNoteCardLogic = ({ note, onUpdate, onDelete, isCollapsed, onTogg
     handleUpdateCategoryColor
   } = useCardCategoryManagement({
     onUpdateCategory: async (category) => {
-      try {
-        await updateNoteCategory(note.id, category, token);
-        logger.debug('note', 'Granular category update successful');
-      } catch (error) {
-        logger.error('Granular category update failed, falling back:', error);
-        await onUpdate(note.id, { category });
-      }
+      await onUpdate(note.id, { category });
     },
     onAddCustomCategory: async (category) => {
-      try {
-        await updateNoteCategory(note.id, category, token);
-        logger.debug('note', 'Granular custom category update successful');
-      } catch (error) {
-        logger.error('Granular custom category update failed, falling back:', error);
-        await onUpdate(note.id, { category });
-      }
+      await onUpdate(note.id, { category });
     },
     onUpdateCategoryColor: (categoryName, newColor) =>
       updateCategory(categoryName, { color_value: newColor }),

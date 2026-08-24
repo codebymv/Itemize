@@ -122,7 +122,7 @@ export function SegmentsPage() {
                 <ErrorState
                     title="Unable to load segments"
                     description={initError}
-                    onAction={() => window.location.reload()}
+                    onAction={() => void fetchSegments()}
                 />
             </PageLayout>
         );

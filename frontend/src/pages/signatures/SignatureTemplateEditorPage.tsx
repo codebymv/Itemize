@@ -10,6 +10,8 @@ import { Separator } from '@/components/ui/separator';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/hooks/use-toast';
+import { useDirtyState } from '@/hooks/useDirtyState';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import {
   SignatureTemplate,
   SignatureTemplateRole,
@@ -58,6 +60,22 @@ export default function SignatureTemplateEditorPage() {
     () => roles.map((role) => role.role_name).filter(Boolean),
     [roles]
   );
+  const templateDraft = useMemo(() => ({
+    title,
+    description,
+    message,
+    roles,
+    fields,
+  }), [description, fields, message, roles, title]);
+  const { isDirty, markClean } = useDirtyState({
+    value: templateDraft,
+    ready: Boolean(template) && !loading,
+    resetKey: id ?? 'template',
+  });
+  useUnsavedChangesGuard({
+    when: isDirty,
+    message: 'This signature template has unsaved changes. Leave without saving them?',
+  });
 
   const handleSave = async () => {
     if (!template) return;
@@ -71,6 +89,7 @@ export default function SignatureTemplateEditorPage() {
         fields
       });
       setTemplate(updated);
+      markClean();
       toast({ title: 'Template updated' });
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to save template', variant: 'destructive' });
@@ -113,13 +132,13 @@ export default function SignatureTemplateEditorPage() {
       title="EDIT SIGNATURE TEMPLATE"
       icon={<FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />}
       headerActions={
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSave} disabled={loading || !template}>
+        <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSave} disabled={loading || !template || !isDirty}>
           <Save className="h-4 w-4 mr-2" />
           Save
         </Button>
       }
       mobileActions={
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white flex-1" onClick={handleSave} disabled={loading || !template}>
+        <Button className="bg-blue-600 hover:bg-blue-700 text-white flex-1" onClick={handleSave} disabled={loading || !template || !isDirty}>
           <Save className="h-4 w-4 mr-2" />
           Save
         </Button>
