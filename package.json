@@ -47,5 +47,8 @@
     "@nestjs/graphql": {
       "ws@8.20.1": "8.21.1"
     }
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.62.4"
   }
 }
