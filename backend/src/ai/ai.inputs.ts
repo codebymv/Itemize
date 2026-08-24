@@ -7,12 +7,18 @@ export class ListSuggestionsInput {
 
   @Field(() => [String])
   existingItems: string[];
+
+  @Field(() => Boolean, { nullable: true })
+  forceRefresh?: boolean;
 }
 
 @InputType()
 export class NoteSuggestionsInput {
   @Field()
   content: string;
+
+  @Field(() => Boolean, { nullable: true })
+  forceRefresh?: boolean;
 }
 
 @InputType()

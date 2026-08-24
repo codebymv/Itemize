@@ -45,6 +45,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
     isLoading: isLoadingSuggestions,
     error: suggestionError,
     debouncedFetchSuggestions,
+    forceRefreshSuggestions,
     getNextSuggestion,
     getSuggestionForInput,
     clearSuggestions,
@@ -279,8 +280,10 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
       setAiEnabled(true); // Auto-enable if disabled
       // Need to fetch suggestions after enabling
       setTimeout(() => debouncedFetchSuggestions(), 100);
-    } else if (currentSuggestion) {
+    } else if (currentSuggestion && suggestions.length > 1) {
       getNextSuggestion();
+    } else if (currentSuggestion) {
+      forceRefreshSuggestions();
     } else {
       // If no current suggestion, try to fetch new ones
       debouncedFetchSuggestions();

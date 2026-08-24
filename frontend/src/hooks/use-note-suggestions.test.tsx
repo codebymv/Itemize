@@ -76,4 +76,21 @@ describe('useNoteSuggestions request ordering', () => {
     expect(result.current.error).toBe('AI suggestions are temporarily unavailable');
     expect(result.current.currentSuggestion).toBeNull();
   });
+
+  it('explains an empty provider response instead of failing silently', async () => {
+    vi.mocked(fetchNoteSuggestions).mockResolvedValue({ suggestions: [] });
+
+    const { result } = renderHook(() => useNoteSuggestions({
+      enabled: true,
+      noteContent: 'The launch plan needs a clear owner and timeline',
+    }));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+      await Promise.resolve();
+    });
+
+    expect(result.current.error).toBe('No useful suggestion yet. Add more context and try again.');
+    expect(result.current.currentSuggestion).toBeNull();
+  });
 });

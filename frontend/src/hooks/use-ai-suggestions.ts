@@ -92,7 +92,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
   }, [listTitle, itemsKey]);
 
   // Fetch suggestions from API
-  const fetchSuggestions = useCallback(async () => {
+  const fetchSuggestions = useCallback(async (forceRefresh = false) => {
     // Cancel any pending debounced calls
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
@@ -115,7 +115,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
     }
     
     // Check if we have cached suggestions first
-    const cachedSuggestions = getCachedSuggestions();
+    const cachedSuggestions = forceRefresh ? null : getCachedSuggestions();
     if (cachedSuggestions) {
       if (requestId !== requestSequence.current) return;
       logger.debug('ai-suggestions', 'Using cached suggestions for:', listTitle);
@@ -129,7 +129,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
     const now = Date.now();
     const timeSinceLastRequest = now - lastRequestTime.current;
     
-    if (timeSinceLastRequest < API_REQUEST_THROTTLE) {
+    if (!forceRefresh && timeSinceLastRequest < API_REQUEST_THROTTLE) {
       setIsLoading(true);
       
       // Delay the call until we're past the throttle window
@@ -150,6 +150,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       const response = await fetchListSuggestions(
         listTitle,
         stableItems.filter(item => item.trim() !== ''),
+        forceRefresh,
       );
 
       if (requestId !== requestSequence.current) return;
@@ -171,6 +172,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       } else {
         setSuggestions([]);
         setCurrentSuggestion(null);
+        setError('No useful suggestion yet. Add more context and try again.');
       }
     } catch (err: unknown) {
       if (requestId !== requestSequence.current) return;
@@ -201,6 +203,14 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
     debounceTimer.current = setTimeout(() => {
       fetchSuggestions();
     }, DEBOUNCE_DELAY);
+  }, [fetchSuggestions]);
+
+  const forceRefreshSuggestions = useCallback(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+      debounceTimer.current = null;
+    }
+    void fetchSuggestions(true);
   }, [fetchSuggestions]);
 
   // Get a suggestion for the current input
@@ -302,6 +312,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
     error,
     debouncedFetchSuggestions,
     fetchSuggestions,
+    forceRefreshSuggestions,
     getSuggestionForInput,
     getNextSuggestion,
     clearSuggestions,

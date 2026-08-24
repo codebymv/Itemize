@@ -70,7 +70,11 @@ describe('AiProviderService', () => {
       cached: true,
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await expect(service.listSuggestions('Groceries', ['Bread'], true)).resolves.toEqual({
+      suggestions: ['Milk', 'Eggs', 'Butter'],
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     const request = fetchMock.mock.calls[0][1] as RequestInit;
     expect(request.headers).toEqual(expect.objectContaining({
       Authorization: 'Bearer test-openai-key',

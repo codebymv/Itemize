@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { WhiteboardCardProps, Category } from '../../types';
 import { WhiteboardCanvas } from './WhiteboardCanvas';
 import { CategorySelector } from '../CategorySelector';
 import { DeleteDialog } from '../ui/delete-dialog';
+import { WorkspaceContentCard } from '../workspace/WorkspaceContentCard';
 
 
 
@@ -125,10 +126,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
       className="w-full"
       style={{ '--whiteboard-color': whiteboardDisplayColor } as React.CSSProperties}
     >
-      <Card 
-        className="w-full shadow-sm h-full flex flex-col" 
-        style={{ border: 'none' }}
-      >
+      <WorkspaceContentCard className="h-full flex flex-col">
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center">
             {isEditing ? (
@@ -290,7 +288,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
             
           </div>
         </CollapsibleContent>
-      </Card>
+      </WorkspaceContentCard>
 
       {/* Delete confirmation modal */}
       <DeleteDialog

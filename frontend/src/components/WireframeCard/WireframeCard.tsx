@@ -3,7 +3,7 @@
  * Card wrapper for React Flow based wireframe diagrams
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import { WireframeCardProps } from '@/types';
 import WireframeCanvas from './WireframeCanvas';
 import { CategorySelector } from '../CategorySelector';
 import { DeleteDialog } from '../ui/delete-dialog';
+import { WorkspaceContentCard } from '../workspace/WorkspaceContentCard';
 
 const WireframeCard: React.FC<WireframeCardProps> = ({
   wireframe,
@@ -118,10 +119,7 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
       className="w-full h-full flex flex-col"
       style={{ '--wireframe-color': wireframeDisplayColor } as React.CSSProperties}
     >
-      <Card 
-        className="w-full shadow-sm h-full flex flex-col" 
-        style={{ border: 'none' }}
-      >
+      <WorkspaceContentCard className="h-full flex flex-col">
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center">
             {isEditing ? (
@@ -272,7 +270,7 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
             />
           </div>
         </CollapsibleContent>
-      </Card>
+      </WorkspaceContentCard>
 
       {/* Delete confirmation modal */}
       <DeleteDialog

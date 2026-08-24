@@ -74,4 +74,47 @@ describe('useAISuggestions request ordering', () => {
     expect(result.current.error).toBe('Suggestion limit reached');
     expect(result.current.currentSuggestion).toBeNull();
   });
+
+  it('bypasses the cache when another suggestion is explicitly requested', async () => {
+    vi.mocked(fetchListSuggestions)
+      .mockResolvedValueOnce({ suggestions: ['Confirm launch ownership'] })
+      .mockResolvedValueOnce({ suggestions: ['Schedule the launch review'] });
+
+    const { result } = renderHook(() => useAISuggestions({
+      enabled: true,
+      listTitle: 'Launch',
+      existingItems: ['Confirm pricing'],
+    }));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+      await Promise.resolve();
+    });
+    expect(result.current.currentSuggestion).toBe('Confirm launch ownership');
+
+    await act(async () => {
+      result.current.forceRefreshSuggestions();
+      await Promise.resolve();
+    });
+
+    expect(fetchListSuggestions).toHaveBeenCalledTimes(2);
+    expect(fetchListSuggestions).toHaveBeenLastCalledWith('Launch', ['Confirm pricing'], true);
+    expect(result.current.currentSuggestion).toBe('Schedule the launch review');
+  });
+
+  it('explains an empty provider response instead of silently disappearing', async () => {
+    vi.mocked(fetchListSuggestions).mockResolvedValue({ suggestions: [] });
+    const { result } = renderHook(() => useAISuggestions({
+      enabled: true,
+      listTitle: 'Launch',
+      existingItems: ['Confirm pricing'],
+    }));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+      await Promise.resolve();
+    });
+
+    expect(result.current.error).toBe('No useful suggestion yet. Add more context and try again.');
+  });
 });

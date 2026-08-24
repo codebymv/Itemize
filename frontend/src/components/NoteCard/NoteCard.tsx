@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import { CategorySelector } from '../CategorySelector';
 
 import { Category } from '@/types';
 import { DeleteDialog } from '../ui/delete-dialog';
+import { WorkspaceContentCard } from '../workspace/WorkspaceContentCard';
 
 interface NoteCardProps {
   note: Note;
@@ -111,7 +112,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isEditing, handleEditTitle]);
+  }, [isEditing, handleEditTitle, titleEditRef]);
 
   const { toast } = useToast();
   const [currentColorPreview, setCurrentColorPreview] = React.useState(note.color_value || '#FFFFE0');
@@ -127,17 +128,6 @@ const NoteCard: React.FC<NoteCardProps> = ({
   const handleUpdateCategoryColor = async (categoryName: string, newColor: string) => {
     await updateCategory(categoryName, { color_value: newColor });
   };
-
-  // Debug logging for note colors
-  React.useEffect(() => {
-    console.log('🎨 Note Color Debug:', {
-      noteId: note.id,
-      noteColorValue: note.color_value,
-      currentColorPreview,
-      noteDisplayColor,
-      isEditingContent
-    });
-  }, [note.id, note.color_value, currentColorPreview, noteDisplayColor, isEditingContent]);
 
   return (
     <Collapsible
@@ -159,7 +149,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
       className="w-full"
       style={{ '--note-color': noteDisplayColor } as React.CSSProperties}
     >
-      <Card className="w-full shadow-sm h-full flex flex-col" style={{ border: 'none' }}>
+      <WorkspaceContentCard className="h-full flex flex-col">
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center">
             {isEditing ? (
@@ -321,7 +311,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
             />
           </div>
         </CollapsibleContent>
-      </Card>
+      </WorkspaceContentCard>
 
       {/* Delete confirmation modal */}
       <DeleteDialog

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { useListCardLogic } from '@/hooks/useListCardLogic';
 import { ListCardProps, Category } from '@/types';
@@ -9,6 +9,7 @@ import { ListItemRow } from './ListItemRow';
 import { ListProgressBar } from './ListProgressBar';
 import { ListItemAdd } from './ListItemAdd';
 import { DeleteDialog } from '../ui/delete-dialog';
+import { WorkspaceContentCard } from '../workspace/WorkspaceContentCard';
 import {
   DndContext,
   closestCenter,
@@ -174,7 +175,7 @@ const ListCard: React.FC<ListCardProps> = ({
       className="w-full"
       style={{ '--list-color': listDisplayColor } as React.CSSProperties}
     >
-      <Card className="w-full border shadow-sm">
+      <WorkspaceContentCard>
         <ListCardHeader
           title={list.title}
           listColor={list.color_value} // Use list.color_value
@@ -266,7 +267,7 @@ const ListCard: React.FC<ListCardProps> = ({
             />
           </CardContent>
         </CollapsibleContent>
-      </Card>
+      </WorkspaceContentCard>
 
       {/* Delete confirmation modal */}
       <DeleteDialog

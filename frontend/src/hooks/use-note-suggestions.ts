@@ -252,7 +252,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       lastApiCall.current = Date.now();
       lastTriggerContext.current = context;
       
-      const response = await fetchNoteSuggestions(context);
+      const response = await fetchNoteSuggestions(context, forceRefresh);
 
       if (requestId !== requestSequence.current) return;
       if (response.error) {
@@ -276,6 +276,11 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
         setSuggestions(suggestions);
         setContinuations(continuations);
         setCurrentSuggestion(suggestions[0] || continuations[0] || null);
+        setError(
+          suggestions.length > 0
+            ? null
+            : 'No useful suggestion yet. Add more context and try again.',
+        );
         
         // Cache results
         cacheSuggestions(context, suggestions, continuations);

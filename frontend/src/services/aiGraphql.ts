@@ -50,10 +50,11 @@ export const askMarketingChat = async (
 export const fetchListSuggestions = async (
   listTitle: string,
   existingItems: string[],
+  forceRefresh = false,
 ): Promise<AiSuggestionsResult> => {
   const data = await graphqlMutationRequest<
     { listSuggestions: AiSuggestionsResult },
-    { input: { listTitle: string; existingItems: string[] } }
+    { input: { listTitle: string; existingItems: string[]; forceRefresh: boolean } }
   >(
     `mutation ListSuggestions($input: ListSuggestionsInput!) {
       listSuggestions(input: $input) {
@@ -62,17 +63,18 @@ export const fetchListSuggestions = async (
         error
       }
     }`,
-    { input: { listTitle, existingItems } },
+    { input: { listTitle, existingItems, forceRefresh } },
   );
   return data.listSuggestions;
 };
 
 export const fetchNoteSuggestions = async (
   content: string,
+  forceRefresh = false,
 ): Promise<AiSuggestionsResult> => {
   const data = await graphqlMutationRequest<
     { noteSuggestions: AiSuggestionsResult },
-    { input: { content: string } }
+    { input: { content: string; forceRefresh: boolean } }
   >(
     `mutation NoteSuggestions($input: NoteSuggestionsInput!) {
       noteSuggestions(input: $input) {
@@ -81,7 +83,7 @@ export const fetchNoteSuggestions = async (
         error
       }
     }`,
-    { input: { content } },
+    { input: { content, forceRefresh } },
   );
   return data.noteSuggestions;
 };

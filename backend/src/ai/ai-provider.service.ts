@@ -124,13 +124,13 @@ export class AiProviderService {
     }
   }
 
-  async listSuggestions(rawTitle: string, rawItems: string[]): Promise<AiSuggestionsPayload> {
+  async listSuggestions(rawTitle: string, rawItems: string[], forceRefresh = false): Promise<AiSuggestionsPayload> {
     const title = this.text(rawTitle, 160, 'listTitle');
     if (!Array.isArray(rawItems) || rawItems.length > 100) this.invalid('existingItems');
     const items = rawItems.slice(-50).map((item) => this.text(item, 160, 'existingItems'));
     if (items.length === 0) return { suggestions: [] };
     const key = this.cacheKey('list', `${this.cacheNamespace()}\n${title}\n${items.join('\n')}`);
-    const cached = this.cached(key);
+    const cached = forceRefresh ? null : this.cached(key);
     if (cached) return { suggestions: cached, cached: true };
     if (this.providers.length === 0) return { suggestions: [], error: 'Missing API key' };
     try {
@@ -148,12 +148,12 @@ export class AiProviderService {
     }
   }
 
-  async noteSuggestions(rawContent: string): Promise<AiSuggestionsPayload> {
+  async noteSuggestions(rawContent: string, forceRefresh = false): Promise<AiSuggestionsPayload> {
     const fullContent = this.text(rawContent, 20_000, 'content');
     const content = fullContent.slice(-1_200);
     if (content.length < 10) return { suggestions: [] };
     const key = this.cacheKey('note', `${this.cacheNamespace()}\n${content}`);
-    const cached = this.cached(key);
+    const cached = forceRefresh ? null : this.cached(key);
     if (cached) return { suggestions: cached, cached: true };
     if (this.providers.length === 0) return { suggestions: [], error: 'Missing API key' };
     try {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { VaultCardProps, Category } from '@/types';
 import { CategorySelector } from '../CategorySelector';
 import { VaultItemRow } from './VaultItemRow';
 import { DeleteDialog } from '../ui/delete-dialog';
+import { WorkspaceContentCard } from '../workspace/WorkspaceContentCard';
 import {
   Dialog,
   DialogContent,
@@ -275,7 +276,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isEditing, handleEditTitle]);
+  }, [isEditing, handleEditTitle, titleEditRef]);
 
   return (
     <Collapsible
@@ -293,10 +294,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
       className="w-full h-full flex flex-col"
       style={{ '--vault-color': vaultDisplayColor } as React.CSSProperties}
     >
-      <Card 
-        className="w-full shadow-sm h-full flex flex-col overflow-hidden" 
-        style={{ border: 'none' }}
-      >
+      <WorkspaceContentCard className="h-full flex flex-col overflow-hidden">
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center">
             {isEditing ? (
@@ -616,7 +614,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
             </div>
           </CardContent>
         </CollapsibleContent>
-      </Card>
+      </WorkspaceContentCard>
 
       {/* Delete Confirmation Modal */}
       <DeleteDialog

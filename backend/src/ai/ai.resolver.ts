@@ -32,7 +32,7 @@ export class AiResolver {
     @Context() context: { req: Request },
   ) {
     this.consumeWorkspaceSuggestion(context.req);
-    return this.provider.listSuggestions(input.listTitle, input.existingItems);
+    return this.provider.listSuggestions(input.listTitle, input.existingItems, input.forceRefresh);
   }
 
   @CsrfProtected()
@@ -42,7 +42,7 @@ export class AiResolver {
     @Context() context: { req: Request },
   ) {
     this.consumeWorkspaceSuggestion(context.req);
-    return this.provider.noteSuggestions(input.content);
+    return this.provider.noteSuggestions(input.content, input.forceRefresh);
   }
 
   @Public()
