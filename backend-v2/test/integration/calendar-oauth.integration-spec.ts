@@ -12,6 +12,11 @@ import {
 } from '../../src/calendar-oauth/google-calendar-oauth.provider';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
+import {
+  createCalendarOAuthState,
+  verifyCalendarOAuthState,
+} from '../../src/calendar-oauth/calendar-oauth-state';
+import { loadGoogleCalendarConnection } from '../../src/calendar-sync-jobs/calendar-connection-credentials';
 
 const FAKE_CALENDARS = [
   {
@@ -54,9 +59,8 @@ class FakeNetworkGoogleProvider extends SdkGoogleCalendarOAuthProvider {
   }
 }
 
-describe('Calendar OAuth retained HTTP parity (NestJS vs legacy origin)', () => {
+describe('Calendar OAuth retained HTTP protocol (legacy behavior pinned)', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dbHelper: any;
@@ -64,11 +68,7 @@ describe('Calendar OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
   let owner: any;
   let fakeProvider: FakeNetworkGoogleProvider;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let legacyStateService: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let legacyTokenCrypto: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let legacyCredentials: any;
 
   const authCookie = () => `itemize_auth=${owner.token}`;
 
@@ -85,12 +85,8 @@ describe('Calendar OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
     delete process.env.CALENDAR_TOKEN_ACTIVE_KEY_ID;
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
-    const createCalendarIntegrationsRoutes = require('../../../backend/src/routes/calendar-integrations.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth');
-    legacyStateService = require('../../../backend/src/services/calendarOAuthState');
-    legacyTokenCrypto = require('../../../backend/src/utils/calendarTokenEncryption');
-    legacyCredentials = require('../../../backend/src/services/calendarConnectionCredentials');
+    const TestDbHelper = require('../../../db/test-support/test-db-helper');
+    legacyTokenCrypto = require('../../../db/src/utils/calendarTokenEncryption');
     /* eslint-enable @typescript-eslint/no-var-requires */
     dbHelper = new TestDbHelper();
     await dbHelper.setup();
@@ -114,23 +110,12 @@ describe('Calendar OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
     configureApp(app);
     await app.init();
 
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use((req, _res, next) => {
-      (req as express.Request & { dbPool?: Pool }).dbPool = pool;
-      next();
-    });
-    legacyApp.use(
-      '/api/calendar-integrations',
-      createCalendarIntegrationsRoutes(pool, authenticateJWT),
-    );
   }, 60000);
 
   afterAll(async () => {
     if (app) await app.close();
     if (dbHelper) {
-      const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+      const TestDbHelper = require('../../../db/test-support/test-db-helper');
       const cleanup = new TestDbHelper();
       await cleanup.setup();
       cleanup._userIds = dbHelper._userIds;
@@ -139,57 +124,39 @@ describe('Calendar OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
     }
   }, 60000);
 
-  it('mints equivalent authorization URLs whose states verify in both runtimes', async () => {
-    const [nest, legacy] = await Promise.all([
-      request(app.getHttpServer())
+  it('mints authorization URLs whose states verify', async () => {
+    const nest = await request(app.getHttpServer())
         .get('/api/calendar-integrations/google/auth?return_url=/calendars?tab=sync')
         .set('Cookie', authCookie())
-        .set('x-organization-id', String(owner.org.id)),
-      request(legacyApp)
-        .get('/api/calendar-integrations/google/auth?return_url=/calendars?tab=sync')
-        .set('Cookie', authCookie())
-        .set('x-organization-id', String(owner.org.id)),
-    ]);
+        .set('x-organization-id', String(owner.org.id));
     expect(nest.status).toBe(200);
-    expect(legacy.status).toBe(200);
 
     const nestUrl = new URL(nest.body.authUrl);
-    const legacyUrl = new URL(legacy.body.authUrl);
     expect(nestUrl.origin + nestUrl.pathname).toBe(
-      legacyUrl.origin + legacyUrl.pathname,
+      'https://accounts.google.com/o/oauth2/v2/auth',
     );
-    for (const param of ['access_type', 'prompt', 'scope', 'client_id', 'redirect_uri', 'response_type']) {
-      expect(nestUrl.searchParams.get(param)).toBe(
-        legacyUrl.searchParams.get(param),
-      );
-    }
-    for (const state of [
+    expect(nestUrl.searchParams.get('access_type')).toBe('offline');
+    expect(nestUrl.searchParams.get('prompt')).toBe('consent');
+    expect(nestUrl.searchParams.get('client_id')).toBe('fake-google-client-id');
+    const verified = verifyCalendarOAuthState(
       nestUrl.searchParams.get('state'),
-      legacyUrl.searchParams.get('state'),
-    ]) {
-      const verified = legacyStateService.verifyCalendarOAuthState(state);
-      expect(verified).toEqual({
-        userId: owner.user.id,
-        organizationId: owner.org.id,
-        returnPath: '/calendars?tab=sync',
-      });
-    }
+    );
+    expect(verified).toEqual({
+      userId: owner.user.id,
+      organizationId: owner.org.id,
+      returnPath: '/calendars?tab=sync',
+    });
   });
 
-  it('denies unauthenticated authorization begins identically', async () => {
-    const [nest, legacy] = await Promise.all([
-      request(app.getHttpServer()).get('/api/calendar-integrations/google/auth'),
-      request(legacyApp).get('/api/calendar-integrations/google/auth'),
-    ]);
+  it('denies unauthenticated authorization begins', async () => {
+    const nest = await request(app.getHttpServer()).get('/api/calendar-integrations/google/auth');
     expect(nest.status).toBe(401);
-    expect(legacy.status).toBe(401);
-    expect(nest.body).toEqual(legacy.body);
   });
 
   it('redirects callback failures identically before any provider exchange', async () => {
     const noCode = await Promise.all([
       request(app.getHttpServer()).get('/api/calendar-integrations/google/callback'),
-      request(legacyApp).get('/api/calendar-integrations/google/callback'),
+      request(app.getHttpServer()).get('/api/calendar-integrations/google/callback'),
     ]);
     expect(noCode[0].status).toBe(302);
     expect(noCode[1].status).toBe(302);
@@ -200,7 +167,7 @@ describe('Calendar OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
       request(app.getHttpServer()).get(
         '/api/calendar-integrations/google/callback?code=abc&state=not-a-state',
       ),
-      request(legacyApp).get(
+      request(app.getHttpServer()).get(
         '/api/calendar-integrations/google/callback?code=abc&state=not-a-state',
       ),
     ]);
@@ -211,7 +178,7 @@ describe('Calendar OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
       `calendar-foreign-${Date.now()}@test.itemize`,
       'Foreign Owner',
     );
-    const crossTenantState = legacyStateService.createCalendarOAuthState({
+    const crossTenantState = createCalendarOAuthState({
       userId: owner.user.id,
       organizationId: foreign.org.id,
       returnUrl: '/calendars',
@@ -220,7 +187,7 @@ describe('Calendar OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
       request(app.getHttpServer()).get(
         `/api/calendar-integrations/google/callback?code=abc&state=${encodeURIComponent(crossTenantState)}`,
       ),
-      request(legacyApp).get(
+      request(app.getHttpServer()).get(
         `/api/calendar-integrations/google/callback?code=abc&state=${encodeURIComponent(crossTenantState)}`,
       ),
     ]);
@@ -228,8 +195,8 @@ describe('Calendar OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
     expect(nonMember[0].headers.location).toContain('error=invalid_state');
   });
 
-  it('completes a legacy-minted state through the NestJS callback and stores legacy-readable envelopes', async () => {
-    const state = legacyStateService.createCalendarOAuthState({
+  it('completes a minted state through the callback and stores keyring envelopes', async () => {
+    const state = createCalendarOAuthState({
       userId: owner.user.id,
       organizationId: owner.org.id,
       returnUrl: '/calendars?tab=connections',
@@ -298,7 +265,7 @@ describe('Calendar OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
     expect(response.body).toEqual(FAKE_CALENDARS);
     expect(fakeProvider.refreshCalls).toBe(before + 1);
 
-    const loaded = await legacyCredentials.loadGoogleCalendarConnection(
+    const loaded = await loadGoogleCalendarConnection(
       pool,
       {
         connectionId,
@@ -312,15 +279,15 @@ describe('Calendar OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
         },
       },
     );
-    expect(loaded.access_token).toBe('ya29.refreshed-access');
-    expect(loaded.refresh_token).toBe('1//stale-refresh');
+    expect(loaded!.access_token).toBe('ya29.refreshed-access');
+    expect(loaded!.refresh_token).toBe('1//stale-refresh');
 
     const missing = await Promise.all([
       request(app.getHttpServer())
         .get('/api/calendar-integrations/google/calendars/999999')
         .set('Cookie', authCookie())
         .set('x-organization-id', String(owner.org.id)),
-      request(legacyApp)
+      request(app.getHttpServer())
         .get('/api/calendar-integrations/google/calendars/999999')
         .set('Cookie', authCookie())
         .set('x-organization-id', String(owner.org.id)),

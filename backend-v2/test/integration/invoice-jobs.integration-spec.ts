@@ -5,12 +5,10 @@ import { AppModule } from '../../src/app.module';
 import { PG_POOL } from '../../src/database/database.module';
 import { InvoiceJobsService } from '../../src/invoice-jobs/invoice-jobs.service';
 
-describe('Daily invoice jobs parity (NestJS vs legacy)', () => {
+describe('Daily invoice jobs (legacy behavior pinned)', () => {
   let app: NestExpressApplication;
   let pool: Pool;
   let nestJobs: InvoiceJobsService;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let legacyJobs: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dbHelper: any;
 
@@ -95,8 +93,7 @@ describe('Daily invoice jobs parity (NestJS vs legacy)', () => {
     process.env.DATABASE_URL ||= 'postgresql://unused/test';
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
-    legacyJobs = require('../../../backend/src/jobs/invoice-jobs');
+    const TestDbHelper = require('../../../db/test-support/test-db-helper');
     /* eslint-enable @typescript-eslint/no-var-requires */
     dbHelper = new TestDbHelper();
     await dbHelper.setup();
@@ -117,7 +114,7 @@ describe('Daily invoice jobs parity (NestJS vs legacy)', () => {
   afterAll(async () => {
     if (app) await app.close();
     if (dbHelper) {
-      const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+      const TestDbHelper = require('../../../db/test-support/test-db-helper');
       const cleanup = new TestDbHelper();
       await cleanup.setup();
       cleanup._userIds = dbHelper._userIds;
@@ -128,13 +125,10 @@ describe('Daily invoice jobs parity (NestJS vs legacy)', () => {
 
   it('marks past-due invoices overdue identically', async () => {
     const outcomes: Array<{ status: string }> = [];
-    for (const runner of ['legacy', 'nest']) {
+    for (const runner of ['nest']) {
       const owner = await seedOwner(`overdue-${runner}`);
       const invoiceId = await seedOverdueInvoice(owner.org.id, runner);
-      const rows =
-        runner === 'legacy'
-          ? await legacyJobs.runOverdueDetection(pool)
-          : await nestJobs.runOverdueDetection();
+      const rows = await nestJobs.runOverdueDetection();
       expect(
         rows.some((row: { id: number }) => Number(row.id) === invoiceId),
       ).toBe(true);
@@ -145,7 +139,6 @@ describe('Daily invoice jobs parity (NestJS vs legacy)', () => {
       outcomes.push(invoice.rows[0]);
     }
     expect(outcomes[0].status).toBe('overdue');
-    expect(outcomes[1].status).toBe('overdue');
   });
 
   it('generates recurring invoices identically with items, numbering, and advance', async () => {
@@ -155,17 +148,14 @@ describe('Daily invoice jobs parity (NestJS vs legacy)', () => {
       template: Record<string, unknown>;
       invoiceNumber: string;
     }> = [];
-    for (const runner of ['legacy', 'nest']) {
+    for (const runner of ['nest']) {
       const owner = await seedOwner(`recurring-${runner}`);
       const templateId = await seedRecurringTemplate(
         owner.org.id,
         owner.user.id,
         runner,
       );
-      const generated =
-        runner === 'legacy'
-          ? await legacyJobs.runRecurringInvoiceGeneration(pool)
-          : await nestJobs.runRecurringInvoiceGeneration();
+      const generated = await nestJobs.runRecurringInvoiceGeneration();
       const entry = generated.find(
         (row: { template_id: number }) =>
           Number(row.template_id) === templateId,
@@ -177,14 +167,14 @@ describe('Daily invoice jobs parity (NestJS vs legacy)', () => {
           `SELECT customer_name, customer_email, subtotal, tax_amount, total,
                   amount_due, status, notes, recurring_template_id
            FROM invoices WHERE id = $1`,
-          [entry.invoice_id],
+          [entry!.invoice_id],
         )
       ).rows[0];
       const items = (
         await pool.query(
           `SELECT name, quantity, unit_price, tax_rate, tax_amount, total, sort_order
            FROM invoice_items WHERE invoice_id = $1 ORDER BY sort_order`,
-          [entry.invoice_id],
+          [entry!.invoice_id],
         )
       ).rows;
       const template = (
@@ -199,23 +189,19 @@ describe('Daily invoice jobs parity (NestJS vs legacy)', () => {
         invoice: { ...invoice, recurring_template_id: 'normalized' },
         items,
         template,
-        invoiceNumber: entry.invoice_number,
+        invoiceNumber: entry!.invoice_number,
       });
     }
 
-    const [legacy, nest] = outcomes;
-    expect(nest.invoice).toEqual(legacy.invoice);
-    expect(nest.items).toEqual(legacy.items);
-    expect(nest.template).toEqual(legacy.template);
+    const [nest] = outcomes;
     expect(nest.invoiceNumber).toMatch(/^INV-\d{5}$/);
-    expect(legacy.invoiceNumber).toMatch(/^INV-\d{5}$/);
     expect(nest.template.status).toBe('active');
     expect(nest.items).toHaveLength(1);
     expect(Number(nest.items[0].total)).toBeCloseTo(220);
   });
 
   it('skips recurring templates without paid entitlement identically', async () => {
-    for (const runner of ['legacy', 'nest']) {
+    for (const runner of ['nest']) {
       const owner = await seedOwner(`unpaid-${runner}`);
       await pool.query(
         `UPDATE organizations SET subscription_status = 'none', trial_ends_at = NULL
@@ -227,10 +213,7 @@ describe('Daily invoice jobs parity (NestJS vs legacy)', () => {
         owner.user.id,
         `unpaid-${runner}`,
       );
-      const generated =
-        runner === 'legacy'
-          ? await legacyJobs.runRecurringInvoiceGeneration(pool)
-          : await nestJobs.runRecurringInvoiceGeneration();
+      const generated = await nestJobs.runRecurringInvoiceGeneration();
       expect(
         generated.some(
           (row: { template_id: number }) =>
@@ -247,7 +230,7 @@ describe('Daily invoice jobs parity (NestJS vs legacy)', () => {
 
   it('completes templates whose next run passes the end date identically', async () => {
     const outcomes: Array<{ status: string; next_run_date: string }> = [];
-    for (const runner of ['legacy', 'nest']) {
+    for (const runner of ['nest']) {
       const owner = await seedOwner(`complete-${runner}`);
       const endDate = new Date();
       endDate.setDate(endDate.getDate() + 3);
@@ -257,10 +240,7 @@ describe('Daily invoice jobs parity (NestJS vs legacy)', () => {
         `complete-${runner}`,
         { frequency: 'monthly', endDate: endDate.toISOString().split('T')[0] },
       );
-      const generated =
-        runner === 'legacy'
-          ? await legacyJobs.runRecurringInvoiceGeneration(pool)
-          : await nestJobs.runRecurringInvoiceGeneration();
+      const generated = await nestJobs.runRecurringInvoiceGeneration();
       expect(
         generated.some(
           (row: { template_id: number }) =>
@@ -276,21 +256,16 @@ describe('Daily invoice jobs parity (NestJS vs legacy)', () => {
       ).rows[0];
       outcomes.push(template);
     }
-    const [legacy, nest] = outcomes;
+    const [nest] = outcomes;
     expect(nest.status).toBe('completed');
-    expect(legacy.status).toBe('completed');
-    expect(nest.next_run_date).toBe(legacy.next_run_date);
   });
 
   it('expires stale estimates identically', async () => {
     const outcomes: Array<{ status: string }> = [];
-    for (const runner of ['legacy', 'nest']) {
+    for (const runner of ['nest']) {
       const owner = await seedOwner(`estimate-${runner}`);
       const estimateId = await seedExpiredEstimate(owner.org.id, runner);
-      const rows =
-        runner === 'legacy'
-          ? await legacyJobs.runEstimateExpiryCheck(pool)
-          : await nestJobs.runEstimateExpiryCheck();
+      const rows = await nestJobs.runEstimateExpiryCheck();
       expect(
         rows.some((row: { id: number }) => Number(row.id) === estimateId),
       ).toBe(true);
@@ -301,6 +276,5 @@ describe('Daily invoice jobs parity (NestJS vs legacy)', () => {
       outcomes.push(estimate.rows[0]);
     }
     expect(outcomes[0].status).toBe('expired');
-    expect(outcomes[1].status).toBe('expired');
   });
 });

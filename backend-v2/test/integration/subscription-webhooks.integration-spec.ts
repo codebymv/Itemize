@@ -50,7 +50,6 @@ const subscriptionEvent = ({
 
 describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy origin)', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dbHelper: any;
@@ -109,8 +108,7 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
     process.env.STRIPE_WEBHOOK_SECRET = webhookSecret;
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
-    const createBillingRoutes = require('../../../backend/src/routes/billing.routes');
+    const TestDbHelper = require('../../../db/test-support/test-db-helper');
     /* eslint-enable @typescript-eslint/no-var-requires */
     dbHelper = new TestDbHelper();
     await dbHelper.setup();
@@ -127,14 +125,6 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
     configureApp(app);
     await app.init();
 
-    legacyApp = express();
-    legacyApp.use(
-      '/api/billing',
-      createBillingRoutes(
-        pool,
-        (_req: express.Request, _res: express.Response, next: express.NextFunction) => next(),
-      ),
-    );
   }, 60000);
 
   afterAll(async () => {
@@ -142,7 +132,7 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
     else process.env.STRIPE_WEBHOOK_SECRET = originalSecret;
     if (app) await app.close();
     if (dbHelper) {
-      const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+      const TestDbHelper = require('../../../db/test-support/test-db-helper');
       const cleanup = new TestDbHelper();
       await cleanup.setup();
       cleanup._userIds = dbHelper._userIds;
@@ -153,7 +143,6 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
 
   it.each([
     ['nest', () => app.getHttpServer()],
-    ['legacy', () => legacyApp],
   ] as const)(
     'activates a subscription, applies plan limits, and deduplicates through the %s runtime',
     async (runtime, server) => {
@@ -245,7 +234,7 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
       eventId: `evt_cross_${suffix}`,
       subscriptionId: `sub_cross_${suffix}`,
     });
-    await signedPost(legacyApp, event).expect(200);
+    await signedPost(app.getHttpServer(), event).expect(200);
     const replay = await signedPost(app.getHttpServer(), event);
     expect(replay.status).toBe(200);
     expect(replay.body).toEqual({
@@ -270,7 +259,7 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
       }),
     ).expect(200);
     const stale = await signedPost(
-      legacyApp,
+      app.getHttpServer(),
       subscriptionEvent({
         customerId,
         eventId: `evt_older_${suffix}`,
@@ -328,7 +317,7 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
     const failedCustomer = `cus_fail_${suffix}`;
     const failedOwner = await createBillingOrganization('failed', failedCustomer);
     const failed = await signedPost(
-      legacyApp,
+      app.getHttpServer(),
       {
         id: `evt_fail_${suffix}`,
         object: 'event',
@@ -386,60 +375,37 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
     const sharedCustomer = `cus_shared_${suffix}`;
     await createBillingOrganization('shared-a', sharedCustomer);
     await createBillingOrganization('shared-b', sharedCustomer);
-    const [nest, legacy] = await Promise.all([
-      signedPost(
+    const nest = await signedPost(
         app.getHttpServer(),
         subscriptionEvent({
           customerId: sharedCustomer,
           eventId: `evt_shared_nest_${suffix}`,
           subscriptionId: `sub_shared_n_${suffix}`,
         }),
-      ),
-      signedPost(
-        legacyApp,
-        subscriptionEvent({
-          customerId: sharedCustomer,
-          eventId: `evt_shared_legacy_${suffix}`,
-          subscriptionId: `sub_shared_l_${suffix}`,
-        }),
-      ),
-    ]);
+      );
     expect(nest.status).toBe(200);
-    expect(legacy.status).toBe(200);
     expect(nest.body).toEqual({
       received: true,
       duplicate: false,
       status: 'ambiguous',
     });
-    expect(legacy.body).toEqual(nest.body);
   });
 
   it('ignores unsupported and checkout events identically', async () => {
     const suffix = `ign${Date.now()}`;
-    const [nest, legacy] = await Promise.all([
-      signedPost(app.getHttpServer(), {
+    const nest = await signedPost(app.getHttpServer(), {
         id: `evt_ign_nest_${suffix}`,
         object: 'event',
         type: 'customer.created',
         created: 1784120000,
         data: { object: { id: `cus_ign_${suffix}`, object: 'customer' } },
-      }),
-      signedPost(legacyApp, {
-        id: `evt_ign_legacy_${suffix}`,
-        object: 'event',
-        type: 'checkout.session.completed',
-        created: 1784120000,
-        data: { object: { id: `cs_ign_${suffix}`, object: 'checkout.session' } },
-      }),
-    ]);
+      });
     expect(nest.status).toBe(200);
-    expect(legacy.status).toBe(200);
     expect(nest.body).toEqual({
       received: true,
       duplicate: false,
       status: 'ignored',
     });
-    expect(legacy.body).toEqual(nest.body);
   });
 
   it('fails signature and configuration checks identically', async () => {
@@ -448,33 +414,18 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
       eventId: `evt_sig_${Date.now()}`,
       subscriptionId: 'sub_sig',
     });
-    const [nestInvalid, legacyInvalid] = await Promise.all([
-      signedPost(app.getHttpServer(), event, { valid: false }),
-      signedPost(legacyApp, event, { valid: false }),
-    ]);
+    const nestInvalid = await signedPost(app.getHttpServer(), event, { valid: false });
     expect(nestInvalid.status).toBe(400);
-    expect(legacyInvalid.status).toBe(400);
-    expect(nestInvalid.body).toEqual(legacyInvalid.body);
     expect(nestInvalid.body).toEqual({ error: 'Invalid webhook' });
 
-    const [nestMissing, legacyMissing] = await Promise.all([
-      signedPost(app.getHttpServer(), event, { omitSignature: true }),
-      signedPost(legacyApp, event, { omitSignature: true }),
-    ]);
+    const nestMissing = await signedPost(app.getHttpServer(), event, { omitSignature: true });
     expect(nestMissing.status).toBe(400);
-    expect(legacyMissing.status).toBe(400);
     expect(nestMissing.text).toBe('Webhook Error: Missing signature');
-    expect(legacyMissing.text).toBe('Webhook Error: Missing signature');
 
     delete process.env.STRIPE_WEBHOOK_SECRET;
     try {
-      const [nestNoSecret, legacyNoSecret] = await Promise.all([
-        signedPost(app.getHttpServer(), event),
-        signedPost(legacyApp, event),
-      ]);
+      const nestNoSecret = await signedPost(app.getHttpServer(), event);
       expect(nestNoSecret.status).toBe(503);
-      expect(legacyNoSecret.status).toBe(503);
-      expect(nestNoSecret.body).toEqual(legacyNoSecret.body);
       expect(nestNoSecret.body).toEqual({
         error: 'Webhook verification unavailable',
       });

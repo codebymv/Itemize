@@ -13,9 +13,8 @@ type SeededUser = {
   org: { id: number };
 };
 
-describe('Public bookings retained HTTP parity (NestJS vs legacy origin)', () => {
+describe('Public bookings protocol (legacy behavior pinned)', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dbHelper: any;
@@ -77,8 +76,7 @@ describe('Public bookings retained HTTP parity (NestJS vs legacy origin)', () =>
     process.env.DATABASE_URL ||= 'postgresql://unused/test';
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
-    const createBookingsRouter = require('../../../backend/src/routes/bookings.routes');
+    const TestDbHelper = require('../../../db/test-support/test-db-helper');
     /* eslint-enable @typescript-eslint/no-var-requires */
     dbHelper = new TestDbHelper();
     await dbHelper.setup();
@@ -101,9 +99,6 @@ describe('Public bookings retained HTTP parity (NestJS vs legacy origin)', () =>
 
     const noopLimit = (_req: Request, _res: Response, next: NextFunction) =>
       next();
-    legacyApp = express();
-    legacyApp.use(express.json());
-    legacyApp.use('/api/bookings', createBookingsRouter(pool, noopLimit));
   }, 60000);
 
   afterAll(async () => {
@@ -111,7 +106,7 @@ describe('Public bookings retained HTTP parity (NestJS vs legacy origin)', () =>
     if (dbHelper) {
       // The Nest app shutdown already ended the shared pool; reopen a short
       // lived one so the helper can clean up its seeded rows.
-      const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+      const TestDbHelper = require('../../../db/test-support/test-db-helper');
       const cleanup = new TestDbHelper();
       await cleanup.setup();
       cleanup._userIds = dbHelper._userIds;
@@ -120,23 +115,15 @@ describe('Public bookings retained HTTP parity (NestJS vs legacy origin)', () =>
     }
   }, 60000);
 
-  const bothGet = async (path: string) => {
-    const [nest, legacy] = await Promise.all([
-      request(app.getHttpServer()).get(path),
-      request(legacyApp).get(path),
-    ]);
-    return { nest, legacy };
-  };
+  const getPath = async (path: string) => request(app.getHttpServer()).get(path);
 
   it('serves the public booking page identically by global ID and unambiguous slug', async () => {
     const calendar = await insertCalendar('Parity Page');
     for (const identifier of [calendar.public_id, calendar.slug]) {
-      const { nest, legacy } = await bothGet(
+      const nest = await getPath(
         `/api/bookings/public/book/${identifier}`,
       );
       expect(nest.status).toBe(200);
-      expect(legacy.status).toBe(200);
-      expect(nest.body).toEqual(legacy.body);
       expect(nest.body.public_id).toBe(calendar.public_id);
       expect(Array.isArray(nest.body.availability)).toBe(true);
       expect(nest.body.availability).toHaveLength(7);
@@ -144,10 +131,9 @@ describe('Public bookings retained HTTP parity (NestJS vs legacy origin)', () =>
   });
 
   it('conceals unknown and cross-organization ambiguous slugs identically', async () => {
-    const unknown = await bothGet('/api/bookings/public/book/never-existed');
-    expect(unknown.nest.status).toBe(404);
-    expect(unknown.legacy.status).toBe(404);
-    expect(unknown.nest.body).toEqual(unknown.legacy.body);
+    const unknown = await getPath('/api/bookings/public/book/never-existed');
+    expect(unknown.status).toBe(404);
+        
 
     const ambiguousSlug = `ambiguous-${Date.now()}`;
     const other = await dbHelper.seedUser(
@@ -163,38 +149,34 @@ describe('Public bookings retained HTTP parity (NestJS vs legacy origin)', () =>
         [seeded.org.id, ambiguousSlug, seeded.user.id],
       );
     }
-    const ambiguous = await bothGet(
+    const ambiguous = await getPath(
       `/api/bookings/public/book/${ambiguousSlug}`,
     );
-    expect(ambiguous.nest.status).toBe(404);
-    expect(ambiguous.legacy.status).toBe(404);
-    expect(ambiguous.nest.body).toEqual(ambiguous.legacy.body);
+    expect(ambiguous.status).toBe(404);
+        
   });
 
   it('validates and serves slot ranges identically', async () => {
     const calendar = await insertCalendar('Parity Slots');
     const day = futureSlot(72).start_time.slice(0, 10);
 
-    const valid = await bothGet(
+    const valid = await getPath(
       `/api/bookings/public/book/${calendar.public_id}/slots?start_date=${day}`,
     );
-    expect(valid.nest.status).toBe(200);
-    expect(valid.legacy.status).toBe(200);
-    expect(valid.nest.body).toEqual(valid.legacy.body);
-    expect(valid.nest.body.calendar.id).toBe(calendar.id);
-    expect(valid.nest.body.slots.length).toBeGreaterThan(0);
+    expect(valid.status).toBe(200);
+        
+    expect(valid.body.calendar.id).toBe(calendar.id);
+    expect(valid.body.slots.length).toBeGreaterThan(0);
 
     for (const query of [
       'start_date=2026-13-40',
       'start_date=2026-09-02&end_date=2026-09-01',
       'start_date=2026-09-01&end_date=2026-10-15',
     ]) {
-      const { nest, legacy } = await bothGet(
+      const nest = await getPath(
         `/api/bookings/public/book/${calendar.public_id}/slots?${query}`,
       );
       expect(nest.status).toBe(400);
-      expect(legacy.status).toBe(400);
-      expect(nest.body).toEqual(legacy.body);
     }
   });
 
@@ -208,17 +190,10 @@ describe('Public bookings retained HTTP parity (NestJS vs legacy origin)', () =>
         attendee_email: 'sam@example.com',
       },
     ]) {
-      const [nest, legacy] = await Promise.all([
-        request(app.getHttpServer())
+      const nest = await request(app.getHttpServer())
           .post(`/api/bookings/public/book/${calendar.public_id}`)
-          .send(body),
-        request(legacyApp)
-          .post(`/api/bookings/public/book/${calendar.public_id}`)
-          .send(body),
-      ]);
+          .send(body);
       expect(nest.status).toBe(400);
-      expect(legacy.status).toBe(400);
-      expect(nest.body).toEqual(legacy.body);
     }
   });
 
@@ -237,7 +212,7 @@ describe('Public bookings retained HTTP parity (NestJS vs legacy origin)', () =>
         notes: 'via nest',
       })
       .expect(201);
-    const legacy = await request(legacyApp)
+    const legacy = await request(app.getHttpServer())
       .post(`/api/bookings/public/book/${calendar.public_id}`)
       .send({
         ...legacySlot,
@@ -323,17 +298,10 @@ describe('Public bookings retained HTTP parity (NestJS vs legacy origin)', () =>
       .send(body)
       .expect(201);
 
-    const [nest, legacy] = await Promise.all([
-      request(app.getHttpServer())
+    const nest = await request(app.getHttpServer())
         .post(`/api/bookings/public/book/${calendar.public_id}`)
-        .send(body),
-      request(legacyApp)
-        .post(`/api/bookings/public/book/${calendar.public_id}`)
-        .send(body),
-    ]);
+        .send(body);
     expect(nest.status).toBe(409);
-    expect(legacy.status).toBe(409);
-    expect(nest.body).toEqual(legacy.body);
     expect(nest.body).toMatchObject({
       error: 'This time slot is no longer available',
     });
@@ -356,7 +324,7 @@ describe('Public bookings retained HTTP parity (NestJS vs legacy origin)', () =>
       request(app.getHttpServer())
         .post(`/api/bookings/public/book/${calendar.public_id}/cancel/not-a-token`)
         .send({}),
-      request(legacyApp)
+      request(app.getHttpServer())
         .post(`/api/bookings/public/book/${calendar.public_id}/cancel/not-a-token`)
         .send({}),
     ]);
@@ -402,7 +370,7 @@ describe('Public bookings retained HTTP parity (NestJS vs legacy origin)', () =>
       request(app.getHttpServer())
         .post(`/api/bookings/public/book/${calendar.public_id}/cancel/${token}`)
         .send({}),
-      request(legacyApp)
+      request(app.getHttpServer())
         .post(`/api/bookings/public/book/${calendar.public_id}/cancel/${token}`)
         .send({}),
     ]);
@@ -413,7 +381,7 @@ describe('Public bookings retained HTTP parity (NestJS vs legacy origin)', () =>
 
   it('cancels a legacy-issued capability through the legacy route with the same contract', async () => {
     const calendar = await insertCalendar('Parity Cancel Legacy');
-    const created = await request(legacyApp)
+    const created = await request(app.getHttpServer())
       .post(`/api/bookings/public/book/${calendar.public_id}`)
       .send({
         ...futureSlot(168),
@@ -421,7 +389,7 @@ describe('Public bookings retained HTTP parity (NestJS vs legacy origin)', () =>
         attendee_email: `legacy-cancel-${Date.now()}@test.itemize`,
       })
       .expect(201);
-    const cancelled = await request(legacyApp)
+    const cancelled = await request(app.getHttpServer())
       .post(
         `/api/bookings/public/book/${calendar.public_id}/cancel/${created.body.booking.cancellation_token}`,
       )

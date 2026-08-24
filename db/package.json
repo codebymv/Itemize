@@ -1,0 +1,18 @@
+{
+  "name": "itemize-db",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PostgreSQL schema authority for itemize.cloud: the historical migration stream, the production migration runner, and the disposable-database test harness.",
+  "scripts": {
+    "migrate": "node scripts/execute-migration.js",
+    "init:test-db": "node scripts/initialize-test-database.js",
+    "test:integration:fresh": "node scripts/run-integration-tests-fresh.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3",
+    "winston": "^3.13.0"
+  }
+}

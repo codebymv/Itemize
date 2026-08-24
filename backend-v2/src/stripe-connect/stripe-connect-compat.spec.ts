@@ -1,7 +1,9 @@
 /**
- * Cross-runtime compatibility for the Stripe Connect state: states
- * minted by either runtime must verify in the other during the
- * dual-runtime window.
+ * Stripe Connect state properties. Cross-runtime interchange with the
+ * retired Express runtime was proven by the dual-runtime suite before
+ * retirement; states carry a short TTL so legacy-minted fixtures
+ * cannot be pinned. The round-trip projection, return-path
+ * normalization, and expiry rejection remain covered here.
  */
 import {
   createStripeConnectState,
@@ -9,11 +11,7 @@ import {
   verifyStripeConnectState,
 } from './stripe-connect-state';
 
-/* eslint-disable @typescript-eslint/no-var-requires */
-const legacyState = require('../../../backend/src/services/stripeConnectState');
-/* eslint-enable @typescript-eslint/no-var-requires */
-
-describe('Stripe Connect cross-runtime state compatibility', () => {
+describe('Stripe Connect state properties', () => {
   const savedSecret = process.env.JWT_SECRET;
   const savedStateSecret = process.env.STRIPE_CONNECT_STATE_SECRET;
 
@@ -29,36 +27,29 @@ describe('Stripe Connect cross-runtime state compatibility', () => {
     else process.env.STRIPE_CONNECT_STATE_SECRET = savedStateSecret;
   });
 
-  it('verifies states across runtimes in both directions', () => {
-    const values = { userId: 5, organizationId: 9, returnUrl: '/payment-settings?from=setup' };
-    const nestState = createStripeConnectState(values);
-    expect(legacyState.verifyStripeConnectState(nestState)).toEqual({
+  it('round-trips states with the verified projection', () => {
+    const state = createStripeConnectState({
       userId: 5,
       organizationId: 9,
-      returnPath: '/payment-settings?from=setup',
+      returnUrl: '/payment-settings?from=setup',
     });
-    const legacyMinted = legacyState.createStripeConnectState(values);
-    expect(verifyStripeConnectState(legacyMinted)).toEqual({
+    expect(verifyStripeConnectState(state)).toEqual({
       userId: 5,
       organizationId: 9,
       returnPath: '/payment-settings?from=setup',
     });
   });
 
-  it('normalizes return paths and rejects expired states identically', () => {
-    for (const value of ['/ok', '//evil', 'https://evil', '/pa\\th', 17]) {
-      expect(normalizeReturnPath(value)).toBe(
-        legacyState.normalizeReturnPath(value),
-      );
+  it('normalizes return paths to safe app-relative values and rejects expired states', () => {
+    expect(normalizeReturnPath('/ok')).toBe('/ok');
+    for (const value of ['//evil', 'https://evil', '/pa\\th', 17]) {
+      expect(normalizeReturnPath(value)).toBe('/payment-settings');
     }
     const stale = createStripeConnectState(
       { userId: 5, organizationId: 9 },
       { now: Date.now() - 11 * 60 * 1000 },
     );
     expect(() => verifyStripeConnectState(stale)).toThrow(
-      'Expired or invalid OAuth state',
-    );
-    expect(() => legacyState.verifyStripeConnectState(stale)).toThrow(
       'Expired or invalid OAuth state',
     );
   });

@@ -11,7 +11,6 @@ import { PG_POOL } from '../../src/database/database.module';
 
 describe('Reputation configuration GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   let memberId: number;
   let outsiderId: number;
@@ -77,14 +76,6 @@ describe('Reputation configuration GraphQL PostgreSQL contract', () => {
     configureApp(app);
     await app.init();
 
-    const createReputationRouter = require('../../../backend/src/routes/reputation.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use('/api/reputation', createReputationRouter(
-      pool, authenticateJWT, (_req: unknown, _res: unknown, next: () => void) => next(),
-    ));
   });
 
   afterAll(async () => {
@@ -270,14 +261,14 @@ describe('Reputation configuration GraphQL PostgreSQL contract', () => {
               ($2,'google',5,'Other tenant','Other reviewer','new','manual',NOW())`,
       [organizationId, outsiderOrganizationId],
     );
-    const publicWidget = await request(legacyApp)
+    const publicWidget = await request(app.getHttpServer())
       .get(`/api/reputation/public/widget/${widgetKey}`).expect(200);
     expect(publicWidget.headers['cache-control']).toBe('no-store');
     expect(publicWidget.body.reviews).toEqual([
       expect.objectContaining({ review_text: 'Visible review', reviewer_name: 'Visible reviewer' }),
       expect.objectContaining({ review_text: 'Legacy review', reviewer_name: 'Legacy reviewer' }),
     ]);
-    const malformed = await request(legacyApp)
+    const malformed = await request(app.getHttpServer())
       .get('/api/reputation/public/widget/not-a-capability').expect(404);
     expect(malformed.headers['cache-control']).toBe('no-store');
 
@@ -304,7 +295,7 @@ describe('Reputation configuration GraphQL PostgreSQL contract', () => {
       'mutation Off($id:Int!,$input:UpdateReputationWidgetInput!){updateReputationWidget(id:$id,input:$input){isActive}}',
       { id: widgetId, input: { isActive: false } },
     ).expect(200);
-    await request(legacyApp).get(`/api/reputation/public/widget/${widgetKey}`).expect(404);
+    await request(app.getHttpServer()).get(`/api/reputation/public/widget/${widgetKey}`).expect(404);
 
     const deleted = await graphql(
       'mutation Delete($id:Int!){deleteReputationWidget(id:$id){deletedId}}', { id: widgetId },

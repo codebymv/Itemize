@@ -2,8 +2,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const sourceRoot = path.join(root, 'backend-v2', 'src');
-const examplePath = path.join(root, 'backend-v2', '.env.example');
+const sourceRoot = path.join(root, 'src');
+const examplePath = path.join(root, '.env.example');
 
 const sourceFiles = [];
 const visit = (directory) => {

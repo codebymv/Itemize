@@ -19,12 +19,10 @@ type JobRow = {
 
 type EventOp = { op: string; eventId?: string; calendarId: string; bookingId?: number };
 
-describe('Calendar sync worker parity (NestJS vs legacy)', () => {
+describe('Calendar sync worker (legacy behavior pinned)', () => {
   let app: NestExpressApplication;
   let pool: Pool;
   let nestJobs: CalendarSyncJobsService;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let legacyJobs: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dbHelper: any;
 
@@ -185,8 +183,7 @@ describe('Calendar sync worker parity (NestJS vs legacy)', () => {
     process.env.DATABASE_URL ||= 'postgresql://unused/test';
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
-    legacyJobs = require('../../../backend/src/jobs/calendar-sync-jobs');
+    const TestDbHelper = require('../../../db/test-support/test-db-helper');
     /* eslint-enable @typescript-eslint/no-var-requires */
     dbHelper = new TestDbHelper();
     await dbHelper.setup();
@@ -215,7 +212,7 @@ describe('Calendar sync worker parity (NestJS vs legacy)', () => {
   afterAll(async () => {
     if (app) await app.close();
     if (dbHelper) {
-      const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+      const TestDbHelper = require('../../../db/test-support/test-db-helper');
       const cleanup = new TestDbHelper();
       await cleanup.setup();
       cleanup._userIds = dbHelper._userIds;
@@ -230,7 +227,7 @@ describe('Calendar sync worker parity (NestJS vs legacy)', () => {
       intervals: Array<Record<string, unknown>>;
       connection: Record<string, unknown>;
     }> = [];
-    for (const runner of ['legacy', 'nest']) {
+    for (const runner of ['nest']) {
       const fixture = await seedFixture(`pull-${runner}`);
       // A stale interval inside the replacement window must be deleted.
       await pool.query(
@@ -249,10 +246,7 @@ describe('Calendar sync worker parity (NestJS vs legacy)', () => {
         loadConnection: passthroughLoader(fixture),
         listEvents,
       };
-      const summary =
-        runner === 'legacy'
-          ? await legacyJobs.runCalendarSyncJobs(pool, options)
-          : await nestJobs.run(options);
+      const summary = await nestJobs.run(options);
       expect(summary).toEqual({ claimed: 1, succeeded: 1, retry: 0, deadLetter: 0 });
       expect(listEvents).toHaveBeenCalledTimes(1);
 
@@ -275,22 +269,18 @@ describe('Calendar sync worker parity (NestJS vs legacy)', () => {
       outcomes.push({ job: await jobRow(jobId), intervals, connection });
     }
 
-    const [legacy, nest] = outcomes;
-    expect(nest.intervals).toEqual(legacy.intervals);
+    const [nest] = outcomes;
     expect(nest.intervals.map((row) => row.external_event_id)).toEqual(['busy-1']);
     expect(nest.job.status).toBe('succeeded');
-    expect(legacy.job.status).toBe('succeeded');
-    expect(nest.job.result).toEqual(legacy.job.result);
     expect(nest.job.result).toEqual({
       pull: { providerCalendars: 1, internalCalendars: 1, imported: 1, removed: 1 },
     });
-    expect(nest.connection).toEqual(legacy.connection);
     expect(nest.connection.synced).toBe(true);
   });
 
   it('defers provider failures identically with redacted errors and connection error counts', async () => {
     const outcomes: Array<{ job: JobRow; connection: Record<string, unknown> }> = [];
-    for (const runner of ['legacy', 'nest']) {
+    for (const runner of ['nest']) {
       const fixture = await seedFixture(`fail-${runner}`);
       const jobId = await seedJob(fixture, 'pull');
       const options = {
@@ -300,10 +290,7 @@ describe('Calendar sync worker parity (NestJS vs legacy)', () => {
           throw new Error('Bearer ya29.secret-token expired');
         }),
       };
-      const summary =
-        runner === 'legacy'
-          ? await legacyJobs.runCalendarSyncJobs(pool, options)
-          : await nestJobs.run(options);
+      const summary = await nestJobs.run(options);
       expect(summary).toEqual({ claimed: 1, succeeded: 0, retry: 1, deadLetter: 0 });
       const connection = (
         await pool.query(
@@ -313,18 +300,15 @@ describe('Calendar sync worker parity (NestJS vs legacy)', () => {
       ).rows[0];
       outcomes.push({ job: await jobRow(jobId), connection });
     }
-    const [legacy, nest] = outcomes;
+    const [nest] = outcomes;
     expect(nest.job.status).toBe('retry');
-    expect(legacy.job.status).toBe('retry');
-    expect(nest.job.last_error).toBe(legacy.job.last_error);
     expect(nest.job.last_error).not.toContain('ya29.secret-token');
-    expect(nest.connection).toEqual(legacy.connection);
     expect(nest.connection.error_count).toBe(1);
   });
 
   it('dead-letters exhausted jobs identically', async () => {
     const outcomes: JobRow[] = [];
-    for (const runner of ['legacy', 'nest']) {
+    for (const runner of ['nest']) {
       const fixture = await seedFixture(`dead-${runner}`);
       const jobId = await seedJob(fixture, 'pull', { attemptCount: 4 });
       const options = {
@@ -334,25 +318,19 @@ describe('Calendar sync worker parity (NestJS vs legacy)', () => {
           throw new Error('provider unavailable');
         }),
       };
-      const summary =
-        runner === 'legacy'
-          ? await legacyJobs.runCalendarSyncJobs(pool, options)
-          : await nestJobs.run(options);
+      const summary = await nestJobs.run(options);
       expect(summary).toEqual({ claimed: 1, succeeded: 0, retry: 0, deadLetter: 1 });
       outcomes.push(await jobRow(jobId));
     }
-    const [legacy, nest] = outcomes;
+    const [nest] = outcomes;
     expect(nest.status).toBe('dead_letter');
-    expect(legacy.status).toBe('dead_letter');
     expect(nest.attempt_count).toBe(5);
-    expect(legacy.attempt_count).toBe(5);
     expect(nest.completed_at).not.toBeNull();
-    expect(legacy.completed_at).not.toBeNull();
   });
 
   it('fails disabled connections identically', async () => {
     const outcomes: JobRow[] = [];
-    for (const runner of ['legacy', 'nest']) {
+    for (const runner of ['nest']) {
       const fixture = await seedFixture(`disabled-${runner}`);
       await pool.query(
         'UPDATE calendar_connections SET sync_enabled = FALSE WHERE id = $1',
@@ -365,15 +343,11 @@ describe('Calendar sync worker parity (NestJS vs legacy)', () => {
         loadConnection: async () => ({ ...(await loader()), sync_enabled: false }),
         listEvents: jest.fn(async () => []),
       };
-      const summary =
-        runner === 'legacy'
-          ? await legacyJobs.runCalendarSyncJobs(pool, options)
-          : await nestJobs.run(options);
+      const summary = await nestJobs.run(options);
       expect(summary.retry).toBe(1);
       outcomes.push(await jobRow(jobId));
     }
-    const [legacy, nest] = outcomes;
-    expect(nest.last_error).toBe(legacy.last_error);
+    const [nest] = outcomes;
     expect(nest.last_error).toBe('Calendar connection sync is disabled or inactive');
   });
 

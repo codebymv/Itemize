@@ -8,10 +8,13 @@ import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
+import {
+  runRealtimeOutboxDelivery,
+} from '../../src/realtime-host/realtime-outbox-delivery';
+import type { RealtimeBroadcast } from '../../src/realtime-host/realtime-host';
 
 describe('Workspace content GraphQL PostgreSQL reads', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   let memberId: number;
   let outsiderId: number;
@@ -168,24 +171,6 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     configureApp(app);
     await app.init();
 
-    const createSharingRouter = require(
-      '../../../backend/src/routes/sharing.routes',
-    );
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    const broadcast = {};
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use(
-      '/api',
-      createSharingRouter(
-        pool,
-        authenticateJWT,
-        (_req: Request, _res: Response, next: NextFunction) =>
-          next(),
-        broadcast,
-      ),
-    );
   });
 
   afterAll(async () => {
@@ -675,15 +660,12 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     });
 
     const noteUpdate = jest.fn();
-    const { runRealtimeOutboxJobs } = require(
-      '../../../backend/src/jobs/realtime-outbox-jobs',
-    );
-    const delivered = await runRealtimeOutboxJobs(
+    const delivered = await runRealtimeOutboxDelivery(
       pool,
-      { noteUpdate },
+      { noteUpdate } as unknown as RealtimeBroadcast,
       {
         batchSize: 1,
-        outboxId: outbox.rows[0].id,
+        outboxId: Number(outbox.rows[0].id),
         workerId: 'nestjs-note-integration',
       },
     );
@@ -884,15 +866,12 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     });
 
     const whiteboardUpdate = jest.fn();
-    const { runRealtimeOutboxJobs } = require(
-      '../../../backend/src/jobs/realtime-outbox-jobs',
-    );
-    const delivered = await runRealtimeOutboxJobs(
+    const delivered = await runRealtimeOutboxDelivery(
       pool,
-      { whiteboardUpdate },
+      { whiteboardUpdate } as unknown as RealtimeBroadcast,
       {
         batchSize: 1,
-        outboxId: outbox.rows[0].id,
+        outboxId: Number(outbox.rows[0].id),
         workerId: 'nestjs-whiteboard-integration',
       },
     );
@@ -983,9 +962,6 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       note: ['enableNoteSharing', 'disableNoteSharing'],
       whiteboard: ['enableWhiteboardSharing', 'disableWhiteboardSharing'],
     } as const;
-    const { runRealtimeOutboxJobs } = require(
-      '../../../backend/src/jobs/realtime-outbox-jobs',
-    );
 
     for (const row of rows.rows) {
       const [enableField, disableField] = fields[row.kind];
@@ -1014,7 +990,7 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       }).expect(200);
       expect(concealed.body.errors[0].extensions.code).toBe('NOT_FOUND');
 
-      const publicRead = await request(legacyApp)
+      const publicRead = await request(app.getHttpServer())
         .get(`/api/shared/${row.kind}/${link.shareToken}`)
         .expect(200);
       expect(publicRead.headers).toMatchObject({
@@ -1036,7 +1012,7 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       ).expect(200);
       expect(disabled.body.errors).toBeUndefined();
       expect(disabled.body.data[disableField].sharingDisabled).toBe(true);
-      await request(legacyApp)
+      await request(app.getHttpServer())
         .get(`/api/shared/${row.kind}/${link.shareToken}`)
         .expect(404);
 
@@ -1047,12 +1023,12 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
         [`${row.kind}:${row.id}:sharing-revoked:${mutationId}`],
       );
       const revokeShared = jest.fn();
-      await expect(runRealtimeOutboxJobs(
-        pool,
-        { revokeShared },
+      await expect(runRealtimeOutboxDelivery(
+      pool,
+      { revokeShared } as unknown as RealtimeBroadcast,
         {
           batchSize: 1,
-          outboxId: revocation.rows[0].id,
+          outboxId: Number(revocation.rows[0].id),
           workerId: `${row.kind}-sharing-revocation`,
         },
       )).resolves.toMatchObject({ claimed: 1, sent: 1 });
@@ -1171,7 +1147,7 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       id: mutationWireframeId,
     }).expect(200);
     expect(concealedShare.body.errors[0].extensions.code).toBe('NOT_FOUND');
-    const publicWireframe = await request(legacyApp)
+    const publicWireframe = await request(app.getHttpServer())
       .get(`/api/shared/wireframe/${sharedWireframeToken}`)
       .expect(200);
     expect(publicWireframe.headers).toMatchObject({
@@ -1276,16 +1252,13 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     ]);
     const wireframeUpdate = jest.fn();
     const userWireframeUpdate = jest.fn();
-    const { runRealtimeOutboxJobs } = require(
-      '../../../backend/src/jobs/realtime-outbox-jobs',
-    );
     for (const event of events.rows) {
-      await expect(runRealtimeOutboxJobs(
-        pool,
-        { wireframeUpdate, userWireframeUpdate },
+      await expect(runRealtimeOutboxDelivery(
+      pool,
+      { wireframeUpdate, userWireframeUpdate } as unknown as RealtimeBroadcast,
         {
           batchSize: 1,
-          outboxId: event.id,
+          outboxId: Number(event.id),
           workerId: `wireframe-crud-${event.channel}`,
         },
       )).resolves.toMatchObject({ claimed: 1, sent: 1 });
@@ -1327,7 +1300,7 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     expect(
       disabled.body.data.disableWireframeSharing.sharingDisabled,
     ).toBe(true);
-    await request(legacyApp)
+    await request(app.getHttpServer())
       .get(`/api/shared/wireframe/${sharedWireframeToken}`)
       .expect(404);
     const revocation = await pool.query<{
@@ -1347,12 +1320,12 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       recipient_key: sharedWireframeToken,
     });
     const revokeShared = jest.fn();
-    await expect(runRealtimeOutboxJobs(
+    await expect(runRealtimeOutboxDelivery(
       pool,
-      { revokeShared },
+      { revokeShared } as unknown as RealtimeBroadcast,
       {
         batchSize: 1,
-        outboxId: revocation.rows[0].id,
+        outboxId: Number(revocation.rows[0].id),
         workerId: 'wireframe-sharing-revocation',
       },
     )).resolves.toMatchObject({ claimed: 1, sent: 1 });
@@ -1401,7 +1374,7 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
         message: 'This wireframe has been deleted by the owner.',
       },
     });
-    await request(legacyApp)
+    await request(app.getHttpServer())
       .put(`/api/wireframes/${mutationWireframeId}`)
       .set('Cookie', `itemize_auth=${memberToken}`)
       .send({ title: 'Gone' })
@@ -1611,16 +1584,13 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       ]);
       const wireframeUpdate = jest.fn();
       const userWireframeUpdate = jest.fn();
-      const { runRealtimeOutboxJobs } = require(
-        '../../../backend/src/jobs/realtime-outbox-jobs',
-      );
       for (const event of events.rows) {
-        await expect(runRealtimeOutboxJobs(
-          pool,
-          { wireframeUpdate, userWireframeUpdate },
+        await expect(runRealtimeOutboxDelivery(
+      pool,
+      { wireframeUpdate, userWireframeUpdate } as unknown as RealtimeBroadcast,
           {
             batchSize: 1,
-            outboxId: event.id,
+            outboxId: Number(event.id),
             workerId: `canvas-position-${event.channel}`,
           },
         )).resolves.toMatchObject({ claimed: 1, sent: 1 });

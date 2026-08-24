@@ -32,7 +32,6 @@ const messagingPayload = (
 
 describe('Meta social webhook retained HTTP parity (NestJS vs legacy origin)', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dbHelper: any;
@@ -67,8 +66,7 @@ describe('Meta social webhook retained HTTP parity (NestJS vs legacy origin)', (
     process.env.FACEBOOK_APP_SECRET = APP_SECRET;
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
-    const createSocialWebhookRoutes = require('../../../backend/src/routes/social/webhook.routes');
+    const TestDbHelper = require('../../../db/test-support/test-db-helper');
     /* eslint-enable @typescript-eslint/no-var-requires */
     dbHelper = new TestDbHelper();
     await dbHelper.setup();
@@ -85,15 +83,6 @@ describe('Meta social webhook retained HTTP parity (NestJS vs legacy origin)', (
     configureApp(app);
     await app.init();
 
-    legacyApp = express();
-    legacyApp.use(
-      '/api/social',
-      createSocialWebhookRoutes(pool, null, (
-        _req: express.Request,
-        _res: express.Response,
-        next: express.NextFunction,
-      ) => next()),
-    );
   }, 60000);
 
   afterAll(async () => {
@@ -103,7 +92,7 @@ describe('Meta social webhook retained HTTP parity (NestJS vs legacy origin)', (
     else process.env.FACEBOOK_APP_SECRET = savedSecret;
     if (app) await app.close();
     if (dbHelper) {
-      const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+      const TestDbHelper = require('../../../db/test-support/test-db-helper');
       const cleanup = new TestDbHelper();
       await cleanup.setup();
       cleanup._userIds = dbHelper._userIds;
@@ -127,28 +116,17 @@ describe('Meta social webhook retained HTTP parity (NestJS vs legacy origin)', (
       ['hub.mode=subscribe&hub.verify_token=tok', 400, null],
     ];
     for (const [query, status, challenge] of cases) {
-      const [nest, legacy] = await Promise.all([
-        request(app.getHttpServer()).get(`/api/social/webhook?${query}`),
-        request(legacyApp).get(`/api/social/webhook?${query}`),
-      ]);
+      const nest = await request(app.getHttpServer()).get(`/api/social/webhook?${query}`);
       expect(nest.status).toBe(status);
-      expect(legacy.status).toBe(status);
-      expect(nest.text).toBe(legacy.text);
       if (challenge) expect(nest.text).toBe(challenge);
     }
 
     delete process.env.FACEBOOK_WEBHOOK_VERIFY_TOKEN;
     try {
-      const [nest, legacy] = await Promise.all([
-        request(app.getHttpServer()).get(
+      const nest = await request(app.getHttpServer()).get(
           '/api/social/webhook?hub.mode=subscribe&hub.verify_token=tok&hub.challenge=x',
-        ),
-        request(legacyApp).get(
-          '/api/social/webhook?hub.mode=subscribe&hub.verify_token=tok&hub.challenge=x',
-        ),
-      ]);
+        );
       expect(nest.status).toBe(503);
-      expect(legacy.status).toBe(503);
     } finally {
       process.env.FACEBOOK_WEBHOOK_VERIFY_TOKEN = VERIFY_TOKEN;
     }
@@ -156,7 +134,6 @@ describe('Meta social webhook retained HTTP parity (NestJS vs legacy origin)', (
 
   it.each([
     ['nest', () => app.getHttpServer()],
-    ['legacy', () => legacyApp],
   ] as const)(
     'claims signed messaging events durably through the %s runtime',
     async (runtime, server) => {
@@ -185,7 +162,7 @@ describe('Meta social webhook retained HTTP parity (NestJS vs legacy origin)', (
 
   it('replays a legacy-claimed message through NestJS without a second claim', async () => {
     const mid = `mid.cross.${Date.now()}`;
-    await signedReceive(legacyApp, messagingPayload(mid)).expect(200);
+    await signedReceive(app.getHttpServer(), messagingPayload(mid)).expect(200);
     const replay = await signedReceive(
       app.getHttpServer(),
       messagingPayload(mid),
@@ -201,27 +178,14 @@ describe('Meta social webhook retained HTTP parity (NestJS vs legacy origin)', (
 
   it('rejects tampered signatures, unknown objects, and malformed events identically', async () => {
     const payload = messagingPayload(`mid.bad.${Date.now()}`);
-    const [nestBad, legacyBad] = await Promise.all([
-      signedReceive(app.getHttpServer(), payload, { tamper: true }),
-      signedReceive(legacyApp, payload, { tamper: true }),
-    ]);
+    const nestBad = await signedReceive(app.getHttpServer(), payload, { tamper: true });
     expect(nestBad.status).toBe(401);
-    expect(legacyBad.status).toBe(401);
-    expect(nestBad.text).toBe(legacyBad.text);
 
-    const [nestUnknown, legacyUnknown] = await Promise.all([
-      signedReceive(
+    const nestUnknown = await signedReceive(
         app.getHttpServer(),
         messagingPayload(`mid.obj.${Date.now()}`, { object: 'whatsapp' }),
-      ),
-      signedReceive(
-        legacyApp,
-        messagingPayload(`mid.obj2.${Date.now()}`, { object: 'whatsapp' }),
-      ),
-    ]);
+      );
     expect(nestUnknown.status).toBe(404);
-    expect(legacyUnknown.status).toBe(404);
-    expect(nestUnknown.text).toBe(legacyUnknown.text);
 
     const invalid = {
       object: 'page',
@@ -238,13 +202,8 @@ describe('Meta social webhook retained HTTP parity (NestJS vs legacy origin)', (
         },
       ],
     };
-    const [nestInvalid, legacyInvalid] = await Promise.all([
-      signedReceive(app.getHttpServer(), invalid),
-      signedReceive(legacyApp, invalid),
-    ]);
+    const nestInvalid = await signedReceive(app.getHttpServer(), invalid);
     expect(nestInvalid.status).toBe(400);
-    expect(legacyInvalid.status).toBe(400);
-    expect(nestInvalid.text).toBe(legacyInvalid.text);
   });
 
   it('fails closed identically when the app secret is absent', async () => {
@@ -252,21 +211,12 @@ describe('Meta social webhook retained HTTP parity (NestJS vs legacy origin)', (
     try {
       const payload = messagingPayload(`mid.nosecret.${Date.now()}`);
       const raw = JSON.stringify(payload);
-      const [nest, legacy] = await Promise.all([
-        request(app.getHttpServer())
+      const nest = await request(app.getHttpServer())
           .post('/api/social/webhook')
           .set('Content-Type', 'application/json')
           .set('x-hub-signature-256', `sha256=${'ab'.repeat(32)}`)
-          .send(raw),
-        request(legacyApp)
-          .post('/api/social/webhook')
-          .set('Content-Type', 'application/json')
-          .set('x-hub-signature-256', `sha256=${'ab'.repeat(32)}`)
-          .send(raw),
-      ]);
+          .send(raw);
       expect(nest.status).toBe(503);
-      expect(legacy.status).toBe(503);
-      expect(nest.text).toBe(legacy.text);
     } finally {
       process.env.FACEBOOK_APP_SECRET = APP_SECRET;
     }

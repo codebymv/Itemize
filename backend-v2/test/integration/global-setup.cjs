@@ -1,7 +1,7 @@
 const { Pool } = require('pg');
 const {
   getTestDatabasePoolConfig,
-} = require('../../../backend/src/__tests__/integration/test-database-config');
+} = require('../../../db/test-support/test-database-config');
 
 /**
  * Feature integration specs exercise their own product contract, not checkout.

@@ -12,7 +12,6 @@ const WEBHOOK_SECRET = 'workflow-webhook-parity-secret';
 
 describe('Workflow webhook retained HTTP parity (NestJS vs legacy origin)', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dbHelper: any;
@@ -81,8 +80,7 @@ describe('Workflow webhook retained HTTP parity (NestJS vs legacy origin)', () =
     process.env.DATABASE_URL ||= 'postgresql://unused/test';
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
-    const legacyWebhookRouter = require('../../../backend/src/routes/webhooks.routes');
+    const TestDbHelper = require('../../../db/test-support/test-db-helper');
     /* eslint-enable @typescript-eslint/no-var-requires */
     dbHelper = new TestDbHelper();
     await dbHelper.setup();
@@ -105,26 +103,12 @@ describe('Workflow webhook retained HTTP parity (NestJS vs legacy origin)', () =
     configureApp(app);
     await app.init();
 
-    legacyApp = express();
-    legacyApp.use(
-      express.json({
-        verify: (req, _res, buffer) => {
-          (req as express.Request & { rawBody?: Buffer }).rawBody =
-            Buffer.from(buffer);
-        },
-      }),
-    );
-    legacyApp.use((req, _res, next) => {
-      (req as express.Request & { dbPool?: Pool }).dbPool = pool;
-      next();
-    });
-    legacyApp.use('/api/webhooks', legacyWebhookRouter);
   }, 60000);
 
   afterAll(async () => {
     if (app) await app.close();
     if (dbHelper) {
-      const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+      const TestDbHelper = require('../../../db/test-support/test-db-helper');
       const cleanup = new TestDbHelper();
       await cleanup.setup();
       cleanup._userIds = dbHelper._userIds;
@@ -135,7 +119,6 @@ describe('Workflow webhook retained HTTP parity (NestJS vs legacy origin)', () =
 
   it.each([
     ['nest', () => app.getHttpServer()],
-    ['legacy', () => legacyApp],
   ] as const)(
     'accepts a signed delivery and records the durable trigger through the %s runtime',
     async (runtime, server) => {
@@ -182,7 +165,7 @@ describe('Workflow webhook retained HTTP parity (NestJS vs legacy origin)', () =
     const workflowId = await seedWorkflow();
     const deliveryId = `delivery-cross-${Date.now()}`;
     const event = { eventType: 'contact_added', entityData: {} };
-    await signedPost(legacyApp, workflowId, event, { deliveryId }).expect(202);
+    await signedPost(app.getHttpServer(), workflowId, event, { deliveryId }).expect(202);
     const replay = await signedPost(app.getHttpServer(), workflowId, event, {
       deliveryId,
     });
@@ -209,13 +192,8 @@ describe('Workflow webhook retained HTTP parity (NestJS vs legacy origin)', () =
       ['Invalid webhook signature', { tamper: true }],
     ];
     for (const [message, options] of cases) {
-      const [nest, legacy] = await Promise.all([
-        signedPost(app.getHttpServer(), workflowId, event, options),
-        signedPost(legacyApp, workflowId, event, options),
-      ]);
+      const nest = await signedPost(app.getHttpServer(), workflowId, event, options);
       expect(nest.status).toBe(401);
-      expect(legacy.status).toBe(401);
-      expect(nest.body).toEqual(legacy.body);
       expect(nest.body).toEqual({ error: message });
     }
   });
@@ -224,7 +202,7 @@ describe('Workflow webhook retained HTTP parity (NestJS vs legacy origin)', () =
     const inactiveId = await seedWorkflow('contact_added', false);
     const inactive = await Promise.all([
       signedPost(app.getHttpServer(), inactiveId, { eventType: 'contact_added' }),
-      signedPost(legacyApp, inactiveId, { eventType: 'contact_added' }),
+      signedPost(app.getHttpServer(), inactiveId, { eventType: 'contact_added' }),
     ]);
     expect(inactive[0].status).toBe(200);
     expect(inactive[0].body).toEqual(inactive[1].body);
@@ -236,7 +214,7 @@ describe('Workflow webhook retained HTTP parity (NestJS vs legacy origin)', () =
     const mismatchId = await seedWorkflow('form_submitted');
     const mismatch = await Promise.all([
       signedPost(app.getHttpServer(), mismatchId, { eventType: 'contact_added' }),
-      signedPost(legacyApp, mismatchId, { eventType: 'contact_added' }),
+      signedPost(app.getHttpServer(), mismatchId, { eventType: 'contact_added' }),
     ]);
     expect(mismatch[0].status).toBe(409);
     expect(mismatch[1].status).toBe(409);
@@ -248,7 +226,7 @@ describe('Workflow webhook retained HTTP parity (NestJS vs legacy origin)', () =
 
     const unknown = await Promise.all([
       signedPost(app.getHttpServer(), 999999999, { eventType: 'contact_added' }),
-      signedPost(legacyApp, 999999999, { eventType: 'contact_added' }),
+      signedPost(app.getHttpServer(), 999999999, { eventType: 'contact_added' }),
     ]);
     expect(unknown[0].status).toBe(404);
     expect(unknown[1].status).toBe(404);
@@ -257,7 +235,7 @@ describe('Workflow webhook retained HTTP parity (NestJS vs legacy origin)', () =
     const workflowId = await seedWorkflow();
     const invalid = await Promise.all([
       signedPost(app.getHttpServer(), workflowId, { eventType: 'not_a_trigger' }),
-      signedPost(legacyApp, workflowId, { eventType: 'not_a_trigger' }),
+      signedPost(app.getHttpServer(), workflowId, { eventType: 'not_a_trigger' }),
     ]);
     expect(invalid[0].status).toBe(400);
     expect(invalid[1].status).toBe(400);

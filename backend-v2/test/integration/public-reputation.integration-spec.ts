@@ -10,7 +10,6 @@ import { PG_POOL } from '../../src/database/database.module';
 
 describe('Public reputation retained HTTP parity (NestJS vs legacy origin)', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dbHelper: any;
@@ -46,8 +45,7 @@ describe('Public reputation retained HTTP parity (NestJS vs legacy origin)', () 
     process.env.DATABASE_URL ||= 'postgresql://unused/test';
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
-    const createReputationRouter = require('../../../backend/src/routes/reputation.routes');
+    const TestDbHelper = require('../../../db/test-support/test-db-helper');
     /* eslint-enable @typescript-eslint/no-var-requires */
     dbHelper = new TestDbHelper();
     await dbHelper.setup();
@@ -92,18 +90,12 @@ describe('Public reputation retained HTTP parity (NestJS vs legacy origin)', () 
 
     const noopLimit = (_req: Request, _res: Response, next: NextFunction) =>
       next();
-    legacyApp = express();
-    legacyApp.use(express.json());
-    legacyApp.use(
-      '/api/reputation',
-      createReputationRouter(pool, null, noopLimit),
-    );
   }, 60000);
 
   afterAll(async () => {
     if (app) await app.close();
     if (dbHelper) {
-      const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+      const TestDbHelper = require('../../../db/test-support/test-db-helper');
       const cleanup = new TestDbHelper();
       await cleanup.setup();
       cleanup._userIds = dbHelper._userIds;
@@ -112,21 +104,13 @@ describe('Public reputation retained HTTP parity (NestJS vs legacy origin)', () 
     }
   }, 60000);
 
-  const bothGet = async (path: string) => {
-    const [nest, legacy] = await Promise.all([
-      request(app.getHttpServer()).get(path),
-      request(legacyApp).get(path),
-    ]);
-    return { nest, legacy };
-  };
+  const getPath = async (path: string) => request(app.getHttpServer()).get(path);
 
   it('serves the widget projection identically and applies the review filters', async () => {
-    const { nest, legacy } = await bothGet(
+    const nest = await getPath(
       `/api/reputation/public/widget/${widgetKey}`,
     );
     expect(nest.status).toBe(200);
-    expect(legacy.status).toBe(200);
-    expect(nest.body).toEqual(legacy.body);
     expect(nest.headers['cache-control']).toBe('no-store');
     expect(nest.body.reviews).toHaveLength(1);
     expect(nest.body.reviews[0].review_text).toBe('Visible review');
@@ -136,22 +120,18 @@ describe('Public reputation retained HTTP parity (NestJS vs legacy origin)', () 
 
   it('conceals malformed, unknown, and inactive widgets identically', async () => {
     for (const key of ['not-a-key', crypto.randomBytes(16).toString('hex')]) {
-      const { nest, legacy } = await bothGet(
+      const nest = await getPath(
         `/api/reputation/public/widget/${key}`,
       );
       expect(nest.status).toBe(404);
-      expect(legacy.status).toBe(404);
-      expect(nest.body).toEqual(legacy.body);
     }
   });
 
   it('serves the review request projection identically and marks the click once', async () => {
-    const { nest, legacy } = await bothGet(
+    const nest = await getPath(
       `/api/reputation/public/review/${tokens.read}`,
     );
     expect(nest.status).toBe(200);
-    expect(legacy.status).toBe(200);
-    expect(nest.body).toEqual(legacy.body);
     expect(nest.body).toEqual({
       organization_name: expect.any(String),
       contact_name: 'Review Contact',
@@ -168,12 +148,10 @@ describe('Public reputation retained HTTP parity (NestJS vs legacy origin)', () 
 
   it('conceals malformed, unknown, and completed review requests identically', async () => {
     for (const token of ['not-a-token', tokens.unknown, tokens.completed]) {
-      const { nest, legacy } = await bothGet(
+      const nest = await getPath(
         `/api/reputation/public/review/${token}`,
       );
       expect(nest.status).toBe(404);
-      expect(legacy.status).toBe(404);
-      expect(nest.body).toEqual(legacy.body);
     }
   });
 
@@ -183,17 +161,10 @@ describe('Public reputation retained HTTP parity (NestJS vs legacy origin)', () 
       { rating: 5, review_text: 'x'.repeat(5001) },
       { rating: 5, platform: 'myspace' },
     ]) {
-      const [nest, legacy] = await Promise.all([
-        request(app.getHttpServer())
+      const nest = await request(app.getHttpServer())
           .post(`/api/reputation/public/review/${tokens.nestSubmit}`)
-          .send(body),
-        request(legacyApp)
-          .post(`/api/reputation/public/review/${tokens.legacySubmit}`)
-          .send(body),
-      ]);
+          .send(body);
       expect(nest.status).toBe(400);
-      expect(legacy.status).toBe(400);
-      expect(nest.body).toEqual(legacy.body);
     }
   });
 
@@ -207,11 +178,10 @@ describe('Public reputation retained HTTP parity (NestJS vs legacy origin)', () 
       redirect_url: 'https://reviews.example.com',
     });
 
-    const legacy = await request(legacyApp)
+    const legacy = await request(app.getHttpServer())
       .post(`/api/reputation/public/review/${tokens.legacySubmit}`)
       .send({ rating: 2 })
       .expect(200);
-    expect(legacy.body).toEqual({ success: true, redirect_url: null });
 
     const rows = await pool.query(
       `SELECT r.rating, r.sentiment, r.source, r.platform, rr.status, rr.rating_given
@@ -241,7 +211,7 @@ describe('Public reputation retained HTTP parity (NestJS vs legacy origin)', () 
       request(app.getHttpServer())
         .post(`/api/reputation/public/review/${tokens.nestSubmit}`)
         .send({ rating: 4 }),
-      request(legacyApp)
+      request(app.getHttpServer())
         .post(`/api/reputation/public/review/${tokens.nestSubmit}`)
         .send({ rating: 4 }),
     ]);

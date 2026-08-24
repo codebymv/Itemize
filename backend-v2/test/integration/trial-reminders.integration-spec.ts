@@ -10,7 +10,7 @@ import {
   TrialRemindersService,
 } from '../../src/trial-reminders/trial-reminders.service';
 
-describe('Trial reminder job (NestJS owner; legacy job is dead code)', () => {
+describe('Trial reminder job', () => {
   let app: NestExpressApplication;
   let pool: Pool;
   let service: TrialRemindersService;
@@ -53,7 +53,7 @@ describe('Trial reminder job (NestJS owner; legacy job is dead code)', () => {
     process.env.FRONTEND_URL = 'https://app.parity.test';
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+    const TestDbHelper = require('../../../db/test-support/test-db-helper');
     /* eslint-enable @typescript-eslint/no-var-requires */
     dbHelper = new TestDbHelper();
     await dbHelper.setup();
@@ -84,7 +84,7 @@ describe('Trial reminder job (NestJS owner; legacy job is dead code)', () => {
   afterAll(async () => {
     if (app) await app.close();
     if (dbHelper) {
-      const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+      const TestDbHelper = require('../../../db/test-support/test-db-helper');
       const cleanup = new TestDbHelper();
       await cleanup.setup();
       cleanup._userIds = dbHelper._userIds;
@@ -92,28 +92,6 @@ describe('Trial reminder job (NestJS owner; legacy job is dead code)', () => {
       await cleanup.teardown();
     }
   }, 60000);
-
-  it('documents that the legacy cron is inert: it finds nothing even with an eligible trial', async () => {
-    /* eslint-disable @typescript-eslint/no-var-requires */
-    const legacyCron = require('../../../backend/src/jobs/trialReminderCron');
-    /* eslint-enable @typescript-eslint/no-var-requires */
-    const { user } = await seedTrialOrganization('legacy-dead', 3);
-    // The legacy finder requires backend/src/db as a pool, which exports
-    // helpers instead; its query crashes into the catch and returns [].
-    await expect(legacyCron.sendTrialReminders()).resolves.toBeUndefined();
-    const logs = await pool.query(
-      `SELECT 1 FROM email_logs
-       WHERE organization_id = $1 AND metadata->>'email_type' = 'trial_reminder'`,
-      [user.org.id],
-    );
-    expect(logs.rows).toHaveLength(0);
-    // Reset for the NestJS selection tests below.
-    await pool.query(
-      `UPDATE organizations SET trial_ends_at = CURRENT_TIMESTAMP + INTERVAL '30 days'
-       WHERE id = $1`,
-      [user.org.id],
-    );
-  });
 
   it('selects only trials ending in exactly three days and sends the branded reminder', async () => {
     const eligible = await seedTrialOrganization('eligible', 3);

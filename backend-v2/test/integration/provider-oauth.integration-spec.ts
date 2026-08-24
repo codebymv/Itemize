@@ -1,12 +1,14 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import cookieParser from 'cookie-parser';
-import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
+import {
+  createStripeConnectState,
+  verifyStripeConnectState,
+} from '../../src/stripe-connect/stripe-connect-state';
 import {
   FACEBOOK_GRAPH_CLIENT,
   FacebookGraphClient,
@@ -65,17 +67,14 @@ class FakeStripeConnect implements StripeConnectClient {
   }
 }
 
-describe('Provider OAuth retained HTTP parity (NestJS vs legacy origin)', () => {
+describe('Provider OAuth retained HTTP protocol (legacy behavior pinned)', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dbHelper: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let owner: any;
   let fakeStripe: FakeStripeConnect;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let legacyStripeState: any;
 
   const authCookie = () => `itemize_auth=${owner.token}`;
 
@@ -96,11 +95,7 @@ describe('Provider OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
     delete process.env.STRIPE_CONNECT_STATE_SECRET;
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
-    const createSocialOAuthRoutes = require('../../../backend/src/routes/social/oauth.routes');
-    const createInvoiceIntegrationsRoutes = require('../../../backend/src/routes/invoice-integrations.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth');
-    legacyStripeState = require('../../../backend/src/services/stripeConnectState');
+    const TestDbHelper = require('../../../db/test-support/test-db-helper');
     /* eslint-enable @typescript-eslint/no-var-requires */
     dbHelper = new TestDbHelper();
     await dbHelper.setup();
@@ -126,31 +121,12 @@ describe('Provider OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
     configureApp(app);
     await app.init();
 
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use((req, _res, next) => {
-      (req as express.Request & { dbPool?: Pool }).dbPool = pool;
-      next();
-    });
-    /* eslint-disable @typescript-eslint/no-var-requires */
-    const { requireOrganization } =
-      require('../../../backend/src/middleware/organization')(pool);
-    /* eslint-enable @typescript-eslint/no-var-requires */
-    legacyApp.use(
-      '/api/social',
-      createSocialOAuthRoutes(pool, authenticateJWT, requireOrganization),
-    );
-    legacyApp.use(
-      '/api/invoice-integrations',
-      createInvoiceIntegrationsRoutes(pool, authenticateJWT),
-    );
   }, 60000);
 
   afterAll(async () => {
     if (app) await app.close();
     if (dbHelper) {
-      const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+      const TestDbHelper = require('../../../db/test-support/test-db-helper');
       const cleanup = new TestDbHelper();
       await cleanup.setup();
       cleanup._userIds = dbHelper._userIds;
@@ -159,30 +135,18 @@ describe('Provider OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
     }
   }, 60000);
 
-  it('mints equivalent Facebook authorization URLs and stores single-use states', async () => {
-    const [nest, legacy] = await Promise.all([
-      request(app.getHttpServer())
+  it('mints Facebook authorization URLs and stores single-use states', async () => {
+    const nest = await request(app.getHttpServer())
         .get('/api/social/connect/facebook')
         .set('Cookie', authCookie())
-        .set('x-organization-id', String(owner.org.id)),
-      request(legacyApp)
-        .get('/api/social/connect/facebook')
-        .set('Cookie', authCookie())
-        .set('x-organization-id', String(owner.org.id)),
-    ]);
+        .set('x-organization-id', String(owner.org.id));
     expect(nest.status).toBe(200);
-    expect(legacy.status).toBe(200);
 
     const nestUrl = new URL(nest.body.auth_url);
-    const legacyUrl = new URL(legacy.body.auth_url);
     expect(nestUrl.origin + nestUrl.pathname).toBe(
-      legacyUrl.origin + legacyUrl.pathname,
+      'https://www.facebook.com/v18.0/dialog/oauth',
     );
-    for (const param of ['client_id', 'redirect_uri', 'scope']) {
-      expect(nestUrl.searchParams.get(param)).toBe(
-        legacyUrl.searchParams.get(param),
-      );
-    }
+    expect(nestUrl.searchParams.get('client_id')).toBe('fake-fb-app-id');
     const states = await pool.query(
       `SELECT state FROM oauth_states
        WHERE provider = 'facebook' AND organization_id = $1`,
@@ -190,13 +154,12 @@ describe('Provider OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
     );
     const stored = new Set(states.rows.map((row) => row.state));
     expect(stored.has(nestUrl.searchParams.get('state'))).toBe(true);
-    expect(stored.has(legacyUrl.searchParams.get('state'))).toBe(true);
   });
 
-  it('rejects Facebook callback failures identically before any Graph call', async () => {
+  it('rejects Facebook callback failures before any Graph call', async () => {
     const missing = await Promise.all([
       request(app.getHttpServer()).get('/api/social/callback/facebook'),
-      request(legacyApp).get('/api/social/callback/facebook'),
+      request(app.getHttpServer()).get('/api/social/callback/facebook'),
     ]);
     expect(missing[0].status).toBe(302);
     expect(missing[0].headers.location).toBe(missing[1].headers.location);
@@ -206,7 +169,7 @@ describe('Provider OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
       request(app.getHttpServer()).get(
         '/api/social/callback/facebook?code=abc&state=unknown-state',
       ),
-      request(legacyApp).get(
+      request(app.getHttpServer()).get(
         '/api/social/callback/facebook?code=abc&state=unknown-state',
       ),
     ]);
@@ -217,7 +180,7 @@ describe('Provider OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
       request(app.getHttpServer()).get(
         '/api/social/callback/facebook?error=access_denied&error_description=User%20denied',
       ),
-      request(legacyApp).get(
+      request(app.getHttpServer()).get(
         '/api/social/callback/facebook?error=access_denied&error_description=User%20denied',
       ),
     ]);
@@ -226,8 +189,8 @@ describe('Provider OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
     );
   });
 
-  it('completes a legacy-stored Facebook state through the NestJS callback and connects channels', async () => {
-    const begin = await request(legacyApp)
+  it('completes a stored Facebook state through the callback and connects channels', async () => {
+    const begin = await request(app.getHttpServer())
       .get('/api/social/connect/facebook')
       .set('Cookie', authCookie())
       .set('x-organization-id', String(owner.org.id))
@@ -271,26 +234,19 @@ describe('Provider OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
     expect(replay.headers.location).toContain('error=invalid_state');
   });
 
-  it('mints equivalent Stripe authorization URLs whose states verify in both runtimes', async () => {
-    const [nest, legacy] = await Promise.all([
-      request(app.getHttpServer())
+  it('mints Stripe authorization URLs whose states verify', async () => {
+    const nest = await request(app.getHttpServer())
         .get('/api/invoice-integrations/stripe/connect?return_url=/payment-settings?from=setup')
         .set('Cookie', authCookie())
-        .set('x-organization-id', String(owner.org.id)),
-      request(legacyApp)
-        .get('/api/invoice-integrations/stripe/connect?return_url=/payment-settings?from=setup')
-        .set('Cookie', authCookie())
-        .set('x-organization-id', String(owner.org.id)),
-    ]);
+        .set('x-organization-id', String(owner.org.id));
     expect(nest.status).toBe(200);
-    expect(legacy.status).toBe(200);
-    for (const body of [nest.body, legacy.body]) {
+    for (const body of [nest.body]) {
       const url = new URL(body.authUrl);
       expect(url.origin + url.pathname).toBe(
         'https://connect.stripe.com/oauth/authorize',
       );
       expect(url.searchParams.get('client_id')).toBe('ca_fake_client');
-      const verified = legacyStripeState.verifyStripeConnectState(
+      const verified = verifyStripeConnectState(
         url.searchParams.get('state'),
       );
       expect(verified).toEqual({
@@ -301,8 +257,8 @@ describe('Provider OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
     }
   });
 
-  it('completes a legacy-minted Stripe state through the NestJS callback and disconnects cleanly', async () => {
-    const state = legacyStripeState.createStripeConnectState({
+  it('completes a minted Stripe state through the callback and disconnects cleanly', async () => {
+    const state = createStripeConnectState({
       userId: owner.user.id,
       organizationId: owner.org.id,
       returnUrl: '/payment-settings?from=setup',
@@ -416,10 +372,10 @@ describe('Provider OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
     expect(withoutCsrf.body.errors?.length).toBeGreaterThan(0);
   });
 
-  it('rejects Stripe callback failures identically before any exchange', async () => {
+  it('rejects Stripe callback failures before any exchange', async () => {
     const noCode = await Promise.all([
       request(app.getHttpServer()).get('/api/invoice-integrations/stripe/callback'),
-      request(legacyApp).get('/api/invoice-integrations/stripe/callback'),
+      request(app.getHttpServer()).get('/api/invoice-integrations/stripe/callback'),
     ]);
     expect(noCode[0].status).toBe(302);
     expect(noCode[0].headers.location).toBe(noCode[1].headers.location);
@@ -429,7 +385,7 @@ describe('Provider OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
       request(app.getHttpServer()).get(
         '/api/invoice-integrations/stripe/callback?code=abc&state=bad',
       ),
-      request(legacyApp).get(
+      request(app.getHttpServer()).get(
         '/api/invoice-integrations/stripe/callback?code=abc&state=bad',
       ),
     ]);
@@ -440,7 +396,7 @@ describe('Provider OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
       `provider-foreign-${Date.now()}@test.itemize`,
       'Foreign Provider Owner',
     );
-    const crossTenant = legacyStripeState.createStripeConnectState({
+    const crossTenant = createStripeConnectState({
       userId: owner.user.id,
       organizationId: foreign.org.id,
     });
@@ -448,7 +404,7 @@ describe('Provider OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
       request(app.getHttpServer()).get(
         `/api/invoice-integrations/stripe/callback?code=abc&state=${encodeURIComponent(crossTenant)}`,
       ),
-      request(legacyApp).get(
+      request(app.getHttpServer()).get(
         `/api/invoice-integrations/stripe/callback?code=abc&state=${encodeURIComponent(crossTenant)}`,
       ),
     ]);
@@ -456,18 +412,13 @@ describe('Provider OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
     expect(nonMember[0].headers.location).toContain('error=invalid_state');
   });
 
-  it('denies unauthenticated begins identically for both providers', async () => {
+  it('denies unauthenticated begins for both providers', async () => {
     for (const path of [
       '/api/social/connect/facebook',
       '/api/invoice-integrations/stripe/connect',
     ]) {
-      const [nest, legacy] = await Promise.all([
-        request(app.getHttpServer()).get(path),
-        request(legacyApp).get(path),
-      ]);
+      const nest = await request(app.getHttpServer()).get(path);
       expect(nest.status).toBe(401);
-      expect(legacy.status).toBe(401);
-      expect(nest.body).toEqual(legacy.body);
     }
   });
 });

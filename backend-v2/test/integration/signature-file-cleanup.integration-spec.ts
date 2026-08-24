@@ -16,12 +16,10 @@ type JobRow = {
   deleted_at: Date | null;
 };
 
-describe('Signature file cleanup worker parity (NestJS vs legacy)', () => {
+describe('Signature file cleanup worker (legacy behavior pinned)', () => {
   let app: NestExpressApplication;
   let pool: Pool;
   let nestCleanup: SignatureFileCleanupService;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let LegacyCleanupService: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dbHelper: any;
   let organizationId: number;
@@ -58,18 +56,6 @@ describe('Signature file cleanup worker parity (NestJS vs legacy)', () => {
     },
   };
 
-  const legacyDependencies = () => ({
-    unlink: nestStorage.unlink,
-    getLocalFilePath: nestStorage.getLocalFilePath,
-    getS3KeyFromUrl: nestStorage.getS3KeyFromUrl,
-    s3Service: {
-      get isConfigured() {
-        return s3Configured;
-      },
-      deleteFile: nestStorage.s3DeleteFile,
-    },
-  });
-
   const seedJob = async (suffix: string, fileUrl: string) => {
     const row = (
       await pool.query<{ id: number }>(
@@ -100,10 +86,7 @@ describe('Signature file cleanup worker parity (NestJS vs legacy)', () => {
     process.env.DATABASE_URL ||= 'postgresql://unused/test';
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
-    ({ SignatureFileCleanupService: LegacyCleanupService } = require(
-      '../../../backend/src/services/signature-file-cleanup.service',
-    ));
+    const TestDbHelper = require('../../../db/test-support/test-db-helper');
     /* eslint-enable @typescript-eslint/no-var-requires */
     dbHelper = new TestDbHelper();
     await dbHelper.setup();
@@ -137,7 +120,7 @@ describe('Signature file cleanup worker parity (NestJS vs legacy)', () => {
   afterAll(async () => {
     if (app) await app.close();
     if (dbHelper) {
-      const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+      const TestDbHelper = require('../../../db/test-support/test-db-helper');
       const cleanup = new TestDbHelper();
       await cleanup.setup();
       cleanup._userIds = dbHelper._userIds;
@@ -147,11 +130,6 @@ describe('Signature file cleanup worker parity (NestJS vs legacy)', () => {
   }, 60000);
 
   const runners = () => [
-    {
-      name: 'legacy',
-      run: (options: Record<string, unknown> = {}) =>
-        new LegacyCleanupService(pool, legacyDependencies()).run(options),
-    },
     {
       name: 'nest',
       run: (options: Record<string, unknown> = {}) => nestCleanup.run(options),
@@ -175,12 +153,10 @@ describe('Signature file cleanup worker parity (NestJS vs legacy)', () => {
       });
       outcomes.push(await jobRow(jobId));
     }
-    const [legacy, nest] = outcomes;
+    const [nest] = outcomes;
     expect(nest.status).toBe('deleted');
-    expect(legacy.status).toBe('deleted');
     expect(nest.deleted_at).not.toBeNull();
-    expect(legacy.deleted_at).not.toBeNull();
-    expect(unlinked).toHaveLength(2);
+    expect(unlinked).toHaveLength(1);
   });
 
   it('defers files that are still referenced identically', async () => {
@@ -204,11 +180,9 @@ describe('Signature file cleanup worker parity (NestJS vs legacy)', () => {
       });
       outcomes.push(await jobRow(jobId));
     }
-    const [legacy, nest] = outcomes;
+    const [nest] = outcomes;
     expect(nest.status).toBe('queued');
-    expect(legacy.status).toBe('queued');
     expect(nest.last_error).toBe('File remains referenced');
-    expect(legacy.last_error).toBe('File remains referenced');
     expect(nest.next_attempt_at!.getTime()).toBeGreaterThan(Date.now());
   });
 
@@ -229,10 +203,8 @@ describe('Signature file cleanup worker parity (NestJS vs legacy)', () => {
       });
       outcomes.push(await jobRow(jobId));
     }
-    const [legacy, nest] = outcomes;
+    const [nest] = outcomes;
     expect(nest.status).toBe('dead_letter');
-    expect(legacy.status).toBe('dead_letter');
-    expect(nest.last_error).toBe(legacy.last_error);
     expect(nest.attempt_count).toBe(1);
   });
 
@@ -258,10 +230,8 @@ describe('Signature file cleanup worker parity (NestJS vs legacy)', () => {
     } finally {
       s3Configured = true;
     }
-    const [legacy, nest] = outcomes;
+    const [nest] = outcomes;
     expect(nest.status).toBe('retry');
-    expect(legacy.status).toBe('retry');
-    expect(nest.last_error).toBe(legacy.last_error);
     expect(nest.last_error).toBe('Signature S3 cleanup is unavailable');
   });
 
@@ -275,6 +245,6 @@ describe('Signature file cleanup worker parity (NestJS vs legacy)', () => {
       expect(summary.deleted).toBe(1);
       expect((await jobRow(jobId)).status).toBe('deleted');
     }
-    expect(s3Deleted.filter((key) => key.includes('gone-'))).toHaveLength(2);
+    expect(s3Deleted.filter((key) => key.includes('gone-'))).toHaveLength(1);
   });
 });

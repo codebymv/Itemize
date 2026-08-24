@@ -8,6 +8,7 @@ import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
+import { SignatureFileCleanupService } from '../../src/signature-files/signature-file-cleanup.service';
 import { SignatureCompletionJobsService } from '../../src/public-signing/signature-completion-jobs.service';
 import { SignatureDeliveryJobsService } from '../../src/signature-delivery/signature-delivery-jobs.service';
 import { signatureDeliveryToken } from '../../src/signature-delivery/signature-delivery.token';
@@ -1064,15 +1065,14 @@ describe('E-signature GraphQL read contract', () => {
       [organizationId, deletedHistoricalUrl],
     )).rows).toHaveLength(2);
 
-    const { SignatureFileCleanupService } = require(
-      '../../../backend/src/services/signature-file-cleanup.service',
-    );
     const unlink = jest.fn().mockResolvedValue(undefined);
     const cleanup = new SignatureFileCleanupService(pool, {
       unlink,
       getLocalFilePath: (value: string) =>
         value.startsWith('/uploads/signatures/') ? `C:\\safe\\${value.split('/').pop()}` : null,
-      s3Service: null,
+      getS3KeyFromUrl: () => null,
+      s3IsConfigured: () => false,
+      s3DeleteFile: async () => undefined,
     });
     const job = await pool.query<{ id: number }>(
       `SELECT id FROM signature_file_deletion_jobs

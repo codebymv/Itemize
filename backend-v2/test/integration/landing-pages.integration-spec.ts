@@ -2,7 +2,6 @@ import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import bcrypt from 'bcryptjs';
-import express, { Express } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -11,7 +10,6 @@ import { PG_POOL } from '../../src/database/database.module';
 
 describe('Authenticated landing-pages GraphQL PostgreSQL contract', () => {
   let graphqlApp: NestExpressApplication;
-  let publicApp: Express;
   let pool: Pool;
   let organizationId: number;
   let outsiderOrganizationId: number;
@@ -135,17 +133,6 @@ describe('Authenticated landing-pages GraphQL PostgreSQL contract', () => {
     configureApp(graphqlApp);
     await graphqlApp.init();
 
-    const createPagesRouter = require('../../../backend/src/routes/pages.routes');
-    publicApp = express();
-    publicApp.use(express.json());
-    publicApp.use(
-      '/api/pages',
-      createPagesRouter(
-        pool,
-        undefined,
-        (_req: unknown, _res: unknown, next: () => void) => next(),
-      ),
-    );
 
   });
 
@@ -522,11 +509,11 @@ describe('Authenticated landing-pages GraphQL PostgreSQL contract', () => {
       version.body.data.createLandingPageVersion.content.settings.password,
     ).toBeUndefined();
 
-    await request(publicApp)
+    await request(graphqlApp.getHttpServer())
       .get('/api/pages/public/page/launch')
       .set('x-page-password', 'wrong-password')
       .expect(401);
-    await request(publicApp)
+    await request(graphqlApp.getHttpServer())
       .get('/api/pages/public/page/launch')
       .set('x-page-password', 'open-sesame')
       .expect(200)

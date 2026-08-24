@@ -257,15 +257,9 @@ export class LegacySignatureFileStorage implements SignatureFileStorage {
   }
 
   protected legacyS3Service(): LegacyS3Service | null {
-    const candidates = [
-      resolve(process.cwd(), 'backend/src/services/s3.service.js'),
-      resolve(process.cwd(), '../backend/src/services/s3.service.js'),
-      resolve(__dirname, '../../../backend/src/services/s3.service.js'),
-    ];
-    const path = candidates.find(existsSync);
-    if (!path) return null;
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require(path) as LegacyS3Service;
+    // The Express backend that used to host the shared S3 singleton is
+    // retired; the private client below is the only implementation now.
+    return null;
   }
 
   protected createS3Client(input: {
@@ -397,9 +391,9 @@ export class LegacySignatureFileStorage implements SignatureFileStorage {
 
   private localDirectories(): string[] {
     return [
-      resolve(process.cwd(), 'backend/uploads/signatures'),
-      resolve(process.cwd(), '../backend/uploads/signatures'),
-      resolve(process.cwd(), '../../backend/uploads/signatures'),
+      resolve(process.cwd(), 'uploads/signatures'),
+      resolve(process.cwd(), 'backend-v2/uploads/signatures'),
+      resolve(__dirname, '../../uploads/signatures'),
     ];
   }
 }

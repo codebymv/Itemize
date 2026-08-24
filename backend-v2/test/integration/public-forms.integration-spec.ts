@@ -1,6 +1,5 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import express, { Express, NextFunction, Request, Response } from 'express';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -14,16 +13,14 @@ type SeededForm = {
   fieldIds: Record<string, number>;
 };
 
-describe('Public forms retained HTTP parity (NestJS vs legacy origin)', () => {
+describe('Public forms (legacy behavior pinned)', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dbHelper: any;
   let organizationId: number;
   let ownerId: number;
   let nestForm: SeededForm;
-  let legacyForm: SeededForm;
 
   const seedForm = async (slug: string): Promise<SeededForm> => {
     const inserted = await pool.query<{ id: number; public_id: string }>(
@@ -123,8 +120,7 @@ describe('Public forms retained HTTP parity (NestJS vs legacy origin)', () => {
     process.env.DATABASE_URL ||= 'postgresql://unused/test';
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
-    const createFormsRouter = require('../../../backend/src/routes/forms.routes');
+    const TestDbHelper = require('../../../db/test-support/test-db-helper');
     /* eslint-enable @typescript-eslint/no-var-requires */
     dbHelper = new TestDbHelper();
     await dbHelper.setup();
@@ -136,7 +132,6 @@ describe('Public forms retained HTTP parity (NestJS vs legacy origin)', () => {
     organizationId = owner.org.id;
     ownerId = owner.user.id;
     nestForm = await seedForm(`parity-nest-${Date.now()}`);
-    legacyForm = await seedForm(`parity-legacy-${Date.now()}`);
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PG_POOL)
@@ -149,17 +144,12 @@ describe('Public forms retained HTTP parity (NestJS vs legacy origin)', () => {
     configureApp(app);
     await app.init();
 
-    const noopLimit = (_req: Request, _res: Response, next: NextFunction) =>
-      next();
-    legacyApp = express();
-    legacyApp.use(express.json());
-    legacyApp.use('/api/forms', createFormsRouter(pool, null, noopLimit));
   }, 60000);
 
   afterAll(async () => {
     if (app) await app.close();
     if (dbHelper) {
-      const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+      const TestDbHelper = require('../../../db/test-support/test-db-helper');
       const cleanup = new TestDbHelper();
       await cleanup.setup();
       cleanup._userIds = dbHelper._userIds;
@@ -168,15 +158,12 @@ describe('Public forms retained HTTP parity (NestJS vs legacy origin)', () => {
     }
   }, 60000);
 
-  it('serves the published definition identically by public ID and slug', async () => {
+  it('serves the published definition by public ID and slug', async () => {
     for (const identifier of [nestForm.public_id, nestForm.slug]) {
-      const [nest, legacy] = await Promise.all([
-        request(app.getHttpServer()).get(`/api/forms/public/form/${identifier}`),
-        request(legacyApp).get(`/api/forms/public/form/${identifier}`),
-      ]);
+      const nest = await request(app.getHttpServer()).get(
+        `/api/forms/public/form/${identifier}`,
+      );
       expect(nest.status).toBe(200);
-      expect(legacy.status).toBe(200);
-      expect(nest.body).toEqual(legacy.body);
       expect(nest.headers['cache-control']).toBe('no-store');
       expect(nest.headers['x-robots-tag']).toBe('noindex, nofollow');
       expect(nest.body.data.fields).toHaveLength(6);
@@ -184,17 +171,18 @@ describe('Public forms retained HTTP parity (NestJS vs legacy origin)', () => {
     }
   });
 
-  it('conceals unknown identifiers identically', async () => {
-    const [nest, legacy] = await Promise.all([
-      request(app.getHttpServer()).get('/api/forms/public/form/never-existed'),
-      request(legacyApp).get('/api/forms/public/form/never-existed'),
-    ]);
+  it('conceals unknown identifiers', async () => {
+    const nest = await request(app.getHttpServer()).get(
+      '/api/forms/public/form/never-existed',
+    );
     expect(nest.status).toBe(404);
-    expect(legacy.status).toBe(404);
-    expect(nest.body).toEqual(legacy.body);
+    expect(nest.body).toEqual({
+      success: false,
+      error: { message: 'Form not found', code: 'NOT_FOUND' },
+    });
   });
 
-  it('rejects invalid submissions identically across the validation matrix', async () => {
+  it('rejects invalid submissions across the validation matrix', async () => {
     const cases: Array<Record<string, unknown>> = [
       {},
       { data: 'not-an-object' },
@@ -230,17 +218,10 @@ describe('Public forms retained HTTP parity (NestJS vs legacy origin)', () => {
       { data: { unknown_field: 'x' } },
     ];
     for (const body of cases) {
-      const [nest, legacy] = await Promise.all([
-        request(app.getHttpServer())
-          .post(`/api/forms/public/form/${nestForm.public_id}`)
-          .send(body),
-        request(legacyApp)
-          .post(`/api/forms/public/form/${nestForm.public_id}`)
-          .send(body),
-      ]);
+      const nest = await request(app.getHttpServer())
+        .post(`/api/forms/public/form/${nestForm.public_id}`)
+        .send(body);
       expect(nest.status).toBe(400);
-      expect(legacy.status).toBe(400);
-      expect(nest.body).toEqual(legacy.body);
     }
     const submissions = await pool.query(
       'SELECT id FROM form_submissions WHERE form_id = $1',
@@ -249,7 +230,7 @@ describe('Public forms retained HTTP parity (NestJS vs legacy origin)', () => {
     expect(submissions.rows).toHaveLength(0);
   });
 
-  it('accepts equivalent submissions and fans out identical durable side effects', async () => {
+  it('accepts submissions and fans out the durable side effects', async () => {
     const email = `parity-contact-${Date.now()}@Test.Itemize`;
     const nest = await request(app.getHttpServer())
       .post(`/api/forms/public/form/${nestForm.public_id}`)
@@ -257,13 +238,6 @@ describe('Public forms retained HTTP parity (NestJS vs legacy origin)', () => {
       .set('referer', 'https://embed.example.com')
       .send(validSubmission(nestForm, email))
       .expect(201);
-    const legacy = await request(legacyApp)
-      .post(`/api/forms/public/form/${legacyForm.public_id}`)
-      .set('user-agent', 'parity-agent')
-      .set('referer', 'https://embed.example.com')
-      .send(validSubmission(legacyForm, email))
-      .expect(201);
-    expect(nest.body).toEqual(legacy.body);
     expect(nest.body).toEqual({
       success: true,
       data: {
@@ -276,13 +250,12 @@ describe('Public forms retained HTTP parity (NestJS vs legacy origin)', () => {
     const submissions = await pool.query(
       `SELECT form_id, contact_id, data, user_agent, referrer
        FROM form_submissions
-       WHERE form_id = ANY($1::int[])
+       WHERE form_id = $1
        ORDER BY form_id`,
-      [[nestForm.id, legacyForm.id]],
+      [nestForm.id],
     );
-    expect(submissions.rows).toHaveLength(2);
-    const [nestRow, legacyRow] = submissions.rows;
-    expect(nestRow.contact_id).toBe(legacyRow.contact_id);
+    expect(submissions.rows).toHaveLength(1);
+    const [nestRow] = submissions.rows;
     expect(nestRow.user_agent).toBe('parity-agent');
     expect(nestRow.referrer).toBe('https://embed.example.com');
     expect(nestRow.data[String(nestForm.fieldIds.first)]).toBe('Parity Tester');
@@ -333,7 +306,7 @@ describe('Public forms retained HTTP parity (NestJS vs legacy origin)', () => {
     }
   });
 
-  it('requires the conditional field identically when its condition activates', async () => {
+  it('requires the conditional field when its condition activates', async () => {
     const body = {
       data: {
         ...validSubmission(nestForm, 'conditional@test.itemize').data,

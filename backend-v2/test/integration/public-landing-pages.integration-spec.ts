@@ -9,9 +9,8 @@ import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
 
-describe('Public landing pages retained HTTP parity (NestJS vs legacy origin)', () => {
+describe('Public landing pages (legacy behavior pinned)', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dbHelper: any;
@@ -56,9 +55,8 @@ describe('Public landing pages retained HTTP parity (NestJS vs legacy origin)', 
     process.env.DATABASE_URL ||= 'postgresql://unused/test';
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
-    const createPublicPagesRouter = require('../../../backend/src/routes/pages/public.routes');
-    const bcrypt = require('bcrypt');
+    const TestDbHelper = require('../../../db/test-support/test-db-helper');
+    const bcrypt = require('bcryptjs');
     /* eslint-enable @typescript-eslint/no-var-requires */
     dbHelper = new TestDbHelper();
     await dbHelper.setup();
@@ -97,13 +95,6 @@ describe('Public landing pages retained HTTP parity (NestJS vs legacy origin)', 
 
     const noopLimit = (_req: Request, _res: Response, next: NextFunction) =>
       next();
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use(
-      '/api/pages',
-      createPublicPagesRouter({ pool, publicRateLimit: noopLimit }),
-    );
   }, 60000);
 
   afterAll(async () => {
@@ -115,7 +106,7 @@ describe('Public landing pages retained HTTP parity (NestJS vs legacy origin)', 
     }
     if (app) await app.close();
     if (dbHelper) {
-      const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+      const TestDbHelper = require('../../../db/test-support/test-db-helper');
       const cleanup = new TestDbHelper();
       await cleanup.setup();
       cleanup._userIds = dbHelper._userIds;
@@ -124,23 +115,16 @@ describe('Public landing pages retained HTTP parity (NestJS vs legacy origin)', 
     }
   }, 60000);
 
-  const bothGet = async (
+  const getPage = async (
     path: string,
     configure?: (req: request.Test) => request.Test,
   ) => {
-    const make = (server: Parameters<typeof request>[0]) => {
-      const req = request(server).get(path);
-      return configure ? configure(req) : req;
-    };
-    const [nest, legacy] = await Promise.all([
-      make(app.getHttpServer()),
-      make(legacyApp),
-    ]);
-    return { nest, legacy };
+    const req = request(app.getHttpServer()).get(path);
+    return configure ? configure(req) : req;
   };
 
-  it('serves a published page identically and records both visits', async () => {
-    const { nest, legacy } = await bothGet(
+  it('serves a published page and records the visit', async () => {
+    const nest = await getPage(
       `/api/pages/public/page/${slugs.open}?utm_source=news`,
       (req) =>
         req
@@ -149,8 +133,6 @@ describe('Public landing pages retained HTTP parity (NestJS vs legacy origin)', 
           .set('referer', 'https://ref.example.com'),
     );
     expect(nest.status).toBe(200);
-    expect(legacy.status).toBe(200);
-    expect(nest.body).toEqual(legacy.body);
     expect(nest.body).toMatchObject({
       id: pageIds.open,
       slug: slugs.open,
@@ -164,7 +146,7 @@ describe('Public landing pages retained HTTP parity (NestJS vs legacy origin)', 
        FROM page_analytics WHERE page_id = $1`,
       [pageIds.open],
     );
-    expect(visits.rows).toHaveLength(2);
+    expect(visits.rows).toHaveLength(1);
     for (const visit of visits.rows) {
       expect(visit).toMatchObject({
         visitor_id: 'parity-visitor',
@@ -179,61 +161,52 @@ describe('Public landing pages retained HTTP parity (NestJS vs legacy origin)', 
       'SELECT view_count FROM pages WHERE id = $1',
       [pageIds.open],
     );
-    expect(Number(counted.rows[0].view_count)).toBe(2);
+    expect(Number(counted.rows[0].view_count)).toBe(1);
   });
 
-  it('conceals unknown and unpublished pages identically', async () => {
+  it('conceals unknown and unpublished pages', async () => {
     for (const slug of ['never-existed', slugs.draft]) {
-      const { nest, legacy } = await bothGet(`/api/pages/public/page/${slug}`);
+      const nest = await getPage(`/api/pages/public/page/${slug}`);
       expect(nest.status).toBe(404);
-      expect(legacy.status).toBe(404);
-      expect(nest.body).toEqual(legacy.body);
     }
   });
 
-  it('enforces hashed and legacy plaintext passwords identically', async () => {
-    const missing = await bothGet(
+  it('enforces hashed and legacy plaintext passwords', async () => {
+    const missing = await getPage(
       `/api/pages/public/page/${slugs.hashedPassword}`,
     );
-    expect(missing.nest.status).toBe(401);
-    expect(missing.nest.body).toEqual(missing.legacy.body);
-
-    const wrong = await bothGet(
+    expect(missing.status).toBe(401);
+    
+    const wrong = await getPage(
       `/api/pages/public/page/${slugs.hashedPassword}`,
       (req) => req.set('x-page-password', 'nope'),
     );
-    expect(wrong.nest.status).toBe(401);
-    expect(wrong.nest.body).toEqual(wrong.legacy.body);
-
-    const viaHeader = await bothGet(
+    expect(wrong.status).toBe(401);
+    
+    const viaHeader = await getPage(
       `/api/pages/public/page/${slugs.hashedPassword}`,
       (req) => req.set('x-page-password', 'open-sesame'),
     );
-    expect(viaHeader.nest.status).toBe(200);
-    expect(viaHeader.nest.body).toEqual(viaHeader.legacy.body);
-
-    const viaQuery = await bothGet(
+    expect(viaHeader.status).toBe(200);
+    
+    const viaQuery = await getPage(
       `/api/pages/public/page/${slugs.plainPassword}?password=plain-secret`,
     );
-    expect(viaQuery.nest.status).toBe(200);
-    expect(viaQuery.nest.body).toEqual(viaQuery.legacy.body);
-  });
+    expect(viaQuery.status).toBe(200);
+      });
 
-  it('reports an expired page as gone identically', async () => {
-    const { nest, legacy } = await bothGet(
+  it('reports an expired page as gone', async () => {
+    const nest = await getPage(
       `/api/pages/public/page/${slugs.expired}`,
     );
     expect(nest.status).toBe(410);
-    expect(legacy.status).toBe(410);
-    expect(nest.body).toEqual(legacy.body);
   });
 
-  it('skips analytics identically when the page disables them', async () => {
-    const { nest, legacy } = await bothGet(
+  it('skips analytics when the page disables them', async () => {
+    const nest = await getPage(
       `/api/pages/public/page/${slugs.noAnalytics}`,
     );
     expect(nest.status).toBe(200);
-    expect(nest.body).toEqual(legacy.body);
     const visits = await pool.query(
       'SELECT id FROM page_analytics WHERE page_id = $1',
       [pageIds.noAnalytics],
@@ -246,7 +219,7 @@ describe('Public landing pages retained HTTP parity (NestJS vs legacy origin)', 
       request(app.getHttpServer())
         .post(`/api/pages/public/page/${slugs.open}/analytics`)
         .send({ visitor_id: 'v' }),
-      request(legacyApp)
+      request(app.getHttpServer())
         .post(`/api/pages/public/page/${slugs.open}/analytics`)
         .send({ visitor_id: 'v' }),
     ]);
@@ -288,7 +261,7 @@ describe('Public landing pages retained HTTP parity (NestJS vs legacy origin)', 
     });
     expect(row.rows[0].left_at).not.toBeNull();
 
-    const legacyUpdated = await request(legacyApp)
+    const legacyUpdated = await request(app.getHttpServer())
       .post(`/api/pages/public/page/${slugs.open}/analytics`)
       .send({ visitor_id: visitorId, session_id: sessionId, scroll_depth: 90 })
       .expect(200);

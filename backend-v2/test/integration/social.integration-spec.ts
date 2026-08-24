@@ -14,7 +14,7 @@ import { SocialService } from '../../src/social/social.service';
 
 const {
   runSocialMessageDeliveryMigration,
-} = require('../../../backend/src/db_social_delivery_migrations');
+} = require('../../../db/src/db_social_delivery_migrations');
 
 describe('Authenticated Social GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;

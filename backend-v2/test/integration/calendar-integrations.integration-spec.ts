@@ -9,7 +9,7 @@ import { PG_POOL } from '../../src/database/database.module';
 
 const {
   encryptCalendarToken,
-} = require('../../../backend/src/utils/calendarTokenEncryption');
+} = require('../../../db/src/utils/calendarTokenEncryption');
 
 describe('Calendar integrations GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;

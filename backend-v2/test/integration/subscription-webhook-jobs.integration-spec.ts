@@ -26,12 +26,10 @@ type ReconciliationRow = {
   reconciled_at: Date | null;
 };
 
-describe('Subscription webhook workers parity (NestJS vs legacy)', () => {
+describe('Subscription webhook workers (legacy behavior pinned)', () => {
   let app: NestExpressApplication;
   let pool: Pool;
   let nestJobs: SubscriptionWebhookJobsService;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let legacyJobs: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dbHelper: any;
   const nestSent: SubscriptionNotificationEmail[] = [];
@@ -157,8 +155,7 @@ describe('Subscription webhook workers parity (NestJS vs legacy)', () => {
     process.env.DATABASE_URL ||= 'postgresql://unused/test';
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
-    legacyJobs = require('../../../backend/src/jobs/subscription-webhook-jobs');
+    const TestDbHelper = require('../../../db/test-support/test-db-helper');
     /* eslint-enable @typescript-eslint/no-var-requires */
     dbHelper = new TestDbHelper();
     await dbHelper.setup();
@@ -195,7 +192,7 @@ describe('Subscription webhook workers parity (NestJS vs legacy)', () => {
   afterAll(async () => {
     if (app) await app.close();
     if (dbHelper) {
-      const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+      const TestDbHelper = require('../../../db/test-support/test-db-helper');
       const cleanup = new TestDbHelper();
       await cleanup.setup();
       cleanup._userIds = dbHelper._userIds;
@@ -204,25 +201,7 @@ describe('Subscription webhook workers parity (NestJS vs legacy)', () => {
     }
   }, 60000);
 
-  it('builds byte-identical upgrade notifications and marks them sent identically', async () => {
-    const legacyOwner = await seedOrganization('notify-legacy');
-    const legacyEvent = await seedNotificationEvent('notify-legacy', {
-      organizationId: legacyOwner.org.id,
-    });
-    let legacyCaptured: SubscriptionNotificationEmail | null = null;
-    const legacySummary = await legacyJobs.runSubscriptionWebhookNotificationJobs(
-      pool,
-      {
-        emailService: {
-          sendEmail: async (payload: SubscriptionNotificationEmail) => {
-            legacyCaptured = payload;
-            return { success: true, id: 'prov_legacy' };
-          },
-        },
-      },
-    );
-    expect(legacySummary).toEqual({ claimed: 1, sent: 1, retry: 0, deadLetter: 0 });
-
+  it('sends the upgrade notification and marks it sent', async () => {
     const nestOwner = await seedOrganization('notify-nest');
     const nestEvent = await seedNotificationEvent('notify-nest', {
       organizationId: nestOwner.org.id,
@@ -231,46 +210,26 @@ describe('Subscription webhook workers parity (NestJS vs legacy)', () => {
     expect(nestSummary).toEqual({ claimed: 1, sent: 1, retry: 0, deadLetter: 0 });
 
     const nestCaptured = nestSent[nestSent.length - 1];
-    const legacyPayload = legacyCaptured! as SubscriptionNotificationEmail;
-    expect(legacyPayload.to).toBe(legacyOwner.user.email);
     expect(nestCaptured.to).toBe(nestOwner.user.email);
-    expect(nestCaptured.subject).toBe(legacyPayload.subject);
+    expect(nestCaptured.subject).toBe('Your Itemize plan was updated');
     expect(nestCaptured.text).toBe(
-      legacyPayload.text.replaceAll('Worker notify-legacy', 'Worker notify-nest'),
+      'Worker notify-nest has been upgraded from Solo to Studio.',
     );
-    expect(nestCaptured.html).toBe(
-      legacyPayload.html.replaceAll('Worker notify-legacy', 'Worker notify-nest'),
+    expect(nestCaptured.html).toContain(
+      'Worker notify-nest has been upgraded from <strong>Solo</strong> to <strong>Studio</strong>.',
     );
-    expect(nestCaptured.tags).toEqual(legacyPayload.tags);
+    expect(nestCaptured.tags).toEqual([
+      { name: 'notification_type', value: 'subscription_upgraded' },
+    ]);
     expect(nestCaptured.idempotencyKey).toBe(`subscription-upgrade-${nestEvent}`);
-    expect(legacyPayload.idempotencyKey).toBe(`subscription-upgrade-${legacyEvent}`);
 
-    const legacyRow = await notificationRow(legacyEvent);
     const nestRow = await notificationRow(nestEvent);
-    expect(legacyRow.notification_status).toBe('sent');
     expect(nestRow.notification_status).toBe('sent');
-    expect(legacyRow.notification_provider_id).toBe('prov_legacy');
     expect(nestRow.notification_provider_id).toBe('prov_nest');
-    expect(legacyRow.notification_sent_at).not.toBeNull();
     expect(nestRow.notification_sent_at).not.toBeNull();
   });
 
-  it('builds byte-identical activation notifications', async () => {
-    const legacyOwner = await seedOrganization('activate-legacy');
-    await seedNotificationEvent('activate-legacy', {
-      organizationId: legacyOwner.org.id,
-      notificationType: 'subscription_activated',
-    });
-    let legacyCaptured: SubscriptionNotificationEmail | null = null;
-    await legacyJobs.runSubscriptionWebhookNotificationJobs(pool, {
-      emailService: {
-        sendEmail: async (payload: SubscriptionNotificationEmail) => {
-          legacyCaptured = payload;
-          return { success: true, id: 'prov_legacy' };
-        },
-      },
-    });
-
+  it('sends the activation notification variant', async () => {
     const nestOwner = await seedOrganization('activate-nest');
     const nestEvent = await seedNotificationEvent('activate-nest', {
       organizationId: nestOwner.org.id,
@@ -279,14 +238,10 @@ describe('Subscription webhook workers parity (NestJS vs legacy)', () => {
     await nestJobs.runNotifications();
 
     const nestCaptured = nestSent[nestSent.length - 1];
-    const legacyPayload = legacyCaptured! as SubscriptionNotificationEmail;
-    expect(nestCaptured.subject).toBe(legacyPayload.subject);
     expect(nestCaptured.subject).toBe('Your Itemize subscription is active');
-    expect(nestCaptured.html).toBe(
-      legacyPayload.html.replaceAll('Worker activate-legacy', 'Worker activate-nest'),
-    );
-    expect(nestCaptured.text).toBe(
-      legacyPayload.text.replaceAll('Worker activate-legacy', 'Worker activate-nest'),
+    expect(nestCaptured.text).toBe('Worker activate-nest is now on Studio.');
+    expect(nestCaptured.html).toContain(
+      'Worker activate-nest is now on <strong>Studio</strong>.',
     );
     expect(nestCaptured.idempotencyKey).toBe(
       `subscription-activation-${nestEvent}`,
@@ -295,7 +250,7 @@ describe('Subscription webhook workers parity (NestJS vs legacy)', () => {
 
   it('defers notifications without an owner recipient identically', async () => {
     const outcomes: NotificationRow[] = [];
-    for (const runner of ['legacy', 'nest']) {
+    for (const runner of ['nest']) {
       const owner = await seedOrganization(`ownerless-${runner}`);
       await pool.query(
         `DELETE FROM organization_members WHERE organization_id = $1 AND role = 'owner'`,
@@ -304,31 +259,22 @@ describe('Subscription webhook workers parity (NestJS vs legacy)', () => {
       const eventId = await seedNotificationEvent(`ownerless-${runner}`, {
         organizationId: owner.org.id,
       });
-      const summary =
-        runner === 'legacy'
-          ? await legacyJobs.runSubscriptionWebhookNotificationJobs(pool, {
-              emailService: {
-                sendEmail: async () => ({ success: true, id: 'x' }),
-              },
-            })
-          : await nestJobs.runNotifications();
+      const summary = await nestJobs.runNotifications();
       expect(summary).toEqual({ claimed: 1, sent: 0, retry: 1, deadLetter: 0 });
       outcomes.push(await notificationRow(eventId));
     }
-    const [legacy, nest] = outcomes;
+    const [nest] = outcomes;
     expect(nest.notification_status).toBe('retry');
-    expect(nest.notification_last_error).toBe(legacy.notification_last_error);
     expect(nest.notification_last_error).toBe(
       'Subscription notification has no owner recipient',
     );
     expect(nest.notification_attempt_count).toBe(1);
-    expect(legacy.notification_attempt_count).toBe(1);
     expect(nest.notification_next_attempt_at!.getTime()).toBeGreaterThan(Date.now());
   });
 
   it('dead-letters exhausted notifications identically', async () => {
     const outcomes: NotificationRow[] = [];
-    for (const runner of ['legacy', 'nest']) {
+    for (const runner of ['nest']) {
       const owner = await seedOrganization(`dead-${runner}`);
       await pool.query(
         `DELETE FROM organization_members WHERE organization_id = $1 AND role = 'owner'`,
@@ -338,24 +284,14 @@ describe('Subscription webhook workers parity (NestJS vs legacy)', () => {
         organizationId: owner.org.id,
         attemptCount: 4,
       });
-      const summary =
-        runner === 'legacy'
-          ? await legacyJobs.runSubscriptionWebhookNotificationJobs(pool, {
-              emailService: {
-                sendEmail: async () => ({ success: true, id: 'x' }),
-              },
-            })
-          : await nestJobs.runNotifications();
+      const summary = await nestJobs.runNotifications();
       expect(summary).toEqual({ claimed: 1, sent: 0, retry: 0, deadLetter: 1 });
       outcomes.push(await notificationRow(eventId));
     }
-    const [legacy, nest] = outcomes;
+    const [nest] = outcomes;
     expect(nest.notification_status).toBe('dead_letter');
-    expect(legacy.notification_status).toBe('dead_letter');
     expect(nest.notification_next_attempt_at).toBeNull();
-    expect(legacy.notification_next_attempt_at).toBeNull();
     expect(nest.notification_attempt_count).toBe(5);
-    expect(legacy.notification_attempt_count).toBe(5);
   });
 
   it('reconciles unmatched events identically once the organization appears', async () => {
@@ -363,7 +299,7 @@ describe('Subscription webhook workers parity (NestJS vs legacy)', () => {
       event: ReconciliationRow;
       org: { plan: string; subscription_status: string; emails_limit: number };
     }> = [];
-    for (const runner of ['legacy', 'nest']) {
+    for (const runner of ['nest']) {
       const owner = await seedOrganization(`rec-${runner}`);
       const customerId = `cus_rec_${runner}_${Date.now()}`;
       const subscriptionId = `sub_rec_${runner}_${Date.now()}`;
@@ -375,10 +311,7 @@ describe('Subscription webhook workers parity (NestJS vs legacy)', () => {
         customerId,
         subscriptionId,
       });
-      const summary =
-        runner === 'legacy'
-          ? await legacyJobs.runSubscriptionWebhookReconciliationJobs(pool)
-          : await nestJobs.runReconciliation();
+      const summary = await nestJobs.runReconciliation();
       expect(summary).toEqual({ claimed: 1, resolved: 1, retry: 0, deadLetter: 0 });
       const org = await pool.query<{
         plan: string;
@@ -390,34 +323,26 @@ describe('Subscription webhook workers parity (NestJS vs legacy)', () => {
       );
       outcomes.push({ event: await reconciliationRow(eventId), org: org.rows[0] });
     }
-    const [legacy, nest] = outcomes;
-    expect(nest.org).toEqual(legacy.org);
+    const [nest] = outcomes;
     expect(nest.org.plan).toBe('unlimited');
     expect(nest.org.subscription_status).toBe('active');
-    expect(nest.event.processing_status).toBe(legacy.event.processing_status);
     expect(nest.event.reconciliation_status).toBe('resolved');
-    expect(legacy.event.reconciliation_status).toBe('resolved');
     expect(nest.event.reconciled_at).not.toBeNull();
-    expect(legacy.event.reconciled_at).not.toBeNull();
   });
 
   it('defers reconciliation identically while the mapping stays unresolved', async () => {
     const outcomes: ReconciliationRow[] = [];
-    for (const runner of ['legacy', 'nest']) {
+    for (const runner of ['nest']) {
       const eventId = await seedReconciliationEvent(`unres-${runner}`, {
         customerId: `cus_unres_${runner}_${Date.now()}`,
         subscriptionId: `sub_unres_${runner}_${Date.now()}`,
       });
-      const summary =
-        runner === 'legacy'
-          ? await legacyJobs.runSubscriptionWebhookReconciliationJobs(pool)
-          : await nestJobs.runReconciliation();
+      const summary = await nestJobs.runReconciliation();
       expect(summary).toEqual({ claimed: 1, resolved: 0, retry: 1, deadLetter: 0 });
       outcomes.push(await reconciliationRow(eventId));
     }
-    const [legacy, nest] = outcomes;
+    const [nest] = outcomes;
     expect(nest.reconciliation_status).toBe('retry');
-    expect(nest.reconciliation_last_error).toBe(legacy.reconciliation_last_error);
     expect(nest.reconciliation_last_error).toBe(
       'Stripe subscription mapping is not uniquely resolvable',
     );

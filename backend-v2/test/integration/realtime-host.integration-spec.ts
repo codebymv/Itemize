@@ -6,6 +6,7 @@ import { io as createClient, Socket as ClientSocket } from 'socket.io-client';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
+import { RealtimeOutboxService } from '../../src/realtime-outbox/realtime-outbox.service';
 import { RealtimeHostService } from '../../src/realtime-host/realtime-host.service';
 import { runRealtimeOutboxDelivery } from '../../src/realtime-host/realtime-outbox-delivery';
 
@@ -37,8 +38,6 @@ describe('NestJS realtime host retained Socket.IO contract', () => {
   let outsider: any;
   let baseUrl: string;
   let hostService: RealtimeHostService;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let enqueueRealtimeEvent: any;
   let sharedNoteToken: string;
   let sharedNoteId: number;
   let chatSessionToken: string;
@@ -77,8 +76,7 @@ describe('NestJS realtime host retained Socket.IO contract', () => {
     process.env.REALTIME_HOST_NESTJS_ENABLED = 'true';
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
-    ({ enqueueRealtimeEvent } = require('../../../backend/src/services/realtimeOutbox'));
+    const TestDbHelper = require('../../../db/test-support/test-db-helper');
     /* eslint-enable @typescript-eslint/no-var-requires */
     dbHelper = new TestDbHelper();
     await dbHelper.setup();
@@ -138,7 +136,7 @@ describe('NestJS realtime host retained Socket.IO contract', () => {
     for (const socket of clients) socket.disconnect();
     if (app) await app.close();
     if (dbHelper) {
-      const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+      const TestDbHelper = require('../../../db/test-support/test-db-helper');
       const cleanup = new TestDbHelper();
       await cleanup.setup();
       cleanup._userIds = dbHelper._userIds;
@@ -172,7 +170,10 @@ describe('NestJS realtime host retained Socket.IO contract', () => {
       client,
       'noteUpdated',
     );
-    const queued = await enqueueRealtimeEvent(pool, {
+    const outboxService = new RealtimeOutboxService();
+    const queued = await outboxService.enqueue(
+      pool as unknown as Parameters<RealtimeOutboxService['enqueue']>[0],
+      {
       eventKey: `nest-host:${Date.now()}:${Math.random()}`,
       aggregateType: 'note',
       aggregateId: sharedNoteId,
@@ -182,13 +183,14 @@ describe('NestJS realtime host retained Socket.IO contract', () => {
       eventType: 'CONTENT_CHANGED',
       payload: { id: sharedNoteId, content: 'Nest host content' },
       occurredAt,
-    });
+      },
+    );
 
     const broadcast = hostService.broadcast();
     expect(broadcast).not.toBeNull();
     const summary = await runRealtimeOutboxDelivery(pool, broadcast!, {
       batchSize: 1,
-      outboxId: queued.event.id,
+      outboxId: Number(queued.event.id),
       workerId: 'nest-host-spec',
     });
     expect(summary).toMatchObject({ claimed: 1, sent: 1 });

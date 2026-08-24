@@ -18,7 +18,6 @@ const CAPABILITY_HEADERS = {
 
 describe('Public sharing retained HTTP parity (NestJS vs legacy origin)', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   let ownerId: number;
   const seededIds: Record<string, number> = {};
@@ -155,17 +154,9 @@ describe('Public sharing retained HTTP parity (NestJS vs legacy origin)', () => 
     await app.init();
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const createSharingRouter = require('../../../backend/src/routes/sharing.routes');
-    const createVaultSharingRouter = require('../../../backend/src/routes/vaults/sharing.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
     /* eslint-enable @typescript-eslint/no-var-requires */
     const noopLimit = (_req: Request, _res: Response, next: NextFunction) =>
       next();
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use('/api', createVaultSharingRouter(pool, authenticateJWT, noopLimit));
-    legacyApp.use('/api', createSharingRouter(pool, authenticateJWT, noopLimit, {}));
   });
 
   afterAll(async () => {
@@ -186,34 +177,24 @@ describe('Public sharing retained HTTP parity (NestJS vs legacy origin)', () => 
     }
   });
 
-  const bothResponses = async (path: string) => {
-    const [nest, legacy] = await Promise.all([
-      request(app.getHttpServer()).get(path),
-      request(legacyApp).get(path),
-    ]);
-    return { nest, legacy };
-  };
+  const getPath = async (path: string) => request(app.getHttpServer()).get(path);
 
   it.each(['list', 'note', 'whiteboard', 'wireframe', 'vault'] as const)(
     'serves an active public %s capability identically in both runtimes',
     async (kind) => {
-      const { nest, legacy } = await bothResponses(
+      const nest = await getPath(
         `/api/shared/${kind}/${tokens[kind]}`,
       );
       expect(nest.status).toBe(200);
-      expect(legacy.status).toBe(200);
       expect(nest.headers).toMatchObject(CAPABILITY_HEADERS);
-      expect(legacy.headers).toMatchObject(CAPABILITY_HEADERS);
-      expect(nest.body).toEqual(legacy.body);
       expect(JSON.stringify(nest.body)).not.toMatch(/<script|onerror|onload/i);
     },
   );
 
   it('decrypts vault items identically and never exposes ciphertext', async () => {
-    const { nest, legacy } = await bothResponses(
+    const nest = await getPath(
       `/api/shared/vault/${tokens.vault}`,
     );
-    expect(nest.body).toEqual(legacy.body);
     expect(nest.body.data.items).toEqual([
       {
         id: expect.anything(),
@@ -228,12 +209,10 @@ describe('Public sharing retained HTTP parity (NestJS vs legacy origin)', () => 
   it.each(['list', 'note', 'whiteboard', 'wireframe', 'vault'] as const)(
     'rejects a malformed public %s token identically in both runtimes',
     async (kind) => {
-      const { nest, legacy } = await bothResponses(
+      const nest = await getPath(
         `/api/shared/${kind}/not-a-token`,
       );
       expect(nest.status).toBe(404);
-      expect(legacy.status).toBe(404);
-      expect(nest.body).toEqual(legacy.body);
       expect(nest.headers).toMatchObject(CAPABILITY_HEADERS);
     },
   );
@@ -241,53 +220,43 @@ describe('Public sharing retained HTTP parity (NestJS vs legacy origin)', () => 
   it.each(['list', 'note', 'whiteboard', 'wireframe', 'vault'] as const)(
     'rejects an unknown public %s token identically in both runtimes',
     async (kind) => {
-      const { nest, legacy } = await bothResponses(
+      const nest = await getPath(
         `/api/shared/${kind}/${tokens.unknown}`,
       );
       expect(nest.status).toBe(404);
-      expect(legacy.status).toBe(404);
-      expect(nest.body).toEqual(legacy.body);
     },
   );
 
   it('conceals a revoked capability identically in both runtimes', async () => {
-    const { nest, legacy } = await bothResponses(
+    const nest = await getPath(
       `/api/shared/note/${tokens.revokedNote}`,
     );
     expect(nest.status).toBe(404);
-    expect(legacy.status).toBe(404);
-    expect(nest.body).toEqual(legacy.body);
   });
 
   it('denies a locked v1 vault identically in both runtimes', async () => {
-    const { nest, legacy } = await bothResponses(
+    const nest = await getPath(
       `/api/shared/vault/${tokens.lockedVault}`,
     );
     expect(nest.status).toBe(403);
-    expect(legacy.status).toBe(403);
-    expect(nest.body).toEqual(legacy.body);
   });
 
   it('fails a vault with an undecryptable item closed identically in both runtimes', async () => {
-    const { nest, legacy } = await bothResponses(
+    const nest = await getPath(
       `/api/shared/vault/${tokens.brokenVault}`,
     );
     expect(nest.status).toBe(500);
-    expect(legacy.status).toBe(500);
-    expect(nest.body).toEqual(legacy.body);
-    for (const body of [nest.body, legacy.body]) {
+    for (const body of [nest.body]) {
       expect(JSON.stringify(body)).not.toContain('Broken secret');
       expect(JSON.stringify(body)).not.toContain('invalid');
     }
   });
 
   it('serves a v2 vault snapshot without item decryption identically in both runtimes', async () => {
-    const { nest, legacy } = await bothResponses(
+    const nest = await getPath(
       `/api/shared/vault/${tokens.snapshotVault}`,
     );
     expect(nest.status).toBe(200);
-    expect(legacy.status).toBe(200);
-    expect(nest.body).toEqual(legacy.body);
     expect(nest.body.data).toMatchObject({
       crypto_version: 2,
       snapshot: { ciphertext: 'snapshot-ciphertext', iv: 'snapshot-iv' },

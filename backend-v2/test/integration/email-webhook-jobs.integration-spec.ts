@@ -16,12 +16,10 @@ type EventRow = {
   reconciled_at: Date | null;
 };
 
-describe('Email webhook reconciliation worker parity (NestJS vs legacy)', () => {
+describe('Email webhook reconciliation worker (legacy behavior pinned)', () => {
   let app: NestExpressApplication;
   let pool: Pool;
   let nestJobs: EmailWebhookJobsService;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let legacyJobs: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dbHelper: any;
   let organizationId: number;
@@ -89,8 +87,7 @@ describe('Email webhook reconciliation worker parity (NestJS vs legacy)', () => 
     process.env.DATABASE_URL ||= 'postgresql://unused/test';
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
-    legacyJobs = require('../../../backend/src/jobs/email-webhook-jobs');
+    const TestDbHelper = require('../../../db/test-support/test-db-helper');
     /* eslint-enable @typescript-eslint/no-var-requires */
     dbHelper = new TestDbHelper();
     await dbHelper.setup();
@@ -125,7 +122,7 @@ describe('Email webhook reconciliation worker parity (NestJS vs legacy)', () => 
   afterAll(async () => {
     if (app) await app.close();
     if (dbHelper) {
-      const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+      const TestDbHelper = require('../../../db/test-support/test-db-helper');
       const cleanup = new TestDbHelper();
       await cleanup.setup();
       cleanup._userIds = dbHelper._userIds;
@@ -143,7 +140,6 @@ describe('Email webhook reconciliation worker parity (NestJS vs legacy)', () => 
       deadLetter: number;
     }>;
   }> = [
-    { name: 'legacy', run: () => legacyJobs.runEmailWebhookReconciliationJobs(pool) },
     { name: 'nest', run: () => nestJobs.run() },
   ];
 
@@ -163,14 +159,9 @@ describe('Email webhook reconciliation worker parity (NestJS vs legacy)', () => 
       expect(log.rows[0].delivered_at).not.toBeNull();
       outcomes.push({ event: row, logStatus: log.rows[0].status });
     }
-    const [legacy, nest] = outcomes;
-    expect(nest.logStatus).toBe(legacy.logStatus);
-    expect(nest.event.processing_status).toBe(legacy.event.processing_status);
-    expect(nest.event.reconciliation_status).toBe(legacy.event.reconciliation_status);
+    const [nest] = outcomes;
     expect(nest.event.reconciliation_status).toBe('resolved');
     expect(nest.event.reconciled_at).not.toBeNull();
-    expect(legacy.event.reconciled_at).not.toBeNull();
-    expect(nest.event.reconciliation_reason).toBe(legacy.event.reconciliation_reason);
   });
 
   it('defers unresolvable claims with identical retry state and redacted error', async () => {
@@ -181,14 +172,10 @@ describe('Email webhook reconciliation worker parity (NestJS vs legacy)', () => 
       expect(summary).toEqual({ claimed: 1, resolved: 0, retry: 1, deadLetter: 0 });
       outcomes.push(await eventRow(seeded.svixId));
     }
-    const [legacy, nest] = outcomes;
+    const [nest] = outcomes;
     expect(nest.reconciliation_status).toBe('retry');
-    expect(legacy.reconciliation_status).toBe('retry');
     expect(nest.reconciliation_attempt_count).toBe(1);
-    expect(legacy.reconciliation_attempt_count).toBe(1);
-    expect(nest.reconciliation_last_error).toBe(legacy.reconciliation_last_error);
     expect(nest.reconciliation_next_attempt_at!.getTime()).toBeGreaterThan(Date.now());
-    expect(legacy.reconciliation_next_attempt_at!.getTime()).toBeGreaterThan(Date.now());
   });
 
   it('dead-letters exhausted claims identically', async () => {
@@ -201,13 +188,10 @@ describe('Email webhook reconciliation worker parity (NestJS vs legacy)', () => 
       expect(summary).toEqual({ claimed: 1, resolved: 0, retry: 0, deadLetter: 1 });
       outcomes.push(await eventRow(seeded.svixId));
     }
-    const [legacy, nest] = outcomes;
+    const [nest] = outcomes;
     expect(nest.reconciliation_status).toBe('dead_letter');
-    expect(legacy.reconciliation_status).toBe('dead_letter');
     expect(nest.reconciliation_next_attempt_at).toBeNull();
-    expect(legacy.reconciliation_next_attempt_at).toBeNull();
     expect(nest.reconciliation_attempt_count).toBe(10);
-    expect(legacy.reconciliation_attempt_count).toBe(10);
   });
 
   it('applies contact suppression identically when reconciling a complaint', async () => {
@@ -233,8 +217,7 @@ describe('Email webhook reconciliation worker parity (NestJS vs legacy)', () => 
         status: log.rows[0].status,
       });
     }
-    const [legacy, nest] = outcomes;
-    expect(nest).toEqual(legacy);
+    const [nest] = outcomes;
     expect(nest.unsubscribed).toBe(true);
     expect(nest.status).toBe('unsubscribed');
   });

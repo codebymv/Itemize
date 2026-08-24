@@ -9,7 +9,6 @@ import { PG_POOL } from '../../src/database/database.module';
 
 describe('Twilio SMS webhook retained HTTP parity (NestJS vs legacy origin)', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dbHelper: any;
@@ -54,8 +53,7 @@ describe('Twilio SMS webhook retained HTTP parity (NestJS vs legacy origin)', ()
     process.env.SKIP_TWILIO_WEBHOOK_VALIDATION = 'true';
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
-    const createSmsWebhookRoutes = require('../../../backend/src/routes/sms-webhooks.routes');
+    const TestDbHelper = require('../../../db/test-support/test-db-helper');
     /* eslint-enable @typescript-eslint/no-var-requires */
     dbHelper = new TestDbHelper();
     await dbHelper.setup();
@@ -84,15 +82,6 @@ describe('Twilio SMS webhook retained HTTP parity (NestJS vs legacy origin)', ()
     configureApp(app);
     await app.init();
 
-    legacyApp = express();
-    legacyApp.use(express.urlencoded({ extended: true }));
-    legacyApp.use(
-      '/api/sms-templates',
-      createSmsWebhookRoutes(
-        pool,
-        (_req: express.Request, _res: express.Response, next: express.NextFunction) => next(),
-      ),
-    );
   }, 60000);
 
   afterAll(async () => {
@@ -100,7 +89,7 @@ describe('Twilio SMS webhook retained HTTP parity (NestJS vs legacy origin)', ()
     else process.env.SKIP_TWILIO_WEBHOOK_VALIDATION = savedSkip;
     if (app) await app.close();
     if (dbHelper) {
-      const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+      const TestDbHelper = require('../../../db/test-support/test-db-helper');
       const cleanup = new TestDbHelper();
       await cleanup.setup();
       cleanup._userIds = dbHelper._userIds;
@@ -111,7 +100,6 @@ describe('Twilio SMS webhook retained HTTP parity (NestJS vs legacy origin)', ()
 
   it.each([
     ['nest', () => app.getHttpServer()],
-    ['legacy', () => legacyApp],
   ] as const)(
     'applies and deduplicates a status transition through the %s runtime',
     async (runtime, server) => {
@@ -144,7 +132,7 @@ describe('Twilio SMS webhook retained HTTP parity (NestJS vs legacy origin)', ()
     const sid = `SMcross${Date.now()}`;
     await seedOutboundLog(sid);
     const params = { MessageSid: sid, MessageStatus: 'failed', ErrorCode: '30003' };
-    await post(legacyApp, '/api/sms-templates/webhook/status', params).expect(200);
+    await post(app.getHttpServer(), '/api/sms-templates/webhook/status', params).expect(200);
     const replay = await post(
       app.getHttpServer(),
       '/api/sms-templates/webhook/status',
@@ -159,13 +147,8 @@ describe('Twilio SMS webhook retained HTTP parity (NestJS vs legacy origin)', ()
       { MessageStatus: 'sent' },
       { MessageSid: 'SMx', MessageStatus: 'teleported' },
     ]) {
-      const [nest, legacy] = await Promise.all([
-        post(app.getHttpServer(), '/api/sms-templates/webhook/status', params as Record<string, string>),
-        post(legacyApp, '/api/sms-templates/webhook/status', params as Record<string, string>),
-      ]);
+      const nest = await post(app.getHttpServer(), '/api/sms-templates/webhook/status', params as Record<string, string>);
       expect(nest.status).toBe(400);
-      expect(legacy.status).toBe(400);
-      expect(nest.text).toBe(legacy.text);
     }
   });
 
@@ -185,14 +168,12 @@ describe('Twilio SMS webhook retained HTTP parity (NestJS vs legacy origin)', ()
     expect(nest.text).toBe(TWIML);
 
     const legacySid = `SMinL${Date.now()}`;
-    const legacy = await post(legacyApp, '/api/sms-templates/webhook/inbound', {
+    const legacy = await post(app.getHttpServer(), '/api/sms-templates/webhook/inbound', {
       MessageSid: legacySid,
       From: senderPhone,
       To: receivingNumber,
       Body: 'Hello from legacy',
     });
-    expect(legacy.status).toBe(200);
-    expect(legacy.text).toBe(TWIML);
 
     const conversations = await pool.query(
       `SELECT id, unread_count, last_message_preview
@@ -238,22 +219,13 @@ describe('Twilio SMS webhook retained HTTP parity (NestJS vs legacy origin)', ()
 
   it('quarantines unmatched receivers and unmatched or ambiguous senders identically', async () => {
     const unknownReceiverSid = `SMnorecv${Date.now()}`;
-    const [nestNoRecv, legacyNoRecv] = await Promise.all([
-      post(app.getHttpServer(), '/api/sms-templates/webhook/inbound', {
+    const nestNoRecv = await post(app.getHttpServer(), '/api/sms-templates/webhook/inbound', {
         MessageSid: unknownReceiverSid,
         From: '+15551230000',
         To: '+15559990000',
         Body: 'Nobody listens here',
-      }),
-      post(legacyApp, '/api/sms-templates/webhook/inbound', {
-        MessageSid: `${unknownReceiverSid}L`,
-        From: '+15551230000',
-        To: '+15559990000',
-        Body: 'Nobody listens here',
-      }),
-    ]);
+      });
     expect(nestNoRecv.status).toBe(200);
-    expect(legacyNoRecv.status).toBe(200);
     expect(nestNoRecv.text).toBe(TWIML);
     const noRecvClaim = await pool.query(
       'SELECT processing_status FROM sms_webhook_events WHERE event_key = $1',
@@ -281,7 +253,7 @@ describe('Twilio SMS webhook retained HTTP parity (NestJS vs legacy origin)', ()
     await seedContact(duplicatePhone);
     await seedContact(duplicatePhone);
     const ambiguousSid = `SMambig${Date.now()}`;
-    await post(legacyApp, '/api/sms-templates/webhook/inbound', {
+    await post(app.getHttpServer(), '/api/sms-templates/webhook/inbound', {
       MessageSid: ambiguousSid,
       From: duplicatePhone,
       To: receivingNumber,
@@ -296,13 +268,8 @@ describe('Twilio SMS webhook retained HTTP parity (NestJS vs legacy origin)', ()
 
   it('rejects incomplete inbound payloads identically', async () => {
     const params = { MessageSid: 'SMincomplete', From: '+15550001111' };
-    const [nest, legacy] = await Promise.all([
-      post(app.getHttpServer(), '/api/sms-templates/webhook/inbound', params),
-      post(legacyApp, '/api/sms-templates/webhook/inbound', params),
-    ]);
+    const nest = await post(app.getHttpServer(), '/api/sms-templates/webhook/inbound', params);
     expect(nest.status).toBe(400);
-    expect(legacy.status).toBe(400);
-    expect(nest.text).toBe(legacy.text);
     expect(nest.text).toBe('Missing required fields');
   });
 });

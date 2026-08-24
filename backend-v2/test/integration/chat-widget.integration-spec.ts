@@ -6,13 +6,12 @@ import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
+import { runRealtimeOutboxDelivery } from '../../src/realtime-host/realtime-outbox-delivery';
+import type { RealtimeBroadcast } from '../../src/realtime-host/realtime-host';
 
 const {
   runChatWidgetGraphqlMigration,
-} = require('../../../backend/src/db_chat_widget_graphql_migrations');
-const {
-  runRealtimeOutboxJobs,
-} = require('../../../backend/src/jobs/realtime-outbox-jobs');
+} = require('../../../db/src/db_chat_widget_graphql_migrations');
 
 describe('Authenticated Chat Widget GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
@@ -376,9 +375,9 @@ describe('Authenticated Chat Widget GraphQL PostgreSQL contract', () => {
     expect(persisted.rows[0]).toMatchObject({ messages: 1, events: 1 });
     const chatMessage = jest.fn().mockResolvedValue(true);
     await expect(
-      runRealtimeOutboxJobs(pool, { chatMessage }, {
+      runRealtimeOutboxDelivery(pool, { chatMessage } as unknown as RealtimeBroadcast, {
         batchSize: 1,
-        outboxId: persisted.rows[0].outbox_id,
+        outboxId: Number(persisted.rows[0].outbox_id),
         workerId: 'chat-widget-contract',
       }),
     ).resolves.toMatchObject({ claimed: 1, sent: 1 });

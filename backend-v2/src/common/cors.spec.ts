@@ -5,9 +5,6 @@ import {
   publicReviewWidgetPath,
 } from './cors';
 
-/* eslint-disable @typescript-eslint/no-var-requires */
-const legacyCors = require('../../../backend/src/config/cors-options');
-/* eslint-enable @typescript-eslint/no-var-requires */
 
 describe('GraphQL CORS policy', () => {
   it('allows the configured frontend and explicit staging origins', () => {
@@ -50,7 +47,7 @@ describe('GraphQL CORS policy', () => {
   });
 });
 
-describe('public review widget CORS delegate (cross-runtime parity)', () => {
+describe('public review widget CORS delegate (legacy-origin behavior pinned)', () => {
   const environment = {
     NODE_ENV: 'production',
     FRONTEND_URL: 'https://itemize.cloud',
@@ -72,22 +69,6 @@ describe('public review widget CORS delegate (cross-runtime parity)', () => {
       );
     });
 
-  const resolveLegacy = (
-    method: string,
-    path: string,
-  ): Promise<Record<string, unknown>> =>
-    new Promise((resolvePromise, rejectPromise) => {
-      legacyCors.createCorsOptionsDelegate(
-        ['https://itemize.cloud'],
-        'production',
-      )(
-        { method, path },
-        (error: Error | null, options: Record<string, unknown>) => {
-          if (error) rejectPromise(error);
-          else resolvePromise(options);
-        },
-      );
-    });
 
   it('matches the widget path exactly like the legacy origin', () => {
     const cases = [
@@ -99,14 +80,12 @@ describe('public review widget CORS delegate (cross-runtime parity)', () => {
     ] as const;
     for (const [path, expected] of cases) {
       expect(publicReviewWidgetPath.test(path)).toBe(expected);
-      expect(legacyCors.publicReviewWidgetPath.test(path)).toBe(expected);
     }
   });
 
-  it('serves the widget read credential-free to any origin, like legacy', async () => {
-    const nest = await resolve('GET', widgetPath);
-    const legacy = await resolveLegacy('GET', widgetPath);
-    for (const options of [nest, legacy]) {
+  it('serves the widget read credential-free to any origin', async () => {
+    const options = await resolve('GET', widgetPath);
+    {
       expect(options.origin).toBe('*');
       expect(options.credentials).toBe(false);
       expect(options.methods).toEqual(['GET', 'OPTIONS']);
@@ -120,19 +99,16 @@ describe('public review widget CORS delegate (cross-runtime parity)', () => {
     }
   });
 
-  it('keeps every other request on the credentialed allowlist, like legacy', async () => {
+  it('keeps every other request on the credentialed allowlist', async () => {
     for (const [method, path] of [
       ['POST', '/graphql'],
       ['GET', '/api/reputation/public/widget/short'],
       // The legacy delegate keys the wildcard on GET only; preserve it.
       ['OPTIONS', widgetPath],
     ] as const) {
-      const nest = await resolve(method, path);
-      const legacy = await resolveLegacy(method, path);
-      expect(nest.credentials).toBe(true);
-      expect(legacy.credentials).toBe(true);
-      expect(nest.origin).not.toBe('*');
-      expect(legacy.origin).not.toBe('*');
+      const options = await resolve(method, path);
+      expect(options.credentials).toBe(true);
+      expect(options.origin).not.toBe('*');
     }
   });
 });

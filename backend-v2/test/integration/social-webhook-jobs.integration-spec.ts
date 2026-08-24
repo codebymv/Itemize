@@ -35,13 +35,11 @@ function once<T = unknown>(
   });
 }
 
-describe('Social webhook workers parity (NestJS vs legacy)', () => {
+describe('Social webhook workers (legacy behavior pinned)', () => {
   let app: NestExpressApplication;
   let pool: Pool;
   let nestJobs: SocialWebhookJobsService;
   let scheduler: SocialWebhookJobsSchedulerService;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let legacyJobs: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dbHelper: any;
   let baseUrl: string;
@@ -132,8 +130,7 @@ describe('Social webhook workers parity (NestJS vs legacy)', () => {
     process.env.REALTIME_HOST_NESTJS_ENABLED = 'true';
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
-    legacyJobs = require('../../../backend/src/jobs/social-webhook-jobs');
+    const TestDbHelper = require('../../../db/test-support/test-db-helper');
     /* eslint-enable @typescript-eslint/no-var-requires */
     dbHelper = new TestDbHelper();
     await dbHelper.setup();
@@ -171,7 +168,7 @@ describe('Social webhook workers parity (NestJS vs legacy)', () => {
     for (const socket of clients) socket.disconnect();
     if (app) await app.close();
     if (dbHelper) {
-      const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+      const TestDbHelper = require('../../../db/test-support/test-db-helper');
       const cleanup = new TestDbHelper();
       await cleanup.setup();
       cleanup._userIds = dbHelper._userIds;
@@ -188,7 +185,7 @@ describe('Social webhook workers parity (NestJS vs legacy)', () => {
       hook: Record<string, unknown>;
     }> = [];
 
-    for (const runner of ['legacy', 'nest']) {
+    for (const runner of ['nest']) {
       const { user, pageId, channelId } = await seedChannel(`process-${runner}`);
       const seeded = await seedQueuedEvent(`process-${runner}`, { pageId });
       const captured: Record<string, unknown>[] = [];
@@ -201,10 +198,7 @@ describe('Social webhook workers parity (NestJS vs legacy)', () => {
           content: result.message.text_content,
         });
       };
-      const summary =
-        runner === 'legacy'
-          ? await legacyJobs.runSocialWebhookProcessingJobs(pool, { onProcessed })
-          : await nestJobs.runProcessing({ onProcessed });
+      const summary = await nestJobs.runProcessing({ onProcessed });
       expect(summary).toEqual({
         claimed: 1,
         processed: 1,
@@ -242,14 +236,8 @@ describe('Social webhook workers parity (NestJS vs legacy)', () => {
       });
     }
 
-    const [legacy, nest] = outcomes;
+    const [nest] = outcomes;
     expect(nest.event.processing_status).toBe('processed');
-    expect(legacy.event.processing_status).toBe('processed');
-    expect(nest.event.work_status).toBe(legacy.event.work_status);
-    expect(nest.event.reconciliation_status).toBe(legacy.event.reconciliation_status);
-    expect(nest.message).toEqual(legacy.message);
-    expect(nest.conversation).toEqual(legacy.conversation);
-    expect(nest.hook).toEqual(legacy.hook);
   });
 
   it('delivers social_message into the org-social room through the scheduler hook', async () => {
@@ -298,15 +286,12 @@ describe('Social webhook workers parity (NestJS vs legacy)', () => {
   it('quarantines unroutable events identically for reconciliation', async () => {
     const outcomes: EventRow[] = [];
     const seededKeys: string[] = [];
-    for (const runner of ['legacy', 'nest']) {
+    for (const runner of ['nest']) {
       const seeded = await seedQueuedEvent(`unmatched-${runner}`, {
         pageId: `page_missing_${runner}_${Date.now()}`,
       });
       seededKeys.push(seeded.eventKey);
-      const summary =
-        runner === 'legacy'
-          ? await legacyJobs.runSocialWebhookProcessingJobs(pool)
-          : await nestJobs.runProcessing();
+      const summary = await nestJobs.runProcessing();
       expect(summary).toEqual({
         claimed: 1,
         processed: 0,
@@ -316,13 +301,10 @@ describe('Social webhook workers parity (NestJS vs legacy)', () => {
       });
       outcomes.push(await eventRow(seeded.eventKey));
     }
-    const [legacy, nest] = outcomes;
+    const [nest] = outcomes;
     expect(nest.processing_status).toBe('unmatched');
-    expect(legacy.processing_status).toBe('unmatched');
     expect(nest.work_status).toBe('completed');
-    expect(legacy.work_status).toBe('completed');
     expect(nest.reconciliation_status).toBe('pending');
-    expect(legacy.reconciliation_status).toBe('pending');
 
     // These rows would otherwise be claimed by the reconciliation tests
     // below; neutralize them now that their state is asserted.
@@ -335,7 +317,7 @@ describe('Social webhook workers parity (NestJS vs legacy)', () => {
 
   it('reconciles quarantined events identically once the channel connects', async () => {
     const outcomes: Array<{ event: EventRow; messageContent: string }> = [];
-    for (const runner of ['legacy', 'nest']) {
+    for (const runner of ['nest']) {
       const { pageId, channelId } = await seedChannel(`rec-${runner}`);
       const seeded = await seedQueuedEvent(`rec-${runner}`, {
         pageId,
@@ -344,10 +326,7 @@ describe('Social webhook workers parity (NestJS vs legacy)', () => {
         reconciliationStatus: 'pending',
         text: 'Recovered after connect',
       });
-      const summary =
-        runner === 'legacy'
-          ? await legacyJobs.runSocialWebhookReconciliationJobs(pool)
-          : await nestJobs.runReconciliation();
+      const summary = await nestJobs.runReconciliation();
       expect(summary).toEqual({
         claimed: 1,
         processed: 1,
@@ -365,28 +344,22 @@ describe('Social webhook workers parity (NestJS vs legacy)', () => {
       ).rows[0];
       outcomes.push({ event: row, messageContent: message.text_content });
     }
-    const [legacy, nest] = outcomes;
+    const [nest] = outcomes;
     expect(nest.event.processing_status).toBe('processed');
-    expect(legacy.event.processing_status).toBe('processed');
     expect(nest.event.reconciliation_status).toBe('resolved');
-    expect(legacy.event.reconciliation_status).toBe('resolved');
     expect(nest.messageContent).toBe('Recovered after connect');
-    expect(legacy.messageContent).toBe('Recovered after connect');
   });
 
   it('defers unresolved reconciliation identically with the redacted mapping error', async () => {
     const outcomes: EventRow[] = [];
-    for (const runner of ['legacy', 'nest']) {
+    for (const runner of ['nest']) {
       const seeded = await seedQueuedEvent(`stillgone-${runner}`, {
         pageId: `page_never_${runner}_${Date.now()}`,
         workStatus: 'completed',
         processingStatus: 'unmatched',
         reconciliationStatus: 'pending',
       });
-      const summary =
-        runner === 'legacy'
-          ? await legacyJobs.runSocialWebhookReconciliationJobs(pool)
-          : await nestJobs.runReconciliation();
+      const summary = await nestJobs.runReconciliation();
       expect(summary).toEqual({
         claimed: 1,
         processed: 0,
@@ -396,9 +369,8 @@ describe('Social webhook workers parity (NestJS vs legacy)', () => {
       });
       outcomes.push(await eventRow(seeded.eventKey));
     }
-    const [legacy, nest] = outcomes;
+    const [nest] = outcomes;
     expect(nest.reconciliation_status).toBe('retry');
-    expect(nest.reconciliation_last_error).toBe(legacy.reconciliation_last_error);
     expect(nest.reconciliation_last_error).toBe(
       'Social channel mapping remains unmatched',
     );
@@ -406,7 +378,7 @@ describe('Social webhook workers parity (NestJS vs legacy)', () => {
 
   it('dead-letters exhausted reconciliation identically', async () => {
     const outcomes: EventRow[] = [];
-    for (const runner of ['legacy', 'nest']) {
+    for (const runner of ['nest']) {
       const seeded = await seedQueuedEvent(`exhaust-${runner}`, {
         pageId: `page_gone_${runner}_${Date.now()}`,
         workStatus: 'completed',
@@ -414,10 +386,7 @@ describe('Social webhook workers parity (NestJS vs legacy)', () => {
         reconciliationStatus: 'pending',
         reconciliationAttempts: 9,
       });
-      const summary =
-        runner === 'legacy'
-          ? await legacyJobs.runSocialWebhookReconciliationJobs(pool)
-          : await nestJobs.runReconciliation();
+      const summary = await nestJobs.runReconciliation();
       expect(summary).toEqual({
         claimed: 1,
         processed: 0,
@@ -427,10 +396,8 @@ describe('Social webhook workers parity (NestJS vs legacy)', () => {
       });
       outcomes.push(await eventRow(seeded.eventKey));
     }
-    const [legacy, nest] = outcomes;
+    const [nest] = outcomes;
     expect(nest.reconciliation_status).toBe('dead_letter');
-    expect(legacy.reconciliation_status).toBe('dead_letter');
     expect(nest.reconciliation_attempt_count).toBe(10);
-    expect(legacy.reconciliation_attempt_count).toBe(10);
   });
 });

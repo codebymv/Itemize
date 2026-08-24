@@ -21,7 +21,6 @@ import { ReputationRequestDeliveryService } from '../../src/reputation-requests/
 
 describe('Reputation reviews GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   let memberId: number;
   let outsiderId: number;
@@ -110,12 +109,6 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
     configureApp(app);
     await app.init();
 
-    const createReputationRouter = require('../../../backend/src/routes/reputation.routes');
-    const { authenticateJWT } = require('../../../backend/src/auth/middleware');
-    legacyApp = express();
-    legacyApp.use(cookieParser());
-    legacyApp.use(express.json());
-    legacyApp.use('/api/reputation', createReputationRouter(pool, authenticateJWT, (_req: unknown, _res: unknown, next: () => void) => next()));
   });
 
   afterAll(async () => {
@@ -507,7 +500,7 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
   });
 
   it('serves the canonical public review page contract and commits only one concurrent submission', async () => {
-    const opened = await request(legacyApp)
+    const opened = await request(app.getHttpServer())
       .get(`/api/reputation/public/review/${deliveryRequestToken}`).expect(200);
     expect(opened.headers['cache-control']).toBe('no-store');
     expect(opened.body).toMatchObject({
@@ -516,9 +509,9 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
     });
 
     const [one, two] = await Promise.all([
-      request(legacyApp).post(`/api/reputation/public/review/${deliveryRequestToken}`)
+      request(app.getHttpServer()).post(`/api/reputation/public/review/${deliveryRequestToken}`)
         .send({ rating: 5, review_text: 'Wonderful', platform: 'google' }),
-      request(legacyApp).post(`/api/reputation/public/review/${deliveryRequestToken}`)
+      request(app.getHttpServer()).post(`/api/reputation/public/review/${deliveryRequestToken}`)
         .send({ rating: 4, review_text: 'Also good', platform: 'google' }),
     ]);
     expect([one.status, two.status].sort()).toEqual([200, 404]);
@@ -529,7 +522,7 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
     );
     expect(Number(committed.rows[0].count)).toBe(1);
 
-    await request(legacyApp).get('/api/reputation/public/review/not-a-token').expect(404);
+    await request(app.getHttpServer()).get('/api/reputation/public/review/not-a-token').expect(404);
   });
 
   it('composes concurrent partial updates and keeps response metadata coherent', async () => {

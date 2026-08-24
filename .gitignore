@@ -69,3 +69,10 @@ backend/.workflow-rollout-results/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Runtime upload storage (NestJS backend)
+backend-v2/uploads/
+
+# Local PDF output scratch
+output/
+tmp/

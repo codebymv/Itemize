@@ -1,7 +1,6 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import * as crypto from 'crypto';
-import express, { Express } from 'express';
 import { Pool } from 'pg';
 import { io as createClient, Socket as ClientSocket } from 'socket.io-client';
 import request from 'supertest';
@@ -26,9 +25,8 @@ function once<T = unknown>(
   });
 }
 
-describe('Chat widget public retained HTTP parity (NestJS host runtime vs legacy origin)', () => {
+describe('Chat widget public protocol (legacy behavior pinned)', () => {
   let app: NestExpressApplication;
-  let legacyApp: Express;
   let pool: Pool;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dbHelper: any;
@@ -90,8 +88,7 @@ describe('Chat widget public retained HTTP parity (NestJS host runtime vs legacy
     process.env.REALTIME_HOST_NESTJS_ENABLED = 'true';
 
     /* eslint-disable @typescript-eslint/no-var-requires */
-    const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
-    const createChatWidgetPublicRoutes = require('../../../backend/src/routes/chat-widget/public.routes');
+    const TestDbHelper = require('../../../db/test-support/test-db-helper');
     /* eslint-enable @typescript-eslint/no-var-requires */
     dbHelper = new TestDbHelper();
     await dbHelper.setup();
@@ -143,24 +140,13 @@ describe('Chat widget public retained HTTP parity (NestJS host runtime vs legacy
     const address = app.getHttpServer().address() as { port: number };
     baseUrl = `http://127.0.0.1:${address.port}`;
 
-    legacyApp = express();
-    legacyApp.use(express.json());
-    const noopRateLimit = (
-      _req: unknown,
-      _res: unknown,
-      nextFn: () => void,
-    ) => nextFn();
-    legacyApp.use(
-      '/api/chat-widget',
-      createChatWidgetPublicRoutes(pool, noopRateLimit, null, null),
-    );
   }, 60000);
 
   afterAll(async () => {
     for (const socket of clients) socket.disconnect();
     if (app) await app.close();
     if (dbHelper) {
-      const TestDbHelper = require('../../../backend/src/__tests__/integration/test-db-helper');
+      const TestDbHelper = require('../../../db/test-support/test-db-helper');
       const cleanup = new TestDbHelper();
       await cleanup.setup();
       cleanup._userIds = dbHelper._userIds;
@@ -169,52 +155,35 @@ describe('Chat widget public retained HTTP parity (NestJS host runtime vs legacy
     }
   }, 60000);
 
-  const bothGet = async (path: string) => {
-    const [nest, legacy] = await Promise.all([
-      request(baseUrl).get(path),
-      request(legacyApp).get(path),
-    ]);
-    return { nest, legacy };
-  };
+  const getPath = async (path: string) => request(baseUrl).get(path);
 
-  it('serves widget configuration identically, including repaired business hours', async () => {
-    const plain = await bothGet(`/api/chat-widget/public/config/${widgetKey}`);
-    expect(plain.nest.status).toBe(200);
-    expect(plain.legacy.status).toBe(200);
-    expect(plain.nest.body).toEqual(plain.legacy.body);
-    expect(plain.nest.body.is_online).toBe(true);
+  it('serves widget configuration including repaired business hours', async () => {
+    const plain = await getPath(`/api/chat-widget/public/config/${widgetKey}`);
+    expect(plain.status).toBe(200);
+    expect(plain.body.widget_key).toBe(widgetKey);
+    expect(plain.body.is_online).toBe(true);
 
-    const hours = await bothGet(`/api/chat-widget/public/config/${hoursWidgetKey}`);
-    expect(hours.nest.status).toBe(200);
-    expect(hours.legacy.status).toBe(200);
-    expect(hours.nest.body).toEqual(hours.legacy.body);
-    expect(hours.nest.body.is_online).toBe(true);
+    const hours = await getPath(`/api/chat-widget/public/config/${hoursWidgetKey}`);
+    expect(hours.status).toBe(200);
+    expect(hours.body.is_online).toBe(true);
 
-    const unknown = await bothGet('/api/chat-widget/public/config/cw_missing');
-    expect(unknown.nest.status).toBe(404);
-    expect(unknown.legacy.status).toBe(404);
-    expect(unknown.nest.body).toEqual(unknown.legacy.body);
+    const unknown = await getPath('/api/chat-widget/public/config/cw_missing');
+    expect(unknown.status).toBe(404);
+    expect(unknown.body).toEqual({ error: 'Widget not found or inactive' });
   });
 
-  it('starts, resumes across runtimes, and validates sessions identically', async () => {
-    const missingKey = await Promise.all([
-      request(baseUrl).post('/api/chat-widget/public/session').send({}),
-      request(legacyApp).post('/api/chat-widget/public/session').send({}),
-    ]);
-    expect(missingKey[0].status).toBe(400);
-    expect(missingKey[0].body).toEqual(missingKey[1].body);
+  it('starts, resumes, and validates sessions', async () => {
+    const missingKey = await request(baseUrl)
+      .post('/api/chat-widget/public/session')
+      .send({});
+    expect(missingKey.status).toBe(400);
+    expect(missingKey.body).toEqual({ error: 'widget_key is required' });
 
-    const requiredEmail = await Promise.all([
-      request(baseUrl)
-        .post('/api/chat-widget/public/session')
-        .send({ widget_key: strictWidgetKey, visitor_name: 'Sam' }),
-      request(legacyApp)
-        .post('/api/chat-widget/public/session')
-        .send({ widget_key: strictWidgetKey, visitor_name: 'Sam' }),
-    ]);
-    expect(requiredEmail[0].status).toBe(400);
-    expect(requiredEmail[0].body).toEqual(requiredEmail[1].body);
-    expect(requiredEmail[0].body).toEqual({ error: 'Email is required' });
+    const requiredEmail = await request(baseUrl)
+      .post('/api/chat-widget/public/session')
+      .send({ widget_key: strictWidgetKey, visitor_name: 'Sam' });
+    expect(requiredEmail.status).toBe(400);
+    expect(requiredEmail.body).toEqual({ error: 'Email is required' });
 
     const agent = await connectAgent();
     const announced = once<{ visitor_email: string }>(agent, 'newChatSession');
@@ -227,11 +196,11 @@ describe('Chat widget public retained HTTP parity (NestJS host runtime vs legacy
     expect(created.body.session_token).toMatch(/^cs_[0-9a-f]{48}$/);
     expect((await announced).visitor_email).toBe(email);
 
-    const resumedThroughLegacy = await request(legacyApp)
+    const resumed = await request(baseUrl)
       .post('/api/chat-widget/public/session')
       .send({ widget_key: widgetKey, visitor_email: email });
-    expect(resumedThroughLegacy.status).toBe(200);
-    expect(resumedThroughLegacy.body).toEqual({
+    expect(resumed.status).toBe(200);
+    expect(resumed.body).toEqual({
       session_token: created.body.session_token,
       session_id: created.body.session_id,
       resumed: true,
@@ -239,18 +208,17 @@ describe('Chat widget public retained HTTP parity (NestJS host runtime vs legacy
     agent.disconnect();
   });
 
-  it('sends visitor messages with agent notification and lists them identically', async () => {
+  it('sends visitor messages with agent notification and lists them', async () => {
     const session = await request(baseUrl)
       .post('/api/chat-widget/public/session')
       .send({ widget_key: widgetKey, visitor_email: `msg-${Date.now()}@t.test` });
     const sessionToken = session.body.session_token;
 
-    const invalid = await Promise.all([
-      request(baseUrl).post('/api/chat-widget/public/messages').send({ session_token: sessionToken, content: '   ' }),
-      request(legacyApp).post('/api/chat-widget/public/messages').send({ session_token: sessionToken, content: '   ' }),
-    ]);
-    expect(invalid[0].status).toBe(400);
-    expect(invalid[0].body).toEqual(invalid[1].body);
+    const invalid = await request(baseUrl)
+      .post('/api/chat-widget/public/messages')
+      .send({ session_token: sessionToken, content: '   ' });
+    expect(invalid.status).toBe(400);
+    expect(invalid.body).toEqual({ error: 'session_token and content are required' });
 
     const agent = await connectAgent();
     const notified = once<{ message: { content: string } }>(agent, 'newChatMessage');
@@ -261,23 +229,21 @@ describe('Chat widget public retained HTTP parity (NestJS host runtime vs legacy
     expect(sent.body).toMatchObject({ sender_type: 'visitor', content: 'Hello agents' });
     expect((await notified).message.content).toBe('Hello agents');
 
-    const listed = await Promise.all([
-      request(baseUrl).get(`/api/chat-widget/public/messages/${sessionToken}`),
-      request(legacyApp).get(`/api/chat-widget/public/messages/${sessionToken}`),
-    ]);
-    expect(listed[0].status).toBe(200);
-    expect(listed[0].body).toEqual(listed[1].body);
-    expect(listed[0].body).toHaveLength(1);
+    const listed = await request(baseUrl).get(
+      `/api/chat-widget/public/messages/${sessionToken}`,
+    );
+    expect(listed.status).toBe(200);
+    expect(listed.body).toHaveLength(1);
 
-    const unknown = await bothGet(
+    const unknown = await getPath(
       `/api/chat-widget/public/messages/cs_${'0'.repeat(48)}`,
     );
-    expect(unknown.nest.status).toBe(404);
-    expect(unknown.nest.body).toEqual(unknown.legacy.body);
+    expect(unknown.status).toBe(404);
+    expect(unknown.body).toEqual({ error: 'Session not found' });
     agent.disconnect();
   });
 
-  it('routes typing indicators to the agent room and validates identically', async () => {
+  it('routes typing indicators to the agent room', async () => {
     const session = await request(baseUrl)
       .post('/api/chat-widget/public/session')
       .send({ widget_key: widgetKey, visitor_email: `typing-${Date.now()}@t.test` });
@@ -292,16 +258,15 @@ describe('Chat widget public retained HTTP parity (NestJS host runtime vs legacy
     expect(typed.body).toEqual({ success: true });
     expect((await seen).is_typing).toBe(true);
 
-    const missing = await Promise.all([
-      request(baseUrl).post('/api/chat-widget/public/typing').send({}),
-      request(legacyApp).post('/api/chat-widget/public/typing').send({}),
-    ]);
-    expect(missing[0].status).toBe(400);
-    expect(missing[0].body).toEqual(missing[1].body);
+    const missing = await request(baseUrl)
+      .post('/api/chat-widget/public/typing')
+      .send({});
+    expect(missing.status).toBe(400);
+    expect(missing.body).toEqual({ error: 'session_token is required' });
     agent.disconnect();
   });
 
-  it('ends sessions with agent notification, visitor eviction, and identical replay denial', async () => {
+  it('ends sessions with agent notification, visitor eviction, and replay denial', async () => {
     const session = await request(baseUrl)
       .post('/api/chat-widget/public/session')
       .send({ widget_key: widgetKey, visitor_email: `end-${Date.now()}@t.test` });
@@ -329,12 +294,11 @@ describe('Chat widget public retained HTTP parity (NestJS host runtime vs legacy
     await agentNotified;
     expect((await visitorEnded).reason).toBe('session_ended');
 
-    const replay = await Promise.all([
-      request(baseUrl).post('/api/chat-widget/public/end-session').send({ session_token: sessionToken }),
-      request(legacyApp).post('/api/chat-widget/public/end-session').send({ session_token: sessionToken }),
-    ]);
-    expect(replay[0].status).toBe(404);
-    expect(replay[0].body).toEqual(replay[1].body);
+    const replay = await request(baseUrl)
+      .post('/api/chat-widget/public/end-session')
+      .send({ session_token: sessionToken });
+    expect(replay.status).toBe(404);
+    expect(replay.body).toEqual({ error: 'Session not found' });
     agent.disconnect();
     visitor.disconnect();
   });
