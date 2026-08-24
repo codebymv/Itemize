@@ -6,9 +6,10 @@ import { PublicSigningRepository } from './public-signing.repository';
 import { PublicSigningService } from './public-signing.service';
 import { SignatureCompletionJobsRepository } from './signature-completion-jobs.repository';
 import { SignatureCompletionJobsService } from './signature-completion-jobs.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [ActivationModule, SignatureFilesModule],
+  imports: [ActivationModule, SignatureFilesModule, NotificationsModule],
   controllers: [PublicSigningController],
   providers: [
     PublicSigningRepository,

@@ -53,6 +53,7 @@ describe('PublicSigningService', () => {
         routing_mode: 'parallel',
         sender_name: 'Owner',
         sender_email: 'owner@example.com',
+        created_by: 7,
       },
       fields: [{
         id: 9,

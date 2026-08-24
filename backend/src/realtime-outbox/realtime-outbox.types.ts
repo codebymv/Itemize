@@ -3,7 +3,8 @@ export type RealtimeAggregateType =
   | 'note'
   | 'whiteboard'
   | 'wireframe'
-  | 'chat_session';
+  | 'chat_session'
+  | 'notification';
 export type RealtimeChannel =
   | 'user_canvas'
   | 'shared_list'
@@ -12,7 +13,8 @@ export type RealtimeChannel =
   | 'shared_wireframe'
   | 'user_wireframe'
   | 'shared_revocation'
-  | 'chat_session';
+  | 'chat_session'
+  | 'user_notification';
 export type RealtimeEventName =
   | 'userListUpdated'
   | 'userListDeleted'
@@ -22,7 +24,8 @@ export type RealtimeEventName =
   | 'wireframeUpdated'
   | 'userWireframeUpdated'
   | 'sharedContentRevoked'
-  | 'newChatMessage';
+  | 'newChatMessage'
+  | 'notificationCreated';
 
 export interface EnqueueRealtimeEventInput {
   eventKey: string;

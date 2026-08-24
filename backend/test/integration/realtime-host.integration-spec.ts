@@ -219,6 +219,62 @@ describe('NestJS realtime host retained Socket.IO contract', () => {
     expect((await unauthenticated).code).toBe('UNAUTHENTICATED');
   });
 
+  it('delivers user notifications only through an authenticated user room', async () => {
+    const member = await connect(`itemize_auth=${owner.token}`);
+    const joined = once<{ userId: number }>(member, 'joinedUserNotifications');
+    member.emit('joinUserNotifications');
+    expect(await joined).toEqual({ userId: Number(owner.user.id) });
+
+    const anonymous = await connect();
+    const rejected = once<{ code: string }>(anonymous, 'realtimeError');
+    anonymous.emit('joinUserNotifications');
+    expect((await rejected).code).toBe('UNAUTHENTICATED');
+
+    const occurredAt = new Date(Date.now() - 1000);
+    const notification = {
+      organizationId: Number(owner.org.id),
+      notification: {
+        id: '42',
+        eventType: 'estimate.accepted',
+        title: 'Estimate accepted',
+      },
+    };
+    const delivered = once<{
+      organizationId: number;
+      notification: { id: string; eventType: string; title: string };
+      timestamp: string;
+    }>(member, 'notificationCreated');
+    const outboxService = new RealtimeOutboxService();
+    const queued = await outboxService.enqueue(
+      pool as unknown as Parameters<RealtimeOutboxService['enqueue']>[0],
+      {
+        eventKey: `notification-host:${Date.now()}:${Math.random()}`,
+        aggregateType: 'notification',
+        aggregateId: 42,
+        channel: 'user_notification',
+        recipientKey: String(owner.user.id),
+        eventName: 'notificationCreated',
+        eventType: 'estimate.accepted',
+        payload: notification,
+        occurredAt,
+      },
+    );
+    const summary = await runRealtimeOutboxDelivery(
+      pool,
+      hostService.broadcast()!,
+      {
+        batchSize: 1,
+        outboxId: Number(queued.event.id),
+        workerId: 'notification-host-spec',
+      },
+    );
+    expect(summary).toMatchObject({ claimed: 1, sent: 1 });
+    expect(await delivered).toEqual({
+      ...notification,
+      timestamp: occurredAt.toISOString(),
+    });
+  });
+
   it('routes chat session typing in both directions with authorization', async () => {
     const visitor = await connect();
     const joinedSession = once<{ sessionId: number }>(visitor, 'joinedChatSession');

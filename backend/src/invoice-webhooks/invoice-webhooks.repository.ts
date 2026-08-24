@@ -5,6 +5,7 @@ import {
   StripeInvoiceEvent,
   StripeInvoiceWebhookRepositoryResult,
 } from './invoice-webhooks.types';
+import { NotificationsService } from '../notifications/notifications.service';
 
 type InvoicePaymentRow = {
   id: number;
@@ -15,13 +16,19 @@ type InvoicePaymentRow = {
   amount_due: string;
   currency: string;
   status: string;
+  invoice_number: string;
+  created_by: number | null;
+  customer_name: string | null;
 };
 
 @Injectable()
 export class InvoiceWebhooksRepository {
   private readonly logger = new Logger(InvoiceWebhooksRepository.name);
 
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async process(event: StripeInvoiceEvent): Promise<StripeInvoiceWebhookRepositoryResult> {
     const client = await this.pool.connect();
@@ -96,7 +103,7 @@ export class InvoiceWebhooksRepository {
 
     const invoiceResult = await client.query<InvoicePaymentRow>(
       `SELECT id, organization_id, contact_id, total, amount_paid, amount_due,
-              currency, status
+              currency, status, invoice_number, created_by, customer_name
        FROM invoices
        WHERE id = $1
        FOR UPDATE`,
@@ -164,7 +171,8 @@ export class InvoiceWebhooksRepository {
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $2
        RETURNING id, organization_id, contact_id, total, amount_paid,
-                 amount_due, currency, status`,
+                 amount_due, currency, status, invoice_number, created_by,
+                 customer_name`,
       [session.amount, session.invoiceId],
     );
     const balance = updated.rows[0];
@@ -196,6 +204,38 @@ export class InvoiceWebhooksRepository {
           `domain:invoice_paid:${session.invoiceId}`,
         ],
       );
+      const recipientUserId = await this.notificationRecipient(
+        client,
+        invoice.organization_id,
+        invoice.created_by,
+      );
+      if (recipientUserId) {
+        const formattedTotal = new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: invoice.currency || 'USD',
+        }).format(Number(invoice.total || 0));
+        const customer = invoice.customer_name?.trim() || 'Your customer';
+        await this.notifications.createWithClient(client, {
+          organizationId: invoice.organization_id,
+          recipientUserId,
+          eventType: 'invoice.paid',
+          entityType: 'invoice',
+          entityId: session.invoiceId,
+          dedupeKey: `invoice:${session.invoiceId}:paid`,
+          payload: {
+            invoiceNumber: invoice.invoice_number,
+            customerName: customer,
+            total: invoice.total,
+            currency: invoice.currency,
+            paymentId: Number(inserted.rows[0].id),
+          },
+          category: 'billing',
+          priority: 'high',
+          title: 'Invoice paid',
+          body: `${customer} paid ${invoice.invoice_number} in full for ${formattedTotal}.`,
+          href: `/invoices/${session.invoiceId}`,
+        });
+      }
     }
     return {
       received: true,
@@ -209,5 +249,23 @@ export class InvoiceWebhooksRepository {
         },
       } : {}),
     };
+  }
+
+  private async notificationRecipient(
+    client: PoolClient,
+    organizationId: number,
+    preferredUserId: number | null,
+  ): Promise<number | null> {
+    const result = await client.query<{ user_id: number }>(
+      `SELECT member.user_id
+       FROM organization_members member
+       WHERE member.organization_id=$1
+         AND (member.user_id=$2 OR member.role='owner')
+       ORDER BY CASE WHEN member.user_id=$2 THEN 0 ELSE 1 END,
+                member.joined_at,member.user_id
+       LIMIT 1`,
+      [organizationId, preferredUserId],
+    );
+    return result.rows[0] ? Number(result.rows[0].user_id) : null;
   }
 }

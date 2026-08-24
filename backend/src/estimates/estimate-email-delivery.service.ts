@@ -172,7 +172,11 @@ export class EstimateEmailDeliveryService {
     }
     const payload = delivery.payload as EstimateResponseEmailPayload;
     const response = delivery.delivery_type === 'estimate_accepted' ? 'accepted' : 'declined';
-    return `${payload.customerName || 'Your customer'} ${response} your estimate for ${payload.total} ${payload.currency}.`;
+    const notificationQuery = payload.notificationId
+      ? `?notification=${encodeURIComponent(payload.notificationId)}`
+      : '';
+    const estimateUrl = `${this.frontendOrigin()}/estimates/${delivery.estimate_id}${notificationQuery}`;
+    return `${payload.customerName || 'Your customer'} ${response} your estimate for ${payload.total} ${payload.currency}.\n\nView estimate: ${estimateUrl}`;
   }
 
   private estimateHtml(
@@ -241,7 +245,9 @@ export class EstimateEmailDeliveryService {
       bodyHtml,
       cta: {
         label: 'View estimate',
-        url: `${this.frontendOrigin()}/estimates/${delivery.estimate_id}`,
+        url: `${this.frontendOrigin()}/estimates/${delivery.estimate_id}${payload.notificationId
+          ? `?notification=${encodeURIComponent(payload.notificationId)}`
+          : ''}`,
       },
       footerText: `This response was recorded for ${payload.businessName || 'your workspace'}.`,
     });

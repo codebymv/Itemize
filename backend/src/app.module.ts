@@ -87,6 +87,7 @@ import { RealtimeOutboxModule } from './realtime-outbox/realtime-outbox.module';
 import { WorkflowsModule } from './workflows/workflows.module';
 import { WorkflowExecutionModule } from './workflow-execution/workflow-execution.module';
 import { WorkflowJobsModule } from './workflow-jobs/workflow-jobs.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 // Apollo's conditional exports expose distinct ESM/CJS private HeaderMap types to
 // ts-jest even though the plugin is runtime-compatible with Nest's Apollo driver.
@@ -172,6 +173,7 @@ const observabilityPlugins = [
     WorkflowsModule,
     WorkflowExecutionModule,
     WorkflowJobsModule,
+    NotificationsModule,
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       path: '/graphql',

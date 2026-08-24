@@ -7,6 +7,7 @@ import {
   PublicSigningValidationError,
   validatePublicSigningFieldValue,
 } from './public-signing.validation';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export type PublicSigningAudit = {
   ipAddress: string | null;
@@ -37,6 +38,7 @@ type CapabilityRow = {
   routing_mode: string | null;
   sender_name: string | null;
   sender_email: string | null;
+  created_by: number | null;
 };
 
 type SigningFieldRow = {
@@ -82,7 +84,10 @@ export type PublicSigningSubmitResult = {
 
 @Injectable()
 export class PublicSigningRepository {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   openSession(
     tokenHash: string,
@@ -348,7 +353,8 @@ export class PublicSigningRepository {
          document.description,document.message,document.file_url,document.file_name,
          document.file_type,document.original_sha256,
          document.status AS document_status,document.expires_at,
-         document.routing_mode,document.sender_name,document.sender_email
+         document.routing_mode,document.sender_name,document.sender_email,
+         document.created_by
        FROM signature_recipients recipient
        JOIN signature_documents document ON document.id=recipient.document_id
          AND document.organization_id=recipient.organization_id
@@ -476,6 +482,28 @@ export class PublicSigningRepository {
     client: PoolClient,
     capability: CapabilityRow,
   ): Promise<void> {
+    const recipientUserId = await this.notificationRecipient(client, capability);
+    if (recipientUserId) {
+      const signer = capability.recipient_name?.trim() || 'A recipient';
+      await this.notifications.createWithClient(client, {
+        organizationId: capability.organization_id,
+        recipientUserId,
+        eventType: 'signature.signed',
+        entityType: 'signature',
+        entityId: capability.document_id,
+        dedupeKey: `signature:${capability.document_id}:recipient:${capability.recipient_id}:signed`,
+        payload: {
+          documentTitle: capability.title,
+          recipientId: capability.recipient_id,
+          recipientName: signer,
+        },
+        category: 'business',
+        priority: 'normal',
+        title: 'Signature received',
+        body: `${signer} signed ${capability.title}.`,
+        href: `/documents/${capability.document_id}`,
+      });
+    }
     if (!capability.sender_email) return;
     await client.query(
       `INSERT INTO signature_delivery_outbox
@@ -506,6 +534,29 @@ export class PublicSigningRepository {
     capability: CapabilityRow,
     reason: string | null,
   ): Promise<void> {
+    const recipientUserId = await this.notificationRecipient(client, capability);
+    if (recipientUserId) {
+      const signer = capability.recipient_name?.trim() || 'A recipient';
+      await this.notifications.createWithClient(client, {
+        organizationId: capability.organization_id,
+        recipientUserId,
+        eventType: 'signature.declined',
+        entityType: 'signature',
+        entityId: capability.document_id,
+        dedupeKey: `signature:${capability.document_id}:recipient:${capability.recipient_id}:declined`,
+        payload: {
+          documentTitle: capability.title,
+          recipientId: capability.recipient_id,
+          recipientName: signer,
+          reason,
+        },
+        category: 'business',
+        priority: 'high',
+        title: 'Signature declined',
+        body: `${signer} declined to sign ${capability.title}.`,
+        href: `/documents/${capability.document_id}`,
+      });
+    }
     if (!capability.sender_email) return;
     await client.query(
       `INSERT INTO signature_delivery_outbox
@@ -529,6 +580,35 @@ export class PublicSigningRepository {
         }),
       ],
     );
+  }
+
+  private async notificationRecipient(
+    client: PoolClient,
+    capability: CapabilityRow,
+  ): Promise<number | null> {
+    const result = await client.query<{ user_id: number }>(
+      `SELECT member.user_id
+       FROM organization_members member
+       JOIN users user_account ON user_account.id=member.user_id
+       WHERE member.organization_id=$1
+         AND (
+           member.user_id=$2
+           OR LOWER(user_account.email)=LOWER($3)
+           OR member.role='owner'
+         )
+       ORDER BY CASE
+         WHEN member.user_id=$2 THEN 0
+         WHEN LOWER(user_account.email)=LOWER($3) THEN 1
+         ELSE 2
+       END,member.joined_at,member.user_id
+       LIMIT 1`,
+      [
+        capability.organization_id,
+        capability.created_by,
+        capability.sender_email || '',
+      ],
+    );
+    return result.rows[0] ? Number(result.rows[0].user_id) : null;
   }
 
   private audit(

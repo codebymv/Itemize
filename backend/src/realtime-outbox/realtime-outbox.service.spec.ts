@@ -215,6 +215,37 @@ describe('RealtimeOutboxService', () => {
     ).resolves.toMatchObject({ inserted: true });
   });
 
+  it('accepts a recipient-scoped notification projection', async () => {
+    const notificationEvent: EnqueueRealtimeEventInput = {
+      eventKey: 'notification-created:42',
+      aggregateType: 'notification',
+      aggregateId: 42,
+      channel: 'user_notification',
+      recipientKey: '7',
+      eventName: 'notificationCreated',
+      eventType: 'estimate.accepted',
+      payload: { organizationId: 3, notification: { id: '42' } },
+    };
+    const query = jest.fn().mockResolvedValue({
+      rows: [{
+        ...row,
+        event_key: notificationEvent.eventKey,
+        aggregate_type: notificationEvent.aggregateType,
+        aggregate_id: notificationEvent.aggregateId,
+        channel: notificationEvent.channel,
+        recipient_key: notificationEvent.recipientKey,
+        event_name: notificationEvent.eventName,
+        event_type: notificationEvent.eventType,
+        payload: notificationEvent.payload,
+      }],
+    });
+
+    await expect(service.enqueue(
+      { query } as unknown as PoolClient,
+      notificationEvent,
+    )).resolves.toMatchObject({ inserted: true });
+  });
+
   it('rejects unsupported channel/event combinations before querying', async () => {
     const query = jest.fn();
     await expect(

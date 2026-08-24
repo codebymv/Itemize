@@ -215,6 +215,16 @@ export function dispatchRealtimeEvent(
       occurredAt,
     );
   }
+  if (
+    claim.channel === 'user_notification'
+    && claim.event_name === 'notificationCreated'
+  ) {
+    return broadcast.notificationCreated(
+      claim.recipient_key,
+      claim.payload,
+      occurredAt,
+    );
+  }
 
   const error = new Error('Unsupported realtime outbox channel/event combination');
   (error as Error & { retryable?: boolean }).retryable = false;

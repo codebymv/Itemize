@@ -33,6 +33,7 @@ import { useSessionWarning } from '@/hooks/useSessionExpiration';
 import { HeaderProvider, useHeader } from '@/contexts/HeaderContext';
 import { cn } from '@/lib/utils';
 import { OrganizationSwitcher } from '@/components/OrganizationSwitcher';
+import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 
 const GlobalSearch = React.lazy(() =>
   import('@/components/GlobalSearch').then((module) => ({ default: module.GlobalSearch }))
@@ -188,6 +189,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
 
                     <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                         <OrganizationSwitcher />
+
+                        <NotificationCenter />
 
                         {/* Theme toggle - only visible on desktop */}
                         <Button

@@ -108,6 +108,9 @@ const {
 const {
   runTrialReminderDeliveryMigration,
 } = require('./db_trial_reminder_delivery_migrations');
+const {
+  runNotificationCenterMigration,
+} = require('./db_notification_migrations');
 
 // Import Forms migrations
 const { runAllFormsMigrations } = require('./db_forms_migrations');
@@ -585,6 +588,11 @@ const initializeDatabase = async (pool) => {
       pool,
       'trial_reminder_deliveries',
       runTrialReminderDeliveryMigration,
+    );
+    await runMigrationOnce(
+      pool,
+      'notification_center_v1',
+      runNotificationCenterMigration,
     );
     await runMigrationOnce(pool, 'campaign_test_email_deliveries', runCampaignTestEmailDeliveryMigration);
     await runMigrationOnce(pool, 'campaign_deliveries', runCampaignDeliveryMigration);

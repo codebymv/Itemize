@@ -65,6 +65,7 @@ export type RealtimeBroadcast = {
   revokeShared: (kind: string, shareToken: string, reason?: string) => Promise<boolean>;
   endChatSession: (sessionToken: string, reason?: string) => Promise<boolean>;
   chatMessage: (sessionToken: string, message: unknown, occurredAt?: string) => Promise<boolean>;
+  notificationCreated: (userId: unknown, data: unknown, occurredAt?: string) => void;
 };
 
 export const parseOrganizationId = (value: unknown): number | null => {
@@ -143,6 +144,19 @@ export function createBroadcast(
     });
   };
 
+  const notificationCreated = (
+    userId: unknown,
+    data: unknown,
+    occurredAt?: string,
+  ): void => {
+    const parsedUserId = parseOrganizationId(userId);
+    if (!io || !parsedUserId) return;
+    io.to(`user-notifications-${parsedUserId}`).emit('notificationCreated', {
+      ...(data && typeof data === 'object' ? data : {}),
+      timestamp: occurredAt || new Date().toISOString(),
+    });
+  };
+
   const revokeShared = async (
     kind: string,
     shareToken: string,
@@ -214,6 +228,7 @@ export function createBroadcast(
     revokeShared,
     endChatSession,
     chatMessage,
+    notificationCreated,
   };
 }
 
@@ -390,6 +405,16 @@ export function initializeRealtimeHost(
       await socket.join(`user-canvas-${userId}`);
       trackConnection(userCanvasConnections, userId, socket.id);
       socket.emit('joinedUserCanvas', { userId });
+    });
+
+    socket.on('joinUserNotifications', async () => {
+      const userId = await authenticateSocket(socket);
+      if (!userId) {
+        emitRealtimeError(socket, 'UNAUTHENTICATED', 'Authentication required');
+        return;
+      }
+      await socket.join(`user-notifications-${userId}`);
+      socket.emit('joinedUserNotifications', { userId });
     });
 
     for (const [kind, config] of Object.entries(SHARED_ROOM_TYPES)) {

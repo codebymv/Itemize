@@ -12,9 +12,10 @@ import {
 import { EstimatePublicController } from './estimate-public.controller';
 import { EstimatePublicRepository } from './estimate-public.repository';
 import { EstimatePublicService } from './estimate-public.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [ActivationModule],
+  imports: [ActivationModule, NotificationsModule],
   controllers: [EstimatePublicController],
   providers: [
     EstimatesRepository,

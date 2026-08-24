@@ -146,6 +146,7 @@ export type EstimateResponseEmailPayload = {
   businessName: string;
   recipientName: string | null;
   respondedAt: string;
+  notificationId?: string | null;
 };
 
 export type EstimateEmailDeliveryType =

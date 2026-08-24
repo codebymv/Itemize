@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { EstimateEmailPayload } from './estimates.repository';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export type PublicEstimateState = 'sent' | 'accepted' | 'declined';
 
@@ -31,7 +32,10 @@ export type PublicEstimateTransition =
 
 @Injectable()
 export class EstimatePublicRepository {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async open(tokenHash: string): Promise<PublicEstimateCapability | null> {
     return this.transaction(async (client) => {
@@ -126,6 +130,36 @@ export class EstimatePublicRepository {
     const businessName = capability.payload.businessName?.trim()
       || capability.organization_name?.trim()
       || 'Itemize workspace';
+    let notificationId: string | null = null;
+    if (recipient.userId) {
+      const formattedTotal = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: capability.payload.currency || 'USD',
+      }).format(Number(capability.payload.total || 0));
+      const customerName = capability.payload.customerName?.trim() || 'A customer';
+      const notification = await this.notifications.createWithClient(client, {
+        organizationId: capability.organization_id,
+        recipientUserId: recipient.userId,
+        eventType: `estimate.${response}`,
+        entityType: 'estimate',
+        entityId: capability.estimate_id,
+        dedupeKey: `estimate:${capability.estimate_id}:${response}`,
+        payload: {
+          response,
+          estimateNumber: capability.estimate_number,
+          customerName,
+          total: capability.payload.total,
+          currency: capability.payload.currency || 'USD',
+        },
+        category: 'business',
+        priority: 'normal',
+        title: `Estimate ${response}`,
+        body: `${customerName} ${response} ${capability.estimate_number} for ${formattedTotal}.`,
+        href: `/estimates/${capability.estimate_id}`,
+        occurredAt: responseAt,
+      });
+      notificationId = notification?.id ?? null;
+    }
     const subject = `Your estimate was ${response}`;
     await client.query(
       `INSERT INTO estimate_email_deliveries (
@@ -150,6 +184,7 @@ export class EstimatePublicRepository {
           businessName,
           recipientName: recipient.name,
           respondedAt: responseAt.toISOString(),
+          notificationId,
         }),
       ],
     );

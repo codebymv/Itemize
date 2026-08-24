@@ -7,9 +7,10 @@ import {
   STRIPE_INVOICE_WEBHOOK_VERIFIER,
   StripeSdkInvoiceWebhookVerifier,
 } from './stripe-invoice-webhook.verifier';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [ActivationModule],
+  imports: [ActivationModule, NotificationsModule],
   controllers: [InvoiceWebhooksController],
   providers: [
     InvoiceWebhooksRepository,
