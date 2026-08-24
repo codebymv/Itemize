@@ -83,11 +83,6 @@ export function SubscriptionStatus() {
                     <div className="flex items-center gap-2">
                         <PlanIcon className="h-5 w-5 text-blue-600" />
                         <span className="text-2xl font-semibold">{planMetadata.displayName}</span>
-                        {planMetadata.popular && (
-                            <Badge variant="secondary" className="ml-2">
-                                Most Popular
-                            </Badge>
-                        )}
                     </div>
                     <div className="text-lg font-semibold text-foreground whitespace-nowrap">
                         {currentPlan === 'free' ? '$0' : `$${planPricing.monthly}/month`}

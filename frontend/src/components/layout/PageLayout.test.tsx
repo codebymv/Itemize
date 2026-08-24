@@ -88,6 +88,21 @@ describe('PageLayout', () => {
     expect(screen.getByText('Profile')).toBeInTheDocument();
   });
 
+  it('allows pages to tighten the mobile navigation gap', () => {
+    const { container } = renderLayout(
+      <PageLayout
+        title="SETTINGS"
+        nav={<nav aria-label="Settings">Account</nav>}
+        navigationClassName="gap-0 md:gap-8"
+      >
+        Profile
+      </PageLayout>
+    );
+
+    expect(container.querySelector('.gap-0')).not.toBeNull();
+    expect(container.querySelector('.md\\:gap-8')).not.toBeNull();
+  });
+
   it('places leading chrome before the title', () => {
     renderLayout(
       <PageLayout title="ALEX" leading={<button type="button">Back</button>}>

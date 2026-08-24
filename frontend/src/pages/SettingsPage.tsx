@@ -74,7 +74,7 @@ function SettingsNav() {
   // Mobile: Use tabs
   const mobileTabs = (
     <Tabs value={activePath} onValueChange={(value) => navigate(value)} className="w-full md:hidden">
-      <TabsList className="grid w-full grid-cols-3 mb-4">
+      <TabsList className="grid w-full grid-cols-3">
         {settingsNav.map((item) => {
           const isActive = activePath === item.path || (item.path === '/settings' && activePath === '/settings/');
           return (
@@ -264,14 +264,14 @@ function AccountSettings() {
     !subscription.hasSubscription;
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="flex flex-col gap-6">
+      <div className="hidden md:block">
         <h3 className="text-lg font-medium">Account</h3>
         <p className="text-sm text-muted-foreground">
           Manage your account information and subscription
         </p>
       </div>
-      <Separator />
+      <Separator className="hidden md:block" />
       <AccountInfo
         currentPlan={planName as Plan | undefined}
         starterTrialEligible={starterTrialEligible}
@@ -300,14 +300,14 @@ function PreferencesSettings() {
   const { aiEnabled, setAiEnabled } = useAISuggest();
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="flex flex-col gap-6">
+      <div className="hidden md:block">
         <h3 className="text-lg font-medium">Preferences</h3>
         <p className="text-sm text-muted-foreground">
           Customize your experience
         </p>
       </div>
-      <Separator />
+      <Separator className="hidden md:block" />
       
       <Card>
         <CardHeader>
@@ -482,19 +482,19 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <CheckoutSuccessModal
         open={!!showCheckoutSuccess}
         onClose={() => onCloseCheckoutSuccess?.()}
         onConfirmed={onCheckoutConfirmed}
       />
-      <div>
+      <div className="hidden md:block">
         <h3 className="text-lg font-medium">Payments</h3>
         <p className="text-sm text-muted-foreground">
           Configure invoicing and payment settings
         </p>
       </div>
-      <Separator />
+      <Separator className="hidden md:block" />
 
       {settings && (
         <PaymentSettingsForm
@@ -576,6 +576,7 @@ export function SettingsPage() {
       headerActions={saveButton}
       mobileActions={saveButton ? <div className="flex-1">{saveButton}</div> : undefined}
       nav={<SettingsNav />}
+      navigationClassName="gap-0 md:gap-8"
     >
       <div key={location.pathname}>
         {location.pathname === '/preferences' && <PreferencesSettings />}

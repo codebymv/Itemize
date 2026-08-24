@@ -7,9 +7,9 @@ import type { PaymentsLoadError } from '../hooks/usePaymentsTab';
 
 export function PaymentsTabLoadingSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       {/* Header */}
-      <div>
+      <div className="hidden md:block">
         <Skeleton className="h-6 w-24 mb-2" />
         <Skeleton className="h-4 w-64" />
       </div>
