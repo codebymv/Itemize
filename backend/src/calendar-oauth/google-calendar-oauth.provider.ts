@@ -10,7 +10,7 @@ export const GOOGLE_CALENDAR_OAUTH_PROVIDER = Symbol(
 const MAX_RETRIES = 3;
 const BASE_DELAY = 1000;
 const FALLBACK_PRODUCTION_API_ORIGIN =
-  'https://itemize-backend-production-92ad.up.railway.app';
+  'https://api.itemize.cloud';
 const RAILWAY_DOMAIN = /^[a-z0-9.-]+$/i;
 
 export type GoogleTokens = {

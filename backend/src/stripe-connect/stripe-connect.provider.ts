@@ -9,7 +9,7 @@ export const STRIPE_CONNECT_CLIENT = Symbol('STRIPE_CONNECT_CLIENT');
 export const STRIPE_ACCOUNT_ID = /^acct_[A-Za-z0-9]+$/;
 
 const FALLBACK_PRODUCTION_API_ORIGIN =
-  'https://itemize-backend-production-92ad.up.railway.app';
+  'https://api.itemize.cloud';
 const RAILWAY_DOMAIN = /^[a-z0-9.-]+$/i;
 
 export type StripeConnectedAccount = {
