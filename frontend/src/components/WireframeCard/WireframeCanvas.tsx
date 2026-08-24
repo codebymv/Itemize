@@ -503,6 +503,9 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
                       <Button
                         variant="ghost"
                         size="sm"
+                        aria-label={tool.label}
+                        aria-pressed={selectedTool === tool.id}
+                        title={tool.label}
                         onClick={() => handleToolClick(tool.id)}
                         className={cn(
                           "h-8 w-8 p-0 transition-colors",
@@ -550,11 +553,11 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
       `}</style>
       {/* Toolbar - styled like WhiteboardCanvas */}
       {!readOnly && (
-        <div 
-          className="flex items-center justify-between p-2 border-b flex-shrink-0" 
+        <div
+          className="flex items-center justify-between overflow-x-auto p-2 border-b flex-shrink-0"
           style={{ backgroundColor: toolbarBg, borderBottomColor: toolbarBorder }}
         >
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex min-w-max flex-nowrap items-center gap-2">
             {renderToolGroup(SHAPE_TOOLS)}
             <Separator orientation="vertical" className="h-6 mx-1 hidden sm:block" />
             {renderToolGroup(STORY_TOOLS)}
@@ -580,6 +583,8 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
                     <Button
                       variant="ghost"
                       size="sm"
+                      aria-label="Undo"
+                      title="Undo"
                       onClick={handleUndo}
                       disabled={historyIndex <= 0}
                       className="h-8 w-8 p-0"
@@ -598,6 +603,8 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
                     <Button
                       variant="ghost"
                       size="sm"
+                      aria-label="Redo"
+                      title="Redo"
                       onClick={handleRedo}
                       disabled={historyIndex >= history.length - 1}
                       className="h-8 w-8 p-0"
@@ -627,6 +634,8 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
                     <Button
                       variant="ghost"
                       size="sm"
+                      aria-label="Delete selected"
+                      title="Delete selected"
                       onClick={handleDeleteSelected}
                       className="h-8 w-8 p-0"
                       style={{ backgroundColor: 'transparent', color: textColor }}
@@ -644,6 +653,8 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
                     <Button
                       variant="ghost"
                       size="sm"
+                      aria-label="Fit view"
+                      title="Fit view"
                       onClick={handleFitView}
                       className="h-8 w-8 p-0"
                       style={{ backgroundColor: 'transparent', color: textColor }}
@@ -661,6 +672,9 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
                     <Button
                       variant="ghost"
                       size="sm"
+                      aria-label={showGrid ? 'Hide grid' : 'Show grid'}
+                      aria-pressed={showGrid}
+                      title={showGrid ? 'Hide grid' : 'Show grid'}
                       onClick={() => setShowGrid(!showGrid)}
                       className={cn(
                         "h-8 w-8 p-0",
@@ -681,6 +695,8 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
                     <Button
                       variant="ghost"
                       size="sm"
+                      aria-label="Clear wireframe"
+                      title="Clear wireframe"
                       onClick={handleClearAll}
                       className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
                       style={{ backgroundColor: 'transparent' }}

@@ -258,9 +258,9 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
         />
 
         <CollapsibleContent className="flex-1 flex flex-col min-h-0">
-          <div 
-            className="rounded-lg mx-6 mb-6 flex-1 flex flex-col relative overflow-hidden" 
-            style={{ 
+          <div
+            className="rounded-lg mx-3 sm:mx-6 mb-6 flex-1 flex flex-col relative overflow-hidden"
+            style={{
               border: `2px solid ${wireframeDisplayColor}`,
               minHeight: isMobile ? '300px' : '400px'
             }}
