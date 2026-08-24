@@ -64,7 +64,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     const { currentUser } = useAuthState();
     const { logout } = useAuthActions();
     useSessionWarning();
-    const { theme, setTheme } = useTheme();
+    const { resolvedTheme, setTheme } = useTheme();
     const { toast } = useToast();
     const { headerContent } = useHeader();
     const navigate = useNavigate();
@@ -193,10 +193,10 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                            onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
                             className="hidden md:flex"
                         >
-                            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                            {resolvedTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                         </Button>
 
                         {/* User menu */}
@@ -245,8 +245,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                                     {/* Theme toggle - only visible on mobile */}
                                     <div className="md:hidden">
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-                                            {theme === 'dark' ? (
+                                        <DropdownMenuItem onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}>
+                                            {resolvedTheme === 'dark' ? (
                                                 <>
                                                     <Sun className="mr-2 h-4 w-4" />
                                                     <span className="flex-1">Light mode</span>

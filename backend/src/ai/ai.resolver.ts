@@ -25,13 +25,21 @@ export class AiResolver {
 
   @CsrfProtected()
   @Mutation(() => AiSuggestionsPayload)
-  listSuggestions(@Args('input') input: ListSuggestionsInput) {
+  listSuggestions(
+    @Args('input') input: ListSuggestionsInput,
+    @Context() context: { req: Request },
+  ) {
+    this.rateLimit.consume(context.req, 'workspace-suggestions', 120);
     return this.provider.listSuggestions(input.listTitle, input.existingItems);
   }
 
   @CsrfProtected()
   @Mutation(() => AiSuggestionsPayload)
-  noteSuggestions(@Args('input') input: NoteSuggestionsInput) {
+  noteSuggestions(
+    @Args('input') input: NoteSuggestionsInput,
+    @Context() context: { req: Request },
+  ) {
+    this.rateLimit.consume(context.req, 'workspace-suggestions', 120);
     return this.provider.noteSuggestions(input.content);
   }
 

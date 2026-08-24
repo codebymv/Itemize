@@ -13,7 +13,8 @@ import { AISuggestProvider } from "@/context/AISuggestContext";
 import { SubscriptionProvider, useSubscriptionState } from "@/contexts/SubscriptionContext";
 import { UpgradePromptCard } from "@/components/subscription/UpgradeCTA";
 import { type Plan } from "@/lib/subscription";
-import { authenticatedHomePath, hasPlanAccess } from "@/lib/entitlements";
+import { hasPlanAccess } from "@/lib/entitlements";
+import { initializeUserPreferences, preferredHomePath } from "@/lib/userPreferences";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
 import { HeaderProvider } from '@/contexts/HeaderContext';
 
@@ -182,7 +183,7 @@ const RootRedirect = () => {
   }
 
   return currentUser
-    ? <Navigate to={authenticatedHomePath(isSubscribed)} replace />
+    ? <Navigate to={preferredHomePath(isSubscribed)} replace />
     : <Navigate to="/home" replace />;
 };
 
@@ -429,6 +430,10 @@ const AppContent = () => {
 };
 
 const App = () => {
+  useEffect(() => {
+    initializeUserPreferences();
+  }, []);
+
   // Enforce HTTPS in production
   useEffect(() => {
     if (import.meta.env.PROD) {
@@ -443,11 +448,11 @@ const App = () => {
       <TooltipProvider>
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
-          enableSystem={false}
+          defaultTheme="system"
+          enableSystem
           disableTransitionOnChange
           storageKey="theme"
-          themes={['light', 'dark']}
+          themes={['light', 'dark', 'system']}
         >
           <BrowserRouter
             future={{

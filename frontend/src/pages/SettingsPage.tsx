@@ -24,6 +24,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { getAssetUrl } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import {
+  getReduceMotionPreference,
+  getStartPagePreference,
+  setReduceMotionPreference,
+  setStartPagePreference,
+  type StartPagePreference,
+} from '@/lib/userPreferences';
 import { PricingCards } from '@/components/subscription';
 import { SubscriptionStatus } from '@/components/subscription/SubscriptionStatus';
 import { CheckoutSuccessModal } from '@/components/subscription/CheckoutSuccessModal';
@@ -39,6 +46,10 @@ import {
   Sparkles,
   Sun,
   Moon,
+  Monitor,
+  Lightbulb,
+  Accessibility,
+  LogIn,
   CreditCard,
   Building,
   Loader2,
@@ -73,7 +84,7 @@ function SettingsNav() {
 
   // Mobile: Use tabs
   const mobileTabs = (
-    <Tabs value={activePath} onValueChange={(value) => navigate(value)} className="w-full md:hidden">
+    <Tabs value={activePath} onValueChange={(value) => navigate(value)} className="w-full lg:hidden">
       <TabsList className="grid w-full grid-cols-3">
         {settingsNav.map((item) => {
           const isActive = activePath === item.path || (item.path === '/settings' && activePath === '/settings/');
@@ -97,7 +108,7 @@ function SettingsNav() {
 
   // Desktop: Use sidebar navigation
   const desktopNav = (
-    <nav className="hidden md:flex flex-col gap-1">
+    <nav className="hidden flex-col gap-1 lg:flex">
       {settingsNav.map((item) => {
         const isActive = location.pathname === item.path || (item.path === '/settings' && location.pathname === '/settings/');
         return (
@@ -109,8 +120,8 @@ function SettingsNav() {
           >
             <item.icon
               className={cn(
-                "mr-2 h-4 w-4 transition-colors text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600",
-                isActive ? 'text-blue-600' : ''
+                "mr-2 h-4 w-4 transition-colors group-hover/item:text-blue-600",
+                isActive ? 'text-blue-600' : 'text-gray-600 dark:text-gray-400'
               )}
             />
             {item.title}
@@ -201,7 +212,6 @@ function AccountInfo({
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Current Usage</CardTitle>
-            <CardDescription>Track your resource consumption</CardDescription>
           </CardHeader>
           <CardContent>
             <UsageIndicatorGrid>
@@ -234,7 +244,6 @@ function AccountInfo({
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Available Plans</CardTitle>
-          <CardDescription>Choose the plan that works best for you</CardDescription>
         </CardHeader>
         <CardContent>
           <PricingCards
@@ -265,13 +274,13 @@ function AccountSettings() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="hidden md:block">
+      <div className="hidden lg:block">
         <h3 className="text-lg font-medium">Account</h3>
         <p className="text-sm text-muted-foreground">
           Manage your account information and subscription
         </p>
       </div>
-      <Separator className="hidden md:block" />
+      <Separator className="hidden lg:block" />
       <AccountInfo
         currentPlan={planName as Plan | undefined}
         starterTrialEligible={starterTrialEligible}
@@ -298,27 +307,48 @@ function AccountSettings() {
 function PreferencesSettings() {
   const { theme, setTheme } = useTheme();
   const { aiEnabled, setAiEnabled } = useAISuggest();
+  const { isSubscribed } = useSubscriptionState();
+  const [reduceMotion, setReduceMotion] = useState(getReduceMotionPreference);
+  const [startPage, setStartPage] = useState<StartPagePreference>(getStartPagePreference);
+
+  const handleReduceMotionChange = (enabled: boolean) => {
+    setReduceMotion(enabled);
+    setReduceMotionPreference(enabled);
+  };
+
+  const handleStartPageChange = (value: StartPagePreference) => {
+    setStartPage(value);
+    setStartPagePreference(value);
+  };
+
+  const startPageDescription: Record<StartPagePreference, string> = {
+    automatic: 'Free plans open to Workspace Canvas. Paid plans open to Dashboard.',
+    canvas: 'Opens to Workspace Canvas after every sign in.',
+    dashboard: 'Opens to Dashboard after every sign in.',
+  };
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="hidden md:block">
+      <div className="hidden lg:block">
         <h3 className="text-lg font-medium">Preferences</h3>
         <p className="text-sm text-muted-foreground">
           Customize your experience
         </p>
       </div>
-      <Separator className="hidden md:block" />
+      <Separator className="hidden lg:block" />
       
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Appearance</CardTitle>
-          <CardDescription>Select your preferred theme</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Lightbulb className="h-4 w-4 text-blue-600" />
+            Appearance
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <Button
-              variant={theme !== 'dark' ? 'default' : 'outline'}
-              className={`flex-1 ${theme !== 'dark' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
+              variant={theme === 'light' ? 'default' : 'outline'}
+              className={theme === 'light' ? 'bg-blue-600 text-white hover:bg-blue-700' : ''}
               onClick={() => setTheme('light')}
             >
               <Sun className="mr-2 h-4 w-4" />
@@ -332,22 +362,89 @@ function PreferencesSettings() {
               <Moon className="mr-2 h-4 w-4" />
               Dark
             </Button>
+            <Button
+              variant={theme === 'system' ? 'default' : 'outline'}
+              className={theme === 'system' ? 'bg-blue-600 text-white hover:bg-blue-700' : ''}
+              onClick={() => setTheme('system')}
+            >
+              <Monitor className="mr-2 h-4 w-4" />
+              System
+            </Button>
+          </div>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Select your preferred theme.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <LogIn className="h-4 w-4 text-blue-600" />
+            After sign in
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_16rem] sm:items-center">
+            <Label htmlFor="start-page">Open Itemize to</Label>
+            <Select value={startPage} onValueChange={handleStartPageChange}>
+              <SelectTrigger id="start-page">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="automatic">Best page for my plan</SelectItem>
+                <SelectItem value="canvas">Workspace Canvas</SelectItem>
+                <SelectItem value="dashboard" disabled={!isSubscribed}>
+                  Dashboard{!isSubscribed ? ' (paid plans)' : ''}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <p className="mt-3 text-sm text-muted-foreground">
+            {startPageDescription[startPage]}
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Accessibility className="h-4 w-4 text-blue-600" />
+            Accessibility
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <Label htmlFor="reduce-motion-toggle">Reduce motion</Label>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Minimize animations and interface transitions on this device.
+              </p>
+            </div>
+            <Switch
+              id="reduce-motion-toggle"
+              aria-label="Reduce motion"
+              checked={reduceMotion}
+              onCheckedChange={handleReduceMotionChange}
+            />
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">AI Features</CardTitle>
-          <CardDescription>
-            Get smart suggestions for list items, note content, and more
-          </CardDescription>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Sparkles className="h-4 w-4 text-blue-600" />
+            AI Features
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-blue-600" />
+          <div className="flex items-center justify-between gap-4">
+            <div>
               <Label htmlFor="ai-toggle">Enable AI Enhancements</Label>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Get smart suggestions for list items, note content, and more.
+              </p>
             </div>
             <Switch
               id="ai-toggle"
@@ -488,13 +585,13 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
         onClose={() => onCloseCheckoutSuccess?.()}
         onConfirmed={onCheckoutConfirmed}
       />
-      <div className="hidden md:block">
+      <div className="hidden lg:block">
         <h3 className="text-lg font-medium">Payments</h3>
         <p className="text-sm text-muted-foreground">
           Configure invoicing and payment settings
         </p>
       </div>
-      <Separator className="hidden md:block" />
+      <Separator className="hidden lg:block" />
 
       {settings && (
         <PaymentSettingsForm
@@ -576,7 +673,7 @@ export function SettingsPage() {
       headerActions={saveButton}
       mobileActions={saveButton ? <div className="flex-1">{saveButton}</div> : undefined}
       nav={<SettingsNav />}
-      navigationClassName="gap-0 md:gap-8"
+      navigationBreakpoint="wide"
     >
       <div key={location.pathname}>
         {location.pathname === '/preferences' && <PreferencesSettings />}

@@ -103,6 +103,21 @@ describe('PageLayout', () => {
     expect(container.querySelector('.md\\:gap-8')).not.toBeNull();
   });
 
+  it('can defer split navigation until a wider viewport', () => {
+    const { container } = renderLayout(
+      <PageLayout
+        title="SETTINGS"
+        nav={<nav aria-label="Settings">Account</nav>}
+        navigationBreakpoint="wide"
+      >
+        Profile
+      </PageLayout>
+    );
+
+    expect(container.querySelector('.lg\\:flex-row')).not.toBeNull();
+    expect(container.querySelector('.lg\\:gap-8')).not.toBeNull();
+  });
+
   it('places leading chrome before the title', () => {
     renderLayout(
       <PageLayout title="ALEX" leading={<button type="button">Back</button>}>

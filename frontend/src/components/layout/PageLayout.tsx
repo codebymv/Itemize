@@ -5,6 +5,7 @@ import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { cn } from '@/lib/utils';
 
 export type PageFrame = 'surface' | 'flush' | 'split';
+export type NavigationBreakpoint = 'md' | 'wide';
 
 export interface PageLayoutProps {
   title: React.ReactNode;
@@ -15,6 +16,7 @@ export interface PageLayoutProps {
   mobileClassName?: string;
   frame?: PageFrame;
   nav?: React.ReactNode;
+  navigationBreakpoint?: NavigationBreakpoint;
   navigationClassName?: string;
   children: React.ReactNode;
   className?: string;
@@ -31,6 +33,7 @@ export function PageLayout({
   mobileClassName,
   frame = 'surface',
   nav,
+  navigationBreakpoint = 'md',
   navigationClassName,
   children,
   className,
@@ -74,7 +77,15 @@ export function PageLayout({
       {mobileBar}
       <PageContainer className={className}>
         {nav ? (
-          <div className={cn('flex flex-col gap-6 md:flex-row md:gap-8', navigationClassName)}>
+          <div
+            className={cn(
+              'flex flex-col',
+              navigationBreakpoint === 'wide'
+                ? 'gap-0 lg:flex-row lg:gap-8'
+                : 'gap-6 md:flex-row md:gap-8',
+              navigationClassName,
+            )}
+          >
             {nav}
             <div className="min-w-0 flex-1">{surface}</div>
           </div>

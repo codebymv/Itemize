@@ -22,6 +22,7 @@ describe('AI GraphQL HTTP contract', () => {
   const query = jest.fn();
   const end = jest.fn();
   const originalGeminiKey = process.env.GEMINI_API_KEY;
+  const originalOpenAiKey = process.env.OPENAI_API_KEY;
 
   beforeAll(async () => {
     process.env.JWT_SECRET = 'ai-e2e-secret';
@@ -29,6 +30,7 @@ describe('AI GraphQL HTTP contract', () => {
     process.env.FRONTEND_URL = 'https://frontend.test.itemize';
     process.env.NODE_ENV = 'test';
     delete process.env.GEMINI_API_KEY;
+    delete process.env.OPENAI_API_KEY;
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PG_POOL)
       .useValue({ query, end })
@@ -48,6 +50,8 @@ describe('AI GraphQL HTTP contract', () => {
     delete process.env.FRONTEND_URL;
     if (originalGeminiKey === undefined) delete process.env.GEMINI_API_KEY;
     else process.env.GEMINI_API_KEY = originalGeminiKey;
+    if (originalOpenAiKey === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = originalOpenAiKey;
   });
 
   beforeEach(() => query.mockReset());

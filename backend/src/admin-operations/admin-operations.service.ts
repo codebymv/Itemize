@@ -252,7 +252,6 @@ export class AdminOperationsService {
     });
     const malwareRequired = process.env.SIGNATURE_MALWARE_SCAN_REQUIRED === 'true';
     const malwareHost = Boolean(process.env.SIGNATURE_CLAMAV_HOST?.trim());
-    const geminiEnabled = process.env.MARKETING_CHAT_AI_ENABLED !== 'false';
     return [
       {
         id: 'database', name: 'PostgreSQL', required: true,
@@ -284,14 +283,40 @@ export class AdminOperationsService {
       malwareHost
         ? { id: 'clamav', name: 'ClamAV', required: malwareRequired, status: 'configured', detail: 'Malware scanner endpoint is configured' }
         : { id: 'clamav', name: 'ClamAV', required: malwareRequired, status: malwareRequired ? 'incomplete' : 'disabled', detail: malwareRequired ? 'Required scanner endpoint is missing' : 'Malware scanning is optional and disabled' },
-      process.env.GEMINI_API_KEY?.trim()
-        ? { id: 'gemini', name: 'Gemini', required: false, status: 'configured', detail: 'AI credentials are configured' }
-        : { id: 'gemini', name: 'Gemini', required: false, status: geminiEnabled ? 'incomplete' : 'disabled', detail: geminiEnabled ? 'AI credentials are missing' : 'Marketing AI is disabled' },
+      ...this.aiProviders(),
       {
         id: 'gleam', name: 'Gleam', required: false,
         status: 'disabled', detail: 'Gleam integration is not implemented',
       },
     ];
+  }
+
+  private aiProviders(): AdminProviderHealth[] {
+    const openAiReady = Boolean(process.env.OPENAI_API_KEY?.trim());
+    const geminiReady = Boolean(process.env.GEMINI_API_KEY?.trim());
+    const configuredPrimary = process.env.AI_PROVIDER?.trim().toLowerCase();
+    const primary = configuredPrimary === 'openai' || configuredPrimary === 'gemini'
+      ? configuredPrimary
+      : openAiReady ? 'openai' : 'gemini';
+    const configuredFallback = process.env.AI_FALLBACK_PROVIDER?.trim().toLowerCase();
+    const fallback = configuredFallback === 'openai' || configuredFallback === 'gemini'
+      ? configuredFallback
+      : null;
+    return [primary, fallback]
+      .filter((provider, index, all): provider is 'openai' | 'gemini' => (
+        provider !== null && all.indexOf(provider) === index
+      ))
+      .map((provider) => {
+        const ready = provider === 'openai' ? openAiReady : geminiReady;
+        const name = provider === 'openai' ? 'OpenAI' : 'Gemini';
+        return {
+          id: provider,
+          name,
+          required: false,
+          status: ready ? 'configured' : 'incomplete',
+          detail: ready ? 'AI credentials are configured' : 'AI credentials are missing',
+        };
+      });
   }
 
   private query(value?: string): string | undefined {

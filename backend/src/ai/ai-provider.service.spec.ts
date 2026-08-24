@@ -1,18 +1,33 @@
 import { AiProviderService } from './ai-provider.service';
 
-describe('AiProviderService without provider credentials', () => {
-  const originalKey = process.env.GEMINI_API_KEY;
+const aiEnvKeys = [
+  'OPENAI_API_KEY',
+  'GEMINI_API_KEY',
+  'AI_PROVIDER',
+  'AI_FALLBACK_PROVIDER',
+  'AI_OPENAI_MODEL',
+  'AI_OPENAI_REASONING_EFFORT',
+  'AI_GEMINI_MODEL',
+  'AI_REQUEST_TIMEOUT_MS',
+] as const;
+
+describe('AiProviderService', () => {
+  const originalEnv = Object.fromEntries(aiEnvKeys.map((key) => [key, process.env[key]]));
 
   beforeEach(() => {
-    delete process.env.GEMINI_API_KEY;
+    for (const key of aiEnvKeys) delete process.env[key];
+    jest.restoreAllMocks();
   });
 
   afterAll(() => {
-    if (originalKey === undefined) delete process.env.GEMINI_API_KEY;
-    else process.env.GEMINI_API_KEY = originalKey;
+    for (const key of aiEnvKeys) {
+      const value = originalEnv[key];
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
   });
 
-  it('returns the stable empty result for list and note suggestions', async () => {
+  it('returns the stable empty result without provider credentials', async () => {
     const service = new AiProviderService();
 
     await expect(service.listSuggestions('Groceries', ['Bread'])).resolves.toEqual({
@@ -31,6 +46,52 @@ describe('AiProviderService without provider credentials', () => {
     await expect(
       service.marketingAnswer([{ role: 'user', content: 'What is Itemize?' }]),
     ).resolves.toContain('support@itemize.cloud');
+  });
+
+  it('uses GPT-5.6 Luna with bounded output and caches successful suggestions', async () => {
+    process.env.OPENAI_API_KEY = 'test-openai-key';
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        output: [{
+          type: 'message',
+          content: [{ type: 'output_text', text: 'Milk, Eggs, Butter' }],
+        }],
+        usage: { input_tokens: 24, output_tokens: 8 },
+      }),
+    } as Response);
+    const service = new AiProviderService();
+
+    await expect(service.listSuggestions('Groceries', ['Bread'])).resolves.toEqual({
+      suggestions: ['Milk', 'Eggs', 'Butter'],
+    });
+    await expect(service.listSuggestions('Groceries', ['Bread'])).resolves.toEqual({
+      suggestions: ['Milk', 'Eggs', 'Butter'],
+      cached: true,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const request = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(request.headers).toEqual(expect.objectContaining({
+      Authorization: 'Bearer test-openai-key',
+    }));
+    expect(JSON.parse(String(request.body))).toMatchObject({
+      model: 'gpt-5.6-luna',
+      max_output_tokens: 200,
+      reasoning: { effort: 'none' },
+      text: { verbosity: 'low' },
+    });
+  });
+
+  it('returns a stable client-safe error when a provider request fails', async () => {
+    process.env.OPENAI_API_KEY = 'test-openai-key';
+    jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false, status: 429 } as Response);
+    const service = new AiProviderService();
+
+    await expect(service.noteSuggestions('A sufficiently long note')).resolves.toEqual({
+      suggestions: [],
+      error: 'AI suggestions are temporarily unavailable',
+    });
   });
 
   it('rejects oversized or malformed inputs before provider work', async () => {

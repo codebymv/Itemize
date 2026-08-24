@@ -73,7 +73,7 @@ const Home: React.FC = () => {
   useEffect(() => {
     if (isAuthenticated && !navigatedRef.current) {
       navigatedRef.current = true;
-      setTimeout(() => navigate('/dashboard'), 0);
+      setTimeout(() => navigate('/', { replace: true }), 0);
     }
   }, [currentUser, navigate, isAuthenticated, token]);
 

@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuthActions, useAuthState } from '@/contexts/AuthContext';
-import { LogIn, LogOut, User, Sun, Moon, Sparkles, Palette, Settings, Book, Activity, ShieldCheck, Zap, Crown, Building2, Mail, BarChart3, ChevronRight } from 'lucide-react';
+import { LogIn, LogOut, User, Sun, Moon, Monitor, Sparkles, Palette, Settings, Book, Activity, ShieldCheck, Zap, Crown, Building2, Mail, BarChart3, ChevronRight } from 'lucide-react';
 import { useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { PLAN_METADATA, type Plan } from '@/lib/subscription';
 import { useToast } from '@/hooks/use-toast';
@@ -216,11 +216,11 @@ const Navbar: React.FC = () => {
                       <Settings className="mr-2 h-4 w-4 text-blue-600" />
                       <span className="text-sm font-medium">Theme</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 ml-6">
+                    <div className="grid grid-cols-3 gap-2 ml-6">
                       <button
                         onClick={() => setTheme('light')}
                         className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                          theme !== 'dark' 
+                          theme === 'light'
                             ? 'bg-accent text-accent-foreground' 
                             : 'hover:bg-accent/80 hover:text-accent-foreground'
                         }`}
@@ -238,6 +238,17 @@ const Navbar: React.FC = () => {
                       >
                         <Moon className="h-4 w-4" />
                         Dark
+                      </button>
+                      <button
+                        onClick={() => setTheme('system')}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                          theme === 'system'
+                            ? 'bg-accent text-accent-foreground'
+                            : 'hover:bg-accent/80 hover:text-accent-foreground'
+                        }`}
+                      >
+                        <Monitor className="h-4 w-4" />
+                        System
                       </button>
                     </div>
                   </div>
