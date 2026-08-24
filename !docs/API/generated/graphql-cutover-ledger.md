@@ -31,7 +31,7 @@
 | Method | REST path | Consumers | Tests | Disposition | Risk | Owner / target |
 | --- | --- | ---: | ---: | --- | --- | --- |
 | GET | `/*` | 0 | 0 | non-api | low | _unassigned_ |
-| POST | `/api/billing/webhook` | 0 | 3 | retain-http | high | billing / SubscriptionWebhooksModule / processStripeSubscriptionEvent |
+| POST | `/api/billing/webhook` | 0 | 10 | retain-http | high | billing / SubscriptionWebhooksModule / processStripeSubscriptionEvent |
 | GET | `/api/bookings/public/book/:slug` | 1 | 10 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingPage |
 | POST | `/api/bookings/public/book/:slug` | 1 | 19 | retain-http | high | scheduling / PublicBookingsModule / createPublicBooking |
 | POST | `/api/bookings/public/book/:slug/cancel/:token` | 1 | 14 | retain-http | high | scheduling / PublicBookingsModule / cancelPublicBooking |

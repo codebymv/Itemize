@@ -58,6 +58,10 @@ const {
     createWorkflowWebhookProxy,
     workflowWebhooksEnabled,
 } = require('../workflow-webhooks-proxy');
+const {
+    createSubscriptionWebhookProxy,
+    subscriptionWebhooksEnabled,
+} = require('../subscription-webhooks-proxy');
 const rateLimit = require('express-rate-limit');
 const webhooksRoutes = require('../routes/webhooks.routes');
 const calendarIntegrationsRoutes = require('../routes/calendar-integrations.routes');
@@ -227,6 +231,14 @@ function registerApiRoutes({
     app.get('/api/invoices/:id/pdf', createInvoicePdfProxy({ logger }));
     app.use('/api/invoices', invoicesRoutes(pool, authenticateJWT, publicRateLimit));
     logger.info('Invoicing routes initialized');
+    {
+        const subscriptionWebhookProxy = createSubscriptionWebhookProxy({ logger });
+        const stack = subscriptionWebhooksEnabled()
+            ? [publicRateLimit, subscriptionWebhookProxy]
+            : [subscriptionWebhookProxy];
+        app.post('/api/billing/webhook', ...stack);
+        logger.info('Subscription webhook proxy route initialized');
+    }
     app.use('/api/billing', billingRoutes(pool, authenticateJWT));
     logger.info('Billing routes initialized');
     const publicReputationRoute = (action) => {

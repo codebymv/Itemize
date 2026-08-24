@@ -51,9 +51,9 @@
       "owner": "billing",
       "targetModule": "SubscriptionWebhooksModule",
       "targetOperation": "processStripeSubscriptionEvent",
-      "parityStatus": "characterized",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Retain the exact raw-body Stripe signature protocol. The callback claims event IDs transactionally, locks tenant mappings, persists minimal replay snapshots, and atomically updates organization/subscription/audit state. Provider time plus event ID gives deterministic same-second ordering. Leased workers reconcile unmatched/ambiguous mappings and deliver upgrade notifications with retry, provider idempotency, and redacted dead letters. Operator dashboards and manual dead-letter controls remain platform work."
+      "notes": "Retain the exact raw-body Stripe signature protocol. The callback claims event IDs transactionally, locks tenant mappings, persists minimal replay snapshots, and atomically updates organization/subscription/audit state. Provider time plus event ID gives deterministic same-second ordering. Leased workers reconcile unmatched/ambiguous mappings and deliver upgrade notifications with retry, provider idempotency, and redacted dead letters. Operator dashboards and manual dead-letter controls remain platform work. NestJS now owns an identical implementation (SubscriptionWebhooksModule) verifying the exact signed bytes with the Stripe SDK and faithfully porting the durable event claim with minimal replay snapshot, deterministic provider ordering, tenant locks, plan/limit application, subscription upsert, audit trail, terminal transitions, and unmatched/ambiguous quarantine, proven by a dual-runtime PostgreSQL parity suite with genuinely signed payloads and cross-runtime deduplication; the legacy origin routes the path through a default-off proxy (SUBSCRIPTION_WEBHOOKS_NESTJS_ENABLED) forwarding the raw bytes and signature. The legacy reconciliation and notification workers keep draining the shared tables until the scheduler moves."
     },
     "POST /api/webhooks/:workflowId": {
       "disposition": "retain-http",

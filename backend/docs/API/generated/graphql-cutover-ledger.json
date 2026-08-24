@@ -60,12 +60,22 @@
       "path": "/api/billing/webhook",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 239
+        },
+        {
           "source": "backend/src/routes/billing.routes.js",
           "line": 28
         }
       ],
       "consumerCallsites": [],
       "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/billing/webhook",
+          "source": "backend-v2/test/integration/subscription-webhooks.integration-spec.ts",
+          "line": 67
+        },
         {
           "method": "POST",
           "path": "/api/billing/webhook",
@@ -83,6 +93,42 @@
           "path": "/api/billing/webhook",
           "source": "backend/src/__tests__/routes/billing.routes.test.js",
           "line": 73
+        },
+        {
+          "method": "POST",
+          "path": "/api/billing/webhook",
+          "source": "backend/src/__tests__/subscription-webhooks-proxy.test.js",
+          "line": 17
+        },
+        {
+          "method": "POST",
+          "path": "/api/billing/webhook",
+          "source": "backend/src/__tests__/subscription-webhooks-proxy.test.js",
+          "line": 35
+        },
+        {
+          "method": "POST",
+          "path": "/api/billing/webhook",
+          "source": "backend/src/__tests__/subscription-webhooks-proxy.test.js",
+          "line": 45
+        },
+        {
+          "method": "POST",
+          "path": "/api/billing/webhook",
+          "source": "backend/src/__tests__/subscription-webhooks-proxy.test.js",
+          "line": 61
+        },
+        {
+          "method": "POST",
+          "path": "/api/billing/webhook",
+          "source": "backend/src/__tests__/subscription-webhooks-proxy.test.js",
+          "line": 72
+        },
+        {
+          "method": "POST",
+          "path": "/api/billing/webhook",
+          "source": "backend/src/__tests__/subscription-webhooks-proxy.test.js",
+          "line": 77
         }
       ],
       "recommendedDisposition": "retain-http",
@@ -91,8 +137,8 @@
       "owner": "billing",
       "targetOperation": "processStripeSubscriptionEvent",
       "targetModule": "SubscriptionWebhooksModule",
-      "parityStatus": "characterized",
-      "notes": "Retain the exact raw-body Stripe signature protocol. The callback claims event IDs transactionally, locks tenant mappings, persists minimal replay snapshots, and atomically updates organization/subscription/audit state. Provider time plus event ID gives deterministic same-second ordering. Leased workers reconcile unmatched/ambiguous mappings and deliver upgrade notifications with retry, provider idempotency, and redacted dead letters. Operator dashboards and manual dead-letter controls remain platform work.",
+      "parityStatus": "implemented",
+      "notes": "Retain the exact raw-body Stripe signature protocol. The callback claims event IDs transactionally, locks tenant mappings, persists minimal replay snapshots, and atomically updates organization/subscription/audit state. Provider time plus event ID gives deterministic same-second ordering. Leased workers reconcile unmatched/ambiguous mappings and deliver upgrade notifications with retry, provider idempotency, and redacted dead letters. Operator dashboards and manual dead-letter controls remain platform work. NestJS now owns an identical implementation (SubscriptionWebhooksModule) verifying the exact signed bytes with the Stripe SDK and faithfully porting the durable event claim with minimal replay snapshot, deterministic provider ordering, tenant locks, plan/limit application, subscription upsert, audit trail, terminal transitions, and unmatched/ambiguous quarantine, proven by a dual-runtime PostgreSQL parity suite with genuinely signed payloads and cross-runtime deduplication; the legacy origin routes the path through a default-off proxy (SUBSCRIPTION_WEBHOOKS_NESTJS_ENABLED) forwarding the raw bytes and signature. The legacy reconciliation and notification workers keep draining the shared tables until the scheduler moves.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -104,7 +150,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 260
+          "line": 272
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -203,7 +249,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 262
+          "line": 274
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -356,7 +402,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 263
+          "line": 275
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -479,7 +525,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 261
+          "line": 273
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -875,7 +921,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 182
+          "line": 186
         }
       ],
       "consumerCallsites": [
@@ -934,7 +980,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 183
+          "line": 187
         }
       ],
       "consumerCallsites": [
@@ -993,7 +1039,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 189
+          "line": 193
         },
         {
           "source": "backend/src/routes/email-webhooks.routes.js",
@@ -1082,7 +1128,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 290
+          "line": 302
         },
         {
           "source": "backend/src/routes/forms.routes.js",
@@ -1193,7 +1239,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 291
+          "line": 303
         },
         {
           "source": "backend/src/routes/forms.routes.js",
@@ -1459,7 +1505,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 227
+          "line": 231
         },
         {
           "source": "backend/src/routes/invoices/pdf.routes.js",
@@ -1570,7 +1616,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 219
+          "line": 223
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -1663,7 +1709,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 223
+          "line": 227
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -1701,7 +1747,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 215
+          "line": 219
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -1808,7 +1854,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 249
+          "line": 261
         },
         {
           "source": "backend/src/routes/pages/public.routes.js",
@@ -1895,7 +1941,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 250
+          "line": 262
         },
         {
           "source": "backend/src/routes/pages/public.routes.js",
@@ -1970,7 +2016,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 356
+          "line": 368
         }
       ],
       "consumerCallsites": [
@@ -2029,7 +2075,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 360
+          "line": 372
         }
       ],
       "consumerCallsites": [],
@@ -2072,7 +2118,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 364
+          "line": 376
         }
       ],
       "consumerCallsites": [],
@@ -2115,7 +2161,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 328
+          "line": 340
         }
       ],
       "consumerCallsites": [
@@ -2192,7 +2238,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 348
+          "line": 360
         }
       ],
       "consumerCallsites": [
@@ -2245,7 +2291,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 344
+          "line": 356
         }
       ],
       "consumerCallsites": [
@@ -2286,7 +2332,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 336
+          "line": 348
         }
       ],
       "consumerCallsites": [],
@@ -2310,7 +2356,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 332
+          "line": 344
         }
       ],
       "consumerCallsites": [],
@@ -2341,7 +2387,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 340
+          "line": 352
         }
       ],
       "consumerCallsites": [],
@@ -2365,7 +2411,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 237
+          "line": 249
         },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
@@ -2428,7 +2474,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 238
+          "line": 250
         },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
@@ -2533,7 +2579,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 236
+          "line": 248
         },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
@@ -2616,7 +2662,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 172
+          "line": 176
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2712,7 +2758,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 173
+          "line": 177
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2759,7 +2805,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 176
+          "line": 180
         },
         {
           "source": "backend/src/routes/vaults/sharing.routes.js",
@@ -2810,7 +2856,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 174
+          "line": 178
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2873,7 +2919,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 175
+          "line": 179
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2933,7 +2979,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 314
+          "line": 326
         }
       ],
       "consumerCallsites": [],
@@ -2970,7 +3016,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 310
+          "line": 322
         }
       ],
       "consumerCallsites": [],
@@ -3007,7 +3053,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 296
+          "line": 308
         }
       ],
       "consumerCallsites": [
@@ -3102,7 +3148,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 318
+          "line": 330
         }
       ],
       "consumerCallsites": [],
@@ -3126,7 +3172,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 303
+          "line": 315
         }
       ],
       "consumerCallsites": [
@@ -3160,7 +3206,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 201
+          "line": 205
         },
         {
           "source": "backend/src/routes/sms-webhooks.routes.js",
@@ -3231,7 +3277,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 200
+          "line": 204
         },
         {
           "source": "backend/src/routes/sms-webhooks.routes.js",
@@ -3434,7 +3480,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 91
+          "line": 95
         }
       ],
       "consumerCallsites": [
@@ -3468,7 +3514,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 374
+          "line": 386
         },
         {
           "source": "backend/src/routes/webhooks.routes.js",
