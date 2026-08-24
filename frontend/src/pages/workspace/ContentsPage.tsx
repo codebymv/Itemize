@@ -328,7 +328,9 @@ export function ContentsPage() {
   const handleWireframeUpdate = useCallback(async (wireframeId: number, updatedData: Partial<Omit<Wireframe, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
     try {
       const result = await apiUpdateWireframe(wireframeId, updatedData, token);
-      fetchAllContent();
+      setWireframes((current) => current.map((wireframe) =>
+        wireframe.id === wireframeId ? result as Wireframe : wireframe
+      ));
       return result as Wireframe;
     } catch (error) {
       console.error('Failed to update wireframe:', error);
@@ -339,7 +341,7 @@ export function ContentsPage() {
       });
       return null;
     }
-  }, [token, toast, fetchAllContent]);
+  }, [token, toast, setWireframes]);
 
   const handleVaultUpdate = useCallback(async (vaultId: number, updatedData: Partial<Omit<Vault, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
     try {

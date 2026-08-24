@@ -1,13 +1,22 @@
 import type { ReactNode } from 'react';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  getCurrentUserViaGraphql,
   loginViaGraphql,
   registerViaGraphql,
 } from '@/services/authGraphql';
+import {
+  clearAuthenticatedSession,
+  hasSessionHint,
+  isLoggedOut,
+} from '@/lib/api';
+import { storage } from '@/lib/storage';
 import { GraphqlRequestError } from '@/services/graphqlClient';
-import { AuthProvider, useAuthActions } from './AuthContext';
+import { AuthProvider, useAuthActions, useAuthState } from './AuthContext';
+
+const storageMemory = vi.hoisted(() => new Map<string, string>());
 
 vi.mock('@/lib/api', () => ({
   markAuthenticatedSession: vi.fn(),
@@ -24,6 +33,19 @@ vi.mock('@/services/authGraphql', () => ({
   registerViaGraphql: vi.fn(),
 }));
 
+vi.mock('@/lib/storage', () => ({
+  storage: {
+    getItem: vi.fn((key: string) => storageMemory.get(key) ?? null),
+    setItem: vi.fn((key: string, value: string) => storageMemory.set(key, value)),
+    removeItem: vi.fn((key: string) => storageMemory.delete(key)),
+    getJson: vi.fn((key: string) => {
+      const value = storageMemory.get(key);
+      return value ? JSON.parse(value) : null;
+    }),
+    setJson: vi.fn((key: string, value: unknown) => storageMemory.set(key, JSON.stringify(value))),
+  },
+}));
+
 const wrapper = ({ children }: { children: ReactNode }) => (
   <MemoryRouter initialEntries={['/register']}>
     <AuthProvider>{children}</AuthProvider>
@@ -31,7 +53,45 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 );
 
 describe('AuthProvider GraphQL authentication', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    storageMemory.clear();
+    window.localStorage.clear();
+    vi.mocked(isLoggedOut).mockReturnValue(true);
+    vi.mocked(hasSessionHint).mockReturnValue(false);
+  });
+
+  it('preserves cached identity when protected-route hydration is temporarily rate limited', async () => {
+    vi.mocked(isLoggedOut).mockReturnValue(false);
+    vi.mocked(hasSessionHint).mockReturnValue(true);
+    storage.setJson('itemize_user', {
+      uid: '42',
+      email: 'member@example.com',
+      name: 'Member',
+      role: 'USER',
+    });
+    storage.setItem('itemize_expiry', String(Date.now() + 60_000));
+    expect(storage.getJson('itemize_user')).toMatchObject({ uid: '42' });
+    vi.mocked(getCurrentUserViaGraphql).mockRejectedValue(
+      new GraphqlRequestError('Too many requests', 429),
+    );
+
+    const protectedWrapper = ({ children }: { children: ReactNode }) => (
+      <MemoryRouter initialEntries={['/canvas']}>
+        <AuthProvider>{children}</AuthProvider>
+      </MemoryRouter>
+    );
+    const { result } = renderHook(() => useAuthState(), { wrapper: protectedWrapper });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.currentUser).toMatchObject({
+      uid: '42',
+      email: 'member@example.com',
+    });
+    expect(clearAuthenticatedSession).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem('itemize_user')).not.toBeNull();
+  });
 
   it('routes registration directly through GraphQL', async () => {
     vi.mocked(registerViaGraphql).mockResolvedValue({

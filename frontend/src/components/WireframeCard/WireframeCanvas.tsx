@@ -143,7 +143,11 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
   
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const lastPersistedRef = useRef<string>('');
+  const lastPersistedRef = useRef<string>(JSON.stringify({
+    nodes: stripWireframeSelection(initialNodes),
+    edges: stripWireframeEdgeSelection(initialEdges),
+    viewport: flowData?.viewport || { x: 0, y: 0, zoom: 1 },
+  }));
   const appliedIncomingRef = useRef(fingerprintWireframeFlow(flowData?.nodes || [], flowData?.edges || []));
   const flowDataRef = useRef(flowData);
   const nodesRef = useRef(nodes);

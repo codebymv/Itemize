@@ -179,20 +179,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           throw new Error('Invalid user data received');
         }
       } catch (error) {
-        clearAuthenticatedSession();
-        storage.removeItem('itemize_user');
-        storage.removeItem('itemize_expiry');
-        setCurrentUser(null);
-        setToken(null);
-
-        if (
+        const isDefinitiveLogout =
           error instanceof GraphqlRequestError
-          && error.code === 'UNAUTHENTICATED'
-        ) {
+          && error.code === 'UNAUTHENTICATED';
+
+        if (isDefinitiveLogout) {
+          clearAuthenticatedSession();
+          storage.removeItem('itemize_user');
+          storage.removeItem('itemize_expiry');
+          setCurrentUser(null);
+          setToken(null);
           logger.debug('Not authenticated (user not logged in)');
         } else {
+          const cached = storage.getJson<Record<string, unknown>>('itemize_user');
+          const cachedUser = cached ? normalizeUser(cached) : null;
+          if (cachedUser) {
+            setCurrentUser(cachedUser);
+            setToken(null);
+          }
           console.error('Auth Error:', error);
-          logger.debug('Not authenticated (user not logged in)');
+          logger.warn('Session hydration failed temporarily; preserving the cached session hint');
         }
       } finally {
         setLoading(false);
