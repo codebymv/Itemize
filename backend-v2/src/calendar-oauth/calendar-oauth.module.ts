@@ -20,5 +20,6 @@ import {
       useClass: SdkGoogleCalendarOAuthProvider,
     },
   ],
+  exports: [GOOGLE_CALENDAR_OAUTH_PROVIDER],
 })
 export class CalendarOAuthModule {}

@@ -33,6 +33,7 @@ These are code defaults, not a claim about current host-dashboard values. Verify
 | Email webhook reconciliation | `EMAIL_WEBHOOK_JOBS_ENABLED`, enabled unless `false` | `EMAIL_WEBHOOK_NEST_JOBS_ENABLED`, off | Disable legacy before enabling Nest. |
 | Social webhook jobs | `SOCIAL_WEBHOOK_JOBS_ENABLED`, enabled unless `false` | `SOCIAL_WEBHOOK_NEST_JOBS_ENABLED`, off | Disable legacy; enable Nest only beside `REALTIME_HOST_NESTJS_ENABLED=true`. |
 | Workflow jobs | Split legacy flags; see workflow contract | `WORKFLOW_NEST_SCHEDULER_ENABLED`, off | Transfer each queue as an ordered change with drain/reconciliation evidence. |
+| Calendar sync (push/pull) | `CALENDAR_SYNC_JOBS_ENABLED`, off | `CALENDAR_SYNC_NEST_JOBS_ENABLED`, off | Choose one scheduler; claims are leased and fenced by worker id and attempt count. Google credentials must exist in the owning runtime. |
 
 ## Deployment sequence
 

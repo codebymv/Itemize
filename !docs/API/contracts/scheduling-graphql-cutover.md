@@ -85,6 +85,15 @@ Connection settings validate provider, sync direction, and selected calendar ide
 `CalendarIntegrationsModule` exposes only safe connection and job projections. Queries and mutations scope every row to both the verified organization and current user; organization peers cannot enumerate or operate one another's provider connections. Access/refresh tokens, provider account IDs, sync cursors, job idempotency keys, lease ownership, and claim metadata are absent from the GraphQL schema. Settings, disconnect, and sync requests require CSRF. The five database-backed management operations are unconditional GraphQL consumers, while OAuth initiation/callback and live provider-calendar listing continue through HTTP.
 
 Migration `033_calendar_sync_jobs` adds one active durable job per connection, durable request-key aliases, direction/calendar snapshots, leased `SKIP LOCKED` claims, bounded exponential retry, redacted errors, fenced completion, and visible retry/dead-letter state. The retained request endpoint now returns `202` after enqueueing and never calls Google inline; sync status includes the ten newest safe job projections. The worker remains explicitly default-off behind `CALENDAR_SYNC_JOBS_ENABLED`.
+NestJS now carries a faithful port of this worker (`CalendarSyncJobsModule`:
+claim/lease/fence SQL, push with deterministic remote identity and the
+409/404 provider fallbacks, pull busy-window replacement with the
+stale-claim fence, backoff, redaction, and connection error bookkeeping),
+default-off behind `CALENDAR_SYNC_NEST_JOBS_ENABLED`; the runtime
+validator rejects enabling both flags in one runtime. A dual-runtime
+fresh-PostgreSQL parity suite drives both workers over identical seeded
+jobs with injected provider boundaries, and cross-runtime unit parity
+pins the normalization, backoff, and redaction primitives.
 
 Push uses deterministic provider event IDs, repairs an ambiguous create replay through update, upserts one connection/booking sync identity, and treats a remote `404` during cancellation as a completed delete. Pull reads up to ten 250-event pages per selected provider calendar over the bounded active-calendar horizon, resolves all-day dates in the provider timezone, excludes Itemize-owned, cancelled, and invalid events, and atomically replaces normalized external busy intervals for active internal calendars assigned to the connection owner. `push`, `pull`, and `both` therefore match the stored direction. Provider failures retry the durable job and never make a partially failed push appear successful.
 
