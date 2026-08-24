@@ -86,6 +86,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { useWorkspaceContent } from './hooks/useWorkspaceContent';
 import { useResponsiveContentCollapse } from '@/hooks/useResponsiveContentCollapse';
 import { useQueuedListUpdates } from '@/hooks/useQueuedListUpdates';
+import { findOpenCanvasPosition } from '@/lib/canvasPosition';
 
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
 type SortOption = 'updated' | 'created' | 'title';
@@ -650,31 +651,36 @@ export function ContentsPage() {
   }, [lists, notes, whiteboards, wireframes, vaults]);
 
   const createNote = async (title: string, category: string, color: string) => {
-    const created = await apiCreateNote({ title, content: '', category, color_value: color, width: 570, height: 350, z_index: 0 }, token);
+    const position = findOpenCanvasPosition([...lists, ...notes, ...whiteboards, ...wireframes, ...vaults], { width: 570, height: 350 });
+    const created = await apiCreateNote({ title, content: '', category, color_value: color, width: 570, height: 350, position_x: position.x, position_y: position.y, z_index: 0 }, token);
     setNotes((current) => [created as Note, ...current]);
     return created;
   };
 
   const createList = async (title: string, type: string, color: string) => {
-    const created = await apiCreateList({ title, type, items: [], color_value: color }, token);
+    const position = findOpenCanvasPosition([...lists, ...notes, ...whiteboards, ...wireframes, ...vaults], { width: 340, height: 265 });
+    const created = await apiCreateList({ title, type, items: [], color_value: color, position_x: position.x, position_y: position.y }, token);
     setLists((current) => [created, ...current]);
     return created;
   };
 
   const createWhiteboard = async (title: string, category: string, color: string) => {
-    const created = await apiCreateWhiteboard({ title, category, color_value: color, z_index: 0 }, token);
+    const position = findOpenCanvasPosition([...lists, ...notes, ...whiteboards, ...wireframes, ...vaults], { width: 750, height: 620 });
+    const created = await apiCreateWhiteboard({ title, category, color_value: color, position_x: position.x, position_y: position.y, z_index: 0 }, token);
     setWhiteboards((current) => [created as Whiteboard, ...current]);
     return created;
   };
 
   const createWireframe = async (title: string, category: string, color: string) => {
-    const created = await apiCreateWireframe({ title, category, color_value: color, z_index: 0 }, token);
+    const position = findOpenCanvasPosition([...lists, ...notes, ...whiteboards, ...wireframes, ...vaults], { width: 600, height: 600 });
+    const created = await apiCreateWireframe({ title, category, color_value: color, position_x: position.x, position_y: position.y, z_index: 0 }, token);
     setWireframes((current) => [created as Wireframe, ...current]);
     return created;
   };
 
   const createVault = async (title: string, category: string, color: string) => {
-    const created = await apiCreateVault({ title, category, color_value: color, z_index: 0 }, token);
+    const position = findOpenCanvasPosition([...lists, ...notes, ...whiteboards, ...wireframes, ...vaults], { width: 400, height: 300 });
+    const created = await apiCreateVault({ title, category, color_value: color, position_x: position.x, position_y: position.y, z_index: 0 }, token);
     setVaults((current) => [created as Vault, ...current]);
     return created;
   };

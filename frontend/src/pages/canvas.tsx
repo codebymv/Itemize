@@ -37,7 +37,7 @@ import { useCanvasSharing } from './canvas/hooks/useCanvasSharing';
 import { useCanvasCRUD } from './canvas/hooks/useCanvasCRUD';
 import { CanvasToolbar } from './canvas/components/CanvasToolbar';
 import { MobileListView as CanvasMobileListView } from './canvas/components/MobileListView';
-import { CANVAS_CENTER, BASE_SPREAD_RADIUS, ITEM_WIDTH, ITEM_HEIGHT, MIN_DISTANCE, MAX_POSITION_ATTEMPTS } from './canvas/constants/canvasConstants';
+import { findOpenCanvasPosition } from '@/lib/canvasPosition';
 
 const CanvasPage: React.FC = () => {
   const { theme } = useTheme();
@@ -313,51 +313,15 @@ const { currentUser } = useAuthState();
 
   // Note: Race condition prevention refs removed since WebSocket creation events are disabled
 
-  // Utility function for intelligent positioning of mobile-created items
+  // Shared placement keeps every creation entry point from stacking cards.
   const getIntelligentPosition = (currentLists: List[], currentNotes: Note[], currentWhiteboards: Whiteboard[], currentWireframes: Wireframe[]) => {
-    const centerX = 2000; // Canvas center X coordinate
-    const centerY = 2000; // Canvas center Y coordinate  
-    const baseSpreadRadius = 300; // Base random spread area around center
-    const itemWidth = 390; // Approximate width of list/note cards
-    const itemHeight = 295; // Approximate height of list/note cards (accounting for headers)
-    const minDistance = 50; // Minimum distance between items
-
-    // Get all existing positions from lists, notes, whiteboards, and wireframes
-    const existingPositions: Array<{ x: number; y: number }> = [
-      ...lists.map(list => ({ x: list.position_x || 0, y: list.position_y || 0 })),
-      ...notes.map(note => ({ x: note.position_x, y: note.position_y })),
-      ...whiteboards.map(whiteboard => ({ x: whiteboard.position_x, y: whiteboard.position_y })),
-      ...wireframes.map(wireframe => ({ x: wireframe.position_x, y: wireframe.position_y }))
-    ];
-
-    // Function to check if a position overlaps with existing items
-    const hasOverlap = (newX: number, newY: number): boolean => {
-      return existingPositions.some(pos => {
-        const distanceX = Math.abs(newX - pos.x);
-        const distanceY = Math.abs(newY - pos.y);
-        return distanceX < (itemWidth + minDistance) && distanceY < (itemHeight + minDistance);
-      });
-    };
-
-    // Try to find a non-overlapping position
-    let attempts = 0;
-    const maxAttempts = 20;
-    let position;
-
-    do {
-      const spreadRadius = baseSpreadRadius + (attempts * 50); // Increase spread radius with each attempt
-      const randomX = (Math.random() - 0.5) * spreadRadius * 2;
-      const randomY = (Math.random() - 0.5) * spreadRadius * 2;
-
-      position = {
-        x: centerX + randomX,
-        y: centerY + randomY
-      };
-
-      attempts++;
-    } while (hasOverlap(position.x, position.y) && attempts < maxAttempts);
-
-    return position;
+    return findOpenCanvasPosition([
+      ...currentLists,
+      ...currentNotes,
+      ...currentWhiteboards,
+      ...currentWireframes,
+      ...vaults,
+    ]);
   };
 
   // CRUD operations for Notes
