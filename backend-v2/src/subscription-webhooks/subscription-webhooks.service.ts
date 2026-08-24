@@ -4,8 +4,9 @@
  * event claim, minimal replay snapshot, deterministic provider
  * ordering, tenant locks, plan/limit writes, subscription upsert,
  * audit trail, and notification marking must not drift while both
- * runtimes serve the receiver; the legacy reconciliation and
- * notification workers keep draining the shared tables.
+ * runtimes serve the receiver. reconcileEvent mirrors the legacy
+ * reconciliation replay so the NestJS workers can drain the shared
+ * tables with identical outcomes.
  */
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
@@ -183,6 +184,65 @@ export function snapshotStripeSubscriptionEvent(normalized: NormalizedEvent) {
   };
 }
 
+export type SubscriptionWebhookClaimRow = {
+  stripe_event_id: string;
+  event_type: string;
+  object_id: string;
+  object_created_at: Date | string;
+  event_snapshot: {
+    customerId?: string | null;
+    subscriptionId?: string | null;
+    status?: string | null;
+    currentPeriodStart?: number | null;
+    currentPeriodEnd?: number | null;
+    trialStart?: number | null;
+    trialEnd?: number | null;
+    cancelAtPeriodEnd?: boolean;
+    pauseCollection?: { behavior?: string } | null;
+    priceId?: string | null;
+    billingInterval?: string | null;
+  } | null;
+};
+
+export function normalizedStripeSubscriptionEventFromClaim(
+  claim: SubscriptionWebhookClaimRow,
+): NormalizedEvent {
+  const snapshot = claim.event_snapshot || {};
+  const object: StripeObject = {
+    id: claim.object_id,
+    customer: snapshot.customerId || null,
+    subscription: snapshot.subscriptionId || null,
+    status: snapshot.status || undefined,
+    current_period_start: snapshot.currentPeriodStart || null,
+    current_period_end: snapshot.currentPeriodEnd || null,
+    trial_start: snapshot.trialStart || null,
+    trial_end: snapshot.trialEnd || null,
+    cancel_at_period_end: Boolean(snapshot.cancelAtPeriodEnd),
+    pause_collection: snapshot.pauseCollection || null,
+    items: {
+      data: snapshot.priceId
+        ? [
+            {
+              price: {
+                id: snapshot.priceId,
+                recurring: {
+                  interval:
+                    snapshot.billingInterval === 'year' ? 'year' : 'month',
+                },
+              },
+            },
+          ]
+        : [],
+    },
+  };
+  return normalizeStripeSubscriptionEvent({
+    id: claim.stripe_event_id,
+    type: claim.event_type,
+    created: new Date(claim.object_created_at).getTime() / 1000,
+    data: { object },
+  });
+}
+
 export function compareStripeProviderOrder(
   normalized: NormalizedEvent,
   organization: OrganizationRow,
@@ -259,6 +319,73 @@ export class SubscriptionWebhooksService {
       }
       return this.processSubscriptionUpdate(client, normalized, org);
     });
+  }
+
+  async reconcileEvent(
+    client: PoolClient,
+    eventId: string,
+  ): Promise<SubscriptionWebhookResult> {
+    const claim = await client.query<SubscriptionWebhookClaimRow>(
+      `SELECT *
+       FROM stripe_subscription_webhook_events
+       WHERE stripe_event_id = $1
+         AND reconciliation_status = 'processing'
+       FOR UPDATE`,
+      [eventId],
+    );
+    if (claim.rows.length === 0) {
+      throw new Error('Stripe reconciliation claim is unavailable');
+    }
+    const normalized = normalizedStripeSubscriptionEventFromClaim(
+      claim.rows[0],
+    );
+    const organizations = await this.findOrganization(
+      client,
+      normalized.customerId,
+      normalized.subscriptionId,
+    );
+    if (organizations.length !== 1) {
+      const error = new Error(
+        'Stripe subscription mapping is not uniquely resolvable',
+      );
+      (error as Error & { code?: string }).code = 'RECONCILIATION_UNRESOLVED';
+      throw error;
+    }
+    const org = organizations[0];
+    let result: SubscriptionWebhookResult;
+    if (compareStripeProviderOrder(normalized, org) <= 0) {
+      result = await this.markEvent(client, normalized, 'stale', {
+        organizationId: org.id,
+      });
+    } else if (normalized.eventType === 'customer.subscription.deleted') {
+      result = await this.processTerminalEvent(
+        client,
+        normalized,
+        org,
+        'canceled',
+      );
+    } else if (normalized.eventType === 'invoice.payment_failed') {
+      result = await this.processTerminalEvent(
+        client,
+        normalized,
+        org,
+        'past_due',
+      );
+    } else {
+      result = await this.processSubscriptionUpdate(client, normalized, org);
+    }
+    await client.query(
+      `UPDATE stripe_subscription_webhook_events SET
+         reconciliation_status = 'resolved',
+         reconciliation_reason = NULL,
+         reconciliation_next_attempt_at = NULL,
+         reconciliation_lease_expires_at = NULL,
+         reconciliation_last_error = NULL,
+         reconciled_at = CURRENT_TIMESTAMP
+       WHERE stripe_event_id = $1`,
+      [eventId],
+    );
+    return result;
   }
 
   private async findOrganization(

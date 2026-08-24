@@ -118,6 +118,24 @@ export class RealtimeHostService
     this.io?.to(`org-chat-${organizationId}`).emit(event, payload);
   }
 
+  /**
+   * Agent-room notification used by the social webhook workers,
+   * mirroring the legacy scheduler's org-social emission. A no-op while
+   * this process is not the socket origin.
+   */
+  emitToOrgSocial(
+    organizationId: number,
+    event: string,
+    payload: Record<string, unknown>,
+  ): void {
+    this.io?.to(`org-social-${organizationId}`).emit(event, payload);
+  }
+
+  /** Whether this process currently hosts the Socket.IO server. */
+  isAttached(): boolean {
+    return this.io !== null;
+  }
+
   viewers(): RealtimeHost['viewers'] | null {
     return this.host?.viewers ?? null;
   }

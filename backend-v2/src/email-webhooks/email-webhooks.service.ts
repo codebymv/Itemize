@@ -3,8 +3,9 @@
  * (backend/src/services/emailWebhookService.js). Event normalization,
  * status-regression protection, ambiguous-tenant quarantine, and the
  * durable svix-id claim semantics must stay identical while both
- * runtimes serve the receiver; the legacy reconciliation worker keeps
- * draining the shared email_webhook_events table.
+ * runtimes serve the receiver. reconcileEvent mirrors the legacy
+ * reconciliation replay so the NestJS worker can drain the shared
+ * email_webhook_events table with identical outcomes.
  */
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
@@ -146,6 +147,32 @@ export function normalizeEmailWebhook(
   };
 }
 
+export type EmailWebhookClaimRow = {
+  svix_id: string;
+  event_type: string;
+  external_id: string;
+  event_created_at: Date | string;
+  details: Record<string, string | null> | null;
+};
+
+export function normalizedEmailWebhookFromClaim(
+  claim: EmailWebhookClaimRow,
+): NormalizedEvent {
+  const eventCreatedAt = new Date(claim.event_created_at);
+  if (Number.isNaN(eventCreatedAt.getTime())) {
+    throw new Error('Invalid stored email event timestamp');
+  }
+  return {
+    config: EVENT_CONFIG[claim.event_type] || null,
+    deliveryId: claim.svix_id,
+    details:
+      claim.details && typeof claim.details === 'object' ? claim.details : {},
+    eventCreatedAt,
+    eventType: claim.event_type,
+    externalId: claim.external_id,
+  };
+}
+
 export function shouldReplaceStatus(
   currentTimestamp: Date | null,
   eventCreatedAt: Date,
@@ -211,9 +238,39 @@ export class EmailWebhooksService {
     });
   }
 
+  async reconcileEvent(
+    client: PoolClient,
+    deliveryId: string,
+  ): Promise<EmailWebhookResult> {
+    const claim = await client.query<EmailWebhookClaimRow>(
+      `SELECT *
+       FROM email_webhook_events
+       WHERE svix_id = $1
+         AND reconciliation_status = 'processing'
+       FOR UPDATE`,
+      [deliveryId],
+    );
+    if (claim.rows.length === 0) {
+      throw new Error('Email reconciliation claim is unavailable');
+    }
+    const normalized = normalizedEmailWebhookFromClaim(claim.rows[0]);
+    const result = await this.applyNormalized(client, normalized, {
+      reconciliation: true,
+    });
+    if (result.pending) {
+      const error = new Error(
+        'Email provider event mapping is not uniquely resolvable',
+      );
+      (error as Error & { code?: string }).code = 'RECONCILIATION_UNRESOLVED';
+      throw error;
+    }
+    return result;
+  }
+
   private async applyNormalized(
     client: PoolClient,
     normalized: NormalizedEvent,
+    options: { reconciliation?: boolean } = {},
   ): Promise<EmailWebhookResult> {
     const targets = await this.loadTargets(client, normalized.externalId);
     if (targets.organizationCount === 0) {
@@ -294,7 +351,7 @@ export class EmailWebhooksService {
         matched ? 'processed' : 'pending',
         emailLog?.id || null,
         campaignRecipient?.id || null,
-        false,
+        options.reconciliation === true,
       ],
     );
 

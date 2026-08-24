@@ -65,6 +65,31 @@ Workflow execution now exposes tenant-scoped summary and paginated queue queries
 
 Events that cannot yet correlate to a local provider ID remain pending. Reconciliation jobs use bounded exponential retry, lease/attempt metadata, a dead-letter terminal state, and operator-visible correlation IDs. Reconciliation must never guess a tenant from a non-unique sender, page, phone number, or email address.
 
+## NestJS worker ownership
+
+NestJS now carries faithful ports of the provider webhook drain workers,
+each proven by a dual-runtime fresh-PostgreSQL parity suite against the
+legacy worker over identical seeded claims (identical claim SQL,
+backoff curves, redaction, summaries, and terminal row states):
+
+- `EmailWebhookJobsService` (Resend reconciliation) behind
+  `EMAIL_WEBHOOK_NEST_JOBS_ENABLED`;
+- `SubscriptionWebhookJobsService` (Stripe owner notifications with
+  byte-identical branded email content and provider idempotency keys,
+  plus reconciliation replay) behind
+  `SUBSCRIPTION_WEBHOOK_NEST_JOBS_ENABLED`;
+- `SocialWebhookJobsService` (Meta processing and reconciliation, with
+  the post-commit `social_message` agent notification emitted through
+  the NestJS realtime host) behind `SOCIAL_WEBHOOK_NEST_JOBS_ENABLED`.
+
+All three are default-off; the legacy scheduler keeps the cadence until
+cutover. `FOR UPDATE SKIP LOCKED` claims with leases make an overlap
+window safe, but exactly one runtime should own each cadence. The
+social flag follows `REALTIME_HOST_NESTJS_ENABLED` into the
+socket-origin runtime — like the legacy `io ? onProcessed : null`, the
+agent notification is skipped entirely where no socket host is
+attached.
+
 ## Remaining P0 blockers
 
 - Cross-provider dashboards still need signature failures, duplicates, pending reconciliation, dead letters, and provider correlation IDs without payload leakage.

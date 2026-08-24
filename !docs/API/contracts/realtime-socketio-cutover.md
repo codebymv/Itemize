@@ -98,7 +98,12 @@ authorization, and revocation eviction against the NestJS host.
 The ported public chat widget protocol (`ChatWidgetPublicModule`,
 `CHAT_WIDGET_PUBLIC_NESTJS_ENABLED`) emits its agent-room events and
 visitor eviction through this host, so that flag rides with
-`REALTIME_HOST_NESTJS_ENABLED` in the same socket-origin runtime.
+`REALTIME_HOST_NESTJS_ENABLED` in the same socket-origin runtime. The
+ported Meta webhook workers (`SOCIAL_WEBHOOK_NEST_JOBS_ENABLED`)
+likewise emit their post-commit `social_message` agent notification
+into the org-social room through this host, and skip the notification
+entirely — exactly like the legacy `io ? onProcessed : null` — when
+this process is not the socket origin.
 
 NestJS exposes `RealtimeOutboxModule`; resolvers never call Socket.IO rooms
 directly. A mutation repository writes its domain rows and every required

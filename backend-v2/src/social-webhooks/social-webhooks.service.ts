@@ -2,12 +2,12 @@
  * Faithful port of the retained Meta webhook receiver
  * (backend/src/routes/social/webhook.routes.js and the verification,
  * normalization, and durable batch claim from
- * backend/src/services/socialWebhookService.js). This runtime claims
+ * backend/src/services/socialWebhookService.js). The receiver claims
  * events durably and deliberately performs no inline processing: the
  * retained design already treats inline work as best-effort, and the
- * legacy scheduler's leased worker — which owns the Socket.IO host —
- * processes every claim and emits the agent-room event. Inline
- * processing can return here once the scheduler moves.
+ * leased worker (SocialWebhookJobsService here, the legacy scheduler's
+ * worker until cutover) processes every claim and emits the agent-room
+ * event through whichever runtime hosts the socket server.
  */
 import { Inject, Injectable } from '@nestjs/common';
 import * as crypto from 'crypto';
