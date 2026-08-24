@@ -651,6 +651,9 @@ export function ContentsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 h-9 w-full bg-muted/20 border-border/50" />
           </div>
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            {totalItems} {totalItems === 1 ? 'item' : 'items'}
+          </span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-3">
@@ -698,7 +701,7 @@ export function ContentsPage() {
         </>
       }
     >
-        <div className="flex items-center justify-end mb-6">
+        <div className="hidden md:flex items-center justify-end mb-6">
           <span className="text-sm text-muted-foreground">{totalItems} {totalItems === 1 ? 'item' : 'items'}</span>
         </div>
 

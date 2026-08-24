@@ -31,4 +31,34 @@ describe('ShareModal', () => {
       ),
     ).toBeInTheDocument();
   });
+
+  it('keeps vault link guidance in a tooltip instead of persistent copy', async () => {
+    render(
+      <ShareModal
+        open
+        onOpenChange={vi.fn()}
+        itemType="vault"
+        itemId={2}
+        itemTitle="Release vault"
+        onShare={vi.fn()}
+        onUnshare={vi.fn()}
+        existingShareData={{
+          shareToken: 'vault-token',
+          shareUrl: 'https://itemize.cloud/shared/vault/vault-token#secret',
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByText('Create a shareable link. The decryption key stays in the URL fragment.'),
+    ).toHaveClass('sr-only');
+
+    const help = screen.getByRole('button', { name: 'About vault share links' });
+    expect(help).toBeInTheDocument();
+
+    fireEvent.focus(help);
+    expect(
+      await screen.findByText(/Anyone with the full URL, including the #fragment/),
+    ).toBeInTheDocument();
+  });
 });

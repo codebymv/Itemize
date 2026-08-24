@@ -10,7 +10,8 @@ import {
   GitBranch,
   KeyRound,
   AlertTriangle,
-  ShieldAlert
+  ShieldAlert,
+  Info
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Button } from './ui/button';
@@ -18,6 +19,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { useToast } from '../hooks/use-toast';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 type ShareItemType = 'note' | 'list' | 'whiteboard' | 'wireframe' | 'vault';
 
@@ -86,6 +88,30 @@ const shareConfig = {
     revokeDescription: 'This vault is no longer publicly accessible.'
   }
 } as const;
+
+const ShareLinkLabel = ({ help }: { help?: string }) => (
+  <div className="flex items-center gap-1.5">
+    <Label className="font-raleway">Share Link</Label>
+    {help && (
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+              aria-label="About vault share links"
+            >
+              <Info className="h-3.5 w-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-72 leading-relaxed">
+            {help}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    )}
+  </div>
+);
 
 export const ShareModal = <TId extends string | number>({
   open,
@@ -204,7 +230,7 @@ export const ShareModal = <TId extends string | number>({
             <Share2 className="h-5 w-5 text-blue-600" />
             {`Share ${config.label}`}
           </DialogTitle>
-          <DialogDescription className="font-raleway">
+          <DialogDescription className={itemType === 'vault' ? 'sr-only' : 'font-raleway'}>
             {config.description}
           </DialogDescription>
         </DialogHeader>
@@ -248,7 +274,7 @@ export const ShareModal = <TId extends string | number>({
           {shareData ? (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="font-raleway">Share Link</Label>
+                <ShareLinkLabel help={itemType === 'vault' ? config.shareHelp : undefined} />
                 <div className="flex space-x-2">
                   <Input value={shareData.shareUrl || ''} readOnly className="flex-1" />
                   <Button
@@ -272,9 +298,11 @@ export const ShareModal = <TId extends string | number>({
                     <ExternalLink className="h-4 w-4" />
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500 font-raleway">
-                  {config.shareHelp}
-                </p>
+                {itemType !== 'vault' && (
+                  <p className="text-xs text-gray-500 font-raleway">
+                    {config.shareHelp}
+                  </p>
+                )}
               </div>
 
               <div className="flex justify-between space-x-2">
@@ -330,7 +358,7 @@ export const ShareModal = <TId extends string | number>({
           ) : isLoading ? (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="font-raleway">Share Link</Label>
+                <ShareLinkLabel help={itemType === 'vault' ? config.shareHelp : undefined} />
                 <div className="flex space-x-2">
                   <Input value="Generating share link..." readOnly className="flex-1" placeholder="Generating share link..." />
                   <Button type="button" variant="outline" size="icon" disabled aria-label="Copy link">
@@ -340,9 +368,11 @@ export const ShareModal = <TId extends string | number>({
                     <ExternalLink className="h-4 w-4" />
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500 font-raleway">
-                  {config.shareHelp}
-                </p>
+                {itemType !== 'vault' && (
+                  <p className="text-xs text-gray-500 font-raleway">
+                    {config.shareHelp}
+                  </p>
+                )}
               </div>
               <div className="flex justify-end">
                 <Button
