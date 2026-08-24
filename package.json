@@ -49,6 +49,8 @@
     }
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "4.62.4"
+    "@esbuild/linux-x64": "0.25.12",
+    "@rollup/rollup-linux-x64-gnu": "4.62.4",
+    "@swc/core-linux-x64-gnu": "1.11.31"
   }
 }
