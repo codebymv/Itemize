@@ -127,6 +127,33 @@ describe('AiProviderService', () => {
     });
   });
 
+  it('preserves commas inside newline-delimited suggestions', async () => {
+    process.env.OPENAI_API_KEY = 'test-openai-key';
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        output: [{
+          type: 'message',
+          content: [{
+            type: 'output_text',
+            text: [
+              'Define milestones, owners, and deadlines',
+              'Collect feedback from the first customer cohort',
+            ].join('\n'),
+          }],
+        }],
+      }),
+    } as Response);
+    const service = new AiProviderService();
+
+    await expect(service.listSuggestions('Launch checklist', ['Draft announcement'])).resolves.toEqual({
+      suggestions: [
+        'Define milestones, owners, and deadlines',
+        'Collect feedback from the first customer cohort',
+      ],
+    });
+  });
+
   it('returns a stable client-safe error when a provider request fails', async () => {
     process.env.OPENAI_API_KEY = 'test-openai-key';
     jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false, status: 429 } as Response);

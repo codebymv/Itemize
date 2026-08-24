@@ -312,7 +312,9 @@ export class AiProviderService {
 
   private parseList(value: string, existingItems: string[]): string[] {
     const existing = new Set(existingItems.map((item) => item.trim().toLowerCase()));
-    return value.split(/[,\n]/)
+    const lines = value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+    const candidates = lines.length > 1 ? lines : value.split(',');
+    return candidates
       .map((item) => item.trim().replace(/^(?:[-*\u2022]|\d+[.)])\s*/, ''))
       .filter((item) => item.length > 0 && item.length <= 120)
       .filter((item) => !existing.has(item.toLowerCase()))
