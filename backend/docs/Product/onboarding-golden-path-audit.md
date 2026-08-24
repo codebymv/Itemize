@@ -199,6 +199,23 @@ The focused frontend regression suite passes 7/7 assertions, and the full
 release contract/build/bundle-budget gate passes. Production confirmation remains
 pending until these changes are deployed.
 
+### August 24 NestJS origin cutover
+
+The post-deployment workspace preflight found that the frontend still targeted
+the retired Railway ingress after the NestJS service became the public API.
+That origin returned `404` to `/graphql` preflights and produced the visible
+`Unable to load workspace` state before any production fixture was created.
+
+Production now targets `https://api.itemize.cloud`. Browser-originated CORS
+preflight returns `204`, the public GraphQL readiness query returns `ready`, and
+the frontend deployment requests `https://api.itemize.cloud/graphql`. The API's
+`PUBLIC_API_URL`, `API_URL`, and `BACKEND_URL` values use the same canonical
+origin, and OAuth provider fallbacks no longer reference the retired service.
+The release contract/build/bundle gate passed, followed by the isolated fresh
+PostgreSQL gate at 57/57 suites and 409/409 assertions. Existing sessions must
+sign in once at the new host-scoped API boundary; the destructive workspace
+matrix remains pending that re-authentication.
+
 ### Remaining matrix extensions
 
 - After deployment, repeat create, edit, reload, share, open, revoke, and delete
