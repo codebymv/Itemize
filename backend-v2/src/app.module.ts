@@ -33,6 +33,7 @@ import { SocialModule } from './social/social.module';
 import { SignatureDocumentsModule } from './signature-documents/signature-documents.module';
 import { SignatureDeliveryModule } from './signature-delivery/signature-delivery.module';
 import { SignatureFilesModule } from './signature-files/signature-files.module';
+import { CalendarOAuthModule } from './calendar-oauth/calendar-oauth.module';
 import { EmailWebhooksModule } from './email-webhooks/email-webhooks.module';
 import { SmsWebhooksModule } from './sms-webhooks/sms-webhooks.module';
 import { SocialWebhooksModule } from './social-webhooks/social-webhooks.module';
@@ -117,6 +118,7 @@ const observabilityPlugins = [
     SignatureDocumentsModule,
     SignatureDeliveryModule,
     SignatureFilesModule,
+    CalendarOAuthModule,
     EmailWebhooksModule,
     SmsWebhooksModule,
     SocialWebhooksModule,

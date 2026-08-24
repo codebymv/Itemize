@@ -66,6 +66,7 @@ const {
     createSocialWebhookProxy,
     socialWebhooksEnabled,
 } = require('../social-webhooks-proxy');
+const { createCalendarOAuthProxy } = require('../calendar-oauth-proxy');
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const webhooksRoutes = require('../routes/webhooks.routes');
@@ -412,6 +413,14 @@ function registerApiRoutes({
     }
     app.use('/api/webhooks', webhooksRoutes);
     logger.info('Webhooks routes initialized');
+    {
+        const calendarOAuthRoute = (action) =>
+            createCalendarOAuthProxy({ action, logger });
+        app.get('/api/calendar-integrations/google/auth', calendarOAuthRoute('auth'));
+        app.get('/api/calendar-integrations/google/callback', calendarOAuthRoute('callback'));
+        app.get('/api/calendar-integrations/google/calendars/:connectionId', calendarOAuthRoute('calendars'));
+        logger.info('Calendar OAuth proxy routes initialized');
+    }
     app.use('/api/calendar-integrations', calendarIntegrationsRoutes(pool, authenticateJWT));
     logger.info('Calendar Integrations routes initialized');
     app.use('/api/invoice-integrations', invoiceIntegrationsRoutes(pool, authenticateJWT));

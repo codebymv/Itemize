@@ -167,28 +167,28 @@
       "disposition": "retain-http",
       "owner": "scheduling-integrations",
       "targetModule": "CalendarOAuthModule",
-      "targetOperation": "beginGoogleCalendarConnection",
-      "parityStatus": "characterized",
+      "targetOperation": "begin",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Currently retained on HTTP by the integration adapter because it begins a browser/provider redirect protocol. It returns a provider URL with short-lived signed user, organization, nonce, and safe return-path state."
+      "notes": "Currently retained on HTTP by the integration adapter because it begins a browser/provider redirect protocol. It returns a provider URL with short-lived signed user, organization, nonce, and safe return-path state. NestJS now owns an identical implementation (CalendarOAuthModule) with faithful ports of the signed expiring state, the key-ring token envelope, and the single-winner FOR UPDATE credential load with lazy refresh and rotation persistence; cross-runtime specs prove states and envelopes minted by either runtime verify and decrypt in the other, and a dual-runtime PostgreSQL parity suite covers authorization URL equivalence, callback denial branches, a legacy-minted state completing through the NestJS callback into legacy-readable envelopes, and refreshed credentials the legacy loader reads back. The legacy origin routes all three paths through a default-off proxy (CALENDAR_OAUTH_NESTJS_ENABLED) that forwards the session cookie and organization selector and passes callback redirects through without following them."
     },
     "GET /api/calendar-integrations/google/callback": {
       "disposition": "retain-http",
       "owner": "scheduling-integrations",
       "targetModule": "CalendarOAuthModule",
-      "targetOperation": "googleCalendarCallback",
-      "parityStatus": "characterized",
+      "targetOperation": "callback",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Provider redirect protocol; verifies signed expiring state and current organization membership before token exchange, then stores access/refresh credentials only as versioned AES-256-GCM envelopes under the active rotation key."
+      "notes": "Provider redirect protocol; verifies signed expiring state and current organization membership before token exchange, then stores access/refresh credentials only as versioned AES-256-GCM envelopes under the active rotation key. NestJS now owns an identical implementation (CalendarOAuthModule) with faithful ports of the signed expiring state, the key-ring token envelope, and the single-winner FOR UPDATE credential load with lazy refresh and rotation persistence; cross-runtime specs prove states and envelopes minted by either runtime verify and decrypt in the other, and a dual-runtime PostgreSQL parity suite covers authorization URL equivalence, callback denial branches, a legacy-minted state completing through the NestJS callback into legacy-readable envelopes, and refreshed credentials the legacy loader reads back. The legacy origin routes all three paths through a default-off proxy (CALENDAR_OAUTH_NESTJS_ENABLED) that forwards the session cookie and organization selector and passes callback redirects through without following them."
     },
     "GET /api/calendar-integrations/google/calendars/:connectionId": {
       "disposition": "retain-http",
       "owner": "scheduling-integrations",
-      "targetModule": "CalendarProviderHttpModule",
+      "targetModule": "CalendarOAuthModule",
       "targetOperation": "providerCalendars",
-      "parityStatus": "characterizing",
+      "parityStatus": "implemented",
       "risk": "high",
-      "notes": "Currently retained on HTTP because it performs live provider I/O. The boundary is user-and-organization scoped with PostgreSQL row-locked token refresh, active-key rewrap, encrypted winning-generation persistence, and redacted provider errors. Fresh PostgreSQL proves concurrent callers issue one provider refresh."
+      "notes": "Currently retained on HTTP because it performs live provider I/O. The boundary is user-and-organization scoped with PostgreSQL row-locked token refresh, active-key rewrap, encrypted winning-generation persistence, and redacted provider errors. Fresh PostgreSQL proves concurrent callers issue one provider refresh. NestJS now owns an identical implementation (CalendarOAuthModule) with faithful ports of the signed expiring state, the key-ring token envelope, and the single-winner FOR UPDATE credential load with lazy refresh and rotation persistence; cross-runtime specs prove states and envelopes minted by either runtime verify and decrypt in the other, and a dual-runtime PostgreSQL parity suite covers authorization URL equivalence, callback denial branches, a legacy-minted state completing through the NestJS callback into legacy-readable envelopes, and refreshed credentials the legacy loader reads back. The legacy origin routes all three paths through a default-off proxy (CALENDAR_OAUTH_NESTJS_ENABLED) that forwards the session cookie and organization selector and passes callback redirects through without following them."
     },
     "POST /api/signatures/documents/upload": {
       "disposition": "retain-http",

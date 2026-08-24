@@ -9,7 +9,7 @@
 - Non-API registered operations: 7
 - Static frontend callsites: 45
 - Operations with frontend consumers: 40
-- Operations referenced by backend tests: 45
+- Operations referenced by backend tests: 46
 - Recommended GraphQL queries: 0
 - Recommended GraphQL mutations: 1
 - Recommended retained HTTP endpoints: 58
@@ -36,9 +36,9 @@
 | POST | `/api/bookings/public/book/:slug` | 1 | 19 | retain-http | high | scheduling / PublicBookingsModule / createPublicBooking |
 | POST | `/api/bookings/public/book/:slug/cancel/:token` | 1 | 14 | retain-http | high | scheduling / PublicBookingsModule / cancelPublicBooking |
 | GET | `/api/bookings/public/book/:slug/slots` | 1 | 4 | retain-http | high | scheduling / PublicBookingsModule / getPublicBookingSlots |
-| GET | `/api/calendar-integrations/google/auth` | 1 | 1 | retain-http | high | scheduling-integrations / CalendarOAuthModule / beginGoogleCalendarConnection |
-| GET | `/api/calendar-integrations/google/calendars/:connectionId` | 1 | 0 | retain-http | high | scheduling-integrations / CalendarProviderHttpModule / providerCalendars |
-| GET | `/api/calendar-integrations/google/callback` | 0 | 3 | retain-http | high | scheduling-integrations / CalendarOAuthModule / googleCalendarCallback |
+| GET | `/api/calendar-integrations/google/auth` | 1 | 10 | retain-http | high | scheduling-integrations / CalendarOAuthModule / begin |
+| GET | `/api/calendar-integrations/google/calendars/:connectionId` | 1 | 5 | retain-http | high | scheduling-integrations / CalendarOAuthModule / providerCalendars |
+| GET | `/api/calendar-integrations/google/callback` | 0 | 13 | retain-http | high | scheduling-integrations / CalendarOAuthModule / callback |
 | GET | `/api/chat-widget/public/config/:widgetKey` | 1 | 0 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / getPublicChatWidgetConfig |
 | POST | `/api/chat-widget/public/end-session` | 1 | 1 | retain-http | medium | chat-widget / PublicChatWidgetHttpModule / endPublicChatSession |
 | POST | `/api/chat-widget/public/messages` | 1 | 0 | retain-http | high | chat-widget / PublicChatWidgetHttpModule / sendPublicChatMessage |

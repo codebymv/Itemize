@@ -11,7 +11,7 @@
     "nonApiOperationCount": 7,
     "frontendCallsiteCount": 45,
     "operationsWithFrontendConsumers": 40,
-    "operationsWithBackendTests": 45,
+    "operationsWithBackendTests": 46,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
     "acknowledgedRuntimeFrontendExpressionCount": 2,
@@ -61,7 +61,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 244
+          "line": 248
         },
         {
           "source": "backend/src/routes/billing.routes.js",
@@ -150,7 +150,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 296
+          "line": 300
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -249,7 +249,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 298
+          "line": 302
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -402,7 +402,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 299
+          "line": 303
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -525,7 +525,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 297
+          "line": 301
         },
         {
           "source": "backend/src/routes/bookings.routes.js",
@@ -587,6 +587,10 @@
       "path": "/api/calendar-integrations/google/auth",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 422
+        },
+        {
           "source": "backend/src/routes/calendar-integrations.routes.js",
           "line": 40
         }
@@ -606,6 +610,60 @@
         {
           "method": "GET",
           "path": "/api/calendar-integrations/google/auth",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 145
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 149
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 181
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 182
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
+          "source": "backend/src/__tests__/calendar-oauth-proxy.test.js",
+          "line": 19
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
+          "source": "backend/src/__tests__/calendar-oauth-proxy.test.js",
+          "line": 35
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
+          "source": "backend/src/__tests__/calendar-oauth-proxy.test.js",
+          "line": 42
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
+          "source": "backend/src/__tests__/calendar-oauth-proxy.test.js",
+          "line": 89
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
+          "source": "backend/src/__tests__/calendar-oauth-proxy.test.js",
+          "line": 94
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
           "source": "backend/src/__tests__/routes/calendar-integrations.routes.test.js",
           "line": 46
         }
@@ -614,10 +672,10 @@
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "retain-http",
       "owner": "scheduling-integrations",
-      "targetOperation": "beginGoogleCalendarConnection",
+      "targetOperation": "begin",
       "targetModule": "CalendarOAuthModule",
-      "parityStatus": "characterized",
-      "notes": "Currently retained on HTTP by the integration adapter because it begins a browser/provider redirect protocol. It returns a provider URL with short-lived signed user, organization, nonce, and safe return-path state.",
+      "parityStatus": "implemented",
+      "notes": "Currently retained on HTTP by the integration adapter because it begins a browser/provider redirect protocol. It returns a provider URL with short-lived signed user, organization, nonce, and safe return-path state. NestJS now owns an identical implementation (CalendarOAuthModule) with faithful ports of the signed expiring state, the key-ring token envelope, and the single-winner FOR UPDATE credential load with lazy refresh and rotation persistence; cross-runtime specs prove states and envelopes minted by either runtime verify and decrypt in the other, and a dual-runtime PostgreSQL parity suite covers authorization URL equivalence, callback denial branches, a legacy-minted state completing through the NestJS callback into legacy-readable envelopes, and refreshed credentials the legacy loader reads back. The legacy origin routes all three paths through a default-off proxy (CALENDAR_OAUTH_NESTJS_ENABLED) that forwards the session cookie and organization selector and passes callback redirects through without following them.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -627,6 +685,10 @@
       "method": "GET",
       "path": "/api/calendar-integrations/google/calendars/:connectionId",
       "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 424
+        },
         {
           "source": "backend/src/routes/calendar-integrations.routes.js",
           "line": 167
@@ -643,15 +705,46 @@
           "literalInterpolation": false
         }
       ],
-      "testCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/calendars/:connectionId",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 294
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/calendars/999999",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 320
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/calendars/999999",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 324
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/calendars/:connectionId",
+          "source": "backend/src/__tests__/calendar-oauth-proxy.test.js",
+          "line": 21
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/calendars/42",
+          "source": "backend/src/__tests__/calendar-oauth-proxy.test.js",
+          "line": 77
+        }
+      ],
       "recommendedDisposition": "graphql-query",
       "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
       "disposition": "retain-http",
       "owner": "scheduling-integrations",
       "targetOperation": "providerCalendars",
-      "targetModule": "CalendarProviderHttpModule",
-      "parityStatus": "characterizing",
-      "notes": "Currently retained on HTTP because it performs live provider I/O. The boundary is user-and-organization scoped with PostgreSQL row-locked token refresh, active-key rewrap, encrypted winning-generation persistence, and redacted provider errors. Fresh PostgreSQL proves concurrent callers issue one provider refresh.",
+      "targetModule": "CalendarOAuthModule",
+      "parityStatus": "implemented",
+      "notes": "Currently retained on HTTP because it performs live provider I/O. The boundary is user-and-organization scoped with PostgreSQL row-locked token refresh, active-key rewrap, encrypted winning-generation persistence, and redacted provider errors. Fresh PostgreSQL proves concurrent callers issue one provider refresh. NestJS now owns an identical implementation (CalendarOAuthModule) with faithful ports of the signed expiring state, the key-ring token envelope, and the single-winner FOR UPDATE credential load with lazy refresh and rotation persistence; cross-runtime specs prove states and envelopes minted by either runtime verify and decrypt in the other, and a dual-runtime PostgreSQL parity suite covers authorization URL equivalence, callback denial branches, a legacy-minted state completing through the NestJS callback into legacy-readable envelopes, and refreshed credentials the legacy loader reads back. The legacy origin routes all three paths through a default-off proxy (CALENDAR_OAUTH_NESTJS_ENABLED) that forwards the session cookie and organization selector and passes callback redirects through without following them.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -662,12 +755,76 @@
       "path": "/api/calendar-integrations/google/callback",
       "routeSources": [
         {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 423
+        },
+        {
           "source": "backend/src/routes/calendar-integrations.routes.js",
           "line": 60
         }
       ],
       "consumerCallsites": [],
       "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 191
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 192
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 200
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 203
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 220
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 223
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 237
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 263
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend/src/__tests__/calendar-oauth-proxy.test.js",
+          "line": 20
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend/src/__tests__/calendar-oauth-proxy.test.js",
+          "line": 61
+        },
         {
           "method": "GET",
           "path": "/api/calendar-integrations/google/callback",
@@ -691,10 +848,10 @@
       "dispositionReason": "Browser/provider callback endpoint.",
       "disposition": "retain-http",
       "owner": "scheduling-integrations",
-      "targetOperation": "googleCalendarCallback",
+      "targetOperation": "callback",
       "targetModule": "CalendarOAuthModule",
-      "parityStatus": "characterized",
-      "notes": "Provider redirect protocol; verifies signed expiring state and current organization membership before token exchange, then stores access/refresh credentials only as versioned AES-256-GCM envelopes under the active rotation key.",
+      "parityStatus": "implemented",
+      "notes": "Provider redirect protocol; verifies signed expiring state and current organization membership before token exchange, then stores access/refresh credentials only as versioned AES-256-GCM envelopes under the active rotation key. NestJS now owns an identical implementation (CalendarOAuthModule) with faithful ports of the signed expiring state, the key-ring token envelope, and the single-winner FOR UPDATE credential load with lazy refresh and rotation persistence; cross-runtime specs prove states and envelopes minted by either runtime verify and decrypt in the other, and a dual-runtime PostgreSQL parity suite covers authorization URL equivalence, callback denial branches, a legacy-minted state completing through the NestJS callback into legacy-readable envelopes, and refreshed credentials the legacy loader reads back. The legacy origin routes all three paths through a default-off proxy (CALENDAR_OAUTH_NESTJS_ENABLED) that forwards the session cookie and organization selector and passes callback redirects through without following them.",
       "literalInterpolationRisk": false,
       "risk": "high"
     },
@@ -921,7 +1078,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 191
+          "line": 195
         }
       ],
       "consumerCallsites": [
@@ -980,7 +1137,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 192
+          "line": 196
         }
       ],
       "consumerCallsites": [
@@ -1039,7 +1196,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 198
+          "line": 202
         },
         {
           "source": "backend/src/routes/email-webhooks.routes.js",
@@ -1128,7 +1285,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 326
+          "line": 330
         },
         {
           "source": "backend/src/routes/forms.routes.js",
@@ -1239,7 +1396,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 327
+          "line": 331
         },
         {
           "source": "backend/src/routes/forms.routes.js",
@@ -1505,7 +1662,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 236
+          "line": 240
         },
         {
           "source": "backend/src/routes/invoices/pdf.routes.js",
@@ -1616,7 +1773,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 228
+          "line": 232
         },
         {
           "source": "backend/src/routes/invoices/businesses.routes.js",
@@ -1709,7 +1866,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 232
+          "line": 236
         },
         {
           "source": "backend/src/routes/invoices/settings.routes.js",
@@ -1747,7 +1904,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 224
+          "line": 228
         },
         {
           "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
@@ -1854,7 +2011,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 285
+          "line": 289
         },
         {
           "source": "backend/src/routes/pages/public.routes.js",
@@ -1941,7 +2098,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 286
+          "line": 290
         },
         {
           "source": "backend/src/routes/pages/public.routes.js",
@@ -2016,7 +2173,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 392
+          "line": 396
         }
       ],
       "consumerCallsites": [
@@ -2075,7 +2232,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 396
+          "line": 400
         }
       ],
       "consumerCallsites": [],
@@ -2118,7 +2275,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 400
+          "line": 404
         }
       ],
       "consumerCallsites": [],
@@ -2161,7 +2318,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 364
+          "line": 368
         }
       ],
       "consumerCallsites": [
@@ -2238,7 +2395,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 384
+          "line": 388
         }
       ],
       "consumerCallsites": [
@@ -2291,7 +2448,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 380
+          "line": 384
         }
       ],
       "consumerCallsites": [
@@ -2332,7 +2489,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 372
+          "line": 376
         }
       ],
       "consumerCallsites": [],
@@ -2356,7 +2513,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 368
+          "line": 372
         }
       ],
       "consumerCallsites": [],
@@ -2387,7 +2544,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 376
+          "line": 380
         }
       ],
       "consumerCallsites": [],
@@ -2411,7 +2568,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 254
+          "line": 258
         },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
@@ -2474,7 +2631,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 255
+          "line": 259
         },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
@@ -2579,7 +2736,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 253
+          "line": 257
         },
         {
           "source": "backend/src/routes/reputation/public.routes.js",
@@ -2662,7 +2819,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 181
+          "line": 185
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2758,7 +2915,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 182
+          "line": 186
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2805,7 +2962,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 185
+          "line": 189
         },
         {
           "source": "backend/src/routes/vaults/sharing.routes.js",
@@ -2856,7 +3013,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 183
+          "line": 187
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2919,7 +3076,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 184
+          "line": 188
         },
         {
           "source": "backend/src/routes/sharing.routes.js",
@@ -2979,7 +3136,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 350
+          "line": 354
         }
       ],
       "consumerCallsites": [],
@@ -3016,7 +3173,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 346
+          "line": 350
         }
       ],
       "consumerCallsites": [],
@@ -3053,7 +3210,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 332
+          "line": 336
         }
       ],
       "consumerCallsites": [
@@ -3148,7 +3305,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 354
+          "line": 358
         }
       ],
       "consumerCallsites": [],
@@ -3172,7 +3329,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 339
+          "line": 343
         }
       ],
       "consumerCallsites": [
@@ -3206,7 +3363,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 210
+          "line": 214
         },
         {
           "source": "backend/src/routes/sms-webhooks.routes.js",
@@ -3277,7 +3434,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 209
+          "line": 213
         },
         {
           "source": "backend/src/routes/sms-webhooks.routes.js",
@@ -3412,11 +3569,11 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 266
+          "line": 270
         },
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 274
+          "line": 278
         },
         {
           "source": "backend/src/routes/social/webhook.routes.js",
@@ -3511,11 +3668,11 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 267
+          "line": 271
         },
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 275
+          "line": 279
         },
         {
           "source": "backend/src/routes/social/webhook.routes.js",
@@ -3580,7 +3737,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 100
+          "line": 104
         }
       ],
       "consumerCallsites": [
@@ -3614,7 +3771,7 @@
       "routeSources": [
         {
           "source": "backend/src/bootstrap/register-api-routes.js",
-          "line": 410
+          "line": 414
         },
         {
           "source": "backend/src/routes/webhooks.routes.js",
