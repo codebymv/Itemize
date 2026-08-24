@@ -90,6 +90,43 @@ describe('AiProviderService', () => {
     });
   });
 
+  it('accepts specific Luna suggestions that are longer than a short label', async () => {
+    process.env.OPENAI_API_KEY = 'test-openai-key';
+    jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        output: [{
+          type: 'message',
+          content: [{
+            type: 'output_text',
+            text: [
+              'Identify target onboarding users and success metrics',
+              'Map the end-to-end onboarding flow and key milestones',
+              'Create sample checklist templates for common use cases',
+              'Implement progress tracking and completion states',
+              'Plan usability testing and feedback collection',
+            ].join('\n'),
+          }],
+        }],
+      }),
+    } as Response);
+    const service = new AiProviderService();
+
+    await expect(
+      service.listSuggestions('Launch Itemize onboarding checklist', [
+        'Write the launch announcement and define the primary customer promise',
+      ]),
+    ).resolves.toEqual({
+      suggestions: [
+        'Identify target onboarding users and success metrics',
+        'Map the end-to-end onboarding flow and key milestones',
+        'Create sample checklist templates for common use cases',
+        'Implement progress tracking and completion states',
+        'Plan usability testing and feedback collection',
+      ],
+    });
+  });
+
   it('returns a stable client-safe error when a provider request fails', async () => {
     process.env.OPENAI_API_KEY = 'test-openai-key';
     jest.spyOn(global, 'fetch').mockResolvedValue({ ok: false, status: 429 } as Response);
