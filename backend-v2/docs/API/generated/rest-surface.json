@@ -1,0 +1,1110 @@
+{
+  "schemaVersion": 1,
+  "generator": "scripts/generate-api-surface.js",
+  "scope": "Static Express route declarations under backend/src, excluding __tests__.",
+  "summary": {
+    "declarationCount": 109,
+    "resolvedDeclarationCount": 109,
+    "unresolvedDeclarationCount": 0,
+    "uniqueResolvedOperationCount": 66,
+    "sourceFileCount": 22
+  },
+  "caveats": [
+    "This is static source analysis; it does not execute application modules.",
+    "Middleware, authorization, request/response schemas, and runtime-conditional registration require separate contract inventory.",
+    "A declaration can have multiple public paths when a router is mounted more than once.",
+    "Dynamic template-literal paths and routers not reachable from known application entrypoints remain unresolved."
+  ],
+  "entries": [
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/*"
+      ],
+      "declaredPath": "*",
+      "source": "backend/src/index.js",
+      "line": 562,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/billing/webhook"
+      ],
+      "declaredPath": "/api/billing/webhook",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 266,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/billing/webhook"
+      ],
+      "declaredPath": "/webhook",
+      "source": "backend/src/routes/billing.routes.js",
+      "line": 28,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/bookings/public/book/:slug"
+      ],
+      "declaredPath": "/api/bookings/public/book/:slug",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 324,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/bookings/public/book/:slug"
+      ],
+      "declaredPath": "/public/book/:slug",
+      "source": "backend/src/routes/bookings.routes.js",
+      "line": 106,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/bookings/public/book/:slug"
+      ],
+      "declaredPath": "/api/bookings/public/book/:slug",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 326,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/bookings/public/book/:slug"
+      ],
+      "declaredPath": "/public/book/:slug",
+      "source": "backend/src/routes/bookings.routes.js",
+      "line": 225,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/bookings/public/book/:slug/cancel/:token"
+      ],
+      "declaredPath": "/api/bookings/public/book/:slug/cancel/:token",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 327,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/bookings/public/book/:slug/cancel/:token"
+      ],
+      "declaredPath": "/public/book/:slug/cancel/:token",
+      "source": "backend/src/routes/bookings.routes.js",
+      "line": 422,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/bookings/public/book/:slug/slots"
+      ],
+      "declaredPath": "/api/bookings/public/book/:slug/slots",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 325,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/bookings/public/book/:slug/slots"
+      ],
+      "declaredPath": "/public/book/:slug/slots",
+      "source": "backend/src/routes/bookings.routes.js",
+      "line": 155,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/calendar-integrations/google/auth"
+      ],
+      "declaredPath": "/api/calendar-integrations/google/auth",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 446,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/calendar-integrations/google/auth"
+      ],
+      "declaredPath": "/google/auth",
+      "source": "backend/src/routes/calendar-integrations.routes.js",
+      "line": 40,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/calendar-integrations/google/calendars/:connectionId"
+      ],
+      "declaredPath": "/api/calendar-integrations/google/calendars/:connectionId",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 448,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/calendar-integrations/google/calendars/:connectionId"
+      ],
+      "declaredPath": "/google/calendars/:connectionId",
+      "source": "backend/src/routes/calendar-integrations.routes.js",
+      "line": 167,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/calendar-integrations/google/callback"
+      ],
+      "declaredPath": "/api/calendar-integrations/google/callback",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 447,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/calendar-integrations/google/callback"
+      ],
+      "declaredPath": "/google/callback",
+      "source": "backend/src/routes/calendar-integrations.routes.js",
+      "line": 60,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/chat-widget/public/config/:widgetKey"
+      ],
+      "declaredPath": "/api/chat-widget/public/config/:widgetKey",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 229,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/chat-widget/public/config/:widgetKey"
+      ],
+      "declaredPath": "/public/config/:widgetKey",
+      "source": "backend/src/routes/chat-widget/public.routes.js",
+      "line": 14,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/chat-widget/public/end-session"
+      ],
+      "declaredPath": "/api/chat-widget/public/end-session",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 233,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/chat-widget/public/end-session"
+      ],
+      "declaredPath": "/public/end-session",
+      "source": "backend/src/routes/chat-widget/public.routes.js",
+      "line": 340,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/chat-widget/public/messages"
+      ],
+      "declaredPath": "/api/chat-widget/public/messages",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 232,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/chat-widget/public/messages"
+      ],
+      "declaredPath": "/public/messages",
+      "source": "backend/src/routes/chat-widget/public.routes.js",
+      "line": 267,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/chat-widget/public/messages/:sessionToken"
+      ],
+      "declaredPath": "/api/chat-widget/public/messages/:sessionToken",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 231,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/chat-widget/public/messages/:sessionToken"
+      ],
+      "declaredPath": "/public/messages/:sessionToken",
+      "source": "backend/src/routes/chat-widget/public.routes.js",
+      "line": 210,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/chat-widget/public/session"
+      ],
+      "declaredPath": "/api/chat-widget/public/session",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 230,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/chat-widget/public/session"
+      ],
+      "declaredPath": "/public/session",
+      "source": "backend/src/routes/chat-widget/public.routes.js",
+      "line": 80,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/chat-widget/public/typing"
+      ],
+      "declaredPath": "/api/chat-widget/public/typing",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 234,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/chat-widget/public/typing"
+      ],
+      "declaredPath": "/public/typing",
+      "source": "backend/src/routes/chat-widget/public.routes.js",
+      "line": 383,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/contacts/export/csv"
+      ],
+      "declaredPath": "/api/contacts/export/csv",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 200,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/contacts/import/csv"
+      ],
+      "declaredPath": "/api/contacts/import/csv",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 201,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/email/webhook/resend"
+      ],
+      "declaredPath": "/api/email/webhook/resend",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 207,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/email/webhook/resend"
+      ],
+      "declaredPath": "/webhook/resend",
+      "source": "backend/src/routes/email-webhooks.routes.js",
+      "line": 35,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/forms/public/form/:identifier"
+      ],
+      "declaredPath": "/api/forms/public/form/:identifier",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 354,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/forms/public/form/:identifier"
+      ],
+      "declaredPath": "/public/form/:identifier",
+      "source": "backend/src/routes/forms.routes.js",
+      "line": 88,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/forms/public/form/:identifier"
+      ],
+      "declaredPath": "/api/forms/public/form/:identifier",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 355,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/forms/public/form/:identifier"
+      ],
+      "declaredPath": "/public/form/:identifier",
+      "source": "backend/src/routes/forms.routes.js",
+      "line": 123,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/health"
+      ],
+      "declaredPath": "/api/health",
+      "source": "backend/src/index.js",
+      "line": 254,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoice-integrations/stripe/callback"
+      ],
+      "declaredPath": "/api/invoice-integrations/stripe/callback",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 456,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoice-integrations/stripe/callback"
+      ],
+      "declaredPath": "/stripe/callback",
+      "source": "backend/src/routes/invoice-integrations.routes.js",
+      "line": 43,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoice-integrations/stripe/connect"
+      ],
+      "declaredPath": "/api/invoice-integrations/stripe/connect",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 455,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoice-integrations/stripe/connect"
+      ],
+      "declaredPath": "/stripe/connect",
+      "source": "backend/src/routes/invoice-integrations.routes.js",
+      "line": 27,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoice-integrations/stripe/disconnect"
+      ],
+      "declaredPath": "/api/invoice-integrations/stripe/disconnect",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 457,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoice-integrations/stripe/disconnect"
+      ],
+      "declaredPath": "/stripe/disconnect",
+      "source": "backend/src/routes/invoice-integrations.routes.js",
+      "line": 93,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoices/:id/pdf"
+      ],
+      "declaredPath": "/api/invoices/:id/pdf",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 258,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/invoices/:id/pdf"
+      ],
+      "declaredPath": "/:id/pdf",
+      "source": "backend/src/routes/invoices/pdf.routes.js",
+      "line": 17,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/businesses/:id/logo"
+      ],
+      "declaredPath": "/api/invoices/businesses/:id/logo",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 250,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/businesses/:id/logo"
+      ],
+      "declaredPath": "/businesses/:id/logo",
+      "source": "backend/src/routes/invoices/businesses.routes.js",
+      "line": 17,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/settings/logo"
+      ],
+      "declaredPath": "/api/invoices/settings/logo",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 254,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/settings/logo"
+      ],
+      "declaredPath": "/settings/logo",
+      "source": "backend/src/routes/invoices/settings.routes.js",
+      "line": 15,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/webhook/stripe"
+      ],
+      "declaredPath": "/api/invoices/webhook/stripe",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 246,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/invoices/webhook/stripe"
+      ],
+      "declaredPath": "/webhook/stripe",
+      "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
+      "line": 18,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/pages/public/page/:slug"
+      ],
+      "declaredPath": "/api/pages/public/page/:slug",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 313,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/pages/public/page/:slug"
+      ],
+      "declaredPath": "/public/page/:slug",
+      "source": "backend/src/routes/pages/public.routes.js",
+      "line": 18,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/pages/public/page/:slug/analytics"
+      ],
+      "declaredPath": "/api/pages/public/page/:slug/analytics",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 314,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/pages/public/page/:slug/analytics"
+      ],
+      "declaredPath": "/public/page/:slug/analytics",
+      "source": "backend/src/routes/pages/public.routes.js",
+      "line": 141,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/public/estimates/:token"
+      ],
+      "declaredPath": "/api/public/estimates/:token",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 420,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/public/estimates/:token/accept"
+      ],
+      "declaredPath": "/api/public/estimates/:token/accept",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 424,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/public/estimates/:token/decline"
+      ],
+      "declaredPath": "/api/public/estimates/:token/decline",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 428,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/public/sign/:token"
+      ],
+      "declaredPath": "/api/public/sign/:token",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 392,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/public/sign/:token"
+      ],
+      "declaredPath": "/api/public/sign/:token",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 412,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/public/sign/:token/decline"
+      ],
+      "declaredPath": "/api/public/sign/:token/decline",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 408,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/public/sign/:token/download"
+      ],
+      "declaredPath": "/api/public/sign/:token/download",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 400,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/public/sign/:token/file"
+      ],
+      "declaredPath": "/api/public/sign/:token/file",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 396,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/public/sign/:token/verify"
+      ],
+      "declaredPath": "/api/public/sign/:token/verify",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 404,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/reputation/public/review/:token"
+      ],
+      "declaredPath": "/api/reputation/public/review/:token",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 276,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/reputation/public/review/:token"
+      ],
+      "declaredPath": "/public/review/:token",
+      "source": "backend/src/routes/reputation/public.routes.js",
+      "line": 102,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/reputation/public/review/:token"
+      ],
+      "declaredPath": "/api/reputation/public/review/:token",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 277,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/reputation/public/review/:token"
+      ],
+      "declaredPath": "/public/review/:token",
+      "source": "backend/src/routes/reputation/public.routes.js",
+      "line": 156,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/reputation/public/widget/:widgetKey"
+      ],
+      "declaredPath": "/api/reputation/public/widget/:widgetKey",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 275,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/reputation/public/widget/:widgetKey"
+      ],
+      "declaredPath": "/public/widget/:widgetKey",
+      "source": "backend/src/routes/reputation/public.routes.js",
+      "line": 20,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/shared/list/:token"
+      ],
+      "declaredPath": "/api/shared/list/:token",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 190,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/shared/list/:token"
+      ],
+      "declaredPath": "/shared/list/:token",
+      "source": "backend/src/routes/sharing.routes.js",
+      "line": 53,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/shared/note/:token"
+      ],
+      "declaredPath": "/api/shared/note/:token",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 191,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/shared/note/:token"
+      ],
+      "declaredPath": "/shared/note/:token",
+      "source": "backend/src/routes/sharing.routes.js",
+      "line": 98,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/shared/vault/:token"
+      ],
+      "declaredPath": "/api/shared/vault/:token",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 194,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/shared/vault/:token"
+      ],
+      "declaredPath": "/shared/vault/:token",
+      "source": "backend/src/routes/vaults/sharing.routes.js",
+      "line": 18,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/shared/whiteboard/:token"
+      ],
+      "declaredPath": "/api/shared/whiteboard/:token",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 192,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/shared/whiteboard/:token"
+      ],
+      "declaredPath": "/shared/whiteboard/:token",
+      "source": "backend/src/routes/sharing.routes.js",
+      "line": 139,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/shared/wireframe/:token"
+      ],
+      "declaredPath": "/api/shared/wireframe/:token",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 193,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/shared/wireframe/:token"
+      ],
+      "declaredPath": "/shared/wireframe/:token",
+      "source": "backend/src/routes/sharing.routes.js",
+      "line": 190,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/signatures/documents/:id/download"
+      ],
+      "declaredPath": "/api/signatures/documents/:id/download",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 378,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/signatures/documents/:id/file"
+      ],
+      "declaredPath": "/api/signatures/documents/:id/file",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 374,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/signatures/documents/upload"
+      ],
+      "declaredPath": "/api/signatures/documents/upload",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 360,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/signatures/templates/:id/file"
+      ],
+      "declaredPath": "/api/signatures/templates/:id/file",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 382,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/signatures/templates/upload"
+      ],
+      "declaredPath": "/api/signatures/templates/upload",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 367,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/sms-templates/webhook/inbound"
+      ],
+      "declaredPath": "/api/sms-templates/webhook/inbound",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 219,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/sms-templates/webhook/inbound"
+      ],
+      "declaredPath": "/webhook/inbound",
+      "source": "backend/src/routes/sms-webhooks.routes.js",
+      "line": 121,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/sms-templates/webhook/status"
+      ],
+      "declaredPath": "/api/sms-templates/webhook/status",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 218,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/sms-templates/webhook/status"
+      ],
+      "declaredPath": "/webhook/status",
+      "source": "backend/src/routes/sms-webhooks.routes.js",
+      "line": 51,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/social/callback/facebook"
+      ],
+      "declaredPath": "/api/social/callback/facebook",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 304,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/social/callback/facebook"
+      ],
+      "declaredPath": "/callback/facebook",
+      "source": "backend/src/routes/social/oauth.routes.js",
+      "line": 61,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/social/connect/facebook"
+      ],
+      "declaredPath": "/api/social/connect/facebook",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 303,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/social/connect/facebook"
+      ],
+      "declaredPath": "/connect/facebook",
+      "source": "backend/src/routes/social/oauth.routes.js",
+      "line": 17,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/social/webhook"
+      ],
+      "declaredPath": "/api/social/webhook",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 288,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/social/webhook"
+      ],
+      "declaredPath": "/api/social/webhook",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 296,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/social/webhook"
+      ],
+      "declaredPath": "/webhook",
+      "source": "backend/src/routes/social/webhook.routes.js",
+      "line": 43,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/social/webhook"
+      ],
+      "declaredPath": "/api/social/webhook",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 289,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/social/webhook"
+      ],
+      "declaredPath": "/api/social/webhook",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 297,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/social/webhook"
+      ],
+      "declaredPath": "/webhook",
+      "source": "backend/src/routes/social/webhook.routes.js",
+      "line": 66,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/api/status"
+      ],
+      "declaredPath": "/api/status",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 109,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/webhooks/:workflowId"
+      ],
+      "declaredPath": "/api/webhooks/:workflowId",
+      "source": "backend/src/bootstrap/register-api-routes.js",
+      "line": 438,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/api/webhooks/:workflowId"
+      ],
+      "declaredPath": "/:workflowId",
+      "source": "backend/src/routes/webhooks.routes.js",
+      "line": 54,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/docs/content"
+      ],
+      "declaredPath": "/content",
+      "source": "backend/src/routes/docs.js",
+      "line": 48,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/docs/search"
+      ],
+      "declaredPath": "/search",
+      "source": "backend/src/routes/docs.js",
+      "line": 138,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/docs/structure"
+      ],
+      "declaredPath": "/structure",
+      "source": "backend/src/routes/docs.js",
+      "line": 121,
+      "dynamic": false
+    },
+    {
+      "method": "ALL",
+      "publicPaths": [
+        "/graphql"
+      ],
+      "declaredPath": "/graphql",
+      "source": "backend/src/index.js",
+      "line": 242,
+      "dynamic": false
+    },
+    {
+      "method": "POST",
+      "publicPaths": [
+        "/graphql"
+      ],
+      "declaredPath": "/graphql",
+      "source": "backend/src/index.js",
+      "line": 241,
+      "dynamic": false
+    },
+    {
+      "method": "GET",
+      "publicPaths": [
+        "/health"
+      ],
+      "declaredPath": "/health",
+      "source": "backend/src/index.js",
+      "line": 351,
+      "dynamic": false
+    }
+  ]
+}

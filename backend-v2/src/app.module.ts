@@ -27,6 +27,7 @@ import { ContactsModule } from './contacts/contacts.module';
 import { ConversationsModule } from './conversations/conversations.module';
 import { DatabaseModule } from './database/database.module';
 import { DealsModule } from './deals/deals.module';
+import { DocsModule } from './docs/docs.module';
 import { EstimatesModule } from './estimates/estimates.module';
 import { EmailTemplatesModule } from './email-templates/email-templates.module';
 import { SmsTemplatesModule } from './sms-templates/sms-templates.module';
@@ -121,6 +122,7 @@ const observabilityPlugins = [
     ConversationsModule,
     ContactTransfersModule,
     DealsModule,
+    DocsModule,
     EmailTemplatesModule,
     SmsTemplatesModule,
     SocialModule,

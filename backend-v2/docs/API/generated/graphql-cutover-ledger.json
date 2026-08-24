@@ -1,0 +1,4753 @@
+{
+  "schemaVersion": 1,
+  "generator": "scripts/generate-cutover-ledger.js",
+  "generatedFrom": [
+    "!docs/API/generated/rest-surface.json",
+    "!docs/API/graphql-operation-overrides.json"
+  ],
+  "summary": {
+    "operationCount": 66,
+    "apiOperationCount": 59,
+    "nonApiOperationCount": 7,
+    "frontendCallsiteCount": 44,
+    "operationsWithFrontendConsumers": 39,
+    "operationsWithBackendTests": 51,
+    "unmatchedFrontendCallCount": 0,
+    "unresolvedFrontendExpressionCount": 0,
+    "acknowledgedRuntimeFrontendExpressionCount": 2,
+    "unmatchedBackendTestCallCount": 39,
+    "retainHttpCount": 58,
+    "graphqlQueryCount": 0,
+    "graphqlMutationCount": 1,
+    "highRiskCount": 48,
+    "literalInterpolationRiskCount": 0
+  },
+  "caveats": [
+    "Consumer and test matching is static and method/path based; unclassified runtime-computed URLs require manual review.",
+    "Parameter names are normalized during matching, so /:id and /:invoiceId are treated as the same shape.",
+    "A missing frontend callsite does not prove an endpoint is unused; external, mobile, automation, and stale consumers may exist.",
+    "Recommended dispositions are starting points, not approved schema design."
+  ],
+  "operations": [
+    {
+      "id": "GET /*",
+      "key": "GET /*",
+      "method": "GET",
+      "path": "/*",
+      "routeSources": [
+        {
+          "source": "backend/src/index.js",
+          "line": 562
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [],
+      "recommendedDisposition": "non-api",
+      "dispositionReason": "Application fallback or documentation route, outside the API migration.",
+      "disposition": "non-api",
+      "owner": null,
+      "targetOperation": null,
+      "targetModule": null,
+      "parityStatus": "not-started",
+      "notes": null,
+      "literalInterpolationRisk": false,
+      "risk": "low"
+    },
+    {
+      "id": "POST /api/billing/webhook",
+      "key": "POST /api/billing/webhook",
+      "method": "POST",
+      "path": "/api/billing/webhook",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 266
+        },
+        {
+          "source": "backend/src/routes/billing.routes.js",
+          "line": 28
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/billing/webhook",
+          "source": "backend-v2/test/integration/subscription-webhooks.integration-spec.ts",
+          "line": 67
+        },
+        {
+          "method": "POST",
+          "path": "/api/billing/webhook",
+          "source": "backend/src/__tests__/integration/subscription-webhook.integration.test.js",
+          "line": 28
+        },
+        {
+          "method": "POST",
+          "path": "/api/billing/webhook",
+          "source": "backend/src/__tests__/routes/billing.routes.test.js",
+          "line": 42
+        },
+        {
+          "method": "POST",
+          "path": "/api/billing/webhook",
+          "source": "backend/src/__tests__/routes/billing.routes.test.js",
+          "line": 73
+        },
+        {
+          "method": "POST",
+          "path": "/api/billing/webhook",
+          "source": "backend/src/__tests__/subscription-webhooks-proxy.test.js",
+          "line": 17
+        },
+        {
+          "method": "POST",
+          "path": "/api/billing/webhook",
+          "source": "backend/src/__tests__/subscription-webhooks-proxy.test.js",
+          "line": 35
+        },
+        {
+          "method": "POST",
+          "path": "/api/billing/webhook",
+          "source": "backend/src/__tests__/subscription-webhooks-proxy.test.js",
+          "line": 45
+        },
+        {
+          "method": "POST",
+          "path": "/api/billing/webhook",
+          "source": "backend/src/__tests__/subscription-webhooks-proxy.test.js",
+          "line": 61
+        },
+        {
+          "method": "POST",
+          "path": "/api/billing/webhook",
+          "source": "backend/src/__tests__/subscription-webhooks-proxy.test.js",
+          "line": 72
+        },
+        {
+          "method": "POST",
+          "path": "/api/billing/webhook",
+          "source": "backend/src/__tests__/subscription-webhooks-proxy.test.js",
+          "line": 77
+        }
+      ],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Externally invoked webhook/protocol endpoint.",
+      "disposition": "retain-http",
+      "owner": "billing",
+      "targetOperation": "processStripeSubscriptionEvent",
+      "targetModule": "SubscriptionWebhooksModule",
+      "parityStatus": "implemented",
+      "notes": "Retain the exact raw-body Stripe signature protocol. The callback claims event IDs transactionally, locks tenant mappings, persists minimal replay snapshots, and atomically updates organization/subscription/audit state. Provider time plus event ID gives deterministic same-second ordering. Leased workers reconcile unmatched/ambiguous mappings and deliver upgrade notifications with retry, provider idempotency, and redacted dead letters. Operator dashboards and manual dead-letter controls remain platform work. NestJS now owns an identical implementation (SubscriptionWebhooksModule) verifying the exact signed bytes with the Stripe SDK and faithfully porting the durable event claim with minimal replay snapshot, deterministic provider ordering, tenant locks, plan/limit application, subscription upsert, audit trail, terminal transitions, and unmatched/ambiguous quarantine, proven by a dual-runtime PostgreSQL parity suite with genuinely signed payloads and cross-runtime deduplication; the legacy origin routes the path through a default-off proxy (SUBSCRIPTION_WEBHOOKS_NESTJS_ENABLED) forwarding the raw bytes and signature. The legacy reconciliation and notification workers keep draining the shared tables until the scheduler moves.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/bookings/public/book/:slug",
+      "key": "GET /api/bookings/public/book/:*",
+      "method": "GET",
+      "path": "/api/bookings/public/book/:slug",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 324
+        },
+        {
+          "source": "backend/src/routes/bookings.routes.js",
+          "line": 106
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/:slug",
+          "rawPath": "/api/bookings/public/book/${slug}",
+          "source": "frontend/src/services/calendarsApi.ts",
+          "line": 186,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/:calendarPublicId",
+          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
+          "line": 156
+        },
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/:calendarSlug",
+          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
+          "line": 166
+        },
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/no-such-calendar-slug-xyz",
+          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
+          "line": 174
+        },
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/:calendarSlug",
+          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
+          "line": 611
+        },
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/:calendarPublicId",
+          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
+          "line": 614
+        },
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/:slug",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 20
+        },
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/cal_abc",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 36
+        },
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/cal_abc",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 48
+        },
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/cal_abc",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 125
+        },
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/cal_abc",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 133
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "scheduling",
+      "targetOperation": "getPublicBookingPage",
+      "targetModule": "PublicBookingsModule",
+      "parityStatus": "implemented",
+      "notes": "Anonymous rate-limited embed protocol resolves a globally unique cal_ public ID first and retains slug compatibility only when exactly one active calendar matches. Authenticated REST/GraphQL projections and the calendar link UI expose the stable public ID. NestJS now owns an identical implementation (PublicBookingsModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_BOOKINGS_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/bookings/public/book/:slug",
+      "key": "POST /api/bookings/public/book/:*",
+      "method": "POST",
+      "path": "/api/bookings/public/book/:slug",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 326
+        },
+        {
+          "source": "backend/src/routes/bookings.routes.js",
+          "line": 225
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:slug",
+          "rawPath": "/api/bookings/public/book/${slug}",
+          "source": "frontend/src/services/calendarsApi.ts",
+          "line": 220,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 213
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 216
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 232
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 241
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 322
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 328
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 331
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 346
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 417
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:calendarPublicId",
+          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
+          "line": 182
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:calendarPublicId",
+          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
+          "line": 223
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:calendarSlug",
+          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
+          "line": 243
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:calendarPublicId",
+          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
+          "line": 278
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:calendarPublicId",
+          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
+          "line": 324
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:calendarSlug",
+          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
+          "line": 464
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:calendarSlug",
+          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
+          "line": 475
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:slug",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 22
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/cal_abc",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 76
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/cal_abc",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 112
+        }
+      ],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "scheduling",
+      "targetOperation": "createPublicBooking",
+      "targetModule": "PublicBookingsModule",
+      "parityStatus": "implemented",
+      "notes": "Anonymous rate-limited booking resolves the global public ID, transactionally rechecks the shared authoritative slot policy after the calendar lock, serializes case-insensitive contact reuse, returns a 256-bit cancellation capability once, and stores only its SHA-256 hash with end-plus-one-day expiry. NestJS now owns an identical implementation (PublicBookingsModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_BOOKINGS_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/bookings/public/book/:slug/cancel/:token",
+      "key": "POST /api/bookings/public/book/:*/cancel/:*",
+      "method": "POST",
+      "path": "/api/bookings/public/book/:slug/cancel/:token",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 327
+        },
+        {
+          "source": "backend/src/routes/bookings.routes.js",
+          "line": 422
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:slug/cancel/:token",
+          "rawPath": "/api/bookings/public/book/${slug}/cancel/${token}",
+          "source": "frontend/src/services/calendarsApi.ts",
+          "line": 233,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id/cancel/not-a-token",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 357
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id/cancel/not-a-token",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 360
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id/cancel/:token",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 368
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id/cancel/:token",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 373
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id/cancel/:token",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 403
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id/cancel/:token",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 406
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:public_id/cancel/:cancellation_token",
+          "source": "backend-v2/test/integration/public-bookings.integration-spec.ts",
+          "line": 425
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/not-:calendarSlug/cancel/:token",
+          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
+          "line": 296
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:calendarPublicId/cancel/:token",
+          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
+          "line": 301
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:calendarPublicId/cancel/:token",
+          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
+          "line": 317
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:calendarPublicId/cancel/:token",
+          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
+          "line": 335
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/:slug/cancel/:token",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 23
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/cal_abc/cancel/:token",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 90
+        },
+        {
+          "method": "POST",
+          "path": "/api/bookings/public/book/cal_abc/cancel/not-a-token",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 99
+        }
+      ],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "scheduling",
+      "targetOperation": "cancelPublicBooking",
+      "targetModule": "PublicBookingsModule",
+      "parityStatus": "implemented",
+      "notes": "Hashes the supplied 256-bit capability, binds it to the resolved calendar and confirmed booking, requires unexpired end-plus-one-day capability state, and clears hash/expiry on success. Malformed, wrong-calendar, expired, and replay attempts share a non-enumerating miss; raw tokens are forbidden in PostgreSQL and excluded from authenticated REST/GraphQL projections. NestJS now owns an identical implementation (PublicBookingsModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_BOOKINGS_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/bookings/public/book/:slug/slots",
+      "key": "GET /api/bookings/public/book/:*/slots",
+      "method": "GET",
+      "path": "/api/bookings/public/book/:slug/slots",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 325
+        },
+        {
+          "source": "backend/src/routes/bookings.routes.js",
+          "line": 155
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/:slug/slots",
+          "rawPath": "/api/bookings/public/book/${slug}/slots",
+          "source": "frontend/src/services/calendarsApi.ts",
+          "line": 195,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/:calendarSlug/slots",
+          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
+          "line": 431
+        },
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/:calendarSlug/slots",
+          "source": "backend/src/__tests__/integration/bookings.integration.test.js",
+          "line": 450
+        },
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/:slug/slots",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 21
+        },
+        {
+          "method": "GET",
+          "path": "/api/bookings/public/book/cal_abc/slots",
+          "source": "backend/src/__tests__/public-bookings-proxy.test.js",
+          "line": 61
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "scheduling",
+      "targetOperation": "getPublicBookingSlots",
+      "targetModule": "PublicBookingsModule",
+      "parityStatus": "implemented",
+      "notes": "Resolves the global public ID with an exactly-one-match legacy slug fallback and returns only concrete timezone-aware slots for a bounded 31-day range. Generation and every booking write share one PostgreSQL policy for effective windows, overrides, activity, duration, buffers, notice, horizon, DST, booking collisions, and normalized external busy intervals. NestJS now owns an identical implementation (PublicBookingsModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_BOOKINGS_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/calendar-integrations/google/auth",
+      "key": "GET /api/calendar-integrations/google/auth",
+      "method": "GET",
+      "path": "/api/calendar-integrations/google/auth",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 446
+        },
+        {
+          "source": "backend/src/routes/calendar-integrations.routes.js",
+          "line": 40
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
+          "rawPath": "/api/calendar-integrations/google/auth",
+          "source": "frontend/src/services/calendarIntegrationsApi.ts",
+          "line": 113,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 145
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 149
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 181
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 182
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
+          "source": "backend/src/__tests__/calendar-oauth-proxy.test.js",
+          "line": 19
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
+          "source": "backend/src/__tests__/calendar-oauth-proxy.test.js",
+          "line": 35
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
+          "source": "backend/src/__tests__/calendar-oauth-proxy.test.js",
+          "line": 42
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
+          "source": "backend/src/__tests__/calendar-oauth-proxy.test.js",
+          "line": 89
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
+          "source": "backend/src/__tests__/calendar-oauth-proxy.test.js",
+          "line": 94
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/auth",
+          "source": "backend/src/__tests__/routes/calendar-integrations.routes.test.js",
+          "line": 46
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "scheduling-integrations",
+      "targetOperation": "begin",
+      "targetModule": "CalendarOAuthModule",
+      "parityStatus": "implemented",
+      "notes": "Currently retained on HTTP by the integration adapter because it begins a browser/provider redirect protocol. It returns a provider URL with short-lived signed user, organization, nonce, and safe return-path state. NestJS now owns an identical implementation (CalendarOAuthModule) with faithful ports of the signed expiring state, the key-ring token envelope, and the single-winner FOR UPDATE credential load with lazy refresh and rotation persistence; cross-runtime specs prove states and envelopes minted by either runtime verify and decrypt in the other, and a dual-runtime PostgreSQL parity suite covers authorization URL equivalence, callback denial branches, a legacy-minted state completing through the NestJS callback into legacy-readable envelopes, and refreshed credentials the legacy loader reads back. The legacy origin routes all three paths through a default-off proxy (CALENDAR_OAUTH_NESTJS_ENABLED) that forwards the session cookie and organization selector and passes callback redirects through without following them.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/calendar-integrations/google/calendars/:connectionId",
+      "key": "GET /api/calendar-integrations/google/calendars/:*",
+      "method": "GET",
+      "path": "/api/calendar-integrations/google/calendars/:connectionId",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 448
+        },
+        {
+          "source": "backend/src/routes/calendar-integrations.routes.js",
+          "line": 167
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/calendars/:connectionId",
+          "rawPath": "/api/calendar-integrations/google/calendars/${connectionId}",
+          "source": "frontend/src/services/calendarIntegrationsApi.ts",
+          "line": 137,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/calendars/:connectionId",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 294
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/calendars/999999",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 320
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/calendars/999999",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 324
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/calendars/:connectionId",
+          "source": "backend/src/__tests__/calendar-oauth-proxy.test.js",
+          "line": 21
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/calendars/42",
+          "source": "backend/src/__tests__/calendar-oauth-proxy.test.js",
+          "line": 77
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "scheduling-integrations",
+      "targetOperation": "providerCalendars",
+      "targetModule": "CalendarOAuthModule",
+      "parityStatus": "implemented",
+      "notes": "Currently retained on HTTP because it performs live provider I/O. The boundary is user-and-organization scoped with PostgreSQL row-locked token refresh, active-key rewrap, encrypted winning-generation persistence, and redacted provider errors. Fresh PostgreSQL proves concurrent callers issue one provider refresh. NestJS now owns an identical implementation (CalendarOAuthModule) with faithful ports of the signed expiring state, the key-ring token envelope, and the single-winner FOR UPDATE credential load with lazy refresh and rotation persistence; cross-runtime specs prove states and envelopes minted by either runtime verify and decrypt in the other, and a dual-runtime PostgreSQL parity suite covers authorization URL equivalence, callback denial branches, a legacy-minted state completing through the NestJS callback into legacy-readable envelopes, and refreshed credentials the legacy loader reads back. The legacy origin routes all three paths through a default-off proxy (CALENDAR_OAUTH_NESTJS_ENABLED) that forwards the session cookie and organization selector and passes callback redirects through without following them.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/calendar-integrations/google/callback",
+      "key": "GET /api/calendar-integrations/google/callback",
+      "method": "GET",
+      "path": "/api/calendar-integrations/google/callback",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 447
+        },
+        {
+          "source": "backend/src/routes/calendar-integrations.routes.js",
+          "line": 60
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 191
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 192
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 200
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 203
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 220
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 223
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 237
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend-v2/test/integration/calendar-oauth.integration-spec.ts",
+          "line": 263
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend/src/__tests__/calendar-oauth-proxy.test.js",
+          "line": 20
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend/src/__tests__/calendar-oauth-proxy.test.js",
+          "line": 61
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend/src/__tests__/routes/calendar-integrations.routes.test.js",
+          "line": 60
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend/src/__tests__/routes/calendar-integrations.routes.test.js",
+          "line": 73
+        },
+        {
+          "method": "GET",
+          "path": "/api/calendar-integrations/google/callback",
+          "source": "backend/src/__tests__/routes/calendar-integrations.routes.test.js",
+          "line": 112
+        }
+      ],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Browser/provider callback endpoint.",
+      "disposition": "retain-http",
+      "owner": "scheduling-integrations",
+      "targetOperation": "callback",
+      "targetModule": "CalendarOAuthModule",
+      "parityStatus": "implemented",
+      "notes": "Provider redirect protocol; verifies signed expiring state and current organization membership before token exchange, then stores access/refresh credentials only as versioned AES-256-GCM envelopes under the active rotation key. NestJS now owns an identical implementation (CalendarOAuthModule) with faithful ports of the signed expiring state, the key-ring token envelope, and the single-winner FOR UPDATE credential load with lazy refresh and rotation persistence; cross-runtime specs prove states and envelopes minted by either runtime verify and decrypt in the other, and a dual-runtime PostgreSQL parity suite covers authorization URL equivalence, callback denial branches, a legacy-minted state completing through the NestJS callback into legacy-readable envelopes, and refreshed credentials the legacy loader reads back. The legacy origin routes all three paths through a default-off proxy (CALENDAR_OAUTH_NESTJS_ENABLED) that forwards the session cookie and organization selector and passes callback redirects through without following them.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/chat-widget/public/config/:widgetKey",
+      "key": "GET /api/chat-widget/public/config/:*",
+      "method": "GET",
+      "path": "/api/chat-widget/public/config/:widgetKey",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 229
+        },
+        {
+          "source": "backend/src/routes/chat-widget/public.routes.js",
+          "line": 14
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/chat-widget/public/config/:widgetKey",
+          "rawPath": "/api/chat-widget/public/config/${widgetKey}",
+          "source": "frontend/src/services/chatWidgetApi.ts",
+          "line": 245,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/chat-widget/public/config/:widgetKey",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 20
+        },
+        {
+          "method": "GET",
+          "path": "/api/chat-widget/public/config/cw_abc",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 43
+        },
+        {
+          "method": "GET",
+          "path": "/api/chat-widget/public/config/cw_abc",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 50
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "chat-widget",
+      "targetOperation": "getPublicChatWidgetConfig",
+      "targetModule": "ChatWidgetPublicModule",
+      "parityStatus": "implemented",
+      "notes": "Retain the rate-limited public embed bootstrap over HTTP. The widget key selects an allowlisted active configuration projection; authenticated management and provider capabilities are absent. NestJS now owns an identical implementation (ChatWidgetPublicModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (CHAT_WIDGET_PUBLIC_NESTJS_ENABLED) that falls through to the retained handler. During the port both runtimes received the same defect fix: the business-hours evaluation used the invalid Intl weekday option 'lowercase' and threw, failing every widget with configured hours closed; both now lowercase the valid long-form weekday.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/chat-widget/public/end-session",
+      "key": "POST /api/chat-widget/public/end-session",
+      "method": "POST",
+      "path": "/api/chat-widget/public/end-session",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 233
+        },
+        {
+          "source": "backend/src/routes/chat-widget/public.routes.js",
+          "line": 340
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/end-session",
+          "rawPath": "/api/chat-widget/public/end-session",
+          "source": "frontend/src/services/chatWidgetApi.ts",
+          "line": 281,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/end-session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 325
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/end-session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 333
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/end-session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 334
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/end-session",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 24
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/end-session",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 110
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/end-session",
+          "source": "backend/src/__tests__/integration/realtime.integration.test.js",
+          "line": 240
+        }
+      ],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "chat-widget",
+      "targetOperation": "endPublicChatSession",
+      "targetModule": "ChatWidgetPublicModule",
+      "parityStatus": "implemented",
+      "notes": "Retain the public terminal session action over the visitor capability. It is part of the externally embedded widget protocol rather than the authenticated operator API. NestJS now owns an identical implementation (ChatWidgetPublicModule) proven by a dual-runtime parity suite covering the agent-room notification and the visitor-socket eviction broadcast through the NestJS realtime host.",
+      "literalInterpolationRisk": false,
+      "risk": "medium"
+    },
+    {
+      "id": "POST /api/chat-widget/public/messages",
+      "key": "POST /api/chat-widget/public/messages",
+      "method": "POST",
+      "path": "/api/chat-widget/public/messages",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 232
+        },
+        {
+          "source": "backend/src/routes/chat-widget/public.routes.js",
+          "line": 267
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/messages",
+          "rawPath": "/api/chat-widget/public/messages",
+          "source": "frontend/src/services/chatWidgetApi.ts",
+          "line": 273,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/messages",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 249
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/messages",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 250
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/messages",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 258
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/messages",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 23
+        }
+      ],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "chat-widget",
+      "targetOperation": "sendPublicChatMessage",
+      "targetModule": "ChatWidgetPublicModule",
+      "parityStatus": "implemented",
+      "notes": "Retain rate-limited public visitor message submission over the session capability. Agent replies originate in CSRF-protected GraphQL and reach this visitor protocol through the durable realtime outbox. NestJS now owns an identical implementation (ChatWidgetPublicModule) proven by a dual-runtime parity suite that asserts the agent-room newChatMessage delivery through the NestJS realtime host; enable CHAT_WIDGET_PUBLIC_NESTJS_ENABLED only alongside REALTIME_HOST_NESTJS_ENABLED.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/chat-widget/public/messages/:sessionToken",
+      "key": "GET /api/chat-widget/public/messages/:*",
+      "method": "GET",
+      "path": "/api/chat-widget/public/messages/:sessionToken",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 231
+        },
+        {
+          "source": "backend/src/routes/chat-widget/public.routes.js",
+          "line": 210
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/chat-widget/public/messages/:sessionToken",
+          "rawPath": "/api/chat-widget/public/messages/${sessionToken}",
+          "source": "frontend/src/services/chatWidgetApi.ts",
+          "line": 263,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/chat-widget/public/messages/:sessionToken",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 265
+        },
+        {
+          "method": "GET",
+          "path": "/api/chat-widget/public/messages/:sessionToken",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 266
+        },
+        {
+          "method": "GET",
+          "path": "/api/chat-widget/public/messages/:sessionToken",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 22
+        },
+        {
+          "method": "GET",
+          "path": "/api/chat-widget/public/messages/:token",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 81
+        },
+        {
+          "method": "GET",
+          "path": "/api/chat-widget/public/messages/:CHAT_TOKEN",
+          "source": "backend/src/__tests__/integration/realtime.integration.test.js",
+          "line": 272
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "chat-widget",
+      "targetOperation": "getPublicChatMessages",
+      "targetModule": "ChatWidgetPublicModule",
+      "parityStatus": "implemented",
+      "notes": "Retain rate-limited visitor polling over the opaque session capability. The authenticated GraphQL schema never exposes that bearer token; live delivery remains on the established Socket.IO protocol. NestJS now owns an identical implementation (ChatWidgetPublicModule, including the after-timestamp polling parameter and last-seen presence refresh) proven by a dual-runtime parity suite behind the default-off CHAT_WIDGET_PUBLIC_NESTJS_ENABLED proxy.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/chat-widget/public/session",
+      "key": "POST /api/chat-widget/public/session",
+      "method": "POST",
+      "path": "/api/chat-widget/public/session",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 230
+        },
+        {
+          "source": "backend/src/routes/chat-widget/public.routes.js",
+          "line": 80
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "rawPath": "/api/chat-widget/public/session",
+          "source": "frontend/src/services/chatWidgetApi.ts",
+          "line": 255,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 201
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 202
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 209
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 212
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 223
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 231
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 244
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 282
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 306
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 21
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 65
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/session",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 93
+        }
+      ],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "chat-widget",
+      "targetOperation": "createPublicChatSession",
+      "targetModule": "ChatWidgetPublicModule",
+      "parityStatus": "implemented",
+      "notes": "Retain public visitor session creation over HTTP. It validates the widget capability and allowed-domain policy, then issues the opaque session capability used by the browser embed. NestJS now owns an identical implementation (ChatWidgetPublicModule) proven by a dual-runtime parity suite that resumes a NestJS-created session through the legacy runtime; agent-room announcement flows through the NestJS realtime host, so CHAT_WIDGET_PUBLIC_NESTJS_ENABLED must only be enabled in the runtime where REALTIME_HOST_NESTJS_ENABLED is on.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/chat-widget/public/typing",
+      "key": "POST /api/chat-widget/public/typing",
+      "method": "POST",
+      "path": "/api/chat-widget/public/typing",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 234
+        },
+        {
+          "source": "backend/src/routes/chat-widget/public.routes.js",
+          "line": 383
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/typing",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 289
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/typing",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 296
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/typing",
+          "source": "backend-v2/test/integration/chat-widget-public.integration-spec.ts",
+          "line": 297
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/typing",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 25
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/typing",
+          "source": "backend/src/__tests__/chat-widget-public-proxy.test.js",
+          "line": 104
+        },
+        {
+          "method": "POST",
+          "path": "/api/chat-widget/public/typing",
+          "source": "backend/src/__tests__/integration/realtime.integration.test.js",
+          "line": 262
+        }
+      ],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "chat-widget",
+      "targetOperation": "sendPublicChatTyping",
+      "targetModule": "ChatWidgetPublicModule",
+      "parityStatus": "implemented",
+      "notes": "Retain ephemeral public typing signals over the visitor capability and Socket.IO. This realtime transport boundary is intentionally not modeled as a GraphQL mutation. NestJS now owns an identical implementation (ChatWidgetPublicModule) proven by a dual-runtime parity suite asserting visitorTyping delivery to the agent room through the NestJS realtime host.",
+      "literalInterpolationRisk": false,
+      "risk": "medium"
+    },
+    {
+      "id": "GET /api/contacts/export/csv",
+      "key": "GET /api/contacts/export/csv",
+      "method": "GET",
+      "path": "/api/contacts/export/csv",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 200
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/contacts/export/csv",
+          "rawPath": "/api/contacts/export/csv",
+          "source": "frontend/src/services/contactsApi.ts",
+          "line": 244,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/contacts/export/csv",
+          "source": "backend-v2/test/integration/contacts.integration-spec.ts",
+          "line": 1138
+        },
+        {
+          "method": "GET",
+          "path": "/api/contacts/export/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 24
+        },
+        {
+          "method": "GET",
+          "path": "/api/contacts/export/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 53
+        },
+        {
+          "method": "GET",
+          "path": "/api/contacts/export/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 134
+        }
+      ],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Binary upload/download transport.",
+      "disposition": "retain-http",
+      "owner": "crm",
+      "targetOperation": "exportContactsCsv",
+      "targetModule": "ContactTransfersModule",
+      "parityStatus": "characterized",
+      "notes": "Retain authenticated CSV HTTP with organization filters, private/no-store delivery, RFC-style quoting, spreadsheet-formula neutralization, and a 50,000-row rejection boundary.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/contacts/import/csv",
+      "key": "POST /api/contacts/import/csv",
+      "method": "POST",
+      "path": "/api/contacts/import/csv",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 201
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/contacts/import/csv",
+          "rawPath": "/api/contacts/import/csv",
+          "source": "frontend/src/services/contactsApi.ts",
+          "line": 267,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/contacts/import/csv",
+          "source": "backend-v2/test/integration/contacts.integration-spec.ts",
+          "line": 1151
+        },
+        {
+          "method": "POST",
+          "path": "/api/contacts/import/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 25
+        },
+        {
+          "method": "POST",
+          "path": "/api/contacts/import/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 105
+        },
+        {
+          "method": "POST",
+          "path": "/api/contacts/import/csv",
+          "source": "backend/src/__tests__/contact-transfer-proxy.test.js",
+          "line": 145
+        }
+      ],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Binary upload/download transport.",
+      "disposition": "retain-http",
+      "owner": "crm",
+      "targetOperation": "importContactsCsv",
+      "targetModule": "ContactTransfersModule",
+      "parityStatus": "characterized",
+      "notes": "Despite the legacy path, this accepts JSON contact rows rather than multipart CSV. Retain HTTP during cutover with an exact object envelope, strict boolean duplicate policy, a 10,000-row limit, bounded 500-row inserts, and serialized plan-limit enforcement.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/email/webhook/resend",
+      "key": "POST /api/email/webhook/resend",
+      "method": "POST",
+      "path": "/api/email/webhook/resend",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 207
+        },
+        {
+          "source": "backend/src/routes/email-webhooks.routes.js",
+          "line": 35
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/email/webhook/resend",
+          "source": "backend-v2/test/integration/email-webhooks.integration-spec.ts",
+          "line": 60
+        },
+        {
+          "method": "POST",
+          "path": "/api/email/webhook/resend",
+          "source": "backend-v2/test/integration/email-webhooks.integration-spec.ts",
+          "line": 376
+        },
+        {
+          "method": "POST",
+          "path": "/api/email/webhook/resend",
+          "source": "backend-v2/test/integration/email-webhooks.integration-spec.ts",
+          "line": 380
+        },
+        {
+          "method": "POST",
+          "path": "/api/email/webhook/resend",
+          "source": "backend/src/__tests__/email-webhooks-proxy.test.js",
+          "line": 18
+        },
+        {
+          "method": "POST",
+          "path": "/api/email/webhook/resend",
+          "source": "backend/src/__tests__/email-webhooks-proxy.test.js",
+          "line": 36
+        },
+        {
+          "method": "POST",
+          "path": "/api/email/webhook/resend",
+          "source": "backend/src/__tests__/email-webhooks-proxy.test.js",
+          "line": 46
+        },
+        {
+          "method": "POST",
+          "path": "/api/email/webhook/resend",
+          "source": "backend/src/__tests__/email-webhooks-proxy.test.js",
+          "line": 68
+        },
+        {
+          "method": "POST",
+          "path": "/api/email/webhook/resend",
+          "source": "backend/src/__tests__/email-webhooks-proxy.test.js",
+          "line": 78
+        },
+        {
+          "method": "POST",
+          "path": "/api/email/webhook/resend",
+          "source": "backend/src/__tests__/email-webhooks-proxy.test.js",
+          "line": 83
+        },
+        {
+          "method": "POST",
+          "path": "/api/email/webhook/resend",
+          "source": "backend/src/__tests__/integration/email-webhooks.integration.test.js",
+          "line": 25
+        }
+      ],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "messaging",
+      "targetOperation": "processResendEmailEvent",
+      "targetModule": "EmailWebhooksModule",
+      "parityStatus": "implemented",
+      "notes": "Retain raw-body Svix verification and fail closed without the signing secret. Durable svix-id claims deduplicate delivery, provider occurrence timestamps prevent status regression, and matched logs/campaign recipients update engagement and contact suppression. Unmatched or cross-tenant ambiguous events are leased and retried from bounded claim fields until exactly one organization mapping exists; exhausted attempts become redacted dead letters. NestJS now owns an identical implementation (EmailWebhooksModule) with the same Resend SDK signature verification over the captured raw bytes and a faithful port of the durable svix-id claim, status-regression, suppression, and quarantine semantics, proven by a dual-runtime PostgreSQL parity suite using genuinely signed payloads (including cross-runtime deduplication through the shared claim table); the legacy origin routes the path through a default-off proxy (EMAIL_WEBHOOKS_NESTJS_ENABLED) that forwards the exact raw bytes and svix headers and falls through to the retained handler. The legacy reconciliation worker continues to drain the shared email_webhook_events table until the scheduler moves.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/forms/public/form/:identifier",
+      "key": "GET /api/forms/public/form/:*",
+      "method": "GET",
+      "path": "/api/forms/public/form/:identifier",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 354
+        },
+        {
+          "source": "backend/src/routes/forms.routes.js",
+          "line": 88
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/:identifier",
+          "rawPath": "/api/forms/public/form/${identifier}",
+          "source": "frontend/src/services/formsApi.ts",
+          "line": 128,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/:identifier",
+          "source": "backend-v2/test/integration/public-forms.integration-spec.ts",
+          "line": 174
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/:identifier",
+          "source": "backend-v2/test/integration/public-forms.integration-spec.ts",
+          "line": 175
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/never-existed",
+          "source": "backend-v2/test/integration/public-forms.integration-spec.ts",
+          "line": 189
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/never-existed",
+          "source": "backend-v2/test/integration/public-forms.integration-spec.ts",
+          "line": 190
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 162
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/:slug",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 174
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 177
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/:identifier",
+          "source": "backend/src/__tests__/public-forms-proxy.test.js",
+          "line": 20
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/frm_abc",
+          "source": "backend/src/__tests__/public-forms-proxy.test.js",
+          "line": 34
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/frm_abc",
+          "source": "backend/src/__tests__/public-forms-proxy.test.js",
+          "line": 41
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/frm_abc",
+          "source": "backend/src/__tests__/public-forms-proxy.test.js",
+          "line": 83
+        },
+        {
+          "method": "GET",
+          "path": "/api/forms/public/form/frm_abc",
+          "source": "backend/src/__tests__/public-forms-proxy.test.js",
+          "line": 88
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "crm",
+      "targetOperation": "getPublicForm",
+      "targetModule": "PublicFormsModule",
+      "parityStatus": "implemented",
+      "notes": "Retained anonymous rate-limited HTTP for embeds uses the global public identifier, with ambiguous legacy slugs failing closed. NestJS now owns an identical implementation (PublicFormsModule, including a faithful port of the public-form validation contract) proven by a dual-runtime PostgreSQL parity suite covering the validation matrix, conditional requirements, contact reuse, and durable trigger/notification fan-out; the legacy origin routes this path through a default-off proxy (PUBLIC_FORMS_NESTJS_ENABLED) that falls through to the retained handler and replicates the dedicated submission rate limit on the proxied path.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/forms/public/form/:identifier",
+      "key": "POST /api/forms/public/form/:*",
+      "method": "POST",
+      "path": "/api/forms/public/form/:identifier",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 355
+        },
+        {
+          "source": "backend/src/routes/forms.routes.js",
+          "line": 123
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:identifier",
+          "rawPath": "/api/forms/public/form/${identifier}",
+          "source": "frontend/src/services/formsApi.ts",
+          "line": 136,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend-v2/test/integration/public-forms.integration-spec.ts",
+          "line": 235
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend-v2/test/integration/public-forms.integration-spec.ts",
+          "line": 238
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend-v2/test/integration/public-forms.integration-spec.ts",
+          "line": 255
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend-v2/test/integration/public-forms.integration-spec.ts",
+          "line": 261
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend-v2/test/integration/public-forms.integration-spec.ts",
+          "line": 345
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 186
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 221
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 294
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 304
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:public_id",
+          "source": "backend/src/__tests__/integration/forms.integration.test.js",
+          "line": 315
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/:identifier",
+          "source": "backend/src/__tests__/public-forms-proxy.test.js",
+          "line": 21
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/frm_abc",
+          "source": "backend/src/__tests__/public-forms-proxy.test.js",
+          "line": 52
+        },
+        {
+          "method": "POST",
+          "path": "/api/forms/public/form/frm_abc",
+          "source": "backend/src/__tests__/public-forms-proxy.test.js",
+          "line": 73
+        }
+      ],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "crm",
+      "targetOperation": "submitPublicForm",
+      "targetModule": "PublicFormsModule",
+      "parityStatus": "implemented",
+      "notes": "Retained anonymous rate-limited HTTP commits contact reuse and submission transactionally with same-email serialization, complete field validation, and durable notification/event delivery. NestJS now owns an identical implementation (PublicFormsModule, including a faithful port of the public-form validation contract) proven by a dual-runtime PostgreSQL parity suite covering the validation matrix, conditional requirements, contact reuse, and durable trigger/notification fan-out; the legacy origin routes this path through a default-off proxy (PUBLIC_FORMS_NESTJS_ENABLED) that falls through to the retained handler and replicates the dedicated submission rate limit on the proxied path.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/health",
+      "key": "GET /api/health",
+      "method": "GET",
+      "path": "/api/health",
+      "routeSources": [
+        {
+          "source": "backend/src/index.js",
+          "line": 254
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "platform-operations",
+      "targetOperation": "health",
+      "targetModule": "FoundationModule",
+      "parityStatus": "implemented",
+      "notes": "Retain as the Railway liveness/readiness protocol. It must remain cheap, unauthenticated, and independent of GraphQL execution. NestJS now serves its own structural equivalent (OperationalStatusController) at the same path. Deliberately NOT proxied: a health probe must describe the process that answers it, so each runtime reports itself; the Nest response mirrors the retained shape (status/checks/optional configuration) for monitors and becomes authoritative at direct-origin cutover.",
+      "literalInterpolationRisk": false,
+      "risk": "low"
+    },
+    {
+      "id": "GET /api/invoice-integrations/stripe/callback",
+      "key": "GET /api/invoice-integrations/stripe/callback",
+      "method": "GET",
+      "path": "/api/invoice-integrations/stripe/callback",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 456
+        },
+        {
+          "source": "backend/src/routes/invoice-integrations.routes.js",
+          "line": 43
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 310
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 421
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 422
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 429
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 432
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 448
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 451
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend/src/__tests__/routes/invoice-integrations.routes.test.js",
+          "line": 65
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend/src/__tests__/routes/invoice-integrations.routes.test.js",
+          "line": 82
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/callback",
+          "source": "backend/src/__tests__/routes/invoice-integrations.routes.test.js",
+          "line": 113
+        }
+      ],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Browser/provider callback endpoint.",
+      "disposition": "retain-http",
+      "owner": "billing-integrations",
+      "targetOperation": "callback",
+      "targetModule": "StripeConnectModule",
+      "parityStatus": "implemented",
+      "notes": "Retain the browser redirect callback over HTTP. It validates signed state, exchanges the code with Stripe, persists the connected account for the organization, and redirects back to the frontend return path with success or error markers; provider errors and invalid state must fail closed to the fallback path without persisting a connection. NestJS now owns an identical implementation (StripeConnectModule) with a faithful port of the signed expiring state (cross-runtime verified), the Connect token exchange and deauthorize client behind an injectable token, and the payment_settings persistence, proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes the trio through a default-off proxy (STRIPE_CONNECT_NESTJS_ENABLED).",
+      "literalInterpolationRisk": false,
+      "risk": "medium"
+    },
+    {
+      "id": "GET /api/invoice-integrations/stripe/connect",
+      "key": "GET /api/invoice-integrations/stripe/connect",
+      "method": "GET",
+      "path": "/api/invoice-integrations/stripe/connect",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 455
+        },
+        {
+          "source": "backend/src/routes/invoice-integrations.routes.js",
+          "line": 27
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
+          "rawPath": "/api/invoice-integrations/stripe/connect",
+          "source": "frontend/src/services/stripeConnectApi.ts",
+          "line": 12,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 277
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 281
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 77
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 81
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 102
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 103
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 112
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 113
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoice-integrations/stripe/connect",
+          "source": "backend/src/__tests__/routes/invoice-integrations.routes.test.js",
+          "line": 51
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "OAuth begin endpoint; part of the retained provider-OAuth protocol trio with its callback.",
+      "disposition": "retain-http",
+      "owner": "billing-integrations",
+      "targetOperation": "connect",
+      "targetModule": "StripeConnectModule",
+      "parityStatus": "implemented",
+      "notes": "Retain as the authenticated OAuth begin step, matching the calendar and social provider-connection precedent: it mints signed state bound to the user and organization and returns the provider authorization URL. Keeping begin and callback in one HTTP module keeps state signing, expiry, and return-path rules in one place. NestJS now owns an identical implementation (StripeConnectModule) with a faithful port of the signed expiring state (cross-runtime verified), the Connect token exchange and deauthorize client behind an injectable token, and the payment_settings persistence, proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes the trio through a default-off proxy (STRIPE_CONNECT_NESTJS_ENABLED).",
+      "literalInterpolationRisk": false,
+      "risk": "medium"
+    },
+    {
+      "id": "POST /api/invoice-integrations/stripe/disconnect",
+      "key": "POST /api/invoice-integrations/stripe/disconnect",
+      "method": "POST",
+      "path": "/api/invoice-integrations/stripe/disconnect",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 457
+        },
+        {
+          "source": "backend/src/routes/invoice-integrations.routes.js",
+          "line": 93
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/invoice-integrations/stripe/disconnect",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 330
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoice-integrations/stripe/disconnect",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 78
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoice-integrations/stripe/disconnect",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 89
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoice-integrations/stripe/disconnect",
+          "source": "backend/src/__tests__/routes/invoice-integrations.routes.test.js",
+          "line": 134
+        }
+      ],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "Authenticated tenant-scoped state change with a JSON envelope; matches the calendar provider connection-management mutations.",
+      "disposition": "graphql-mutation",
+      "owner": "billing-integrations",
+      "targetOperation": "disconnect",
+      "targetModule": "StripeConnectModule",
+      "parityStatus": "implemented",
+      "notes": "Migrated to the disconnectStripe GraphQL mutation following the calendar provider-connection management precedent: authenticated, CSRF-protected, organization-scoped removal of the Stripe connection with an idempotent already-disconnected outcome, deliberately without a plan gate so a lapsed organization can still disconnect. The frontend adapter now routes disconnectStripeConnect through the mutation (validated by the static consumer-contract suite), and both the mutation and the retained REST route share one StripeConnectService implementation. The REST route stays as rollback behind the default-off proxy until the per-slice exit gate passes in production.",
+      "literalInterpolationRisk": false,
+      "risk": "medium"
+    },
+    {
+      "id": "GET /api/invoices/:id/pdf",
+      "key": "GET /api/invoices/:*/pdf",
+      "method": "GET",
+      "path": "/api/invoices/:id/pdf",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 258
+        },
+        {
+          "source": "backend/src/routes/invoices/pdf.routes.js",
+          "line": 17
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/invoices/:invoiceId/pdf",
+          "rawPath": "/api/invoices/${invoiceId}/pdf",
+          "source": "frontend/src/services/invoicesApi.ts",
+          "line": 496,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/invoices/:id/pdf",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 372
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/not-an-id/pdf",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 378
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/:id/pdf",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 385
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/:id/pdf",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 395
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/:id/pdf",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 426
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/:id/pdf",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 436
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/:id/pdf",
+          "source": "backend/src/__tests__/invoice-pdf-proxy.test.js",
+          "line": 19
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/12/pdf",
+          "source": "backend/src/__tests__/invoice-pdf-proxy.test.js",
+          "line": 32
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/12/pdf",
+          "source": "backend/src/__tests__/invoice-pdf-proxy.test.js",
+          "line": 62
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/12/pdf",
+          "source": "backend/src/__tests__/invoice-pdf-proxy.test.js",
+          "line": 103
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/12/pdf",
+          "source": "backend/src/__tests__/invoice-pdf-proxy.test.js",
+          "line": 115
+        },
+        {
+          "method": "GET",
+          "path": "/api/invoices/1/pdf",
+          "source": "backend/src/__tests__/routes/invoice-core-retirement.routes.test.js",
+          "line": 34
+        }
+      ],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Binary upload/download transport.",
+      "disposition": "retain-http",
+      "owner": "billing",
+      "targetOperation": "invoicePdf",
+      "targetModule": "InvoicesModule",
+      "parityStatus": "implemented",
+      "notes": "NestJS owns the retained cookie-authenticated binary route with selected-organization concealment, the legacy renderer's tenant snapshot, validated PDF output, safe attachment naming, and private/no-store, nosniff, sandbox headers. The existing origin proxies this exact URL behind a default-off server flag; the active frontend controls download the blob without selecting a transport.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/invoices/businesses/:id/logo",
+      "key": "POST /api/invoices/businesses/:*/logo",
+      "method": "POST",
+      "path": "/api/invoices/businesses/:id/logo",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 250
+        },
+        {
+          "source": "backend/src/routes/invoices/businesses.routes.js",
+          "line": 17
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/invoices/businesses/:businessId/logo",
+          "rawPath": "/api/invoices/businesses/${businessId}/logo",
+          "source": "frontend/src/services/invoicesApi.ts",
+          "line": 464,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/invoices/businesses/:businessId/logo",
+          "source": "backend-v2/test/integration/invoice-businesses.integration-spec.ts",
+          "line": 580
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/businesses/:businessId/logo",
+          "source": "backend-v2/test/integration/invoice-businesses.integration-spec.ts",
+          "line": 586
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/businesses/:id/logo",
+          "source": "backend/src/__tests__/invoice-logo-upload-proxy.test.js",
+          "line": 7
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/businesses/4/logo",
+          "source": "backend/src/__tests__/invoice-logo-upload-proxy.test.js",
+          "line": 16
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/businesses/4/logo",
+          "source": "backend/src/__tests__/invoice-logo-upload-proxy.test.js",
+          "line": 32
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/businesses/4/logo",
+          "source": "backend/src/__tests__/invoice-logo-upload-proxy.test.js",
+          "line": 47
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/businesses/4/logo",
+          "source": "backend/src/__tests__/invoice-logo-upload-proxy.test.js",
+          "line": 51
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/businesses/4/logo",
+          "source": "backend/src/__tests__/invoice-logo-upload-proxy.test.js",
+          "line": 52
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/businesses/4/logo",
+          "source": "backend/src/__tests__/routes/invoice-logo.routes.test.js",
+          "line": 31
+        }
+      ],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Binary upload/download transport.",
+      "disposition": "retain-http",
+      "owner": "billing",
+      "targetOperation": "uploadInvoiceBusinessLogo",
+      "targetModule": "InvoiceBusinessesModule",
+      "parityStatus": "implemented",
+      "notes": "NestJS retains tenant-authorized multipart HTTP with a 2 MiB limit, bounded parts, structural PNG/JPEG/GIF/WebP checks, server-owned names, store-first replacement, durable old-logo cleanup, and compensating cleanup on database failure. A default-off legacy-origin proxy preserves rollback.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/invoices/settings/logo",
+      "key": "POST /api/invoices/settings/logo",
+      "method": "POST",
+      "path": "/api/invoices/settings/logo",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 254
+        },
+        {
+          "source": "backend/src/routes/invoices/settings.routes.js",
+          "line": 15
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/invoices/settings/logo",
+          "rawPath": "/api/invoices/settings/logo",
+          "source": "frontend/src/services/invoicesApi.ts",
+          "line": 407,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Binary upload/download transport.",
+      "disposition": "retain-http",
+      "owner": "billing",
+      "targetOperation": "uploadInvoiceSettingsLogo",
+      "targetModule": "InvoiceSettingsModule",
+      "parityStatus": "implemented",
+      "notes": "NestJS retains tenant-authorized multipart HTTP with a 2 MiB limit, bounded parts, structural PNG/JPEG/GIF/WebP checks, server-owned names, store-first replacement, durable old-logo cleanup, and compensating cleanup on database failure. A default-off legacy-origin proxy preserves rollback.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/invoices/webhook/stripe",
+      "key": "POST /api/invoices/webhook/stripe",
+      "method": "POST",
+      "path": "/api/invoices/webhook/stripe",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 246
+        },
+        {
+          "source": "backend/src/routes/invoices/stripe-webhook.routes.js",
+          "line": 18
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend-v2/test/integration/invoice-webhooks.integration-spec.ts",
+          "line": 146
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/integration/stripe-webhook.integration.test.js",
+          "line": 65
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/routes/stripe-webhook.routes.test.js",
+          "line": 98
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/routes/stripe-webhook.routes.test.js",
+          "line": 102
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/routes/stripe-webhook.routes.test.js",
+          "line": 121
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/routes/stripe-webhook.routes.test.js",
+          "line": 151
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/stripe-invoice-webhook-proxy.test.js",
+          "line": 24
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/stripe-invoice-webhook-proxy.test.js",
+          "line": 38
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/stripe-invoice-webhook-proxy.test.js",
+          "line": 67
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/stripe-invoice-webhook-proxy.test.js",
+          "line": 103
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/stripe-invoice-webhook-proxy.test.js",
+          "line": 115
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/stripe-invoice-webhook-proxy.test.js",
+          "line": 124
+        },
+        {
+          "method": "POST",
+          "path": "/api/invoices/webhook/stripe",
+          "source": "backend/src/__tests__/stripe-invoice-webhook-proxy.test.js",
+          "line": 136
+        }
+      ],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Externally invoked webhook/protocol endpoint.",
+      "disposition": "retain-http",
+      "owner": "billing",
+      "targetOperation": "stripeInvoiceWebhook",
+      "targetModule": "InvoiceWebhooksModule",
+      "parityStatus": "implemented",
+      "notes": "NestJS retains the signed webhook over HTTP, verifies the exact raw bytes with Stripe's SDK, fails closed without its secret, and commits the event claim, payment, PostgreSQL balance update, and one paid-workflow trigger transactionally. A default-off legacy-origin proxy preserves rollback.",
+      "literalInterpolationRisk": false,
+      "risk": "medium"
+    },
+    {
+      "id": "GET /api/pages/public/page/:slug",
+      "key": "GET /api/pages/public/page/:*",
+      "method": "GET",
+      "path": "/api/pages/public/page/:slug",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 313
+        },
+        {
+          "source": "backend/src/routes/pages/public.routes.js",
+          "line": 18
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/pages/public/page/:slug",
+          "rawPath": "/api/pages/public/page/${slug}",
+          "source": "frontend/src/services/pagesApi.ts",
+          "line": 475,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/pages/public/page/launch",
+          "source": "backend-v2/test/integration/landing-pages.integration-spec.ts",
+          "line": 526
+        },
+        {
+          "method": "GET",
+          "path": "/api/pages/public/page/launch",
+          "source": "backend-v2/test/integration/landing-pages.integration-spec.ts",
+          "line": 530
+        },
+        {
+          "method": "GET",
+          "path": "/api/pages/public/page/:slug",
+          "source": "backend/src/__tests__/public-landing-pages-proxy.test.js",
+          "line": 22
+        },
+        {
+          "method": "GET",
+          "path": "/api/pages/public/page/launch",
+          "source": "backend/src/__tests__/public-landing-pages-proxy.test.js",
+          "line": 36
+        },
+        {
+          "method": "GET",
+          "path": "/api/pages/public/page/launch",
+          "source": "backend/src/__tests__/public-landing-pages-proxy.test.js",
+          "line": 43
+        },
+        {
+          "method": "GET",
+          "path": "/api/pages/public/page/launch",
+          "source": "backend/src/__tests__/public-landing-pages-proxy.test.js",
+          "line": 63
+        },
+        {
+          "method": "GET",
+          "path": "/api/pages/public/page/launch",
+          "source": "backend/src/__tests__/public-landing-pages-proxy.test.js",
+          "line": 87
+        },
+        {
+          "method": "GET",
+          "path": "/api/pages/public/page/launch",
+          "source": "backend/src/__tests__/public-landing-pages-proxy.test.js",
+          "line": 92
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "growth",
+      "targetOperation": "getPublicPage",
+      "targetModule": "PublicLandingPagesModule",
+      "parityStatus": "implemented",
+      "notes": "Retain anonymous page delivery over HTTP for browser navigation, password capability checks, expiry enforcement, cache policy, and public rendering. NestJS now owns an identical implementation (PublicLandingPagesModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_LANDING_PAGES_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/pages/public/page/:slug/analytics",
+      "key": "POST /api/pages/public/page/:*/analytics",
+      "method": "POST",
+      "path": "/api/pages/public/page/:slug/analytics",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 314
+        },
+        {
+          "source": "backend/src/routes/pages/public.routes.js",
+          "line": 141
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/pages/public/page/:slug/analytics",
+          "rawPath": "/api/pages/public/page/${slug}/analytics",
+          "source": "frontend/src/services/pagesApi.ts",
+          "line": 493,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/pages/public/page/:open/analytics",
+          "source": "backend-v2/test/integration/public-landing-pages.integration-spec.ts",
+          "line": 247
+        },
+        {
+          "method": "POST",
+          "path": "/api/pages/public/page/:open/analytics",
+          "source": "backend-v2/test/integration/public-landing-pages.integration-spec.ts",
+          "line": 250
+        },
+        {
+          "method": "POST",
+          "path": "/api/pages/public/page/:open/analytics",
+          "source": "backend-v2/test/integration/public-landing-pages.integration-spec.ts",
+          "line": 266
+        },
+        {
+          "method": "POST",
+          "path": "/api/pages/public/page/:open/analytics",
+          "source": "backend-v2/test/integration/public-landing-pages.integration-spec.ts",
+          "line": 292
+        },
+        {
+          "method": "POST",
+          "path": "/api/pages/public/page/:slug/analytics",
+          "source": "backend/src/__tests__/public-landing-pages-proxy.test.js",
+          "line": 23
+        },
+        {
+          "method": "POST",
+          "path": "/api/pages/public/page/launch/analytics",
+          "source": "backend/src/__tests__/public-landing-pages-proxy.test.js",
+          "line": 71
+        }
+      ],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "growth",
+      "targetOperation": "recordPublicPageAnalytics",
+      "targetModule": "PublicLandingPagesModule",
+      "parityStatus": "implemented",
+      "notes": "Retain the anonymous rate-limited analytics beacon over HTTP; it validates the published page and records request-derived device and attribution evidence. NestJS now owns an identical implementation (PublicLandingPagesModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_LANDING_PAGES_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/public/estimates/:token",
+      "key": "GET /api/public/estimates/:*",
+      "method": "GET",
+      "path": "/api/public/estimates/:token",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 420
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/public/estimates/:token:suffix",
+          "rawPath": "${getApiUrl()}/api/public/estimates/${encodeURIComponent(token)}${suffix}",
+          "source": "frontend/src/services/publicEstimatesApi.ts",
+          "line": 47,
+          "client": "fetch",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/public/estimates/:publicToken",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 1709
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/estimates/:token",
+          "source": "backend/src/__tests__/public-estimate-proxy.test.js",
+          "line": 27
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/estimates/:token",
+          "source": "backend/src/__tests__/public-estimate-proxy.test.js",
+          "line": 41
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/estimates/not-a-token",
+          "source": "backend/src/__tests__/public-estimate-proxy.test.js",
+          "line": 79
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Anonymous token-capability endpoint; part of the retained public-estimate protocol, matching public signing.",
+      "disposition": "retain-http",
+      "owner": "billing",
+      "targetOperation": "open",
+      "targetModule": "EstimatesModule",
+      "parityStatus": "implemented",
+      "notes": "Retain anonymous token-scoped estimate delivery over HTTP for recipient browsers, matching the public-signing precedent. NestJS owns the implementation; the legacy origin routes this path through the rate-limited public-estimate proxy.",
+      "literalInterpolationRisk": false,
+      "risk": "medium"
+    },
+    {
+      "id": "POST /api/public/estimates/:token/accept",
+      "key": "POST /api/public/estimates/:*/accept",
+      "method": "POST",
+      "path": "/api/public/estimates/:token/accept",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 424
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/public/estimates/:publicToken/accept",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 1726
+        },
+        {
+          "method": "POST",
+          "path": "/api/public/estimates/:publicToken/accept",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 1730
+        },
+        {
+          "method": "POST",
+          "path": "/api/public/estimates/:publicToken/accept",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 1885
+        }
+      ],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "billing",
+      "targetOperation": "accept",
+      "targetModule": "EstimatesModule",
+      "parityStatus": "implemented",
+      "notes": "Retain the anonymous token-capability accept action over HTTP. NestJS owns the implementation behind the legacy origin's rate-limited public-estimate proxy; terminal-state estimates must deny repeated transitions.",
+      "literalInterpolationRisk": false,
+      "risk": "medium"
+    },
+    {
+      "id": "POST /api/public/estimates/:token/decline",
+      "key": "POST /api/public/estimates/:*/decline",
+      "method": "POST",
+      "path": "/api/public/estimates/:token/decline",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 428
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/public/estimates/:publicToken/decline",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 1733
+        },
+        {
+          "method": "POST",
+          "path": "/api/public/estimates/:publicToken/decline",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 1834
+        },
+        {
+          "method": "POST",
+          "path": "/api/public/estimates/:publicToken/decline",
+          "source": "backend-v2/test/integration/invoices.integration-spec.ts",
+          "line": 1837
+        }
+      ],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "billing",
+      "targetOperation": "decline",
+      "targetModule": "EstimatesModule",
+      "parityStatus": "implemented",
+      "notes": "Retain the anonymous token-capability decline action over HTTP. NestJS owns the implementation behind the legacy origin's rate-limited public-estimate proxy; terminal-state estimates must deny repeated transitions.",
+      "literalInterpolationRisk": false,
+      "risk": "medium"
+    },
+    {
+      "id": "GET /api/public/sign/:token",
+      "key": "GET /api/public/sign/:*",
+      "method": "GET",
+      "path": "/api/public/sign/:token",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 392
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/public/sign/:token",
+          "rawPath": "/api/public/sign/${token}",
+          "source": "frontend/src/services/signaturesApi.ts",
+          "line": 205,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/public/sign/:invalidToken",
+          "source": "backend-v2/test/integration/signatures.integration-spec.ts",
+          "line": 1339
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/sign/:secondToken",
+          "source": "backend-v2/test/integration/signatures.integration-spec.ts",
+          "line": 1475
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/sign/:secondToken",
+          "source": "backend-v2/test/integration/signatures.integration-spec.ts",
+          "line": 1499
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/sign/:token",
+          "source": "backend/src/__tests__/public-signing-proxy.test.js",
+          "line": 38
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/sign/:token",
+          "source": "backend/src/__tests__/public-signing-proxy.test.js",
+          "line": 69
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/sign/not-a-token",
+          "source": "backend/src/__tests__/public-signing-proxy.test.js",
+          "line": 168
+        },
+        {
+          "method": "GET",
+          "path": "/api/public/sign/:token",
+          "source": "backend/src/__tests__/public-signing-proxy.test.js",
+          "line": 170
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetOperation": "getSigningSession",
+      "targetModule": "PublicSigningModule",
+      "parityStatus": "characterized",
+      "notes": "Rate-limited hashed capability protocol; active unexpired recipient/document only, with minimal sanitized public data.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/public/sign/:token",
+      "key": "POST /api/public/sign/:*",
+      "method": "POST",
+      "path": "/api/public/sign/:token",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 412
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/public/sign/:token",
+          "rawPath": "/api/public/sign/${token}",
+          "source": "frontend/src/services/signaturesApi.ts",
+          "line": 210,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/public/sign/:token",
+          "source": "backend-v2/test/integration/signatures.integration-spec.ts",
+          "line": 1451
+        },
+        {
+          "method": "POST",
+          "path": "/api/public/sign/:token",
+          "source": "backend/src/__tests__/public-signing-proxy.test.js",
+          "line": 43
+        },
+        {
+          "method": "POST",
+          "path": "/api/public/sign/:token",
+          "source": "backend/src/__tests__/public-signing-proxy.test.js",
+          "line": 103
+        }
+      ],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetOperation": "submitSignature",
+      "targetModule": "PublicSigningModule",
+      "parityStatus": "characterizing",
+      "notes": "Atomic one-time capability claim, exact field allowlist and validation, immutable audit event, and durable completion work.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/public/sign/:token/decline",
+      "key": "POST /api/public/sign/:*/decline",
+      "method": "POST",
+      "path": "/api/public/sign/:token/decline",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 408
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/public/sign/:token/decline",
+          "rawPath": "/api/public/sign/${token}/decline",
+          "source": "frontend/src/services/signaturesApi.ts",
+          "line": 215,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/public/sign/:secondToken/decline",
+          "source": "backend-v2/test/integration/signatures.integration-spec.ts",
+          "line": 1478
+        }
+      ],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetOperation": "declineSignature",
+      "targetModule": "PublicSigningModule",
+      "parityStatus": "characterizing",
+      "notes": "Atomic active-recipient decline, bounded reason, token revocation, lifecycle transition, and durable notification intent.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/public/sign/:token/download",
+      "key": "GET /api/public/sign/:*/download",
+      "method": "GET",
+      "path": "/api/public/sign/:token/download",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 400
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Binary upload/download transport.",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetOperation": "downloadSigningPdf",
+      "targetModule": "SignatureFilesModule",
+      "parityStatus": "characterized",
+      "notes": "Active signing capabilities receive the source PDF as a private attachment; completed-artifact delivery remains a separate product/lifecycle decision.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/public/sign/:token/file",
+      "key": "GET /api/public/sign/:*/file",
+      "method": "GET",
+      "path": "/api/public/sign/:token/file",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 396
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/public/sign/:token/file",
+          "source": "backend/src/__tests__/public-signing-proxy.test.js",
+          "line": 138
+        }
+      ],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Binary upload/download transport.",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetOperation": "streamSigningPdf",
+      "targetModule": "SignatureFilesModule",
+      "parityStatus": "characterized",
+      "notes": "Capability-authorized private PDF stream with no arbitrary URL proxying and no view-state mutation.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/public/sign/:token/verify",
+      "key": "POST /api/public/sign/:*/verify",
+      "method": "POST",
+      "path": "/api/public/sign/:token/verify",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 404
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetOperation": "verifySigner",
+      "targetModule": "PublicSigningModule",
+      "parityStatus": "blocked",
+      "notes": "Currently returns 410. Legacy draft configuration now rejects email/SMS verification so unsupported assurance cannot be advertised.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/reputation/public/review/:token",
+      "key": "GET /api/reputation/public/review/:*",
+      "method": "GET",
+      "path": "/api/reputation/public/review/:token",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 276
+        },
+        {
+          "source": "backend/src/routes/reputation/public.routes.js",
+          "line": 102
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/review/:token",
+          "rawPath": "/api/reputation/public/review/${encodeURIComponent(token)}",
+          "source": "frontend/src/services/reputationApi.ts",
+          "line": 353,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/review/:deliveryRequestToken",
+          "source": "backend-v2/test/integration/reputation-reviews.integration-spec.ts",
+          "line": 511
+        },
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/review/not-a-token",
+          "source": "backend-v2/test/integration/reputation-reviews.integration-spec.ts",
+          "line": 532
+        },
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/review/:token",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 23
+        },
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/review/not-a-token",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 61
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "reputation",
+      "targetOperation": "getPublicReviewRequest",
+      "targetModule": "PublicReputationModule",
+      "parityStatus": "implemented",
+      "notes": "Retain anonymous no-store capability HTTP with an exact 256-bit token, expiry, and minimal token-free projection. NestJS now owns an identical implementation (PublicReputationModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_REPUTATION_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/reputation/public/review/:token",
+      "key": "POST /api/reputation/public/review/:*",
+      "method": "POST",
+      "path": "/api/reputation/public/review/:token",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 277
+        },
+        {
+          "source": "backend/src/routes/reputation/public.routes.js",
+          "line": 156
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/:token",
+          "rawPath": "/api/reputation/public/review/${encodeURIComponent(token)}",
+          "source": "frontend/src/services/reputationApi.ts",
+          "line": 361,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/:nestSubmit",
+          "source": "backend-v2/test/integration/public-reputation.integration-spec.ts",
+          "line": 188
+        },
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/:legacySubmit",
+          "source": "backend-v2/test/integration/public-reputation.integration-spec.ts",
+          "line": 191
+        },
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/:nestSubmit",
+          "source": "backend-v2/test/integration/public-reputation.integration-spec.ts",
+          "line": 202
+        },
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/:legacySubmit",
+          "source": "backend-v2/test/integration/public-reputation.integration-spec.ts",
+          "line": 211
+        },
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/:nestSubmit",
+          "source": "backend-v2/test/integration/public-reputation.integration-spec.ts",
+          "line": 242
+        },
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/:nestSubmit",
+          "source": "backend-v2/test/integration/public-reputation.integration-spec.ts",
+          "line": 245
+        },
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/:deliveryRequestToken",
+          "source": "backend-v2/test/integration/reputation-reviews.integration-spec.ts",
+          "line": 519
+        },
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/:deliveryRequestToken",
+          "source": "backend-v2/test/integration/reputation-reviews.integration-spec.ts",
+          "line": 521
+        },
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/:token",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 24
+        },
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/not-a-token",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 64
+        },
+        {
+          "method": "POST",
+          "path": "/api/reputation/public/review/:TOKEN",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 73
+        }
+      ],
+      "recommendedDisposition": "graphql-mutation",
+      "dispositionReason": "State-changing operation suitable for a GraphQL mutation pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "reputation",
+      "targetOperation": "submitPublicReview",
+      "targetModule": "PublicReputationModule",
+      "parityStatus": "implemented",
+      "notes": "Retain anonymous rate-limited capability HTTP; row locking makes submission one-time and rating, text, platform, and redirect behavior are validated server-side. NestJS now owns an identical implementation (PublicReputationModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_REPUTATION_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/reputation/public/widget/:widgetKey",
+      "key": "GET /api/reputation/public/widget/:*",
+      "method": "GET",
+      "path": "/api/reputation/public/widget/:widgetKey",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 275
+        },
+        {
+          "source": "backend/src/routes/reputation/public.routes.js",
+          "line": 20
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/widget/:widgetKey",
+          "source": "backend-v2/test/integration/reputation-configuration.integration-spec.ts",
+          "line": 274
+        },
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/widget/not-a-capability",
+          "source": "backend-v2/test/integration/reputation-configuration.integration-spec.ts",
+          "line": 281
+        },
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/widget/:widgetKey",
+          "source": "backend-v2/test/integration/reputation-configuration.integration-spec.ts",
+          "line": 307
+        },
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/widget/:widgetKey",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 22
+        },
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/widget/:WIDGET_KEY",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 38
+        },
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/widget/:WIDGET_KEY",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 45
+        },
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/widget/not-a-key",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 57
+        },
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/widget/:WIDGET_KEY",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 85
+        },
+        {
+          "method": "GET",
+          "path": "/api/reputation/public/widget/:WIDGET_KEY",
+          "source": "backend/src/__tests__/public-reputation-proxy.test.js",
+          "line": 90
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "reputation",
+      "targetOperation": "getPublicWidget",
+      "targetModule": "PublicReputationModule",
+      "parityStatus": "implemented",
+      "notes": "Retain credential-free rate-limited HTTP for third-party embedding. Exact 128-bit keys, no-store revocation, active-only configuration, tenant isolation, bounded review selection, and hidden/flagged exclusion are required. NestJS now owns an identical implementation (PublicReputationModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_REPUTATION_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler. The credential-free Access-Control-Allow-Origin: * boundary is still emitted by the legacy origin's CORS delegate ahead of the proxy; the NestJS CORS options must add the widget wildcard before any direct-origin cutover.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/shared/list/:token",
+      "key": "GET /api/shared/list/:*",
+      "method": "GET",
+      "path": "/api/shared/list/:token",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 190
+        },
+        {
+          "source": "backend/src/routes/sharing.routes.js",
+          "line": 53
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/shared/list/:token",
+          "rawPath": "/api/shared/list/${token}",
+          "source": "frontend/src/pages/SharedListPage.tsx",
+          "line": 59,
+          "client": "api",
+          "literalInterpolation": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/list/:token",
+          "rawPath": "/api/shared/list/${token}",
+          "source": "frontend/src/pages/SharedListPage.tsx",
+          "line": 93,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/shared/list/:token",
+          "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+          "line": 25
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/list/not-a-token",
+          "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+          "line": 76
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/list/:token",
+          "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+          "line": 96
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/list/:token",
+          "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+          "line": 112
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/list/:token",
+          "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+          "line": 127
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/list/:token",
+          "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+          "line": 150
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/list/:token",
+          "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+          "line": 165
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/list/:token",
+          "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+          "line": 173
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "sharing",
+      "targetOperation": "sharedList",
+      "targetModule": "PublicSharingModule",
+      "parityStatus": "implemented",
+      "notes": "Rate-limited non-enumerating capability read with recursive sanitization and no-store/noindex headers. NestJS now owns an identical implementation (PublicSharingModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_SHARING_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/shared/note/:token",
+      "key": "GET /api/shared/note/:*",
+      "method": "GET",
+      "path": "/api/shared/note/:token",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 191
+        },
+        {
+          "source": "backend/src/routes/sharing.routes.js",
+          "line": 98
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/shared/note/:token",
+          "rawPath": "/api/shared/note/${token}",
+          "source": "frontend/src/pages/SharedNotePage.tsx",
+          "line": 56,
+          "client": "api",
+          "literalInterpolation": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/note/:token",
+          "rawPath": "/api/shared/note/${token}",
+          "source": "frontend/src/pages/SharedNotePage.tsx",
+          "line": 110,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "sharing",
+      "targetOperation": "sharedNote",
+      "targetModule": "PublicSharingModule",
+      "parityStatus": "implemented",
+      "notes": "Rate-limited non-enumerating capability read; executable markup is sanitized and the response cannot be cached or indexed. NestJS now owns an identical implementation (PublicSharingModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_SHARING_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/shared/vault/:token",
+      "key": "GET /api/shared/vault/:*",
+      "method": "GET",
+      "path": "/api/shared/vault/:token",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 194
+        },
+        {
+          "source": "backend/src/routes/vaults/sharing.routes.js",
+          "line": 18
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/shared/vault/:shareToken",
+          "rawPath": "/api/shared/vault/${shareToken}",
+          "source": "frontend/src/services/api.ts",
+          "line": 593,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/shared/vault/:vault",
+          "source": "backend/src/__tests__/integration/sharing.integration.test.js",
+          "line": 135
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/vault/not-a-token",
+          "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+          "line": 82
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "sharing",
+      "targetOperation": "sharedVault",
+      "targetModule": "PublicSharingModule",
+      "parityStatus": "implemented",
+      "notes": "Intentional rate-limited no-store public-link boundary. It rejects malformed, unknown, revoked, and locked capabilities; returns an allowlisted decrypted projection; and fails the complete response closed on any item decryption error. Hash-at-rest and browser telemetry verification remain security hardening. NestJS now owns an identical implementation (PublicSharingModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_SHARING_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/shared/whiteboard/:token",
+      "key": "GET /api/shared/whiteboard/:*",
+      "method": "GET",
+      "path": "/api/shared/whiteboard/:token",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 192
+        },
+        {
+          "source": "backend/src/routes/sharing.routes.js",
+          "line": 139
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/shared/whiteboard/:token",
+          "rawPath": "/api/shared/whiteboard/${token}",
+          "source": "frontend/src/pages/SharedWhiteboardPage.tsx",
+          "line": 57,
+          "client": "api",
+          "literalInterpolation": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/whiteboard/:token",
+          "rawPath": "/api/shared/whiteboard/${token}",
+          "source": "frontend/src/pages/SharedWhiteboardPage.tsx",
+          "line": 111,
+          "client": "api",
+          "literalInterpolation": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/whiteboard/:token",
+          "rawPath": "/api/shared/whiteboard/${token}",
+          "source": "frontend/src/pages/SharedWhiteboardPage.tsx",
+          "line": 132,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/shared/whiteboard/:whiteboard",
+          "source": "backend/src/__tests__/integration/sharing.integration.test.js",
+          "line": 122
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "sharing",
+      "targetOperation": "sharedWhiteboard",
+      "targetModule": "PublicSharingModule",
+      "parityStatus": "implemented",
+      "notes": "Rate-limited capability read with recursive sanitization; canvas node and external-resource schemas still need an exact allowlist. NestJS now owns an identical implementation (PublicSharingModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_SHARING_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/shared/wireframe/:token",
+      "key": "GET /api/shared/wireframe/:*",
+      "method": "GET",
+      "path": "/api/shared/wireframe/:token",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 193
+        },
+        {
+          "source": "backend/src/routes/sharing.routes.js",
+          "line": 190
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/shared/wireframe/:token",
+          "rawPath": "/api/shared/wireframe/${token}",
+          "source": "frontend/src/pages/SharedWireframePage.tsx",
+          "line": 52,
+          "client": "api",
+          "literalInterpolation": false
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/wireframe/:token",
+          "rawPath": "/api/shared/wireframe/${token}",
+          "source": "frontend/src/pages/SharedWireframePage.tsx",
+          "line": 100,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/shared/wireframe/:sharedWireframeToken",
+          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
+          "line": 1175
+        },
+        {
+          "method": "GET",
+          "path": "/api/shared/wireframe/:sharedWireframeToken",
+          "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
+          "line": 1331
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "sharing",
+      "targetOperation": "sharedWireframe",
+      "targetModule": "PublicSharingModule",
+      "parityStatus": "implemented",
+      "notes": "Intentional public-link protocol boundary. The rate-limited non-enumerating capability read returns an allowlisted recursively sanitized projection with no-store/noindex/no-referrer headers; the shipped read-only viewer handles live updates, deletion, and durable revocation. NestJS now owns an identical implementation (PublicSharingModule) proven by a dual-runtime PostgreSQL parity suite; the legacy origin routes this path through a default-off proxy (PUBLIC_SHARING_NESTJS_ENABLED) that preserves legacy rollback by falling through to the retained handler.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/signatures/documents/:id/download",
+      "key": "GET /api/signatures/documents/:*/download",
+      "method": "GET",
+      "path": "/api/signatures/documents/:id/download",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 378
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/signatures/documents/:id/download",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 91
+        },
+        {
+          "method": "GET",
+          "path": "/api/signatures/documents/7/download",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 102
+        }
+      ],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Binary upload/download transport.",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetOperation": "downloadCompletedSignaturePdf",
+      "targetModule": "SignatureFilesModule",
+      "parityStatus": "implemented",
+      "notes": "NestJS owns the unchanged authenticated URL behind a default-off read proxy. A tenant-owned signed locator is required; delivery accepts only exact private local/S3 storage and returns an attachment with private no-store/nosniff/sandbox headers and a safe filename.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/signatures/documents/:id/file",
+      "key": "GET /api/signatures/documents/:*/file",
+      "method": "GET",
+      "path": "/api/signatures/documents/:id/file",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 374
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/signatures/documents/:id/file",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 23
+        },
+        {
+          "method": "GET",
+          "path": "/api/signatures/documents/7/file",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 32
+        }
+      ],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Binary upload/download transport.",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetOperation": "streamSignatureDraftPdf",
+      "targetModule": "SignatureFilesModule",
+      "parityStatus": "implemented",
+      "notes": "NestJS owns the unchanged authenticated URL behind a default-off read proxy. Tenant lookup precedes an allowlisted local/S3 read; successful responses use private no-store/nosniff/sandbox headers and a safe inline filename without exposing a permanent storage URL.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/signatures/documents/upload",
+      "key": "POST /api/signatures/documents/upload",
+      "method": "POST",
+      "path": "/api/signatures/documents/upload",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 360
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "rawPath": "/api/signatures/documents/upload",
+          "source": "frontend/src/services/signaturesApi.ts",
+          "line": 138,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend-v2/test/integration/signatures.integration-spec.ts",
+          "line": 587
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 16
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 30
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 42
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 52
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 127
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 132
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 135
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 143
+        },
+        {
+          "method": "POST",
+          "path": "/api/signatures/documents/upload",
+          "source": "backend/src/__tests__/signature-file-proxy.test.js",
+          "line": 145
+        }
+      ],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Binary upload/download transport.",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetOperation": "uploadSignatureDraftPdf",
+      "targetModule": "SignatureFilesModule",
+      "parityStatus": "implemented",
+      "notes": "NestJS owns the unchanged authenticated URL behind a default-off upload proxy. Bounded multipart parsing, CSRF, tenant/draft preflight plus row-lock recheck, PDF magic validation, private unguessable storage, SHA-256 metadata, version-1 convergence, replacement cleanup, and failed-commit compensation are covered by PostgreSQL tests. Malware scanning and structural/page validation remain production cutover blockers.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/signatures/templates/:id/file",
+      "key": "GET /api/signatures/templates/:*/file",
+      "method": "GET",
+      "path": "/api/signatures/templates/:id/file",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 382
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Binary upload/download transport.",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetOperation": "streamSignatureTemplatePdf",
+      "targetModule": "SignatureFilesModule",
+      "parityStatus": "implemented",
+      "notes": "NestJS owns the unchanged authenticated URL behind a default-off read proxy. Tenant lookup precedes the exact private local/S3 allowlist; the response uses hardened headers and a safe inline filename.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/signatures/templates/upload",
+      "key": "POST /api/signatures/templates/upload",
+      "method": "POST",
+      "path": "/api/signatures/templates/upload",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 367
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/signatures/templates/upload",
+          "rawPath": "/api/signatures/templates/upload",
+          "source": "frontend/src/services/signaturesApi.ts",
+          "line": 273,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Binary upload/download transport.",
+      "disposition": "retain-http",
+      "owner": "esignatures",
+      "targetOperation": "uploadSignatureTemplatePdf",
+      "targetModule": "SignatureFilesModule",
+      "parityStatus": "implemented",
+      "notes": "NestJS owns the unchanged authenticated URL behind a default-off upload proxy. Bounded multipart parsing, CSRF, tenant preflight plus row-lock recheck, PDF magic validation, private unguessable storage, SHA-256 metadata, replacement cleanup, and failed-commit compensation are covered by PostgreSQL tests. Malware scanning and structural/page validation remain production cutover blockers.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/sms-templates/webhook/inbound",
+      "key": "POST /api/sms-templates/webhook/inbound",
+      "method": "POST",
+      "path": "/api/sms-templates/webhook/inbound",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 219
+        },
+        {
+          "source": "backend/src/routes/sms-webhooks.routes.js",
+          "line": 121
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/inbound",
+          "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
+          "line": 122
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/inbound",
+          "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
+          "line": 123
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/inbound",
+          "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
+          "line": 165
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/inbound",
+          "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
+          "line": 182
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/inbound",
+          "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
+          "line": 225
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/inbound",
+          "source": "backend/src/__tests__/routes/sms-webhooks.routes.test.js",
+          "line": 55
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/inbound",
+          "source": "backend/src/__tests__/sms-webhooks-proxy.test.js",
+          "line": 70
+        }
+      ],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Externally invoked webhook/protocol endpoint.",
+      "disposition": "retain-http",
+      "owner": "messaging",
+      "targetOperation": "processInboundSmsWebhook",
+      "targetModule": "SmsWebhooksModule",
+      "parityStatus": "implemented",
+      "notes": "Retain Twilio-signed form HTTP, fail closed in production, and claim MessageSid durably. The globally unique normalized To number selects one owning organization before From is matched only among that tenant's contacts; unmatched receivers and ambiguous or missing tenant-local senders are quarantined without attribution. NestJS now owns an identical implementation (SmsWebhooksModule) mirroring the Twilio form-signature decision table over the public URL, the durable event-key claim, the provider-to-domain status map, receiving-number routing, tenant-local sender matching, and quarantine reasons, proven by a dual-runtime PostgreSQL parity suite including cross-runtime claim deduplication; the legacy origin routes both paths through a default-off proxy (SMS_WEBHOOKS_NESTJS_ENABLED) that forwards the raw form bytes, the Twilio signature, and the original protocol/host so URL-bound validation still succeeds upstream.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/sms-templates/webhook/status",
+      "key": "POST /api/sms-templates/webhook/status",
+      "method": "POST",
+      "path": "/api/sms-templates/webhook/status",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 218
+        },
+        {
+          "source": "backend/src/routes/sms-webhooks.routes.js",
+          "line": 51
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/status",
+          "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
+          "line": 254
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/status",
+          "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
+          "line": 257
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/status",
+          "source": "backend/src/__tests__/integration/sms-messaging.integration.test.js",
+          "line": 260
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/status",
+          "source": "backend/src/__tests__/routes/sms-webhooks.routes.test.js",
+          "line": 43
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/status",
+          "source": "backend/src/__tests__/sms-webhooks-proxy.test.js",
+          "line": 35
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/status",
+          "source": "backend/src/__tests__/sms-webhooks-proxy.test.js",
+          "line": 50
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/status",
+          "source": "backend/src/__tests__/sms-webhooks-proxy.test.js",
+          "line": 82
+        },
+        {
+          "method": "POST",
+          "path": "/api/sms-templates/webhook/status",
+          "source": "backend/src/__tests__/sms-webhooks-proxy.test.js",
+          "line": 87
+        }
+      ],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Externally invoked webhook/protocol endpoint.",
+      "disposition": "retain-http",
+      "owner": "messaging",
+      "targetOperation": "processSmsStatusWebhook",
+      "targetModule": "SmsWebhooksModule",
+      "parityStatus": "implemented",
+      "notes": "Retain Twilio-signed form HTTP with durable MessageSid/status claims and an explicit provider-to-domain status map. NestJS now owns an identical implementation (SmsWebhooksModule) mirroring the Twilio form-signature decision table over the public URL, the durable event-key claim, the provider-to-domain status map, receiving-number routing, tenant-local sender matching, and quarantine reasons, proven by a dual-runtime PostgreSQL parity suite including cross-runtime claim deduplication; the legacy origin routes both paths through a default-off proxy (SMS_WEBHOOKS_NESTJS_ENABLED) that forwards the raw form bytes, the Twilio signature, and the original protocol/host so URL-bound validation still succeeds upstream.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/social/callback/facebook",
+      "key": "GET /api/social/callback/facebook",
+      "method": "GET",
+      "path": "/api/social/callback/facebook",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 304
+        },
+        {
+          "source": "backend/src/routes/social/oauth.routes.js",
+          "line": 61
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 198
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 199
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 206
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 209
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 217
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 220
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 237
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 268
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 43
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/callback/facebook",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 58
+        }
+      ],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Browser/provider callback endpoint.",
+      "disposition": "retain-http",
+      "owner": "social-integrations",
+      "targetOperation": "callback",
+      "targetModule": "SocialOAuthModule",
+      "parityStatus": "implemented",
+      "notes": "Retain the provider callback and browser redirect over HTTP. Single-use state selects the organization and actor before token exchange and channel persistence; GraphQL never receives provider authorization codes or access tokens. NestJS now owns an identical implementation (SocialOAuthModule) with the single-use expiring database state, injectable Graph client, and verbatim social-channel upserts, proven by a dual-runtime PostgreSQL parity suite including a legacy-stored state completing through the NestJS callback; the legacy origin routes both paths through a default-off proxy (SOCIAL_OAUTH_NESTJS_ENABLED).",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/social/connect/facebook",
+      "key": "GET /api/social/connect/facebook",
+      "method": "GET",
+      "path": "/api/social/connect/facebook",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 303
+        },
+        {
+          "source": "backend/src/routes/social/oauth.routes.js",
+          "line": 17
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/social/connect/facebook",
+          "rawPath": "/api/social/connect/facebook",
+          "source": "frontend/src/services/socialApi.ts",
+          "line": 121,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/social/connect/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 165
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/connect/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 169
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/connect/facebook",
+          "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
+          "line": 231
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/connect/facebook",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 29
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/connect/facebook",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 30
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/connect/facebook",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 42
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/connect/facebook",
+          "source": "backend/src/__tests__/provider-oauth-proxies.test.js",
+          "line": 46
+        }
+      ],
+      "recommendedDisposition": "graphql-query",
+      "dispositionReason": "Read operation suitable for a GraphQL query pending semantic review.",
+      "disposition": "retain-http",
+      "owner": "social-integrations",
+      "targetOperation": "connect",
+      "targetModule": "SocialOAuthModule",
+      "parityStatus": "implemented",
+      "notes": "Retain browser OAuth initiation over HTTP. The authenticated organization context is bound to a short-lived server-side state record before redirecting to Meta; the frontend uses this endpoint only for top-level navigation. NestJS now owns an identical implementation (SocialOAuthModule) with the single-use expiring database state, injectable Graph client, and verbatim social-channel upserts, proven by a dual-runtime PostgreSQL parity suite including a legacy-stored state completing through the NestJS callback; the legacy origin routes both paths through a default-off proxy (SOCIAL_OAUTH_NESTJS_ENABLED).",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/social/webhook",
+      "key": "GET /api/social/webhook",
+      "method": "GET",
+      "path": "/api/social/webhook",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 288
+        },
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 296
+        },
+        {
+          "source": "backend/src/routes/social/webhook.routes.js",
+          "line": 43
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/social/webhook",
+          "source": "backend-v2/test/integration/social-webhooks.integration-spec.ts",
+          "line": 131
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/webhook",
+          "source": "backend-v2/test/integration/social-webhooks.integration-spec.ts",
+          "line": 132
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/webhook",
+          "source": "backend-v2/test/integration/social-webhooks.integration-spec.ts",
+          "line": 143
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/webhook",
+          "source": "backend-v2/test/integration/social-webhooks.integration-spec.ts",
+          "line": 146
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/webhook",
+          "source": "backend/src/__tests__/integration/social-webhook.integration.test.js",
+          "line": 123
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/webhook",
+          "source": "backend/src/__tests__/integration/social-webhook.integration.test.js",
+          "line": 132
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/webhook",
+          "source": "backend/src/__tests__/social-webhooks-proxy.test.js",
+          "line": 20
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/webhook",
+          "source": "backend/src/__tests__/social-webhooks-proxy.test.js",
+          "line": 40
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/webhook",
+          "source": "backend/src/__tests__/social-webhooks-proxy.test.js",
+          "line": 47
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/webhook",
+          "source": "backend/src/__tests__/social-webhooks-proxy.test.js",
+          "line": 75
+        },
+        {
+          "method": "GET",
+          "path": "/api/social/webhook",
+          "source": "backend/src/__tests__/social-webhooks-proxy.test.js",
+          "line": 80
+        }
+      ],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Externally invoked webhook/protocol endpoint.",
+      "disposition": "retain-http",
+      "owner": "social-integrations",
+      "targetOperation": "verifyMetaWebhook",
+      "targetModule": "SocialWebhooksModule",
+      "parityStatus": "implemented",
+      "notes": "Retain the Meta challenge protocol, compare the verify token in constant time, use dedicated configuration, and fail closed when it is absent. NestJS now owns the receiver (SocialWebhooksModule) with identical challenge verification, raw-byte HMAC checking, normalization, and the durable batch claim, proven by a dual-runtime PostgreSQL parity suite with genuinely signed payloads and cross-runtime deduplication. The NestJS receiver deliberately performs no inline processing: the retained design already treats inline work as best-effort, and the legacy scheduler worker — which owns the Socket.IO host — processes every claim and emits the agent-room event, so outcomes are identical with inline latency deferred to worker cadence until the scheduler moves. The legacy origin routes both methods through a default-off proxy (SOCIAL_WEBHOOKS_NESTJS_ENABLED).",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "POST /api/social/webhook",
+      "key": "POST /api/social/webhook",
+      "method": "POST",
+      "path": "/api/social/webhook",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 289
+        },
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 297
+        },
+        {
+          "source": "backend/src/routes/social/webhook.routes.js",
+          "line": 66
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/social/webhook",
+          "source": "backend-v2/test/integration/social-webhooks.integration-spec.ts",
+          "line": 54
+        },
+        {
+          "method": "POST",
+          "path": "/api/social/webhook",
+          "source": "backend-v2/test/integration/social-webhooks.integration-spec.ts",
+          "line": 257
+        },
+        {
+          "method": "POST",
+          "path": "/api/social/webhook",
+          "source": "backend-v2/test/integration/social-webhooks.integration-spec.ts",
+          "line": 262
+        },
+        {
+          "method": "POST",
+          "path": "/api/social/webhook",
+          "source": "backend/src/__tests__/integration/social-webhook.integration.test.js",
+          "line": 38
+        },
+        {
+          "method": "POST",
+          "path": "/api/social/webhook",
+          "source": "backend/src/__tests__/social-webhooks-proxy.test.js",
+          "line": 22
+        },
+        {
+          "method": "POST",
+          "path": "/api/social/webhook",
+          "source": "backend/src/__tests__/social-webhooks-proxy.test.js",
+          "line": 60
+        }
+      ],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Externally invoked webhook/protocol endpoint.",
+      "disposition": "retain-http",
+      "owner": "social-integrations",
+      "targetOperation": "processMetaMessagingWebhook",
+      "targetModule": "SocialWebhooksModule",
+      "parityStatus": "implemented",
+      "notes": "Retain exact-body X-Hub-Signature-256 verification and fail closed without the app secret. One normalized durable batch claim precedes bounded inline processing; leased workers drain overflow and reconcile unmatched or ambiguous page/account mappings only when exactly one active organization remains. Durable message IDs prevent replay, Facebook and Instagram identities route separately, and socket delivery occurs only after commit. NestJS now owns the receiver (SocialWebhooksModule) with identical challenge verification, raw-byte HMAC checking, normalization, and the durable batch claim, proven by a dual-runtime PostgreSQL parity suite with genuinely signed payloads and cross-runtime deduplication. The NestJS receiver deliberately performs no inline processing: the retained design already treats inline work as best-effort, and the legacy scheduler worker — which owns the Socket.IO host — processes every claim and emits the agent-room event, so outcomes are identical with inline latency deferred to worker cadence until the scheduler moves. The legacy origin routes both methods through a default-off proxy (SOCIAL_WEBHOOKS_NESTJS_ENABLED).",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /api/status",
+      "key": "GET /api/status",
+      "method": "GET",
+      "path": "/api/status",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 109
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/api/status",
+          "rawPath": "/api/status",
+          "source": "frontend/src/pages/StatusPage.tsx",
+          "line": 91,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Infrastructure health/status endpoint.",
+      "disposition": "retain-http",
+      "owner": "platform-operations",
+      "targetOperation": "status",
+      "targetModule": "FoundationModule",
+      "parityStatus": "implemented",
+      "notes": "Retain as the verbose operational status endpoint alongside the readiness probe. The NestJS implementation should keep the response cheap and unauthenticated, and must not leak configuration beyond the current environment, uptime, version, and coarse health booleans. NestJS now serves its own structural equivalent (OperationalStatusController) at the same path, including this runtime's route inventory for the status page. Deliberately NOT proxied for the same process-probe reason as /api/health.",
+      "literalInterpolationRisk": false,
+      "risk": "low"
+    },
+    {
+      "id": "POST /api/webhooks/:workflowId",
+      "key": "POST /api/webhooks/:*",
+      "method": "POST",
+      "path": "/api/webhooks/:workflowId",
+      "routeSources": [
+        {
+          "source": "backend/src/bootstrap/register-api-routes.js",
+          "line": 438
+        },
+        {
+          "source": "backend/src/routes/webhooks.routes.js",
+          "line": 54
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [
+        {
+          "method": "POST",
+          "path": "/api/webhooks/:workflowId",
+          "source": "backend-v2/test/integration/workflow-webhooks.integration-spec.ts",
+          "line": 63
+        },
+        {
+          "method": "POST",
+          "path": "/api/webhooks/1",
+          "source": "backend/src/__tests__/routes/webhooks.test.js",
+          "line": 46
+        },
+        {
+          "method": "POST",
+          "path": "/api/webhooks/1",
+          "source": "backend/src/__tests__/routes/webhooks.test.js",
+          "line": 57
+        },
+        {
+          "method": "POST",
+          "path": "/api/webhooks/1",
+          "source": "backend/src/__tests__/routes/webhooks.test.js",
+          "line": 70
+        },
+        {
+          "method": "POST",
+          "path": "/api/webhooks/1",
+          "source": "backend/src/__tests__/routes/webhooks.test.js",
+          "line": 83
+        },
+        {
+          "method": "POST",
+          "path": "/api/webhooks/1",
+          "source": "backend/src/__tests__/routes/webhooks.test.js",
+          "line": 104
+        },
+        {
+          "method": "POST",
+          "path": "/api/webhooks/1",
+          "source": "backend/src/__tests__/routes/webhooks.test.js",
+          "line": 134
+        },
+        {
+          "method": "POST",
+          "path": "/api/webhooks/:workflowId",
+          "source": "backend/src/__tests__/workflow-webhooks-proxy.test.js",
+          "line": 18
+        },
+        {
+          "method": "POST",
+          "path": "/api/webhooks/12",
+          "source": "backend/src/__tests__/workflow-webhooks-proxy.test.js",
+          "line": 36
+        },
+        {
+          "method": "POST",
+          "path": "/api/webhooks/12",
+          "source": "backend/src/__tests__/workflow-webhooks-proxy.test.js",
+          "line": 45
+        },
+        {
+          "method": "POST",
+          "path": "/api/webhooks/12",
+          "source": "backend/src/__tests__/workflow-webhooks-proxy.test.js",
+          "line": 65
+        },
+        {
+          "method": "POST",
+          "path": "/api/webhooks/12",
+          "source": "backend/src/__tests__/workflow-webhooks-proxy.test.js",
+          "line": 75
+        },
+        {
+          "method": "POST",
+          "path": "/api/webhooks/12",
+          "source": "backend/src/__tests__/workflow-webhooks-proxy.test.js",
+          "line": 81
+        }
+      ],
+      "recommendedDisposition": "retain-http",
+      "dispositionReason": "Externally invoked webhook/protocol endpoint.",
+      "disposition": "retain-http",
+      "owner": "automation",
+      "targetOperation": "processWorkflowWebhook",
+      "targetModule": "WorkflowWebhooksModule",
+      "parityStatus": "implemented",
+      "notes": "Retain raw-body HMAC HTTP delivery with timestamp tolerance, canonical trigger matching, and durable replay claims. The adapter returns execution=durably_queued and feeds the same leased trigger matcher as first-party producers. NestJS now owns an identical implementation (WorkflowWebhooksModule) mirroring the raw-body HMAC verification with timestamp tolerance, canonical trigger normalization, and the durable delivery-key/event-key replay claim, proven by a dual-runtime PostgreSQL parity suite with genuinely signed payloads and cross-runtime replay deduplication; the legacy origin routes the path through a default-off proxy (WORKFLOW_WEBHOOKS_NESTJS_ENABLED) forwarding the exact raw bytes and signature headers. The port also repaired the retained validation middleware, whose 400 details had broken under the zod v4 upgrade (ZodError.errors removed) and returned an HTML error page instead of the documented JSON.",
+      "literalInterpolationRisk": false,
+      "risk": "high"
+    },
+    {
+      "id": "GET /docs/content",
+      "key": "GET /docs/content",
+      "method": "GET",
+      "path": "/docs/content",
+      "routeSources": [
+        {
+          "source": "backend/src/routes/docs.js",
+          "line": 48
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/docs/content",
+          "rawPath": "/docs/content?path=${encodeURIComponent(path)}",
+          "source": "frontend/src/services/docsService.ts",
+          "line": 82,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [],
+      "recommendedDisposition": "non-api",
+      "dispositionReason": "Application fallback or documentation route, outside the API migration.",
+      "disposition": "non-api",
+      "owner": null,
+      "targetOperation": null,
+      "targetModule": null,
+      "parityStatus": "not-started",
+      "notes": null,
+      "literalInterpolationRisk": false,
+      "risk": "low"
+    },
+    {
+      "id": "GET /docs/search",
+      "key": "GET /docs/search",
+      "method": "GET",
+      "path": "/docs/search",
+      "routeSources": [
+        {
+          "source": "backend/src/routes/docs.js",
+          "line": 138
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/docs/search",
+          "rawPath": "/docs/search?q=${encodeURIComponent(query)}",
+          "source": "frontend/src/services/docsService.ts",
+          "line": 105,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [],
+      "recommendedDisposition": "non-api",
+      "dispositionReason": "Application fallback or documentation route, outside the API migration.",
+      "disposition": "non-api",
+      "owner": null,
+      "targetOperation": null,
+      "targetModule": null,
+      "parityStatus": "not-started",
+      "notes": null,
+      "literalInterpolationRisk": false,
+      "risk": "low"
+    },
+    {
+      "id": "GET /docs/structure",
+      "key": "GET /docs/structure",
+      "method": "GET",
+      "path": "/docs/structure",
+      "routeSources": [
+        {
+          "source": "backend/src/routes/docs.js",
+          "line": 121
+        }
+      ],
+      "consumerCallsites": [
+        {
+          "method": "GET",
+          "path": "/docs/structure",
+          "rawPath": "/docs/structure",
+          "source": "frontend/src/services/docsService.ts",
+          "line": 95,
+          "client": "api",
+          "literalInterpolation": false
+        }
+      ],
+      "testCallsites": [],
+      "recommendedDisposition": "non-api",
+      "dispositionReason": "Application fallback or documentation route, outside the API migration.",
+      "disposition": "non-api",
+      "owner": null,
+      "targetOperation": null,
+      "targetModule": null,
+      "parityStatus": "not-started",
+      "notes": null,
+      "literalInterpolationRisk": false,
+      "risk": "low"
+    },
+    {
+      "id": "ALL /graphql",
+      "key": "ALL /graphql",
+      "method": "ALL",
+      "path": "/graphql",
+      "routeSources": [
+        {
+          "source": "backend/src/index.js",
+          "line": 242
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [],
+      "recommendedDisposition": "non-api",
+      "dispositionReason": "Application fallback or documentation route, outside the API migration.",
+      "disposition": "non-api",
+      "owner": null,
+      "targetOperation": null,
+      "targetModule": null,
+      "parityStatus": "not-started",
+      "notes": null,
+      "literalInterpolationRisk": false,
+      "risk": "low"
+    },
+    {
+      "id": "POST /graphql",
+      "key": "POST /graphql",
+      "method": "POST",
+      "path": "/graphql",
+      "routeSources": [
+        {
+          "source": "backend/src/index.js",
+          "line": 241
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [],
+      "recommendedDisposition": "non-api",
+      "dispositionReason": "Application fallback or documentation route, outside the API migration.",
+      "disposition": "non-api",
+      "owner": null,
+      "targetOperation": null,
+      "targetModule": null,
+      "parityStatus": "not-started",
+      "notes": null,
+      "literalInterpolationRisk": false,
+      "risk": "low"
+    },
+    {
+      "id": "GET /health",
+      "key": "GET /health",
+      "method": "GET",
+      "path": "/health",
+      "routeSources": [
+        {
+          "source": "backend/src/index.js",
+          "line": 351
+        }
+      ],
+      "consumerCallsites": [],
+      "testCallsites": [],
+      "recommendedDisposition": "non-api",
+      "dispositionReason": "Application fallback or documentation route, outside the API migration.",
+      "disposition": "non-api",
+      "owner": null,
+      "targetOperation": null,
+      "targetModule": null,
+      "parityStatus": "not-started",
+      "notes": null,
+      "literalInterpolationRisk": false,
+      "risk": "low"
+    }
+  ],
+  "unmatchedFrontendCalls": [],
+  "unresolvedFrontendExpressions": [],
+  "acknowledgedRuntimeFrontendExpressions": [
+    {
+      "method": "GET",
+      "expression": "url",
+      "source": "frontend/src/lib/debounce.ts",
+      "line": 51,
+      "classification": "generic-client-wrapper",
+      "notes": "The caller supplies the application endpoint; this helper does not define a REST operation."
+    },
+    {
+      "method": "POST",
+      "expression": "url",
+      "source": "frontend/src/lib/debounce.ts",
+      "line": 75,
+      "classification": "generic-client-wrapper",
+      "notes": "The caller supplies the application endpoint; this helper does not define a REST operation."
+    }
+  ],
+  "unmatchedBackendTestCalls": [
+    {
+      "method": "GET",
+      "path": "/api/analytics/dashboard",
+      "source": "backend-v2/test/integration/analytics.integration-spec.ts",
+      "line": 284
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/contacts/trends",
+      "source": "backend-v2/test/integration/analytics.integration-spec.ts",
+      "line": 285
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/deals/performance",
+      "source": "backend-v2/test/integration/analytics.integration-spec.ts",
+      "line": 286
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/bookings/summary",
+      "source": "backend-v2/test/integration/analytics.integration-spec.ts",
+      "line": 287
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/communication-stats",
+      "source": "backend-v2/test/integration/analytics.integration-spec.ts",
+      "line": 288
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/workflow-performance",
+      "source": "backend-v2/test/integration/analytics.integration-spec.ts",
+      "line": 289
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/conversion-rates",
+      "source": "backend-v2/test/integration/analytics.integration-spec.ts",
+      "line": 290
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/revenue-trends",
+      "source": "backend-v2/test/integration/analytics.integration-spec.ts",
+      "line": 291
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/pipeline-velocity",
+      "source": "backend-v2/test/integration/analytics.integration-spec.ts",
+      "line": 292
+    },
+    {
+      "method": "GET",
+      "path": "/api/tags",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 378
+    },
+    {
+      "method": "GET",
+      "path": "/api/tags/suggestions",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 379
+    },
+    {
+      "method": "POST",
+      "path": "/api/tags",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 380
+    },
+    {
+      "method": "PUT",
+      "path": "/api/tags/1",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 381
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/tags/1",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 382
+    },
+    {
+      "method": "GET",
+      "path": "/api/pipelines",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 452
+    },
+    {
+      "method": "POST",
+      "path": "/api/pipelines",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 453
+    },
+    {
+      "method": "GET",
+      "path": "/api/pipelines/1",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 454
+    },
+    {
+      "method": "PUT",
+      "path": "/api/pipelines/1",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 455
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/pipelines/1",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 456
+    },
+    {
+      "method": "GET",
+      "path": "/api/pipelines/deals/all",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 457
+    },
+    {
+      "method": "POST",
+      "path": "/api/pipelines/deals",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 458
+    },
+    {
+      "method": "GET",
+      "path": "/api/pipelines/deals/1",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 459
+    },
+    {
+      "method": "PUT",
+      "path": "/api/pipelines/deals/1",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 460
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/pipelines/deals/1",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 461
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/pipelines/deals/1/stage",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 462
+    },
+    {
+      "method": "POST",
+      "path": "/api/pipelines/deals/1/won",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 465
+    },
+    {
+      "method": "POST",
+      "path": "/api/pipelines/deals/1/lost",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 466
+    },
+    {
+      "method": "POST",
+      "path": "/api/pipelines/deals/1/reopen",
+      "source": "backend-v2/test/integration/crm-vocabulary.integration-spec.ts",
+      "line": 467
+    },
+    {
+      "method": "GET",
+      "path": "/api/shared/:kind/:shareToken",
+      "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
+      "line": 1018
+    },
+    {
+      "method": "GET",
+      "path": "/api/shared/:kind/:shareToken",
+      "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
+      "line": 1040
+    },
+    {
+      "method": "PUT",
+      "path": "/api/wireframes/:mutationWireframeId",
+      "source": "backend-v2/test/integration/workspace-content.integration-spec.ts",
+      "line": 1405
+    },
+    {
+      "method": "POST",
+      "path": "/api/chat-widget/sessions/:id/messages",
+      "source": "backend/src/__tests__/integration/realtime.integration.test.js",
+      "line": 267
+    },
+    {
+      "method": "GET",
+      "path": "/api/shared/:kind/:kind",
+      "source": "backend/src/__tests__/integration/sharing.integration.test.js",
+      "line": 110
+    },
+    {
+      "method": "GET",
+      "path": "/api/shared/:kind/not-a-token",
+      "source": "backend/src/__tests__/integration/sharing.integration.test.js",
+      "line": 144
+    },
+    {
+      "method": "POST",
+      "path": "/api/public/estimates/:token/:action",
+      "source": "backend/src/__tests__/public-estimate-proxy.test.js",
+      "line": 63
+    },
+    {
+      "method": "GET",
+      "path": "/api/shared/:kind/:token",
+      "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+      "line": 12
+    },
+    {
+      "method": "GET",
+      "path": "/api/shared/:kind/:token",
+      "source": "backend/src/__tests__/public-sharing-proxy.test.js",
+      "line": 55
+    },
+    {
+      "method": "POST",
+      "path": "/api/invoices/email/preview",
+      "source": "backend/src/__tests__/routes/invoice-email-preview-retirement.routes.test.js",
+      "line": 18
+    },
+    {
+      "method": "POST",
+      "path": "/api/sms-templates/webhook/:action",
+      "source": "backend/src/__tests__/sms-webhooks-proxy.test.js",
+      "line": 19
+    }
+  ],
+  "orphanedOverrides": [],
+  "orphanedRuntimeExpressionOverrides": []
+}
