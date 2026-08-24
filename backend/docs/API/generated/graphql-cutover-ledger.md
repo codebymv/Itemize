@@ -7,8 +7,8 @@
 - Registered method/path operations: 66
 - API operations under `/api`: 59
 - Non-API registered operations: 7
-- Static frontend callsites: 45
-- Operations with frontend consumers: 40
+- Static frontend callsites: 44
+- Operations with frontend consumers: 39
 - Operations referenced by backend tests: 51
 - Recommended GraphQL queries: 0
 - Recommended GraphQL mutations: 1
@@ -53,7 +53,7 @@
 | GET | `/api/health` | 0 | 0 | retain-http | low | platform-operations / FoundationModule / health |
 | GET | `/api/invoice-integrations/stripe/callback` | 0 | 10 | retain-http | medium | billing-integrations / StripeConnectModule / callback |
 | GET | `/api/invoice-integrations/stripe/connect` | 1 | 9 | retain-http | medium | billing-integrations / StripeConnectModule / connect |
-| POST | `/api/invoice-integrations/stripe/disconnect` | 1 | 4 | graphql-mutation | medium | billing-integrations / StripeConnectModule / disconnect |
+| POST | `/api/invoice-integrations/stripe/disconnect` | 0 | 4 | graphql-mutation | medium | billing-integrations / StripeConnectModule / disconnect |
 | GET | `/api/invoices/:id/pdf` | 1 | 12 | retain-http | high | billing / InvoicesModule / invoicePdf |
 | POST | `/api/invoices/businesses/:id/logo` | 1 | 9 | retain-http | high | billing / InvoiceBusinessesModule / uploadInvoiceBusinessLogo |
 | POST | `/api/invoices/settings/logo` | 1 | 0 | retain-http | high | billing / InvoiceSettingsModule / uploadInvoiceSettingsLogo |

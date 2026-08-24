@@ -26,7 +26,7 @@ The GraphQL type deliberately has no access-token, refresh-token, or token-expir
 
 The prior embed response referenced `/widget/reviews.js`, but no such asset existed. The cutover adds the missing dependency-free browser runtime. Generated code separates the public asset origin from the API origin, renders all review content through `textContent`, sends no credentials, and fails closed to a small unavailable state.
 
-The retained public endpoint accepts only exact 32-hex keys, returns only active widget configuration, clamps persisted limits, excludes hidden and flagged reviews, qualifies review selection by the capability owner's organization, and is the only API path allowed credential-free `Access-Control-Allow-Origin: *`. The rest of the application retains its authenticated CORS allowlist.
+The retained public endpoint accepts only exact 32-hex keys, returns only active widget configuration, clamps persisted limits, excludes hidden and flagged reviews, qualifies review selection by the capability owner's organization, and is the only API path allowed credential-free `Access-Control-Allow-Origin: *`. The rest of the application retains its authenticated CORS allowlist. The NestJS runtime now carries the same request-aware CORS delegate (`corsOptionsDelegate` in `backend-v2/src/common/cors.ts`, applied in `configureApp`), proven byte-equivalent to the legacy delegate by a cross-runtime unit suite — so the wildcard boundary survives the direct-origin cutover.
 
 ## Permanent-cutover evidence and rollback
 

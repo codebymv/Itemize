@@ -345,6 +345,77 @@ describe('Provider OAuth retained HTTP parity (NestJS vs legacy origin)', () => 
     });
   });
 
+  it('disconnects through the GraphQL mutation with the retained REST semantics', async () => {
+    await pool.query(
+      `INSERT INTO payment_settings (
+         organization_id, stripe_account_id, stripe_publishable_key,
+         stripe_connected, stripe_connected_at
+       ) VALUES ($1, 'acct_mutation123', 'pk_test_mutation', TRUE, NOW())
+       ON CONFLICT (organization_id) DO UPDATE SET
+         stripe_account_id = EXCLUDED.stripe_account_id,
+         stripe_publishable_key = EXCLUDED.stripe_publishable_key,
+         stripe_connected = TRUE,
+         stripe_connected_at = NOW()`,
+      [owner.org.id],
+    );
+    const deauthorizedBefore = fakeStripe.deauthorized.length;
+
+    const csrf = 'stripe-disconnect-csrf';
+    const mutate = () =>
+      request(app.getHttpServer())
+        .post('/graphql')
+        .set('Cookie', `${authCookie()}; csrf-token=${csrf}`)
+        .set('x-csrf-token', csrf)
+        .set('x-organization-id', String(owner.org.id))
+        .send({ query: 'mutation DisconnectStripe { disconnectStripe }' });
+
+    const first = await mutate();
+    expect(first.status).toBe(200);
+    expect(first.body.errors).toBeUndefined();
+    expect(first.body.data).toEqual({ disconnectStripe: true });
+    expect(fakeStripe.deauthorized.slice(deauthorizedBefore)).toEqual([
+      'acct_mutation123',
+    ]);
+
+    const cleared = await pool.query(
+      `SELECT stripe_account_id, stripe_publishable_key, stripe_connected, stripe_connected_at
+       FROM payment_settings WHERE organization_id = $1`,
+      [owner.org.id],
+    );
+    expect(cleared.rows[0]).toMatchObject({
+      stripe_account_id: null,
+      stripe_publishable_key: null,
+      stripe_connected: false,
+      stripe_connected_at: null,
+    });
+
+    // Idempotent already-disconnected outcome, exactly like the REST route.
+    const replay = await mutate();
+    expect(replay.body.errors).toBeUndefined();
+    expect(replay.body.data).toEqual({ disconnectStripe: true });
+    expect(fakeStripe.deauthorized.slice(deauthorizedBefore)).toEqual([
+      'acct_mutation123',
+      null,
+    ]);
+  });
+
+  it('refuses the disconnect mutation without a session or CSRF evidence', async () => {
+    const anonymous = await request(app.getHttpServer())
+      .post('/graphql')
+      .set('x-organization-id', String(owner.org.id))
+      .send({ query: 'mutation DisconnectStripe { disconnectStripe }' });
+    expect(anonymous.body.data ?? null).toBeNull();
+    expect(anonymous.body.errors?.length).toBeGreaterThan(0);
+
+    const withoutCsrf = await request(app.getHttpServer())
+      .post('/graphql')
+      .set('Cookie', authCookie())
+      .set('x-organization-id', String(owner.org.id))
+      .send({ query: 'mutation DisconnectStripe { disconnectStripe }' });
+    expect(withoutCsrf.body.data ?? null).toBeNull();
+    expect(withoutCsrf.body.errors?.length).toBeGreaterThan(0);
+  });
+
   it('rejects Stripe callback failures identically before any exchange', async () => {
     const noCode = await Promise.all([
       request(app.getHttpServer()).get('/api/invoice-integrations/stripe/callback'),

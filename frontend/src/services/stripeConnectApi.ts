@@ -1,4 +1,5 @@
 import api from '@/lib/api';
+import { disconnectStripeViaGraphql } from './stripeConnectGraphql';
 
 const orgHeaders = (organizationId?: number) => (
   organizationId ? { 'x-organization-id': organizationId.toString() } : {}
@@ -18,8 +19,5 @@ export const initiateStripeConnect = async (
 export const disconnectStripeConnect = async (
   organizationId?: number,
 ): Promise<{ success: boolean }> => {
-  const response = await api.post('/api/invoice-integrations/stripe/disconnect', {}, {
-    headers: orgHeaders(organizationId),
-  });
-  return response.data;
+  return disconnectStripeViaGraphql(organizationId);
 };

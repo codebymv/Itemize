@@ -1,7 +1,7 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import { Request, Response } from 'express';
-import { graphqlCorsOptions } from './common/cors';
+import { corsOptionsDelegate } from './common/cors';
 
 export const configureApp = (app: NestExpressApplication): void => {
   app.set('trust proxy', 1);
@@ -12,7 +12,7 @@ export const configureApp = (app: NestExpressApplication): void => {
     },
   });
   app.useBodyParser('urlencoded', { extended: true, limit: '1mb' });
-  app.enableCors(graphqlCorsOptions());
+  app.enableCors(corsOptionsDelegate());
   app.use(cookieParser());
   app.enableShutdownHooks();
 };

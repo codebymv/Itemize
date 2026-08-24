@@ -9,8 +9,8 @@
     "operationCount": 66,
     "apiOperationCount": 59,
     "nonApiOperationCount": 7,
-    "frontendCallsiteCount": 45,
-    "operationsWithFrontendConsumers": 40,
+    "frontendCallsiteCount": 44,
+    "operationsWithFrontendConsumers": 39,
     "operationsWithBackendTests": 51,
     "unmatchedFrontendCallCount": 0,
     "unresolvedFrontendExpressionCount": 0,
@@ -1781,37 +1781,37 @@
           "method": "GET",
           "path": "/api/invoice-integrations/stripe/callback",
           "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
-          "line": 350
+          "line": 421
         },
         {
           "method": "GET",
           "path": "/api/invoice-integrations/stripe/callback",
           "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
-          "line": 351
+          "line": 422
         },
         {
           "method": "GET",
           "path": "/api/invoice-integrations/stripe/callback",
           "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
-          "line": 358
+          "line": 429
         },
         {
           "method": "GET",
           "path": "/api/invoice-integrations/stripe/callback",
           "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
-          "line": 361
+          "line": 432
         },
         {
           "method": "GET",
           "path": "/api/invoice-integrations/stripe/callback",
           "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
-          "line": 377
+          "line": 448
         },
         {
           "method": "GET",
           "path": "/api/invoice-integrations/stripe/callback",
           "source": "backend-v2/test/integration/provider-oauth.integration-spec.ts",
-          "line": 380
+          "line": 451
         },
         {
           "method": "GET",
@@ -1864,7 +1864,7 @@
           "path": "/api/invoice-integrations/stripe/connect",
           "rawPath": "/api/invoice-integrations/stripe/connect",
           "source": "frontend/src/services/stripeConnectApi.ts",
-          "line": 11,
+          "line": 12,
           "client": "api",
           "literalInterpolation": false
         }
@@ -1951,17 +1951,7 @@
           "line": 93
         }
       ],
-      "consumerCallsites": [
-        {
-          "method": "POST",
-          "path": "/api/invoice-integrations/stripe/disconnect",
-          "rawPath": "/api/invoice-integrations/stripe/disconnect",
-          "source": "frontend/src/services/stripeConnectApi.ts",
-          "line": 21,
-          "client": "api",
-          "literalInterpolation": false
-        }
-      ],
+      "consumerCallsites": [],
       "testCallsites": [
         {
           "method": "POST",
@@ -1995,7 +1985,7 @@
       "targetOperation": "disconnect",
       "targetModule": "StripeConnectModule",
       "parityStatus": "implemented",
-      "notes": "Migrate to a GraphQL mutation following the calendar provider-connection management precedent: authenticated, organization-scoped removal of the Stripe connection with an idempotent already-disconnected outcome. The retained REST route stays as rollback until the frontend consumer passes the per-slice exit gate. NestJS now owns an identical retained REST implementation (StripeConnectModule.disconnect) behind the same default-off proxy, proven by the dual-runtime parity suite; the planned GraphQL mutation and its frontend adapter remain the final consumer cutover step for this row.",
+      "notes": "Migrated to the disconnectStripe GraphQL mutation following the calendar provider-connection management precedent: authenticated, CSRF-protected, organization-scoped removal of the Stripe connection with an idempotent already-disconnected outcome, deliberately without a plan gate so a lapsed organization can still disconnect. The frontend adapter now routes disconnectStripeConnect through the mutation (validated by the static consumer-contract suite), and both the mutation and the retained REST route share one StripeConnectService implementation. The REST route stays as rollback behind the default-off proxy until the per-slice exit gate passes in production.",
       "literalInterpolationRisk": false,
       "risk": "medium"
     },

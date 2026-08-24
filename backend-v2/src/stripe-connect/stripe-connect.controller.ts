@@ -23,6 +23,7 @@ import {
   STRIPE_CONNECT_CLIENT,
   StripeConnectClient,
 } from './stripe-connect.provider';
+import { StripeConnectService } from './stripe-connect.service';
 
 const frontendOrigin = (): string =>
   process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -47,6 +48,7 @@ export class StripeConnectController {
     private readonly stripeConnect: StripeConnectClient,
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly requestContext: RequestContextService,
+    private readonly stripeConnectService: StripeConnectService,
   ) {}
 
   @Get('connect')
@@ -149,26 +151,8 @@ export class StripeConnectController {
   async disconnect(@Res() response: Response): Promise<void> {
     try {
       const context = this.requestContext.current();
-      const organizationId = context.organization!.organizationId;
-      const current = await this.pool.query<{
-        stripe_account_id: string | null;
-      }>(
-        `SELECT stripe_account_id FROM payment_settings
-         WHERE organization_id = $1`,
-        [organizationId],
-      );
-      await this.pool.query(
-        `UPDATE payment_settings
-         SET stripe_account_id = NULL,
-             stripe_publishable_key = NULL,
-             stripe_connected = FALSE,
-             stripe_connected_at = NULL,
-             updated_at = NOW()
-         WHERE organization_id = $1`,
-        [organizationId],
-      );
-      await this.stripeConnect.deauthorizeAccount(
-        current.rows[0]?.stripe_account_id || null,
+      await this.stripeConnectService.disconnect(
+        context.organization!.organizationId,
       );
       response.status(200).json({ success: true });
     } catch (error) {

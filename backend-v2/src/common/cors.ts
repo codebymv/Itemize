@@ -44,6 +44,40 @@ export const isCorsOriginAllowed = (
   environment: CorsEnvironment = process.env,
 ): boolean => !origin || allowedCorsOrigins(environment).has(origin);
 
+export const publicReviewWidgetPath =
+  /^\/api\/reputation\/public\/widget\/[a-f0-9]{32}$/i;
+
+/**
+ * Request-aware CORS delegate mirroring the legacy origin's
+ * backend/src/config/cors-options.js: the embeddable public review
+ * widget read is served credential-free to any origin
+ * (Access-Control-Allow-Origin: *), while every other path keeps the
+ * credentialed allowlist. Required before this runtime serves browsers
+ * directly — the widget embeds on arbitrary third-party sites.
+ */
+export const corsOptionsDelegate = (
+  environment: CorsEnvironment = process.env,
+): ((
+  request: { method?: string; path?: string; url?: string },
+  callback: (error: Error | null, options: CorsOptions) => void,
+) => void) => {
+  const authenticated = graphqlCorsOptions(environment);
+  return (request, callback) => {
+    const path = request.path ?? (request.url ?? '').split('?')[0];
+    if (request.method === 'GET' && publicReviewWidgetPath.test(path)) {
+      callback(null, {
+        origin: '*',
+        credentials: false,
+        methods: ['GET', 'OPTIONS'],
+        allowedHeaders: ['Accept', 'Content-Type', 'Origin', 'X-Request-Id'],
+        exposedHeaders: ['X-Request-Id'],
+      });
+      return;
+    }
+    callback(null, authenticated);
+  };
+};
+
 export const graphqlCorsOptions = (
   environment: CorsEnvironment = process.env,
 ): CorsOptions => ({
