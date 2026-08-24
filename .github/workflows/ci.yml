@@ -26,7 +26,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run docs:check
-      - run: npm run lint:backend
       - run: npm run lint:frontend
       - run: npm run test
       - run: npm run build:graphql

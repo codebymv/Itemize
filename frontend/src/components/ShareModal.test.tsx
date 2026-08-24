@@ -57,8 +57,12 @@ describe('ShareModal', () => {
     expect(help).toBeInTheDocument();
 
     fireEvent.focus(help);
-    expect(
-      await screen.findByText(/Anyone with the full URL, including the #fragment/),
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      const tooltipId = help.getAttribute('aria-describedby');
+      expect(tooltipId).toBeTruthy();
+      expect(document.getElementById(tooltipId!)).toHaveTextContent(
+        /Anyone with the full URL, including the #fragment/,
+      );
+    });
   });
 });
