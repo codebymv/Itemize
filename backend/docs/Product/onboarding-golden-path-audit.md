@@ -214,12 +214,35 @@ origin, and OAuth provider fallbacks no longer reference the retired service.
 The release contract/build/bundle gate passed, followed by the isolated fresh
 PostgreSQL gate at 57/57 suites and 409/409 assertions. Existing sessions must
 sign in once at the new host-scoped API boundary; the destructive workspace
-matrix remains pending that re-authentication.
+matrix then passed after that re-authentication.
+
+### August 24 production workspace matrix
+
+A new email-verified Free workspace completed the full production matrix against
+the canonical GraphQL origin. Lists, notes, whiteboards, wireframes, and
+password-protected vaults were each created, edited, reloaded, shared through
+the branded public shell, opened as a recipient, revoked, and deleted. The vault
+run used only dummy data, confirmed client-side fragment decryption, and left no
+share capability active. The account returned `0 items` after a full reload, and
+none of the named matrix fixtures remained.
+
+The run exposed two same-session interaction defects that are now covered by
+focused regressions:
+
+- Rapid list edits reused a stale `updated_at` revision. List writes are now
+  serialized per list, carry the latest committed revision forward, and do not
+  let an older response repaint over newer optimistic state. Three rapid item
+  toggles persisted across a production reload without a flash or error.
+- Content created from Contents or Canvas could reuse occupied coordinates.
+  Both entry points now use one mixed-size collision-aware allocator. A deployed
+  production probe selected `{ x: 1180, y: 2000 }` beside the occupied center at
+  `{ x: 2000, y: 2000 }`, remaining on the initial visible row without overlap.
+
+The targeted workspace tests pass 6/6 assertions, frontend lint is clean for the
+changed modules, and the production frontend build passes.
 
 ### Remaining matrix extensions
 
-- After deployment, repeat create, edit, reload, share, open, revoke, and delete
-  coverage for each workspace content type against the production GraphQL path.
 - Replace the placeholder annual price environment values with isolated live
   Itemize prices before exposing annual billing controls, then repeat the same
   immediate-cancellation/refund canary for each annual tier.
