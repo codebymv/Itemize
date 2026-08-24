@@ -76,3 +76,6 @@ backend-v2/uploads/
 # Local PDF output scratch
 output/
 tmp/
+
+# Preserved secrets from the retired Express backend
+.env.legacy-express.backup
