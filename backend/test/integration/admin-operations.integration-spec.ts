@@ -150,6 +150,120 @@ describe('Admin operations GraphQL PostgreSQL contract', () => {
     });
   });
 
+  it('joins durable product evidence into the bounded activation funnel', async () => {
+    await pool.query(
+      `UPDATE organizations
+       SET created_at = NOW() - INTERVAL '12 hours',
+           trial_started_at = NOW() - INTERVAL '11 hours',
+           trial_ends_at = NOW() + INTERVAL '14 days'
+       WHERE id = $1`,
+      [adminOrganizationId],
+    );
+    await pool.query(
+      `INSERT INTO get_started_milestones (
+         organization_id, name, user_id, source, dedupe_key, occurred_at
+       ) VALUES
+         ($1, 'first_workspace_item', $2, 'integration_test', $3, NOW() - INTERVAL '10 hours'),
+         ($1, 'first_contact', $2, 'integration_test', $4, NOW() - INTERVAL '9 hours')`,
+      [
+        adminOrganizationId,
+        adminId,
+        `${adminOrganizationId}:admin-funnel:workspace`,
+        `${adminOrganizationId}:admin-funnel:contact`,
+      ],
+    );
+    const estimate = await pool.query<{ id: number }>(
+      `INSERT INTO estimates (
+         organization_id, estimate_number, valid_until, created_by, created_at
+       ) VALUES ($1, $2, CURRENT_DATE + 7, $3, NOW() - INTERVAL '8 hours')
+       RETURNING id`,
+      [adminOrganizationId, `EST-ADMIN-${suffix}`, adminId],
+    );
+    const estimateId = Number(estimate.rows[0].id);
+    await pool.query(
+      `INSERT INTO activation_events (
+         organization_id, user_id, event_name, artifact_type, artifact_id,
+         source, dedupe_key, occurred_at
+       ) VALUES
+         ($1, $2, 'artifact_sent', 'estimate', $3,
+          'estimate_email_delivered', $4, NOW() - INTERVAL '7 hours'),
+         ($1, NULL, 'artifact_advanced', 'estimate', $3,
+          'estimate_recipient_accepted', $5, NOW() - INTERVAL '6 hours'),
+         ($1, $2, 'returned_after_send', NULL, NULL,
+          'dashboard_analytics_authenticated', $6, NOW() - INTERVAL '5 hours'),
+         ($1, NULL, 'checkout_started', NULL, NULL,
+          'subscription_checkout_created', $7, NOW() - INTERVAL '4 hours')`,
+      [
+        adminOrganizationId,
+        adminId,
+        estimateId,
+        `${adminOrganizationId}:admin-funnel:sent`,
+        `${adminOrganizationId}:admin-funnel:advanced`,
+        `${adminOrganizationId}:admin-funnel:return`,
+        `${adminOrganizationId}:admin-funnel:checkout`,
+      ],
+    );
+    await pool.query(
+      `INSERT INTO stripe_subscription_webhook_events (
+         stripe_event_id, event_type, object_id, object_created_at,
+         event_snapshot, processing_status, organization_id,
+         notification_type, notification_status, received_at
+       ) VALUES ($1, 'customer.subscription.updated', $2,
+                 NOW() - INTERVAL '3 hours', '{}'::jsonb, 'processed', $3,
+                 'subscription_activated', 'sent', NOW() - INTERVAL '3 hours')`,
+      [`evt_admin_funnel_${suffix}`, `sub_admin_funnel_${suffix}`, adminOrganizationId],
+    );
+
+    const result = await graphql(`{
+      adminActivationFunnel(days: 1) {
+        cohortDays organizationsCreated organizationsVerified
+        organizationsWorkspaceActivated organizationsTrialStarted
+        organizationsContactCreated organizationsArtifactCreated
+        organizationsSent organizationsAdvanced organizationsReturned
+        organizationsCheckoutStarted organizationsSubscriptionActivated
+        trialOrganizationsSent organizationsTrialToPaid
+        verificationRate workspaceActivationRate trialStartRate
+        contactCreationRate artifactCreationRate artifactToSendRate
+        checkoutStartRate subscriptionActivationRate advanceRate returnRate
+        trialToPaidRate medianHoursToWorkspace medianHoursToTrial
+        medianHoursToContact medianHoursToArtifact medianHoursToSend
+        medianHoursToAdvance medianHoursToCheckout medianHoursToSubscription
+      }
+    }`).expect(200);
+
+    expect(result.body.errors).toBeUndefined();
+    expect(result.body.data.adminActivationFunnel).toMatchObject({
+      cohortDays: 1,
+      organizationsCreated: 2,
+      organizationsVerified: 2,
+      organizationsWorkspaceActivated: 1,
+      organizationsTrialStarted: 1,
+      organizationsContactCreated: 1,
+      organizationsArtifactCreated: 1,
+      organizationsSent: 1,
+      organizationsAdvanced: 1,
+      organizationsReturned: 1,
+      organizationsCheckoutStarted: 1,
+      organizationsSubscriptionActivated: 1,
+      trialOrganizationsSent: 1,
+      organizationsTrialToPaid: 1,
+      subscriptionActivationRate: 1,
+      advanceRate: 1,
+      returnRate: 1,
+      trialToPaidRate: 1,
+    });
+    expect(result.body.data.adminActivationFunnel).toEqual(expect.objectContaining({
+      medianHoursToWorkspace: expect.any(Number),
+      medianHoursToTrial: expect.any(Number),
+      medianHoursToContact: expect.any(Number),
+      medianHoursToArtifact: expect.any(Number),
+      medianHoursToSend: expect.any(Number),
+      medianHoursToAdvance: expect.any(Number),
+      medianHoursToCheckout: expect.any(Number),
+      medianHoursToSubscription: expect.any(Number),
+    }));
+  });
+
   it('preserves requested batch order, deduplicates IDs, and validates bounds', async () => {
     const batch = await graphql(
       'query Batch($ids:[Int!]!){adminUsersByIds(ids:$ids){id email role plan}}',

@@ -6,6 +6,7 @@ describe('ActivationService', () => {
     insertArtifactSent: jest.fn(),
     insertArtifactAdvanced: jest.fn(),
     insertReturnAfterSend: jest.fn(),
+    insertLifecycleEvent: jest.fn(),
   } as unknown as jest.Mocked<ActivationRepository>;
   const service = new ActivationService(repository);
 
@@ -111,5 +112,31 @@ describe('ActivationService', () => {
       source: 'dashboard_analytics_authenticated',
       dedupeKey: '7:returned_after_send',
     });
+  });
+
+  it('records one PII-free checkout start after Stripe creates the session', async () => {
+    repository.insertLifecycleEvent.mockResolvedValue(true);
+    await expect(service.recordCheckoutStarted({
+      organizationId: 7,
+      plan: 'starter',
+      billingPeriod: 'monthly',
+    })).resolves.toBe(true);
+    expect(repository.insertLifecycleEvent).toHaveBeenCalledWith({
+      organizationId: 7,
+      userId: null,
+      eventName: 'checkout_started',
+      source: 'subscription_checkout_created',
+      dedupeKey: '7:checkout_started:first',
+      properties: { plan: 'starter', billingPeriod: 'monthly' },
+    });
+  });
+
+  it('rejects unrecognized checkout dimensions without writing', async () => {
+    await expect(service.recordCheckoutStarted({
+      organizationId: 7,
+      plan: 'free',
+      billingPeriod: 'monthly',
+    })).resolves.toBe(false);
+    expect(repository.insertLifecycleEvent).not.toHaveBeenCalled();
   });
 });

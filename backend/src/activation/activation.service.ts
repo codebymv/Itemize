@@ -23,6 +23,9 @@ const ADVANCEMENT_SOURCES: Record<string, {
 };
 
 const RETURN_SOURCE = 'dashboard_analytics_authenticated';
+const CHECKOUT_SOURCE = 'subscription_checkout_created';
+const CHECKOUT_PLANS = new Set(['starter', 'unlimited', 'pro']);
+const CHECKOUT_PERIODS = new Set(['monthly', 'yearly']);
 
 @Injectable()
 export class ActivationService {
@@ -135,6 +138,47 @@ export class ActivationService {
       this.logger.error('Failed to record return after send', {
         organizationId: input.organizationId,
         userId: input.userId,
+        error,
+      });
+      return false;
+    }
+  }
+
+  /** Records the first provider-created subscription checkout without provider IDs or PII. */
+  async recordCheckoutStarted(input: {
+    organizationId: number;
+    plan: string;
+    billingPeriod: string;
+  }): Promise<boolean> {
+    if (
+      !Number.isSafeInteger(input.organizationId) || input.organizationId < 1
+      || !CHECKOUT_PLANS.has(input.plan)
+      || !CHECKOUT_PERIODS.has(input.billingPeriod)
+    ) {
+      this.logger.warn('Rejected invalid checkout activation event', {
+        organizationId: input.organizationId,
+        plan: input.plan,
+        billingPeriod: input.billingPeriod,
+      });
+      return false;
+    }
+
+    try {
+      return await this.activation.insertLifecycleEvent({
+        organizationId: input.organizationId,
+        userId: null,
+        eventName: 'checkout_started',
+        source: CHECKOUT_SOURCE,
+        dedupeKey: `${input.organizationId}:checkout_started:first`,
+        properties: {
+          plan: input.plan,
+          billingPeriod: input.billingPeriod,
+        },
+      });
+    } catch (error) {
+      this.logger.error('Failed to record checkout activation event', {
+        organizationId: input.organizationId,
+        plan: input.plan,
         error,
       });
       return false;

@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ActivationService } from '../activation/activation.service';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import {
   BILLING_PLANS,
@@ -27,6 +28,7 @@ export class BillingService {
   constructor(
     private readonly billing: BillingRepository,
     private readonly stripe: StripeBillingProvider,
+    private readonly activation: ActivationService,
   ) {}
 
   plans(): BillingPlan[] {
@@ -116,8 +118,12 @@ export class BillingService {
           organizationId,
         }),
     );
+    let providerResult: {
+      session: BillingSession;
+      checkoutCreated: boolean;
+    };
     try {
-      return await this.startProviderCheckout(
+      providerResult = await this.startProviderCheckout(
         organizationId,
         customer,
         resolved.priceId,
@@ -131,7 +137,7 @@ export class BillingService {
       }
       try {
         const replacement = await this.replaceMissingCustomer(organizationId);
-        return await this.startProviderCheckout(
+        providerResult = await this.startProviderCheckout(
           organizationId,
           replacement,
           resolved.priceId,
@@ -143,6 +149,14 @@ export class BillingService {
         throw this.providerFailure(retryError);
       }
     }
+    if (providerResult.checkoutCreated) {
+      await this.activation.recordCheckoutStarted({
+        organizationId,
+        plan: resolved.planId,
+        billingPeriod: resolved.period,
+      });
+    }
+    return providerResult.session;
   }
 
   async portal(
@@ -271,7 +285,7 @@ export class BillingService {
     successUrl: string,
     cancelUrl: string,
     idempotencyKey: string,
-  ): Promise<BillingSession> {
+  ): Promise<{ session: BillingSession; checkoutCreated: boolean }> {
     if (customer.existed) {
       const active = await this.stripe.activeSubscription(customer.customerId);
       if (active) {
@@ -279,23 +293,29 @@ export class BillingService {
         // Stripe portal presents the amount and proration before the customer
         // explicitly confirms a plan change.
         return {
-          url: await this.stripe.createPortalSession(
-            customer.customerId,
-            successUrl,
-            `billing-portal:${organizationId}:${idempotencyKey}`,
-          ),
+          session: {
+            url: await this.stripe.createPortalSession(
+              customer.customerId,
+              successUrl,
+              `billing-portal:${organizationId}:${idempotencyKey}`,
+            ),
+          },
+          checkoutCreated: false,
         };
       }
     }
     return {
-      url: await this.stripe.createCheckoutSession({
-        customerId: customer.customerId,
-        priceId,
-        organizationId,
-        successUrl,
-        cancelUrl,
-        idempotencyKey,
-      }),
+      session: {
+        url: await this.stripe.createCheckoutSession({
+          customerId: customer.customerId,
+          priceId,
+          organizationId,
+          successUrl,
+          cancelUrl,
+          idempotencyKey,
+        }),
+      },
+      checkoutCreated: true,
     };
   }
 

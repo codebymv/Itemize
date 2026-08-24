@@ -46,15 +46,38 @@ export class AdminActivationFunnel {
   @Field(() => GraphQLISODateTime) cohortStartedAt: Date;
   @Field(() => Int) cohortDays: number;
   @Field(() => Int) organizationsCreated: number;
+  @Field(() => Int) organizationsVerified: number;
+  @Field(() => Int) organizationsWorkspaceActivated: number;
+  @Field(() => Int) organizationsTrialStarted: number;
+  @Field(() => Int) organizationsContactCreated: number;
+  @Field(() => Int) organizationsArtifactCreated: number;
   @Field(() => Int) organizationsSent: number;
   @Field(() => Int) organizationsAdvanced: number;
   @Field(() => Int) organizationsReturned: number;
+  @Field(() => Int) organizationsCheckoutStarted: number;
+  @Field(() => Int) organizationsSubscriptionActivated: number;
   @Field(() => Int) trialOrganizationsSent: number;
   @Field(() => Int) organizationsTrialToPaid: number;
   @Field(() => Float) sendRate: number;
+  @Field(() => Float) verificationRate: number;
+  @Field(() => Float) workspaceActivationRate: number;
+  @Field(() => Float) trialStartRate: number;
+  @Field(() => Float) contactCreationRate: number;
+  @Field(() => Float) artifactCreationRate: number;
+  @Field(() => Float) artifactToSendRate: number;
+  @Field(() => Float) checkoutStartRate: number;
+  @Field(() => Float) subscriptionActivationRate: number;
   @Field(() => Float) advanceRate: number;
   @Field(() => Float) returnRate: number;
   @Field(() => Float) trialToPaidRate: number;
+  @Field(() => Float, { nullable: true }) medianHoursToWorkspace: number | null;
+  @Field(() => Float, { nullable: true }) medianHoursToTrial: number | null;
+  @Field(() => Float, { nullable: true }) medianHoursToContact: number | null;
+  @Field(() => Float, { nullable: true }) medianHoursToArtifact: number | null;
+  @Field(() => Float, { nullable: true }) medianHoursToSend: number | null;
+  @Field(() => Float, { nullable: true }) medianHoursToAdvance: number | null;
+  @Field(() => Float, { nullable: true }) medianHoursToCheckout: number | null;
+  @Field(() => Float, { nullable: true }) medianHoursToSubscription: number | null;
 }
 
 @ObjectType()

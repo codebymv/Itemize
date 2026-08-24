@@ -210,8 +210,11 @@ locks, tour modal changes.
 - Calendar or campaign step
 - Express form/booking write hooks (or move those inserts into Nest)
 - Empty-state CTAs pointing at the same query
-- Activation funnel admin UI
 - Stamping `organization_id` on historical lists with NULL org
+
+The activation funnel admin UI is now implemented separately from the
+get-started card. It reads durable milestones and commercial evidence through
+`adminActivationFunnel`; see `!docs/Product/activation-funnel.md`.
 
 ## Gleam lessons kept / dropped
 

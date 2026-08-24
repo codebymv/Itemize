@@ -30,18 +30,26 @@ dashboard analytics load at least 24 hours after the first provider-confirmed
 send. The delay avoids counting mutation refetches and same-session browsing as
 retention.
 
+`checkout_started` is recorded only after Stripe returns a newly created
+subscription Checkout Session. Routing an existing subscriber to the customer
+portal does not count. The event is idempotent per organization and stores only
+the selected Itemize plan and billing period; it does not store a provider
+session ID, customer ID, or user data.
+
 ## Funnel joins
 
-The existing product tables provide the leading indicators:
+The existing product tables provide the leading and confirmed indicators:
 
-- organization creation or trial start
-- first contact creation
+- owner email verification
+- first workspace item from `get_started_milestones`
+- trial start from the organization billing record
+- first contact from `get_started_milestones`
 - first invoice, estimate, or signature document creation
 - first provider-confirmed `activation_events.event_name = 'artifact_sent'`
 - recipient/payment `artifact_advanced` after the first send
 - authenticated `returned_after_send` after the first send
-- active paid subscription with a recorded trial whose end followed the first
-  send
+- provider-created `checkout_started`
+- webhook-confirmed `subscription_activated`
 
 The first-send timestamp for an organization is:
 
@@ -54,11 +62,30 @@ GROUP BY organization_id;
 
 Do not use feature-page visits as activation. Administrators can query
 `adminActivationFunnel(days: Int)` for a bounded signup cohort (default 30
-days). Rates use explicit denominators: sends/signups, advances/sends,
-returns/sends, and trial-to-paid/activated trials. Trial conversion requires a
-server-recorded trial bounds plus current active billing, and the trial must end
-after the first send. A direct paid signup is not mislabeled as a trial
-conversion.
+days, selectable as 7, 30, or 90 days in the admin UI). Rates use explicit
+denominators:
+
+- verification uses cohort signups;
+- workspace, trial, contact, artifact, and checkout use verified organizations;
+- first send uses artifact creators;
+- recipient advancement and return use provider-confirmed senders;
+- subscription activation uses organizations that started Checkout;
+- activated-trial-to-paid uses trials that reached a provider-confirmed send.
+
+The admin view also reports median time from signup to the major stages, except
+recipient advancement, which is measured from first send. Subscription
+activation is sourced from the durable Stripe webhook record, so later churn or
+refunds do not erase the historical conversion. A direct paid signup is not
+mislabeled as a trial conversion.
+
+## Empty dashboard query policy
+
+The dashboard always loads its primary aggregate snapshot first. Conversion,
+communications, pipeline-age, and revenue reports remain disabled for a truly
+empty organization and activate after the snapshot contains a contact, deal,
+booking, task, invoice, signature document, or workspace item. Default pipeline
+configuration alone is not treated as activity. This preserves the zero-state
+experience while avoiding four reports that cannot yet contain useful data.
 
 Public estimate links store only a token hash, expire at the end of the quoted
 validity date, and render the immutable delivery snapshot. A successful resend

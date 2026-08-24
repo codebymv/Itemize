@@ -4,6 +4,7 @@ import { PG_POOL } from '../database/database.module';
 
 export type ActivationArtifactType = 'estimate' | 'invoice' | 'signature';
 export type ActivationArtifactStage = 'viewed' | 'accepted' | 'signed' | 'paid';
+export type ActivationLifecycleEvent = 'checkout_started';
 
 @Injectable()
 export class ActivationRepository {
@@ -80,6 +81,31 @@ export class ActivationRepository {
        )
        ON CONFLICT (dedupe_key) DO NOTHING RETURNING id`,
       [input.organizationId, input.userId, input.source, input.dedupeKey],
+    );
+    return result.rows.length > 0;
+  }
+
+  async insertLifecycleEvent(input: {
+    organizationId: number;
+    userId: number | null;
+    eventName: ActivationLifecycleEvent;
+    source: string;
+    dedupeKey: string;
+    properties: Record<string, string>;
+  }): Promise<boolean> {
+    const result = await this.pool.query(
+      `INSERT INTO activation_events (
+         organization_id,user_id,event_name,source,dedupe_key,properties
+       ) VALUES ($1,$2,$3,$4,$5,$6::jsonb)
+       ON CONFLICT (dedupe_key) DO NOTHING RETURNING id`,
+      [
+        input.organizationId,
+        input.userId,
+        input.eventName,
+        input.source,
+        input.dedupeKey,
+        JSON.stringify(input.properties),
+      ],
     );
     return result.rows.length > 0;
   }

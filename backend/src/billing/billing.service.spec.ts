@@ -2,6 +2,7 @@ import { GraphQLError } from 'graphql';
 import { BillingRepository, BillingStatusRow } from './billing.repository';
 import { BillingService } from './billing.service';
 import { StripeBillingProvider } from './stripe-billing.provider';
+import { ActivationService } from '../activation/activation.service';
 
 describe('BillingService', () => {
   const originalFrontendUrl = process.env.FRONTEND_URL;
@@ -24,6 +25,9 @@ describe('BillingService', () => {
     createPortalSession: jest.fn(),
     changeSubscriptionPrice: jest.fn(),
   };
+  const activation = {
+    recordCheckoutStarted: jest.fn().mockResolvedValue(true),
+  };
   let service: BillingService;
 
   beforeEach(() => {
@@ -33,6 +37,7 @@ describe('BillingService', () => {
     service = new BillingService(
       repository as unknown as BillingRepository,
       provider as unknown as StripeBillingProvider,
+      activation as unknown as ActivationService,
     );
   });
 
@@ -191,6 +196,11 @@ describe('BillingService', () => {
       email: 'owner@itemize.test',
       organizationId: 4,
     });
+    expect(activation.recordCheckoutStarted).toHaveBeenCalledWith({
+      organizationId: 4,
+      plan: 'starter',
+      billingPeriod: 'monthly',
+    });
   });
 
   it('routes an already-subscribed tenant to a provider portal', async () => {
@@ -214,6 +224,7 @@ describe('BillingService', () => {
       'https://itemize.test/success',
       'billing-portal:4:checkout-unit-test-key-0001',
     );
+    expect(activation.recordCheckoutStarted).not.toHaveBeenCalled();
   });
 
   it('routes a plan change through the portal instead of silently repricing an active subscription', async () => {

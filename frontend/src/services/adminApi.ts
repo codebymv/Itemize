@@ -45,15 +45,38 @@ export interface ActivationFunnel {
     cohortStartedAt: string;
     cohortDays: number;
     organizationsCreated: number;
+    organizationsVerified: number;
+    organizationsWorkspaceActivated: number;
+    organizationsTrialStarted: number;
+    organizationsContactCreated: number;
+    organizationsArtifactCreated: number;
     organizationsSent: number;
     organizationsAdvanced: number;
     organizationsReturned: number;
+    organizationsCheckoutStarted: number;
+    organizationsSubscriptionActivated: number;
     trialOrganizationsSent: number;
     organizationsTrialToPaid: number;
     sendRate: number;
+    verificationRate: number;
+    workspaceActivationRate: number;
+    trialStartRate: number;
+    contactCreationRate: number;
+    artifactCreationRate: number;
+    artifactToSendRate: number;
+    checkoutStartRate: number;
+    subscriptionActivationRate: number;
     advanceRate: number;
     returnRate: number;
     trialToPaidRate: number;
+    medianHoursToWorkspace: number | null;
+    medianHoursToTrial: number | null;
+    medianHoursToContact: number | null;
+    medianHoursToArtifact: number | null;
+    medianHoursToSend: number | null;
+    medianHoursToAdvance: number | null;
+    medianHoursToCheckout: number | null;
+    medianHoursToSubscription: number | null;
 }
 
 export interface UserCountResponse {

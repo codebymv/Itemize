@@ -11,11 +11,26 @@ export type AdminActivationFunnelRow = {
   as_of: Date;
   cohort_started_at: Date;
   organizations_created: number;
+  organizations_verified: number;
+  organizations_workspace_activated: number;
+  organizations_trial_started: number;
+  organizations_contact_created: number;
+  organizations_artifact_created: number;
   organizations_sent: number;
   organizations_advanced: number;
   organizations_returned: number;
+  organizations_checkout_started: number;
+  organizations_subscription_activated: number;
   trial_organizations_sent: number;
   organizations_trial_to_paid: number;
+  median_hours_to_workspace: number | null;
+  median_hours_to_trial: number | null;
+  median_hours_to_contact: number | null;
+  median_hours_to_artifact: number | null;
+  median_hours_to_send: number | null;
+  median_hours_to_advance: number | null;
+  median_hours_to_checkout: number | null;
+  median_hours_to_subscription: number | null;
 };
 
 export type AdminPlanEntitlement = {
@@ -442,49 +457,150 @@ export class AdminOperationsRepository {
          SELECT CURRENT_TIMESTAMP AS as_of,
                 CURRENT_TIMESTAMP - ($1::int * INTERVAL '1 day') AS started_at
        ), cohort AS (
-         SELECT o.id, o.subscription_status, o.trial_started_at,
-                o.trial_ends_at
+         SELECT o.id, o.created_at, o.trial_started_at
          FROM organizations o, bounds b
          WHERE o.created_at >= b.started_at AND o.created_at <= b.as_of
+       ), verified AS (
+         SELECT cohort.id AS organization_id
+         FROM cohort
+         WHERE EXISTS (
+           SELECT 1
+           FROM organization_members member
+           JOIN users owner ON owner.id = member.user_id
+           WHERE member.organization_id = cohort.id
+             AND member.role = 'owner'
+             AND owner.email_verified = true
+         )
+       ), milestones AS (
+         SELECT milestone.organization_id,
+                MIN(milestone.occurred_at) FILTER (
+                  WHERE milestone.name IN ('first_workspace_item', 'first_list')
+                ) AS workspace_at,
+                MIN(milestone.occurred_at) FILTER (
+                  WHERE milestone.name = 'first_contact'
+                ) AS contact_at
+         FROM get_started_milestones milestone
+         JOIN verified ON verified.organization_id = milestone.organization_id
+         GROUP BY milestone.organization_id
+       ), artifact_created AS (
+         SELECT candidate.organization_id, MIN(candidate.created_at) AS artifact_at
+         FROM (
+           SELECT estimate.organization_id, estimate.created_at FROM estimates estimate
+           UNION ALL
+           SELECT invoice.organization_id, invoice.created_at FROM invoices invoice
+           UNION ALL
+           SELECT document.organization_id, document.created_at
+             FROM signature_documents document
+         ) candidate
+         JOIN verified ON verified.organization_id = candidate.organization_id
+         GROUP BY candidate.organization_id
+       ), checkout_started AS (
+         SELECT event.organization_id, MIN(event.occurred_at) AS checkout_at
+         FROM activation_events event
+         JOIN verified ON verified.organization_id = event.organization_id
+         WHERE event.event_name = 'checkout_started'
+         GROUP BY event.organization_id
        ), first_send AS (
          SELECT event.organization_id, MIN(event.occurred_at) AS sent_at
          FROM activation_events event
-         JOIN cohort ON cohort.id = event.organization_id
+         JOIN verified ON verified.organization_id = event.organization_id
          WHERE event.event_name = 'artifact_sent'
          GROUP BY event.organization_id
        ), advanced AS (
-         SELECT DISTINCT event.organization_id
+         SELECT event.organization_id, MIN(event.occurred_at) AS advanced_at
          FROM activation_events event
          JOIN first_send sent ON sent.organization_id = event.organization_id
          WHERE event.event_name = 'artifact_advanced'
            AND event.occurred_at >= sent.sent_at
+         GROUP BY event.organization_id
        ), returned AS (
-         SELECT DISTINCT event.organization_id
+         SELECT event.organization_id, MIN(event.occurred_at) AS returned_at
          FROM activation_events event
          JOIN first_send sent ON sent.organization_id = event.organization_id
          WHERE event.event_name = 'returned_after_send'
            AND event.occurred_at >= sent.sent_at
+         GROUP BY event.organization_id
+       ), subscription_activated AS (
+         SELECT event.organization_id, MIN(event.received_at) AS activated_at
+         FROM stripe_subscription_webhook_events event
+         JOIN checkout_started checkout ON checkout.organization_id = event.organization_id
+         WHERE event.notification_type = 'subscription_activated'
+           AND event.received_at >= checkout.checkout_at
+         GROUP BY event.organization_id
        )
        SELECT b.as_of, b.started_at AS cohort_started_at,
               COUNT(cohort.id)::int AS organizations_created,
+              COUNT(verified.organization_id)::int AS organizations_verified,
+              COUNT(*) FILTER (WHERE milestones.workspace_at IS NOT NULL)::int
+                AS organizations_workspace_activated,
+              COUNT(*) FILTER (
+                WHERE verified.organization_id IS NOT NULL
+                  AND cohort.trial_started_at IS NOT NULL
+              )::int
+                AS organizations_trial_started,
+              COUNT(*) FILTER (WHERE milestones.contact_at IS NOT NULL)::int
+                AS organizations_contact_created,
+              COUNT(artifact.organization_id)::int AS organizations_artifact_created,
               COUNT(sent.organization_id)::int AS organizations_sent,
               COUNT(advanced.organization_id)::int AS organizations_advanced,
               COUNT(returned.organization_id)::int AS organizations_returned,
+              COUNT(checkout.organization_id)::int AS organizations_checkout_started,
+              COUNT(activated.organization_id)::int
+                AS organizations_subscription_activated,
               COUNT(*) FILTER (
                 WHERE cohort.trial_started_at IS NOT NULL
                   AND sent.organization_id IS NOT NULL
               )::int AS trial_organizations_sent,
               COUNT(*) FILTER (
                 WHERE cohort.trial_started_at IS NOT NULL
-                  AND cohort.subscription_status = 'active'
-                  AND cohort.trial_ends_at IS NOT NULL
-                  AND cohort.trial_ends_at >= sent.sent_at
-              )::int AS organizations_trial_to_paid
+                  AND sent.organization_id IS NOT NULL
+                  AND activated.activated_at >= cohort.trial_started_at
+              )::int AS organizations_trial_to_paid,
+              PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY
+                EXTRACT(EPOCH FROM (milestones.workspace_at - cohort.created_at)) / 3600
+              ) FILTER (WHERE milestones.workspace_at >= cohort.created_at)
+                AS median_hours_to_workspace,
+              PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY
+                EXTRACT(EPOCH FROM (cohort.trial_started_at - cohort.created_at)) / 3600
+              ) FILTER (
+                WHERE verified.organization_id IS NOT NULL
+                  AND cohort.trial_started_at >= cohort.created_at
+              )
+                AS median_hours_to_trial,
+              PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY
+                EXTRACT(EPOCH FROM (milestones.contact_at - cohort.created_at)) / 3600
+              ) FILTER (WHERE milestones.contact_at >= cohort.created_at)
+                AS median_hours_to_contact,
+              PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY
+                EXTRACT(EPOCH FROM (artifact.artifact_at - cohort.created_at)) / 3600
+              ) FILTER (WHERE artifact.artifact_at >= cohort.created_at)
+                AS median_hours_to_artifact,
+              PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY
+                EXTRACT(EPOCH FROM (sent.sent_at - cohort.created_at)) / 3600
+              ) FILTER (WHERE sent.sent_at >= cohort.created_at)
+                AS median_hours_to_send,
+              PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY
+                EXTRACT(EPOCH FROM (advanced.advanced_at - sent.sent_at)) / 3600
+              ) FILTER (WHERE advanced.advanced_at >= sent.sent_at)
+                AS median_hours_to_advance,
+              PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY
+                EXTRACT(EPOCH FROM (checkout.checkout_at - cohort.created_at)) / 3600
+              ) FILTER (WHERE checkout.checkout_at >= cohort.created_at)
+                AS median_hours_to_checkout,
+              PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY
+                EXTRACT(EPOCH FROM (activated.activated_at - cohort.created_at)) / 3600
+              ) FILTER (WHERE activated.activated_at >= cohort.created_at)
+                AS median_hours_to_subscription
        FROM bounds b
        LEFT JOIN cohort ON true
+       LEFT JOIN verified ON verified.organization_id = cohort.id
+       LEFT JOIN milestones ON milestones.organization_id = cohort.id
+       LEFT JOIN artifact_created artifact ON artifact.organization_id = cohort.id
+       LEFT JOIN checkout_started checkout ON checkout.organization_id = cohort.id
        LEFT JOIN first_send sent ON sent.organization_id = cohort.id
        LEFT JOIN advanced ON advanced.organization_id = cohort.id
        LEFT JOIN returned ON returned.organization_id = cohort.id
+       LEFT JOIN subscription_activated activated ON activated.organization_id = cohort.id
        GROUP BY b.as_of, b.started_at`,
       [days],
     );

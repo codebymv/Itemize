@@ -151,9 +151,16 @@ export class AdminOperationsService {
     }
     const row = await this.repository.activationFunnel(days);
     const created = Number(row.organizations_created);
+    const verified = Number(row.organizations_verified);
+    const workspace = Number(row.organizations_workspace_activated);
+    const trials = Number(row.organizations_trial_started);
+    const contacts = Number(row.organizations_contact_created);
+    const artifacts = Number(row.organizations_artifact_created);
     const sent = Number(row.organizations_sent);
     const advanced = Number(row.organizations_advanced);
     const returned = Number(row.organizations_returned);
+    const checkouts = Number(row.organizations_checkout_started);
+    const subscriptions = Number(row.organizations_subscription_activated);
     const trialsSent = Number(row.trial_organizations_sent);
     const trialToPaid = Number(row.organizations_trial_to_paid);
     return {
@@ -161,15 +168,38 @@ export class AdminOperationsService {
       cohortStartedAt: row.cohort_started_at,
       cohortDays: days,
       organizationsCreated: created,
+      organizationsVerified: verified,
+      organizationsWorkspaceActivated: workspace,
+      organizationsTrialStarted: trials,
+      organizationsContactCreated: contacts,
+      organizationsArtifactCreated: artifacts,
       organizationsSent: sent,
       organizationsAdvanced: advanced,
       organizationsReturned: returned,
+      organizationsCheckoutStarted: checkouts,
+      organizationsSubscriptionActivated: subscriptions,
       trialOrganizationsSent: trialsSent,
       organizationsTrialToPaid: trialToPaid,
       sendRate: this.rate(sent, created),
+      verificationRate: this.rate(verified, created),
+      workspaceActivationRate: this.rate(workspace, verified),
+      trialStartRate: this.rate(trials, verified),
+      contactCreationRate: this.rate(contacts, verified),
+      artifactCreationRate: this.rate(artifacts, verified),
+      artifactToSendRate: this.rate(sent, artifacts),
+      checkoutStartRate: this.rate(checkouts, verified),
+      subscriptionActivationRate: this.rate(subscriptions, checkouts),
       advanceRate: this.rate(advanced, sent),
       returnRate: this.rate(returned, sent),
       trialToPaidRate: this.rate(trialToPaid, trialsSent),
+      medianHoursToWorkspace: this.optionalNumber(row.median_hours_to_workspace),
+      medianHoursToTrial: this.optionalNumber(row.median_hours_to_trial),
+      medianHoursToContact: this.optionalNumber(row.median_hours_to_contact),
+      medianHoursToArtifact: this.optionalNumber(row.median_hours_to_artifact),
+      medianHoursToSend: this.optionalNumber(row.median_hours_to_send),
+      medianHoursToAdvance: this.optionalNumber(row.median_hours_to_advance),
+      medianHoursToCheckout: this.optionalNumber(row.median_hours_to_checkout),
+      medianHoursToSubscription: this.optionalNumber(row.median_hours_to_subscription),
     };
   }
 
@@ -284,6 +314,12 @@ export class AdminOperationsService {
 
   private rate(numerator: number, denominator: number): number {
     return denominator === 0 ? 0 : Number((numerator / denominator).toFixed(4));
+  }
+
+  private optionalNumber(value: number | null): number | null {
+    if (value === null || value === undefined) return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? Number(number.toFixed(2)) : null;
   }
 
   private redactOperationalError(value: string | null): string | null {

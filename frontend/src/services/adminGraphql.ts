@@ -56,8 +56,17 @@ export const getAdminActivationFunnelViaGraphql = async (
   >(`query AdminActivationFunnel($days: Int) {
     adminActivationFunnel(days: $days) {
       asOf cohortStartedAt cohortDays organizationsCreated organizationsSent
+      organizationsVerified organizationsWorkspaceActivated
+      organizationsTrialStarted organizationsContactCreated
+      organizationsArtifactCreated organizationsCheckoutStarted
+      organizationsSubscriptionActivated
       organizationsAdvanced organizationsReturned trialOrganizationsSent
-      organizationsTrialToPaid sendRate advanceRate returnRate trialToPaidRate
+      organizationsTrialToPaid sendRate verificationRate workspaceActivationRate
+      trialStartRate contactCreationRate artifactCreationRate artifactToSendRate
+      checkoutStartRate subscriptionActivationRate advanceRate returnRate
+      trialToPaidRate medianHoursToWorkspace medianHoursToTrial
+      medianHoursToContact medianHoursToArtifact medianHoursToSend
+      medianHoursToAdvance medianHoursToCheckout medianHoursToSubscription
     }
   }`, { days });
   return data.adminActivationFunnel;

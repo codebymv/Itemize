@@ -5,8 +5,10 @@ import { BillingService } from './billing.service';
 import { StripeBillingProvider } from './stripe-billing.provider';
 import { BillingEntitlementService } from './billing-entitlement.service';
 import { GraphqlEntitlementGuard } from './graphql-entitlement.guard';
+import { ActivationModule } from '../activation/activation.module';
 
 @Module({
+  imports: [ActivationModule],
   providers: [
     BillingRepository,
     BillingResolver,

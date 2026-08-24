@@ -27,10 +27,22 @@ describe('admin GraphQL adapters', () => {
   it('requests the bounded activation cohort explicitly', async () => {
     const funnel = {
       asOf: '2026-08-20T12:00:00.000Z', cohortStartedAt: '2026-07-21T12:00:00.000Z',
-      cohortDays: 30, organizationsCreated: 10, organizationsSent: 4,
+      cohortDays: 30, organizationsCreated: 10, organizationsVerified: 8,
+      organizationsWorkspaceActivated: 6, organizationsTrialStarted: 5,
+      organizationsContactCreated: 4, organizationsArtifactCreated: 4,
+      organizationsSent: 4, organizationsCheckoutStarted: 2,
+      organizationsSubscriptionActivated: 1,
       organizationsAdvanced: 3, organizationsReturned: 2,
       trialOrganizationsSent: 2, organizationsTrialToPaid: 1,
-      sendRate: 0.4, advanceRate: 0.75, returnRate: 0.5, trialToPaidRate: 0.5,
+      sendRate: 0.4, verificationRate: 0.8, workspaceActivationRate: 0.75,
+      trialStartRate: 0.625, contactCreationRate: 0.5, artifactCreationRate: 0.5,
+      artifactToSendRate: 1, checkoutStartRate: 0.25,
+      subscriptionActivationRate: 0.5, advanceRate: 0.75, returnRate: 0.5,
+      trialToPaidRate: 0.5, medianHoursToWorkspace: 1,
+      medianHoursToTrial: 2, medianHoursToContact: 3,
+      medianHoursToArtifact: 4, medianHoursToSend: 5,
+      medianHoursToAdvance: 6, medianHoursToCheckout: 7,
+      medianHoursToSubscription: 8,
     };
     vi.mocked(graphqlRequest).mockResolvedValue({ adminActivationFunnel: funnel });
     await expect(getAdminActivationFunnelViaGraphql(30)).resolves.toEqual(funnel);

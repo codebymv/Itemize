@@ -48,6 +48,43 @@ interface UseDashboardDataReturn {
   refetchAll: () => void;
 }
 
+/** Default pipeline configuration is not evidence of workspace activity. */
+export function hasMeaningfulDashboardActivity(
+  analytics: DashboardAnalytics | undefined,
+): boolean {
+  if (!analytics) return false;
+
+  const invoices = analytics.invoiceMetrics;
+  const signatures = analytics.signatureMetrics;
+  const workspace = analytics.workspaceMetrics;
+
+  return (
+    analytics.contacts.total > 0
+    || analytics.deals.total > 0
+    || analytics.bookings.total > 0
+    || analytics.tasks.total > 0
+    || Boolean(invoices && (
+      invoices.pending > 0
+      || invoices.overdue > 0
+      || invoices.paidThisMonth > 0
+      || invoices.countThisMonth > 0
+      || invoices.recentInvoices.length > 0
+    ))
+    || Boolean(signatures && (
+      signatures.awaiting > 0
+      || signatures.signedThisWeek > 0
+      || signatures.total > 0
+      || signatures.recentDocuments.length > 0
+    ))
+    || Boolean(workspace && (
+      workspace.activeItems > 0
+      || workspace.lists > 0
+      || workspace.notes > 0
+      || workspace.recentItems.length > 0
+    ))
+  );
+}
+
 export function useDashboardData({
   organizationId,
   period = '30days',
@@ -70,6 +107,10 @@ export function useDashboardData({
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  const shouldLoadSecondary = Boolean(
+    organizationId && hasMeaningfulDashboardActivity(analytics),
+  );
+
   // Conversion rates query
   const {
     data: conversions,
@@ -80,7 +121,7 @@ export function useDashboardData({
     queryKey: ['conversion-rates', period, organizationId],
     queryFn: () =>
       getConversionRates(conversionPeriod, organizationId),
-    enabled: !!organizationId,
+    enabled: shouldLoadSecondary,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -94,7 +135,7 @@ export function useDashboardData({
     queryKey: ['communication-stats', period, organizationId],
     queryFn: () =>
       getCommunicationStats(communicationPeriod, organizationId),
-    enabled: !!organizationId,
+    enabled: shouldLoadSecondary,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -108,7 +149,7 @@ export function useDashboardData({
     queryKey: ['pipeline-deal-age', organizationId],
     queryFn: () =>
       getPipelineDealAge(undefined, organizationId),
-    enabled: !!organizationId,
+    enabled: shouldLoadSecondary,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -122,40 +163,42 @@ export function useDashboardData({
     queryKey: ['revenue-trends', period, organizationId],
     queryFn: () =>
       getRevenueTrends(revenuePeriod, organizationId),
-    enabled: !!organizationId,
+    enabled: shouldLoadSecondary,
     staleTime: 5 * 60 * 1000,
   });
 
   // Refetch all data
   const refetchAll = () => {
-    refetchAnalytics();
-    refetchConversions();
-    refetchCommunications();
-    refetchPipelineDealAge();
-    refetchRevenue();
+    void refetchAnalytics();
+    if (shouldLoadSecondary) {
+      void refetchConversions();
+      void refetchCommunications();
+      void refetchPipelineDealAge();
+      void refetchRevenue();
+    }
   };
 
   return {
     // Data
     analytics: analytics || undefined,
-    conversions: conversions || undefined,
-    communications: communications || undefined,
-    pipelineDealAge: pipelineDealAge || undefined,
-    revenue: revenue || undefined,
+    conversions: shouldLoadSecondary ? conversions || undefined : undefined,
+    communications: shouldLoadSecondary ? communications || undefined : undefined,
+    pipelineDealAge: shouldLoadSecondary ? pipelineDealAge || undefined : undefined,
+    revenue: shouldLoadSecondary ? revenue || undefined : undefined,
     
     // Loading states
     isLoadingAnalytics,
-    isLoadingConversions,
-    isLoadingCommunications,
-    isLoadingPipelineDealAge,
-    isLoadingRevenue,
+    isLoadingConversions: shouldLoadSecondary && isLoadingConversions,
+    isLoadingCommunications: shouldLoadSecondary && isLoadingCommunications,
+    isLoadingPipelineDealAge: shouldLoadSecondary && isLoadingPipelineDealAge,
+    isLoadingRevenue: shouldLoadSecondary && isLoadingRevenue,
     
     // Error states
     analyticsError: analyticsError as Error | null,
-    conversionsError: conversionsError as Error | null,
-    communicationsError: communicationsError as Error | null,
-    pipelineDealAgeError: pipelineDealAgeError as Error | null,
-    revenueError: revenueError as Error | null,
+    conversionsError: shouldLoadSecondary ? conversionsError as Error | null : null,
+    communicationsError: shouldLoadSecondary ? communicationsError as Error | null : null,
+    pipelineDealAgeError: shouldLoadSecondary ? pipelineDealAgeError as Error | null : null,
+    revenueError: shouldLoadSecondary ? revenueError as Error | null : null,
     
     // Refetch
     refetchAll,
