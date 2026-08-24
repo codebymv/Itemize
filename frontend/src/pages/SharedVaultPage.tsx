@@ -105,7 +105,10 @@ const SharedVaultPage: React.FC = () => {
         } else if (status === 429) {
           setError('Too many requests. Please try again later.');
         } else {
-          setError('Failed to load shared content. Please try again later.');
+          const detail = err instanceof Error ? err.message : 'Unknown error';
+          setError(import.meta.env.DEV
+            ? `Failed to load shared content: ${detail}`
+            : 'Failed to load shared content. Please try again later.');
         }
       } finally {
         setLoading(false);

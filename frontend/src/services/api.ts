@@ -591,7 +591,7 @@ export const unshareVault = async (vaultId: number, token?: string) => {
 // Get shared vault (public)
 export const getSharedVault = async (shareToken: string) => {
   const response = await api.get(`/api/shared/vault/${shareToken}`);
-  return response.data.data;
+  return response.data;
 };
 
 // Lock vault with master password

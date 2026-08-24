@@ -13,9 +13,9 @@ describe('retained public vault sharing HTTP contract', () => {
     vi.clearAllMocks();
   });
 
-  it('unwraps the public vault response envelope', async () => {
+  it('returns the public vault data already unwrapped by the shared API client', async () => {
     vi.mocked(api.get).mockResolvedValue({
-      data: { success: true, data: { id: 7, title: 'Shared vault', items: [] } },
+      data: { id: 7, title: 'Shared vault', items: [] },
     });
 
     await expect(getSharedVault('token')).resolves.toEqual({ id: 7, title: 'Shared vault', items: [] });
