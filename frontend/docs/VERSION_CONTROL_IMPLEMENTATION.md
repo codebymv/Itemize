@@ -17,7 +17,7 @@ Implemented a comprehensive staging and version control system for the landing p
   - Added `current_version_id` column to track production version
   - Foreign key reference to page_versions
 
-#### GraphQL API (`backend-v2/src/landing-pages/`)
+#### GraphQL API (`backend/src/landing-pages/`)
 
 `LandingPageVersionsResolver` provides organization-qualified version history,
 detail, create, publish, delete, and restore operations. Draft preview uses the
@@ -192,8 +192,8 @@ restorePageVersion(pageId, versionId, organizationId)
 ### Backend Files
 | File | Status | Description |
 |------|--------|-------------|
-| `backend-v2/src/landing-pages/landing-page-versions.resolver.ts` | ✅ Created | Version GraphQL API |
-| `backend-v2/src/landing-pages/landing-page-versions.service.ts` | ✅ Created | Version policy and lifecycle |
+| `backend/src/landing-pages/landing-page-versions.resolver.ts` | ✅ Created | Version GraphQL API |
+| `backend/src/landing-pages/landing-page-versions.service.ts` | ✅ Created | Version policy and lifecycle |
 | `db_pages_migrations.js` | 🔄 Modified | Added pageVersions table |
 
 ### Frontend Files

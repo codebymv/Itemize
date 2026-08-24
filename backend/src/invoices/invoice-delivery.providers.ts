@@ -214,7 +214,7 @@ export class LegacyInvoicePdfRenderer implements InvoicePdfRenderer {
   async render(snapshot: InvoicePdfSnapshot): Promise<Buffer> {
     const candidates = [
       resolve(process.cwd(), 'pdf-service/pdf.service.js'),
-      resolve(process.cwd(), 'backend-v2/pdf-service/pdf.service.js'),
+      resolve(process.cwd(), 'backend/pdf-service/pdf.service.js'),
       resolve(__dirname, '../../pdf-service/pdf.service.js'),
       resolve(__dirname, '../../../pdf-service/pdf.service.js'),
     ];

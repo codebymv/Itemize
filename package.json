@@ -31,7 +31,7 @@
   },
   "workspaces": [
     "frontend",
-    "backend-v2",
+    "backend",
     "db"
   ],
   "dependencies": {

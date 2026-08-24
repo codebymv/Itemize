@@ -196,7 +196,7 @@ export class SignatureFileCleanupService {
          lease_expires_at=CURRENT_TIMESTAMP+($1::int*INTERVAL '1 second'),
          claimed_by=$3,last_error=NULL,updated_at=CURRENT_TIMESTAMP
        FROM candidate WHERE job.id=candidate.id RETURNING job.*`,
-      [leaseSeconds, jobId, `backend-v2:${process.pid}`],
+      [leaseSeconds, jobId, `backend:${process.pid}`],
     );
     return result.rows[0] || null;
   }

@@ -5,7 +5,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 const DOCS_SOURCE = '!docs';
-const DOCS_TARGET = 'backend-v2/docs';
+const DOCS_TARGET = 'backend/docs';
 
 /**
  * Cross-platform copy function

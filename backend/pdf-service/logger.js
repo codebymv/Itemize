@@ -1,5 +1,5 @@
 // Minimal console logger shim replacing the legacy winston logger so the
-// ported PDF service stays dependency-free inside backend-v2.
+// ported PDF service stays dependency-free inside the NestJS backend.
 const format = (level, args) =>
     console[level === 'error' ? 'error' : 'log'](
         `[pdf-service] ${level}:`,

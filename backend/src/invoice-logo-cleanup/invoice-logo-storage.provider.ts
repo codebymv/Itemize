@@ -157,7 +157,7 @@ export class LegacyInvoiceLogoStorage implements InvoiceLogoStorage {
   private localDirectories(): string[] {
     return [
       resolve(process.cwd(), 'uploads/logos'),
-      resolve(process.cwd(), 'backend-v2/uploads/logos'),
+      resolve(process.cwd(), 'backend/uploads/logos'),
       resolve(__dirname, '../../uploads/logos'),
     ];
   }

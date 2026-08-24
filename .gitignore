@@ -57,7 +57,7 @@ jspm_packages/
 # Build output
 frontend/dist/
 backend/dist/
-backend-v2/dist/
+backend/dist/
 backend/.cache/
 backend/.workflow-rollout-results/
 
@@ -71,7 +71,7 @@ ehthumbs.db
 Thumbs.db
 
 # Runtime upload storage (NestJS backend)
-backend-v2/uploads/
+backend/uploads/
 
 # Local PDF output scratch
 output/

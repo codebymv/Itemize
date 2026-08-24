@@ -3,7 +3,7 @@
  * (backend/src/routes/docs.js): markdown content reads with a
  * directory-containment guard, the recursive structure listing with
  * the !-first ordering, and content search with excerpts. Serves the
- * synced docs mirror (backend-v2/docs) in deployments and the !docs
+ * synced docs mirror (backend/docs) in deployments and the !docs
  * source when running inside the monorepo.
  */
 import { Controller, Get, Query, Res } from '@nestjs/common';

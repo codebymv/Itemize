@@ -36,9 +36,9 @@ for (const line of fs.readFileSync(examplePath, 'utf8').split(/\r?\n/)) {
 
 const missing = [...used].filter((key) => !declared.has(key)).sort();
 if (missing.length > 0) {
-  console.error('backend-v2/.env.example is missing runtime variables:');
+  console.error('backend/.env.example is missing runtime variables:');
   for (const key of missing) console.error(`  - ${key}`);
   process.exitCode = 1;
 } else {
-  console.log(`backend-v2 environment contract covers ${used.size} runtime variables.`);
+  console.log(`backend environment contract covers ${used.size} runtime variables.`);
 }

@@ -12,7 +12,7 @@ const { spawn } = require('child_process');
 
 const dbRoot = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(dbRoot, '..');
-const graphqlRoot = path.resolve(repoRoot, 'backend-v2');
+const graphqlRoot = path.resolve(repoRoot, 'backend');
 const composeFile = path.join(dbRoot, 'docker-compose.integration.yml');
 const port = process.env.ITEMIZE_TEST_DB_PORT || '55432';
 const projectName = process.env.ITEMIZE_INTEGRATION_PROJECT || `itemize-integration-${process.pid}`;

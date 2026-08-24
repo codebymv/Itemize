@@ -29,7 +29,7 @@ const redact = (error: unknown): string =>
 
 @Injectable()
 export class TrialRemindersRepository {
-  private readonly workerId = `backend-v2:${process.pid}:${randomUUID()}`;
+  private readonly workerId = `backend:${process.pid}:${randomUUID()}`;
 
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 

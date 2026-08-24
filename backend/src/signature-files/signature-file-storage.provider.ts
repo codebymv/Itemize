@@ -392,7 +392,7 @@ export class LegacySignatureFileStorage implements SignatureFileStorage {
   private localDirectories(): string[] {
     return [
       resolve(process.cwd(), 'uploads/signatures'),
-      resolve(process.cwd(), 'backend-v2/uploads/signatures'),
+      resolve(process.cwd(), 'backend/uploads/signatures'),
       resolve(__dirname, '../../uploads/signatures'),
     ];
   }

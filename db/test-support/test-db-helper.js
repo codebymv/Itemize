@@ -77,7 +77,7 @@ class TestDbHelper {
         const created = await createPersonalOrganization(this.pool, user.id, user.name);
         this._orgIds.push(created.id);
 
-        // Mirror the production signup trial (backend-v2 auth grants 14 days of
+        // Mirror the production signup trial (the NestJS auth grants 14 days of
         // 'trialing') so entitlement-gated background workers see the same
         // state as a real new workspace. Suites exercising the unentitled path
         // must override subscription_status explicitly.
