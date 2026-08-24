@@ -1,128 +1,83 @@
 # Itemize - Business Operations Platform
 
+A comprehensive business operations platform built with React (frontend) and NestJS/GraphQL (backend), deployed on Railway with PostgreSQL. Includes invoicing, CRM, campaigns, e-signatures, workflows, and collaboration tools.
+
 ## 📚 Documentation
 
-This project's documentation has been organized into separate files for better readability and maintenance.
-
-### Core Documentation
-
 - [Getting Started](./!docs/getting-started.md) - Setup instructions for local development
-
-## 🚀 Quick Start
-
-For a quick start guide, see the [Getting Started](./!docs/getting-started.md) documentation.
-
-A comprehensive business operations platform built with React (frontend) and Node.js/Express (backend), designed for deployment on Railway with PostgreSQL. Includes invoicing, CRM, campaigns, e-signatures, workflows, and collaboration tools.
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 18+ installed
-- npm or yarn package manager
-
-### Development Setup
-
-1. **Install all dependencies**:
-   ```bash
-   npm run install:all
-   ```
-
-2. **Start both frontend and backend in development mode**:
-   ```bash
-   npm run dev
-   ```
-   This will start:
-   - Backend server on `http://localhost:3001`
-   - Frontend development server on `http://localhost:5173`
-
-### Individual Services
-
-**Start only backend**:
-```bash
-npm run dev:backend
-```
-
-**Start only frontend**:
-```bash
-npm run dev:frontend
-```
+- `backend-v2/docs/` - Architecture, API, and implementation docs (synced mirror; edit `!docs/` and run `npm run docs:sync`)
 
 ## 📁 Project Structure
 
 ```
-Itemize/
-├── package.json          # Root package.json with scripts
-├── README.md            # This file
-├── backend/             # Node.js/Express API
-│   ├── src/
-│   │   └── index.js     # Main server file
-│   ├── package.json     # Backend dependencies
-│   ├── schema.sql       # Database schema
-│   ├── railway.json     # Railway deployment config
-│   └── .env.example     # Environment variables template
-└── frontend/            # React application
-    ├── src/             # React components and pages
-    ├── package.json     # Frontend dependencies
-    └── vite.config.ts   # Vite configuration
+itemize.cloud/
+├── package.json          # Root workspace scripts (workspaces: frontend, backend-v2, db)
+├── backend-v2/           # NestJS/GraphQL API (the canonical backend)
+│   ├── src/              # Nest modules: GraphQL resolvers + retained HTTP controllers
+│   ├── test/integration/ # Integration specs (run against a Dockerized Postgres)
+│   ├── pdf-service/      # Invoice PDF renderer (puppeteer, ported from Express)
+│   ├── Dockerfile        # Railway production image (includes Chrome for PDFs)
+│   └── railway.json      # Railway deploy config
+├── db/                   # Database workspace: schema authority
+│   ├── migrations/       # Numbered migration stream (the schema source of truth)
+│   ├── src/              # Migration modules + shared db utilities
+│   ├── scripts/          # initialize-test-database, execute-migration, fresh test gate
+│   └── test-support/     # Test DB helpers used by backend-v2 integration specs
+├── frontend/             # React application (Vite + TypeScript)
+└── !docs/                # Documentation source of truth
 ```
 
-## 🛠 Available Scripts
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 22+
+- Docker (for the integration test database)
+
+### Development Setup
+
+```bash
+npm install
+npm run dev
+```
+
+This starts:
+- NestJS GraphQL API on `http://localhost:3100` (`/graphql` + retained HTTP routes under `/api`)
+- Frontend development server on `http://localhost:5173`
+- Docs watcher (syncs `!docs/` into `backend-v2/docs/`)
+
+### Individual Services
+
+```bash
+npm run dev:graphql    # backend only
+npm run dev:frontend   # frontend only
+```
+
+## 🛠 Key Scripts
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start both frontend and backend in development mode |
-| `npm run dev:backend` | Start only the backend server |
-| `npm run dev:frontend` | Start only the frontend dev server |
-| `npm run install:all` | Install dependencies for root, backend, and frontend |
-| `npm run build` | Build the frontend for production |
-| `npm run start` | Start both services in production mode |
+| `npm run dev` | Backend + frontend + docs watcher |
+| `npm run build` | Docs sync/check + backend + frontend production builds |
+| `npm run migrate` | Run pending database migrations (db workspace) |
+| `npm run test` | Backend-v2 unit suite + frontend tests |
+| `npm run release:integration` | Fresh-database integration gate (Docker Postgres, full migration stream, all integration specs) |
+| `npm run release:check` | Full pre-release gate |
 
-## 🗄️ Database Setup (Local Development)
+## 🗄️ Database
 
-1. Install PostgreSQL locally
-2. Create a database named `itemize`
-3. Copy `backend/.env.example` to `backend/.env`
-4. Update the `DATABASE_URL` in `.env`
-5. Run the schema: `psql -d itemize -f backend/schema.sql`
+The `db/` workspace owns the schema: `db/migrations/` is the numbered migration stream, applied by `npm run migrate` (tracked in `schema_migrations`). The integration gate (`npm run release:integration`) boots a disposable Postgres in Docker, applies every migration from zero, and runs the backend-v2 integration specs against it.
+
+For local development, copy `backend-v2/.env.example` to `backend-v2/.env` and set `DATABASE_URL`.
 
 ## 🚀 Railway Deployment
 
-### Backend Deployment
-1. Push your code to GitHub
-2. Connect your repository to Railway
-3. Deploy the backend service (point to `/backend` directory)
-4. Add PostgreSQL database service
-5. Set environment variables:
-   - `DATABASE_URL` (auto-provided by Railway)
-   - `FRONTEND_URL` (your frontend URL)
-   - Leave `COOKIE_DOMAIN` unset when the backend runs on `*.railway.app`; set it to `.itemize.cloud` only if the backend is served from an `itemize.cloud` subdomain such as `api.itemize.cloud`.
-6. Run `schema.sql` in Railway's PostgreSQL console
+Production runs as separate Railway services:
 
-### Frontend Deployment
-1. Deploy frontend as separate Railway service (point to `/frontend` directory)
-2. Set environment variable:
-   - `VITE_API_URL` (your backend URL)
+- **GraphQL backend** (`backend-v2/`): built from its `Dockerfile` (includes Chrome for invoice PDF rendering). Serves `api.itemize.cloud` on port 3100. Deployed with `railway up` from a staged copy of `backend-v2/` (the CLI must not walk up to the repo root).
+- **Frontend** (`frontend/`): Vite build, serves `itemize.cloud`.
+- **PostgreSQL**: Railway Postgres; migrations run via `npm run migrate` with `DATABASE_URL` pointed at it.
 
-## 🔧 Environment Variables
-
-### Backend (.env)
-```env
-DATABASE_URL=postgresql://username:password@localhost:5432/itemize
-PORT=3001
-NODE_ENV=development
-FRONTEND_URL=http://localhost:5173
-# Optional. Do not set this for a Railway backend URL like *.railway.app.
-# COOKIE_DOMAIN=.itemize.cloud
-GEMINI_API_KEY=your-gemini-api-key
-MARKETING_CHAT_AI_ENABLED=true
-```
-
-### Frontend (.env)
-```env
-VITE_API_URL=http://localhost:3001
-# Optional. Defaults enabled unless set to false.
-VITE_MARKETING_CHAT_ENABLED=true
-```
+Backend environment variables are enumerated in `backend-v2/.env.example`; `npm run build` enforces that contract (`config:check`). Leave `COOKIE_DOMAIN` unset on `*.railway.app`; set `.itemize.cloud` only when serving from an `itemize.cloud` subdomain.
 
 ## 📋 Features
 
@@ -153,31 +108,19 @@ VITE_MARKETING_CHAT_ENABLED=true
 - ✅ Reputation management
 - ✅ Social integrations
 
-**Platform**
-- ✅ Responsive design with Tailwind CSS
-- ✅ Modern UI components with shadcn/ui
-- ✅ PostgreSQL database with JSONB storage
-- ✅ RESTful API with Express.js
-- ✅ OAuth and authentication
-
 ## 🛡️ Tech Stack
 
 **Frontend:**
 - React 18 with TypeScript
-- Vite for build tooling
-- Tailwind CSS for styling
-- shadcn/ui components
-- TanStack Query for data fetching
-- React Router for navigation
+- Vite, Tailwind CSS, shadcn/ui
+- TanStack Query, React Router
 
-**Backend:**
-- Node.js with Express.js
-- PostgreSQL with pg driver
-- CORS and Helmet for security
-- Morgan for logging
-- dotenv for environment management
+**Backend (`backend-v2/`):**
+- NestJS with Apollo GraphQL (code-first)
+- Retained HTTP controllers for webhooks, OAuth callbacks, uploads, and public widgets
+- Socket.IO realtime host with a Postgres outbox
+- Background workers (email/social/subscription webhooks, calendar sync, trial reminders, file cleanup)
+- PostgreSQL with pg driver, Winston logging, Sentry, express-rate-limit ingress guard
 
 **Deployment:**
-- Railway for hosting
-- PostgreSQL on Railway
-- GitHub for version control
+- Railway (Docker image for the backend), PostgreSQL on Railway
