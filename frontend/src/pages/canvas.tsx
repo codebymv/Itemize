@@ -100,15 +100,10 @@ const { currentUser } = useAuthState();
     getFilterCounts,
   } = useCanvasFilters(lists, notes, whiteboards, wireframes, vaults);
   const {
-    isListCollapsed,
-    toggleListCollapsed,
-    isNoteCollapsed,
-    toggleNoteCollapsed,
     isWhiteboardCollapsed,
     toggleWhiteboardCollapsed,
     isWireframeCollapsed,
     toggleWireframeCollapsed,
-    listToggleCallbacks,
   } = useCanvasCollapsible(lists);
   const {
     showButtonContextMenu,
@@ -599,13 +594,6 @@ const { currentUser } = useAuthState();
                 onShareList={handleShareList}
                 onShareNote={handleShareNote}
                 onShareWhiteboard={handleShareWhiteboard}
-                isListCollapsed={isListCollapsed}
-                toggleListCollapsed={toggleListCollapsed}
-                isNoteCollapsed={isNoteCollapsed}
-                toggleNoteCollapsed={toggleNoteCollapsed}
-                isWhiteboardCollapsed={isWhiteboardCollapsed}
-                toggleWhiteboardCollapsed={toggleWhiteboardCollapsed}
-                listToggleCallbacks={listToggleCallbacks}
                 addCategory={addCategory}
                 updateCategory={editCategory}
                 editCategory={editCategory}

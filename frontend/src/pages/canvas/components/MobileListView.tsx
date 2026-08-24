@@ -5,6 +5,7 @@ import { ListCard } from '@/components/ListCard';
 import { NoteCard } from '@/components/NoteCard';
 import { WhiteboardCard } from '@/components/WhiteboardCard';
 import { Category, List, Note, Whiteboard } from '@/types';
+import { useResponsiveContentCollapse } from '@/hooks/useResponsiveContentCollapse';
 
 interface MobileListViewProps {
   filteredLists: List[];
@@ -30,13 +31,6 @@ interface MobileListViewProps {
   onShareList: (listId: string) => void;
   onShareNote: (noteId: number) => void;
   onShareWhiteboard: (whiteboardId: number) => void;
-  isListCollapsed: (id: string) => boolean;
-  toggleListCollapsed: (id: string) => void;
-  isNoteCollapsed: (id: number) => boolean;
-  toggleNoteCollapsed: (id: number) => void;
-  isWhiteboardCollapsed: (id: number) => boolean;
-  toggleWhiteboardCollapsed: (id: number) => void;
-  listToggleCallbacks: Record<string, () => void>;
   addCategory: (data: { name: string; color_value: string }) => Promise<unknown>;
   updateCategory: (name: string, data: Partial<{ name: string; color_value: string }>) => Promise<void>;
   editCategory: (name: string, data: Partial<{ name: string; color_value: string }>) => Promise<void>;
@@ -66,17 +60,12 @@ export function MobileListView({
   onShareList,
   onShareNote,
   onShareWhiteboard,
-  isListCollapsed,
-  toggleListCollapsed,
-  isNoteCollapsed,
-  toggleNoteCollapsed,
-  isWhiteboardCollapsed,
-  toggleWhiteboardCollapsed,
-  listToggleCallbacks,
   addCategory,
   updateCategory,
   editCategory,
 }: MobileListViewProps) {
+  const contentCollapse = useResponsiveContentCollapse(true);
+
   return (
     <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-8">
       {/* Categories Section */}
@@ -162,8 +151,8 @@ export function MobileListView({
                     onDelete={onDeleteList}
                     onShare={onShareList}
                     existingCategories={dbCategories}
-                    isCollapsed={isListCollapsed(list.id)}
-                    onToggleCollapsed={listToggleCallbacks[list.id]}
+                    isCollapsed={contentCollapse.isCollapsed('list', list.id)}
+                    onToggleCollapsed={() => contentCollapse.toggle('list', list.id)}
                     addCategory={addCategory}
                     updateCategory={editCategory}
                   />
@@ -192,8 +181,8 @@ export function MobileListView({
                     }}
                     onShare={onShareNote}
                     existingCategories={dbCategories}
-                    isCollapsed={isNoteCollapsed(note.id)}
-                    onToggleCollapsed={() => toggleNoteCollapsed(note.id)}
+                    isCollapsed={contentCollapse.isCollapsed('note', note.id)}
+                    onToggleCollapsed={() => contentCollapse.toggle('note', note.id)}
                     updateCategory={editCategory}
                   />
                 ))}
@@ -221,8 +210,8 @@ export function MobileListView({
                     }}
                     onShare={onShareWhiteboard}
                     existingCategories={dbCategories}
-                    isCollapsed={isWhiteboardCollapsed(whiteboard.id)}
-                    onToggleCollapsed={() => toggleWhiteboardCollapsed(whiteboard.id)}
+                    isCollapsed={contentCollapse.isCollapsed('whiteboard', whiteboard.id)}
+                    onToggleCollapsed={() => contentCollapse.toggle('whiteboard', whiteboard.id)}
                     updateCategory={editCategory}
                   />
                 ))}
