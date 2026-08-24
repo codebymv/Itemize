@@ -1,9 +1,9 @@
 import { useEffect, type ReactNode } from 'react';
 import { useSetHeaderContent } from '@/contexts/HeaderContext';
+import { ResponsivePageHeading } from '@/components/layout/ResponsivePageHeading';
 import { cn } from '@/lib/utils';
 
-export const PAGE_TITLE_CLASS =
-    'text-xl font-semibold italic truncate italic-safe font-raleway text-foreground';
+export { PAGE_TITLE_CLASS } from '@/components/layout/pageHeaderLayout';
 
 interface UsePageHeaderOptions {
     title?: ReactNode;
@@ -23,19 +23,7 @@ export const usePageHeader = ({
     useEffect(() => {
         setHeaderContent(
             <div className="flex items-center justify-between w-full min-w-0">
-                <div className="flex items-center gap-2 ml-2 min-w-0">
-                    {leading}
-                    {icon ? (
-                        <span className="hidden shrink-0 md:inline-flex" data-page-header-icon>
-                            {icon}
-                        </span>
-                    ) : null}
-                    {title ? (
-                        <h1 className={PAGE_TITLE_CLASS}>
-                            {title}
-                        </h1>
-                    ) : null}
-                </div>
+                <ResponsivePageHeading title={title} icon={icon} leading={leading} />
                 {rightContent ? (
                     <div className={cn('hidden md:flex items-center gap-2 ml-4 flex-1 justify-end mr-4')}>
                         {rightContent}

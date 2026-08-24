@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { HeaderProvider, useHeader } from '@/contexts/HeaderContext';
 import { PageLayout } from './PageLayout';
 import { PAGE_TITLE_CLASS } from '@/hooks/usePageHeader';
+import { shouldShowMobilePageHeaderIcon } from './pageHeaderLayout';
 
 function HeaderSlot() {
   const { headerContent } = useHeader();
@@ -33,8 +34,27 @@ describe('PageLayout', () => {
     expect(screen.getByTestId('app-header')).toContainElement(heading);
     const icon = screen.getByTestId('page-icon');
     expect(icon).toBeInTheDocument();
-    expect(icon.parentElement).toHaveClass('hidden', 'md:inline-flex');
+    expect(icon.parentElement).toHaveClass('inline-flex', 'md:inline-flex');
+    expect(icon.parentElement).not.toHaveClass('hidden');
     expect(screen.getByText('Body')).toBeInTheDocument();
+  });
+
+  it('keeps the mobile icon when the complete title fits', () => {
+    expect(shouldShowMobilePageHeaderIcon({
+      availableWidth: 220,
+      titleWidth: 105,
+      iconWidth: 20,
+      gap: 8,
+    })).toBe(true);
+  });
+
+  it('drops the mobile icon before allowing the complete title to truncate', () => {
+    expect(shouldShowMobilePageHeaderIcon({
+      availableWidth: 132,
+      titleWidth: 112,
+      iconWidth: 20,
+      gap: 8,
+    })).toBe(false);
   });
 
   it('renders mobile actions in the mobile controls bar', () => {
