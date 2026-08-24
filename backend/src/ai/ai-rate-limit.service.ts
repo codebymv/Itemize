@@ -8,14 +8,22 @@ type Bucket = { count: number; resetAt: number };
 export class AiRateLimitService {
   private readonly buckets = new Map<string, Bucket>();
 
-  consume(request: Request, namespace: string, limit: number): void {
+  consume(request: Request, namespace: string, limit: number, actorId?: string): void {
     const now = Date.now();
     const ip = request.ip || request.socket?.remoteAddress || 'unknown';
-    const key = `${namespace}:${ip}`;
+    if (actorId) {
+      this.consumeKey(`${namespace}:actor:${actorId}`, limit, now);
+      this.consumeKey(`${namespace}:ip:${ip}`, Math.max(limit * 3, limit), now);
+    } else {
+      this.consumeKey(`${namespace}:ip:${ip}`, limit, now);
+    }
+    this.prune(now);
+  }
+
+  private consumeKey(key: string, limit: number, now: number): void {
     const bucket = this.buckets.get(key);
     if (!bucket || bucket.resetAt <= now) {
       this.buckets.set(key, { count: 1, resetAt: now + 15 * 60 * 1000 });
-      this.prune(now);
       return;
     }
     if (bucket.count >= limit) {

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import '@/styles/tiptap-editor.css';
 import { Editor, EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -9,195 +9,46 @@ import TextStyle from '@tiptap/extension-text-style';
 import { Extension } from '@tiptap/core';
 import { Sparkles } from 'lucide-react';
 import { RichTextToolbar } from './RichTextToolbar';
+import { SuggestionActions } from '@/components/ai/SuggestionActions';
 import { SaveStatus } from '@/components/ui/save-status';
 import { useNoteSuggestions } from '../../hooks/use-note-suggestions';
 import { formatRelativeTime } from '../../utils/timeUtils';
 import { useAISuggest } from '@/context/AISuggestContext';
 import { useAutosave } from '@/hooks/useAutosave';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
-import { storage } from '@/lib/storage';
 import logger from '@/lib/logger';
 import { migrateNoteContentToHtml, shouldApplyExternalNoteHtml } from './noteEditorHtml';
-
-// Global storage for autocomplete suggestions (persists across editor recreations)
-const globalAutocompleteStorage: {
-  suggestion: string | null;
-  triggerSuggestions: (() => void) | null;
-  setSuggestionDebounce: ((wordCount: number) => void) | null;
-  handleSave: (() => void) | null;
-} = {
-  suggestion: null,
-  triggerSuggestions: null,
-  setSuggestionDebounce: null,
-  handleSave: null,
-};
+import { formatNoteSuggestion } from './noteSuggestionText';
+import { createAutocompleteStorage, type AutocompleteStorage } from './autocompleteStorage';
 
 // TipTap extension for autocomplete keyboard shortcuts
 const AutocompleteExtension = Extension.create({
   name: 'autocomplete',
 
-  addKeyboardShortcuts() {
-    return {
-      Tab: () => {
-        if (!this.editor.isFocused) {
-          return false;
-        }
-        logger.debug('tiptap', 'Tab key pressed');
-        logger.debug('tiptap', 'Editor focus state:', this.editor.isFocused);
-        logger.debug('tiptap', 'Local storage object:', JSON.stringify(this.storage, null, 2));
-        logger.debug('tiptap', 'Global storage object:', JSON.stringify(globalAutocompleteStorage, null, 2));
-        
-        // Use global storage instead of local storage
-        const suggestion = globalAutocompleteStorage.suggestion;
-        logger.debug('tiptap', 'Current suggestion from global storage:', suggestion?.substring(0, 30));
-        
-        if (suggestion) {
-          logger.debug('tiptap', 'Accepting suggestion with Tab:', suggestion.substring(0, 30));
-          
-          // Get current content to check for duplicates before insertion
-          const currentContent = this.editor.getText();
-          const suggestionTrimmed = suggestion.trim();
-          
-          // Enhanced duplicate checking for both single words and phrases
-          const lastWords = currentContent.trim().split(/\s+/).slice(-10);
-          const suggestionWords = suggestionTrimmed.toLowerCase().split(/\s+/);
-          
-          // Check for single word duplicates (like "the")
-          if (suggestionWords.length === 1) {
-            const singleWord = suggestionWords[0];
-            if (lastWords.some(word => word.toLowerCase() === singleWord)) {
-              logger.debug('tiptap', 'Preventing single word duplicate:', {
-                duplicateWord: singleWord,
-                lastWords: lastWords.slice(-5)
-              });
-              globalAutocompleteStorage.suggestion = null;
-              return true; // Prevent default but don't insert
-            }
-          }
-          
-          // Check for phrase duplicates (3+ words)
-          const suggestionStart = suggestionWords.slice(0, 3).join(' ');
-          const lastWordsText = lastWords.join(' ').toLowerCase();
-          
-          if (suggestionStart.length > 3 && lastWordsText.includes(suggestionStart)) {
-            logger.debug('tiptap', 'Preventing phrase duplicate:', {
-              suggestionStart,
-              lastWords: lastWords.slice(-5)
-            });
-            globalAutocompleteStorage.suggestion = null;
-            return true; // Prevent default but don't insert
-          }
-          
-          // Clear the suggestion first to prevent immediate re-showing
-          globalAutocompleteStorage.suggestion = null;
-          
-          // Insert the suggestion
-          this.editor.commands.insertContent(suggestion);
-          
-          // Get word count AFTER insertion for proper debounce
-          const newContent = this.editor.getText();
-          const newWordCount = newContent.trim().split(/\s+/).filter(word => word.length > 0).length;
-          
-          // Set debounce AFTER inserting content using global storage
-          if (globalAutocompleteStorage.setSuggestionDebounce) {
-            globalAutocompleteStorage.setSuggestionDebounce(newWordCount);
-          }
-          
-          return true; // Prevent default Tab behavior
-        } else {
-          logger.debug('tiptap', 'No suggestion available in global storage');
-          logger.debug('tiptap', 'Global storage state:', globalAutocompleteStorage);
-        }
-        return false;
-      },
-      ArrowRight: () => {
-        const suggestion = globalAutocompleteStorage.suggestion;
-        if (suggestion) {
-          logger.debug('tiptap', 'ArrowRight pressed with suggestion:', suggestion.substring(0, 30));
-          
-          // Get current content to check for duplicates before insertion
-          const currentContent = this.editor.getText();
-          const suggestionTrimmed = suggestion.trim();
-          
-          // Enhanced duplicate checking for both single words and phrases
-          const lastWords = currentContent.trim().split(/\s+/).slice(-10);
-          const suggestionWords = suggestionTrimmed.toLowerCase().split(/\s+/);
-          
-          // Check for single word duplicates (like "the")
-          if (suggestionWords.length === 1) {
-            const singleWord = suggestionWords[0];
-            if (lastWords.some(word => word.toLowerCase() === singleWord)) {
-              logger.debug('tiptap', 'Preventing single word duplicate (ArrowRight):', {
-                duplicateWord: singleWord,
-                lastWords: lastWords.slice(-5)
-              });
-              globalAutocompleteStorage.suggestion = null;
-              return true; // Prevent default but don't insert
-            }
-          }
-          
-          // Check for phrase duplicates (3+ words)
-          const suggestionStart = suggestionWords.slice(0, 3).join(' ');
-          const lastWordsText = lastWords.join(' ').toLowerCase();
-          
-          if (suggestionStart.length > 3 && lastWordsText.includes(suggestionStart)) {
-            logger.debug('tiptap', 'Preventing phrase duplicate (ArrowRight):', {
-              suggestionStart,
-              lastWords: lastWords.slice(-5)
-            });
-            globalAutocompleteStorage.suggestion = null;
-            return true; // Prevent default but don't insert
-          }
-          
-          // Clear the suggestion first to prevent immediate re-showing
-          globalAutocompleteStorage.suggestion = null;
-          
-          // Insert the suggestion
-          this.editor.commands.insertContent(suggestion);
-          
-          // Get word count AFTER insertion for proper debounce
-          const newContent = this.editor.getText();
-          const newWordCount = newContent.trim().split(/\s+/).filter(word => word.length > 0).length;
-          
-          // Set debounce AFTER inserting content using global storage
-          if (globalAutocompleteStorage.setSuggestionDebounce) {
-            globalAutocompleteStorage.setSuggestionDebounce(newWordCount);
-          }
-          
-          return true; // Prevent default Arrow behavior
-        }
-        return false;
-      },
-    };
-  },
-
   addStorage() {
     return {
-      autocomplete: null,
+      autocomplete: createAutocompleteStorage(),
     };
   },
 
-  onBeforeCreate() {
-    // NEVER reset existing storage - preserve suggestion if it exists
-    const existingSuggestion = this.storage.autocomplete?.suggestion;
-    
-    if (!this.storage.autocomplete || typeof this.storage.autocomplete !== 'object') {
-      this.storage.autocomplete = {
-        suggestion: null,
-        triggerSuggestions: () => {},
-        setSuggestionDebounce: () => {},
-        handleSave: () => {},
-      };
-    } else if (existingSuggestion) {
-      // Preserve existing suggestion during recreation
-      this.storage.autocomplete.suggestion = existingSuggestion;
-    }
-    
-    logger.debug('tiptap', 'onBeforeCreate called, preserving suggestion:', this.storage.autocomplete?.suggestion?.substring(0, 30) || 'null');
-  },
+  addKeyboardShortcuts() {
+    const acceptCurrentSuggestion = () => {
+      if (!this.editor.isFocused) return false;
+      const autocomplete = this.storage.autocomplete as AutocompleteStorage | undefined;
+      if (!autocomplete?.suggestion || !autocomplete.acceptSuggestion) return false;
+      autocomplete.acceptSuggestion();
+      return true;
+    };
 
-  onCreate() {
-    logger.debug('tiptap', 'onCreate called, final storage:', this.storage.autocomplete?.suggestion?.substring(0, 30) || 'null');
+    return {
+      Tab: acceptCurrentSuggestion,
+      ArrowRight: acceptCurrentSuggestion,
+      'Mod-Space': () => {
+        const autocomplete = this.storage.autocomplete as AutocompleteStorage | undefined;
+        autocomplete?.triggerSuggestions?.();
+        return Boolean(autocomplete?.triggerSuggestions);
+      },
+    };
   },
 });
 
@@ -229,13 +80,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
   updatedAt
 }) => {
   const isUpdatingFromProps = useRef(false);
-  const measureRef = useRef<HTMLDivElement>(null);
-  
-  // Simplified suggestion state - removed problematic debouncing that causes flashing
-  const [lastAcceptedSuggestionLength, setLastAcceptedSuggestionLength] = useState<number>(0);
-  
-  // Show suggestion button state
-  const [showSuggestionButton, setShowSuggestionButton] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
   
   // Use global AI enabled state from context
   const { aiEnabled } = useAISuggest();
@@ -348,29 +193,6 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
     },
   });
 
-  // Global Tab key logger to debug event capture
-  useEffect(() => {
-    const globalTabHandler = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab' || !editor?.isFocused) {
-        return;
-      }
-      const suggestion = globalAutocompleteStorage.suggestion;
-      if (suggestion && !e.defaultPrevented) {
-        e.preventDefault();
-        globalAutocompleteStorage.suggestion = null;
-        editor.commands.insertContent(suggestion);
-        const newContent = editor.getText();
-        const newWordCount = newContent.trim().split(/\s+/).filter(word => word.length > 0).length;
-        if (globalAutocompleteStorage.setSuggestionDebounce) {
-          globalAutocompleteStorage.setSuggestionDebounce(newWordCount);
-        }
-      }
-    };
-
-    document.addEventListener('keydown', globalTabHandler);
-    return () => document.removeEventListener('keydown', globalTabHandler);
-  }, [editor]);
-
   // Add keyboard shortcuts for formatting (Apple-style)
   useEffect(() => {
     if (!editor) return;
@@ -411,16 +233,15 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
   const cursorPosition = editor?.state.selection.anchor || 0;
 
   // AI suggestions hook (placed after plainTextContent is defined)
-  const { 
-    suggestions, 
-    continuations, 
+  const {
     getSuggestionForInput, 
     triggerSuggestions: fetchAISuggestions,
     forceRefreshSuggestions,
     clearSuggestions,
-    currentSuggestion
+    isLoading: isLoadingSuggestions,
+    error: suggestionError,
   } = useNoteSuggestions({
-    enabled: aiEnabled,
+    enabled: aiEnabled && isEditingContent,
     noteContent: plainTextContent,
     noteCategory
   });
@@ -445,200 +266,44 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
     isUpdatingFromProps.current = false;
   }, [editor, content, setEditContent]);
 
-  // Simplified word count tracking without problematic debouncing
   const currentWordCount = plainTextContent.trim().split(/\s+/).filter(word => word.length > 0).length;
-  const shouldShowSuggestions = true; // Always show suggestions when available
+  const rawAutocomplete = getSuggestionForInput(plainTextContent, cursorPosition);
+  const currentAutocomplete = rawAutocomplete
+    ? formatNoteSuggestion(rawAutocomplete, plainTextContent)
+    : null;
 
-  // Improved grammar correction for AI suggestions
-  const fixSuggestionGrammar = useCallback((suggestion: string, context: string): string => {
-    if (!suggestion) return suggestion;
-    
-    const trimmedContext = context.trim();
-    
-    // Simple and reliable logic: if context doesn't end with sentence punctuation, use lowercase
-    const endsWithSentencePunctuation = /[.!?]\s*$/.test(trimmedContext);
-    const isStartOfSentence = !trimmedContext || endsWithSentencePunctuation;
-    
-    let fixedSuggestion = suggestion;
-    
-    if (isStartOfSentence && fixedSuggestion.length > 0) {
-      // Capitalize first letter at start of sentences
-      fixedSuggestion = fixedSuggestion.charAt(0).toUpperCase() + fixedSuggestion.slice(1);
-    } else if (!isStartOfSentence && fixedSuggestion.length > 0) {
-      // Lowercase first letter in middle of sentences
-      fixedSuggestion = fixedSuggestion.charAt(0).toLowerCase() + fixedSuggestion.slice(1);
-    }
-    
-    logger.debug('tiptap', 'Grammar fix:', {
-      context: `"${trimmedContext.slice(-15)}"`,
-      suggestion: `"${suggestion.substring(0, 20)}"`,
-      fixed: `"${fixedSuggestion.substring(0, 20)}"`,
-      isStartOfSentence,
-      endsWithSentencePunctuation
-    });
-    
-    return fixedSuggestion;
-  }, []);
+  const dismissSuggestion = useCallback(() => {
+    clearSuggestions();
+    const autocomplete = editor?.storage.autocomplete as AutocompleteStorage | undefined;
+    if (autocomplete) autocomplete.suggestion = null;
+  }, [clearSuggestions, editor]);
 
-  // Get current autocomplete suggestion with stabilization to prevent flashing
-  const [stableSuggestion, setStableSuggestion] = useState<string | null>(null);
-  const [lastContentLength, setLastContentLength] = useState(0);
-  
-  // Only update suggestion when content length changes (user typed/deleted)
-  // This prevents constant re-evaluation that causes flashing
-  useEffect(() => {
-    if (plainTextContent.length !== lastContentLength) {
-      // If user is actively typing (content increased), update suggestion immediately
-      // Don't clear it to prevent flickering
-      if (plainTextContent.length > lastContentLength) {
-        // Update suggestion immediately to prevent disappearing
-        const rawSuggestion = getSuggestionForInput(plainTextContent, cursorPosition);
-        const newSuggestion = rawSuggestion ? fixSuggestionGrammar(rawSuggestion, plainTextContent) : null;
-        setStableSuggestion(newSuggestion);
-        setLastContentLength(plainTextContent.length);
-      } else {
-        // If user deleted content, update immediately
-        const rawSuggestion = getSuggestionForInput(plainTextContent, cursorPosition);
-        const newSuggestion = rawSuggestion ? fixSuggestionGrammar(rawSuggestion, plainTextContent) : null;
-        setStableSuggestion(newSuggestion);
-        setLastContentLength(plainTextContent.length);
-      }
-    }
-  }, [plainTextContent.length, lastContentLength, getSuggestionForInput, fixSuggestionGrammar, plainTextContent, cursorPosition]);
-  
-  const currentAutocomplete = stableSuggestion;
-  
-  // Debug logging for Tab functionality
-  logger.debug('tiptap', 'Tab Debug:', {
-    currentAutocomplete: currentAutocomplete?.substring(0, 20),
-    suggestionsAvailable: suggestions.length,
-    plainTextLength: plainTextContent.length,
-    willShowInline: isEditingContent && currentAutocomplete && aiEnabled && plainTextContent.trim().split(/\s+/).length >= 3
-  });
+  const acceptCurrentSuggestion = useCallback(() => {
+    if (!editor || !currentAutocomplete) return;
+    const insertion = formatNoteSuggestion(currentAutocomplete, editor.getText());
+    if (!insertion) return;
+    editor.chain().focus().insertContent(insertion).run();
+    dismissSuggestion();
+  }, [currentAutocomplete, dismissSuggestion, editor]);
+
+  const regenerateSuggestion = useCallback(() => {
+    dismissSuggestion();
+    forceRefreshSuggestions();
+  }, [dismissSuggestion, forceRefreshSuggestions]);
 
   // Update editor's autocomplete storage with current state
   useEffect(() => {
-    if (editor && editor.storage && typeof editor.storage.autocomplete === 'object') {
-      logger.debug('tiptap', 'Updating editor autocomplete storage:', {
-        suggestion: currentAutocomplete?.substring(0, 30),
-        isEditingContent,
-        willPassSuggestion: currentAutocomplete !== null,
-        finalSuggestion: currentAutocomplete?.substring(0, 30) || 'null',
-        storageExists: !!editor.storage.autocomplete,
-        editorReady: editor.isEditable
-      });
-
-      // Update global storage (persists across editor recreations)
-      const updateStorage = () => {
-        // Update global storage - this persists even when editor is recreated
-        globalAutocompleteStorage.suggestion = currentAutocomplete;
-        globalAutocompleteStorage.triggerSuggestions = fetchAISuggestions;
-        globalAutocompleteStorage.setSuggestionDebounce = (wordCount: number) => {
-          logger.debug('tiptap', 'Setting suggestion tracking after accepting suggestion, word count:', wordCount);
-          setLastAcceptedSuggestionLength(wordCount);
-          
-          // Clear note suggestion cache to force fresh suggestions for new context
-          try {
-            storage.removeByPrefix('note-suggestions-');
-            logger.debug('tiptap', 'Cleared note suggestion cache after accepting suggestion');
-          } catch (err) {
-            logger.warn('Failed to clear note suggestion cache:', err);
-          }
-          
-          // Clear current in-memory suggestions to prevent stale data
-          logger.debug('tiptap', 'Clearing in-memory suggestions before refresh', {
-            currentSuggestionsCount: suggestions.length,
-            currentContinuationsCount: continuations.length,
-            currentSuggestion: currentSuggestion?.substring(0, 30)
-          });
-          
-          // Clear React state immediately to prevent stale suggestions
-          if (clearSuggestions) {
-            clearSuggestions();
-          }
-          
-          // Immediately clear current autocomplete to prevent stale display
-          globalAutocompleteStorage.suggestion = null;
-          // Also clear the stable suggestion to prevent flashing
-          setStableSuggestion(null);
-          
-          // Trigger fresh suggestions after a short delay
-          if (forceRefreshSuggestions) {
-            logger.debug('tiptap', 'Force refreshing suggestions after cache clear');
-            setTimeout(() => {
-              forceRefreshSuggestions();
-            }, 300); // Small delay to let editor settle after insertion
-          }
-        };
-        globalAutocompleteStorage.handleSave = () => {
-          void flushAutosave().then((saved) => {
-            if (saved) setIsEditingContent(false);
-          });
-        };
-        
-        // Also update local storage for backward compatibility (but this might get reset)
-        if (editor && editor.storage && editor.storage.autocomplete) {
-          editor.storage.autocomplete = {
-            suggestion: currentAutocomplete,
-            triggerSuggestions: fetchAISuggestions,
-            setSuggestionDebounce: globalAutocompleteStorage.setSuggestionDebounce,
-            handleSave: globalAutocompleteStorage.handleSave,
-          };
-        }
-        
-        // Additional logging to verify storage was set correctly
-        logger.debug('tiptap', 'Storage after update:', {
-          globalSuggestion: globalAutocompleteStorage.suggestion?.substring(0, 30) || 'null',
-          localSuggestion: editor?.storage?.autocomplete?.suggestion?.substring(0, 30) || 'null',
-          hasGlobalStorage: !!globalAutocompleteStorage.suggestion,
-          hasLocalStorage: !!editor?.storage?.autocomplete?.suggestion,
-          isEditing: isEditingContent,
-          timestamp: Date.now()
-        });
-      };
-
-      // Update global storage immediately (no need to wait for local storage)
-      updateStorage();
-    }
-  }, [editor, currentAutocomplete, fetchAISuggestions, flushAutosave, setIsEditingContent]); // Removed isEditingContent from dependencies
-
-  // Simplified debug logging for note autocomplete
-  useEffect(() => {
-    logger.debug('tiptap', 'Rich Note Autocomplete State:', {
-      isEditingContent,
-      aiEnabled,
-      plainTextContent: plainTextContent.substring(0, 50) + (plainTextContent.length > 50 ? '...' : ''),
-      cursorPosition,
-      currentAutocomplete: currentAutocomplete?.substring(0, 30) + (currentAutocomplete && currentAutocomplete.length > 30 ? '...' : ''),
-      suggestionsCount: suggestions.length,
-      continuationsCount: continuations.length,
-      wordCount: currentWordCount,
-      shouldShow: isEditingContent && currentAutocomplete && plainTextContent.trim().split(/\s+/).length >= 3,
-      firstSuggestion: suggestions[0]?.substring(0, 30),
-      firstContinuation: continuations[0]?.substring(0, 30)
-    });
-  }, [isEditingContent, aiEnabled, plainTextContent, cursorPosition, currentAutocomplete, suggestions.length, continuations.length, suggestions, continuations]);
-
-  // Show suggestion button when appropriate
-  useEffect(() => {
-    setShowSuggestionButton(
-      aiEnabled && 
-      isEditingContent && 
-      (suggestions.length > 0 || continuations.length > 0 || currentSuggestion !== null)
-    );
-  }, [aiEnabled, isEditingContent, suggestions.length, continuations.length, currentSuggestion]);
-
-  // Auto-enable editing mode when suggestions are available
-  useEffect(() => {
-    if (aiEnabled && !isEditingContent && (suggestions.length > 0 || currentAutocomplete)) {
-      logger.debug('tiptap', 'Auto-enabling editing mode because suggestions are available');
-      setIsEditingContent(true);
-      // Also focus the editor to enable Tab capture
-      if (editor) {
-        editor.commands.focus();
-      }
-    }
-  }, [aiEnabled, isEditingContent, suggestions.length, currentAutocomplete, editor, setIsEditingContent]);
+    const autocomplete = editor?.storage.autocomplete as AutocompleteStorage | undefined;
+    if (!autocomplete) return;
+    autocomplete.suggestion = currentAutocomplete;
+    autocomplete.triggerSuggestions = fetchAISuggestions;
+    autocomplete.acceptSuggestion = acceptCurrentSuggestion;
+    return () => {
+      autocomplete.suggestion = null;
+      autocomplete.triggerSuggestions = null;
+      autocomplete.acceptSuggestion = null;
+    };
+  }, [acceptCurrentSuggestion, currentAutocomplete, editor, fetchAISuggestions]);
 
   // Handle clicks on the editor container to focus
   const handleEditorClick = useCallback((e: React.MouseEvent) => {
@@ -658,15 +323,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
     if (!isEditingContent) return;
     
     const handleClickOutside = (event: MouseEvent) => {
-      // Check if click is outside the editor area
-      const editorElement = editor?.view.dom;
-      const toolbarElement = document.querySelector('[data-rich-text-toolbar]');
-      
-      if (
-        editorElement && 
-        !editorElement.contains(event.target as Node) &&
-        (!toolbarElement || !toolbarElement.contains(event.target as Node))
-      ) {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
         void flushAutosave().then((saved) => {
           if (saved) setIsEditingContent(false);
         });
@@ -685,6 +342,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
 
   return (
     <div 
+      ref={rootRef}
       className="flex flex-col h-full relative"
       data-rich-text-editor
       tabIndex={-1}
@@ -696,11 +354,14 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
 
       {/* Main Editor Content - takes remaining space but leaves room for footer */}
       <div 
-        className="flex-1 relative cursor-text overflow-hidden"
+        className={`flex-1 relative cursor-text overflow-hidden ${
+          isEditingContent && aiEnabled && (currentAutocomplete || isLoadingSuggestions || suggestionError)
+            ? 'pb-32 md:pb-9'
+            : updatedAt || saveState !== 'idle'
+              ? 'pb-9'
+              : 'pb-2'
+        }`}
         onClick={handleEditorClick}
-        style={{ 
-          paddingBottom: updatedAt ? '36px' : '8px' // Reserve space for footer (responsive)
-        }}
       >
         {/* Editor Content - Always editable */}
         <div className="relative h-full">
@@ -715,7 +376,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
 
           {isEditingContent && currentAutocomplete && aiEnabled && plainTextContent.trim().split(/\s+/).length >= 3 && (
             <div
-              className="pointer-events-none absolute inset-0 overflow-hidden p-3 text-sm leading-relaxed text-muted-foreground"
+              className="pointer-events-none absolute inset-0 hidden overflow-hidden p-3 text-sm leading-relaxed text-muted-foreground md:block"
               aria-hidden
             >
               <span className="invisible whitespace-pre-wrap">{plainTextContent}</span>
@@ -723,24 +384,32 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
             </div>
           )}
 
-          {/* Hidden measurement div for text width calculation */}
-          <div 
-            ref={measureRef}
-            className="absolute opacity-0 pointer-events-none prose prose-sm max-w-none"
-            style={{
-              fontFamily: 'inherit',
-              fontSize: '14px',
-              lineHeight: '20px',
-              padding: '12px',
-              whiteSpace: 'pre-wrap',
-              top: 0,
-              left: 0
-            }}
-          >
-            {plainTextContent}
-          </div>
         </div>
       </div>
+
+      {isEditingContent && aiEnabled && (
+        <>
+          <div className={`absolute left-2 right-2 z-20 md:hidden ${updatedAt || saveState !== 'idle' ? 'bottom-8' : 'bottom-2'}`}>
+            <SuggestionActions
+              suggestion={currentWordCount >= 3 ? currentAutocomplete : null}
+              isLoading={isLoadingSuggestions}
+              error={suggestionError}
+              onAccept={acceptCurrentSuggestion}
+              onDismiss={dismissSuggestion}
+              onRegenerate={regenerateSuggestion}
+            />
+          </div>
+          <div className={`absolute left-2 right-2 z-20 hidden md:block ${updatedAt || saveState !== 'idle' ? 'bottom-8' : 'bottom-2'}`}>
+            <SuggestionActions
+              isLoading={isLoadingSuggestions}
+              error={suggestionError}
+              onAccept={acceptCurrentSuggestion}
+              onDismiss={dismissSuggestion}
+              onRegenerate={regenerateSuggestion}
+            />
+          </div>
+        </>
+      )}
 
       {/* Footer with persistence state and last edited time */}
       {(updatedAt || saveState !== 'idle') && (

@@ -4,6 +4,7 @@ import { storage } from '@/lib/storage';
 import logger from '@/lib/logger';
 import { fetchListSuggestions } from '@/services/aiGraphql';
 import { GraphqlRequestError } from '@/services/graphqlClient';
+import { buildSuggestionCacheKey } from './aiSuggestionCache';
 
 // Cache duration in milliseconds (30 minutes)
 const CACHE_DURATION = 30 * 60 * 1000;
@@ -44,29 +45,20 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
   const [error, setError] = useState<string | null>(null);
 
   // Memoize the items string to prevent unnecessary re-runs
-  const itemsKey = useMemo(() => existingItems.join('|'), [existingItems.join('|')]);
-
-  // Track the last content we had suggestions for to prevent unnecessary clearing
-  const lastSuggestedContent = useRef<string>('');
+  const itemsKey = JSON.stringify(existingItems);
+  const stableItems = useMemo(() => JSON.parse(itemsKey) as string[], [itemsKey]);
   
   // For debouncing and throttling
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const lastRequestTime = useRef<number>(0);
-  const lastInitializedKey = useRef<string>('');
+  const requestSequence = useRef(0);
   
   const { isAuthenticated } = useAuth();
-
-  // Reset current suggestion when input is cleared or feature is disabled
-  useEffect(() => {
-    if (!enabled) {
-      setCurrentSuggestion(null);
-    }
-  }, [enabled]);
 
   // Check if we have cached suggestions for this list
   const getCachedSuggestions = useCallback(() => {
     try {
-      const cacheKey = `itemize-suggestions-${listTitle}-${existingItems.join(',')}`;
+      const cacheKey = buildSuggestionCacheKey('list', `${listTitle}\n${itemsKey}`);
       const cachedData = storage.getJson<{ suggestions: string[]; timestamp: number }>(cacheKey);
       
       if (cachedData) {
@@ -80,14 +72,14 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
         logger.warn('Failed to read suggestion cache:', err);
       }
       return null;
-  }, [listTitle, existingItems]);
+  }, [listTitle, itemsKey]);
   
   // Save suggestions to cache
   const cacheSuggestions = useCallback((newSuggestions: string[]) => {
     try {
       if (!listTitle || !newSuggestions.length) return;
       
-      const cacheKey = `itemize-suggestions-${listTitle}-${existingItems.join(',')}`;
+      const cacheKey = buildSuggestionCacheKey('list', `${listTitle}\n${itemsKey}`);
       const cacheData = {
         suggestions: newSuggestions,
         timestamp: Date.now()
@@ -97,7 +89,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
     } catch (err) {
       logger.warn('Failed to cache suggestions:', err);
     }
-  }, [listTitle, existingItems]);
+  }, [listTitle, itemsKey]);
 
   // Fetch suggestions from API
   const fetchSuggestions = useCallback(async () => {
@@ -106,23 +98,14 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       clearTimeout(debounceTimer.current);
       debounceTimer.current = null;
     }
-
-    const currentContentKey = `${listTitle}-${itemsKey}`;
+    const requestId = ++requestSequence.current;
 
     // Only fetch if enabled and we have at least one item
-    if (!enabled || !listTitle || existingItems.length === 0) {
-      // Only clear suggestions if they're not already empty to prevent unnecessary re-renders
-      if (suggestions.length > 0 || currentSuggestion !== null) {
-        setSuggestions([]);
-        setCurrentSuggestion(null);
-        lastSuggestedContent.current = '';
-      }
-      return;
-    }
-
-    // If we already have suggestions for this exact content, don't clear them
-    if (lastSuggestedContent.current === currentContentKey && currentSuggestion !== null) {
-      logger.debug('ai-suggestions', 'Skipping fetch - already have suggestions for this content');
+    if (!enabled || !listTitle || stableItems.length === 0) {
+      setSuggestions([]);
+      setCurrentSuggestion(null);
+      setError(null);
+      setIsLoading(false);
       return;
     }
 
@@ -134,16 +117,10 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
     // Check if we have cached suggestions first
     const cachedSuggestions = getCachedSuggestions();
     if (cachedSuggestions) {
-      // Only update if suggestions actually changed to prevent unnecessary re-renders
-      const currentFirstSuggestion = suggestions[0];
-      const cachedFirstSuggestion = cachedSuggestions[0];
-
-      if (suggestions.length === 0 || currentFirstSuggestion !== cachedFirstSuggestion) {
-        logger.debug('ai-suggestions', 'Using cached suggestions for:', listTitle);
-        setSuggestions(cachedSuggestions);
-        setCurrentSuggestion(cachedFirstSuggestion || null);
-        lastSuggestedContent.current = currentContentKey;
-      }
+      if (requestId !== requestSequence.current) return;
+      logger.debug('ai-suggestions', 'Using cached suggestions for:', listTitle);
+      setSuggestions(cachedSuggestions);
+      setCurrentSuggestion(cachedSuggestions[0] || null);
       setIsLoading(false);
       return;
     }
@@ -172,8 +149,16 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       
       const response = await fetchListSuggestions(
         listTitle,
-        existingItems.filter(item => item.trim() !== ''),
+        stableItems.filter(item => item.trim() !== ''),
       );
+
+      if (requestId !== requestSequence.current) return;
+      if (response.error) {
+        setSuggestions([]);
+        setCurrentSuggestion(null);
+        setError(response.error);
+        return;
+      }
 
       if (response.suggestions.length > 0) {
         const newSuggestions = response.suggestions;
@@ -188,6 +173,7 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
         setCurrentSuggestion(null);
       }
     } catch (err: unknown) {
+      if (requestId !== requestSequence.current) return;
       logger.error('Failed to fetch AI suggestions:', err);
       
       // Handle auth errors gracefully
@@ -201,9 +187,9 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
       setSuggestions([]);
       setCurrentSuggestion(null);
     } finally {
-      setIsLoading(false);
+      if (requestId === requestSequence.current) setIsLoading(false);
     }
-  }, [enabled, listTitle, existingItems, isAuthenticated, getCachedSuggestions, cacheSuggestions]);
+  }, [enabled, listTitle, stableItems, isAuthenticated, getCachedSuggestions, cacheSuggestions]);
 
   // Debounced fetch suggestions
   const debouncedFetchSuggestions = useCallback(() => {
@@ -269,21 +255,6 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
     return null;
   }, [enabled, suggestions]);
 
-  // Accept a suggestion (returns the complete suggestion)
-  const acceptSuggestion = useCallback((suggestion: string): string => {
-    // Find the next suggestion and set it as current
-    const nextSuggestions = suggestions
-      .filter(s => s.toLowerCase() !== suggestion.toLowerCase());
-      
-    if (nextSuggestions.length > 0) {
-      setCurrentSuggestion(nextSuggestions[0]);
-    } else {
-      setCurrentSuggestion(null);
-    }
-    
-    return suggestion;
-  }, [suggestions]);
-
   // Get next suggestion in the list
   const getNextSuggestion = useCallback(() => {
     if (suggestions.length === 0) return null;
@@ -296,35 +267,33 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
     return nextSuggestion;
   }, [suggestions, currentIndex]);
 
-  // Generate a context-aware suggestion without needing user input
-  const generateContextSuggestion = useCallback((): string | null => {
-    // Only use actual API suggestions if available
-    if (suggestions.length > 0) {
-      return suggestions[0];
-    }
-    
-    // No hardcoded fallback suggestions - return null for clean UI
-    return null;
-  }, [suggestions]);
-  
-  // Generate an initial suggestion when the hook mounts or when key dependencies change
+  const clearSuggestions = useCallback(() => {
+    requestSequence.current += 1;
+    setSuggestions([]);
+    setCurrentSuggestion(null);
+    setCurrentIndex(0);
+    setError(null);
+    setIsLoading(false);
+  }, []);
+
   useEffect(() => {
-    const currentKey = `${enabled}-${listTitle}-${itemsKey}`;
+    requestSequence.current += 1;
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    setSuggestions([]);
+    setCurrentSuggestion(null);
+    setCurrentIndex(0);
+    setError(null);
+    setIsLoading(false);
 
-    // Only initialize if we haven't already done so for this configuration
-    if (enabled && !currentSuggestion && lastInitializedKey.current !== currentKey) {
-      lastInitializedKey.current = currentKey;
-
-      // Try to use a generated suggestion immediately
-      const initialSuggestion = generateContextSuggestion();
-      if (initialSuggestion) {
-        setCurrentSuggestion(initialSuggestion);
-      } else {
-        // Otherwise fetch from API
-        debouncedFetchSuggestions();
-      }
+    if (enabled && listTitle && stableItems.length > 0) {
+      debouncedFetchSuggestions();
     }
-  }, [enabled, listTitle, itemsKey]); // Use memoized itemsKey to prevent unnecessary re-runs
+
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      requestSequence.current += 1;
+    };
+  }, [enabled, listTitle, itemsKey, stableItems.length, debouncedFetchSuggestions]);
   
   return {
     currentSuggestion,
@@ -334,9 +303,8 @@ export const useAISuggestions = ({ enabled, listTitle, existingItems }: UseSugge
     debouncedFetchSuggestions,
     fetchSuggestions,
     getSuggestionForInput,
-    acceptSuggestion,
     getNextSuggestion,
-    generateContextSuggestion
+    clearSuggestions,
   };
 };
 

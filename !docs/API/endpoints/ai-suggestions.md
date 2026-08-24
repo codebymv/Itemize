@@ -1,35 +1,46 @@
-# AI Suggestions API
+# AI suggestions GraphQL API
 
-## Get AI suggestions for a list
+Authenticated workspace list and note suggestions are served by the Nest GraphQL API. Both mutations require the session cookie and matching CSRF header.
 
-Returns a list of AI-generated suggestions for a list.
+## List suggestions
 
-### Endpoint
-
-```
-POST /suggestions
-```
-
-### Request Body
-
-```json
-{
-  "listTitle": "My List",
-  "existingItems": [
-    "Item 1",
-    "Item 2"
-  ]
+```graphql
+mutation ListSuggestions($input: ListSuggestionsInput!) {
+  listSuggestions(input: $input) {
+    suggestions
+    cached
+    error
+  }
 }
 ```
 
-### Response
+```json
+{
+  "input": {
+    "listTitle": "Product launch checklist",
+    "existingItems": ["Confirm pricing", "Publish landing page"]
+  }
+}
+```
+
+## Note suggestions
+
+```graphql
+mutation NoteSuggestions($input: NoteSuggestionsInput!) {
+  noteSuggestions(input: $input) {
+    suggestions
+    cached
+    error
+  }
+}
+```
 
 ```json
 {
-  "suggestions": [
-    "Item 3",
-    "Item 4",
-    "Item 5"
-  ]
+  "input": {
+    "content": "The customer approved the proposal."
+  }
 }
 ```
+
+The stable payload always contains `suggestions`. Provider failures return an empty array and a client-safe `error`; authentication, CSRF, validation, and rate-limit failures use GraphQL errors. Successful results may return `cached: true`.

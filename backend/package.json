@@ -21,6 +21,7 @@
     "jobs:workflow-enrollments": "node dist/run-workflow-enrollments.js",
     "jobs:workflow-side-effects": "node dist/run-workflow-side-effects.js",
     "jobs:signature-deliveries": "node dist/run-signature-deliveries.js",
+    "ai:eval": "ts-node src/run-ai-suggestion-eval.ts",
     "test": "jest --runInBand",
     "test:integration": "jest --config jest.integration.config.cjs --runInBand",
     "test:contract": "jest --runInBand --runTestsByPath src/common/graphql-consumer-contract.spec.ts",

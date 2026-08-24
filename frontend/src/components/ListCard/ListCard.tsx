@@ -8,7 +8,6 @@ import { CategorySelector } from '../CategorySelector';
 import { ListItemRow } from './ListItemRow';
 import { ListProgressBar } from './ListProgressBar';
 import { ListItemAdd } from './ListItemAdd';
-import { ListAISuggestionButton } from './ListAISuggestionButton';
 import { DeleteDialog } from '../ui/delete-dialog';
 import {
   DndContext,
@@ -69,9 +68,9 @@ const ListCard: React.FC<ListCardProps> = ({
     startEditingItem, handleEditItem,
     
     // AI suggestions
-    suggestions, isLoadingSuggestions,
+    isLoadingSuggestions, suggestionError,
     handleGetSuggestion, handleAcceptSuggestion,
-    currentSuggestion, currentInputSuggestion, aiEnabled,
+    currentSuggestion, currentInputSuggestion, aiEnabled, clearSuggestions,
     
     // Refs
     titleEditRef, newItemInputRef
@@ -133,7 +132,7 @@ const ListCard: React.FC<ListCardProps> = ({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isEditing, handleEditTitle]);
+  }, [isEditing, handleEditTitle, titleEditRef]);
 
   // Memoize calculations to prevent unnecessary re-renders and flashing
   const { totalItems, completedItems, progress } = useMemo(() => {
@@ -262,6 +261,8 @@ const ListCard: React.FC<ListCardProps> = ({
               handleGetSuggestion={handleGetSuggestion}
               aiEnabled={aiEnabled}
               isLoadingSuggestions={isLoadingSuggestions}
+              suggestionError={suggestionError}
+              dismissSuggestion={clearSuggestions}
             />
           </CardContent>
         </CollapsibleContent>

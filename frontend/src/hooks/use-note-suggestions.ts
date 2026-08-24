@@ -4,6 +4,7 @@ import { storage } from '@/lib/storage';
 import logger from '@/lib/logger';
 import { fetchNoteSuggestions } from '@/services/aiGraphql';
 import { GraphqlRequestError } from '@/services/graphqlClient';
+import { buildSuggestionCacheKey } from './aiSuggestionCache';
 
 // Shorter debounce for better responsiveness (was 3000ms)
 const NOTES_DEBOUNCE_DELAY = 1000;
@@ -45,10 +46,10 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
   const [currentSuggestion, setCurrentSuggestion] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastTriggerContext, setLastTriggerContext] = useState<string>('');
-  
+  const lastTriggerContext = useRef<string>('');
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
   const lastApiCall = useRef<number>(0);
+  const requestSequence = useRef(0);
   const { isAuthenticated } = useAuth();
 
   // Get the last few sentences as context (more efficient than full content)
@@ -88,16 +89,16 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     // Check if context has changed significantly since last call
     const currentContext = getContextWindow(content);
     // Allow more frequent updates by checking for meaningful changes rather than exact equality
-    const contextChanged = currentContext !== lastTriggerContext;
-    const contentLengthChanged = Math.abs(content.length - lastTriggerContext.length) > 5;
+    const contextChanged = currentContext !== lastTriggerContext.current;
+    const contentLengthChanged = Math.abs(content.length - lastTriggerContext.current.length) > 5;
     
     logger.debug('note-suggestions', 'Context change check:', {
       contextChanged,
       contentLengthChanged,
       currentLength: content.length,
-      lastLength: lastTriggerContext.length,
+      lastLength: lastTriggerContext.current.length,
       currentContext: currentContext.substring(0, 30),
-      lastContext: lastTriggerContext.substring(0, 30)
+      lastContext: lastTriggerContext.current.substring(0, 30)
     });
     
     // Don't block if content has changed meaningfully
@@ -120,14 +121,14 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     }
     
     // 3. After a significant amount of new content (reduced from 100 to 20)
-    const newContentLength = Math.abs(content.length - lastTriggerContext.length);
+    const newContentLength = Math.abs(content.length - lastTriggerContext.current.length);
     if (newContentLength > 20) {
       logger.debug('note-suggestions', 'Trigger: New content length', newContentLength);
       return true;
     }
     
     // 4. Trigger when user has typed enough new content for fresh suggestions
-    const wordsSinceLastTrigger = Math.abs(words.length - (lastTriggerContext.trim().split(/\s+/).length || 0));
+    const wordsSinceLastTrigger = Math.abs(words.length - (lastTriggerContext.current.trim().split(/\s+/).length || 0));
     if (wordsSinceLastTrigger >= 3) {
       logger.debug('note-suggestions', 'Trigger: Significant word count change', { wordsSinceLastTrigger });
       return true;
@@ -141,20 +142,19 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     
     logger.debug('note-suggestions', 'No trigger conditions met');
     return false;
-  }, [enabled, getContextWindow, lastTriggerContext]);
+  }, [enabled, getContextWindow]);
 
   // Get cached suggestions
   const getCachedSuggestions = useCallback((context: string) => {
     try {
-      // Use hash of full context instead of just last 50 chars for better cache sensitivity
-      const contextHash = context.replace(/\s+/g, ' ').trim().split(' ').slice(-20).join(' ');
-      const cacheKey = `note-suggestions-${btoa(contextHash).slice(-50)}-${noteCategory || 'general'}`;
+      const normalizedContext = context.replace(/\s+/g, ' ').trim();
+      const cacheKey = buildSuggestionCacheKey('note', normalizedContext, noteCategory || 'general');
       const cachedData = storage.getJson<{ suggestions: string[]; continuations: string[]; timestamp: number }>(cacheKey);
       
       if (cachedData) {
         const { suggestions, continuations, timestamp } = cachedData;
         if (Date.now() - timestamp < CACHE_DURATION) {
-          logger.debug('note-suggestions', 'Found cached suggestions for context:', contextHash.substring(0, 50));
+          logger.debug('note-suggestions', 'Found cached suggestions');
           return { suggestions: suggestions || [], continuations: continuations || [] };
         }
       }
@@ -167,16 +167,15 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
   // Cache suggestions
   const cacheSuggestions = useCallback((context: string, newSuggestions: string[], newContinuations: string[]) => {
     try {
-      // Use same hash logic as getCachedSuggestions for consistency
-      const contextHash = context.replace(/\s+/g, ' ').trim().split(' ').slice(-20).join(' ');
-      const cacheKey = `note-suggestions-${btoa(contextHash).slice(-50)}-${noteCategory || 'general'}`;
+      const normalizedContext = context.replace(/\s+/g, ' ').trim();
+      const cacheKey = buildSuggestionCacheKey('note', normalizedContext, noteCategory || 'general');
       const cacheData = {
         suggestions: newSuggestions,
         continuations: newContinuations,
         timestamp: Date.now()
       };
       storage.setJson(cacheKey, cacheData);
-      logger.debug('note-suggestions', 'Cached suggestions for context:', contextHash.substring(0, 50));
+      logger.debug('note-suggestions', 'Cached suggestions');
     } catch (err) {
       logger.warn('Failed to cache note suggestions:', err);
     }
@@ -209,11 +208,13 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
   // Fetch AI suggestions (cost-controlled)
   const fetchAISuggestions = useCallback(async (forceRefresh = false) => {
     if (!isAuthenticated || !enabled) return;
+    const requestId = ++requestSequence.current;
     
     const context = getContextWindow(noteContent);
     if (!context || !shouldTriggerAI(noteContent)) {
       // Use local suggestions instead
       const localSugs = getLocalSuggestions(noteContent);
+      if (requestId !== requestSequence.current) return;
       setSuggestions(localSugs);
       setCurrentSuggestion(localSugs[0] || null);
       return;
@@ -222,6 +223,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     // Check cache first
     const cached = getCachedSuggestions(context);
     if (cached && !forceRefresh) {
+      if (requestId !== requestSequence.current) return;
       logger.debug('note-suggestions', 'Using cached note suggestions for context:', context.substring(0, 50));
       setSuggestions(cached.suggestions);
       setContinuations(cached.continuations);
@@ -232,7 +234,11 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     // Throttle API calls to avoid hitting rate limits
     const now = Date.now();
     if (!forceRefresh && lastApiCall.current && (now - lastApiCall.current) < AI_CALL_THROTTLE) {
-      logger.debug('note-suggestions', 'Throttling AI call - too soon since last request');
+      const delay = AI_CALL_THROTTLE - (now - lastApiCall.current);
+      logger.debug('note-suggestions', `Throttling AI call for ${delay}ms`);
+      debounceTimer.current = setTimeout(() => {
+        void fetchAISuggestions(forceRefresh);
+      }, delay);
       return;
     }
     
@@ -244,9 +250,18 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
       setIsLoading(true);
       setError(null);
       lastApiCall.current = Date.now();
-      setLastTriggerContext(context);
+      lastTriggerContext.current = context;
       
       const response = await fetchNoteSuggestions(context);
+
+      if (requestId !== requestSequence.current) return;
+      if (response.error) {
+        setSuggestions([]);
+        setContinuations([]);
+        setCurrentSuggestion(null);
+        setError(response.error);
+        return;
+      }
 
       if (response) {
         const { suggestions = [] } = response;
@@ -266,6 +281,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
         cacheSuggestions(context, suggestions, continuations);
       }
     } catch (err: unknown) {
+      if (requestId !== requestSequence.current) return;
       logger.error('Failed to fetch note AI suggestions:', err);
       
       // Fallback to local suggestions on error
@@ -279,7 +295,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
         setError('AI suggestions temporarily unavailable');
       }
     } finally {
-      setIsLoading(false);
+      if (requestId === requestSequence.current) setIsLoading(false);
     }
   }, [isAuthenticated, enabled, noteContent, getContextWindow, shouldTriggerAI, getCachedSuggestions, cacheSuggestions, getLocalSuggestions]);
 
@@ -312,6 +328,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
 
   // Clear all suggestions from React state
   const clearSuggestions = useCallback(() => {
+    requestSequence.current += 1;
     logger.debug('note-suggestions', 'Clearing suggestions from React state');
     setSuggestions([]);
     setContinuations([]);
@@ -332,34 +349,8 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     
     if (!enabled || !content) return null;
     
-    // More permissive cursor position validation - allow suggestions in most cases
     const isAtEnd = cursorPosition >= content.length;
-    const isAfterSpace = cursorPosition > 0 && /\s/.test(content[cursorPosition - 1]);
-    const isAtWordBoundary = cursorPosition === content.length || /\s/.test(content[cursorPosition] || ' ');
-    const isInMiddleOfWord = cursorPosition > 0 && cursorPosition < content.length && 
-                             !/\s/.test(content[cursorPosition - 1]) && !/\s/.test(content[cursorPosition]);
-    
-    // Only block suggestions if we're clearly in middle of a word (not at end, not after space)
-    if (isInMiddleOfWord) {
-      logger.debug('note-suggestions', 'Cursor in middle of word, blocking suggestion:', {
-        isAtEnd,
-        isAfterSpace,
-        isAtWordBoundary,
-        isInMiddleOfWord,
-        charBefore: content[cursorPosition - 1],
-        charAfter: content[cursorPosition]
-      });
-      return null;
-    }
-    
-    logger.debug('note-suggestions', 'Cursor position valid for suggestions:', {
-      isAtEnd,
-      isAfterSpace,
-      isAtWordBoundary,
-      isInMiddleOfWord,
-      charBefore: content[cursorPosition - 1],
-      charAfter: content[cursorPosition]
-    });
+    if (!isAtEnd) return null;
     
     // GitHub Copilot style: suggest continuation from current position
     const allSuggestions = [...suggestions, ...continuations];
@@ -449,12 +440,20 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
   useEffect(() => {
     if (enabled && noteContent) {
       debouncedFetch();
+    } else {
+      requestSequence.current += 1;
+      setSuggestions([]);
+      setContinuations([]);
+      setCurrentSuggestion(null);
+      setError(null);
+      setIsLoading(false);
     }
     
     return () => {
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);
       }
+      requestSequence.current += 1;
     };
   }, [enabled, noteContent, debouncedFetch]);
 
@@ -470,7 +469,7 @@ export const useNoteSuggestions = ({ enabled, noteContent, noteCategory }: UseNo
     getSuggestionForInput,
     // Metrics for debugging/optimization
     metrics: {
-      lastTriggerContext,
+      lastTriggerContext: lastTriggerContext.current,
       shouldTrigger: shouldTriggerAI(noteContent),
       wordCount: noteContent.trim().split(/\s+/).length,
       contextWindow: getContextWindow(noteContent)

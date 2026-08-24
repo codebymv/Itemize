@@ -1,6 +1,7 @@
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { Request } from 'express';
 import { CsrfProtected, Public } from '../common/metadata';
+import { RequestContextService } from '../request-context/request-context.service';
 import { AiProviderService } from './ai-provider.service';
 import { AiRateLimitService } from './ai-rate-limit.service';
 import {
@@ -21,6 +22,7 @@ export class AiResolver {
     private readonly provider: AiProviderService,
     private readonly capabilities: MarketingChatCapabilityService,
     private readonly rateLimit: AiRateLimitService,
+    private readonly requestContext: RequestContextService,
   ) {}
 
   @CsrfProtected()
@@ -29,7 +31,7 @@ export class AiResolver {
     @Args('input') input: ListSuggestionsInput,
     @Context() context: { req: Request },
   ) {
-    this.rateLimit.consume(context.req, 'workspace-suggestions', 120);
+    this.consumeWorkspaceSuggestion(context.req);
     return this.provider.listSuggestions(input.listTitle, input.existingItems);
   }
 
@@ -39,7 +41,7 @@ export class AiResolver {
     @Args('input') input: NoteSuggestionsInput,
     @Context() context: { req: Request },
   ) {
-    this.rateLimit.consume(context.req, 'workspace-suggestions', 120);
+    this.consumeWorkspaceSuggestion(context.req);
     return this.provider.noteSuggestions(input.content);
   }
 
@@ -59,5 +61,14 @@ export class AiResolver {
     this.rateLimit.consume(context.req, 'marketing-ask', 30);
     this.capabilities.consume(input.token);
     return { reply: await this.provider.marketingAnswer(input.messages) };
+  }
+
+  private consumeWorkspaceSuggestion(request: Request): void {
+    const requestContext = this.requestContext.current();
+    const userId = requestContext.identity?.userId;
+    if (!userId) throw new Error('Verified user identity is unavailable');
+    const organizationId = requestContext.organization?.organizationId;
+    const actorId = organizationId ? `${organizationId}:${userId}` : String(userId);
+    this.rateLimit.consume(request, 'workspace-suggestions', 120, actorId);
   }
 }

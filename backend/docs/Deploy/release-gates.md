@@ -42,3 +42,7 @@ node backend/scripts/run-integration-tests-fresh.js --nestjs-only trial-reminder
 4. Deploy application code with new Nest workers disabled.
 5. Transfer each worker using the ownership sequence in `runtime-and-worker-ownership.md`.
 6. Verify health, queue age, error rate, and one representative user flow before enabling the next worker.
+
+## AI suggestion launch gate
+
+When prompts, providers, model configuration, suggestion UX, or AI limits change, also run the paid comparison gate documented in `Product/ai-suggestion-launch-audit.md`. This gate is manual by design and does not run inside `release:check`.

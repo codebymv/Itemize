@@ -1,8 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import { storage } from '@/lib/storage';
-
-// Local storage key
-const LOCAL_STORAGE_KEY = 'itemize-ai-suggest-enabled';
+import { useAuthState } from '@/contexts/AuthContext';
+import { AI_SUGGEST_STORAGE_KEY, aiSuggestStorageKey } from './aiSuggestPreference';
 
 // Types
 interface AISuggestContextType {
@@ -18,20 +17,29 @@ const AISuggestContext = createContext<AISuggestContextType>({
 
 // Provider component
 export const AISuggestProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Initialize from localStorage if available
-  const [aiEnabled, setAiEnabled] = useState<boolean>(() => {
-    try {
-      const savedValue = storage.getItem(LOCAL_STORAGE_KEY);
-      return savedValue ? JSON.parse(savedValue) : true;
-    } catch (e) {
-      return true;
-    }
-  });
+  const { currentUser } = useAuthState();
+  const scopedStorageKey = useMemo(() => aiSuggestStorageKey(currentUser?.uid), [currentUser?.uid]);
+  const [aiEnabled, setAiEnabledState] = useState(true);
 
-  // Update localStorage when state changes
   useEffect(() => {
-    storage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(aiEnabled));
-  }, [aiEnabled]);
+    try {
+      const scopedValue = storage.getItem(scopedStorageKey);
+      const legacyValue = storage.getItem(AI_SUGGEST_STORAGE_KEY);
+      const nextValue = scopedValue ?? legacyValue;
+      const enabled = nextValue === null ? true : Boolean(JSON.parse(nextValue));
+      setAiEnabledState(enabled);
+      if (scopedValue === null && legacyValue !== null) {
+        storage.setItem(scopedStorageKey, JSON.stringify(enabled));
+      }
+    } catch {
+      setAiEnabledState(true);
+    }
+  }, [scopedStorageKey]);
+
+  const setAiEnabled = useCallback((enabled: boolean) => {
+    setAiEnabledState(enabled);
+    storage.setItem(scopedStorageKey, JSON.stringify(enabled));
+  }, [scopedStorageKey]);
 
   return (
     <AISuggestContext.Provider value={{ aiEnabled, setAiEnabled }}>

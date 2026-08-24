@@ -77,9 +77,12 @@ describe('AiProviderService', () => {
     }));
     expect(JSON.parse(String(request.body))).toMatchObject({
       model: 'gpt-5.6-luna',
-      max_output_tokens: 200,
+      max_output_tokens: 120,
       reasoning: { effort: 'none' },
       text: { verbosity: 'low' },
+      temperature: 0.45,
+      store: false,
+      metadata: { feature: 'list-suggestions' },
     });
   });
 

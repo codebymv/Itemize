@@ -26,7 +26,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
   // Get items as simple text strings for AI suggestions (memoized to prevent unnecessary re-renders)
   const itemTexts = useMemo(() =>
     list.items.map(item => item.text),
-    [list.items.map(item => item.text).join('|')]
+    [list.items]
   );
 
   // Memoize the AI suggestions options to prevent unnecessary hook re-runs
@@ -43,26 +43,16 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
     currentSuggestion,
     suggestions,
     isLoading: isLoadingSuggestions,
+    error: suggestionError,
     debouncedFetchSuggestions,
-    fetchSuggestions,
     getNextSuggestion,
     getSuggestionForInput,
-    acceptSuggestion,
-    generateContextSuggestion
+    clearSuggestions,
   } = useAISuggestions(aiSuggestionsOptions);
 
   // Debug AI suggestions results (disabled)
   // console.log('AI Suggestions results:', { currentSuggestion, suggestionsCount: suggestions.length });
 
-  // Generate initial suggestion on mount
-  useEffect(() => {
-    if (aiEnabled && !currentSuggestion) {
-      debouncedFetchSuggestions();
-    }
-  }, [aiEnabled, currentSuggestion, debouncedFetchSuggestions]);
-  
-
-  
   const { toast } = useToast();
   
   // Component state - use external collapsible state if provided, otherwise use internal state
@@ -284,26 +274,12 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
 
   // Handle getting a suggestion
   const handleGetSuggestion = () => {
-    console.log('Getting next suggestion');
     if (!aiEnabled) {
       // Just use the context function to update the global state
       setAiEnabled(true); // Auto-enable if disabled
       // Need to fetch suggestions after enabling
       setTimeout(() => debouncedFetchSuggestions(), 100);
     } else if (currentSuggestion) {
-      // Add the current suggestion directly to the list
-      const newItem: ListItem = {
-        id: crypto.randomUUID(),
-        text: currentSuggestion,
-        completed: false
-      };
-      
-      onUpdate({
-        ...list,
-        items: [...list.items, newItem]
-      });
-      
-      // Get the next suggestion
       getNextSuggestion();
     } else {
       // If no current suggestion, try to fetch new ones
@@ -311,19 +287,6 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
     }
   };
   
-  // Handle accepting an AI suggestion
-  const handleAcceptAISuggestion = (suggestion: string) => {
-    const newItem: ListItem = {
-      id: crypto.randomUUID(),
-      text: suggestion.trim(),
-      completed: false
-    };
-    onUpdate({
-      ...list,
-      items: [...list.items, newItem]
-    });
-  };
-
   // Handle saving the list color
   const { isSavingColor, saveColor: handleSaveListColor } = useCardColorManagement({
     onSave: async (newColor) => {
@@ -380,12 +343,14 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
     // AI suggestions
     suggestions,
     isLoadingSuggestions,
+    suggestionError,
     aiEnabled,
     setAiEnabled,
     currentSuggestion,
     currentInputSuggestion,
     handleGetSuggestion,
     handleAcceptSuggestion,
+    clearSuggestions,
     
     // Refs
     titleEditRef,
