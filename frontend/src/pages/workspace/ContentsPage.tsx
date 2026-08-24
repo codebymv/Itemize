@@ -85,6 +85,7 @@ import {
 import { ErrorState } from '@/components/ErrorState';
 import { useWorkspaceContent } from './hooks/useWorkspaceContent';
 import { useResponsiveContentCollapse } from '@/hooks/useResponsiveContentCollapse';
+import { useQueuedListUpdates } from '@/hooks/useQueuedListUpdates';
 
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
 type SortOption = 'updated' | 'created' | 'title';
@@ -187,26 +188,25 @@ export function ContentsPage() {
 
   const contentCollapse = useResponsiveContentCollapse(isMobile);
 
-  const handleListUpdate = useCallback(async (list: List) => {
-    const previous = lists.find((candidate) => candidate.id === list.id);
-    setLists((current) => current.map((candidate) => candidate.id === list.id ? list : candidate));
-    try {
-      const updated = await apiUpdateList(list, token);
-      setLists((current) => current.map((candidate) => candidate.id === list.id ? updated : candidate));
-      return updated;
-    } catch (error) {
+  const mutateList = useCallback(
+    (list: List) => apiUpdateList(list, token),
+    [token],
+  );
+
+  const handleListUpdateError = useCallback((error: unknown) => {
       console.error('Failed to update list:', error);
       toast({
         title: 'Error',
         description: 'Failed to update list',
         variant: 'destructive',
       });
-      if (previous) {
-        setLists((current) => current.map((candidate) => candidate.id === list.id ? previous : candidate));
-      }
-      return null;
-    }
-  }, [lists, setLists, token, toast]);
+  }, [toast]);
+
+  const handleListUpdate = useQueuedListUpdates({
+    setLists,
+    mutate: mutateList,
+    onError: handleListUpdateError,
+  });
 
   const handleListDelete = useCallback(async (id: string): Promise<boolean> => {
     try {

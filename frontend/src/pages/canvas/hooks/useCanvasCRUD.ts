@@ -25,6 +25,7 @@ import {
   CreateVaultPayload,
 } from '@/services/api';
 import { List, Note, Whiteboard, Wireframe, Vault } from '@/types';
+import { useQueuedListUpdates } from '@/hooks/useQueuedListUpdates';
 
 type PositionUpdate = {
   type: 'note' | 'wireframe' | 'vault' | 'whiteboard' | 'list';
@@ -62,6 +63,38 @@ export function useCanvasCRUD(
   const recentlyCreatedListIds = useRef<Set<string>>(new Set());
   const { isCategoryInUse, addCategory } = categoriesHook;
   const { setLists, setNotes, setWhiteboards, setWireframes, setVaults } = updateState;
+
+  const mutateList = useCallback(
+    (list: List) => apiUpdateList(list, token),
+    [token],
+  );
+
+  const handleListUpdateError = useCallback((error: unknown, updatedList: List) => {
+    logger.error('Failed to update list:', error);
+
+    if (getApiStatus(error) === 404) {
+      logger.warn(`List ${updatedList.id} no longer exists in backend, removing from frontend state`);
+      setLists((previous) => previous.filter((list) => list.id !== updatedList.id));
+      toast({
+        title: "List no longer exists",
+        description: "This list has been removed as it no longer exists.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    toast({
+      title: "Error",
+      description: "Could not update your list. Please try again.",
+      variant: "destructive"
+    });
+  }, [setLists, toast]);
+
+  const enqueueListUpdate = useQueuedListUpdates({
+    setLists,
+    mutate: mutateList,
+    onError: handleListUpdateError,
+  });
 
   const handleCreateNote = async (title: string, category: string, color: string, position?: { x: number; y: number }) => {
     try {
@@ -465,50 +498,7 @@ export function useCanvasCRUD(
     });
   };
 
-  const updateList = async (updatedList: List) => {
-    try {
-      const updatedListFromAPI = await apiUpdateList(updatedList, token);
-
-      const transformedList: List = {
-        id: updatedListFromAPI.id,
-        title: updatedListFromAPI.title,
-        type: updatedListFromAPI.type || 'General',
-        items: updatedListFromAPI.items || [],
-        createdAt: updatedListFromAPI.createdAt ? new Date(updatedListFromAPI.createdAt) : undefined,
-        updated_at: updatedListFromAPI.updated_at,
-        position_x: updatedListFromAPI.position_x,
-        position_y: updatedListFromAPI.position_y,
-        width: updatedListFromAPI.width,
-        height: updatedListFromAPI.height,
-        color_value: updatedListFromAPI.color_value,
-        share_token: updatedListFromAPI.share_token,
-        is_public: updatedListFromAPI.is_public,
-        shared_at: updatedListFromAPI.shared_at ? new Date(updatedListFromAPI.shared_at).toISOString() : undefined,
-      };
-
-      setLists(prev =>
-        prev.map(list => list.id === updatedList.id ? transformedList : list)
-      );
-    } catch (error: unknown) {
-      logger.error('Failed to update list:', error);
-
-      if (getApiStatus(error) === 404) {
-        logger.warn(`List ${updatedList.id} no longer exists in backend, removing from frontend state`);
-        setLists(prev => prev.filter(list => list.id !== updatedList.id));
-        toast({
-          title: "List no longer exists",
-          description: "This list has been removed as it no longer exists.",
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "Could not update your list. Please try again.",
-          variant: "destructive"
-        });
-      }
-    }
-  };
+  const updateList = (updatedList: List) => enqueueListUpdate(updatedList);
 
   const deleteList = async (listId: string): Promise<boolean> => {
     try {
