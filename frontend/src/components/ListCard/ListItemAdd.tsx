@@ -33,15 +33,17 @@ export const ListItemAdd: React.FC<ListItemAddProps> = ({
   isLoadingSuggestions,
   suggestionError,
 }) => {
+  const acceptanceSuggestion = currentInputSuggestion || currentSuggestion;
+
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
       handleAddItem();
     } else if (event.key === 'Escape') {
       setNewItemText('');
-    } else if (event.key === 'Tab' && currentInputSuggestion) {
+    } else if (event.key === 'Tab' && acceptanceSuggestion) {
       event.preventDefault();
       handleAcceptSuggestion();
-    } else if (event.key === 'ArrowRight' && currentInputSuggestion) {
+    } else if (event.key === 'ArrowRight' && acceptanceSuggestion) {
       if (event.currentTarget.selectionStart === event.currentTarget.value.length) {
         event.preventDefault();
         handleAcceptSuggestion();

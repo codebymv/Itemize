@@ -40,6 +40,7 @@ const overlaps = (
 export function findOpenCanvasPosition(
   items: CanvasPositionedItem[],
   size: CanvasItemSize = DEFAULT_ITEM_SIZE,
+  origin: { x: number; y: number } = CANVAS_CENTER,
 ): { x: number; y: number } {
   for (let ring = 0; ring <= 24; ring += 1) {
     const offsets: Array<[number, number]> = ring === 0
@@ -58,8 +59,8 @@ export function findOpenCanvasPosition(
 
     for (const [column, row] of offsets) {
       const candidate = {
-        x: CANVAS_CENTER.x + column * HORIZONTAL_STEP,
-        y: CANVAS_CENTER.y + row * VERTICAL_STEP,
+        x: origin.x + column * HORIZONTAL_STEP,
+        y: origin.y + row * VERTICAL_STEP,
       };
       if (candidate.x < 0 || candidate.y < 0) continue;
       if (!items.some((item) => overlaps(candidate, size, item))) return candidate;
@@ -67,7 +68,7 @@ export function findOpenCanvasPosition(
   }
 
   return {
-    x: CANVAS_CENTER.x + (items.length + 1) * HORIZONTAL_STEP,
-    y: CANVAS_CENTER.y,
+    x: origin.x + (items.length + 1) * HORIZONTAL_STEP,
+    y: origin.y,
   };
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useTheme } from 'next-themes';
 import { DraggableListCard } from './DraggableListCard';
 import { ContextMenu } from './ContextMenu';
@@ -63,6 +63,11 @@ export interface CanvasContainerMethods {
   showAddWhiteboardMenu: (position: { x: number, y: number }, isFromButton?: boolean, absolutePosition?: { x: number, y: number }) => void;
   hideContextMenu: () => void;
   isMenuOpenFromButton: () => boolean;
+  getViewportCenter: () => { x: number; y: number };
+  focusPosition: (
+    position: { x: number; y: number },
+    size?: { width: number; height: number },
+  ) => void;
 }
 
 export const CanvasContainer: React.FC<CanvasContainerProps> = ({
@@ -147,6 +152,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   const canvasRef = useRef<HTMLDivElement>(null);
   const canvasContentRef = useRef<HTMLDivElement>(null);
   const canvasTransformRef = useRef(canvasTransform);
+  const lastFocusedFilterRef = useRef('');
   canvasTransformRef.current = canvasTransform;
 
   const allPositions = useMemo(() => {
@@ -166,26 +172,48 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     return positions;
   }, [lists, notes, whiteboards, wireframes, vaults]);
 
-  const getViewportSize = () => {
+  const getViewportSize = useCallback(() => {
     const width = canvasRef.current?.clientWidth ?? window.innerWidth;
     const height = canvasRef.current?.clientHeight ?? window.innerHeight;
     return { width, height };
-  };
+  }, []);
 
-  const getMedian = (values: number[]) => {
+  const getViewportCenter = useCallback(() => {
+    const { width, height } = getViewportSize();
+    const transform = canvasTransformRef.current;
+    return {
+      x: (width / 2 - transform.x) / transform.scale,
+      y: (height / 2 - transform.y) / transform.scale,
+    };
+  }, [getViewportSize]);
+
+  const focusPosition = useCallback((
+    position: { x: number; y: number },
+    size: { width: number; height: number } = { width: 600, height: 420 },
+  ) => {
+    const { width, height } = getViewportSize();
+    const scale = canvasTransformRef.current.scale;
+    setCanvasTransform({
+      x: width / 2 - (position.x + size.width / 2) * scale,
+      y: height / 2 - (position.y + size.height / 2) * scale,
+      scale,
+    });
+  }, [getViewportSize]);
+
+  const getMedian = useCallback((values: number[]) => {
     const sorted = [...values].sort((a, b) => a - b);
     const mid = Math.floor(sorted.length / 2);
     return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
-  };
+  }, []);
 
-  const getContentCenter = (positions: { x: number; y: number }[]) => {
+  const getContentCenter = useCallback((positions: { x: number; y: number }[]) => {
     if (positions.length === 0) {
       return { x: 2000, y: 2000 };
     }
     const xs = positions.map((pos) => pos.x);
     const ys = positions.map((pos) => pos.y);
     return { x: getMedian(xs), y: getMedian(ys) };
-  };
+  }, [getMedian]);
 
   useEffect(() => {
     if (initialTransformAppliedRef.current) return;
@@ -207,7 +235,41 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
       });
       initialTransformAppliedRef.current = true;
     }
-  }, [allPositions, viewportKey]);
+  }, [allPositions, getContentCenter, getViewportSize, viewportKey]);
+
+  const filteredPositionSignature = useMemo(
+    () => allPositions.map(({ x, y }) => `${x}:${y}`).join('|'),
+    [allPositions],
+  );
+
+  // Filtering a spatial canvas should reveal the matching work, not leave a
+  // blank viewport while the result remains offscreen at its stored position.
+  useEffect(() => {
+    const hasActiveFilter = searchQuery.trim().length > 0 || categoryFilter !== 'all';
+    if (!hasActiveFilter) {
+      lastFocusedFilterRef.current = '';
+      return;
+    }
+    if (allPositions.length === 0 || !initialTransformAppliedRef.current) return;
+
+    const filterKey = `${searchQuery.trim()}|${categoryFilter}|${filteredPositionSignature}`;
+    if (lastFocusedFilterRef.current === filterKey) return;
+    lastFocusedFilterRef.current = filterKey;
+
+    const timeout = window.setTimeout(() => {
+      const center = getContentCenter(allPositions);
+      focusPosition(center);
+    }, 150);
+
+    return () => window.clearTimeout(timeout);
+  }, [
+    allPositions,
+    categoryFilter,
+    filteredPositionSignature,
+    focusPosition,
+    getContentCenter,
+    searchQuery,
+  ]);
 
   useEffect(() => {
     if (!initialTransformAppliedRef.current) return;
@@ -280,10 +342,12 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
         },
         isMenuOpenFromButton: () => {
           return showContextMenu && menuIsFromButton;
-        }
+        },
+        getViewportCenter,
+        focusPosition,
       });
     }
-  }, [onReady, showContextMenu, menuIsFromButton]);
+  }, [focusPosition, getViewportCenter, onReady, showContextMenu, menuIsFromButton]);
 
   // Set up event listeners
   useEffect(() => {
@@ -532,7 +596,18 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   };
 
   const handleResetView = () => {
-    setCanvasTransform(getDefaultTransform());
+    if (allPositions.length === 0) {
+      setCanvasTransform(getDefaultTransform());
+      return;
+    }
+
+    const { width, height } = getViewportSize();
+    const center = getContentCenter(allPositions);
+    setCanvasTransform({
+      x: width / 2 - (center.x + 300),
+      y: height / 2 - (center.y + 210),
+      scale: 1,
+    });
   };
 
   // Filter logic

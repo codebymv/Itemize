@@ -77,6 +77,7 @@ const CanvasPage: React.FC = () => {
   const [newWireframeInitialPosition, setNewWireframeInitialPosition] = useState<{ x: number, y: number } | null>(null);
   const [showNewVaultModal, setShowNewVaultModal] = useState(false);
   const [newVaultInitialPosition, setNewVaultInitialPosition] = useState<{ x: number, y: number } | null>(null);
+  const canvasMethodsRef = useRef<CanvasContainerMethods | null>(null);
 
   const { toast } = useToast();
 const { currentUser } = useAuthState();
@@ -153,15 +154,15 @@ const { currentUser } = useAuthState();
     handleUpdateNote,
     handleDeleteNote,
     handleNotePositionUpdate,
-    handleCreateWhiteboard,
+    handleCreateWhiteboard: createWhiteboard,
     handleUpdateWhiteboard,
     handleDeleteWhiteboard,
     handleWhiteboardPositionUpdate,
-    handleCreateWireframe,
+    handleCreateWireframe: createWireframe,
     handleUpdateWireframe,
     handleDeleteWireframe,
     handleWireframePositionChange,
-    handleCreateVault,
+    handleCreateVault: createVault,
     handleUpdateVault,
     handleDeleteVault,
     handleVaultPositionChange,
@@ -172,10 +173,34 @@ const { currentUser } = useAuthState();
     enqueuePositionUpdate
   );
 
+  const focusCreatedItem = (
+    item: {
+      position_x?: number | null;
+      position_y?: number | null;
+      width?: number | null;
+      height?: number | null;
+      canvas_width?: number | null;
+      canvas_height?: number | null;
+    },
+    fallbackPosition: { x: number; y: number },
+  ) => {
+    if (isMobileView) return;
+    const position = {
+      x: item.position_x ?? fallbackPosition.x,
+      y: item.position_y ?? fallbackPosition.y,
+    };
+    const size = {
+      width: item.width ?? item.canvas_width ?? 600,
+      height: item.height ?? item.canvas_height ?? 420,
+    };
+    window.requestAnimationFrame(() => canvasMethodsRef.current?.focusPosition(position, size));
+  };
+
   const handleCreateNote = async (title: string, category: string, color: string, position: { x: number; y: number }) => {
     const newNote = await createNote(title, category, color, position);
     if (newNote) {
       setShowNewNoteModal(false);
+      focusCreatedItem(newNote, position);
     }
     return newNote;
   };
@@ -184,8 +209,36 @@ const { currentUser } = useAuthState();
     const newList = await createList(title, type, color, position);
     if (newList) {
       setShowNewListModal(false);
+      focusCreatedItem(newList, position);
     }
     return newList;
+  };
+
+  const handleCreateWhiteboard = async (title: string, category: string, color: string, position: { x: number; y: number }) => {
+    const newWhiteboard = await createWhiteboard(title, category, color, position);
+    if (newWhiteboard) {
+      setShowNewWhiteboardModal(false);
+      focusCreatedItem(newWhiteboard, position);
+    }
+    return newWhiteboard;
+  };
+
+  const handleCreateWireframe = async (title: string, category: string, color: string, position: { x: number; y: number }) => {
+    const newWireframe = await createWireframe(title, category, color, position);
+    if (newWireframe) {
+      setShowNewWireframeModal(false);
+      focusCreatedItem(newWireframe, position);
+    }
+    return newWireframe;
+  };
+
+  const handleCreateVault = async (title: string, category: string, color: string, position: { x: number; y: number }) => {
+    const newVault = await createVault(title, category, color, position);
+    if (newVault) {
+      setShowNewVaultModal(false);
+      focusCreatedItem(newVault, position);
+    }
+    return newVault;
   };
 
   const getApiStatus = (error: unknown): number | undefined => {
@@ -301,9 +354,6 @@ const { currentUser } = useAuthState();
     totalCount: 0
   }));
 
-  // Reference to canvas container methods
-  const canvasMethodsRef = useRef<CanvasContainerMethods | null>(null);
-
   // Redirect mobile users to Contents page (Canvas requires desktop for infinite canvas functionality)
   useEffect(() => {
     if (isMobileView) {
@@ -315,13 +365,21 @@ const { currentUser } = useAuthState();
 
   // Shared placement keeps every creation entry point from stacking cards.
   const getIntelligentPosition = (currentLists: List[], currentNotes: Note[], currentWhiteboards: Whiteboard[], currentWireframes: Wireframe[]) => {
+    const viewportCenter = isMobileView ? null : canvasMethodsRef.current?.getViewportCenter();
+    const placementOrigin = viewportCenter
+      ? {
+          x: Math.max(0, viewportCenter.x - 300),
+          y: Math.max(0, viewportCenter.y - 210),
+        }
+      : undefined;
+
     return findOpenCanvasPosition([
       ...currentLists,
       ...currentNotes,
       ...currentWhiteboards,
       ...currentWireframes,
       ...vaults,
-    ]);
+    ], undefined, placementOrigin);
   };
 
   // CRUD operations for Notes

@@ -23,4 +23,21 @@ describe('findOpenCanvasPosition', () => {
     expect(findOpenCanvasPosition([{ position_x: undefined, position_y: undefined }]))
       .toEqual({ x: 2000, y: 2000 });
   });
+
+  it('can place new work around the current viewport instead of the global canvas center', () => {
+    expect(findOpenCanvasPosition([], undefined, { x: 3200, y: 1400 }))
+      .toEqual({ x: 3200, y: 1400 });
+  });
+
+  it('finds an open slot around a viewport-relative origin', () => {
+    const occupied = [{
+      position_x: 3200,
+      position_y: 1400,
+      width: 600,
+      height: 420,
+    }];
+
+    expect(findOpenCanvasPosition(occupied, undefined, { x: 3200, y: 1400 }))
+      .toEqual({ x: 2380, y: 1400 });
+  });
 });
