@@ -12,7 +12,10 @@ import {
   PublicSharingRepository,
   SharedVaultRow,
 } from './public-sharing.repository';
-import { sanitizeSharedContent } from './shared-content-sanitizer';
+import {
+  sanitizeSharedContent,
+  sanitizeSharedText,
+} from './shared-content-sanitizer';
 import { decryptVaultItemValue } from './vault-item-crypto';
 
 const UUID_PATTERN =
@@ -35,16 +38,17 @@ export class PublicSharingService {
 
   constructor(private readonly repository: PublicSharingRepository) {}
 
-  async sharedList(token: string) {
+  async sharedList(token: string, viewerUserId: number | null = null) {
     this.assertShareToken(token);
     const list = await this.guardSharedContent(
       'list',
       () => this.repository.sharedList(token),
     );
     if (!list) throw new NotFoundException(SHARED_CONTENT_NOT_FOUND);
-    return {
+    const title = sanitizeSharedText(list.title) ?? '';
+    const response = {
       id: list.id,
-      title: sanitizeSharedContent(list.title),
+      title,
       category: sanitizeSharedContent(list.category),
       items: list.items
         ? list.items.map((item) => ({
@@ -59,18 +63,21 @@ export class PublicSharingService {
       creator_name: sanitizeSharedContent(list.creator_name),
       type: 'list',
     };
+    await this.recordSharedView('list', list, title, viewerUserId);
+    return response;
   }
 
-  async sharedNote(token: string) {
+  async sharedNote(token: string, viewerUserId: number | null = null) {
     this.assertShareToken(token);
     const note = await this.guardSharedContent(
       'note',
       () => this.repository.sharedNote(token),
     );
     if (!note) throw new NotFoundException(SHARED_CONTENT_NOT_FOUND);
-    return {
+    const title = sanitizeSharedText(note.title) ?? '';
+    const response = {
       id: note.id,
-      title: sanitizeSharedContent(note.title),
+      title,
       content: sanitizeSharedContent(note.content),
       category: sanitizeSharedContent(note.category),
       color_value: note.color_value,
@@ -79,9 +86,11 @@ export class PublicSharingService {
       creator_name: sanitizeSharedContent(note.creator_name),
       type: 'note',
     };
+    await this.recordSharedView('note', note, title, viewerUserId);
+    return response;
   }
 
-  async sharedWhiteboard(token: string) {
+  async sharedWhiteboard(token: string, viewerUserId: number | null = null) {
     this.assertShareToken(token);
     const whiteboard = await this.guardSharedContent(
       'whiteboard',
@@ -89,9 +98,10 @@ export class PublicSharingService {
       { databaseAvailabilityErrors: true },
     );
     if (!whiteboard) throw new NotFoundException(SHARED_CONTENT_NOT_FOUND);
-    return {
+    const title = sanitizeSharedText(whiteboard.title) ?? '';
+    const response = {
       id: whiteboard.id,
-      title: sanitizeSharedContent(whiteboard.title),
+      title,
       category: sanitizeSharedContent(whiteboard.category),
       canvas_data: sanitizeSharedContent(whiteboard.canvas_data),
       canvas_width: whiteboard.canvas_width,
@@ -103,18 +113,21 @@ export class PublicSharingService {
       creator_name: sanitizeSharedContent(whiteboard.creator_name),
       type: 'whiteboard',
     };
+    await this.recordSharedView('whiteboard', whiteboard, title, viewerUserId);
+    return response;
   }
 
-  async sharedWireframe(token: string) {
+  async sharedWireframe(token: string, viewerUserId: number | null = null) {
     this.assertShareToken(token);
     const wireframe = await this.guardSharedContent(
       'wireframe',
       () => this.repository.sharedWireframe(token),
     );
     if (!wireframe) throw new NotFoundException(SHARED_CONTENT_NOT_FOUND);
-    return {
+    const title = sanitizeSharedText(wireframe.title) ?? '';
+    const response = {
       id: wireframe.id,
-      title: sanitizeSharedContent(wireframe.title),
+      title,
       category: sanitizeSharedContent(wireframe.category),
       flow_data: sanitizeSharedContent(wireframe.flow_data),
       width: wireframe.width,
@@ -125,9 +138,11 @@ export class PublicSharingService {
       creator_name: sanitizeSharedContent(wireframe.creator_name),
       type: 'wireframe',
     };
+    await this.recordSharedView('wireframe', wireframe, title, viewerUserId);
+    return response;
   }
 
-  async sharedVault(token: string) {
+  async sharedVault(token: string, viewerUserId: number | null = null) {
     if (!UUID_PATTERN.test(token)) {
       throw this.vaultNotFound();
     }
@@ -149,13 +164,17 @@ export class PublicSharingService {
       if (!vault.share_snapshot_ciphertext || !vault.share_snapshot_iv) {
         throw this.vaultUnavailable();
       }
-      return this.presentVault(vault, 2, {
+      const response = this.presentVault(vault, 2, {
         snapshot: {
           ciphertext: vault.share_snapshot_ciphertext,
           iv: vault.share_snapshot_iv,
         },
         items: [],
       });
+      await this.recordSharedView(
+        'vault', vault, sanitizeSharedText(vault.title) ?? '', viewerUserId,
+      );
+      return response;
     }
 
     if (vault.is_locked) {
@@ -194,7 +213,44 @@ export class PublicSharingService {
         throw this.vaultUnavailable();
       }
     }
-    return this.presentVault(vault, 1, { snapshot: null, items });
+    const response = this.presentVault(vault, 1, { snapshot: null, items });
+    await this.recordSharedView(
+      'vault', vault, sanitizeSharedText(vault.title) ?? '', viewerUserId,
+    );
+    return response;
+  }
+
+  private async recordSharedView(
+    kind: 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault',
+    content: {
+      id: number;
+      organization_id: number | null;
+      owner_user_id: number;
+    },
+    title: string,
+    viewerUserId: number | null,
+  ): Promise<void> {
+    const organizationId = Number(content.organization_id);
+    const ownerUserId = Number(content.owner_user_id);
+    if (!Number.isSafeInteger(organizationId) || organizationId <= 0
+      || !Number.isSafeInteger(ownerUserId) || ownerUserId <= 0
+      || viewerUserId === ownerUserId) {
+      return;
+    }
+    try {
+      await this.repository.recordSharedView({
+        kind,
+        id: Number(content.id),
+        title,
+        organizationId,
+        ownerUserId,
+        viewerUserId,
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Unable to record shared ${kind} view: ${(error as Error).message}`,
+      );
+    }
   }
 
   private presentVault(

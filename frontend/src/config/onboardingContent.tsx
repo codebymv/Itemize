@@ -25,7 +25,7 @@ export const ONBOARDING_CONTENT: Record<string, OnboardingContent> = {
     title: "Build your workspace",
     description: "Choose the kinds of content that fit your work and arrange them together on one canvas.",
     version: "3.0",
-    completeLabel: "Start exploring",
+    completeLabel: "Choose a format",
     steps: [
       {
         title: "Choose what belongs on your canvas",

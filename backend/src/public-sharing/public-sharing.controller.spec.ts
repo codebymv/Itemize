@@ -1,6 +1,8 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import cookieParser from 'cookie-parser';
 import request from 'supertest';
+import { AccessTokenService } from '../auth/access-token.service';
 import { PublicSharingController } from './public-sharing.controller';
 import { PublicSharingRepository } from './public-sharing.repository';
 import { PublicSharingService } from './public-sharing.service';
@@ -29,7 +31,9 @@ describe('PublicSharingController retained HTTP contract', () => {
     sharedWireframe: jest.fn(),
     sharedVault: jest.fn(),
     sharedVaultItems: jest.fn(),
+    recordSharedView: jest.fn().mockResolvedValue(undefined),
   };
+  const accessTokens = { verify: jest.fn() };
 
   beforeAll(async () => {
     process.env.VAULT_ENCRYPTION_KEY = 'cd'.repeat(32);
@@ -38,9 +42,11 @@ describe('PublicSharingController retained HTTP contract', () => {
       providers: [
         PublicSharingService,
         { provide: PublicSharingRepository, useValue: repository },
+        { provide: AccessTokenService, useValue: accessTokens },
       ],
     }).compile();
     app = moduleRef.createNestApplication({ logger: false });
+    app.use(cookieParser());
     await app.init();
   });
 
@@ -77,6 +83,8 @@ describe('PublicSharingController retained HTTP contract', () => {
       color_value: '#fff',
       ...timestamps,
       creator_name: 'Owner<script>alert(1)</script>',
+      organization_id: 31,
+      owner_user_id: 5,
     });
     const response = await request(app.getHttpServer())
       .get(`/api/shared/list/${TOKENS.list}`)
@@ -93,6 +101,37 @@ describe('PublicSharingController retained HTTP contract', () => {
       type: 'list',
     });
     expect(JSON.stringify(response.body)).not.toMatch(/<script|onerror/i);
+    expect(repository.recordSharedView).toHaveBeenCalledWith(expect.objectContaining({
+      kind: 'list',
+      id: 7,
+      title: '<b>Shared list</b>',
+      organizationId: 31,
+      ownerUserId: 5,
+      viewerUserId: null,
+    }));
+  });
+
+  it('does not notify an authenticated owner about their own shared view', async () => {
+    accessTokens.verify.mockResolvedValue({ userId: 5 });
+    repository.sharedNote.mockResolvedValue({
+      id: 18,
+      title: 'Owner preview',
+      content: 'Preview',
+      category: null,
+      color_value: null,
+      ...timestamps,
+      creator_name: 'Owner',
+      organization_id: 31,
+      owner_user_id: 5,
+    });
+
+    await request(app.getHttpServer())
+      .get(`/api/shared/note/${TOKENS.note}`)
+      .set('Cookie', 'itemize_auth=owner-token')
+      .expect(200);
+
+    expect(accessTokens.verify).toHaveBeenCalledWith('owner-token');
+    expect(repository.recordSharedView).not.toHaveBeenCalled();
   });
 
   it('serves a shared note with type marker', async () => {

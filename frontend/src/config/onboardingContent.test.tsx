@@ -18,7 +18,7 @@ describe('grouped onboarding content', () => {
   it('introduces Canvas as a flexible workspace instead of a list creator', () => {
     expect(ONBOARDING_CONTENT.canvas).toMatchObject({
       version: '3.0',
-      completeLabel: 'Start exploring',
+      completeLabel: 'Choose a format',
     });
     expect(ONBOARDING_CONTENT.canvas.steps).toHaveLength(2);
 

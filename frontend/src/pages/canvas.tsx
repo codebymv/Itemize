@@ -424,7 +424,9 @@ const { currentUser } = useAuthState();
 
   const handleCanvasOnboardingComplete = async () => {
     await completeOnboarding();
-    handleButtonAddList();
+    window.requestAnimationFrame(() => {
+      handleOpenMenu(isMobileView ? 'mobile-new-canvas-button' : 'new-canvas-button');
+    });
   };
 
   const handleButtonAddNote = () => {

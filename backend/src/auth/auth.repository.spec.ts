@@ -50,10 +50,53 @@ describe('AuthRepository registration transaction', () => {
         recipientUserId: 13,
         eventType: 'account.welcome',
         dedupeKey: 'account:13:welcome:v1',
+        body: 'Your workspace is ready. Add content, create a contact, or send your first estimate.',
         href: '/canvas',
       }),
     );
     expect(query.mock.calls.at(-1)?.[0]).toBe('COMMIT');
+  });
+
+  it('welcomes free accounts with workspace-only actions they can use', async () => {
+    const query = jest.fn()
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{
+        id: 16,
+        email: 'free@example.com',
+        name: 'Free',
+        password_hash: 'hash',
+        provider: 'email',
+        email_verified: false,
+        role: 'USER',
+        created_at: new Date(),
+      }] })
+      .mockResolvedValueOnce({ rows: [{ default_organization_id: null }] })
+      .mockResolvedValueOnce({ rows: [{ id: 32 }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+    const client = { query, release: jest.fn() } as unknown as PoolClient;
+    const pool = { connect: jest.fn().mockResolvedValue(client) } as unknown as Pool;
+    const notificationService = notifications();
+    const repository = new AuthRepository(pool, notificationService);
+
+    await repository.registerEmailUser({
+      email: 'free@example.com',
+      name: 'Free',
+      passwordHash: 'hash',
+      verificationTokenHash: 'token-hash',
+      verificationTokenExpires: new Date(),
+      signupMode: SignupMode.FREE,
+    });
+
+    expect(notificationService.createWithClient).toHaveBeenCalledWith(
+      client,
+      expect.objectContaining({
+        organizationId: 32,
+        recipientUserId: 16,
+        body: 'Your workspace is ready. Add your first list, note, whiteboard, wireframe, or vault.',
+      }),
+    );
   });
 
   it('rolls back the user when personal-workspace creation fails', async () => {

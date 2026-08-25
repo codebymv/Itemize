@@ -6,7 +6,7 @@ const content: OnboardingContent = {
   title: 'Build your workspace',
   description: 'Choose what fits your work.',
   version: '3.0',
-  completeLabel: 'Start exploring',
+  completeLabel: 'Choose a format',
   steps: [
     {
       title: 'Choose what belongs on your canvas',
@@ -50,7 +50,7 @@ describe('OnboardingModal', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Start exploring' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Choose a format' }));
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
