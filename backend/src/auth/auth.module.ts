@@ -9,9 +9,10 @@ import { GraphqlAuthGuard } from './graphql-auth.guard';
 import { GraphqlCsrfGuard } from './graphql-csrf.guard';
 import { SessionService } from './session.service';
 import { IdentityLifecycleService } from './identity-lifecycle.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [JwtModule.register({})],
+  imports: [JwtModule.register({}), NotificationsModule],
   providers: [
     AccessTokenService,
     AuthEmailService,

@@ -1,6 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import { NotificationsService } from '../notifications/notifications.service';
+import { planDisplayName } from '../subscription-webhooks/subscription-plan.constants';
 
 export type AdminUserRow = {
   id: number; email: string; name: string | null; role: string | null;
@@ -191,7 +193,10 @@ const ADMIN_JOB_QUEUES = [
 
 @Injectable()
 export class AdminOperationsRepository {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async userCount(): Promise<number> {
     const result = await this.pool.query<{ count: number }>('SELECT COUNT(*)::int AS count FROM users');
@@ -621,8 +626,8 @@ export class AdminOperationsRepository {
       );
       const organizationId = user.rows[0]?.default_organization_id;
       if (!organizationId) { await client.query('ROLLBACK'); return 'no_organization'; }
-      const organization = await client.query<{ current_plan_id: number | null }>(
-        'SELECT current_plan_id FROM organizations WHERE id = $1 FOR UPDATE',
+      const organization = await client.query<{ current_plan_id: number | null; plan: string | null }>(
+        'SELECT current_plan_id,plan FROM organizations WHERE id = $1 FOR UPDATE',
         [organizationId],
       );
       if (!organization.rows[0]) { await client.query('ROLLBACK'); return 'no_organization'; }
@@ -682,7 +687,7 @@ export class AdminOperationsRepository {
       );
       if (updated.rowCount !== 1) throw new Error('Default organization disappeared during plan update');
 
-      await client.query(
+      const event = await client.query<{ id: string }>(
         `INSERT INTO subscription_events (
            subscription_id, organization_id, event_type, previous_plan_id,
            new_plan_id, metadata, created_at
@@ -692,7 +697,8 @@ export class AdminOperationsRepository {
              'plan', $6::text,
              'source', 'admin_tier_selector'
            ),
-           NOW())`,
+           NOW())
+         RETURNING id`,
         [
           subscriptionId,
           organizationId,
@@ -702,6 +708,26 @@ export class AdminOperationsRepository {
           plan,
         ],
       );
+      if (organization.rows[0].plan !== plan) {
+        const previousPlan = organization.rows[0].plan || 'free';
+        const planName = planDisplayName(plan);
+        const previousName = planDisplayName(previousPlan);
+        await this.notifications.createForOrganizationOwnerWithClient(client, {
+          organizationId,
+          preferredUserId: userId,
+          actorUserId: userId,
+          eventType: 'subscription.plan_changed',
+          entityType: 'subscription',
+          entityId: subscriptionId,
+          dedupeKey: `subscription-event:${event.rows[0].id}:plan-changed`,
+          payload: { previousPlan, newPlan: plan, source: 'admin_tier_selector' },
+          category: 'billing',
+          priority: 'normal',
+          title: `Plan changed to ${planName}`,
+          body: `Your Itemize plan changed from ${previousName} to ${planName}.`,
+          href: '/settings',
+        });
+      }
       await client.query('COMMIT');
       return 'updated';
     } catch (error) {

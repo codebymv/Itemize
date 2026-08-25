@@ -96,12 +96,12 @@ export class PublicSigningRepository {
     return this.transaction(async (client) => {
       const capability = await this.capability(client, tokenHash, true);
       if (!capability) return null;
-      const viewed = await client.query(
+      const viewed = await client.query<{ id: number; viewed_at: Date }>(
         `UPDATE signature_recipients
          SET status='viewed',viewed_at=CURRENT_TIMESTAMP,
            ip_address=$2,user_agent=$3
          WHERE id=$1 AND status IN ('pending','sent','viewed') AND viewed_at IS NULL
-         RETURNING id`,
+         RETURNING id,viewed_at`,
         [capability.recipient_id, audit.ipAddress, audit.userAgent],
       );
       if (viewed.rows[0]) {
@@ -114,11 +114,41 @@ export class PublicSigningRepository {
           audit,
         );
         capability.recipient_status = 'viewed';
+        await this.enqueueViewed(client, capability, viewed.rows[0].viewed_at);
       }
       return {
         capability,
         fields: await this.signerFields(client, capability.document_id, capability.recipient_id),
       };
+    });
+  }
+
+  private async enqueueViewed(
+    client: PoolClient,
+    capability: CapabilityRow,
+    viewedAt: Date,
+  ): Promise<void> {
+    const recipientUserId = await this.notificationRecipient(client, capability);
+    if (!recipientUserId) return;
+    const signer = capability.recipient_name?.trim() || 'A recipient';
+    await this.notifications.createWithClient(client, {
+      organizationId: capability.organization_id,
+      recipientUserId,
+      eventType: 'signature.viewed',
+      entityType: 'signature',
+      entityId: capability.document_id,
+      dedupeKey: `signature:${capability.document_id}:recipient:${capability.recipient_id}:viewed`,
+      payload: {
+        documentTitle: capability.title,
+        recipientId: capability.recipient_id,
+        recipientName: signer,
+      },
+      category: 'business',
+      priority: 'low',
+      title: 'Document viewed',
+      body: `${signer} viewed ${capability.title}.`,
+      href: `/documents/${capability.document_id}`,
+      occurredAt: viewedAt,
     });
   }
 

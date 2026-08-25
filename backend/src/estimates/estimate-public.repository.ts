@@ -49,9 +49,41 @@ export class EstimatePublicRepository {
            RETURNING viewed_at`,
           [capability.estimate_id, capability.organization_id],
         );
-        capability.viewed_at = viewed.rows[0]?.viewed_at ?? capability.viewed_at;
+        const viewedAt = viewed.rows[0]?.viewed_at;
+        capability.viewed_at = viewedAt ?? capability.viewed_at;
+        if (viewedAt) {
+          await this.enqueueViewedNotification(client, capability, viewedAt);
+        }
       }
       return capability;
+    });
+  }
+
+  private async enqueueViewedNotification(
+    client: PoolClient,
+    capability: PublicEstimateCapability,
+    viewedAt: Date,
+  ): Promise<void> {
+    const recipient = await this.responseRecipient(client, capability);
+    if (!recipient?.userId) return;
+    const customerName = capability.payload.customerName?.trim() || 'A customer';
+    await this.notifications.createWithClient(client, {
+      organizationId: capability.organization_id,
+      recipientUserId: recipient.userId,
+      eventType: 'estimate.viewed',
+      entityType: 'estimate',
+      entityId: capability.estimate_id,
+      dedupeKey: `estimate:${capability.estimate_id}:viewed`,
+      payload: {
+        estimateNumber: capability.estimate_number,
+        customerName,
+      },
+      category: 'business',
+      priority: 'low',
+      title: 'Estimate viewed',
+      body: `${customerName} viewed ${capability.estimate_number}.`,
+      href: `/estimates/${capability.estimate_id}`,
+      occurredAt: viewedAt,
     });
   }
 

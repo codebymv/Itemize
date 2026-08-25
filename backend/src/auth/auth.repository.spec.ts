@@ -1,6 +1,11 @@
 import { Pool, PoolClient } from 'pg';
 import { AuthRepository } from './auth.repository';
 import { SignupMode } from './auth.inputs';
+import { NotificationsService } from '../notifications/notifications.service';
+
+const notifications = () => ({
+  createWithClient: jest.fn().mockResolvedValue(null),
+}) as unknown as jest.Mocked<NotificationsService>;
 
 describe('AuthRepository registration transaction', () => {
   it('uses one explicit SQL type for the reused subscription status parameter', async () => {
@@ -23,7 +28,8 @@ describe('AuthRepository registration transaction', () => {
       .mockResolvedValueOnce({ rows: [] });
     const client = { query, release: jest.fn() } as unknown as PoolClient;
     const pool = { connect: jest.fn().mockResolvedValue(client) } as unknown as Pool;
-    const repository = new AuthRepository(pool);
+    const notificationService = notifications();
+    const repository = new AuthRepository(pool, notificationService);
 
     await repository.registerEmailUser({
       email: 'trial@example.com',
@@ -37,6 +43,16 @@ describe('AuthRepository registration transaction', () => {
     const organizationSql = String(query.mock.calls[3][0]);
     expect(organizationSql.match(/\$5::varchar/g)).toHaveLength(2);
     expect(query.mock.calls[3][1]).toEqual(expect.arrayContaining(['starter', 'trialing']));
+    expect(notificationService.createWithClient).toHaveBeenCalledWith(
+      client,
+      expect.objectContaining({
+        organizationId: 27,
+        recipientUserId: 13,
+        eventType: 'account.welcome',
+        dedupeKey: 'account:13:welcome:v1',
+        href: '/canvas',
+      }),
+    );
     expect(query.mock.calls.at(-1)?.[0]).toBe('COMMIT');
   });
 
@@ -58,7 +74,7 @@ describe('AuthRepository registration transaction', () => {
       .mockResolvedValueOnce({ rows: [] });
     const client = { query, release: jest.fn() } as unknown as PoolClient;
     const pool = { connect: jest.fn().mockResolvedValue(client) } as unknown as Pool;
-    const repository = new AuthRepository(pool);
+    const repository = new AuthRepository(pool, notifications());
 
     await expect(repository.registerEmailUser({
       email: 'rollback@example.com',
@@ -99,7 +115,8 @@ describe('AuthRepository registration transaction', () => {
       .mockResolvedValueOnce({ rows: [] });
     const client = { query, release: jest.fn() } as unknown as PoolClient;
     const pool = { connect: jest.fn().mockResolvedValue(client) } as unknown as Pool;
-    const repository = new AuthRepository(pool);
+    const notificationService = notifications();
+    const repository = new AuthRepository(pool, notificationService);
 
     await expect(repository.findOrCreateGoogleUser({
       email: 'member@example.com',
@@ -111,6 +128,7 @@ describe('AuthRepository registration transaction', () => {
     expect(linkSql).toContain('SET google_id = $1');
     expect(linkSql).not.toContain('SET name');
     expect(query.mock.calls[2][1]).toEqual(['google-id-14', 14]);
+    expect(notificationService.createWithClient).not.toHaveBeenCalled();
     expect(query.mock.calls.at(-1)?.[0]).toBe('COMMIT');
   });
 });

@@ -11,6 +11,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   API_LIMITS,
   CALENDAR_LIMITS,
@@ -21,6 +22,7 @@ import {
   getPlanFromStripePrice,
   LANDING_PAGE_LIMITS,
   PLAN_TIER_ORDER,
+  planDisplayName,
   PLANS,
   SMS_LIMITS,
   USERS_LIMITS,
@@ -261,7 +263,10 @@ export function compareStripeProviderOrder(
 
 @Injectable()
 export class SubscriptionWebhooksService {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async processStripeSubscriptionEvent(
     event: unknown,
@@ -646,6 +651,15 @@ export class SubscriptionWebhooksService {
       subscriptionId: object.id,
     });
     await this.recordAuditEvent(client, normalized, org.id, org.plan, plan);
+    if (org.plan !== plan) {
+      await this.enqueuePlanChangedNotification(
+        client,
+        normalized,
+        org.id,
+        org.plan,
+        plan,
+      );
+    }
     const isUpgrade =
       (PLAN_TIER_ORDER[plan] ?? -1) > (PLAN_TIER_ORDER[org.plan ?? ''] ?? -1);
     const isActivation =
@@ -669,7 +683,7 @@ export class SubscriptionWebhooksService {
     status: string,
   ): Promise<SubscriptionWebhookResult> {
     const canceled = status === 'canceled';
-    const terminalPlan = canceled ? PLANS.FREE : org.plan;
+    const terminalPlan = canceled ? PLANS.FREE : (org.plan || PLANS.FREE);
     await client.query(
       `UPDATE organizations SET
          plan = $1,
@@ -723,10 +737,47 @@ export class SubscriptionWebhooksService {
       org.plan,
       terminalPlan,
     );
+    if (org.plan !== terminalPlan) {
+      await this.enqueuePlanChangedNotification(
+        client,
+        normalized,
+        org.id,
+        org.plan,
+        terminalPlan,
+      );
+    }
     return this.markEvent(client, normalized, 'processed', {
       newPlan: terminalPlan,
       organizationId: org.id,
       previousPlan: org.plan,
+    });
+  }
+
+  private async enqueuePlanChangedNotification(
+    client: PoolClient,
+    normalized: NormalizedEvent,
+    organizationId: number,
+    previousPlan: string | null,
+    newPlan: string,
+  ): Promise<void> {
+    const previousName = planDisplayName(previousPlan || PLANS.FREE);
+    const newName = planDisplayName(newPlan);
+    await this.notifications.createForOrganizationOwnerWithClient(client, {
+      organizationId,
+      eventType: 'subscription.plan_changed',
+      entityType: 'subscription',
+      dedupeKey: `stripe:${normalized.eventId}:plan-changed`,
+      payload: {
+        previousPlan: previousPlan || PLANS.FREE,
+        newPlan,
+        stripeEventId: normalized.eventId,
+      },
+      category: 'billing',
+      priority: 'normal',
+      title: `Plan changed to ${newName}`,
+      body: `Your Itemize plan changed from ${previousName} to ${newName}.`,
+      href: '/settings',
+      occurredAt: normalized.eventCreatedAt,
     });
   }
 

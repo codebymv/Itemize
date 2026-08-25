@@ -18,6 +18,17 @@ export const PLAN_TIER_ORDER: Readonly<Record<string, number>> = {
   [PLANS.PRO]: 3,
 };
 
+export const PLAN_DISPLAY_NAMES: Readonly<Record<string, string>> = {
+  [PLANS.FREE]: 'Free',
+  [PLANS.STARTER]: 'Solo',
+  [PLANS.UNLIMITED]: 'Studio',
+  [PLANS.PRO]: 'Studio+',
+};
+
+export const planDisplayName = (plan: string): string =>
+  PLAN_DISPLAY_NAMES[plan]
+  ?? (plan.charAt(0).toUpperCase() + plan.slice(1));
+
 const STRIPE_PRICE_TO_PLAN: Readonly<Record<string, string>> = {
   price_1U78itEHPD0TpM72ybhQuqwH: PLANS.STARTER,
   price_1U78jKEHPD0TpM72XLrdBuO5: PLANS.UNLIMITED,

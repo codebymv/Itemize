@@ -3,8 +3,10 @@ import { AdminAccessGuard } from './admin-access.guard';
 import { AdminOperationsRepository } from './admin-operations.repository';
 import { AdminOperationsResolver } from './admin-operations.resolver';
 import { AdminOperationsService } from './admin-operations.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
+  imports: [NotificationsModule],
   providers: [AdminAccessGuard, AdminOperationsRepository, AdminOperationsService, AdminOperationsResolver],
   exports: [AdminAccessGuard],
 })

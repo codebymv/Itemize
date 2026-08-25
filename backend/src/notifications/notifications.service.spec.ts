@@ -67,6 +67,32 @@ describe('NotificationsService', () => {
     }));
   });
 
+  it('routes organization notifications to the preferred member or owner', async () => {
+    repository.create.mockResolvedValue(row);
+    realtime.enqueue.mockResolvedValue({ event: {} as never, inserted: true });
+    const client = {
+      query: jest.fn().mockResolvedValue({ rows: [{ user_id: 7 }] }),
+    } as unknown as PoolClient;
+
+    await service.createForOrganizationOwnerWithClient(client, {
+      organizationId: 3,
+      preferredUserId: 7,
+      eventType: 'subscription.plan_changed',
+      dedupeKey: 'stripe:evt_1:plan-changed',
+      payload: { previousPlan: 'free', newPlan: 'starter' },
+      category: 'billing',
+      priority: 'normal',
+      title: 'Plan changed to Starter',
+      body: 'Your Itemize plan changed from Free to Starter.',
+      href: '/settings',
+    });
+
+    expect(repository.create).toHaveBeenCalledWith(client, expect.objectContaining({
+      recipientUserId: 7,
+      eventType: 'subscription.plan_changed',
+    }));
+  });
+
   it('returns a cursor page and current recipient counts', async () => {
     repository.findPage.mockResolvedValue([row, { ...row, id: '41' }]);
     repository.counts.mockResolvedValue({ unread: 2, unseen: 1 });

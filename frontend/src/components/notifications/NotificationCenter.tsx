@@ -4,12 +4,15 @@ import { formatDistanceToNow, isThisWeek, isToday } from 'date-fns';
 import {
   AlertTriangle,
   Bell,
+  BadgeCheck,
   Check,
   CircleDollarSign,
   FileCheck2,
   FileSignature,
   Inbox,
   Loader2,
+  Eye,
+  Sparkles,
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -57,6 +60,15 @@ function notificationGroup(value: string): string {
 }
 
 function NotificationIcon({ notification }: { notification: AppNotification }) {
+  if (notification.eventType === 'account.welcome') {
+    return <Sparkles className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+  }
+  if (notification.eventType === 'subscription.plan_changed') {
+    return <BadgeCheck className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+  }
+  if (notification.eventType.endsWith('.viewed')) {
+    return <Eye className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+  }
   if (notification.eventType === 'invoice.paid') {
     return <CircleDollarSign className="h-4 w-4 text-emerald-600" aria-hidden="true" />;
   }

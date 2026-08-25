@@ -3,6 +3,7 @@ import { Pool, PoolClient } from 'pg';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { PG_POOL } from '../database/database.module';
 import { SignupMode } from './auth.inputs';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export type AuthenticationUser = {
   id: number;
@@ -43,7 +44,10 @@ const mapUser = (row: AuthenticationUserRow): AuthenticationUser => ({
 
 @Injectable()
 export class AuthRepository {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async findByEmail(email: string): Promise<AuthenticationUser | null> {
     const result = await this.pool.query<AuthenticationUserRow>(
@@ -320,5 +324,19 @@ export class AuthRepository {
       'UPDATE users SET default_organization_id = $1 WHERE id = $2',
       [organizationId, user.id],
     );
+    await this.notifications.createWithClient(client, {
+      organizationId,
+      recipientUserId: user.id,
+      eventType: 'account.welcome',
+      entityType: 'organization',
+      entityId: organizationId,
+      dedupeKey: `account:${user.id}:welcome:v1`,
+      payload: { workspaceName: `${user.name}'s Workspace` },
+      category: 'system',
+      priority: 'normal',
+      title: 'Welcome to Itemize',
+      body: 'Your workspace is ready. Add content, create a contact, or send your first estimate.',
+      href: '/canvas',
+    });
   }
 }

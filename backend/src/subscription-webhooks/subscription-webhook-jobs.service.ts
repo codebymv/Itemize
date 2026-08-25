@@ -20,6 +20,7 @@ import {
   SubscriptionNotificationEmailProvider,
 } from './subscription-notification-email.provider';
 import { SubscriptionWebhooksService } from './subscription-webhooks.service';
+import { PLAN_DISPLAY_NAMES } from './subscription-plan.constants';
 
 const DEFAULT_BATCH_SIZE = 25;
 const DEFAULT_LEASE_SECONDS = 300;
@@ -29,13 +30,7 @@ const DEFAULT_RECONCILIATION_MAX_ATTEMPTS = 10;
 const DEFAULT_RECONCILIATION_BASE_DELAY_MS = 300_000;
 const DEFAULT_MAX_DELAY_MS = 86_400_000;
 
-export const PLAN_DISPLAY_NAMES: Readonly<Record<string, string>> =
-  Object.freeze({
-    free: 'Free',
-    starter: 'Solo',
-    unlimited: 'Studio',
-    pro: 'Studio+',
-  });
+export { PLAN_DISPLAY_NAMES } from './subscription-plan.constants';
 
 export type SubscriptionNotificationRun = {
   claimed: number;

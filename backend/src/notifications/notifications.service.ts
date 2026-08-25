@@ -10,6 +10,10 @@ import {
 import { NotificationPage, UserNotification } from './notification.types';
 
 type NotificationCursor = { createdAt: string; id: string };
+type CreateOrganizationNotificationInput = Omit<
+  CreateNotificationInput,
+  'recipientUserId'
+> & { preferredUserId?: number | null };
 
 @Injectable()
 export class NotificationsService {
@@ -37,6 +41,29 @@ export class NotificationsService {
       occurredAt: input.occurredAt,
     });
     return notification;
+  }
+
+  async createForOrganizationOwnerWithClient(
+    client: PoolClient,
+    input: CreateOrganizationNotificationInput,
+  ): Promise<UserNotification | null> {
+    const recipient = await client.query<{ user_id: number }>(
+      `SELECT member.user_id
+       FROM organization_members member
+       WHERE member.organization_id=$1
+         AND (member.user_id=$2 OR member.role='owner')
+       ORDER BY CASE WHEN member.user_id=$2 THEN 0 ELSE 1 END,
+                member.joined_at,member.user_id
+       LIMIT 1`,
+      [input.organizationId, input.preferredUserId ?? null],
+    );
+    const recipientUserId = recipient.rows[0]?.user_id;
+    if (!recipientUserId) return null;
+    const { preferredUserId: _preferredUserId, ...notification } = input;
+    return this.createWithClient(client, {
+      ...notification,
+      recipientUserId: Number(recipientUserId),
+    });
   }
 
   async list(input: {

@@ -11,8 +11,10 @@ import { SubscriptionWebhookJobsService } from './subscription-webhook-jobs.serv
 import { SubscriptionWebhookJobsSchedulerService } from './subscription-webhook-jobs-scheduler.service';
 import { SubscriptionWebhooksController } from './subscription-webhooks.controller';
 import { SubscriptionWebhooksService } from './subscription-webhooks.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
+  imports: [NotificationsModule],
   controllers: [SubscriptionWebhooksController],
   providers: [
     SubscriptionWebhooksService,
