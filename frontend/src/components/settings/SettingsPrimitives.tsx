@@ -1,7 +1,5 @@
 import type { ComponentProps, ReactNode } from 'react';
-import type { LucideIcon } from 'lucide-react';
 import { Info } from 'lucide-react';
-import { CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import {
   Tooltip,
@@ -9,7 +7,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
+export { SectionCardTitle as SettingsSectionTitle } from '@/components/ui/section-card-title';
 
 export function SettingsInfoTooltip({
   children,
@@ -35,23 +33,6 @@ export function SettingsInfoTooltip({
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-  );
-}
-
-export function SettingsSectionTitle({
-  icon: Icon,
-  children,
-  className,
-}: {
-  icon: LucideIcon;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <CardTitle className={cn('flex items-center gap-2 text-base', className)}>
-      <Icon className="h-4 w-4 shrink-0 text-blue-600" aria-hidden="true" />
-      {children}
-    </CardTitle>
   );
 }
 

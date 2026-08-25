@@ -93,8 +93,15 @@
       flex-direction: column;
       overflow: hidden;
     }
-    .itemize-chat-widget.bottom-right .itemize-chat-window { right: 0; }
-    .itemize-chat-widget.bottom-left .itemize-chat-window { left: 0; }
+    .itemize-chat-widget.bottom-right .itemize-chat-window,
+    .itemize-chat-widget.top-right .itemize-chat-window { right: 0; }
+    .itemize-chat-widget.bottom-left .itemize-chat-window,
+    .itemize-chat-widget.top-left .itemize-chat-window { left: 0; }
+    .itemize-chat-widget.top-right .itemize-chat-window,
+    .itemize-chat-widget.top-left .itemize-chat-window {
+      top: 80px;
+      bottom: auto;
+    }
     .itemize-chat-window.open { display: flex; }
 
     .itemize-chat-header {
