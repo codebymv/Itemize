@@ -14,11 +14,19 @@ import {
 import { io } from 'socket.io-client';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { ResponsivePageHeading } from '@/components/layout/ResponsivePageHeading';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ToastAction } from '@/components/ui/toast';
+import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -113,16 +121,10 @@ function NotificationPanel({
         'flex items-center justify-between border-b px-4 py-3',
         reserveCloseSpace && 'pr-12',
       )}>
-        <div>
-          <h2 className="text-base font-semibold">Notifications</h2>
-          <p className="text-xs text-muted-foreground" aria-live="polite">
-            {isError
-              ? 'Unable to load'
-              : unreadCount === 0
-                ? 'You are all caught up'
-                : `${unreadCount} unread`}
-          </p>
-        </div>
+        <ResponsivePageHeading
+          title="Notifications"
+          icon={<Bell className="h-4 w-4 text-blue-600" aria-hidden="true" />}
+        />
         <Button
           variant="ghost"
           size="sm"
@@ -200,23 +202,25 @@ function NotificationPanel({
                     <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
                       <NotificationIcon notification={notification} />
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-start gap-2">
+                    <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] gap-x-3">
+                      <span className="min-w-0">
                         <span className={cn(
-                          'min-w-0 flex-1 text-sm leading-5',
+                          'block text-sm leading-5',
                           !notification.readAt ? 'font-semibold' : 'font-medium',
                         )}>
                           {notification.title}
                         </span>
+                        <span className="mt-0.5 line-clamp-2 block text-xs leading-5 text-muted-foreground">
+                          {notification.body}
+                        </span>
+                      </span>
+                      <span className="flex min-h-full flex-col items-end justify-between gap-2">
                         {!notification.readAt && (
                           <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-600" aria-label="Unread" />
                         )}
-                      </span>
-                      <span className="mt-0.5 line-clamp-2 block text-xs leading-5 text-muted-foreground">
-                        {notification.body}
-                      </span>
-                      <span className="mt-1 block text-[11px] text-muted-foreground">
-                        {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                        <span className="whitespace-nowrap text-right text-[11px] leading-4 text-muted-foreground">
+                          {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                        </span>
                       </span>
                     </span>
                   </button>
@@ -393,6 +397,12 @@ export function NotificationCenter() {
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetTrigger asChild>{trigger}</SheetTrigger>
         <SheetContent side="right" className="w-full max-w-none p-0 sm:max-w-sm">
+          <VisuallyHidden>
+            <SheetTitle>Notifications</SheetTitle>
+            <SheetDescription>
+              Review recent account activity and unread notifications.
+            </SheetDescription>
+          </VisuallyHidden>
           {renderPanel(true)}
         </SheetContent>
       </Sheet>
