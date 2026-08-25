@@ -4,6 +4,7 @@ import { AppSidebar } from '@/components/AppSidebar';
 import { useAuthActions, useAuthState } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
+import { AppHeaderIconButton } from '@/components/ui/app-header-icon-button';
 import { LogOut, Moon, Sun, ShieldCheck, User, Zap, Crown, Building2, Mail, BarChart3, ChevronRight } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSubscriptionState } from '@/contexts/SubscriptionContext';
@@ -179,7 +180,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                     {/* Top header bar */}
                 <header className="flex h-14 items-center justify-between border-b px-4 bg-background sticky top-0 z-50 w-full min-w-0">
                     <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
-                        <SidebarTrigger className="md:hidden" />
+                        <SidebarTrigger className="h-11 w-11 md:hidden" />
 
                         {/* Dynamic header content injected by pages */}
                         <div className="flex-1 flex items-center min-w-0 overflow-hidden py-px">
@@ -193,14 +194,13 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                         <NotificationCenter />
 
                         {/* Theme toggle - only visible on desktop */}
-                        <Button
-                            variant="ghost"
-                            size="icon"
+                        <AppHeaderIconButton
                             onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
                             className="hidden md:flex"
+                            aria-label={`Use ${resolvedTheme === 'dark' ? 'light' : 'dark'} theme`}
                         >
                             {resolvedTheme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                        </Button>
+                        </AppHeaderIconButton>
 
                         {/* User menu */}
                         {currentUser && (

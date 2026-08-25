@@ -45,7 +45,7 @@ import {
     FileSignature,
     Ellipsis,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { AppHeaderIconButton } from '@/components/ui/app-header-icon-button';
 import { Input } from '@/components/ui/input';
 import { useSearch } from '@/components/AppShell';
 import { useSubscriptionState } from '@/contexts/SubscriptionContext';
@@ -528,15 +528,12 @@ export function AppSidebar() {
                             {brandIcon('h-8 w-8')}
                         </div>
                     )}
-                    <Button
-                        variant="ghost"
-                        size="icon"
+                    <AppHeaderIconButton
                         onClick={toggleSidebar}
-                        className="h-8 w-8 flex-shrink-0"
                         aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                     >
                         {isCollapsed ? <ChevronRight className="h-4 w-4 text-gray-600 dark:text-gray-400" /> : <ChevronLeft className="h-4 w-4 text-gray-600 dark:text-gray-400" />}
-                    </Button>
+                    </AppHeaderIconButton>
                 </div>
             </SidebarHeader>
 

@@ -2,6 +2,7 @@ import * as React from "react"
 import * as TabsPrimitive from "@radix-ui/react-tabs"
 
 import { cn } from "@/lib/utils"
+import "./tabs.css"
 
 const Tabs = TabsPrimitive.Root
 
@@ -58,7 +59,7 @@ const IconTabsTrigger = React.forwardRef<
   <TabsTrigger
     ref={ref}
     className={cn(
-      "group/icon-tab gap-1.5 rounded-md text-muted-foreground shadow-none [&_svg]:shrink-0 [&_svg]:transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:[&_svg]:text-blue-600 data-[state=active]:bg-sidebar-accent data-[state=active]:font-medium data-[state=active]:text-sidebar-accent-foreground data-[state=active]:shadow-none data-[state=active]:[&_svg]:text-blue-600",
+      "icon-tabs-trigger gap-1.5 rounded-md text-muted-foreground shadow-none [&>svg]:shrink-0 [&>svg]:transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=active]:bg-sidebar-accent data-[state=active]:font-medium data-[state=active]:text-sidebar-accent-foreground data-[state=active]:shadow-none",
       className
     )}
     {...props}

@@ -1,4 +1,6 @@
 import { Settings } from 'lucide-react';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { IconTabsList, IconTabsTrigger, Tabs } from './tabs';
@@ -18,10 +20,12 @@ describe('IconTabsTrigger', () => {
 
     const trigger = screen.getByRole('tab', { name: 'Settings' });
     expect(trigger).toHaveAttribute('data-state', 'active');
+    expect(trigger).toHaveClass('icon-tabs-trigger');
     expect(trigger).toHaveClass('hover:bg-sidebar-accent');
     expect(trigger).toHaveClass('data-[state=active]:bg-sidebar-accent');
     expect(trigger).toHaveClass('data-[state=active]:shadow-none');
-    expect(trigger).toHaveClass('hover:[&_svg]:text-blue-600');
-    expect(trigger).toHaveClass('data-[state=active]:[&_svg]:text-blue-600');
+    const css = readFileSync(join(process.cwd(), 'src/components/ui/tabs.css'), 'utf8');
+    expect(css).toContain(".icon-tabs-trigger[data-state='active'] > svg");
+    expect(css).toContain('#2563eb');
   });
 });

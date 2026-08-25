@@ -1,0 +1,9 @@
+/*
+ * Icon navigation follows the sidebar contract. Radix places data-state on
+ * the trigger, so target the child icon from the actual active/hover element.
+ * #2563eb is the application's invariant Tailwind blue-600 brand color.
+ */
+.icon-tabs-trigger:hover > svg,
+.icon-tabs-trigger[data-state='active'] > svg {
+  color: #2563eb;
+}

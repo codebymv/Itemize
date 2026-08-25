@@ -17,6 +17,7 @@ import {
 import { io } from 'socket.io-client';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { AppHeaderIconButton } from '@/components/ui/app-header-icon-button';
 import { ResponsivePageHeading } from '@/components/layout/ResponsivePageHeading';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -369,10 +370,8 @@ export function NotificationCenter() {
   }, [organizationId, toast]);
 
   const trigger = (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="relative h-8 w-8 shrink-0"
+    <AppHeaderIconButton
+      className="relative"
       aria-label={unseenCount > 0
         ? `Notifications, ${unseenCount} new`
         : 'Notifications'}
@@ -383,7 +382,7 @@ export function NotificationCenter() {
           {unseenCount > 99 ? '99+' : unseenCount}
         </span>
       )}
-    </Button>
+    </AppHeaderIconButton>
   );
 
   const renderPanel = (reserveCloseSpace = false) => (

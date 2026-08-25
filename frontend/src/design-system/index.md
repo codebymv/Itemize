@@ -132,6 +132,20 @@ Used for delete/destroy actions.
 
 Use `TabsList` and `TabsTrigger` for content/status switching. For labeled icon navigation, use `IconTabsList` and `IconTabsTrigger`; they mirror the sidebar with a transparent parent, `sidebar-accent` hover/selected rows, no inset shadow, and blue-600 icons on hover and selection. Do not recreate those states in individual pages.
 
+### App chrome icon actions
+
+Use `AppHeaderIconButton` for unlabeled icon actions in the authenticated top bar. It standardizes a 44px hit area, ghost/accent hover, focus ring, and icon sizing. Sidebar toggles in that same bar use the same 44px geometry. Compact row actions and canvas tools are separate roles and may remain smaller.
+
+| Control role | Geometry | Hover / selected behavior |
+| --- | --- | --- |
+| Authenticated app chrome | 44px square | `accent` hover; use `AppHeaderIconButton` |
+| Labeled icon navigation | Content-sized | `sidebar-accent` row with blue-600 icon on hover and selection; use `IconTabsTrigger` |
+| Primary icon action | 36px or larger | Blue-600 surface, blue-700 hover |
+| Compact row action | 32px square | Neutral ghost hover; keep inside its row or card |
+| Canvas/editor tool | 32px square | Neutral hover with an explicit active state |
+
+Do not shrink one app-chrome action independently or copy these hover classes into a page. If two controls occupy the same header role, they use the same primitive.
+
 ### Progress
 
 Use `Progress` for usage meters, completion bars, and Get Started. Sit the meter on card or page chrome — do not tint the full container behind it.
