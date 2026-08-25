@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Code, MoreHorizontal, Trash2, Copy, Eye, Settings } from 'lucide-react';
+import { Plus, Search, Code, MoreHorizontal, Trash2, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,6 +29,7 @@ import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { getWidgetTypeBadgeClass } from '@/lib/badge-utils';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 
 interface ReviewWidget {
     id: number;
@@ -58,6 +59,7 @@ export function ReputationWidgetsPage() {
     const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [typeFilter, setTypeFilter] = useState<string>('all');
+    const [widgetToDelete, setWidgetToDelete] = useState<ReviewWidget | null>(null);
 
     useEffect(() => {
         if (!organizationId && initError) {
@@ -76,7 +78,7 @@ export function ReputationWidgetsPage() {
         } finally {
             setLoading(false);
         }
-    }, [organizationId]);
+    }, [organizationId, toast]);
 
     useEffect(() => {
         fetchWidgets();
@@ -107,14 +109,15 @@ export function ReputationWidgetsPage() {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!organizationId) return;
+    const handleDelete = async (): Promise<boolean> => {
+        if (!organizationId || !widgetToDelete) return false;
         try {
-            await deleteReviewWidget(id, organizationId);
-            setWidgets(prev => prev.filter(w => w.id !== id));
-            toast({ title: 'Deleted', description: 'Widget deleted successfully' });
+            await deleteReviewWidget(widgetToDelete.id, organizationId);
+            setWidgets(prev => prev.filter(w => w.id !== widgetToDelete.id));
+            setWidgetToDelete(null);
+            return true;
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' });
+            return false;
         }
     };
 
@@ -243,17 +246,11 @@ export function ReputationWidgetsPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem className="group/menu">
-                                                        <Settings className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Configure
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem className="group/menu">
-                                                        <Eye className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Preview
-                                                    </DropdownMenuItem>
                                                     <DropdownMenuItem onClick={() => handleCopyEmbedCode(widget.id)} className="group/menu">
                                                         <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Copy Embed Code
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
-                                                    <DropdownMenuItem onClick={() => handleDelete(widget.id)} className="text-destructive focus:text-destructive">
+                                                    <DropdownMenuItem onClick={() => setWidgetToDelete(widget)} className="text-destructive focus:text-destructive">
                                                         <Trash2 className="h-4 w-4 mr-2" />Delete
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
@@ -277,6 +274,14 @@ export function ReputationWidgetsPage() {
                             ))}
                         </div>
                     )}
+
+            <DeleteDialog
+                open={Boolean(widgetToDelete)}
+                onOpenChange={(open) => { if (!open) setWidgetToDelete(null); }}
+                onConfirm={handleDelete}
+                itemType="widget"
+                itemTitle={widgetToDelete?.name}
+            />
 
             {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
                 <OnboardingModal

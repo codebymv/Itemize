@@ -30,6 +30,7 @@ import { getPages, updatePage, deletePage, duplicatePage, createPage } from '@/s
 import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { formatStatus, titleCase } from '@/utils/textUtils';
 
 interface LandingPage {
@@ -62,6 +63,7 @@ export function LandingPagesPage() {
     const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [pageToDelete, setPageToDelete] = useState<LandingPage | null>(null);
 
     useEffect(() => {
         if (orgLoading) {
@@ -152,14 +154,15 @@ const handleDuplicate = async (id: number) => {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!organizationId) return;
+    const handleDelete = async (): Promise<boolean> => {
+        if (!organizationId || !pageToDelete) return false;
         try {
-            await deletePage(id, organizationId);
-            setPages(prev => prev.filter(p => p.id !== id));
-            toast({ title: 'Deleted', description: toastMessages.deleted('page') });
+            await deletePage(pageToDelete.id, organizationId);
+            setPages(prev => prev.filter(p => p.id !== pageToDelete.id));
+            setPageToDelete(null);
+            return true;
         } catch (error) {
-            toast({ title: 'Error', description: toastMessages.failedToDelete('page'), variant: 'destructive' });
+            return false;
         }
     };
 
@@ -326,7 +329,7 @@ const handleDuplicate = async (id: number) => {
                                                         <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Duplicate
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
-                                                    <DropdownMenuItem onClick={() => handleDelete(page.id)} className="text-destructive focus:text-destructive">
+                                                    <DropdownMenuItem onClick={() => setPageToDelete(page)} className="text-destructive focus:text-destructive">
                                                         <Trash2 className="h-4 w-4 mr-2" />Delete
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
@@ -350,6 +353,13 @@ const handleDuplicate = async (id: number) => {
                             ))}
                         </div>
                     )}
+            <DeleteDialog
+                open={Boolean(pageToDelete)}
+                onOpenChange={(open) => { if (!open) setPageToDelete(null); }}
+                onConfirm={handleDelete}
+                itemType="page"
+                itemTitle={pageToDelete?.name}
+            />
         </PageLayout>
     );
 }

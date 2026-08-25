@@ -72,6 +72,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   const currentStepContent = content.steps[currentStep];
 
+  // Radix can keep exit-animation content mounted after a controlled dialog
+  // closes. Unmounting here guarantees the tour cannot remain visible or
+  // intercept pointer events after Close, Escape, or Skip Tour.
+  if (!isOpen) return null;
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent 

@@ -65,4 +65,27 @@ describe('ShareModal', () => {
       );
     });
   });
+
+  it('uses the concise hierarchy and labels shared note controls accessibly', async () => {
+    render(
+      <ShareModal
+        open
+        onOpenChange={vi.fn()}
+        itemType="note"
+        itemId={3}
+        itemTitle="Product positioning"
+        onShare={vi.fn()}
+        onUnshare={vi.fn()}
+        existingShareData={{
+          shareToken: 'note-token',
+          shareUrl: 'https://itemize.cloud/shared/note/note-token',
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Create a shareable link for your note')).toHaveClass('sr-only');
+    expect(document.querySelector('p.text-xs')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'About note share links' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Note share link' })).toHaveAttribute('readonly');
+  });
 });

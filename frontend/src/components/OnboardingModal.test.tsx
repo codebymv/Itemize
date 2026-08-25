@@ -53,4 +53,30 @@ describe('OnboardingModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Start exploring' }));
     expect(onComplete).toHaveBeenCalledOnce();
   });
+
+  it('unmounts its dialog content when controlled closed', () => {
+    const { rerender } = render(
+      <OnboardingModal
+        isOpen
+        onClose={vi.fn()}
+        onComplete={vi.fn()}
+        onDismiss={vi.fn()}
+        content={content}
+      />,
+    );
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    rerender(
+      <OnboardingModal
+        isOpen={false}
+        onClose={vi.fn()}
+        onComplete={vi.fn()}
+        onDismiss={vi.fn()}
+        content={content}
+      />,
+    );
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });

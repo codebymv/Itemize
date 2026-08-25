@@ -63,13 +63,12 @@ export const useOnboardingTrigger = (featureKey: string) => {
   };
 
   const handleDismiss = async () => {
+    // Close immediately so persistence latency never makes Skip Tour feel broken.
+    setShowModal(false);
     try {
       await dismissOnboarding(featureKey);
-      setShowModal(false);
     } catch (error) {
       console.error(`Failed to dismiss onboarding for ${featureKey}`, error);
-      // Still close the modal even if saving fails
-      setShowModal(false);
     }
   };
 
@@ -163,12 +162,12 @@ export const useRouteOnboarding = () => {
 
   const handleDismiss = async () => {
     if (!onboardingKey) return;
+    // Close immediately so persistence latency never makes Skip Tour feel broken.
+    setShowModal(false);
     try {
       await dismissOnboarding(onboardingKey);
-      setShowModal(false);
     } catch (error) {
       console.error(`Failed to dismiss onboarding for ${onboardingKey}`, error);
-      setShowModal(false);
     }
   };
 

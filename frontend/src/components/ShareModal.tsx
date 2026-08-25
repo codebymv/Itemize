@@ -89,7 +89,7 @@ const shareConfig = {
   }
 } as const;
 
-const ShareLinkLabel = ({ help }: { help?: string }) => (
+const ShareLinkLabel = ({ help, itemLabel }: { help?: string; itemLabel: string }) => (
   <div className="flex items-center gap-1.5">
     <Label className="font-raleway">Share Link</Label>
     {help && (
@@ -99,7 +99,7 @@ const ShareLinkLabel = ({ help }: { help?: string }) => (
             <button
               type="button"
               className="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-              aria-label="About vault share links"
+              aria-label={`About ${itemLabel.toLowerCase()} share links`}
             >
               <Info className="h-3.5 w-3.5" />
             </button>
@@ -230,7 +230,7 @@ export const ShareModal = <TId extends string | number>({
             <Share2 className="h-5 w-5 text-blue-600" />
             {`Share ${config.label}`}
           </DialogTitle>
-          <DialogDescription className={itemType === 'vault' ? 'sr-only' : 'font-raleway'}>
+          <DialogDescription className="sr-only">
             {config.description}
           </DialogDescription>
         </DialogHeader>
@@ -274,9 +274,14 @@ export const ShareModal = <TId extends string | number>({
           {shareData ? (
             <div className="space-y-4">
               <div className="space-y-2">
-                <ShareLinkLabel help={itemType === 'vault' ? config.shareHelp : undefined} />
+                <ShareLinkLabel help={config.shareHelp} itemLabel={config.label} />
                 <div className="flex space-x-2">
-                  <Input value={shareData.shareUrl || ''} readOnly className="flex-1" />
+                  <Input
+                    value={shareData.shareUrl || ''}
+                    readOnly
+                    className="flex-1"
+                    aria-label={`${config.label} share link`}
+                  />
                   <Button
                     type="button"
                     variant="outline"
@@ -298,11 +303,6 @@ export const ShareModal = <TId extends string | number>({
                     <ExternalLink className="h-4 w-4" />
                   </Button>
                 </div>
-                {itemType !== 'vault' && (
-                  <p className="text-xs text-gray-500 font-raleway">
-                    {config.shareHelp}
-                  </p>
-                )}
               </div>
 
               <div className="flex justify-between space-x-2">
@@ -358,9 +358,15 @@ export const ShareModal = <TId extends string | number>({
           ) : isLoading ? (
             <div className="space-y-4">
               <div className="space-y-2">
-                <ShareLinkLabel help={itemType === 'vault' ? config.shareHelp : undefined} />
+                <ShareLinkLabel help={config.shareHelp} itemLabel={config.label} />
                 <div className="flex space-x-2">
-                  <Input value="Generating share link..." readOnly className="flex-1" placeholder="Generating share link..." />
+                  <Input
+                    value="Generating share link..."
+                    readOnly
+                    className="flex-1"
+                    placeholder="Generating share link..."
+                    aria-label={`${config.label} share link`}
+                  />
                   <Button type="button" variant="outline" size="icon" disabled aria-label="Copy link">
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -368,11 +374,6 @@ export const ShareModal = <TId extends string | number>({
                     <ExternalLink className="h-4 w-4" />
                   </Button>
                 </div>
-                {itemType !== 'vault' && (
-                  <p className="text-xs text-gray-500 font-raleway">
-                    {config.shareHelp}
-                  </p>
-                )}
               </div>
               <div className="flex justify-end">
                 <Button

@@ -32,6 +32,7 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 
 export function FormsPage() {
     const navigate = useNavigate();
@@ -51,6 +52,7 @@ export function FormsPage() {
     const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [formToDelete, setFormToDelete] = useState<Form | null>(null);
 
     const handleCreateForm = useCallback(async () => {
         if (!organizationId) return;
@@ -118,14 +120,15 @@ export function FormsPage() {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!organizationId) return;
+    const handleDelete = async (): Promise<boolean> => {
+        if (!organizationId || !formToDelete) return false;
         try {
-            await deleteForm(id, organizationId);
-            setForms(prev => prev.filter(f => f.id !== id));
-            toast({ title: 'Deleted', description: toastMessages.deleted('form') });
+            await deleteForm(formToDelete.id, organizationId);
+            setForms(prev => prev.filter(f => f.id !== formToDelete.id));
+            setFormToDelete(null);
+            return true;
         } catch (error) {
-            toast({ title: 'Error', description: toastMessages.failedToDelete('form'), variant: 'destructive' });
+            return false;
         }
     };
 
@@ -281,7 +284,7 @@ export function FormsPage() {
                                                             <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Duplicate
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
-                                                        <DropdownMenuItem onClick={() => handleDelete(form.id)} className="text-destructive focus:text-destructive">
+                                                        <DropdownMenuItem onClick={() => setFormToDelete(form)} className="text-destructive focus:text-destructive">
                                                             <Trash2 className="h-4 w-4 mr-2" />Delete
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
@@ -306,6 +309,13 @@ export function FormsPage() {
                                 ))}
                             </div>
                         )}
+            <DeleteDialog
+                open={Boolean(formToDelete)}
+                onOpenChange={(open) => { if (!open) setFormToDelete(null); }}
+                onConfirm={handleDelete}
+                itemType="form"
+                itemTitle={formToDelete?.name}
+            />
         </PageLayout>
     );
 }
