@@ -26,6 +26,7 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 
 export function SegmentsPage() {
     const navigate = useNavigate();
@@ -44,6 +45,7 @@ export function SegmentsPage() {
     const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [segmentToDelete, setSegmentToDelete] = useState<Segment | null>(null);
 
     const stats = useMemo(() => {
         const total = segments.length;
@@ -98,14 +100,15 @@ export function SegmentsPage() {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!organizationId) return;
+    const handleDelete = async (): Promise<boolean> => {
+        if (!organizationId || !segmentToDelete) return false;
         try {
-            await deleteSegment(id, organizationId);
-            setSegments(prev => prev.filter(s => s.id !== id));
-            toast({ title: 'Deleted', description: 'Segment deleted successfully' });
+            await deleteSegment(segmentToDelete.id, organizationId);
+            setSegments(prev => prev.filter(s => s.id !== segmentToDelete.id));
+            setSegmentToDelete(null);
+            return true;
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' });
+            return false;
         }
     };
 
@@ -245,7 +248,7 @@ export function SegmentsPage() {
                                                             <RefreshCw className="h-4 w-4 mr-2" />Recalculate
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
-                                                        <DropdownMenuItem onClick={() => handleDelete(segment.id)} className="text-destructive focus:text-destructive">
+                                                        <DropdownMenuItem onClick={() => setSegmentToDelete(segment)} className="text-destructive focus:text-destructive">
                                                             <Trash2 className="h-4 w-4 mr-2" />Delete
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
@@ -288,6 +291,13 @@ export function SegmentsPage() {
                     content={ONBOARDING_CONTENT[onboardingFeatureKey]}
                 />
             )}
+            <DeleteDialog
+                open={Boolean(segmentToDelete)}
+                onOpenChange={(open) => !open && setSegmentToDelete(null)}
+                onConfirm={handleDelete}
+                itemType="segment"
+                itemTitle={segmentToDelete?.name}
+            />
         </PageLayout>
     );
 }

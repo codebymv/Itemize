@@ -34,6 +34,7 @@ import type { EmailCampaign } from '@/services/campaignsApi';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 
 export function CampaignsPage() {
     const navigate = useNavigate();
@@ -47,6 +48,7 @@ export function CampaignsPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
 
     const toCampaignListItem = useCallback((campaign: EmailCampaign): Campaign => ({
         id: campaign.id,
@@ -142,14 +144,15 @@ export function CampaignsPage() {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!organizationId) return;
+    const handleDelete = async (): Promise<boolean> => {
+        if (!organizationId || !campaignToDelete) return false;
         try {
-            await deleteCampaign(id, organizationId);
-            setCampaigns(prev => prev.filter(c => c.id !== id));
-            toast({ title: 'Deleted', description: 'Campaign deleted successfully' });
+            await deleteCampaign(campaignToDelete.id, organizationId);
+            setCampaigns(prev => prev.filter(c => c.id !== campaignToDelete.id));
+            setCampaignToDelete(null);
+            return true;
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' });
+            return false;
         }
     };
 
@@ -347,7 +350,7 @@ export function CampaignsPage() {
                                                     <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Duplicate
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
-                                                <DropdownMenuItem onClick={() => handleDelete(campaign.id)} className="text-destructive focus:text-destructive">
+                                                <DropdownMenuItem onClick={() => setCampaignToDelete(campaign)} className="text-destructive focus:text-destructive">
                                                     <Trash2 className="h-4 w-4 mr-2" />Delete
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
@@ -368,6 +371,13 @@ export function CampaignsPage() {
                     }}
                 />
             )}
+            <DeleteDialog
+                open={Boolean(campaignToDelete)}
+                onOpenChange={(open) => !open && setCampaignToDelete(null)}
+                onConfirm={handleDelete}
+                itemType="campaign"
+                itemTitle={campaignToDelete?.name}
+            />
         </PageLayout>
     );
 }

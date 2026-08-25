@@ -350,17 +350,17 @@ The design system supports light and dark themes via CSS variables defined in `s
 
 /* Dark theme — same brand primary */
 .dark {
-  --background: 215 28% 21%;
+  --background: 217 28% 22.5%;
   --foreground: 210 20% 98%;
-  --card: 215 25% 25%;
+  --card: 217 26% 24.5%;
   --primary: 221.2 83.2% 53.3%;
   --primary-foreground: 0 0% 100%;
   --primary-hover: 224.3 76.3% 48%;
-  --secondary: 215 25% 34%;
-  --muted: 215 25% 34%;
-  --accent: 215 20% 25%;
+  --secondary: 217 25% 33.5%;
+  --muted: 217 25% 33.5%;
+  --accent: 217 22% 25%;
   --destructive: 0 72% 55%;
-  --border: 215 20% 37%;
+  --border: 217 20% 37%;
 }
 ```
 

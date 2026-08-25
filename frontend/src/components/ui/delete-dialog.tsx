@@ -17,6 +17,7 @@ import {
   Package,
   Receipt,
   Clock,
+  Zap,
   type LucideIcon
 } from 'lucide-react';
 import { 
@@ -56,6 +57,7 @@ type PredefinedItemType =
   | 'campaign'
   | 'segment'
   | 'form'
+  | 'workflow'
   | 'generic';
 
 interface ItemConfig {
@@ -243,6 +245,14 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
     successTitle: 'Form deleted',
     successDescription: 'The form has been permanently deleted.',
     errorDescription: 'Failed to delete the form. Please try again.',
+  },
+  workflow: {
+    icon: Zap,
+    typeLabel: 'Workflow',
+    description: 'This will permanently delete the workflow and stop any future runs. This action cannot be undone.',
+    successTitle: 'Workflow deleted',
+    successDescription: 'The workflow has been permanently deleted.',
+    errorDescription: 'Failed to delete the workflow. Please try again.',
   },
   generic: {
     icon: Trash2,

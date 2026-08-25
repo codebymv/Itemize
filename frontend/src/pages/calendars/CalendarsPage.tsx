@@ -26,11 +26,7 @@ import { CalendarIntegrations } from './components/CalendarIntegrations';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
-
-const getApiErrorMessage = (error: unknown, fallback: string): string => {
-    const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
-    return responseData?.error || responseData?.message || fallback;
-};
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 
 export function CalendarsPage() {
     const navigate = useNavigate();
@@ -46,6 +42,7 @@ export function CalendarsPage() {
     });
     const [searchQuery, setSearchQuery] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [calendarToDelete, setCalendarToDelete] = useState<Calendar | null>(null);
 
     useEffect(() => {
         if (!organizationId && initError) {
@@ -108,23 +105,17 @@ export function CalendarsPage() {
     };
 
     // Delete calendar
-    const handleDeleteCalendar = async (id: number) => {
-        if (!organizationId) return;
+    const handleDeleteCalendar = async (): Promise<boolean> => {
+        if (!organizationId || !calendarToDelete) return false;
 
         try {
-            await deleteCalendar(id, organizationId);
-            setCalendars((prev) => prev.filter((c) => c.id !== id));
-            toast({
-                title: 'Deleted',
-                description: 'Calendar deleted successfully',
-            });
+            await deleteCalendar(calendarToDelete.id, organizationId);
+            setCalendars((prev) => prev.filter((c) => c.id !== calendarToDelete.id));
+            setCalendarToDelete(null);
+            return true;
         } catch (error) {
             console.error('Error deleting calendar:', error);
-            toast({
-                title: 'Error',
-                description: getApiErrorMessage(error, 'Failed to delete calendar'),
-                variant: 'destructive',
-            });
+            return false;
         }
     };
 
@@ -283,7 +274,7 @@ export function CalendarsPage() {
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem
-                                                        onClick={() => handleDeleteCalendar(calendar.id)}
+                                                        onClick={() => setCalendarToDelete(calendar)}
                                                         className="text-destructive focus:text-destructive"
                                                     >
                                                         <Trash2 className="h-4 w-4 mr-2" />
@@ -338,6 +329,13 @@ export function CalendarsPage() {
                     onCreated={handleCalendarCreated}
                 />
             )}
+            <DeleteDialog
+                open={Boolean(calendarToDelete)}
+                onOpenChange={(open) => !open && setCalendarToDelete(null)}
+                onConfirm={handleDeleteCalendar}
+                itemType="calendar"
+                itemTitle={calendarToDelete?.name}
+            />
         </PageLayout>
     );
 }

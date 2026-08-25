@@ -30,6 +30,7 @@ import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import type { ReviewRequest as ApiReviewRequest } from '@/services/reputationApi';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 
 interface ReviewRequest {
     id: number;
@@ -76,6 +77,7 @@ export function ReputationRequestsPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [showSendModal, setShowSendModal] = useState(false);
+    const [requestToDelete, setRequestToDelete] = useState<ReviewRequest | null>(null);
 
     useEffect(() => {
         if (!initError) return;
@@ -140,14 +142,15 @@ export function ReputationRequestsPage() {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!organizationId) return;
+    const handleDelete = async (): Promise<boolean> => {
+        if (!organizationId || !requestToDelete) return false;
         try {
-            await deleteReviewRequest(id, organizationId);
-            setRequests(prev => prev.filter(r => r.id !== id));
-            toast({ title: 'Deleted', description: 'Request deleted successfully' });
+            await deleteReviewRequest(requestToDelete.id, organizationId);
+            setRequests(prev => prev.filter(r => r.id !== requestToDelete.id));
+            setRequestToDelete(null);
+            return true;
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' });
+            return false;
         }
     };
 
@@ -293,7 +296,7 @@ export function ReputationRequestsPage() {
                                                         <Send className="h-4 w-4 mr-2" />Resend
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
-                                                    <DropdownMenuItem onClick={() => handleDelete(request.id)} className="text-destructive focus:text-destructive">
+                                                    <DropdownMenuItem onClick={() => setRequestToDelete(request)} className="text-destructive focus:text-destructive">
                                                         <Trash2 className="h-4 w-4 mr-2" />Delete
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
@@ -325,6 +328,13 @@ export function ReputationRequestsPage() {
                     content={ONBOARDING_CONTENT[onboardingFeatureKey]}
                 />
             )}
+            <DeleteDialog
+                open={Boolean(requestToDelete)}
+                onOpenChange={(open) => !open && setRequestToDelete(null)}
+                onConfirm={handleDelete}
+                itemType="review-request"
+                itemTitle={requestToDelete?.contact_name}
+            />
         </PageLayout>
     );
 }

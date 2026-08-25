@@ -30,6 +30,7 @@ import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { useAuthState } from '@/contexts/AuthContext';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 
 interface EmailTemplate {
     id: number;
@@ -60,6 +61,7 @@ export function EmailTemplatesPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [categoryFilter, setCategoryFilter] = useState<string>('all');
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [templateToDelete, setTemplateToDelete] = useState<EmailTemplate | null>(null);
 
     useEffect(() => {
         if (!initError) return;
@@ -104,14 +106,15 @@ export function EmailTemplatesPage() {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!organizationId) return;
+    const handleDelete = async (): Promise<boolean> => {
+        if (!organizationId || !templateToDelete) return false;
         try {
-            await deleteEmailTemplate(id, organizationId);
-            setTemplates(prev => prev.filter(t => t.id !== id));
-            toast({ title: 'Deleted', description: 'Template deleted successfully' });
+            await deleteEmailTemplate(templateToDelete.id, organizationId);
+            setTemplates(prev => prev.filter(t => t.id !== templateToDelete.id));
+            setTemplateToDelete(null);
+            return true;
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' });
+            return false;
         }
     };
 
@@ -245,7 +248,7 @@ export function EmailTemplatesPage() {
                                                         <Copy className="h-4 w-4 mr-2" />Duplicate
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
-                                                    <DropdownMenuItem onClick={() => handleDelete(template.id)} className="text-destructive focus:text-destructive">
+                                                    <DropdownMenuItem onClick={() => setTemplateToDelete(template)} className="text-destructive focus:text-destructive">
                                                         <Trash2 className="h-4 w-4 mr-2" />Delete
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
@@ -293,6 +296,13 @@ export function EmailTemplatesPage() {
                     content={ONBOARDING_CONTENT[onboardingFeatureKey]}
                 />
             )}
+            <DeleteDialog
+                open={Boolean(templateToDelete)}
+                onOpenChange={(open) => !open && setTemplateToDelete(null)}
+                onConfirm={handleDelete}
+                itemType="email-template"
+                itemTitle={templateToDelete?.name}
+            />
         </PageLayout>
     );
 }

@@ -53,6 +53,7 @@ import {
     deleteProduct,
     Product,
 } from '@/services/invoicesApi';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 
 interface ProductFormData {
     name: string;
@@ -113,6 +114,7 @@ export function ProductsPage() {
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const [formData, setFormData] = useState<ProductFormData>(defaultFormData);
     const [saving, setSaving] = useState(false);
+    const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
     useEffect(() => {
         if (!organizationId) {
@@ -184,14 +186,15 @@ export function ProductsPage() {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!organizationId) return;
+    const handleDelete = async (): Promise<boolean> => {
+        if (!organizationId || !productToDelete) return false;
         try {
-            await deleteProduct(id, organizationId);
-            setProducts(prev => prev.filter(p => p.id !== id));
-            toast({ title: 'Deleted', description: 'Product deleted successfully' });
+            await deleteProduct(productToDelete.id, organizationId);
+            setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+            setProductToDelete(null);
+            return true;
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to delete product', variant: 'destructive' });
+            return false;
         }
     };
 
@@ -345,7 +348,7 @@ export function ProductsPage() {
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem
-                                                        onClick={() => handleDelete(product.id)}
+                                                        onClick={() => setProductToDelete(product)}
                                                         className="text-destructive focus:text-destructive"
                                                     >
                                                         <Trash2 className="h-4 w-4 mr-2" />Delete
@@ -498,6 +501,13 @@ export function ProductsPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+        <DeleteDialog
+            open={Boolean(productToDelete)}
+            onOpenChange={(open) => !open && setProductToDelete(null)}
+            onConfirm={handleDelete}
+            itemType="product"
+            itemTitle={productToDelete?.name}
+        />
         {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
             <OnboardingModal
                 isOpen={showOnboarding}

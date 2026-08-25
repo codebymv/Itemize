@@ -57,7 +57,7 @@ describe('AI GraphQL client', () => {
     });
     expect(graphqlMutationRequest).toHaveBeenCalledWith(
       expect.stringContaining('ListSuggestions'),
-      { input: { listTitle: 'Groceries', existingItems: ['Bread'] } },
+      { input: { listTitle: 'Groceries', existingItems: ['Bread'], forceRefresh: false } },
     );
   });
 
@@ -71,7 +71,7 @@ describe('AI GraphQL client', () => {
     });
     expect(graphqlMutationRequest).toHaveBeenCalledWith(
       expect.stringContaining('NoteSuggestions'),
-      { input: { content: 'We should follow up' } },
+      { input: { content: 'We should follow up', forceRefresh: false } },
     );
   });
 });

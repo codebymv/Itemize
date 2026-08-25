@@ -22,6 +22,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 
 interface SMSTemplate {
     id: number;
@@ -51,6 +52,7 @@ export function SMSTemplatesPage() {
     const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [templateToDelete, setTemplateToDelete] = useState<SMSTemplate | null>(null);
 
     useEffect(() => {
         if (!initError) return;
@@ -117,14 +119,15 @@ export function SMSTemplatesPage() {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!organizationId) return;
+    const handleDelete = async (): Promise<boolean> => {
+        if (!organizationId || !templateToDelete) return false;
         try {
-            await deleteSMSTemplate(id, organizationId);
-            setTemplates(prev => prev.filter(t => t.id !== id));
-            toast({ title: 'Deleted', description: 'Template deleted successfully' });
+            await deleteSMSTemplate(templateToDelete.id, organizationId);
+            setTemplates(prev => prev.filter(t => t.id !== templateToDelete.id));
+            setTemplateToDelete(null);
+            return true;
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' });
+            return false;
         }
     };
 
@@ -231,7 +234,7 @@ export function SMSTemplatesPage() {
                                                         <Copy className="h-4 w-4 mr-2" />Duplicate
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
-                                                    <DropdownMenuItem onClick={() => handleDelete(template.id)} className="text-destructive focus:text-destructive">
+                                                    <DropdownMenuItem onClick={() => setTemplateToDelete(template)} className="text-destructive focus:text-destructive">
                                                         <Trash2 className="h-4 w-4 mr-2" />Delete
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
@@ -287,6 +290,13 @@ export function SMSTemplatesPage() {
                     content={ONBOARDING_CONTENT[onboardingFeatureKey]}
                 />
             )}
+            <DeleteDialog
+                open={Boolean(templateToDelete)}
+                onOpenChange={(open) => !open && setTemplateToDelete(null)}
+                onConfirm={handleDelete}
+                itemType="sms-template"
+                itemTitle={templateToDelete?.name}
+            />
         </PageLayout>
     );
 }

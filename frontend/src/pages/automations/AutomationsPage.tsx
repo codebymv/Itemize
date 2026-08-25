@@ -48,6 +48,7 @@ import {
   WORKFLOW_TRIGGER_OPTIONS,
   type WorkflowTriggerType,
 } from '@/domain/workflowRegistry';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 
 const TRIGGER_TYPE_ICONS: Record<string, React.ReactNode> = {
   contact_added: <Users className="h-4 w-4" />,
@@ -74,6 +75,7 @@ export function AutomationsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [triggerFilter, setTriggerFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [workflowToDelete, setWorkflowToDelete] = useState<Workflow | null>(null);
 
   useEffect(() => {
     if (orgLoading) {
@@ -156,19 +158,16 @@ export function AutomationsPage() {
   };
 
   // Handle delete
-  const handleDeleteWorkflow = async (workflow: Workflow) => {
-    if (!organizationId) return;
+  const handleDeleteWorkflow = async (): Promise<boolean> => {
+    if (!organizationId || !workflowToDelete) return false;
 
     try {
-      await deleteWorkflow(workflow.id, organizationId);
-      toast({ title: 'Deleted', description: 'Workflow deleted successfully' });
-      fetchWorkflows();
+      await deleteWorkflow(workflowToDelete.id, organizationId);
+      setWorkflows((prev) => prev.filter((workflow) => workflow.id !== workflowToDelete.id));
+      setWorkflowToDelete(null);
+      return true;
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete workflow',
-        variant: 'destructive',
-      });
+      return false;
     }
   };
 
@@ -437,7 +436,7 @@ export function AutomationsPage() {
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             className="text-destructive focus:text-destructive"
-                            onClick={() => handleDeleteWorkflow(workflow)}
+                            onClick={() => setWorkflowToDelete(workflow)}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
@@ -452,6 +451,13 @@ export function AutomationsPage() {
           )}
         </CardContent>
       </Card>
+      <DeleteDialog
+        open={Boolean(workflowToDelete)}
+        onOpenChange={(open) => !open && setWorkflowToDelete(null)}
+        onConfirm={handleDeleteWorkflow}
+        itemType="workflow"
+        itemTitle={workflowToDelete?.name}
+      />
     </PageLayout>
   );
 }

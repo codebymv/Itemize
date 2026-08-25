@@ -45,6 +45,7 @@ import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { formatDateOnly } from './utils/invoiceFormatters';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 
 export function EstimatesPage() {
     const navigate = useNavigate();
@@ -68,6 +69,7 @@ export function EstimatesPage() {
     });
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<string>('all');
+    const [estimateToDelete, setEstimateToDelete] = useState<Estimate | null>(null);
 
     useEffect(() => {
         if (!organizationId) {
@@ -115,14 +117,15 @@ export function EstimatesPage() {
         }
     };
 
-    const handleDelete = async (id: number) => {
-        if (!organizationId) return;
+    const handleDelete = async (): Promise<boolean> => {
+        if (!organizationId || !estimateToDelete) return false;
         try {
-            await deleteEstimate(id, organizationId);
-            setEstimates(prev => prev.filter(e => e.id !== id));
-            toast({ title: 'Deleted', description: 'Estimate deleted successfully' });
+            await deleteEstimate(estimateToDelete.id, organizationId);
+            setEstimates(prev => prev.filter(e => e.id !== estimateToDelete.id));
+            setEstimateToDelete(null);
+            return true;
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to delete estimate', variant: 'destructive' });
+            return false;
         }
     };
 
@@ -367,7 +370,7 @@ export function EstimatesPage() {
                                                     )}
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem
-                                                        onClick={() => handleDelete(estimate.id)}
+                                                        onClick={() => setEstimateToDelete(estimate)}
                                                         className="text-destructive focus:text-destructive"
                                                     >
                                                         <Trash2 className="h-4 w-4 mr-2" />Delete
@@ -417,6 +420,13 @@ export function EstimatesPage() {
                 content={ONBOARDING_CONTENT[onboardingFeatureKey]}
             />
         )}
+        <DeleteDialog
+            open={Boolean(estimateToDelete)}
+            onOpenChange={(open) => !open && setEstimateToDelete(null)}
+            onConfirm={handleDelete}
+            itemType="estimate"
+            itemTitle={estimateToDelete?.estimate_number}
+        />
         </PageLayout>
     );
 }
