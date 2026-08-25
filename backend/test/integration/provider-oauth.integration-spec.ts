@@ -202,7 +202,7 @@ describe('Provider OAuth retained HTTP protocol (legacy behavior pinned)', () =>
     );
     expect(response.status).toBe(302);
     expect(response.headers.location).toBe(
-      'https://app.itemize.test/calendar-integrations?success=facebook_connected',
+      'https://app.itemize.test/settings/integrations?success=facebook_connected',
     );
 
     const channels = await pool.query(

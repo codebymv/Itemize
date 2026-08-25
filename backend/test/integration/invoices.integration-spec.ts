@@ -357,6 +357,37 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     });
   });
 
+  it('applies the organization default business when an invoice omits one', async () => {
+    await pool.query(
+      `UPDATE organizations
+       SET settings = jsonb_set(
+         COALESCE(settings, '{}'::jsonb),
+         '{defaultBusinessId}',
+         to_jsonb($2::int)
+       )
+       WHERE id = $1`,
+      [organizationId, businessId],
+    );
+    const { businessId: _omitted, ...withoutBusiness } = input();
+    const created = await graphql(
+      memberToken,
+      organizationId,
+      createMutation,
+      { input: withoutBusiness },
+    ).expect(200);
+    expect(created.body.errors).toBeUndefined();
+    expect(created.body.data.createInvoice.businessId).toBe(businessId);
+    await pool.query(
+      `DELETE FROM invoices WHERE id = $1 AND organization_id = $2`,
+      [Number(created.body.data.createInvoice.id), organizationId],
+    );
+    await pool.query(
+      `UPDATE organizations SET settings = settings - 'defaultBusinessId'
+       WHERE id = $1`,
+      [organizationId],
+    );
+  });
+
   it('serves tenant-scoped invoice PDFs over retained authenticated HTTP', async () => {
     invoicePdfRenderer.render.mockReset();
     const created = await graphql(

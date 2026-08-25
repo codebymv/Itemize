@@ -19,6 +19,9 @@ import { SocialOAuthRepository } from './social-oauth.repository';
 
 const frontendUrl = (): string => process.env.FRONTEND_URL as string;
 
+const integrationsUrl = (query: string): string =>
+  `${frontendUrl()}/settings/integrations?${query}`;
+
 const redirectUri = (): string =>
   process.env.FACEBOOK_REDIRECT_URI ||
   `${process.env.BACKEND_URL}/api/social/callback/facebook`;
@@ -88,13 +91,15 @@ export class SocialOAuthController {
           `Facebook OAuth error: ${providerError} ${errorDescription ?? ''}`,
         );
         response.redirect(
-          `${frontendUrl()}/calendar-integrations?error=${encodeURIComponent(errorDescription || providerError)}`,
+          integrationsUrl(
+            `error=${encodeURIComponent(errorDescription || providerError)}`,
+          ),
         );
         return;
       }
       if (!code || !state) {
         response.redirect(
-          `${frontendUrl()}/calendar-integrations?error=missing_params`,
+          integrationsUrl('error=missing_params'),
         );
         return;
       }
@@ -102,7 +107,7 @@ export class SocialOAuthController {
       const stateData = await this.repository.claimState(state);
       if (!stateData) {
         response.redirect(
-          `${frontendUrl()}/calendar-integrations?error=invalid_state`,
+          integrationsUrl('error=invalid_state'),
         );
         return;
       }
@@ -116,7 +121,7 @@ export class SocialOAuthController {
       if (tokenData.error) {
         this.logger.error('Facebook token error');
         response.redirect(
-          `${frontendUrl()}/calendar-integrations?error=token_exchange_failed`,
+          integrationsUrl('error=token_exchange_failed'),
         );
         return;
       }
@@ -126,7 +131,7 @@ export class SocialOAuthController {
       if (pagesData.error) {
         this.logger.error('Facebook pages error');
         response.redirect(
-          `${frontendUrl()}/calendar-integrations?error=pages_fetch_failed`,
+          integrationsUrl('error=pages_fetch_failed'),
         );
         return;
       }
@@ -141,14 +146,14 @@ export class SocialOAuthController {
       });
 
       response.redirect(
-        `${frontendUrl()}/calendar-integrations?success=facebook_connected`,
+        integrationsUrl('success=facebook_connected'),
       );
     } catch (error) {
       this.logger.error(
         `Error in Facebook callback: ${(error as Error).message}`,
       );
       response.redirect(
-        `${frontendUrl()}/calendar-integrations?error=callback_failed`,
+        integrationsUrl('error=callback_failed'),
       );
     }
   }

@@ -218,7 +218,7 @@ export function CalendarIntegrations({ organizationId }: CalendarIntegrationsPro
             });
             window.history.replaceState({}, document.title, window.location.pathname);
         }
-    }, []);
+    }, [queryClient, toast]);
 
     return (
         <Card className="mb-6">
@@ -229,7 +229,7 @@ export function CalendarIntegrations({ organizationId }: CalendarIntegrationsPro
                     <button
                         type="button"
                         className="text-blue-600 hover:underline"
-                        onClick={() => navigate('/calendar-integrations')}
+                        onClick={() => navigate('/settings/integrations')}
                     >
                         Manage all integrations
                     </button>

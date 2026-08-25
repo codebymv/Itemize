@@ -69,12 +69,24 @@ import {
   readIntegrationOAuthResult,
 } from '@/lib/integrationOAuthReturn';
 import { disconnectStripeConnect, initiateStripeConnect } from '@/services/stripeConnectApi';
+const OrganizationSettings = React.lazy(() =>
+  import('./settings/OrganizationSettings').then((module) => ({
+    default: module.OrganizationSettings,
+  })),
+);
+const IntegrationsSettings = React.lazy(() =>
+  import('./calendar-integrations/CalendarIntegrationsPage').then((module) => ({
+    default: module.CalendarIntegrationsPage,
+  })),
+);
 
 // Settings navigation items
 const settingsNav = [
   { title: 'Account', path: '/settings', icon: User },
+  { title: 'Organization', path: '/organization-settings', icon: Building },
   { title: 'Preferences', path: '/preferences', icon: Wrench },
   { title: 'Payments', path: '/payment-settings', icon: CreditCard },
+  { title: 'Integrations', path: '/settings/integrations', icon: Plug },
 ];
 
 function SettingsNav() {
@@ -85,7 +97,7 @@ function SettingsNav() {
   // Mobile: Use tabs
   const mobileTabs = (
     <Tabs value={activePath} onValueChange={(value) => navigate(value)} className="w-full lg:hidden">
-      <TabsList className="grid w-full grid-cols-3">
+      <TabsList className="grid w-full grid-cols-5">
         {settingsNav.map((item) => {
           const isActive = activePath === item.path || (item.path === '/settings' && activePath === '/settings/');
           return (
@@ -294,7 +306,7 @@ function AccountSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button variant="outline" onClick={() => navigate('/calendar-integrations')}>
+          <Button variant="outline" onClick={() => navigate('/settings/integrations')}>
             <Plug className="mr-2 h-4 w-4" />
             Manage integrations
           </Button>
@@ -677,6 +689,8 @@ export function SettingsPage() {
     >
       <div key={location.pathname}>
         {location.pathname === '/preferences' && <PreferencesSettings />}
+        {location.pathname === '/organization-settings' && <OrganizationSettings />}
+        {location.pathname === '/settings/integrations' && <IntegrationsSettings embedded />}
         {location.pathname === '/payment-settings' && (
           <PaymentsSettings
             setSaveButton={setSaveButton}

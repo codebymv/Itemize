@@ -2,8 +2,8 @@ export type IntegrationOAuthResult =
   | { ok: true; provider: 'google' | 'facebook' | 'stripe' }
   | { ok: false; error: string };
 
-export const INTEGRATIONS_PATH = '/calendar-integrations';
-export const INTEGRATIONS_ALIAS_PATH = '/settings/integrations';
+export const INTEGRATIONS_PATH = '/settings/integrations';
+export const INTEGRATIONS_ALIAS_PATH = '/calendar-integrations';
 
 export function readIntegrationOAuthResult(search: string): IntegrationOAuthResult | null {
   const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);

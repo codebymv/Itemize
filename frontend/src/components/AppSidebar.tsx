@@ -219,10 +219,6 @@ const mainNavItems: NavItem[] = [
                 title: 'Bookings',
                 path: '/bookings',
             },
-            {
-                title: 'Integrations',
-                path: '/calendar-integrations',
-            },
         ],
     },
     {
@@ -265,6 +261,10 @@ const secondaryNavItems: NavItem[] = [
                 path: '/settings',
             },
             {
+                title: 'Organization',
+                path: '/organization-settings',
+            },
+            {
                 title: 'Preferences',
                 path: '/preferences',
             },
@@ -274,7 +274,7 @@ const secondaryNavItems: NavItem[] = [
             },
             {
                 title: 'Integrations',
-                path: '/calendar-integrations',
+                path: '/settings/integrations',
             },
         ],
     },

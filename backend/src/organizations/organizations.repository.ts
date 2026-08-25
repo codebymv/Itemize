@@ -36,7 +36,8 @@ export type OrganizationAccessRole =
 export type OrganizationAccessOutcome<T> =
   | { kind: 'ok'; value: T }
   | { kind: 'forbidden' }
-  | { kind: 'not_found' };
+  | { kind: 'not_found' }
+  | { kind: 'invalid_default_business' };
 
 export type OrganizationDeleteOutcome =
   | { kind: 'deleted' }
@@ -198,6 +199,17 @@ export class OrganizationsRepository {
       );
       if (!current.rows[0]) return { kind: 'not_found' };
       const row = current.rows[0];
+      const settings = values.settings ?? this.record(row.settings);
+      const defaultBusinessId = settings.defaultBusinessId;
+      if (defaultBusinessId !== undefined && defaultBusinessId !== null) {
+        const business = await client.query(
+          `SELECT id FROM businesses
+           WHERE id = $1 AND organization_id = $2 AND is_active = TRUE
+           FOR SHARE`,
+          [defaultBusinessId, organizationId],
+        );
+        if (!business.rows[0]) return { kind: 'invalid_default_business' };
+      }
       const updated = await client.query<OrganizationRow>(
         `UPDATE organizations
          SET name = $1,
@@ -212,7 +224,7 @@ export class OrganizationsRepository {
            created_at, updated_at`,
         [
           values.name ?? row.name,
-          JSON.stringify(values.settings ?? row.settings),
+          JSON.stringify(settings),
           values.logoUrl === undefined ? row.logo_url : values.logoUrl,
           organizationId,
           membership.role,
@@ -443,6 +455,9 @@ export class OrganizationsRepository {
       if (!actor || !['owner', 'admin'].includes(actor.role)) {
         return { kind: 'forbidden' };
       }
+      if (actor.role === 'admin' && values.role === 'admin') {
+        return { kind: 'admin_peer_forbidden' };
+      }
       const user = await client.query<{ id: number }>(
         `SELECT id FROM users
          WHERE lower(email) = lower($1)
@@ -511,7 +526,10 @@ export class OrganizationsRepository {
       if (target.rows[0].role === 'owner') {
         return { kind: 'owner_immutable' };
       }
-      if (actor.role === 'admin' && target.rows[0].role === 'admin') {
+      if (
+        actor.role === 'admin' &&
+        (target.rows[0].role === 'admin' || role === 'admin')
+      ) {
         return { kind: 'admin_peer_forbidden' };
       }
       const updated = await client.query<OrganizationMemberRow>(
@@ -611,6 +629,11 @@ export class OrganizationsRepository {
         .replace(/^-|-$/g, '')
         .slice(0, 220) || 'workspace'
     );
+  }
+
+  private record(value: unknown): Record<string, unknown> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+    return value as Record<string, unknown>;
   }
 
   private async lockMembership(

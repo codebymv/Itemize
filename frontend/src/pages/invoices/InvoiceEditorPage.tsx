@@ -89,7 +89,10 @@ export function InvoiceEditorPage() {
     const [initialized, setInitialized] = useState(false);
     const [loadError, setLoadError] = useState(false);
     const [loadAttempt, setLoadAttempt] = useState(0);
-    const { organizationId } = useOrganization();
+    const { organizationId, organization } = useOrganization();
+    const defaultBusinessId = typeof organization?.settings.defaultBusinessId === 'number'
+        ? organization.settings.defaultBusinessId
+        : undefined;
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [businesses, setBusinesses] = useState<Business[]>([]);
@@ -330,12 +333,14 @@ export function InvoiceEditorPage() {
                             email: contactEmailParam || undefined,
                         });
                     }
-                    // Auto-select last used business for new invoices
+                    // Prefer the organization default, then recent activity.
                     const businessesList = businessesData;
                     if (businessesList.length > 0) {
-                        const lastUsed = businessesList.find(b => b.last_used_at);
-                        if (lastUsed) {
-                            setSelectedBusinessId(lastUsed.id);
+                        const preferred = businessesList.find(b => b.id === defaultBusinessId)
+                            || businessesList.find(b => b.last_used_at)
+                            || businessesList[0];
+                        if (preferred) {
+                            setSelectedBusinessId(preferred.id);
                         }
                     }
                 }
@@ -350,6 +355,7 @@ export function InvoiceEditorPage() {
         init();
     }, [
         organizationId,
+        defaultBusinessId,
         id,
         isNew,
         toast,

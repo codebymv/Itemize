@@ -110,6 +110,13 @@ export class OrganizationsService {
       if (outcome.kind === 'not_found') {
         throw itemizeGraphqlError('Organization not found', 'NOT_FOUND');
       }
+      if (outcome.kind === 'invalid_default_business') {
+        throw itemizeGraphqlError(
+          'Default business profile is not available in this organization',
+          'BAD_USER_INPUT',
+          { field: 'settings.defaultBusinessId', reason: 'INVALID_DEFAULT_BUSINESS' },
+        );
+      }
       return this.map(outcome.value);
     } catch (error) {
       this.rethrow(error);
@@ -368,7 +375,56 @@ export class OrganizationsService {
         { field: 'settings', reason: 'SETTINGS_TOO_LARGE' },
       );
     }
-    return value as Record<string, unknown>;
+    const settings = value as Record<string, unknown>;
+    this.organizationPreference(settings, 'timezone', (candidate) => {
+      try {
+        new Intl.DateTimeFormat('en-US', { timeZone: candidate }).format();
+        return true;
+      } catch {
+        return false;
+      }
+    });
+    this.organizationPreference(settings, 'locale', (candidate) => {
+      try {
+        return Intl.getCanonicalLocales(candidate).length === 1;
+      } catch {
+        return false;
+      }
+    });
+    const defaultBusinessId = settings.defaultBusinessId;
+    if (
+      defaultBusinessId !== undefined &&
+      defaultBusinessId !== null &&
+      (!Number.isSafeInteger(defaultBusinessId) || Number(defaultBusinessId) < 1)
+    ) {
+      throw itemizeGraphqlError(
+        'Default business profile must be a positive integer or null',
+        'BAD_USER_INPUT',
+        { field: 'settings.defaultBusinessId', reason: 'INVALID_DEFAULT_BUSINESS' },
+      );
+    }
+    return settings;
+  }
+
+  private organizationPreference(
+    settings: Record<string, unknown>,
+    field: 'timezone' | 'locale',
+    valid: (candidate: string) => boolean,
+  ): void {
+    const value = settings[field];
+    if (value === undefined) return;
+    if (
+      typeof value !== 'string' ||
+      value.length < 1 ||
+      value.length > 64 ||
+      !valid(value)
+    ) {
+      throw itemizeGraphqlError(
+        `Organization ${field} is invalid`,
+        'BAD_USER_INPUT',
+        { field: `settings.${field}`, reason: `INVALID_ORGANIZATION_${field.toUpperCase()}` },
+      );
+    }
   }
 
   private readonly map = (row: OrganizationRow): Organization => ({

@@ -24,6 +24,7 @@ describe('OrganizationsService', () => {
   beforeEach(() => {
     repository = {
       listForUser: jest.fn(),
+      update: jest.fn(),
       selectForUser: jest.fn(),
       ensureDefaultForUser: jest.fn(),
     } as unknown as jest.Mocked<OrganizationsRepository>;
@@ -92,6 +93,54 @@ describe('OrganizationsService', () => {
     repository.listForUser.mockRejectedValue(new Error('connection refused'));
     await expect(service.list(7)).rejects.toMatchObject({
       extensions: { code: 'SERVICE_UNAVAILABLE' },
+    });
+  });
+
+  it('validates typed organization preferences and the default business boundary', async () => {
+    repository.update.mockResolvedValue({
+      kind: 'ok',
+      value: row({
+        settings: {
+          personal: true,
+          timezone: 'America/Phoenix',
+          locale: 'en-US',
+          defaultBusinessId: 12,
+        },
+      }),
+    });
+
+    await expect(service.update(7, 3, {
+      settings: {
+        personal: true,
+        timezone: 'America/Phoenix',
+        locale: 'en-US',
+        defaultBusinessId: 12,
+      },
+    })).resolves.toMatchObject({
+      settings: { defaultBusinessId: 12, timezone: 'America/Phoenix' },
+    });
+
+    await expect(service.update(7, 3, {
+      settings: { timezone: 'Not/A_Timezone' },
+    })).rejects.toMatchObject({
+      extensions: { reason: 'INVALID_ORGANIZATION_TIMEZONE' },
+    });
+    await expect(service.update(7, 3, {
+      settings: { locale: 'not a locale' },
+    })).rejects.toMatchObject({
+      extensions: { reason: 'INVALID_ORGANIZATION_LOCALE' },
+    });
+    await expect(service.update(7, 3, {
+      settings: { defaultBusinessId: -1 },
+    })).rejects.toMatchObject({
+      extensions: { reason: 'INVALID_DEFAULT_BUSINESS' },
+    });
+
+    repository.update.mockResolvedValue({ kind: 'invalid_default_business' });
+    await expect(service.update(7, 3, {
+      settings: { defaultBusinessId: 99 },
+    })).rejects.toMatchObject({
+      extensions: { reason: 'INVALID_DEFAULT_BUSINESS' },
     });
   });
 });

@@ -284,12 +284,26 @@ export class EstimatesRepository {
       const estimateNumber = await this.allocateNumber(client, organizationId);
       const inserted = await client.query<{ id: number }>(
         `INSERT INTO estimates (
-           organization_id, estimate_number, contact_id, customer_name,
+           organization_id, estimate_number, contact_id, business_id, customer_name,
            customer_email, customer_phone, customer_address, valid_until,
            subtotal, tax_amount, discount_amount, discount_type,
            discount_value, total, notes, terms_and_conditions, created_by
          ) VALUES (
-           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+           $1, $2, $3,
+           (
+             SELECT business.id
+             FROM organizations organization
+             JOIN businesses business
+               ON business.organization_id = organization.id
+              AND business.is_active = TRUE
+              AND business.id = CASE
+                WHEN organization.settings->>'defaultBusinessId' ~ '^[1-9][0-9]*$'
+                THEN (organization.settings->>'defaultBusinessId')::integer
+                ELSE NULL
+              END
+             WHERE organization.id = $1
+           ),
+           $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
            $15, $16, $17
          ) RETURNING id`,
         [
@@ -567,20 +581,33 @@ export class EstimatesRepository {
                 e.notes, e.terms_and_conditions,
                 COALESCE(
                   NULLIF(b.name, ''),
+                  NULLIF(default_business.name, ''),
                   NULLIF(settings.business_name, ''),
                   NULLIF(organization.name, ''),
                   'Itemize workspace'
                 )
                   AS business_name,
-                COALESCE(NULLIF(b.email, ''), NULLIF(settings.business_email, ''))
+                COALESCE(
+                  NULLIF(b.email, ''),
+                  NULLIF(default_business.email, ''),
+                  NULLIF(settings.business_email, '')
+                )
                   AS business_email
          FROM estimates e
-         LEFT JOIN businesses b
-           ON b.id = e.business_id AND b.organization_id = e.organization_id
-         LEFT JOIN payment_settings settings
-           ON settings.organization_id = e.organization_id
          JOIN organizations organization
            ON organization.id = e.organization_id
+         LEFT JOIN businesses b
+           ON b.id = e.business_id AND b.organization_id = e.organization_id
+         LEFT JOIN businesses default_business
+           ON default_business.organization_id = e.organization_id
+          AND default_business.is_active = TRUE
+          AND default_business.id = CASE
+            WHEN organization.settings->>'defaultBusinessId' ~ '^[1-9][0-9]*$'
+            THEN (organization.settings->>'defaultBusinessId')::integer
+            ELSE NULL
+          END
+         LEFT JOIN payment_settings settings
+           ON settings.organization_id = e.organization_id
          WHERE e.id = $1 AND e.organization_id = $2
          FOR UPDATE OF e`,
         [estimateId, organizationId],

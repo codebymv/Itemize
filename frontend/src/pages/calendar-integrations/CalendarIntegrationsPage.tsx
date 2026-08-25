@@ -45,7 +45,7 @@ const GoogleLogo = () => (
     </svg>
 );
 
-export function CalendarIntegrationsPage() {
+export function CalendarIntegrationsPage({ embedded = false }: { embedded?: boolean }) {
     const { toast } = useToast();
     const navigate = useNavigate();
     const location = useLocation();
@@ -192,26 +192,26 @@ export function CalendarIntegrationsPage() {
     const googleConnection = connections.find((connection) => connection.provider === 'google' && connection.is_active);
 
     if (initError) {
+        const errorState = (
+            <ErrorState
+                title="Unable to load integrations"
+                description={initError}
+                onAction={() => void fetchStatus()}
+            />
+        );
+        if (embedded) return errorState;
         return (
             <PageLayout
                 title="INTEGRATIONS"
                 icon={<Plug className="h-5 w-5 text-blue-600 flex-shrink-0" />}
             >
-                <ErrorState
-                    title="Unable to load integrations"
-                    description={initError}
-                    onAction={() => void fetchStatus()}
-                />
+                {errorState}
             </PageLayout>
         );
     }
 
-    return (
-        <PageLayout
-            title="INTEGRATIONS"
-            icon={<Plug className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            surfaceClassName="space-y-6"
-        >
+    const content = (
+        <>
                     <div>
                         <h2 className="text-lg font-medium text-foreground">Connected tools</h2>
                         <p className="text-sm text-muted-foreground">
@@ -357,6 +357,16 @@ export function CalendarIntegrationsPage() {
                     content={ONBOARDING_CONTENT[onboardingFeatureKey]}
                 />
             )}
+        </>
+    );
+    if (embedded) return <div className="space-y-6">{content}</div>;
+    return (
+        <PageLayout
+            title="INTEGRATIONS"
+            icon={<Plug className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            surfaceClassName="space-y-6"
+        >
+            {content}
         </PageLayout>
     );
 }

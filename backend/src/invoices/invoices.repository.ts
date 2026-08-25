@@ -341,7 +341,10 @@ export class InvoicesRepository {
     values: InvoiceValues,
   ): Promise<InvoiceWriteOutcome> {
     return this.transaction(async (client) => {
-      const reference = await this.references(client, organizationId, values);
+      const businessId = values.businessId ??
+        await this.defaultBusinessId(client, organizationId);
+      const effectiveValues = { ...values, businessId };
+      const reference = await this.references(client, organizationId, effectiveValues);
       if (reference) return reference;
       const totals = await this.totals(
         client,
@@ -396,7 +399,8 @@ export class InvoicesRepository {
            $15, $16, $17, $17, $18, $19, $20, $21
          ) RETURNING id`,
         [
-          organizationId, number, values.contactId, values.businessId,
+          organizationId, number, effectiveValues.contactId,
+          effectiveValues.businessId,
           values.customerName, values.customerEmail, values.customerPhone,
           values.customerAddress, dates.rows[0].issue_date,
           dates.rows[0].due_date, totals.subtotal, values.taxRate,
@@ -407,7 +411,7 @@ export class InvoicesRepository {
       );
       const invoiceId = Number(inserted.rows[0].id);
       await this.replaceItems(client, organizationId, invoiceId, values.items);
-      await this.touchBusiness(client, organizationId, values.businessId);
+      await this.touchBusiness(client, organizationId, effectiveValues.businessId);
       const aggregate = await this.load(client, organizationId, invoiceId);
       if (!aggregate) throw new Error('Created invoice could not be reloaded');
       return { kind: 'saved', aggregate };
@@ -937,6 +941,27 @@ export class InvoicesRepository {
       }
     }
     return null;
+  }
+
+  private async defaultBusinessId(
+    client: PoolClient,
+    organizationId: number,
+  ): Promise<number | null> {
+    const result = await client.query<{ id: number }>(
+      `SELECT b.id
+       FROM organizations o
+       JOIN businesses b
+         ON b.organization_id = o.id
+        AND b.is_active = TRUE
+        AND b.id = CASE
+          WHEN o.settings->>'defaultBusinessId' ~ '^[1-9][0-9]*$'
+            THEN (o.settings->>'defaultBusinessId')::int
+          ELSE NULL
+        END
+       WHERE o.id = $1`,
+      [organizationId],
+    );
+    return result.rows[0] ? Number(result.rows[0].id) : null;
   }
 
   private async totals(

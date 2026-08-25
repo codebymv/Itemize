@@ -72,7 +72,6 @@ const SharedPage = React.lazy(() => import("./pages/workspace").then(m => ({ def
 
 // New pages for expanded navigation
 const SegmentsPage = React.lazy(() => import("./pages/segments/SegmentsPage"));
-const CalendarIntegrationsPage = React.lazy(() => import("./pages/calendar-integrations/CalendarIntegrationsPage"));
 const CampaignsPage = React.lazy(() => import("./pages/campaigns/CampaignsPage"));
 const EmailTemplatesPage = React.lazy(() => import("./pages/email-templates/EmailTemplatesPage"));
 const SMSTemplatesPage = React.lazy(() => import("./pages/sms-templates/SMSTemplatesPage"));
@@ -283,9 +282,9 @@ const AppContent = () => {
     return <Navigate to={token ? `/review/${token}` : '/home'} replace />;
   };
 
-  const IntegrationsAliasRedirect = () => {
+  const LegacyIntegrationsRedirect = () => {
     const { search, hash } = useLocation();
-    return <Navigate to={`/calendar-integrations${search}${hash}`} replace />;
+    return <Navigate to={`/settings/integrations${search}${hash}`} replace />;
   };
 
   // Handle session expiration notifications
@@ -365,8 +364,10 @@ const AppContent = () => {
         
         {/* Settings */}
         <Route path="/settings" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
+        <Route path="/organization-settings" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
         <Route path="/preferences" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
         <Route path="/payment-settings" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
+        <Route path="/calendar-integrations" element={<LegacyIntegrationsRedirect />} />
         <Route path="/admin/*" element={<AuthenticatedLayout><AdminPage /></AuthenticatedLayout>} />
 
         <Route element={<EntitledRoute />}>
@@ -384,8 +385,7 @@ const AppContent = () => {
           <Route path="/automations/new" element={<WorkflowBuilderPage />} />
           <Route path="/automations/:id" element={<WorkflowBuilderPage />} />
           <Route path="/segments" element={<SegmentsPage />} />
-          <Route path="/calendar-integrations" element={<CalendarIntegrationsPage />} />
-          <Route path="/settings/integrations" element={<IntegrationsAliasRedirect />} />
+          <Route path="/settings/integrations" element={<SettingsPage />} />
           <Route path="/campaigns" element={<CampaignsPage />} />
           <Route path="/email-templates" element={<EmailTemplatesPage />} />
           <Route path="/sms-templates" element={<SMSTemplatesPage />} />
