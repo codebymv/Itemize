@@ -9,6 +9,7 @@ const api = vi.hoisted(() => ({
   declinePublicEstimate: vi.fn(),
 }));
 const setTheme = vi.hoisted(() => vi.fn());
+const localStorageValues = new Map<string, string>();
 
 vi.mock('@/services/publicEstimatesApi', () => api);
 vi.mock('next-themes', () => ({
@@ -57,6 +58,15 @@ const renderPage = () => render(
 describe('PublicEstimatePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorageValues.clear();
+    vi.mocked(localStorage.getItem).mockImplementation((key) => localStorageValues.get(key) ?? null);
+    vi.mocked(localStorage.setItem).mockImplementation((key, value) => {
+      localStorageValues.set(key, value);
+    });
+    vi.mocked(localStorage.removeItem).mockImplementation((key) => {
+      localStorageValues.delete(key);
+    });
+    vi.mocked(localStorage.clear).mockImplementation(() => localStorageValues.clear());
     api.getPublicEstimate.mockResolvedValue(estimate);
     api.acceptPublicEstimate.mockResolvedValue({
       ...estimate,
@@ -123,5 +133,23 @@ describe('PublicEstimatePage', () => {
     expect(within(dialog).getByText(
       'This records that you do not approve estimate EST-00007 and notifies Analytical Studio.',
     )).toBeInTheDocument();
+  });
+
+  it('persists dismissal of a recorded-response banner for the estimate status', async () => {
+    api.getPublicEstimate.mockResolvedValue({
+      ...estimate,
+      estimate: { ...estimate.estimate, status: 'accepted' },
+    });
+    const firstRender = renderPage();
+
+    expect(await screen.findByText('Estimate accepted')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss response confirmation' }));
+    expect(screen.queryByText('Estimate accepted')).not.toBeInTheDocument();
+    expect(localStorage.getItem('itemize:estimate-response-banner:test-token:accepted')).toBe('dismissed');
+
+    firstRender.unmount();
+    renderPage();
+    await screen.findByText('Analytical Studio');
+    expect(screen.queryByText('Estimate accepted')).not.toBeInTheDocument();
   });
 });

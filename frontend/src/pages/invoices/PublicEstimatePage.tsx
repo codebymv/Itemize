@@ -4,6 +4,7 @@ import {
   FileText,
   Loader2,
   Mail,
+  X,
   XCircle,
 } from 'lucide-react';
 import { useParams } from 'react-router-dom';
@@ -39,6 +40,12 @@ const date = (value: string): string => {
     : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(parsed);
 };
 
+const isTerminalStatus = (status: PublicEstimateData['estimate']['status']) =>
+  status === 'accepted' || status === 'declined';
+
+const responseBannerStorageKey = (token: string, status: PublicEstimateData['estimate']['status']) =>
+  `itemize:estimate-response-banner:${token}:${status}`;
+
 export default function PublicEstimatePage() {
   const { token = '' } = useParams();
   const [data, setData] = useState<PublicEstimateData | null>(null);
@@ -46,6 +53,7 @@ export default function PublicEstimatePage() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<'accept' | 'decline' | null>(null);
   const [confirming, setConfirming] = useState<'accept' | 'decline' | null>(null);
+  const [dismissedResponseKey, setDismissedResponseKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -54,7 +62,9 @@ export default function PublicEstimatePage() {
       return;
     }
     getPublicEstimate(token)
-      .then(setData)
+      .then((response) => {
+        setData(response);
+      })
       .catch((requestError) => setError(
         requestError instanceof Error ? requestError.message : 'This estimate is unavailable.',
       ))
@@ -72,9 +82,12 @@ export default function PublicEstimatePage() {
     setPending(action);
     setError(null);
     try {
-      setData(action === 'accept'
+      const response = action === 'accept'
         ? await acceptPublicEstimate(token)
-        : await declinePublicEstimate(token));
+        : await declinePublicEstimate(token);
+      localStorage.removeItem(responseBannerStorageKey(token, response.estimate.status));
+      setDismissedResponseKey(null);
+      setData(response);
     } catch (requestError) {
       setError(requestError instanceof Error
         ? requestError.message
@@ -118,28 +131,54 @@ export default function PublicEstimatePage() {
   }
 
   const estimate = data.estimate;
-  const terminal = estimate.status === 'accepted' || estimate.status === 'declined';
+  const terminal = isTerminalStatus(estimate.status);
+  const currentResponseKey = terminal
+    ? responseBannerStorageKey(token, estimate.status)
+    : null;
+  const responseBannerDismissed = Boolean(
+    currentResponseKey
+    && (dismissedResponseKey === currentResponseKey
+      || localStorage.getItem(currentResponseKey) === 'dismissed'),
+  );
+
+  const dismissResponseBanner = () => {
+    if (!currentResponseKey) return;
+    localStorage.setItem(currentResponseKey, 'dismissed');
+    setDismissedResponseKey(currentResponseKey);
+  };
 
   return (
     <BrandedPublicPage>
       <BrandedPublicContainer>
-        {terminal && (
+        {terminal && !responseBannerDismissed && (
           <div
-            className={`flex items-start gap-3 rounded-xl border p-4 ${
+            className={`flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between ${
               estimate.status === 'accepted'
                 ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                 : 'border-destructive/30 bg-destructive/10 text-destructive'
             }`}
             role="status"
           >
-            {estimate.status === 'accepted'
-              ? <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
-              : <XCircle className="mt-0.5 h-5 w-5 shrink-0" />}
-            <div>
+            <div className="flex min-w-0 items-center gap-3">
+              {estimate.status === 'accepted'
+                ? <CheckCircle2 className="h-5 w-5 shrink-0" />
+                : <XCircle className="h-5 w-5 shrink-0" />}
               <p className="font-semibold">
                 Estimate {estimate.status === 'accepted' ? 'accepted' : 'declined'}
               </p>
+            </div>
+            <div className="flex items-center justify-between gap-3 sm:justify-end">
               <p className="text-sm opacity-80">Your response has been recorded.</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0 text-current hover:bg-current/10 hover:text-current"
+                aria-label="Dismiss response confirmation"
+                onClick={dismissResponseBanner}
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         )}
