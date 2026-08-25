@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
     Dialog,
     DialogContent,
@@ -32,6 +33,8 @@ interface SendInvoiceModalProps {
     dueDate: string;
     business?: Business;
     invoice?: Invoice;
+    paymentLinksAvailable?: boolean;
+    senderName?: string;
 }
 
 export interface SendOptions {
@@ -40,6 +43,20 @@ export interface SendOptions {
     ccEmails: string[];
     includePaymentLink?: boolean;
 }
+
+const formatCurrency = (amount: number, currency: string) => new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency || 'USD'
+}).format(amount);
+
+const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+};
 
 export function SendInvoiceModal({
     open,
@@ -54,6 +71,8 @@ export function SendInvoiceModal({
     dueDate,
     business,
     invoice,
+    paymentLinksAvailable = false,
+    senderName,
 }: SendInvoiceModalProps) {
     const [subject, setSubject] = useState('');
     const [message, setMessage] = useState('');
@@ -63,30 +82,14 @@ export function SendInvoiceModal({
     const [showPreview, setShowPreview] = useState(false);
     const [showInvoicePreview, setShowInvoicePreview] = useState(false);
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: currency || 'USD'
-        }).format(amount);
-    };
-
-    const formatDate = (dateStr: string) => {
-        if (!dateStr) return '';
-        return new Date(dateStr).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-    };
-
     // Reset form when modal opens
     useEffect(() => {
         if (open) {
-            const businessName = business?.name || 'Our Business';
+            const businessName = business?.name || senderName || 'Itemize';
             setSubject('Your invoice');
             setMessage(
                 `Hi ${customerName || 'there'},\n\n` +
-                `Please find your invoice for ${formatCurrency(total)} attached.\n\n` +
+                `Please find your invoice for ${formatCurrency(total, currency)} attached.\n\n` +
                 `Payment is due by ${formatDate(dueDate)}.\n\n` +
                 `If you have any questions, please don't hesitate to reach out.\n\n` +
                 `Thank you for your business!\n\n` +
@@ -97,7 +100,7 @@ export function SendInvoiceModal({
             setIncludePaymentLink(false);
             setShowPreview(true); // Default to showing preview
         }
-    }, [open, invoiceNumber, customerName, total, dueDate, business]);
+    }, [open, invoiceNumber, customerName, total, currency, dueDate, business, senderName]);
 
     const addCcEmail = () => {
         if (newCc && !ccEmails.includes(newCc) && newCc.includes('@')) {
@@ -207,14 +210,28 @@ export function SendInvoiceModal({
                                 id="includePaymentLink"
                                 checked={includePaymentLink}
                                 onCheckedChange={(checked) => setIncludePaymentLink(checked as boolean)}
+                                disabled={!paymentLinksAvailable}
                                 className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                             />
                             <div className="flex-1">
-                                <Label htmlFor="includePaymentLink" className="text-sm font-medium cursor-pointer" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                                <Label
+                                    htmlFor="includePaymentLink"
+                                    className={paymentLinksAvailable ? 'text-sm font-medium cursor-pointer' : 'text-sm font-medium'}
+                                    style={{ fontFamily: '"Raleway", sans-serif' }}
+                                >
                                     Include Payment Link
                                 </Label>
                                 <p className="text-xs text-muted-foreground">
-                                    Add a "Pay Now" button to the email for easy online payment
+                                    {paymentLinksAvailable ? (
+                                        'Add a "Pay Now" button to the email for easy online payment'
+                                    ) : (
+                                        <>
+                                            <Link to="/payment-settings" className="text-blue-600 hover:underline">
+                                                Connect Stripe in Payments
+                                            </Link>{' '}
+                                            to add a "Pay Now" button.
+                                        </>
+                                    )}
                                 </p>
                             </div>
                             <CreditCard className="h-4 w-4 text-muted-foreground" />

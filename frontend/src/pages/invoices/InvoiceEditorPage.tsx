@@ -1022,6 +1022,8 @@ export function InvoiceEditorPage() {
                 currency={currency}
                 dueDate={dueDate}
                 business={businesses.find(b => b.id === selectedBusinessId)}
+                paymentLinksAvailable={Boolean(settings?.stripe_connected)}
+                senderName={organization?.name}
             />
     </PageLayout>
     );

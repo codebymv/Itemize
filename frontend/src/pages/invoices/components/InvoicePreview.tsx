@@ -130,12 +130,20 @@ export function InvoicePreview({
 
                 {/* Invoice Preview Content - matches PDF exactly */}
                 {/* Note: Raleway font should be loaded in index.html for full parity */}
-                <div ref={previewViewportRef} className="w-full overflow-auto">
-                    <div style={{ width: baseWidth * previewScale, height: previewHeight }}>
+                <div ref={previewViewportRef} className="w-full overflow-y-auto overflow-x-hidden">
+                    <div style={{
+                        width: baseWidth * previewScale,
+                        height: previewHeight,
+                        position: 'relative',
+                        overflow: 'hidden'
+                    }}>
                         <div
                             style={{
                                 width: baseWidth,
                                 height: baseHeight,
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
                                 transform: `scale(${previewScale})`,
                                 transformOrigin: 'top left'
                             }}
