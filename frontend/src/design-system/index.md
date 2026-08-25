@@ -130,7 +130,7 @@ Used for delete/destroy actions.
 
 ### Tabs
 
-Use the shared `Tabs`, `TabsList`, and `TabsTrigger` primitives. Icons inside a tab inherit the canonical interaction states automatically: blue-600 on hover and while selected. Do not recreate those states in individual pages.
+Use `TabsList` and `TabsTrigger` for content/status switching. For labeled icon navigation, use `IconTabsList` and `IconTabsTrigger`; they mirror the sidebar with a transparent parent, `sidebar-accent` hover/selected rows, no inset shadow, and blue-600 icons on hover and selection. Do not recreate those states in individual pages.
 
 ### Progress
 

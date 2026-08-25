@@ -12,14 +12,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+    IconTabsList,
+    IconTabsTrigger,
+    Tabs,
+    TabsContent,
+} from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { getChannels, disconnectChannel, getConversations, getFacebookConnectUrl } from '@/services/socialApi';
-import { cn } from '@/lib/utils';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -215,14 +219,14 @@ export function SocialPage() {
             )}
 
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="mb-6">
-                    <TabsTrigger value="conversations">
-                        <MessageCircle className={cn("h-4 w-4 mr-2", activeTab === 'conversations' && "text-blue-600")} />Conversations
-                    </TabsTrigger>
-                    <TabsTrigger value="channels">
-                        <Share2 className={cn("h-4 w-4 mr-2", activeTab === 'channels' && "text-blue-600")} />Connected Accounts
-                    </TabsTrigger>
-                </TabsList>
+                <IconTabsList className="mb-6">
+                    <IconTabsTrigger value="conversations">
+                        <MessageCircle className="mr-2 h-4 w-4" />Conversations
+                    </IconTabsTrigger>
+                    <IconTabsTrigger value="channels">
+                        <Share2 className="mr-2 h-4 w-4" />Connected Accounts
+                    </IconTabsTrigger>
+                </IconTabsList>
 
                 <TabsContent value="conversations">
                     <Card>

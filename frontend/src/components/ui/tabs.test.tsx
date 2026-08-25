@@ -1,23 +1,26 @@
 import { Settings } from 'lucide-react';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { Tabs, TabsList, TabsTrigger } from './tabs';
+import { IconTabsList, IconTabsTrigger, Tabs } from './tabs';
 
-describe('TabsTrigger', () => {
-  it('uses the shared blue icon states for hover and selection', () => {
+describe('IconTabsTrigger', () => {
+  it('mirrors the sidebar hover and selected states', () => {
     render(
       <Tabs defaultValue="settings">
-        <TabsList>
-          <TabsTrigger value="settings">
+        <IconTabsList>
+          <IconTabsTrigger value="settings">
             <Settings aria-hidden="true" />
             Settings
-          </TabsTrigger>
-        </TabsList>
+          </IconTabsTrigger>
+        </IconTabsList>
       </Tabs>,
     );
 
     const trigger = screen.getByRole('tab', { name: 'Settings' });
     expect(trigger).toHaveAttribute('data-state', 'active');
+    expect(trigger).toHaveClass('hover:bg-sidebar-accent');
+    expect(trigger).toHaveClass('data-[state=active]:bg-sidebar-accent');
+    expect(trigger).toHaveClass('data-[state=active]:shadow-none');
     expect(trigger).toHaveClass('hover:[&_svg]:text-blue-600');
     expect(trigger).toHaveClass('data-[state=active]:[&_svg]:text-blue-600');
   });

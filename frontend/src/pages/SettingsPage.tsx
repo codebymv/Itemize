@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { IconTabsList, IconTabsTrigger, Tabs } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { getAssetUrl } from '@/lib/api';
@@ -99,24 +99,18 @@ function SettingsNav() {
   // Mobile: Use tabs
   const mobileTabs = (
     <Tabs value={activePath} onValueChange={(value) => navigate(value)} className="w-full lg:hidden">
-      <TabsList className="grid w-full grid-cols-5">
-        {settingsNav.map((item) => {
-          const isActive = activePath === item.path || (item.path === '/settings' && activePath === '/settings/');
-          return (
-            <TabsTrigger 
-              key={item.path} 
-              value={item.path}
-              className="flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3 text-muted-foreground group/item"
-            >
-              <item.icon className={cn(
-                "h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 transition-colors group-hover/item:text-blue-600",
-                isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400"
-              )} />
-              <span className="hidden sm:inline">{item.title}</span>
-            </TabsTrigger>
-          );
-        })}
-      </TabsList>
+      <IconTabsList className="grid w-full grid-cols-5">
+        {settingsNav.map((item) => (
+          <IconTabsTrigger
+            key={item.path}
+            value={item.path}
+            className="px-2 text-xs sm:px-3 sm:text-sm"
+          >
+            <item.icon className="h-3.5 w-3.5 flex-shrink-0 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">{item.title}</span>
+          </IconTabsTrigger>
+        ))}
+      </IconTabsList>
     </Tabs>
   );
 

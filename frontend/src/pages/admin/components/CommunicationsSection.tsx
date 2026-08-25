@@ -4,7 +4,7 @@ import { RefreshButton } from '@/components/ui/refresh-button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { IconTabsList, IconTabsTrigger, Tabs } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { type Plan, PLAN_METADATA } from '@/lib/subscription';
 import { TemplateSelectorDialog, EmailComposeDialog, EmailTemplate } from '@/components/admin';
@@ -24,7 +24,6 @@ import {
     Globe2
 } from 'lucide-react';
 import * as adminApi from '@/services/adminApi';
-import { cn } from '@/lib/utils';
 import { EmailLogsView } from './EmailLogsView';
 
 const PLAN_ICONS = {
@@ -244,30 +243,16 @@ export default function CommunicationsSection() {
     return (
         <div className="space-y-6">
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'users' | 'logs')}>
-                <TabsList>
-                    <TabsTrigger value="users" className="group/tab">
-                        <Users
-                            className={cn(
-                                "h-4 w-4 mr-2 transition-colors",
-                                activeTab === 'users'
-                                    ? "text-blue-600"
-                                    : "text-gray-600 dark:text-gray-400 group-hover/tab:text-blue-600",
-                            )}
-                        />
+                <IconTabsList>
+                    <IconTabsTrigger value="users">
+                        <Users className="mr-2 h-4 w-4" />
                         Users
-                    </TabsTrigger>
-                    <TabsTrigger value="logs" className="group/tab">
-                        <Mail
-                            className={cn(
-                                "h-4 w-4 mr-2 transition-colors",
-                                activeTab === 'logs'
-                                    ? "text-blue-600"
-                                    : "text-gray-600 dark:text-gray-400 group-hover/tab:text-blue-600",
-                            )}
-                        />
+                    </IconTabsTrigger>
+                    <IconTabsTrigger value="logs">
+                        <Mail className="mr-2 h-4 w-4" />
                         Email Logs
-                    </TabsTrigger>
-                </TabsList>
+                    </IconTabsTrigger>
+                </IconTabsList>
             </Tabs>
 
             {activeTab === 'users' && (

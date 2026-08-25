@@ -25,7 +25,12 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  IconTabsList,
+  IconTabsTrigger,
+  Tabs,
+  TabsContent,
+} from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -258,17 +263,17 @@ export function ChatWidgetPage() {
       headerActions={
         <>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="h-9">
-              <TabsTrigger value="settings" className="text-xs">
+            <IconTabsList className="h-9">
+              <IconTabsTrigger value="settings" className="text-xs">
                 <Settings className="mr-1 h-4 w-4" />Settings
-              </TabsTrigger>
-              <TabsTrigger value="appearance" className="text-xs">
+              </IconTabsTrigger>
+              <IconTabsTrigger value="appearance" className="text-xs">
                 <Palette className="mr-1 h-4 w-4" />Appearance
-              </TabsTrigger>
-              <TabsTrigger value="install" className="text-xs">
+              </IconTabsTrigger>
+              <IconTabsTrigger value="install" className="text-xs">
                 <Code2 className="mr-1 h-4 w-4" />Install
-              </TabsTrigger>
-            </TabsList>
+              </IconTabsTrigger>
+            </IconTabsList>
           </Tabs>
           {saveButton}
         </>
@@ -276,17 +281,17 @@ export function ChatWidgetPage() {
       mobileActions={
         <>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="settings">
+            <IconTabsList className="grid w-full grid-cols-3">
+              <IconTabsTrigger value="settings">
                 <Settings className="mr-1 h-4 w-4" />Settings
-              </TabsTrigger>
-              <TabsTrigger value="appearance">
+              </IconTabsTrigger>
+              <IconTabsTrigger value="appearance">
                 <Palette className="mr-1 h-4 w-4" />Style
-              </TabsTrigger>
-              <TabsTrigger value="install">
+              </IconTabsTrigger>
+              <IconTabsTrigger value="install">
                 <Code2 className="mr-1 h-4 w-4" />Install
-              </TabsTrigger>
-            </TabsList>
+              </IconTabsTrigger>
+            </IconTabsList>
           </Tabs>
           <div className="[&>button]:w-full">{saveButton}</div>
         </>
