@@ -1,117 +1,92 @@
 import React from 'react';
 import { AlertTriangle, Building2, Zap } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { PaymentsLoadError } from '../hooks/usePaymentsTab';
 
 export function PaymentsTabLoadingSkeleton() {
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="hidden md:block">
-        <Skeleton className="h-6 w-24 mb-2" />
-        <Skeleton className="h-4 w-64" />
-      </div>
-
-      {/* Payment Settings Card */}
       <Card>
         <CardHeader>
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-4 w-48" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4" />
+            <Skeleton className="h-5 w-32" />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Invoice Settings */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-9 w-full" />
-            </div>
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-9 w-full" />
-            </div>
-          </div>
-
-          {/* Payment Terms */}
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-9 w-full md:w-1/2" />
-          </div>
-
-          {/* Tax Rate */}
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-9 w-full md:w-1/3" />
-          </div>
-
-          {/* Currency */}
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-9 w-full md:w-1/3" />
-          </div>
-
-          {/* Default Notes */}
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-20 w-full" />
-          </div>
-
-          {/* Default Terms */}
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-20 w-full" />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Business Profile Card */}
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-4 w-40" />
-        </CardHeader>
-        <CardContent>
-          {/* Business List Skeleton */}
-          <div className="space-y-3">
-            {[1, 2].map((i) => (
-              <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <div>
-                    <Skeleton className="h-4 w-32 mb-1" />
-                    <Skeleton className="h-3 w-48" />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Skeleton className="h-8 w-16" />
-                  <Skeleton className="h-8 w-16" />
-                </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {[0, 1, 2].map((index) => (
+              <div key={index} className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-10 w-full" />
               </div>
             ))}
           </div>
-
-          {/* Add Business Button */}
-          <Skeleton className="h-10 w-40 mt-4" />
+          {[0, 1].map((index) => (
+            <div key={index} className="space-y-2">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          ))}
         </CardContent>
       </Card>
 
-      {/* Stripe Connection Card */}
       <Card>
         <CardHeader>
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-4 w-56" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4" />
+            <Skeleton className="h-5 w-24" />
+          </div>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          {[0, 1].map((index) => (
+            <div key={index} className="space-y-2">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4" />
+            <Skeleton className="h-5 w-32" />
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-12 w-12 rounded-full" />
-              <div>
-                <Skeleton className="h-4 w-32 mb-1" />
-                <Skeleton className="h-3 w-48" />
-              </div>
+          <div className="flex items-center gap-3 rounded-lg border p-4">
+            <Skeleton className="h-10 w-10 rounded-lg" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-3 w-full max-w-sm" />
             </div>
-            <Skeleton className="h-9 w-32" />
+            <Skeleton className="h-9 w-20" />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4" />
+            <Skeleton className="h-5 w-32" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[0, 1].map((index) => (
+              <div key={index} className="flex items-center gap-3 rounded-lg border p-3">
+                <Skeleton className="h-12 w-12" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-48 max-w-full" />
+                </div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>

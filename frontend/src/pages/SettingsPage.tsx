@@ -7,7 +7,7 @@ import { useAuthState } from '@/contexts/AuthContext';
 import { useSubscriptionFeatures, useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { Button } from '@/components/ui/button';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
@@ -40,7 +40,6 @@ import { UsageIndicator, UsageIndicatorGrid } from '@/components/trial/UsageIndi
 import { useUsageStats } from '@/hooks/useUsageStats';
 import { Mail, MessageSquare, Code2 } from 'lucide-react';
 import {
-  Settings,
   User,
   Wrench,
   Sparkles,
@@ -54,7 +53,10 @@ import {
   Building,
   Loader2,
   Plug,
+  Gauge,
+  Layers3,
 } from 'lucide-react';
+import { SettingsSectionTitle } from '@/components/settings/SettingsPrimitives';
 // Refactored hooks and components
 import { usePaymentsTab } from './settings/hooks/usePaymentsTab';
 import {
@@ -200,7 +202,7 @@ function AccountInfo({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Account Information</CardTitle>
+          <SettingsSectionTitle icon={User}>Account Information</SettingsSectionTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
@@ -223,7 +225,7 @@ function AccountInfo({
       {usageStats && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Current Usage</CardTitle>
+            <SettingsSectionTitle icon={Gauge}>Current Usage</SettingsSectionTitle>
           </CardHeader>
           <CardContent>
             <UsageIndicatorGrid>
@@ -255,7 +257,7 @@ function AccountInfo({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Available Plans</CardTitle>
+          <SettingsSectionTitle icon={Layers3}>Available Plans</SettingsSectionTitle>
         </CardHeader>
         <CardContent>
           <PricingCards
@@ -277,7 +279,6 @@ function AccountInfo({
 
 function AccountSettings() {
   const { planName, subscription } = useSubscriptionState();
-  const navigate = useNavigate();
   const starterTrialEligible = planName === 'free' && !subscription?.trialStartedAt;
   const canSubscribeCurrentTrial =
     planName === 'starter' &&
@@ -286,32 +287,11 @@ function AccountSettings() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="hidden lg:block">
-        <h3 className="text-lg font-medium">Account</h3>
-        <p className="text-sm text-muted-foreground">
-          Manage your account information and subscription
-        </p>
-      </div>
-      <Separator className="hidden lg:block" />
       <AccountInfo
         currentPlan={planName as Plan | undefined}
         starterTrialEligible={starterTrialEligible}
         canSubscribeCurrentTrial={canSubscribeCurrentTrial}
       />
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Integrations</CardTitle>
-          <CardDescription>
-            Connect Google Calendar, Facebook, and other tools from one place.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button variant="outline" onClick={() => navigate('/settings/integrations')}>
-            <Plug className="mr-2 h-4 w-4" />
-            Manage integrations
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 }
@@ -341,20 +321,9 @@ function PreferencesSettings() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="hidden lg:block">
-        <h3 className="text-lg font-medium">Preferences</h3>
-        <p className="text-sm text-muted-foreground">
-          Customize your experience
-        </p>
-      </div>
-      <Separator className="hidden lg:block" />
-      
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Lightbulb className="h-4 w-4 text-blue-600" />
-            Appearance
-          </CardTitle>
+          <SettingsSectionTitle icon={Lightbulb}>Appearance</SettingsSectionTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-3 gap-2 sm:gap-4">
@@ -383,18 +352,12 @@ function PreferencesSettings() {
               System
             </Button>
           </div>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Select your preferred theme.
-          </p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <LogIn className="h-4 w-4 text-blue-600" />
-            After sign in
-          </CardTitle>
+          <SettingsSectionTitle icon={LogIn}>After sign in</SettingsSectionTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_16rem] sm:items-center">
@@ -420,10 +383,7 @@ function PreferencesSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Accessibility className="h-4 w-4 text-blue-600" />
-            Accessibility
-          </CardTitle>
+          <SettingsSectionTitle icon={Accessibility}>Accessibility</SettingsSectionTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between gap-4">
@@ -445,10 +405,7 @@ function PreferencesSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Sparkles className="h-4 w-4 text-blue-600" />
-            AI Features
-          </CardTitle>
+          <SettingsSectionTitle icon={Sparkles}>AI Features</SettingsSectionTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between gap-4">
@@ -597,14 +554,6 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
         onClose={() => onCloseCheckoutSuccess?.()}
         onConfirmed={onCheckoutConfirmed}
       />
-      <div className="hidden lg:block">
-        <h3 className="text-lg font-medium">Payments</h3>
-        <p className="text-sm text-muted-foreground">
-          Configure invoicing and payment settings
-        </p>
-      </div>
-      <Separator className="hidden lg:block" />
-
       {settings && (
         <PaymentSettingsForm
           settings={settings}
@@ -663,6 +612,7 @@ export function SettingsPage() {
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
 
   const activeNavItem = settingsNav.find(item => item.path === location.pathname) || settingsNav[0];
+  const ActivePageIcon = activeNavItem.icon;
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -681,7 +631,7 @@ export function SettingsPage() {
   return (
     <PageLayout
       title={activeNavItem.title.toUpperCase()}
-      icon={<Settings className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      icon={<ActivePageIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />}
       headerActions={saveButton}
       mobileActions={saveButton ? <div className="flex-1">{saveButton}</div> : undefined}
       nav={<SettingsNav />}

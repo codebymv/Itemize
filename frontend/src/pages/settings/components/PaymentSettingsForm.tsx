@@ -1,6 +1,5 @@
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,7 +10,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Link as LinkIcon, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { CreditCard, FileText, Percent } from 'lucide-react';
+import { IntegrationProviderMark } from '@/components/brand/IntegrationProviderMark';
+import { SettingsSectionTitle } from '@/components/settings/SettingsPrimitives';
+import { IntegrationStatusRow } from '@/components/integrations/IntegrationStatusRow';
 import type { PaymentSettings } from '@/services/invoicesApi';
 
 interface PaymentSettingsFormProps {
@@ -60,35 +62,36 @@ export const PaymentSettingsForm: React.FC<PaymentSettingsFormProps> = ({
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Invoice Settings</CardTitle>
-          <CardDescription>Configure how your invoices are numbered and their default terms</CardDescription>
+          <SettingsSectionTitle icon={FileText}>Invoice Settings</SettingsSectionTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <Label>Invoice Prefix</Label>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid gap-2">
+              <Label htmlFor="invoice-prefix">Invoice Prefix</Label>
               <Input
+                id="invoice-prefix"
                 value={settings.invoice_prefix || ''}
                 onChange={(e) => updateField('invoice_prefix' as keyof PaymentSettings, e.target.value)}
                 placeholder="INV-"
               />
             </div>
-            <div>
-              <Label>Next Invoice Number</Label>
+            <div className="grid gap-2">
+              <Label htmlFor="next-invoice-number">Next Invoice Number</Label>
               <Input
+                id="next-invoice-number"
                 type="number"
                 min="1"
                 value={settings.next_invoice_number || ''}
                 onChange={(e) => updateField('next_invoice_number' as keyof PaymentSettings, e.target.value === '' ? 1 : parseInt(e.target.value))}
               />
             </div>
-            <div>
-              <Label>Default Payment Due</Label>
+            <div className="grid gap-2">
+              <Label htmlFor="default-payment-due">Default Payment Due</Label>
               <Select
                 value={String(settings.default_payment_terms || 30)}
                 onValueChange={(v) => updateField('default_payment_terms' as keyof PaymentSettings, parseInt(v))}
               >
-                <SelectTrigger>
+                <SelectTrigger id="default-payment-due">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -104,18 +107,20 @@ export const PaymentSettingsForm: React.FC<PaymentSettingsFormProps> = ({
               </Select>
             </div>
           </div>
-          <div>
-            <Label>Default Notes</Label>
+          <div className="grid gap-2">
+            <Label htmlFor="default-invoice-notes">Default Notes</Label>
             <Textarea
+              id="default-invoice-notes"
               value={settings.default_notes || ''}
               onChange={(e) => updateField('default_notes' as keyof PaymentSettings, e.target.value)}
               placeholder="Thank you for your business!"
               rows={2}
             />
           </div>
-          <div>
-            <Label>Default Terms & Conditions</Label>
+          <div className="grid gap-2">
+            <Label htmlFor="default-invoice-terms">Default Terms &amp; Conditions</Label>
             <Textarea
+              id="default-invoice-terms"
               value={settings.default_terms || ''}
               onChange={(e) => updateField('default_terms' as keyof PaymentSettings, e.target.value)}
               placeholder="Payment is due within the specified terms."
@@ -127,14 +132,14 @@ export const PaymentSettingsForm: React.FC<PaymentSettingsFormProps> = ({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Tax Settings</CardTitle>
-          <CardDescription>Configure default tax rates for new products and invoices</CardDescription>
+          <SettingsSectionTitle icon={Percent}>Tax Settings</SettingsSectionTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label>Default Tax Rate (%)</Label>
+            <div className="grid gap-2">
+              <Label htmlFor="default-tax-rate">Default Tax Rate (%)</Label>
               <Input
+                id="default-tax-rate"
                 type="number"
                 min="0"
                 max="100"
@@ -145,13 +150,13 @@ export const PaymentSettingsForm: React.FC<PaymentSettingsFormProps> = ({
                 className="w-full"
               />
             </div>
-            <div>
-              <Label>Default Currency</Label>
+            <div className="grid gap-2">
+              <Label htmlFor="default-currency">Default Currency</Label>
               <Select
                 value={settings.default_currency || 'USD'}
                 onValueChange={(v) => updateField('default_currency' as keyof PaymentSettings, v)}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger id="default-currency" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -169,61 +174,24 @@ export const PaymentSettingsForm: React.FC<PaymentSettingsFormProps> = ({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Online Payments</CardTitle>
-          <CardDescription>Connect Stripe to accept online payments from your customers</CardDescription>
+          <SettingsSectionTitle icon={CreditCard}>Online Payments</SettingsSectionTitle>
         </CardHeader>
         <CardContent>
-          <div className="p-4 border rounded-lg">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-4 flex-1 min-w-0">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${settings.stripe_connected ? 'bg-green-100 dark:bg-green-900' : 'bg-muted'}`}>
-                  {settings.stripe_connected ? (
-                    <CheckCircle className="h-6 w-6 text-green-600" />
-                  ) : (
-                    <XCircle className="h-6 w-6 text-muted-foreground" />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium">
-                    {settings.stripe_connected ? 'Stripe Connected' : 'Stripe Not Connected'}
-                  </p>
-                  <p className="text-sm text-muted-foreground break-words">
-                    {settings.stripe_connected
-                      ? `Connected ${settings.stripe_connected_at ? new Date(settings.stripe_connected_at).toLocaleDateString() : ''}`
-                      : 'Connect your Stripe account to accept credit card payments'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto flex-shrink-0">
-                {settings.stripe_connected && onDisconnectStripe ? (
-                  <Button
-                    variant="outline"
-                    className="w-full sm:w-auto text-destructive hover:text-destructive"
-                    onClick={onDisconnectStripe}
-                    disabled={connectingStripe}
-                  >
-                    Disconnect
-                  </Button>
-                ) : null}
-                <Button
-                  variant={settings.stripe_connected ? 'outline' : 'default'}
-                  className={`w-full sm:w-auto ${!settings.stripe_connected ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
-                  onClick={onConnectStripe}
-                  disabled={connectingStripe || !onConnectStripe}
-                >
-                  {connectingStripe ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <LinkIcon className="h-4 w-4 mr-2" />}
-                  {settings.stripe_connected ? 'Reconnect' : 'Connect Stripe'}
-                </Button>
-              </div>
-            </div>
+          <div className="rounded-lg border">
+            <IntegrationStatusRow
+              name="Stripe"
+              description="Accept card payments on invoices to your Stripe account."
+              detail={settings.stripe_connected_at
+                ? `Connected ${new Date(settings.stripe_connected_at).toLocaleDateString()}`
+                : undefined}
+              status={settings.stripe_connected ? 'connected' : 'disconnected'}
+              icon={<IntegrationProviderMark provider="stripe" />}
+              primaryLabel={settings.stripe_connected ? 'Reconnect' : 'Connect'}
+              onPrimary={onConnectStripe}
+              onDisconnect={settings.stripe_connected ? onDisconnectStripe : undefined}
+              busy={connectingStripe}
+            />
           </div>
-          {settings.stripe_connected && settings.stripe_account_id && (
-            <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground">
-                Stripe Account ID: <code className="text-xs">{settings.stripe_account_id}</code>
-              </p>
-            </div>
-          )}
         </CardContent>
       </Card>
     </>

@@ -1,10 +1,11 @@
 import React from 'react';
 import { Plus, Building, Clock, Edit, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/EmptyState';
 import type { Business } from '@/services/invoicesApi';
+import { SettingsSectionTitle } from '@/components/settings/SettingsPrimitives';
 
 interface BusinessProfileCardProps {
   businesses: Business[];
@@ -29,7 +30,7 @@ export const BusinessProfileCard: React.FC<BusinessProfileCardProps> = ({
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Business Profiles</CardTitle>
+          <SettingsSectionTitle icon={Building}>Business Profiles</SettingsSectionTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
@@ -46,8 +47,7 @@ export const BusinessProfileCard: React.FC<BusinessProfileCardProps> = ({
     <Card>
       <CardHeader className={businesses.length > 0 ? "flex flex-row items-center justify-between space-y-0 pb-4" : ""}>
         <div>
-          <CardTitle className="text-base">Business Profiles</CardTitle>
-          <CardDescription>Manage your business profiles for invoicing</CardDescription>
+          <SettingsSectionTitle icon={Building}>Business Profiles</SettingsSectionTitle>
         </div>
         {businesses.length > 0 && (
           <Button
@@ -82,7 +82,7 @@ export const BusinessProfileCard: React.FC<BusinessProfileCardProps> = ({
           <EmptyState
             icon={Building}
             title="No businesses yet"
-            description="Add your first business to start creating invoices"
+            description="Add the identity customers will see on estimates and invoices."
             actionLabel="Add Business"
             onAction={onAddBusiness}
           />

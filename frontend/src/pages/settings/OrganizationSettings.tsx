@@ -13,7 +13,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -23,7 +23,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
+import {
+  SettingsFieldLabel,
+  SettingsSectionTitle,
+} from '@/components/settings/SettingsPrimitives';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -278,22 +281,19 @@ export function OrganizationSettings() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="hidden lg:block">
-        <h3 className="text-lg font-medium">Organization</h3>
-        <p className="text-sm text-muted-foreground">Manage this workspace and its members</p>
-      </div>
-      <Separator className="hidden lg:block" />
-
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Building2 className="h-4 w-4 text-blue-600" />
-            Workspace identity
-          </CardTitle>
+          <SettingsSectionTitle icon={Building2}>Workspace identity</SettingsSectionTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="grid gap-2">
-            <Label htmlFor="organization-name">Workspace name</Label>
+            <SettingsFieldLabel
+              htmlFor="organization-name"
+              help="Used inside Itemize. Customer-facing documents use the business identity selected below."
+              helpLabel="About workspace names"
+            >
+              Workspace name
+            </SettingsFieldLabel>
             <Input
               id="organization-name"
               value={name}
@@ -301,9 +301,6 @@ export function OrganizationSettings() {
               disabled={!canManage || saving}
               onChange={(event) => setName(event.target.value)}
             />
-            <p className="text-sm text-muted-foreground">
-              Used inside Itemize. Customer-facing documents use the business identity below.
-            </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -368,23 +365,23 @@ export function OrganizationSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Users className="h-4 w-4 text-blue-600" />
-            Members
-          </CardTitle>
+          <SettingsSectionTitle icon={Users}>Members</SettingsSectionTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {canManage && (
             <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_9rem_auto]">
+              <Label htmlFor="member-email" className="sr-only">Member email</Label>
               <Input
+                id="member-email"
                 type="email"
                 value={email}
                 placeholder="teammate@example.com"
                 aria-label="Member email"
                 onChange={(event) => setEmail(event.target.value)}
               />
+              <Label htmlFor="member-role" className="sr-only">Member role</Label>
               <Select value={inviteRole} onValueChange={(value) => setInviteRole(value as typeof inviteRole)}>
-                <SelectTrigger aria-label="Member role"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="member-role" aria-label="Member role"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {isOwner && <SelectItem value="admin">Admin</SelectItem>}
                   <SelectItem value="member">Member</SelectItem>
@@ -395,6 +392,9 @@ export function OrganizationSettings() {
                 {memberSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
                 Add member
               </Button>
+              <p className="text-sm text-muted-foreground sm:col-span-3">
+                Members must already have an Itemize account.
+              </p>
             </div>
           )}
 
@@ -451,20 +451,12 @@ export function OrganizationSettings() {
               })}
             </div>
           )}
-          {canManage && (
-            <p className="text-sm text-muted-foreground">
-              Members must already have an Itemize account. Email invitations can follow after launch.
-            </p>
-          )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Globe2 className="h-4 w-4 text-blue-600" />
-            Organization access
-          </CardTitle>
+          <SettingsSectionTitle icon={Globe2}>Organization access</SettingsSectionTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:flex-row">
           {!isOwner && (

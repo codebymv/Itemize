@@ -73,22 +73,24 @@ export const BusinessFormDialog: React.FC<BusinessFormDialogProps> = ({
             {editingBusiness ? 'Edit Business' : 'Add Business'}
           </DialogTitle>
           <DialogDescription>
-            {editingBusiness ? 'Update your business profile information' : 'Add a new business profile for invoicing'}
+            This identity appears on customer-facing estimates and invoices.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
-            <Label>Business Name *</Label>
+            <Label htmlFor="business-name">Business Name *</Label>
             <Input
+              id="business-name"
               value={formData.name}
               onChange={(e) => onFormChange('name' as keyof BusinessFormData, e.target.value)}
               placeholder="Your Business Name"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Email</Label>
+              <Label htmlFor="business-email">Email</Label>
               <Input
+                id="business-email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => onFormChange('email' as keyof BusinessFormData, e.target.value)}
@@ -96,8 +98,9 @@ export const BusinessFormDialog: React.FC<BusinessFormDialogProps> = ({
               />
             </div>
             <div className="space-y-2">
-              <Label>Phone</Label>
+              <Label htmlFor="business-phone">Phone</Label>
               <Input
+                id="business-phone"
                 value={formData.phone}
                 onChange={(e) => onFormChange('phone' as keyof BusinessFormData, e.target.value)}
                 placeholder="+1 (555) 123-4567"
@@ -105,16 +108,18 @@ export const BusinessFormDialog: React.FC<BusinessFormDialogProps> = ({
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Tax ID / VAT Number</Label>
+            <Label htmlFor="business-tax-id">Tax ID / VAT Number</Label>
             <Input
+              id="business-tax-id"
               value={formData.tax_id}
               onChange={(e) => onFormChange('tax_id' as keyof BusinessFormData, e.target.value)}
               placeholder="e.g. 12-3456789 or GB123456789"
             />
           </div>
           <div className="space-y-2">
-            <Label>Address</Label>
+            <Label htmlFor="business-address">Address</Label>
             <Textarea
+              id="business-address"
               value={formData.address}
               onChange={(e) => onFormChange('address' as keyof BusinessFormData, e.target.value)}
               placeholder="123 Business St, Suite 100\nCity, State 12345"
@@ -123,7 +128,7 @@ export const BusinessFormDialog: React.FC<BusinessFormDialogProps> = ({
           </div>
           
           <div className="space-y-2">
-            <Label>Logo</Label>
+            <Label htmlFor="business-logo">Logo</Label>
             <div className="mt-1">
               {formData.logo_url ? (
                 <div className="flex items-center gap-4 p-3 border rounded-lg">
@@ -192,6 +197,7 @@ export const BusinessFormDialog: React.FC<BusinessFormDialogProps> = ({
                 </Button>
               )}
               <input
+                id="business-logo"
                 ref={businessFileInputRef}
                 type="file"
                 accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
