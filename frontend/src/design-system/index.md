@@ -76,6 +76,26 @@ Predefined spacing values for consistency:
 
 ## Component Library
 
+### Page hierarchy
+
+- Page identity gets space before controls; complete section titles are the last thing allowed to truncate.
+- Keep one visually primary action in the shell header. Compact its label before compromising the title.
+- Search, filters, sorting, and result counts belong in `PageToolbar` inside the page surface.
+- Secondary navigation uses outline or ghost styling so it does not compete with creation.
+- Keep descriptive action labels in onboarding and empty states; icon-only header actions require an accessible label and tooltip.
+- Responsive decisions must follow the available content width, including the sidebar, rather than viewport width alone.
+
+```tsx
+import { PageToolbar } from '@/components/layout/PageToolbar'
+
+<PageToolbar
+  label="Contact controls"
+  search={<ContactSearch />}
+  filters={<ContactFilters />}
+  meta={<span>24 contacts</span>}
+/>
+```
+
 ### Buttons
 
 #### Primary Button
@@ -107,6 +127,10 @@ Used for delete/destroy actions.
   Delete
 </Button>
 ```
+
+### Tabs
+
+Use the shared `Tabs`, `TabsList`, and `TabsTrigger` primitives. Icons inside a tab inherit the canonical interaction states automatically: blue-600 on hover and while selected. Do not recreate those states in individual pages.
 
 ### Progress
 

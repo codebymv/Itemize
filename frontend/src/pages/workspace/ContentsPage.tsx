@@ -66,6 +66,7 @@ import { VaultCard } from '@/components/VaultCard/VaultCard';
 import { CreateItemModal } from '@/components/CreateItemModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { PageToolbar } from '@/components/layout/PageToolbar';
 import { EmptyState } from '@/components/EmptyState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
@@ -78,6 +79,7 @@ import {
   isVaultZke,
 } from '@/lib/vaultZkSession';
 import { enableVaultSharingViaGraphql, getVaultViaGraphql } from '@/services/workspaceVaultGraphql';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   disableWorkspaceWireframeSharingViaGraphql,
   enableWorkspaceWireframeSharingViaGraphql,
@@ -701,16 +703,32 @@ export function ContentsPage() {
 
   const addContentMenu = (compact = false) => (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          size="sm"
-          className="bg-blue-600 hover:bg-blue-700 text-white h-9 px-3 whitespace-nowrap font-light"
-          aria-label={compact ? 'Add content' : undefined}
-        >
-          <Plus className="h-4 w-4" />
-          {!compact && <span>Add Content</span>}
-        </Button>
-      </DropdownMenuTrigger>
+      {compact ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="icon"
+                className="h-9 w-9 bg-blue-600 p-0 text-white hover:bg-blue-700"
+                aria-label="Add content"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent>Add content</TooltipContent>
+        </Tooltip>
+      ) : (
+        <DropdownMenuTrigger asChild>
+          <Button
+            size="sm"
+            className="h-9 bg-blue-600 px-3 font-light text-white hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add Content</span>
+          </Button>
+        </DropdownMenuTrigger>
+      )}
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuItem onClick={() => setShowNewListModal(true)}><CheckSquare className="h-4 w-4 mr-2" />List</DropdownMenuItem>
         <DropdownMenuItem onClick={() => setShowNewNoteModal(true)}><StickyNote className="h-4 w-4 mr-2" />Note</DropdownMenuItem>
@@ -728,43 +746,11 @@ export function ContentsPage() {
       mobileClassName="flex-col items-stretch gap-3"
       headerActions={
         <>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50"><SelectValue placeholder="Category" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {uniqueCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-            <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50"><SelectValue placeholder="Sort" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="updated">Updated</SelectItem>
-              <SelectItem value="created">Created</SelectItem>
-              <SelectItem value="title">Title A-Z</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
-            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="list">Lists</SelectItem>
-              <SelectItem value="note">Notes</SelectItem>
-              <SelectItem value="whiteboard">Whiteboards</SelectItem>
-              <SelectItem value="wireframe">Wireframes</SelectItem>
-              <SelectItem value="vault">Vaults</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="relative w-full max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background font-raleway" />
-          </div>
-          {addContentMenu()}
-          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light" onClick={() => navigate('/canvas')}>
+          <Button size="sm" variant="outline" className="h-9 whitespace-nowrap font-light" onClick={() => navigate('/canvas')}>
             <Map className="h-4 w-4 mr-2" />
             Canvas
           </Button>
+          {addContentMenu(true)}
         </>
       }
       mobileActions={
@@ -810,9 +796,57 @@ export function ContentsPage() {
         </>
       }
     >
-        <div className="hidden md:flex items-center justify-end mb-6">
-          <span className="text-sm text-muted-foreground">{totalItems} {totalItems === 1 ? 'item' : 'items'}</span>
-        </div>
+        <PageToolbar
+          label="Content controls"
+          className="mb-6 hidden md:flex"
+          search={(
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                aria-label="Search content"
+                placeholder="Search content..."
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                className="h-9 bg-muted/20 pl-10 font-raleway focus:bg-background"
+              />
+            </div>
+          )}
+          filters={(
+            <>
+              <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as ContentType)}>
+                <SelectTrigger className="h-9 w-[130px] bg-muted/20"><SelectValue placeholder="Type" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="list">Lists</SelectItem>
+                  <SelectItem value="note">Notes</SelectItem>
+                  <SelectItem value="whiteboard">Whiteboards</SelectItem>
+                  <SelectItem value="wireframe">Wireframes</SelectItem>
+                  <SelectItem value="vault">Vaults</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="h-9 w-[140px] bg-muted/20"><SelectValue placeholder="Category" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {uniqueCategories.map((category) => <SelectItem key={category} value={category}>{category}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+                <SelectTrigger className="h-9 w-[130px] bg-muted/20"><SelectValue placeholder="Sort" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="updated">Updated</SelectItem>
+                  <SelectItem value="created">Created</SelectItem>
+                  <SelectItem value="title">Title A-Z</SelectItem>
+                </SelectContent>
+              </Select>
+            </>
+          )}
+          meta={(
+            <span className="whitespace-nowrap text-sm text-muted-foreground">
+              {totalItems} {totalItems === 1 ? 'item' : 'items'}
+            </span>
+          )}
+        />
 
         <Card aria-busy={refreshing}>
           <CardContent className="p-0">

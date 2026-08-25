@@ -228,7 +228,7 @@ export function ChatWidgetPage() {
       <PageLayout
         title="CHAT WIDGET"
         icon={<MessageCircle className="h-5 w-5 flex-shrink-0 text-blue-600" />}
-        className="max-w-7xl"
+        className="mx-auto max-w-7xl"
       >
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
           <Skeleton className="h-[34rem]" />
@@ -253,7 +253,7 @@ export function ChatWidgetPage() {
     <PageLayout
       title="CHAT WIDGET"
       icon={<MessageCircle className="h-5 w-5 flex-shrink-0 text-blue-600" />}
-      className="max-w-7xl"
+      className="mx-auto max-w-7xl"
       mobileClassName="flex-col items-stretch gap-3"
       headerActions={
         <>

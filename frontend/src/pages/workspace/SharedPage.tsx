@@ -57,6 +57,7 @@ import {
 } from '@/services/api';
 import { List, Note, Whiteboard, Wireframe, Vault } from '@/types';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { PageToolbar } from '@/components/layout/PageToolbar';
 import { EmptyState } from '@/components/EmptyState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
@@ -364,48 +365,15 @@ export function SharedPage() {
       icon={<Share2 className="h-5 w-5 text-blue-600 flex-shrink-0" />}
       mobileClassName="flex-col items-stretch gap-3"
       headerActions={
-        <>
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as 'recent' | 'title')}>
-            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="recent">Most Recent</SelectItem>
-              <SelectItem value="title">Title A-Z</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
-            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="list">Lists</SelectItem>
-              <SelectItem value="note">Notes</SelectItem>
-              <SelectItem value="whiteboard">Whiteboards</SelectItem>
-              <SelectItem value="wireframe">Wireframes</SelectItem>
-              <SelectItem value="vault">Vaults</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="relative w-full max-w-xs">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background font-raleway"
-            />
-          </div>
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
-            onClick={() => navigate('/canvas')}
-          >
-            <Map className="h-4 w-4 mr-2" />
-            Canvas
-          </Button>
-        </>
+        <Button
+          size="sm"
+          variant="outline"
+          className="whitespace-nowrap font-light"
+          onClick={() => navigate('/canvas')}
+        >
+          <Map className="mr-2 h-4 w-4" />
+          Canvas
+        </Button>
       }
       mobileActions={
         <>
@@ -446,12 +414,54 @@ export function SharedPage() {
         </>
       }
     >
-          {/* Summary */}
-          <div className="flex items-center justify-end mb-6">
-            <span className="text-sm text-muted-foreground">
-              {filteredContent.length} {filteredContent.length === 1 ? 'item' : 'items'} shared
-            </span>
-          </div>
+          <PageToolbar
+            label="Shared content controls"
+            className="mb-6 hidden md:flex"
+            search={
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  aria-label="Search shared content"
+                  placeholder="Search shared content..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-9 bg-muted/20 pl-10 focus:bg-background"
+                />
+              </div>
+            }
+            filters={
+              <>
+                <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
+                  <SelectTrigger className="h-9 w-[140px] bg-muted/20">
+                    <Filter className="mr-2 h-4 w-4" />
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="list">Lists</SelectItem>
+                    <SelectItem value="note">Notes</SelectItem>
+                    <SelectItem value="whiteboard">Whiteboards</SelectItem>
+                    <SelectItem value="wireframe">Wireframes</SelectItem>
+                    <SelectItem value="vault">Vaults</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as 'recent' | 'title')}>
+                  <SelectTrigger className="h-9 w-[140px] bg-muted/20">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="recent">Most Recent</SelectItem>
+                    <SelectItem value="title">Title A-Z</SelectItem>
+                  </SelectContent>
+                </Select>
+              </>
+            }
+            meta={
+              <span className="text-sm text-muted-foreground">
+                {filteredContent.length} {filteredContent.length === 1 ? 'item' : 'items'} shared
+              </span>
+            }
+          />
 
           {/* Content */}
           <Card>

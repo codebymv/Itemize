@@ -38,6 +38,7 @@ import {
     sendEstimate,
 } from '@/services/estimatesApi';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { PageToolbar } from '@/components/layout/PageToolbar';
 import { EmptyState } from '@/components/EmptyState';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
@@ -46,6 +47,7 @@ import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { formatDateOnly } from './utils/invoiceFormatters';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export function EstimatesPage() {
     const navigate = useNavigate();
@@ -196,45 +198,19 @@ export function EstimatesPage() {
             icon={<FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />}
             mobileClassName="flex-col items-stretch"
             headerActions={
-                <>
-                    <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="h-9">
-                            <TabsTrigger value="all" className="text-xs">
-                                All estimates
-                                <Badge variant="secondary" className="ml-2">{estimates.length}</Badge>
-                            </TabsTrigger>
-                            <TabsTrigger value="draft" className="text-xs">
-                                Draft
-                                <Badge variant="secondary" className="ml-2">{stats.draft}</Badge>
-                            </TabsTrigger>
-                            <TabsTrigger value="sent" className="text-xs">
-                                Sent
-                                <Badge variant="secondary" className="ml-2">{stats.sent}</Badge>
-                            </TabsTrigger>
-                            <TabsTrigger value="accepted" className="text-xs">
-                                Accepted
-                                <Badge variant="secondary" className="ml-2">{stats.accepted}</Badge>
-                            </TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search estimates..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
-                    </div>
+                <Tooltip>
+                    <TooltipTrigger asChild>
                     <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        size="icon"
+                        aria-label="New estimate"
+                        className="h-9 w-9 bg-blue-600 text-white hover:bg-blue-700"
                         onClick={() => navigate('/estimates/new')}
                     >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Estimate
+                        <Plus className="h-4 w-4" />
                     </Button>
-                </>
+                    </TooltipTrigger>
+                    <TooltipContent>New estimate</TooltipContent>
+                </Tooltip>
             }
             mobileActions={
                 <>
@@ -270,6 +246,44 @@ export function EstimatesPage() {
                 </>
             }
         >
+            <PageToolbar
+                label="Estimate controls"
+                className="mb-6 hidden md:flex"
+                search={
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            aria-label="Search estimates"
+                            placeholder="Search estimates..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="h-9 bg-muted/20 pl-10"
+                        />
+                    </div>
+                }
+                filters={
+                    <Tabs value={activeTab} onValueChange={setActiveTab}>
+                        <TabsList className="h-9">
+                            <TabsTrigger value="all" className="text-xs">
+                                All
+                                <Badge variant="secondary" className="ml-2">{estimates.length}</Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="draft" className="text-xs">
+                                Draft
+                                <Badge variant="secondary" className="ml-2">{stats.draft}</Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="sent" className="text-xs">
+                                Sent
+                                <Badge variant="secondary" className="ml-2">{stats.sent}</Badge>
+                            </TabsTrigger>
+                            <TabsTrigger value="accepted" className="text-xs">
+                                Accepted
+                                <Badge variant="secondary" className="ml-2">{stats.accepted}</Badge>
+                            </TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                }
+            />
                 {/* Summary Cards */}
             <ResponsiveCardRail
                 label="Estimate status summary"
