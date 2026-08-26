@@ -368,9 +368,9 @@ export class PaymentsRepository {
     return this.transaction(async (client) => {
       const updated = await client.query<{ payment_id: number; amount: string }>(
         `UPDATE payment_refunds
-         SET stripe_refund_id=$3,status=$4,provider_failure_code=$5,
-             provider_failure_message=$6,
-             completed_at=CASE WHEN $4='succeeded' THEN CURRENT_TIMESTAMP ELSE completed_at END,
+         SET stripe_refund_id=$3,status=$4::varchar,provider_failure_code=$5,
+              provider_failure_message=$6,
+              completed_at=CASE WHEN $4::varchar='succeeded' THEN CURRENT_TIMESTAMP ELSE completed_at END,
              updated_at=CURRENT_TIMESTAMP
          WHERE id=$1 AND organization_id=$2
          RETURNING payment_id,amount`,

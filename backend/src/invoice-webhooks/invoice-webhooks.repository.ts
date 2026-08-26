@@ -360,8 +360,8 @@ export class InvoiceWebhooksRepository {
       `INSERT INTO payment_refunds (
          organization_id,payment_id,idempotency_key,stripe_refund_id,
          amount,currency,status,reason,provider_failure_code,completed_at
-       ) VALUES ($1,$2,$3,$4,$5::numeric,$6,$7,$8,$9,
-                 CASE WHEN $7='succeeded' THEN CURRENT_TIMESTAMP ELSE NULL END)
+       ) VALUES ($1,$2,$3,$4,$5::numeric,$6,$7::varchar,$8,$9,
+                  CASE WHEN $7::varchar='succeeded' THEN CURRENT_TIMESTAMP ELSE NULL END)
        ON CONFLICT (stripe_refund_id) WHERE stripe_refund_id IS NOT NULL
        DO UPDATE SET status=EXCLUDED.status,reason=COALESCE(EXCLUDED.reason,payment_refunds.reason),
          provider_failure_code=EXCLUDED.provider_failure_code,
