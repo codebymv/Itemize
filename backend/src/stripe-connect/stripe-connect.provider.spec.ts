@@ -56,7 +56,7 @@ describe('HttpStripeConnectClient', () => {
     expect(body.get('metadata[itemize_organization_id]')).toBe('7');
     expect(options?.headers).toMatchObject({
       Authorization: 'Bearer sk_test_itemize',
-      'Idempotency-Key': 'itemize-connect-account-7',
+      'Idempotency-Key': 'itemize-connect-account-v2-7',
     });
   });
 

@@ -80,7 +80,7 @@ export class HttpStripeConnectClient implements StripeConnectClient {
       '/v1/accounts',
       'POST',
       form,
-      `itemize-connect-account-${organizationId}`,
+      `itemize-connect-account-v2-${organizationId}`,
     );
     if (!response.ok) this.failure('account creation', response);
     return this.account(response.body);
