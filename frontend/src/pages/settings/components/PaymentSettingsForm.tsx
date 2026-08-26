@@ -183,10 +183,16 @@ export const PaymentSettingsForm: React.FC<PaymentSettingsFormProps> = ({
               description="Accept card payments on invoices to your Stripe account."
               detail={settings.stripe_connected_at
                 ? `Connected ${new Date(settings.stripe_connected_at).toLocaleDateString()}`
-                : undefined}
+                : settings.stripe_account_id
+                  ? 'Setup in progress'
+                  : undefined}
               status={settings.stripe_connected ? 'connected' : 'disconnected'}
               icon={<IntegrationProviderMark provider="stripe" />}
-              primaryLabel={settings.stripe_connected ? 'Reconnect' : 'Connect'}
+              primaryLabel={settings.stripe_connected
+                ? 'Reconnect'
+                : settings.stripe_account_id
+                  ? 'Continue setup'
+                  : 'Connect'}
               onPrimary={onConnectStripe}
               onDisconnect={settings.stripe_connected ? onDisconnectStripe : undefined}
               busy={connectingStripe}

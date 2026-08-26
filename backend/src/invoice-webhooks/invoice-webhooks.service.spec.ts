@@ -43,6 +43,7 @@ describe('InvoiceWebhooksService', () => {
     expect(repository.process).toHaveBeenCalledWith({
       id: 'evt_invoice_1',
       type: 'checkout.session.completed',
+      connectedAccount: null,
       session: {
         id: 'cs_invoice_1',
         invoiceId: 12,
@@ -51,6 +52,50 @@ describe('InvoiceWebhooksService', () => {
         paymentStatus: 'paid',
         amount: '26.06',
         currency: 'USD',
+      },
+    });
+  });
+
+  it('normalizes connected-account readiness updates', async () => {
+    await service.process({
+      id: 'evt_account_1',
+      type: 'account.updated',
+      account: 'acct_Merchant123',
+      data: {
+        object: {
+          id: 'acct_Merchant123',
+          charges_enabled: true,
+          details_submitted: true,
+        },
+      },
+    } as unknown as Stripe.Event);
+
+    expect(repository.process).toHaveBeenCalledWith({
+      id: 'evt_account_1',
+      type: 'account.updated',
+      session: null,
+      connectedAccount: {
+        stripeAccountId: 'acct_Merchant123',
+        connected: true,
+      },
+    });
+  });
+
+  it('normalizes connected-account deauthorization', async () => {
+    await service.process({
+      id: 'evt_account_2',
+      type: 'account.application.deauthorized',
+      account: 'acct_Merchant123',
+      data: { object: { id: 'ca_application' } },
+    } as unknown as Stripe.Event);
+
+    expect(repository.process).toHaveBeenCalledWith({
+      id: 'evt_account_2',
+      type: 'account.application.deauthorized',
+      session: null,
+      connectedAccount: {
+        stripeAccountId: 'acct_Merchant123',
+        connected: false,
       },
     });
   });

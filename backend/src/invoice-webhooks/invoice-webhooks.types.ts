@@ -12,6 +12,10 @@ export type StripeInvoiceEvent = {
   id: string;
   type: string;
   session: StripeCheckoutSession | null;
+  connectedAccount: {
+    stripeAccountId: string;
+    connected: boolean | null;
+  } | null;
 };
 
 export type StripeInvoiceWebhookResult = {

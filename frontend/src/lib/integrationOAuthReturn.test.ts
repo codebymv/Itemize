@@ -22,6 +22,18 @@ describe('readIntegrationOAuthResult', () => {
     });
   });
 
+  it('reads a pending Stripe onboarding return', () => {
+    const result = readIntegrationOAuthResult('?stripe_onboarding=pending');
+    expect(result).toEqual({
+      ok: true,
+      provider: 'stripe',
+      pending: true,
+    });
+    expect(integrationOAuthToast(result!)).toMatchObject({
+      title: 'Stripe setup submitted',
+    });
+  });
+
   it('reads an OAuth error return', () => {
     expect(readIntegrationOAuthResult('?error=invalid_state')).toEqual({
       ok: false,

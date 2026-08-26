@@ -1,19 +1,13 @@
-import api from '@/lib/api';
-import { disconnectStripeViaGraphql } from './stripeConnectGraphql';
-
-const orgHeaders = (organizationId?: number) => (
-  organizationId ? { 'x-organization-id': organizationId.toString() } : {}
-);
+import {
+  disconnectStripeViaGraphql,
+  startStripeConnectViaGraphql,
+} from './stripeConnectGraphql';
 
 export const initiateStripeConnect = async (
   organizationId?: number,
   returnUrl?: string,
 ): Promise<{ authUrl: string }> => {
-  const response = await api.get('/api/invoice-integrations/stripe/connect', {
-    params: { return_url: returnUrl },
-    headers: orgHeaders(organizationId),
-  });
-  return response.data;
+  return startStripeConnectViaGraphql(organizationId, returnUrl);
 };
 
 export const disconnectStripeConnect = async (

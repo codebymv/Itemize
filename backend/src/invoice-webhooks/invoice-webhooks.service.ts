@@ -8,6 +8,8 @@ import {
   StripeInvoiceWebhookResult,
 } from './invoice-webhooks.types';
 
+const STRIPE_ACCOUNT_ID = /^acct_[A-Za-z0-9]+$/;
+
 export class StripeInvoiceWebhookInputError extends Error {
   constructor() {
     super('Stripe invoice webhook event is invalid');
@@ -41,10 +43,38 @@ export class InvoiceWebhooksService {
     const id = this.text(event?.id, 255);
     const type = this.text(event?.type, 100);
     let session: StripeCheckoutSession | null = null;
+    let connectedAccount: StripeInvoiceEvent['connectedAccount'] = null;
     if (type === 'checkout.session.completed') {
       session = this.session(event.data?.object);
+    } else if (
+      type === 'account.updated' ||
+      type === 'account.application.deauthorized'
+    ) {
+      connectedAccount = this.connectedAccount(event, type);
     }
-    return { id, type, session };
+    return { id, type, session, connectedAccount };
+  }
+
+  private connectedAccount(
+    event: Stripe.Event,
+    type: string,
+  ): NonNullable<StripeInvoiceEvent['connectedAccount']> {
+    const source =
+      event.data?.object && typeof event.data.object === 'object'
+        ? (event.data.object as unknown as Record<string, unknown>)
+        : {};
+    const stripeAccountId = String(event.account || source.id || '').trim();
+    if (!STRIPE_ACCOUNT_ID.test(stripeAccountId)) {
+      throw new StripeInvoiceWebhookInputError();
+    }
+    if (type === 'account.application.deauthorized') {
+      return { stripeAccountId, connected: false };
+    }
+    return {
+      stripeAccountId,
+      connected:
+        source.charges_enabled === true && source.details_submitted === true,
+    };
   }
 
   private session(value: unknown): StripeCheckoutSession {

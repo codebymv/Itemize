@@ -61,6 +61,7 @@ export default defineConfig(({ mode }) => ({
             return "react-vendor";
           if (id.includes("@tanstack/react-query")) return "query-vendor";
           if (id.includes("lucide-react")) return "icons";
+          if (id.includes("node_modules/axios/")) return "axios-vendor";
           // Do not force a sentry chunk from ErrorBoundary; only main.tsx idle-loads it.
         },
       },

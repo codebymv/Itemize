@@ -1,17 +1,13 @@
-import api from '@/lib/api';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { disconnectStripeConnect, initiateStripeConnect } from './stripeConnectApi';
-import { disconnectStripeViaGraphql } from './stripeConnectGraphql';
-
-vi.mock('@/lib/api', () => ({
-  default: {
-    get: vi.fn(),
-    post: vi.fn(),
-  },
-}));
+import {
+  disconnectStripeViaGraphql,
+  startStripeConnectViaGraphql,
+} from './stripeConnectGraphql';
 
 vi.mock('./stripeConnectGraphql', () => ({
   disconnectStripeViaGraphql: vi.fn(),
+  startStripeConnectViaGraphql: vi.fn(),
 }));
 
 describe('stripeConnectApi', () => {
@@ -19,23 +15,24 @@ describe('stripeConnectApi', () => {
     vi.clearAllMocks();
   });
 
-  it('starts Connect with a safe return path and tenant header', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: { authUrl: 'https://connect.stripe.com/oauth/authorize' } });
+  it('starts hosted onboarding through the tenant-scoped GraphQL mutation', async () => {
+    vi.mocked(startStripeConnectViaGraphql).mockResolvedValue({
+      authUrl: 'https://connect.stripe.com/setup/s/example',
+    });
 
     await expect(initiateStripeConnect(7, '/payment-settings')).resolves.toEqual({
-      authUrl: 'https://connect.stripe.com/oauth/authorize',
+      authUrl: 'https://connect.stripe.com/setup/s/example',
     });
-    expect(api.get).toHaveBeenCalledWith('/api/invoice-integrations/stripe/connect', {
-      params: { return_url: '/payment-settings' },
-      headers: { 'x-organization-id': '7' },
-    });
+    expect(startStripeConnectViaGraphql).toHaveBeenCalledWith(
+      7,
+      '/payment-settings',
+    );
   });
 
-  it('disconnects through the GraphQL mutation instead of the retained REST route', async () => {
+  it('disconnects through the GraphQL mutation', async () => {
     vi.mocked(disconnectStripeViaGraphql).mockResolvedValue({ success: true });
 
     await expect(disconnectStripeConnect(7)).resolves.toEqual({ success: true });
     expect(disconnectStripeViaGraphql).toHaveBeenCalledWith(7);
-    expect(api.post).not.toHaveBeenCalled();
   });
 });

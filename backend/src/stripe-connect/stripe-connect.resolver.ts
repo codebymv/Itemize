@@ -1,12 +1,9 @@
 /**
- * GraphQL owner of the Stripe Connect disconnection, following the
- * calendar provider connection-management mutation precedent: an
- * authenticated, CSRF-protected, organization-scoped state change with
- * an idempotent already-disconnected outcome. Deliberately no plan
- * gate — like the legacy REST route, an organization whose
- * subscription lapsed must still be able to disconnect its account.
+ * Authenticated, CSRF-protected, organization-scoped entry points for
+ * Stripe onboarding and local payment disablement. There is deliberately
+ * no plan gate so an organization can always disable its connection.
  */
-import { Mutation, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CsrfProtected, OrganizationScoped } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import { StripeConnectService } from './stripe-connect.service';
@@ -17,6 +14,21 @@ export class StripeConnectResolver {
     private readonly stripeConnect: StripeConnectService,
     private readonly requestContext: RequestContextService,
   ) {}
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => String)
+  startStripeConnect(
+    @Args('returnUrl', { type: () => String, nullable: true })
+    returnUrl?: string,
+  ): Promise<string> {
+    const context = this.requestContext.current();
+    return this.stripeConnect.start(
+      context.identity!.userId,
+      context.organization!.organizationId,
+      returnUrl,
+    );
+  }
 
   @CsrfProtected()
   @OrganizationScoped()

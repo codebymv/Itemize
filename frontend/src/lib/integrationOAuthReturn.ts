@@ -1,5 +1,9 @@
 export type IntegrationOAuthResult =
-  | { ok: true; provider: 'google' | 'facebook' | 'stripe' }
+  | {
+      ok: true;
+      provider: 'google' | 'facebook' | 'stripe';
+      pending?: boolean;
+    }
   | { ok: false; error: string };
 
 export const INTEGRATIONS_PATH = '/settings/integrations';
@@ -16,6 +20,9 @@ export function readIntegrationOAuthResult(search: string): IntegrationOAuthResu
   }
   if (params.get('stripe_connected') === 'true') {
     return { ok: true, provider: 'stripe' };
+  }
+  if (params.get('stripe_onboarding') === 'pending') {
+    return { ok: true, provider: 'stripe', pending: true };
   }
 
   const error = params.get('error');
@@ -38,6 +45,13 @@ export function integrationOAuthToast(result: IntegrationOAuthResult): {
     };
   }
   if (result.ok && result.provider === 'stripe') {
+    if (result.pending) {
+      return {
+        title: 'Stripe setup submitted',
+        description:
+          'Stripe is reviewing your account. Invoice payments will unlock when card payments are active.',
+      };
+    }
     return {
       title: 'Stripe connected',
       description: 'Invoice card payments will go to your Stripe account.',

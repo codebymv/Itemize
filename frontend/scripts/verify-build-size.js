@@ -13,6 +13,7 @@ const limits = {
   'router-vendor': 42 * 1024,
   'query-vendor': 45 * 1024,
   icons: 42 * 1024,
+  'axios-vendor': 50 * 1024,
 };
 
 const kb = (bytes) => `${(bytes / 1024).toFixed(2)} KB`;

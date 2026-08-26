@@ -63,6 +63,32 @@ export class InvoiceWebhooksRepository {
     if (event.type === 'checkout.session.expired') {
       return { received: true, duplicateEvent: false, handled: true };
     }
+    if (
+      event.type === 'account.updated' ||
+      event.type === 'account.application.deauthorized'
+    ) {
+      const account = event.connectedAccount;
+      if (!account || account.connected === null) {
+        throw new Error('Verified Stripe account event is missing readiness evidence');
+      }
+      const updated = await client.query(
+        `UPDATE payment_settings
+         SET stripe_connected = $2,
+             stripe_connected_at = CASE
+               WHEN $2 THEN COALESCE(stripe_connected_at, CURRENT_TIMESTAMP)
+               ELSE NULL
+             END,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE stripe_account_id = $1`,
+        [account.stripeAccountId, account.connected],
+      );
+      return {
+        received: true,
+        duplicateEvent: false,
+        handled: updated.rowCount === 1,
+        ...(updated.rowCount === 1 ? {} : { reason: 'connected_account_not_found' }),
+      };
+    }
     if (event.type !== 'checkout.session.completed') {
       return {
         received: true,

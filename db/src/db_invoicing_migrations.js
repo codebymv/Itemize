@@ -314,6 +314,11 @@ async function createPaymentSettingsTable(pool) {
         await client.query(`
             CREATE INDEX IF NOT EXISTS idx_payment_settings_org ON payment_settings(organization_id)
         `);
+        await client.query(`
+            CREATE UNIQUE INDEX IF NOT EXISTS ux_payment_settings_stripe_account
+            ON payment_settings(stripe_account_id)
+            WHERE stripe_account_id IS NOT NULL AND stripe_account_id <> ''
+        `);
 
         console.log('✅ payment_settings table created/verified');
     } finally {
