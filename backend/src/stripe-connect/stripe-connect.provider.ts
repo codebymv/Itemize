@@ -70,7 +70,10 @@ export class HttpStripeConnectClient implements StripeConnectClient {
 
   async createAccount(organizationId: number): Promise<StripeConnectedAccount> {
     const form = new URLSearchParams({
-      type: 'standard',
+      'controller[losses][payments]': 'stripe',
+      'controller[fees][payer]': 'account',
+      'controller[requirement_collection]': 'stripe',
+      'controller[stripe_dashboard][type]': 'full',
       'metadata[itemize_organization_id]': String(organizationId),
     });
     const response = await this.request(

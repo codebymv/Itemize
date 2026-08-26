@@ -31,7 +31,7 @@ describe('HttpStripeConnectClient', () => {
     else process.env.STRIPE_CONNECT_API_ORIGIN = savedOrigin;
   });
 
-  it('creates a Standard connected account scoped to the organization', async () => {
+  it('creates a Stripe-managed connected account scoped to the organization', async () => {
     const request = jest.spyOn(global, 'fetch').mockResolvedValue(
       stripeResponse(200, {
         id: 'acct_Connected123',
@@ -48,7 +48,11 @@ describe('HttpStripeConnectClient', () => {
 
     const [, options] = request.mock.calls[0];
     const body = new URLSearchParams(String(options?.body));
-    expect(body.get('type')).toBe('standard');
+    expect(body.has('type')).toBe(false);
+    expect(body.get('controller[losses][payments]')).toBe('stripe');
+    expect(body.get('controller[fees][payer]')).toBe('account');
+    expect(body.get('controller[requirement_collection]')).toBe('stripe');
+    expect(body.get('controller[stripe_dashboard][type]')).toBe('full');
     expect(body.get('metadata[itemize_organization_id]')).toBe('7');
     expect(options?.headers).toMatchObject({
       Authorization: 'Bearer sk_test_itemize',
