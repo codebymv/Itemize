@@ -19,6 +19,8 @@ import {
     Download,
     Copy,
     MoreVertical,
+    RotateCcw,
+    Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +41,7 @@ import { useOrganization } from '@/hooks/useOrganization';
 import {
     createInvoicePayment,
     getInvoicePayments,
+    refundInvoicePayment,
     type InvoicePayment,
 } from '@/services/invoicePaymentsApi';
 import { PageLayout } from '@/components/layout/PageLayout';
@@ -55,6 +58,14 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { CreatePaymentModal } from './components/CreatePaymentModal';
 import type { PaymentData } from './components/CreatePaymentModal';
 
@@ -101,7 +112,8 @@ export function PaymentsPage() {
 
 const [payments, setPayments] = useState<Payment[]>([]);
     const [loading, setLoading] = useState(true);
-    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
+    const { organizationId, organization, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
+    const canRefund = organization?.role === 'owner' || organization?.role === 'admin';
     const [searchQuery, setSearchQuery] = useState('');
     const [methodFilter, setMethodFilter] = useState<string>('all');
     const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -109,6 +121,10 @@ const [payments, setPayments] = useState<Payment[]>([]);
     // Payment creation state
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [creating, setCreating] = useState(false);
+    const [refundRequest, setRefundRequest] = useState<{ payment: Payment; key: string } | null>(null);
+    const [refundAmount, setRefundAmount] = useState('');
+    const [refundReason, setRefundReason] = useState('');
+    const [refunding, setRefunding] = useState(false);
 
     // Expanded payment state
     const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -265,6 +281,53 @@ const filteredPayments = payments.filter(p => {
             toast({ title: 'Error', description: 'Failed to record payment', variant: 'destructive' });
         } finally {
             setCreating(false);
+        }
+    };
+
+    const openRefund = (payment: Payment) => {
+        setRefundAmount(payment.refundable_amount.toFixed(2));
+        setRefundReason('');
+        setRefundRequest({ payment, key: crypto.randomUUID() });
+    };
+
+    const handleRefund = async () => {
+        if (!organizationId || !refundRequest) return;
+        const amount = Number(refundAmount);
+        if (!Number.isFinite(amount) || amount <= 0 || amount > refundRequest.payment.refundable_amount) {
+            toast({
+                title: 'Invalid refund amount',
+                description: `Enter an amount up to ${formatCurrency(refundRequest.payment.refundable_amount, refundRequest.payment.currency)}.`,
+                variant: 'destructive',
+            });
+            return;
+        }
+        setRefunding(true);
+        try {
+            const result = await refundInvoicePayment(organizationId, refundRequest.payment.id, {
+                amount,
+                reason: refundReason,
+                idempotencyKey: refundRequest.key,
+            });
+            toast({
+                title: result.refundStatus === 'succeeded'
+                    ? amount === refundRequest.payment.refundable_amount
+                        ? 'Payment refunded'
+                        : 'Partial refund completed'
+                    : 'Refund submitted',
+                description: result.refundStatus === 'succeeded'
+                    ? `${formatCurrency(amount, refundRequest.payment.currency)} was sent back through Stripe.`
+                    : 'Stripe is processing the refund. Itemize will update the payment when it completes.',
+            });
+            setRefundRequest(null);
+            await fetchPayments();
+        } catch (error) {
+            toast({
+                title: 'Refund failed',
+                description: error instanceof Error ? error.message : 'Stripe could not complete this refund.',
+                variant: 'destructive',
+            });
+        } finally {
+            setRefunding(false);
         }
     };
 
@@ -492,6 +555,15 @@ const filteredPayments = payments.filter(p => {
                                                                 <Download className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
                                                                 Download Receipt
                                                             </DropdownMenuItem>
+                                                            {canRefund && payment.payment_method === 'stripe' && payment.refundable_amount > 0 && (
+                                                                <DropdownMenuItem
+                                                                    className="group/menu"
+                                                                    onClick={() => openRefund(payment)}
+                                                                >
+                                                                    <RotateCcw className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+                                                                    Refund payment
+                                                                </DropdownMenuItem>
+                                                            )}
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 </div>
@@ -554,6 +626,14 @@ const filteredPayments = payments.filter(p => {
                                                                         {formatCurrency(payment.amount, payment.currency)}
                                                                     </span>
                                                                 </div>
+                                                                {payment.refunded_amount > 0 && (
+                                                                    <div className="flex justify-between items-center py-2 border-b">
+                                                                        <span className="text-sm text-muted-foreground">Refunded</span>
+                                                                        <span className="text-sm font-semibold text-purple-600 dark:text-purple-400">
+                                                                            {formatCurrency(payment.refunded_amount, payment.currency)}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
                                                                 
                                                                 <div className="flex justify-between items-center py-2 border-b">
                                                                     <span className="text-sm text-muted-foreground">Status</span>
@@ -709,6 +789,62 @@ onDismiss={handleOnboardingDismiss}
             onConfirm={handleCreatePayment}
             creating={creating}
         />
+        <Dialog
+            open={refundRequest !== null}
+            onOpenChange={(open) => !open && !refunding && setRefundRequest(null)}
+        >
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Refund payment</DialogTitle>
+                    <DialogDescription>
+                        Stripe will send the refund to the original payment method. This cannot be undone in Itemize.
+                    </DialogDescription>
+                </DialogHeader>
+                {refundRequest && (
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label htmlFor="refund-amount" className="text-sm font-medium">Amount</label>
+                            <Input
+                                id="refund-amount"
+                                type="number"
+                                min="0.01"
+                                max={refundRequest.payment.refundable_amount}
+                                step="0.01"
+                                value={refundAmount}
+                                onChange={(event) => setRefundAmount(event.target.value)}
+                                disabled={refunding}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Up to {formatCurrency(refundRequest.payment.refundable_amount, refundRequest.payment.currency)} is available.
+                            </p>
+                        </div>
+                        <div className="space-y-2">
+                            <label htmlFor="refund-reason" className="text-sm font-medium">Reason <span className="text-muted-foreground">(optional)</span></label>
+                            <textarea
+                                id="refund-reason"
+                                className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                maxLength={500}
+                                value={refundReason}
+                                onChange={(event) => setRefundReason(event.target.value)}
+                                placeholder="Customer request, duplicate payment, or another note"
+                                disabled={refunding}
+                            />
+                        </div>
+                    </div>
+                )}
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setRefundRequest(null)} disabled={refunding}>
+                        Cancel
+                    </Button>
+                    <Button onClick={() => void handleRefund()} disabled={refunding}>
+                        {refunding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Refund {refundAmount && refundRequest
+                            ? formatCurrency(Number(refundAmount), refundRequest.payment.currency)
+                            : 'payment'}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
         </PageLayout>
     );
 }

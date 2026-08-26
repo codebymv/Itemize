@@ -22,6 +22,10 @@ export interface InvoicePayment {
   description?: string;
   notes?: string;
   receipt_url?: string;
+  refunded_amount: number;
+  refundable_amount: number;
+  refunded_at?: string;
+  refund_reason?: string;
   paid_at?: string;
   created_at: string;
   updated_at?: string;
@@ -60,6 +64,10 @@ type GraphqlPayment = {
   description: string | null;
   notes: string | null;
   receiptUrl: string | null;
+  refundedAmount: string;
+  refundableAmount: string;
+  refundedAt: string | null;
+  refundReason: string | null;
   paidAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -69,6 +77,7 @@ const fields = `
   id organizationId invoiceId invoiceNumber contactId contactName amount currency
   paymentMethod status stripePaymentIntentId cardLast4 cardBrand description notes
   receiptUrl paidAt createdAt updatedAt
+  refundedAmount refundableAmount refundedAt refundReason
 `;
 
 const mapPayment = (payment: GraphqlPayment): InvoicePayment => ({
@@ -90,6 +99,10 @@ const mapPayment = (payment: GraphqlPayment): InvoicePayment => ({
   ...(payment.description === null ? {} : { description: payment.description }),
   ...(payment.notes === null ? {} : { notes: payment.notes }),
   ...(payment.receiptUrl === null ? {} : { receipt_url: payment.receiptUrl }),
+  refunded_amount: Number(payment.refundedAmount),
+  refundable_amount: Number(payment.refundableAmount),
+  ...(payment.refundedAt === null ? {} : { refunded_at: payment.refundedAt }),
+  ...(payment.refundReason === null ? {} : { refund_reason: payment.refundReason }),
   ...(payment.paidAt === null ? {} : { paid_at: payment.paidAt }),
   created_at: payment.createdAt,
   updated_at: payment.updatedAt,
@@ -129,6 +142,37 @@ export const getInvoicePayments = async (
     organizationId,
   );
   return data.payments.nodes.map(mapPayment);
+};
+
+export const refundInvoicePayment = async (
+  organizationId: number,
+  paymentId: number,
+  input: { amount?: number; reason?: string; idempotencyKey: string },
+): Promise<{ payment: InvoicePayment; refundStatus: string }> => {
+  const data = await graphqlMutationRequest<
+    { refundPayment: { payment: GraphqlPayment; refundStatus: string } },
+    { paymentId: number; input: { amount?: string; reason?: string; idempotencyKey: string } }
+  >(
+    `mutation RefundPayment($paymentId: Int!, $input: RefundPaymentInput!) {
+      refundPayment(paymentId: $paymentId, input: $input) {
+        payment { ${fields} }
+        refundStatus
+      }
+    }`,
+    {
+      paymentId,
+      input: {
+        ...(input.amount === undefined ? {} : { amount: input.amount.toFixed(2) }),
+        ...(input.reason?.trim() ? { reason: input.reason.trim() } : {}),
+        idempotencyKey: input.idempotencyKey,
+      },
+    },
+    organizationId,
+  );
+  return {
+    payment: mapPayment(data.refundPayment.payment),
+    refundStatus: data.refundPayment.refundStatus,
+  };
 };
 
 export const createInvoicePayment = async (

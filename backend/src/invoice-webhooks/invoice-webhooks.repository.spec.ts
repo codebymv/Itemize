@@ -37,6 +37,7 @@ describe('InvoiceWebhooksRepository connected-account events', () => {
         stripeAccountId: 'acct_Merchant123',
         connected,
       },
+      refund: null,
     })).resolves.toEqual({
       received: true,
       duplicateEvent: false,
@@ -64,6 +65,7 @@ describe('InvoiceWebhooksRepository connected-account events', () => {
         stripeAccountId: 'acct_Unknown123',
         connected: true,
       },
+      refund: null,
     })).resolves.toEqual({
       received: true,
       duplicateEvent: false,

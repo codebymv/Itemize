@@ -78,6 +78,18 @@ export class Payment {
   @Field(() => String, { nullable: true })
   receiptUrl: string | null;
 
+  @Field(() => String)
+  refundedAmount: string;
+
+  @Field(() => String)
+  refundableAmount: string;
+
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  refundedAt: Date | null;
+
+  @Field(() => String, { nullable: true })
+  refundReason: string | null;
+
   @Field(() => GraphQLISODateTime, { nullable: true })
   paidAt: Date | null;
 
@@ -116,4 +128,16 @@ export class RecordPaymentResult {
 
   @Field(() => InvoicePaymentBalance, { nullable: true })
   invoice: InvoicePaymentBalance | null;
+}
+
+@ObjectType()
+export class RefundPaymentResult {
+  @Field(() => Payment)
+  payment: Payment;
+
+  @Field(() => InvoicePaymentBalance, { nullable: true })
+  invoice: InvoicePaymentBalance | null;
+
+  @Field(() => String)
+  refundStatus: string;
 }

@@ -16,7 +16,7 @@ async function runInvoicePaymentLinkMigration(pool) {
       customer_email VARCHAR(255),
       status VARCHAR(32) NOT NULL DEFAULT 'processing'
         CHECK (status IN (
-          'processing', 'ready', 'rejected', 'reconciliation_required'
+          'processing', 'ready', 'paid', 'refunded', 'rejected', 'reconciliation_required'
         )),
       provider_session_id VARCHAR(255),
       payment_url TEXT,

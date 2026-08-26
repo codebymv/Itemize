@@ -89,6 +89,7 @@ const InvoiceEditorPage = React.lazy(() => import("./pages/invoices/InvoiceEdito
 const EstimatesPage = React.lazy(() => import("./pages/invoices/EstimatesPage"));
 const EstimateEditorPage = React.lazy(() => import("./pages/invoices/EstimateEditorPage"));
 const PublicEstimatePage = React.lazy(() => import("./pages/invoices/PublicEstimatePage"));
+const PublicInvoicePaymentPage = React.lazy(() => import("./pages/invoices/PublicInvoicePaymentPage"));
 const RecurringInvoicesPage = React.lazy(() => import("./pages/invoices/RecurringInvoicesPage"));
 const PaymentsPage = React.lazy(() => import("./pages/invoices/PaymentsPage"));
 const ProductsPage = React.lazy(() => import("./pages/invoices/ProductsPage"));
@@ -349,6 +350,8 @@ const AppContent = () => {
       <Route path="/shared/vault/:token" element={<SharedVaultPage />} />
       <Route path="/sign/:token" element={<SignPage />} />
       <Route path="/estimate/:token" element={<PublicEstimatePage />} />
+      <Route path="/invoice/payment/success" element={<PublicInvoicePaymentPage />} />
+      <Route path="/invoice/payment/cancelled" element={<PublicInvoicePaymentPage />} />
       <Route path="/form/:identifier" element={<PublicFormPage />} />
       <Route path="/p/:slug" element={<PublicLandingPage />} />
       <Route path="/review/:token" element={<PublicReviewPage />} />

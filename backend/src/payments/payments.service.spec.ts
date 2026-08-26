@@ -19,6 +19,9 @@ const payment: PaymentRow = {
   description: null,
   notes: 'Deposit',
   receipt_url: null,
+  refund_amount: '0.00',
+  refunded_at: null,
+  refund_reason: null,
   paid_at: new Date('2026-07-18T12:00:00.000Z'),
   created_at: new Date('2026-07-18T12:00:00.000Z'),
   updated_at: new Date('2026-07-18T12:00:00.000Z'),
@@ -27,13 +30,18 @@ const payment: PaymentRow = {
 describe('PaymentsService', () => {
   let repository: jest.Mocked<PaymentsRepository>;
   let service: PaymentsService;
+  const stripe = { create: jest.fn() };
 
   beforeEach(() => {
     repository = {
       findPage: jest.fn(),
       record: jest.fn(),
+      prepareRefund: jest.fn(),
+      completeRefund: jest.fn(),
+      failRefund: jest.fn(),
     } as unknown as jest.Mocked<PaymentsRepository>;
-    service = new PaymentsService(repository);
+    stripe.create.mockReset();
+    service = new PaymentsService(repository, stripe as never);
   });
 
   it('maps decimal strings and tenant-scoped payment context', async () => {
@@ -160,5 +168,52 @@ describe('PaymentsService', () => {
     })).rejects.toMatchObject({
       extensions: { code: 'NOT_FOUND' },
     });
+  });
+
+  it('submits a bounded Stripe refund and returns recalculated balances', async () => {
+    repository.prepareRefund.mockResolvedValue({
+      kind: 'prepared',
+      refundId: 31,
+      paymentId: 7,
+      paymentIntentId: 'pi_payment_7',
+      stripeAccountId: 'acct_Merchant123',
+      amount: '25.50',
+      currency: 'USD',
+      reason: 'Customer request',
+      idempotencyKey: 'refund-request-0001',
+    });
+    stripe.create.mockResolvedValue({
+      kind: 'accepted',
+      refundId: 're_Refund31',
+      status: 'succeeded',
+      failureCode: null,
+      failureMessage: null,
+    });
+    repository.completeRefund.mockResolvedValue({
+      payment: {
+        ...payment,
+        payment_method: PaymentMethod.STRIPE,
+        stripe_payment_intent_id: 'pi_payment_7',
+        refund_amount: '25.50',
+        refunded_at: new Date('2026-08-26T12:00:00.000Z'),
+        refund_reason: 'Customer request',
+      },
+      invoice: { amount_paid: '100.00', amount_due: '25.50', status: 'partial' },
+      refundStatus: 'succeeded',
+    });
+
+    await expect(service.refund(3, 7, {
+      amount: '25.50',
+      reason: ' Customer request ',
+      idempotencyKey: 'refund-request-0001',
+    })).resolves.toMatchObject({
+      payment: { refundedAmount: '25.50', refundableAmount: '100.00' },
+      invoice: { amountPaid: '100.00', amountDue: '25.50', status: 'partial' },
+      refundStatus: 'succeeded',
+    });
+    expect(stripe.create).toHaveBeenCalledWith(expect.objectContaining({
+      amount: '25.50',
+      idempotencyKey: 'payment-refund:3:refund-request-0001',
+    }));
   });
 });

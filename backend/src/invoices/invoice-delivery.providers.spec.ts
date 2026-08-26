@@ -33,6 +33,8 @@ describe('StripeInvoicePaymentLinkProvider', () => {
       json: async () => ({
         id: 'cs_existing', status: 'open', url: 'https://checkout.test/existing',
         amount_total: 2606, currency: 'usd',
+        success_url: 'https://app.itemize.test/invoice/payment/success?session_id={CHECKOUT_SESSION_ID}',
+        cancel_url: 'https://app.itemize.test/invoice/payment/cancelled',
         metadata: { invoice_id: '12', organization_id: '4' },
       }),
     });
@@ -71,7 +73,10 @@ describe('StripeInvoicePaymentLinkProvider', () => {
     expect(createCall[1].body).toContain('unit_amount%5D=2606');
     expect(createCall[1].body).not.toContain('customer_email');
     expect(createCall[1].body).toContain(
-      'success_url=https%3A%2F%2Fapp.itemize.test%2Finvoices',
+      'success_url=https%3A%2F%2Fapp.itemize.test%2Finvoice%2Fpayment%2Fsuccess%3Fsession_id%3D%7BCHECKOUT_SESSION_ID%7D',
+    );
+    expect(createCall[1].body).toContain(
+      'cancel_url=https%3A%2F%2Fapp.itemize.test%2Finvoice%2Fpayment%2Fcancelled',
     );
   });
 

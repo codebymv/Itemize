@@ -82,6 +82,12 @@ const {
   runInvoicePaymentUrlMigration,
 } = require('./db_invoice_payment_url_migrations');
 const {
+  runInvoicePaymentResultMigration,
+} = require('./db_invoice_payment_result_migrations');
+const {
+  runPaymentRefundMigration,
+} = require('./db_payment_refund_migrations');
+const {
   runInvoiceHostedUrlMigration,
 } = require('./db_invoice_hosted_url_migrations');
 const {
@@ -593,6 +599,16 @@ const initializeDatabase = async (pool) => {
       pool,
       'invoice_payment_urls_text_v1',
       runInvoicePaymentUrlMigration,
+    );
+    await runMigrationOnce(
+      pool,
+      'invoice_payment_results_v1',
+      runInvoicePaymentResultMigration,
+    );
+    await runMigrationOnce(
+      pool,
+      'payment_refunds_v1',
+      runPaymentRefundMigration,
     );
     await runMigrationOnce(
       pool,

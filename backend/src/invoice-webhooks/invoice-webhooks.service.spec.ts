@@ -44,6 +44,7 @@ describe('InvoiceWebhooksService', () => {
       id: 'evt_invoice_1',
       type: 'checkout.session.completed',
       connectedAccount: null,
+      refund: null,
       session: {
         id: 'cs_invoice_1',
         invoiceId: 12,
@@ -74,6 +75,7 @@ describe('InvoiceWebhooksService', () => {
       id: 'evt_account_1',
       type: 'account.updated',
       session: null,
+      refund: null,
       connectedAccount: {
         stripeAccountId: 'acct_Merchant123',
         connected: true,
@@ -93,6 +95,7 @@ describe('InvoiceWebhooksService', () => {
       id: 'evt_account_2',
       type: 'account.application.deauthorized',
       session: null,
+      refund: null,
       connectedAccount: {
         stripeAccountId: 'acct_Merchant123',
         connected: false,
@@ -116,6 +119,41 @@ describe('InvoiceWebhooksService', () => {
         }),
       }),
     );
+  });
+
+  it('normalizes connected-account refunds with exact cents', async () => {
+    await service.process({
+      id: 'evt_refund_1',
+      type: 'refund.updated',
+      account: 'acct_Merchant123',
+      data: {
+        object: {
+          id: 're_Refund123',
+          payment_intent: 'pi_invoice_1',
+          amount: 1250,
+          currency: 'usd',
+          status: 'succeeded',
+          metadata: { itemize_reason: 'Customer request' },
+        },
+      },
+    } as unknown as Stripe.Event);
+
+    expect(repository.process).toHaveBeenCalledWith({
+      id: 'evt_refund_1',
+      type: 'refund.updated',
+      session: null,
+      connectedAccount: null,
+      refund: {
+        refundId: 're_Refund123',
+        paymentReference: 'pi_invoice_1',
+        stripeAccountId: 'acct_Merchant123',
+        amount: '12.50',
+        currency: 'USD',
+        status: 'succeeded',
+        reason: 'Customer request',
+        failureCode: null,
+      },
+    });
   });
 
   it('records authoritative paid evidence and keeps internal ownership private', async () => {

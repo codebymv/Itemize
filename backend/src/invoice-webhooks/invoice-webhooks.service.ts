@@ -44,6 +44,7 @@ export class InvoiceWebhooksService {
     const type = this.text(event?.type, 100);
     let session: StripeCheckoutSession | null = null;
     let connectedAccount: StripeInvoiceEvent['connectedAccount'] = null;
+    let refund: StripeInvoiceEvent['refund'] = null;
     if (type === 'checkout.session.completed') {
       session = this.session(event.data?.object);
     } else if (
@@ -51,8 +52,55 @@ export class InvoiceWebhooksService {
       type === 'account.application.deauthorized'
     ) {
       connectedAccount = this.connectedAccount(event, type);
+    } else if (
+      type === 'refund.created' || type === 'refund.updated' || type === 'refund.failed'
+    ) {
+      refund = this.refund(event);
     }
-    return { id, type, session, connectedAccount };
+    return { id, type, session, connectedAccount, refund };
+  }
+
+  private refund(event: Stripe.Event): NonNullable<StripeInvoiceEvent['refund']> {
+    const source = event.data?.object && typeof event.data.object === 'object'
+      ? event.data.object as unknown as Record<string, unknown>
+      : {};
+    const refundId = this.text(source.id, 255);
+    const paymentReference = this.reference(source.payment_intent, 'pi_');
+    const stripeAccountId = this.text(event.account, 255);
+    const cents = source.amount;
+    const currency = this.text(source.currency, 3).toUpperCase();
+    const rawStatus = this.text(source.status, 24);
+    if (
+      !/^re_[A-Za-z0-9_]+$/.test(refundId) ||
+      !/^pi_[A-Za-z0-9_]+$/.test(paymentReference) ||
+      !STRIPE_ACCOUNT_ID.test(stripeAccountId) ||
+      !Number.isSafeInteger(cents) || Number(cents) < 1 ||
+      !/^[A-Z]{3}$/.test(currency) ||
+      !['pending', 'requires_action', 'succeeded', 'failed', 'canceled'].includes(rawStatus)
+    ) {
+      throw new StripeInvoiceWebhookInputError();
+    }
+    return {
+      refundId,
+      paymentReference,
+      stripeAccountId,
+      amount: (Number(cents) / 100).toFixed(2),
+      currency,
+      status: rawStatus as NonNullable<StripeInvoiceEvent['refund']>['status'],
+      reason: this.optionalText(source.metadata && typeof source.metadata === 'object'
+        ? (source.metadata as Record<string, unknown>).itemize_reason
+        : source.reason, 500),
+      failureCode: this.optionalText(source.failure_reason, 100),
+    };
+  }
+
+  private reference(value: unknown, prefix: string): string {
+    if (typeof value === 'string') return value;
+    if (value && typeof value === 'object' && 'id' in value) {
+      const id = (value as { id?: unknown }).id;
+      return typeof id === 'string' && id.startsWith(prefix) ? id : '';
+    }
+    return '';
   }
 
   private connectedAccount(

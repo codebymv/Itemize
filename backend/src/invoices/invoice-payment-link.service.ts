@@ -61,7 +61,7 @@ export class InvoicePaymentLinkService {
         customerName: intent.customer_name,
         customerEmail: intent.customer_email,
         existingSessionId: null,
-        idempotencyKey: `invoice-payment-link:${organizationId}:${intent.id}`,
+        idempotencyKey: `invoice-payment-link:${organizationId}:${intent.id}:public-result-v1`,
         stripeAccountId,
       });
       if (provider.kind === 'rejected') {

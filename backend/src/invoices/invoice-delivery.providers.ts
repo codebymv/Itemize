@@ -103,6 +103,9 @@ export class StripeInvoicePaymentLinkProvider implements InvoicePaymentLinkProvi
       return { kind: 'rejected', message: 'Invoice has no payable balance' };
     }
     if (request.existingSessionId) {
+      const origin = this.frontendOrigin();
+      const successUrl = `${origin}/invoice/payment/success?session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = `${origin}/invoice/payment/cancelled`;
       const existing = await this.request(
         `/v1/checkout/sessions/${encodeURIComponent(request.existingSessionId)}`,
         secret,
@@ -116,7 +119,9 @@ export class StripeInvoicePaymentLinkProvider implements InvoicePaymentLinkProvi
         Number(existing.body.amount_total) === amount &&
         String(existing.body.currency ?? '').toUpperCase() === request.currency.toUpperCase() &&
         String(metadata?.invoice_id ?? '') === String(request.invoiceId) &&
-        String(metadata?.organization_id ?? '') === String(request.organizationId)
+        String(metadata?.organization_id ?? '') === String(request.organizationId) &&
+        existing.body.success_url === successUrl &&
+        existing.body.cancel_url === cancelUrl
       ) {
         return {
           kind: 'ready', sessionId: request.existingSessionId,
@@ -134,8 +139,8 @@ export class StripeInvoicePaymentLinkProvider implements InvoicePaymentLinkProvi
         request.customerName || 'Invoice Payment',
       'line_items[0][price_data][unit_amount]': String(amount),
       'line_items[0][quantity]': '1',
-      success_url: `${origin}/invoices?payment=success&invoice=${request.invoiceId}`,
-      cancel_url: `${origin}/invoices?payment=cancelled&invoice=${request.invoiceId}`,
+      success_url: `${origin}/invoice/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/invoice/payment/cancelled`,
       'metadata[invoice_id]': String(request.invoiceId),
       'metadata[invoice_number]': request.invoiceNumber,
       'metadata[organization_id]': String(request.organizationId),

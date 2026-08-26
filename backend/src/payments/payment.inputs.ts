@@ -39,3 +39,15 @@ export class RecordInvoicePaymentInput {
   @Field(() => String, { nullable: true })
   notes?: string | null;
 }
+
+@InputType()
+export class RefundPaymentInput {
+  @Field(() => String, { nullable: true })
+  amount?: string;
+
+  @Field(() => String, { nullable: true })
+  reason?: string;
+
+  @Field(() => String)
+  idempotencyKey: string;
+}

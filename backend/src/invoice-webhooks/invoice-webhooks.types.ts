@@ -16,6 +16,16 @@ export type StripeInvoiceEvent = {
     stripeAccountId: string;
     connected: boolean | null;
   } | null;
+  refund: {
+    refundId: string;
+    paymentReference: string;
+    stripeAccountId: string;
+    amount: string;
+    currency: string;
+    status: 'pending' | 'requires_action' | 'succeeded' | 'failed' | 'canceled';
+    reason: string | null;
+    failureCode: string | null;
+  } | null;
 };
 
 export type StripeInvoiceWebhookResult = {

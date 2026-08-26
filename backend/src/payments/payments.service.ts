@@ -7,6 +7,7 @@ import {
   PaymentPage,
   PaymentStatus,
   RecordPaymentResult,
+  RefundPaymentResult,
 } from './payment.types';
 import {
   PaymentRow,
@@ -16,7 +17,9 @@ import {
 import {
   RecordInvoicePaymentInput,
   RecordPaymentInput,
+  RefundPaymentInput,
 } from './payment.inputs';
+import { StripeRefundProvider } from './stripe-refund.provider';
 
 const ORGANIZATION_PAYMENT_METHODS = new Set<PaymentMethod>([
   PaymentMethod.CARD,
@@ -34,7 +37,10 @@ const ORGANIZATION_PAYMENT_STATUSES = new Set<PaymentStatus>([
 
 @Injectable()
 export class PaymentsService {
-  constructor(private readonly payments: PaymentsRepository) {}
+  constructor(
+    private readonly payments: PaymentsRepository,
+    private readonly stripeRefunds: StripeRefundProvider,
+  ) {}
 
   async list(
     organizationId: number,
@@ -100,6 +106,66 @@ export class PaymentsService {
       paymentDate: null,
       notes: this.notes(input.notes),
     });
+  }
+
+  async refund(
+    organizationId: number,
+    paymentId: number,
+    input: RefundPaymentInput,
+  ): Promise<RefundPaymentResult> {
+    this.id(paymentId, 'paymentId');
+    const idempotencyKey = input.idempotencyKey.trim();
+    if (!/^[A-Za-z0-9:_-]{16,128}$/.test(idempotencyKey)) {
+      this.invalid('idempotencyKey', 'INVALID_IDEMPOTENCY_KEY');
+    }
+    const amount = input.amount === undefined ? null : this.amount(input.amount);
+    const reason = this.notes(input.reason);
+    const prepared = await this.payments.prepareRefund(
+      organizationId,
+      paymentId,
+      amount,
+      reason,
+      idempotencyKey,
+    );
+    if (prepared.kind === 'payment-not-found') {
+      throw itemizeGraphqlError('Payment not found', 'NOT_FOUND');
+    }
+    if (prepared.kind === 'not-refundable') {
+      throw itemizeGraphqlError(prepared.reason, 'BAD_USER_INPUT', {
+        field: 'amount',
+        reason: 'PAYMENT_NOT_REFUNDABLE',
+      });
+    }
+    const provider = await this.stripeRefunds.create({
+      paymentIntentId: prepared.paymentIntentId,
+      stripeAccountId: prepared.stripeAccountId,
+      amount: prepared.amount,
+      paymentId: prepared.paymentId,
+      organizationId,
+      idempotencyKey: `payment-refund:${organizationId}:${prepared.idempotencyKey}`,
+      reason: prepared.reason,
+    });
+    if (provider.kind === 'rejected') {
+      await this.payments.failRefund(organizationId, prepared.refundId, provider.message);
+      throw itemizeGraphqlError(provider.message, 'BAD_USER_INPUT', {
+        field: 'paymentId',
+        reason: 'REFUND_REJECTED',
+      });
+    }
+    const completed = await this.payments.completeRefund(
+      organizationId,
+      prepared.refundId,
+      provider,
+    );
+    return {
+      payment: this.map(completed.payment),
+      invoice: completed.invoice === null ? null : {
+        amountPaid: completed.invoice.amount_paid,
+        amountDue: completed.invoice.amount_due,
+        status: completed.invoice.status,
+      },
+      refundStatus: completed.refundStatus,
+    };
   }
 
   private async persist(
@@ -216,6 +282,10 @@ export class PaymentsService {
     description: row.description,
     notes: row.notes,
     receiptUrl: row.receipt_url,
+    refundedAmount: row.refund_amount || '0.00',
+    refundableAmount: Math.max(0, Number(row.amount) - Number(row.refund_amount || 0)).toFixed(2),
+    refundedAt: row.refunded_at === null ? null : new Date(row.refunded_at),
+    refundReason: row.refund_reason,
     paidAt: row.paid_at === null ? null : new Date(row.paid_at),
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),

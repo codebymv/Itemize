@@ -22,16 +22,21 @@ import {
 } from './invoice-delivery.providers';
 import { PdfLibInvoiceRenderer } from './invoice-pdf.renderer';
 import { InvoicePdfBrandAssets } from './invoice-pdf-brand-assets';
+import { InvoicePaymentResultController } from './invoice-payment-result.controller';
+import { InvoicePaymentResultRepository } from './invoice-payment-result.repository';
+import { InvoicePaymentResultService } from './invoice-payment-result.service';
 
 @Module({
   imports: [ActivationModule, AuthModule, BillingModule, GetStartedModule, OrganizationsModule],
-  controllers: [InvoicePdfController],
+  controllers: [InvoicePdfController, InvoicePaymentResultController],
   providers: [
     InvoicesRepository,
     InvoicesService,
     InvoiceEmailPreviewService,
     InvoiceEmailDeliveryService,
     InvoicePaymentLinkService,
+    InvoicePaymentResultRepository,
+    InvoicePaymentResultService,
     InvoicePdfGuard,
     InvoicePdfService,
     ResendInvoiceEmailProvider,

@@ -99,7 +99,7 @@ export class InvoiceEmailDeliveryService {
           customerEmail: claimed.recipient_email,
           existingSessionId: invoice.stripe_payment_intent_id
             ? String(invoice.stripe_payment_intent_id) : null,
-          idempotencyKey: `invoice-payment:${organizationId}:${claimed.id}`,
+          idempotencyKey: `invoice-payment:${organizationId}:${claimed.id}:public-result-v1`,
           stripeAccountId: await this.invoices.findConnectedStripeAccountId(organizationId),
         });
         if (link.kind === 'rejected') {
