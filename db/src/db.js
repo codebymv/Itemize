@@ -79,6 +79,9 @@ const {
   runInvoicePaymentLinkMigration,
 } = require('./db_invoice_payment_link_migrations');
 const {
+  runInvoicePaymentUrlMigration,
+} = require('./db_invoice_payment_url_migrations');
+const {
   runInvoiceLogoDeletionMigration,
 } = require('./db_invoice_logo_deletion_migrations');
 const {
@@ -583,6 +586,11 @@ const initializeDatabase = async (pool) => {
     );
     await runMigrationOnce(pool, 'invoice_email_deliveries', runInvoiceEmailDeliveryMigration);
     await runMigrationOnce(pool, 'invoice_payment_link_intents', runInvoicePaymentLinkMigration);
+    await runMigrationOnce(
+      pool,
+      'invoice_payment_urls_text_v1',
+      runInvoicePaymentUrlMigration,
+    );
     await runMigrationOnce(pool, 'invoice_logo_deletion_jobs', runInvoiceLogoDeletionMigration);
     await runMigrationOnce(
       pool,
