@@ -19,6 +19,7 @@ import { Send, Mail, Plus, X, CreditCard, Eye, EyeOff, FileText, ChevronDown, Ch
 import { Business, Invoice } from '@/services/invoicesApi';
 import { InvoiceEmailPreview } from './InvoiceEmailPreview';
 import { InlineInvoicePreview } from './InlineInvoicePreview';
+import { usePaymentLinkAvailability } from '../hooks/usePaymentLinkAvailability';
 
 interface SendInvoiceModalProps {
     open: boolean;
@@ -71,7 +72,7 @@ export function SendInvoiceModal({
     dueDate,
     business,
     invoice,
-    paymentLinksAvailable = false,
+    paymentLinksAvailable: initialPaymentLinksAvailable,
     senderName,
 }: SendInvoiceModalProps) {
     const [subject, setSubject] = useState('');
@@ -81,6 +82,11 @@ export function SendInvoiceModal({
     const [includePaymentLink, setIncludePaymentLink] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
     const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+    const {
+        paymentLinksAvailable,
+        checkingPaymentLinks,
+        paymentLinkCheckFailed,
+    } = usePaymentLinkAvailability(open, initialPaymentLinksAvailable);
 
     // Reset form when modal opens
     useEffect(() => {
@@ -114,7 +120,15 @@ export function SendInvoiceModal({
     };
 
     const handleSend = () => {
-        onSend({ subject, message, ccEmails, includePaymentLink });
+        onSend({
+            subject,
+            message,
+            ccEmails,
+            includePaymentLink: includePaymentLink
+                && paymentLinksAvailable
+                && !checkingPaymentLinks
+                && !paymentLinkCheckFailed,
+        });
     };
 
     return (
@@ -210,7 +224,7 @@ export function SendInvoiceModal({
                                 id="includePaymentLink"
                                 checked={includePaymentLink}
                                 onCheckedChange={(checked) => setIncludePaymentLink(checked as boolean)}
-                                disabled={!paymentLinksAvailable}
+                                disabled={checkingPaymentLinks || paymentLinkCheckFailed || !paymentLinksAvailable}
                                 className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                             />
                             <div className="flex-1">
@@ -222,7 +236,11 @@ export function SendInvoiceModal({
                                     Include Payment Link
                                 </Label>
                                 <p className="text-xs text-muted-foreground">
-                                    {paymentLinksAvailable ? (
+                                    {checkingPaymentLinks ? (
+                                        'Checking Stripe connection...'
+                                    ) : paymentLinkCheckFailed ? (
+                                        'Unable to verify Stripe right now. Close this dialog and try again.'
+                                    ) : paymentLinksAvailable ? (
                                         'Add a "Pay Now" button to the email for easy online payment'
                                     ) : (
                                         <>
