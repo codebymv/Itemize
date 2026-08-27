@@ -7,6 +7,7 @@ import {
   createOrganizationViaGraphql,
   deleteOrganizationViaGraphql,
   ensureDefaultOrganizationViaGraphql,
+  getOrganizationActivityViaGraphql,
   getOrganizationMembersViaGraphql,
   getOrganizationInvitationPreviewViaGraphql,
   getOrganizationInvitationsViaGraphql,
@@ -94,6 +95,30 @@ describe('organization GraphQL consumer', () => {
     await expect(getViewerOrganizationAllowanceViaGraphql()).resolves.toEqual(allowance);
     const body = JSON.parse(String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body));
     expect(body.query).toContain('viewerOrganizationAllowance');
+    expect(fetchCsrfToken).not.toHaveBeenCalled();
+  });
+
+  it('reads manager-visible organization activity without a CSRF token', async () => {
+    const activity = [{
+      id: '42',
+      organizationId: 4,
+      eventType: 'organization.ownership_transferred',
+      actorUserId: 7,
+      actorName: 'Ada',
+      actorEmail: 'ada@test.itemize',
+      targetUserId: 8,
+      targetName: 'Grace',
+      targetEmail: 'grace@test.itemize',
+      payload: { targetUserId: 8 },
+      occurredAt: '2026-08-27T12:00:00.000Z',
+    }];
+    vi.mocked(fetch).mockResolvedValueOnce(
+      response({ data: { organizationActivity: activity } }),
+    );
+
+    await expect(getOrganizationActivityViaGraphql(4, 10)).resolves.toEqual(activity);
+    const body = JSON.parse(String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body));
+    expect(body.variables).toEqual({ organizationId: 4, first: 10 });
     expect(fetchCsrfToken).not.toHaveBeenCalled();
   });
 

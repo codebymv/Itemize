@@ -10,6 +10,7 @@ import {
 import {
   DeleteOrganizationResult,
   Organization,
+  OrganizationActivity,
   OrganizationAllowance,
   OrganizationInvitation,
   OrganizationInvitationAcceptance,
@@ -50,6 +51,14 @@ export class OrganizationsResolver {
     @Args('organizationId', { type: () => Int }) organizationId: number,
   ): Promise<OrganizationMember[]> {
     return this.organizations.members(this.userId(), organizationId);
+  }
+
+  @Query(() => [OrganizationActivity])
+  organizationActivity(
+    @Args('organizationId', { type: () => Int }) organizationId: number,
+    @Args('first', { type: () => Int, defaultValue: 20 }) first: number,
+  ): Promise<OrganizationActivity[]> {
+    return this.organizations.activity(this.userId(), organizationId, first);
   }
 
   @Query(() => [OrganizationInvitation])

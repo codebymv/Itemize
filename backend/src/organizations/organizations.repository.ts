@@ -1,7 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export type OrganizationRow = {
   id: number | string;
@@ -51,6 +52,26 @@ export type OrganizationAllowanceRow = {
   sourcePlan: string;
 };
 
+export type OrganizationActivityRow = {
+  id: number | string;
+  organization_id: number | string;
+  event_type: string;
+  actor_user_id: number | string | null;
+  actor_name: string | null;
+  actor_email: string | null;
+  target_user_id: number | string | null;
+  target_name: string | null;
+  target_email: string | null;
+  payload: unknown;
+  occurred_at: Date | string;
+};
+
+export type OrganizationOwnershipTransferDelivery = {
+  organizationName: string;
+  previousOwner: { name: string | null; email: string };
+  newOwner: { name: string | null; email: string };
+};
+
 export type OrganizationDeleteOutcome =
   | { kind: 'deleted' }
   | { kind: 'forbidden' }
@@ -75,7 +96,11 @@ export type OrganizationMemberRemovalOutcome =
   | { kind: 'admin_peer_forbidden' };
 
 export type OrganizationOwnershipTransferOutcome =
-  | { kind: 'ok'; row: OrganizationMemberRow }
+  | {
+      kind: 'ok';
+      row: OrganizationMemberRow;
+      delivery: OrganizationOwnershipTransferDelivery;
+    }
   | { kind: 'forbidden' }
   | { kind: 'owner_required' }
   | { kind: 'member_not_found' }
@@ -119,7 +144,10 @@ const organizationMemberSelection = `
 
 @Injectable()
 export class OrganizationsRepository {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async listForUser(userId: number): Promise<OrganizationRow[]> {
     const result = await this.pool.query<OrganizationRow>(
@@ -147,6 +175,50 @@ export class OrganizationsRepository {
       [userId, organizationId],
     );
     return result.rows[0] ?? null;
+  }
+
+  async listActivity(
+    userId: number,
+    organizationId: number,
+    first: number,
+  ): Promise<OrganizationAccessOutcome<OrganizationActivityRow[]>> {
+    const result = await this.pool.query<
+      Omit<OrganizationActivityRow, 'id'> & { id: number | string | null }
+    >(
+      `WITH access AS (
+         SELECT 1
+         FROM organization_members
+         WHERE organization_id = $1 AND user_id = $2
+           AND role IN ('owner','admin')
+       )
+       SELECT event.id,event.organization_id,event.event_type,
+              event.actor_user_id,actor.name AS actor_name,
+              actor.email AS actor_email,
+              target.id AS target_user_id,target.name AS target_name,
+              target.email AS target_email,event.payload,event.occurred_at
+       FROM access
+       LEFT JOIN LATERAL (
+         SELECT *
+         FROM notification_events
+         WHERE organization_id = $1
+           AND event_type LIKE 'organization.%'
+         ORDER BY occurred_at DESC,id DESC
+         LIMIT $3
+       ) event ON TRUE
+       LEFT JOIN users actor ON actor.id = event.actor_user_id
+       LEFT JOIN users target ON target.id = CASE
+         WHEN event.payload->>'targetUserId' ~ '^[1-9][0-9]*$'
+         THEN (event.payload->>'targetUserId')::int
+         ELSE NULL
+       END
+       ORDER BY event.occurred_at DESC,event.id DESC`,
+      [organizationId, userId, first],
+    );
+    if (result.rows.length === 0) return { kind: 'forbidden' };
+    return {
+      kind: 'ok',
+      value: result.rows.filter((row) => row.id !== null) as OrganizationActivityRow[],
+    };
   }
 
   create(
@@ -195,6 +267,15 @@ export class OrganizationsRepository {
          ) VALUES ($1, $2, 'owner', NOW())`,
         [organization.id, userId],
       );
+      await this.notifications.recordEventWithClient(client, {
+        organizationId: Number(organization.id),
+        actorUserId: userId,
+        eventType: 'organization.created',
+        entityType: 'organization',
+        entityId: Number(organization.id),
+        dedupeKey: `organization-created:${randomUUID()}`,
+        payload: { targetUserId: userId },
+      });
       const selected = await client.query<{ selected: boolean }>(
         `UPDATE users
          SET default_organization_id = $1
@@ -281,6 +362,17 @@ export class OrganizationsRepository {
           row.is_default === true,
         ],
       );
+      await this.notifications.recordEventWithClient(client, {
+        organizationId,
+        actorUserId: userId,
+        eventType: 'organization.updated',
+        entityType: 'organization',
+        entityId: organizationId,
+        dedupeKey: `organization-updated:${randomUUID()}`,
+        payload: {
+          changedFields: Object.keys(values).sort(),
+        },
+      });
       return { kind: 'ok', value: updated.rows[0] };
     });
   }
@@ -457,6 +549,15 @@ export class OrganizationsRepository {
          ) VALUES ($1, $2, 'owner', NOW())`,
         [organization.id, userId],
       );
+      await this.notifications.recordEventWithClient(client, {
+        organizationId: Number(organization.id),
+        actorUserId: userId,
+        eventType: 'organization.created',
+        entityType: 'organization',
+        entityId: Number(organization.id),
+        dedupeKey: `organization-created:${randomUUID()}`,
+        payload: { targetUserId: userId },
+      });
       await client.query(
         `UPDATE users
          SET default_organization_id = $1
@@ -590,6 +691,18 @@ export class OrganizationsRepository {
          JOIN users u ON u.id = inserted.user_id`,
         [organizationId, user.rows[0].id, values.role, actorUserId],
       );
+      await this.notifications.recordEventWithClient(client, {
+        organizationId,
+        actorUserId,
+        eventType: 'organization.member_added',
+        entityType: 'organization_member',
+        entityId: Number(inserted.rows[0].id),
+        dedupeKey: `organization-member-added:${randomUUID()}`,
+        payload: {
+          targetUserId: Number(inserted.rows[0].user_id),
+          role: inserted.rows[0].role,
+        },
+      });
       return { kind: 'ok', row: inserted.rows[0] };
     });
   }
@@ -648,6 +761,19 @@ export class OrganizationsRepository {
          JOIN users u ON u.id = updated.user_id`,
         [role, memberId, organizationId],
       );
+      await this.notifications.recordEventWithClient(client, {
+        organizationId,
+        actorUserId,
+        eventType: 'organization.member_role_changed',
+        entityType: 'organization_member',
+        entityId: memberId,
+        dedupeKey: `organization-member-role-changed:${randomUUID()}`,
+        payload: {
+          targetUserId: Number(target.rows[0].user_id),
+          previousRole: target.rows[0].role,
+          role,
+        },
+      });
       return { kind: 'ok', row: updated.rows[0] };
     });
   }
@@ -702,6 +828,21 @@ export class OrganizationsRepository {
         };
       }
 
+      const context = await client.query<{
+        organization_name: string;
+        actor_name: string | null;
+        actor_email: string;
+      }>(
+        `SELECT organization.name AS organization_name,
+                actor.name AS actor_name,actor.email AS actor_email
+         FROM organizations organization
+         JOIN users actor ON actor.id = $2
+         WHERE organization.id = $1`,
+        [organizationId, actorUserId],
+      );
+      const transferContext = context.rows[0];
+      if (!transferContext) return { kind: 'member_not_found' };
+
       // The partial unique-owner index is immediate, so release the current
       // owner slot before assigning it. Both writes remain invisible until
       // this transaction commits.
@@ -717,7 +858,53 @@ export class OrganizationsRepository {
          WHERE organization_id = $1 AND id = $2`,
         [organizationId, memberId],
       );
-      return { kind: 'ok', row: { ...targetRow, role: 'owner' } };
+
+      const dedupeKey = `organization-ownership-transfer:${randomUUID()}`;
+      const actorDisplay = transferContext.actor_name || transferContext.actor_email;
+      const targetDisplay = targetRow.user_name || targetRow.email;
+      const payload = {
+        previousOwnerUserId: actorUserId,
+        targetUserId: Number(targetRow.user_id),
+        previousOwnerRole: 'admin',
+        organizationName: transferContext.organization_name,
+      };
+      const event = {
+        organizationId,
+        actorUserId,
+        eventType: 'organization.ownership_transferred',
+        entityType: 'organization',
+        entityId: organizationId,
+        dedupeKey,
+        payload,
+        category: 'collaboration' as const,
+        priority: 'high' as const,
+        href: '/organization-settings',
+      };
+      await this.notifications.createWithClient(client, {
+        ...event,
+        recipientUserId: Number(targetRow.user_id),
+        title: `You now own ${transferContext.organization_name}`.slice(0, 255),
+        body: `${actorDisplay} transferred this workspace to you. Its plan and billing stay with the workspace.`,
+      });
+      await this.notifications.createWithClient(client, {
+        ...event,
+        recipientUserId: actorUserId,
+        title: 'Workspace ownership transferred',
+        body: `${targetDisplay} now owns ${transferContext.organization_name}. You remain an admin.`,
+      });
+
+      return {
+        kind: 'ok',
+        row: { ...targetRow, role: 'owner' },
+        delivery: {
+          organizationName: transferContext.organization_name,
+          previousOwner: {
+            name: transferContext.actor_name,
+            email: transferContext.actor_email,
+          },
+          newOwner: { name: targetRow.user_name, email: targetRow.email },
+        },
+      };
     });
   }
 
@@ -749,6 +936,18 @@ export class OrganizationsRepository {
       if (actor.role === 'admin' && target.rows[0].role === 'admin') {
         return { kind: 'admin_peer_forbidden' };
       }
+      await this.notifications.recordEventWithClient(client, {
+        organizationId,
+        actorUserId,
+        eventType: 'organization.member_removed',
+        entityType: 'organization_member',
+        entityId: memberId,
+        dedupeKey: `organization-member-removed:${randomUUID()}`,
+        payload: {
+          targetUserId: Number(target.rows[0].user_id),
+          previousRole: target.rows[0].role,
+        },
+      });
       await client.query(
         `DELETE FROM organization_members
          WHERE id = $1 AND organization_id = $2`,
@@ -775,6 +974,20 @@ export class OrganizationsRepository {
       );
       if (!membership) return { kind: 'forbidden' };
       if (membership.role === 'owner') return { kind: 'owner_cannot_leave' };
+      const member = await client.query<{ id: number | string }>(
+        `SELECT id FROM organization_members
+         WHERE organization_id = $1 AND user_id = $2`,
+        [organizationId, userId],
+      );
+      await this.notifications.recordEventWithClient(client, {
+        organizationId,
+        actorUserId: userId,
+        eventType: 'organization.member_left',
+        entityType: 'organization_member',
+        entityId: Number(member.rows[0].id),
+        dedupeKey: `organization-member-left:${randomUUID()}`,
+        payload: { targetUserId: userId, previousRole: membership.role },
+      });
       await client.query(
         `DELETE FROM organization_members
          WHERE organization_id = $1 AND user_id = $2`,

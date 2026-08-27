@@ -14,6 +14,7 @@ import {
   getContactContent,
   getContacts,
   getOrganization,
+  getOrganizationActivity,
   getOrganizationInvitations,
   getOrganizationMembers,
   getOrganizations,
@@ -47,6 +48,7 @@ import {
   deleteOrganizationViaGraphql,
   ensureDefaultOrganizationViaGraphql,
   getOrganizationInvitationsViaGraphql,
+  getOrganizationActivityViaGraphql,
   getOrganizationMembersViaGraphql,
   getOrganizationViaGraphql,
   getOrganizationsViaGraphql,
@@ -89,6 +91,7 @@ vi.mock('./organizationsGraphql', () => ({
   deleteOrganizationViaGraphql: vi.fn(),
   ensureDefaultOrganizationViaGraphql: vi.fn(),
   getOrganizationInvitationsViaGraphql: vi.fn(),
+  getOrganizationActivityViaGraphql: vi.fn(),
   getOrganizationMembersViaGraphql: vi.fn(),
   getOrganizationViaGraphql: vi.fn(),
   getOrganizationsViaGraphql: vi.fn(),
@@ -150,6 +153,7 @@ describe('contacts API GraphQL transport', () => {
     vi.mocked(updateOrganizationViaGraphql).mockResolvedValue(organization);
     vi.mocked(getOrganizationMembersViaGraphql).mockResolvedValue([member]);
     vi.mocked(getOrganizationInvitationsViaGraphql).mockResolvedValue([invitation]);
+    vi.mocked(getOrganizationActivityViaGraphql).mockResolvedValue([]);
     vi.mocked(createOrganizationInvitationViaGraphql).mockResolvedValue(invitation);
     vi.mocked(resendOrganizationInvitationViaGraphql).mockResolvedValue(invitation);
     vi.mocked(updateOrganizationMemberRoleViaGraphql).mockResolvedValue(member);
@@ -174,6 +178,7 @@ describe('contacts API GraphQL transport', () => {
     await expect(selectOrganization(4)).resolves.toEqual(organization);
     await expect(getOrganizationMembers(4)).resolves.toEqual([member]);
     await expect(getOrganizationInvitations(4)).resolves.toEqual([invitation]);
+    await expect(getOrganizationActivity(4, 10)).resolves.toEqual([]);
     await expect(inviteMember(4, member.email, 'member')).resolves.toEqual(invitation);
     await expect(resendOrganizationInvitation(4, 12)).resolves.toEqual(invitation);
     await revokeOrganizationInvitation(4, 12);
@@ -189,6 +194,7 @@ describe('contacts API GraphQL transport', () => {
     expect(deleteOrganizationViaGraphql).toHaveBeenCalledWith(4);
     expect(selectOrganizationViaGraphql).toHaveBeenCalledWith(4);
     expect(getOrganizationInvitationsViaGraphql).toHaveBeenCalledWith(4);
+    expect(getOrganizationActivityViaGraphql).toHaveBeenCalledWith(4, 10);
     expect(createOrganizationInvitationViaGraphql).toHaveBeenCalledWith(
       4,
       member.email,

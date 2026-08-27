@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { createHash, randomBytes } from 'node:crypto';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import { NotificationsService } from '../notifications/notifications.service';
 import { OrganizationAccessRole } from './organizations.repository';
 
 export type OrganizationInvitationRow = {
@@ -56,7 +57,10 @@ const invitationSelection = `
 
 @Injectable()
 export class OrganizationInvitationsRepository {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async list(actorUserId: number, organizationId: number) {
     const access = await this.pool.query<{ role: string }>(
@@ -127,6 +131,15 @@ export class OrganizationInvitationsRepository {
          LEFT JOIN users inviter ON inviter.id = inserted.invited_by`,
         [organizationId, email, role, prepared.hash, actorUserId],
       );
+      await this.notifications.recordEventWithClient(client, {
+        organizationId,
+        actorUserId,
+        eventType: 'organization.invitation_created',
+        entityType: 'organization_invitation',
+        entityId: Number(result.rows[0].id),
+        dedupeKey: `organization-invitation-created:${result.rows[0].id}`,
+        payload: { targetEmail: result.rows[0].email, role: result.rows[0].role },
+      });
       return {
         kind: 'ok',
         invitation: { row: result.rows[0], token: prepared.raw, tokenHash: prepared.hash },
@@ -183,6 +196,15 @@ export class OrganizationInvitationsRepository {
          LEFT JOIN users inviter ON inviter.id = changed.invited_by`,
         [prepared.hash, actorUserId, invitationId, organizationId],
       );
+      await this.notifications.recordEventWithClient(client, {
+        organizationId,
+        actorUserId,
+        eventType: 'organization.invitation_resent',
+        entityType: 'organization_invitation',
+        entityId: invitationId,
+        dedupeKey: `organization-invitation-resent:${prepared.hash}`,
+        payload: { targetEmail: updated.rows[0].email, role: updated.rows[0].role },
+      });
       return {
         kind: 'ok',
         invitation: { row: updated.rows[0], token: prepared.raw, tokenHash: prepared.hash },
@@ -208,8 +230,8 @@ export class OrganizationInvitationsRepository {
     return this.transaction(async (client) => {
       const actor = await this.lockActor(client, actorUserId, organizationId);
       if (!actor) return { kind: 'forbidden' as const };
-      const target = await client.query<{ role: string }>(
-        `SELECT role FROM organization_invitations
+      const target = await client.query<{ role: string; email: string }>(
+        `SELECT role,email FROM organization_invitations
          WHERE id = $1 AND organization_id = $2 AND status = 'pending'
          FOR UPDATE`,
         [invitationId, organizationId],
@@ -224,6 +246,18 @@ export class OrganizationInvitationsRepository {
          WHERE id = $1`,
         [invitationId],
       );
+      await this.notifications.recordEventWithClient(client, {
+        organizationId,
+        actorUserId,
+        eventType: 'organization.invitation_revoked',
+        entityType: 'organization_invitation',
+        entityId: invitationId,
+        dedupeKey: `organization-invitation-revoked:${invitationId}`,
+        payload: {
+          targetEmail: target.rows[0].email,
+          role: target.rows[0].role,
+        },
+      });
       return { kind: 'revoked' as const };
     });
   }
@@ -281,10 +315,11 @@ export class OrganizationInvitationsRepository {
       if (quota.limit >= 0 && quota.current >= quota.limit) {
         return { kind: 'limit_reached', ...quota };
       }
-      await client.query(
+      const membership = await client.query<{ id: number | string }>(
         `INSERT INTO organization_members (
            organization_id, user_id, role, invited_by, invited_at, joined_at
-         ) VALUES ($1, $2, $3, $4, $5, NOW())`,
+         ) VALUES ($1, $2, $3, $4, $5, NOW())
+         RETURNING id`,
         [organizationId, userId, row.role, row.invited_by, row.invited_at],
       );
       await client.query(
@@ -298,6 +333,15 @@ export class OrganizationInvitationsRepository {
         'UPDATE users SET default_organization_id = $1 WHERE id = $2',
         [organizationId, userId],
       );
+      await this.notifications.recordEventWithClient(client, {
+        organizationId,
+        actorUserId: userId,
+        eventType: 'organization.invitation_accepted',
+        entityType: 'organization_member',
+        entityId: Number(membership.rows[0].id),
+        dedupeKey: `organization-invitation-accepted:${row.id}`,
+        payload: { targetUserId: userId, targetEmail: row.email, role: row.role },
+      });
       return {
         kind: 'ok',
         organizationId,

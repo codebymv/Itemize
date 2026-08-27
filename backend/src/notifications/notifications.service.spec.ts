@@ -24,6 +24,7 @@ const row: NotificationRow = {
 describe('NotificationsService', () => {
   const repository = {
     create: jest.fn(),
+    recordEvent: jest.fn(),
     findPage: jest.fn(),
     counts: jest.fn(),
     markSeen: jest.fn(),
@@ -65,6 +66,21 @@ describe('NotificationsService', () => {
       eventName: 'notificationCreated',
       payload: expect.objectContaining({ organizationId: 3 }),
     }));
+  });
+
+  it('records an audit-only organization event without a recipient projection', async () => {
+    repository.recordEvent.mockResolvedValue('43');
+    const client = {} as PoolClient;
+    await expect(service.recordEventWithClient(client, {
+      organizationId: 3,
+      actorUserId: 7,
+      eventType: 'organization.member_removed',
+      entityType: 'organization_member',
+      entityId: 9,
+      dedupeKey: 'organization-member-removed:event-1',
+      payload: { targetUserId: 8 },
+    })).resolves.toBe('43');
+    expect(realtime.enqueue).not.toHaveBeenCalled();
   });
 
   it('routes organization notifications to the preferred member or owner', async () => {

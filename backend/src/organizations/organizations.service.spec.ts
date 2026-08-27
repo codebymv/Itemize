@@ -1,9 +1,11 @@
 import {
+  OrganizationActivityRow,
   OrganizationMemberRow,
   OrganizationRow,
   OrganizationsRepository,
 } from './organizations.repository';
 import { OrganizationsService } from './organizations.service';
+import { OrganizationOwnershipEmailService } from './organization-ownership-email.service';
 
 const row = (values: Partial<OrganizationRow> = {}): OrganizationRow => ({
   id: 3,
@@ -35,6 +37,7 @@ const memberRow = (
 
 describe('OrganizationsService', () => {
   let repository: jest.Mocked<OrganizationsRepository>;
+  let ownershipEmail: jest.Mocked<OrganizationOwnershipEmailService>;
   let service: OrganizationsService;
 
   beforeEach(() => {
@@ -42,12 +45,16 @@ describe('OrganizationsService', () => {
       create: jest.fn(),
       listForUser: jest.fn(),
       organizationAllowance: jest.fn(),
+      listActivity: jest.fn(),
       update: jest.fn(),
       selectForUser: jest.fn(),
       ensureDefaultForUser: jest.fn(),
       transferOwnership: jest.fn(),
     } as unknown as jest.Mocked<OrganizationsRepository>;
-    service = new OrganizationsService(repository);
+    ownershipEmail = {
+      send: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<OrganizationOwnershipEmailService>;
+    service = new OrganizationsService(repository, ownershipEmail);
   });
 
   it('returns ownership allowance and enforces the creation boundary', async () => {
@@ -203,6 +210,11 @@ describe('OrganizationsService', () => {
     repository.transferOwnership.mockResolvedValue({
       kind: 'ok',
       row: memberRow(),
+      delivery: {
+        organizationName: 'Alpha',
+        previousOwner: { name: 'Previous Owner', email: 'previous@example.com' },
+        newOwner: { name: 'New Owner', email: 'owner@example.com' },
+      },
     });
     await expect(service.transferOwnership(7, 3, 9)).resolves.toMatchObject({
       id: 9,
@@ -210,6 +222,9 @@ describe('OrganizationsService', () => {
       role: 'owner',
       email: 'owner@example.com',
     });
+    expect(ownershipEmail.send).toHaveBeenCalledWith(expect.objectContaining({
+      organizationName: 'Alpha',
+    }));
 
     repository.transferOwnership.mockResolvedValue({ kind: 'owner_required' });
     await expect(service.transferOwnership(7, 3, 9)).rejects.toMatchObject({
@@ -234,6 +249,35 @@ describe('OrganizationsService', () => {
         current: 2,
         limit: 1,
       },
+    });
+  });
+
+  it('returns bounded manager activity and hides it from other members', async () => {
+    const activity: OrganizationActivityRow = {
+      id: '42',
+      organization_id: 3,
+      event_type: 'organization.ownership_transferred',
+      actor_user_id: 7,
+      actor_name: 'Previous Owner',
+      actor_email: 'previous@example.com',
+      target_user_id: 8,
+      target_name: 'New Owner',
+      target_email: 'owner@example.com',
+      payload: { targetUserId: 8 },
+      occurred_at: new Date('2026-08-27T12:00:00.000Z'),
+    };
+    repository.listActivity.mockResolvedValue({ kind: 'ok', value: [activity] });
+    await expect(service.activity(7, 3, 10)).resolves.toEqual([
+      expect.objectContaining({ id: '42', targetUserId: 8 }),
+    ]);
+    expect(repository.listActivity).toHaveBeenCalledWith(7, 3, 10);
+
+    repository.listActivity.mockResolvedValue({ kind: 'forbidden' });
+    await expect(service.activity(9, 3)).rejects.toMatchObject({
+      extensions: { code: 'NOT_FOUND' },
+    });
+    await expect(service.activity(7, 3, 51)).rejects.toMatchObject({
+      extensions: { code: 'BAD_USER_INPUT' },
     });
   });
 });

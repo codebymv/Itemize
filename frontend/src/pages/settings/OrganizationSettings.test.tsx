@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   },
   getMembers: vi.fn(),
   getInvitations: vi.fn(),
+  getActivity: vi.fn(),
   getBusinesses: vi.fn(),
   invite: vi.fn(),
   resendInvitation: vi.fn(),
@@ -59,6 +60,7 @@ vi.mock('@/services/contactsApi', () => ({
   deleteOrganization: vi.fn(),
   getOrganizationMembers: (...args: unknown[]) => mocks.getMembers(...args),
   getOrganizationInvitations: (...args: unknown[]) => mocks.getInvitations(...args),
+  getOrganizationActivity: (...args: unknown[]) => mocks.getActivity(...args),
   getViewerOrganizationAllowance: (...args: unknown[]) => mocks.getAllowance(...args),
   inviteMember: (...args: unknown[]) => mocks.invite(...args),
   leaveOrganization: vi.fn(),
@@ -115,6 +117,7 @@ describe('OrganizationSettings', () => {
       },
     ]);
     mocks.getInvitations.mockResolvedValue([]);
+    mocks.getActivity.mockResolvedValue([]);
     mocks.getBusinesses.mockResolvedValue([
       {
         id: 12,
@@ -220,6 +223,30 @@ describe('OrganizationSettings', () => {
       expect(mocks.transferOwnership).toHaveBeenCalledWith(7, 22);
       expect(mocks.refresh).toHaveBeenCalled();
     });
+  });
+
+  it('shows the durable ownership transfer activity to managers', async () => {
+    mocks.getActivity.mockResolvedValueOnce([
+      {
+        id: '42',
+        organizationId: 7,
+        eventType: 'organization.ownership_transferred',
+        actorUserId: 4,
+        actorName: 'Ada Lovelace',
+        actorEmail: 'ada@example.com',
+        targetUserId: 5,
+        targetName: 'Grace Hopper',
+        targetEmail: 'grace@example.com',
+        payload: {},
+        occurredAt: '2026-08-27T12:00:00.000Z',
+      },
+    ]);
+    render(<OrganizationSettings />);
+
+    expect(await screen.findByText(
+      'Ada Lovelace transferred workspace ownership to Grace Hopper.',
+    )).toBeInTheDocument();
+    expect(mocks.getActivity).toHaveBeenCalledWith(7, 20);
   });
 
   it('shows pending seat reservations and supports resend and revoke', async () => {

@@ -52,6 +52,42 @@ export class OrganizationAllowance {
 }
 
 @ObjectType()
+export class OrganizationActivity {
+  @Field(() => String)
+  id: string;
+
+  @Field(() => Int)
+  organizationId: number;
+
+  @Field()
+  eventType: string;
+
+  @Field(() => Int, { nullable: true })
+  actorUserId: number | null;
+
+  @Field(() => String, { nullable: true })
+  actorName: string | null;
+
+  @Field(() => String, { nullable: true })
+  actorEmail: string | null;
+
+  @Field(() => Int, { nullable: true })
+  targetUserId: number | null;
+
+  @Field(() => String, { nullable: true })
+  targetName: string | null;
+
+  @Field(() => String, { nullable: true })
+  targetEmail: string | null;
+
+  @Field(() => GraphQLJSON)
+  payload: Record<string, unknown>;
+
+  @Field(() => GraphQLISODateTime)
+  occurredAt: Date;
+}
+
+@ObjectType()
 export class OrganizationMember {
   @Field(() => Int)
   id: number;

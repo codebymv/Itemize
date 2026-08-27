@@ -613,6 +613,54 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     expect(ownershipRoles.rows).toContainEqual(
       expect.objectContaining({ user_id: memberId, role: 'admin' }),
     );
+    const activity = await query(
+      invitedUserToken,
+      `query Activity($organizationId: Int!) {
+        organizationActivity(organizationId: $organizationId, first: 10) {
+          id eventType actorUserId actorName targetUserId targetName payload occurredAt
+        }
+      }`,
+      { organizationId },
+    ).expect(200);
+    expect(activity.body.errors).toBeUndefined();
+    expect(activity.body.data.organizationActivity[0]).toEqual(
+      expect.objectContaining({
+        eventType: 'organization.ownership_transferred',
+        actorUserId: memberId,
+        actorName: 'Workspace Member',
+        targetUserId: invitedUserId,
+        targetName: 'Workspace Invitee',
+      }),
+    );
+    const concealedActivity = await query(
+      outsiderToken,
+      `query Activity($organizationId: Int!) {
+        organizationActivity(organizationId: $organizationId) { id }
+      }`,
+      { organizationId },
+    ).expect(200);
+    expect(concealedActivity.body.data).toBeNull();
+    expect(concealedActivity.body.errors[0].extensions.code).toBe('NOT_FOUND');
+    const ownershipNotifications = await pool.query<{
+      recipient_user_id: number;
+      title: string;
+    }>(
+      `SELECT recipient_user_id,title
+       FROM user_notifications
+       WHERE organization_id = $1
+       ORDER BY recipient_user_id`,
+      [organizationId],
+    );
+    expect(ownershipNotifications.rows).toEqual([
+      expect.objectContaining({
+        recipient_user_id: memberId,
+        title: 'Workspace ownership transferred',
+      }),
+      expect.objectContaining({
+        recipient_user_id: invitedUserId,
+        title: 'You now own GraphQL Workspace Renamed',
+      }),
+    ]);
     await expect(
       pool.query(
         `UPDATE organization_members SET role = 'owner'
@@ -977,5 +1025,33 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
       [revocableId],
     );
     expect(revokedRow.rows[0]).toEqual({ status: 'revoked', token_hash: null });
+    const invitationActivity = await pool.query<{
+      event_type: string;
+      target_email: string | null;
+    }>(
+      `SELECT event_type,payload->>'targetEmail' AS target_email
+       FROM notification_events
+       WHERE organization_id = $1
+         AND event_type LIKE 'organization.invitation_%'`,
+      [alphaId],
+    );
+    expect(invitationActivity.rows).toEqual(expect.arrayContaining([
+      {
+        event_type: 'organization.invitation_created',
+        target_email: invitedEmail,
+      },
+      {
+        event_type: 'organization.invitation_resent',
+        target_email: invitedEmail,
+      },
+      {
+        event_type: 'organization.invitation_accepted',
+        target_email: invitedEmail,
+      },
+      {
+        event_type: 'organization.invitation_revoked',
+        target_email: 'revoked@test.itemize',
+      },
+    ]));
   });
 });

@@ -53,6 +53,20 @@ export type OrganizationAllowance = {
   sourcePlan: string;
 };
 
+export type OrganizationActivity = {
+  id: string;
+  organizationId: number;
+  eventType: string;
+  actorUserId: number | null;
+  actorName: string | null;
+  actorEmail: string | null;
+  targetUserId: number | null;
+  targetName: string | null;
+  targetEmail: string | null;
+  payload: JsonRecord;
+  occurredAt: string;
+};
+
 const invitationFields = `
   id organizationId organizationName email role status invitedBy invitedByName
   invitedAt expiresAt lastSentAt deliverySent
@@ -100,6 +114,15 @@ const organizationMembersQuery = `
       invitedBy
       userName
       email
+    }
+  }
+`;
+
+const organizationActivityQuery = `
+  query OrganizationActivity($organizationId: Int!, $first: Int!) {
+    organizationActivity(organizationId: $organizationId, first: $first) {
+      id organizationId eventType actorUserId actorName actorEmail
+      targetUserId targetName targetEmail payload occurredAt
     }
   }
 `;
@@ -322,6 +345,17 @@ export const getOrganizationMembersViaGraphql = async (
     { organizationId: number }
   >(organizationMembersQuery, { organizationId });
   return data.organizationMembers.map(mapOrganizationMember);
+};
+
+export const getOrganizationActivityViaGraphql = async (
+  organizationId: number,
+  first = 20,
+): Promise<OrganizationActivity[]> => {
+  const data = await graphqlRequest<
+    { organizationActivity: OrganizationActivity[] },
+    { organizationId: number; first: number }
+  >(organizationActivityQuery, { organizationId, first });
+  return data.organizationActivity;
 };
 
 export const getOrganizationInvitationsViaGraphql = async (

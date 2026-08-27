@@ -21,6 +21,7 @@ import {
   createOrganizationViaGraphql,
   deleteOrganizationViaGraphql,
   ensureDefaultOrganizationViaGraphql,
+  getOrganizationActivityViaGraphql,
   getOrganizationMembersViaGraphql,
   getOrganizationInvitationsViaGraphql,
   getOrganizationViaGraphql,
@@ -35,6 +36,7 @@ import {
   updateOrganizationMemberRoleViaGraphql,
   updateOrganizationViaGraphql,
   type OrganizationAllowance,
+  type OrganizationActivity,
 } from './organizationsGraphql';
 
 const unwrapResponse = <T>(payload: unknown): T => {
@@ -84,6 +86,11 @@ export const selectOrganization = async (id: number): Promise<Organization> => {
 export const getOrganizationMembers = async (orgId: number): Promise<OrganizationMember[]> => {
   return getOrganizationMembersViaGraphql(orgId);
 };
+
+export const getOrganizationActivity = async (
+  orgId: number,
+  first = 20,
+): Promise<OrganizationActivity[]> => getOrganizationActivityViaGraphql(orgId, first);
 
 export const inviteMember = async (orgId: number, email: string, role: string): Promise<OrganizationInvitation> => {
   return createOrganizationInvitationViaGraphql(orgId, email, role);

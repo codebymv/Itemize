@@ -8,10 +8,13 @@ import {
 } from './organization.inputs';
 import {
   Organization,
+  OrganizationActivity,
   OrganizationAllowance,
   OrganizationMember,
 } from './organization.types';
+import { OrganizationOwnershipEmailService } from './organization-ownership-email.service';
 import {
+  OrganizationActivityRow,
   OrganizationAccessRole,
   OrganizationMemberRow,
   OrganizationRow,
@@ -23,7 +26,10 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 @Injectable()
 export class OrganizationsService {
-  constructor(private readonly organizations: OrganizationsRepository) {}
+  constructor(
+    private readonly organizations: OrganizationsRepository,
+    private readonly ownershipEmail: OrganizationOwnershipEmailService,
+  ) {}
 
   async list(userId: number): Promise<Organization[]> {
     try {
@@ -86,6 +92,34 @@ export class OrganizationsService {
       const allowance = await this.organizations.organizationAllowance(userId);
       if (!allowance) throw itemizeGraphqlError('User not found', 'NOT_FOUND');
       return allowance;
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async activity(
+    userId: number,
+    organizationId: number,
+    first = 20,
+  ): Promise<OrganizationActivity[]> {
+    this.id(organizationId);
+    if (!Number.isInteger(first) || first < 1 || first > 50) {
+      throw itemizeGraphqlError(
+        'first must be between 1 and 50',
+        'BAD_USER_INPUT',
+        { field: 'first' },
+      );
+    }
+    try {
+      const outcome = await this.organizations.listActivity(
+        userId,
+        organizationId,
+        first,
+      );
+      if (outcome.kind !== 'ok') {
+        throw itemizeGraphqlError('Organization not found', 'NOT_FOUND');
+      }
+      return outcome.value.map(this.mapActivity);
     } catch (error) {
       this.rethrow(error);
     }
@@ -290,7 +324,10 @@ export class OrganizationsService {
         organizationId,
         memberId,
       );
-      if (outcome.kind === 'ok') return this.mapMember(outcome.row);
+      if (outcome.kind === 'ok') {
+        await this.ownershipEmail.send(outcome.delivery);
+        return this.mapMember(outcome.row);
+      }
       if (outcome.kind === 'forbidden' || outcome.kind === 'member_not_found') {
         throw itemizeGraphqlError('Organization member not found', 'NOT_FOUND');
       }
@@ -543,6 +580,27 @@ export class OrganizationsService {
     userName: row.user_name,
     email: row.email,
   });
+
+  private readonly mapActivity = (
+    row: OrganizationActivityRow,
+  ): OrganizationActivity => ({
+    id: String(row.id),
+    organizationId: Number(row.organization_id),
+    eventType: row.event_type,
+    actorUserId: row.actor_user_id === null ? null : Number(row.actor_user_id),
+    actorName: row.actor_name,
+    actorEmail: row.actor_email,
+    targetUserId: row.target_user_id === null ? null : Number(row.target_user_id),
+    targetName: row.target_name,
+    targetEmail: row.target_email ?? this.activityTargetEmail(row.payload),
+    payload: this.settings(row.payload),
+    occurredAt: new Date(row.occurred_at),
+  });
+
+  private activityTargetEmail(payload: unknown): string | null {
+    const targetEmail = this.settings(payload).targetEmail;
+    return typeof targetEmail === 'string' ? targetEmail : null;
+  }
 
   private memberMutationOutcome(
     outcome: Awaited<

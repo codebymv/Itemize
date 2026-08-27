@@ -4,6 +4,7 @@ import { itemizeGraphqlError } from '../common/graphql-error';
 import { RealtimeOutboxService } from '../realtime-outbox/realtime-outbox.service';
 import {
   CreateNotificationInput,
+  CreateNotificationEventInput,
   NotificationRow,
   NotificationsRepository,
 } from './notifications.repository';
@@ -41,6 +42,13 @@ export class NotificationsService {
       occurredAt: input.occurredAt,
     });
     return notification;
+  }
+
+  recordEventWithClient(
+    client: PoolClient,
+    input: CreateNotificationEventInput,
+  ): Promise<string> {
+    return this.notifications.recordEvent(client, input);
   }
 
   async createForOrganizationOwnerWithClient(

@@ -4,6 +4,7 @@ import {
   Building2,
   Crown,
   Globe2,
+  History,
   Loader2,
   LogOut,
   Plus,
@@ -57,6 +58,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   createOrganization,
   deleteOrganization,
+  getOrganizationActivity,
   getOrganizationInvitations,
   getOrganizationMembers,
   getViewerOrganizationAllowance,
@@ -69,7 +71,10 @@ import {
   updateMemberRole,
   updateOrganization,
 } from '@/services/contactsApi';
-import type { OrganizationAllowance } from '@/services/organizationsGraphql';
+import type {
+  OrganizationActivity,
+  OrganizationAllowance,
+} from '@/services/organizationsGraphql';
 import { getBusinesses, type Business } from '@/services/invoicesApi';
 import type { JsonRecord, OrganizationInvitation, OrganizationMember } from '@/types';
 
@@ -115,6 +120,43 @@ const settingId = (settings: JsonRecord, key: string) =>
     ? Number(settings[key])
     : null;
 
+const activityDescription = (activity: OrganizationActivity): string => {
+  const actor = activity.actorName || activity.actorEmail || 'A former member';
+  const target = activity.targetName || activity.targetEmail || 'another member';
+  const role = typeof activity.payload.role === 'string'
+    ? activity.payload.role
+    : 'member';
+  const previousRole = typeof activity.payload.previousRole === 'string'
+    ? activity.payload.previousRole
+    : 'member';
+  switch (activity.eventType) {
+    case 'organization.created':
+      return `${actor} created the workspace.`;
+    case 'organization.updated':
+      return `${actor} updated the workspace.`;
+    case 'organization.member_added':
+      return `${actor} added ${target} as ${role}.`;
+    case 'organization.member_role_changed':
+      return `${actor} changed ${target} from ${previousRole} to ${role}.`;
+    case 'organization.member_removed':
+      return `${actor} removed ${target} from the workspace.`;
+    case 'organization.member_left':
+      return `${actor} left the workspace.`;
+    case 'organization.invitation_created':
+      return `${actor} invited ${target} as ${role}.`;
+    case 'organization.invitation_resent':
+      return `${actor} resent ${target}'s invitation.`;
+    case 'organization.invitation_revoked':
+      return `${actor} revoked ${target}'s invitation.`;
+    case 'organization.invitation_accepted':
+      return `${target} joined the workspace as ${role}.`;
+    case 'organization.ownership_transferred':
+      return `${actor} transferred workspace ownership to ${target}.`;
+    default:
+      return `${actor} changed the workspace.`;
+  }
+};
+
 export function OrganizationSettings() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -133,6 +175,7 @@ export function OrganizationSettings() {
   const [defaultBusinessId, setDefaultBusinessId] = useState<number | null>(null);
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [invitations, setInvitations] = useState<OrganizationInvitation[]>([]);
+  const [activity, setActivity] = useState<OrganizationActivity[]>([]);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [businessProfilesAvailable, setBusinessProfilesAvailable] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -174,10 +217,11 @@ export function OrganizationSettings() {
     if (!organizationId) return;
     setLoading(true);
     try {
-      const [membersResult, invitationsResult, businessesResult] = await Promise.allSettled([
+      const [membersResult, invitationsResult, businessesResult, activityResult] = await Promise.allSettled([
         getOrganizationMembers(organizationId),
         canManage ? getOrganizationInvitations(organizationId) : Promise.resolve([]),
         getBusinesses(organizationId),
+        canManage ? getOrganizationActivity(organizationId, 20) : Promise.resolve([]),
       ]);
       if (membersResult.status === 'rejected') throw membersResult.reason;
       setMembers(membersResult.value);
@@ -193,6 +237,7 @@ export function OrganizationSettings() {
         setBusinesses([]);
         setBusinessProfilesAvailable(false);
       }
+      setActivity(activityResult.status === 'fulfilled' ? activityResult.value : []);
     } catch (error) {
       toast({
         title: 'Organization unavailable',
@@ -494,6 +539,39 @@ export function OrganizationSettings() {
           )}
         </CardContent>
       </Card>
+
+      {canManage && (
+        <Card>
+          <CardHeader>
+            <SettingsSectionTitle icon={History}>Recent workspace activity</SettingsSectionTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="h-20 animate-pulse rounded-lg bg-muted/50" />
+            ) : activity.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Ownership and other security-sensitive workspace changes will appear here.
+              </p>
+            ) : (
+              <div className="divide-y rounded-lg border">
+                {activity.map((item) => (
+                  <div key={item.id} className="flex gap-3 p-3">
+                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600/10 text-blue-600">
+                      <History className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium">{activityDescription(item)}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {new Date(item.occurredAt).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

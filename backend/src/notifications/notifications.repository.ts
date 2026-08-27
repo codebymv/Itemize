@@ -36,6 +36,18 @@ export type CreateNotificationInput = {
   occurredAt?: Date;
 };
 
+export type CreateNotificationEventInput = Pick<
+  CreateNotificationInput,
+  | 'organizationId'
+  | 'actorUserId'
+  | 'eventType'
+  | 'entityType'
+  | 'entityId'
+  | 'dedupeKey'
+  | 'payload'
+  | 'occurredAt'
+>;
+
 @Injectable()
 export class NotificationsRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
@@ -95,6 +107,38 @@ export class NotificationsRepository {
       ],
     );
     return result.rows[0] ?? null;
+  }
+
+  async recordEvent(
+    client: PoolClient,
+    input: CreateNotificationEventInput,
+  ): Promise<string> {
+    const result = await client.query<{ id: string }>(
+      `WITH inserted AS (
+         INSERT INTO notification_events (
+           organization_id,actor_user_id,event_type,entity_type,entity_id,
+           dedupe_key,payload,occurred_at
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,COALESCE($8,CURRENT_TIMESTAMP))
+         ON CONFLICT (organization_id,dedupe_key) DO NOTHING
+         RETURNING id
+       )
+       SELECT id FROM inserted
+       UNION ALL
+       SELECT id FROM notification_events
+       WHERE organization_id = $1 AND dedupe_key = $6
+       LIMIT 1`,
+      [
+        input.organizationId,
+        input.actorUserId ?? null,
+        input.eventType,
+        input.entityType ?? null,
+        input.entityId ?? null,
+        input.dedupeKey,
+        JSON.stringify(input.payload),
+        input.occurredAt ?? null,
+      ],
+    );
+    return String(result.rows[0].id);
   }
 
   async findPage(input: {
