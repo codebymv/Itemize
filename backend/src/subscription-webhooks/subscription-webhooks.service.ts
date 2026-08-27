@@ -765,7 +765,6 @@ export class SubscriptionWebhooksService {
     await this.notifications.createForOrganizationOwnerWithClient(client, {
       organizationId,
       eventType: 'subscription.plan_changed',
-      entityType: 'subscription',
       dedupeKey: `stripe:${normalized.eventId}:plan-changed`,
       payload: {
         previousPlan: previousPlan || PLANS.FREE,

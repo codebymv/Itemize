@@ -44,30 +44,34 @@ class FakeFacebookGraph implements FacebookGraphClient {
 }
 
 class FakeStripeConnect implements StripeConnectClient {
-  deauthorized: Array<string | null> = [];
-  getAuthUrl(state: string): string {
-    // Delegate to the real URL builder shape via the runtime environment.
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: (process.env.STRIPE_CLIENT_ID as string).trim(),
-      scope: 'read_write',
-      state,
-      redirect_uri: 'http://localhost:3001/api/invoice-integrations/stripe/callback',
-    });
-    return `https://connect.stripe.com/oauth/authorize?${params}`;
-  }
-  async exchangeCodeForAccount() {
+  account = {
+    stripeAccountId: 'acct_parity123',
+    chargesEnabled: true,
+    detailsSubmitted: true,
+  };
+  onboardingStates: string[] = [];
+
+  async createAccount() {
     return {
       stripeAccountId: 'acct_parity123',
-      stripePublishableKey: 'pk_test_parity',
+      chargesEnabled: false,
+      detailsSubmitted: false,
     };
   }
-  async deauthorizeAccount(stripeAccountId: string | null): Promise<void> {
-    this.deauthorized.push(stripeAccountId);
+
+  async retrieveAccount(stripeAccountId: string) {
+    return stripeAccountId === this.account.stripeAccountId
+      ? this.account
+      : null;
+  }
+
+  async createOnboardingLink(_stripeAccountId: string, state: string) {
+    this.onboardingStates.push(state);
+    return `https://connect.stripe.test/onboarding?state=${encodeURIComponent(state)}`;
   }
 }
 
-describe('Provider OAuth retained HTTP protocol (legacy behavior pinned)', () => {
+describe('Provider OAuth protocol', () => {
   let app: NestExpressApplication;
   let pool: Pool;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -88,7 +92,6 @@ describe('Provider OAuth retained HTTP protocol (legacy behavior pinned)', () =>
     process.env.BACKEND_URL = 'https://api.itemize.test';
     process.env.FACEBOOK_APP_ID = 'fake-fb-app-id';
     process.env.FACEBOOK_APP_SECRET = 'fake-fb-app-secret';
-    process.env.STRIPE_CLIENT_ID = 'ca_fake_client';
     process.env.STRIPE_SECRET_KEY = 'sk_test_fake';
     delete process.env.FACEBOOK_REDIRECT_URI;
     delete process.env.STRIPE_CONNECT_REDIRECT_URI;
@@ -234,37 +237,51 @@ describe('Provider OAuth retained HTTP protocol (legacy behavior pinned)', () =>
     expect(replay.headers.location).toContain('error=invalid_state');
   });
 
-  it('mints Stripe authorization URLs whose states verify', async () => {
-    const nest = await request(app.getHttpServer())
-        .get('/api/invoice-integrations/stripe/connect?return_url=/payment-settings?from=setup')
-        .set('Cookie', authCookie())
-        .set('x-organization-id', String(owner.org.id));
-    expect(nest.status).toBe(200);
-    for (const body of [nest.body]) {
-      const url = new URL(body.authUrl);
-      expect(url.origin + url.pathname).toBe(
-        'https://connect.stripe.com/oauth/authorize',
-      );
-      expect(url.searchParams.get('client_id')).toBe('ca_fake_client');
-      const verified = verifyStripeConnectState(
-        url.searchParams.get('state'),
-      );
-      expect(verified).toEqual({
-        userId: owner.user.id,
-        organizationId: owner.org.id,
-        returnPath: '/payment-settings?from=setup',
+  it('starts Stripe-hosted onboarding with a tenant-bound state', async () => {
+    const csrf = 'stripe-start-csrf';
+    const started = await request(app.getHttpServer())
+      .post('/graphql')
+      .set('Cookie', `${authCookie()}; csrf-token=${csrf}`)
+      .set('x-csrf-token', csrf)
+      .set('x-organization-id', String(owner.org.id))
+      .send({
+        query: `mutation StartStripe($returnUrl: String) {
+          startStripeConnect(returnUrl: $returnUrl)
+        }`,
+        variables: { returnUrl: '/payment-settings?from=setup' },
       });
-    }
+    expect(started.status).toBe(200);
+    expect(started.body.errors).toBeUndefined();
+    const url = new URL(started.body.data.startStripeConnect);
+    expect(url.origin + url.pathname).toBe(
+      'https://connect.stripe.test/onboarding',
+    );
+    expect(verifyStripeConnectState(url.searchParams.get('state'))).toEqual({
+      userId: owner.user.id,
+      organizationId: owner.org.id,
+      returnPath: '/payment-settings?from=setup',
+    });
+    expect(fakeStripe.onboardingStates).toHaveLength(1);
+    const settings = await pool.query(
+      `SELECT stripe_account_id, stripe_publishable_key, stripe_connected
+       FROM payment_settings WHERE organization_id = $1`,
+      [owner.org.id],
+    );
+    expect(settings.rows[0]).toMatchObject({
+      stripe_account_id: 'acct_parity123',
+      stripe_publishable_key: null,
+      stripe_connected: false,
+    });
   });
 
-  it('completes a minted Stripe state through the callback and disconnects cleanly', async () => {
+  it('completes Stripe-hosted onboarding through the signed return route', async () => {
     const state = createStripeConnectState({
       userId: owner.user.id,
       organizationId: owner.org.id,
       returnUrl: '/payment-settings?from=setup',
     });
     const callback = await request(app.getHttpServer()).get(
-      `/api/invoice-integrations/stripe/callback?code=ac_code&state=${encodeURIComponent(state)}`,
+      `/api/invoice-integrations/stripe/return?state=${encodeURIComponent(state)}`,
     );
     expect(callback.status).toBe(302);
     expect(callback.headers.location).toBe(
@@ -278,30 +295,12 @@ describe('Provider OAuth retained HTTP protocol (legacy behavior pinned)', () =>
     );
     expect(settings.rows[0]).toMatchObject({
       stripe_account_id: 'acct_parity123',
-      stripe_publishable_key: 'pk_test_parity',
+      stripe_publishable_key: null,
       stripe_connected: true,
-    });
-
-    const disconnect = await request(app.getHttpServer())
-      .post('/api/invoice-integrations/stripe/disconnect')
-      .set('Cookie', authCookie())
-      .set('x-organization-id', String(owner.org.id));
-    expect(disconnect.status).toBe(200);
-    expect(disconnect.body).toEqual({ success: true });
-    expect(fakeStripe.deauthorized).toEqual(['acct_parity123']);
-
-    const cleared = await pool.query(
-      `SELECT stripe_account_id, stripe_connected
-       FROM payment_settings WHERE organization_id = $1`,
-      [owner.org.id],
-    );
-    expect(cleared.rows[0]).toMatchObject({
-      stripe_account_id: null,
-      stripe_connected: false,
     });
   });
 
-  it('disconnects through the GraphQL mutation with the retained REST semantics', async () => {
+  it('disconnects Stripe through the GraphQL mutation', async () => {
     await pool.query(
       `INSERT INTO payment_settings (
          organization_id, stripe_account_id, stripe_publishable_key,
@@ -314,8 +313,6 @@ describe('Provider OAuth retained HTTP protocol (legacy behavior pinned)', () =>
          stripe_connected_at = NOW()`,
       [owner.org.id],
     );
-    const deauthorizedBefore = fakeStripe.deauthorized.length;
-
     const csrf = 'stripe-disconnect-csrf';
     const mutate = () =>
       request(app.getHttpServer())
@@ -329,9 +326,6 @@ describe('Provider OAuth retained HTTP protocol (legacy behavior pinned)', () =>
     expect(first.status).toBe(200);
     expect(first.body.errors).toBeUndefined();
     expect(first.body.data).toEqual({ disconnectStripe: true });
-    expect(fakeStripe.deauthorized.slice(deauthorizedBefore)).toEqual([
-      'acct_mutation123',
-    ]);
 
     const cleared = await pool.query(
       `SELECT stripe_account_id, stripe_publishable_key, stripe_connected, stripe_connected_at
@@ -339,7 +333,7 @@ describe('Provider OAuth retained HTTP protocol (legacy behavior pinned)', () =>
       [owner.org.id],
     );
     expect(cleared.rows[0]).toMatchObject({
-      stripe_account_id: null,
+      stripe_account_id: 'acct_mutation123',
       stripe_publishable_key: null,
       stripe_connected: false,
       stripe_connected_at: null,
@@ -349,10 +343,6 @@ describe('Provider OAuth retained HTTP protocol (legacy behavior pinned)', () =>
     const replay = await mutate();
     expect(replay.body.errors).toBeUndefined();
     expect(replay.body.data).toEqual({ disconnectStripe: true });
-    expect(fakeStripe.deauthorized.slice(deauthorizedBefore)).toEqual([
-      'acct_mutation123',
-      null,
-    ]);
   });
 
   it('refuses the disconnect mutation without a session or CSRF evidence', async () => {
@@ -372,25 +362,17 @@ describe('Provider OAuth retained HTTP protocol (legacy behavior pinned)', () =>
     expect(withoutCsrf.body.errors?.length).toBeGreaterThan(0);
   });
 
-  it('rejects Stripe callback failures before any exchange', async () => {
-    const noCode = await Promise.all([
-      request(app.getHttpServer()).get('/api/invoice-integrations/stripe/callback'),
-      request(app.getHttpServer()).get('/api/invoice-integrations/stripe/callback'),
-    ]);
-    expect(noCode[0].status).toBe(302);
-    expect(noCode[0].headers.location).toBe(noCode[1].headers.location);
-    expect(noCode[0].headers.location).toContain('error=no_code');
-
+  it('rejects invalid Stripe onboarding return states consistently', async () => {
     const badState = await Promise.all([
       request(app.getHttpServer()).get(
-        '/api/invoice-integrations/stripe/callback?code=abc&state=bad',
+        '/api/invoice-integrations/stripe/return?state=bad',
       ),
       request(app.getHttpServer()).get(
-        '/api/invoice-integrations/stripe/callback?code=abc&state=bad',
+        '/api/invoice-integrations/stripe/return?state=bad',
       ),
     ]);
     expect(badState[0].headers.location).toBe(badState[1].headers.location);
-    expect(badState[0].headers.location).toContain('error=invalid_state');
+    expect(badState[0].headers.location).toContain('error=onboarding_failed');
 
     const foreign = await dbHelper.seedUser(
       `provider-foreign-${Date.now()}@test.itemize`,
@@ -402,23 +384,31 @@ describe('Provider OAuth retained HTTP protocol (legacy behavior pinned)', () =>
     });
     const nonMember = await Promise.all([
       request(app.getHttpServer()).get(
-        `/api/invoice-integrations/stripe/callback?code=abc&state=${encodeURIComponent(crossTenant)}`,
+        `/api/invoice-integrations/stripe/return?state=${encodeURIComponent(crossTenant)}`,
       ),
       request(app.getHttpServer()).get(
-        `/api/invoice-integrations/stripe/callback?code=abc&state=${encodeURIComponent(crossTenant)}`,
+        `/api/invoice-integrations/stripe/return?state=${encodeURIComponent(crossTenant)}`,
       ),
     ]);
     expect(nonMember[0].headers.location).toBe(nonMember[1].headers.location);
-    expect(nonMember[0].headers.location).toContain('error=invalid_state');
+    expect(nonMember[0].headers.location).toContain('error=onboarding_failed');
   });
 
-  it('denies unauthenticated begins for both providers', async () => {
-    for (const path of [
+  it('denies unauthenticated starts for both providers', async () => {
+    const facebook = await request(app.getHttpServer()).get(
       '/api/social/connect/facebook',
-      '/api/invoice-integrations/stripe/connect',
-    ]) {
-      const nest = await request(app.getHttpServer()).get(path);
-      expect(nest.status).toBe(401);
-    }
+    );
+    expect(facebook.status).toBe(401);
+    const stripe = await request(app.getHttpServer())
+      .post('/graphql')
+      .set('x-organization-id', String(owner.org.id))
+      .send({
+        query: `mutation StartStripe($returnUrl: String) {
+          startStripeConnect(returnUrl: $returnUrl)
+        }`,
+        variables: { returnUrl: '/payment-settings' },
+      });
+    expect(stripe.body.data ?? null).toBeNull();
+    expect(stripe.body.errors?.length).toBeGreaterThan(0);
   });
 });

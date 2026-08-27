@@ -222,6 +222,22 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
         notification_type: 'subscription_upgraded',
         notification_status: 'pending',
       });
+      const notification = await pool.query(
+        `SELECT event.event_type, event.entity_type, event.entity_id,
+                notification.category, notification.title
+         FROM notification_events event
+         JOIN user_notifications notification ON notification.event_id = event.id
+         WHERE event.organization_id = $1
+           AND event.dedupe_key = $2`,
+        [owner.org.id, `stripe:evt_act_${suffix}:plan-changed`],
+      );
+      expect(notification.rows[0]).toMatchObject({
+        event_type: 'subscription.plan_changed',
+        entity_type: null,
+        entity_id: null,
+        category: 'billing',
+        title: 'Plan changed to Studio',
+      });
     },
   );
 
