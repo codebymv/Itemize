@@ -8,7 +8,7 @@ exports.up = async (pool) => {
             sms_limit = 0,
             api_calls_limit = 0,
             contacts_limit = 0,
-            users_limit = 0,
+            users_limit = 1,
             workflows_limit = 0,
             landing_pages_limit = 0,
             forms_limit = 0,

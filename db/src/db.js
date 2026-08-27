@@ -709,6 +709,14 @@ const initializeDatabase = async (pool) => {
     // Billing and features
     await runMigrationOnce(pool, 'module_subscriptions', runAllSubscriptionMigrations);
     await runMigrationOnce(pool, 'organization_billing_columns_v2', ensureOrganizationBillingColumns);
+    await runMigrationOnce(pool, 'free_owner_seat_v1', async (p) => {
+      await p.query(`
+        UPDATE organizations
+        SET users_limit = 1, updated_at = CURRENT_TIMESTAMP
+        WHERE plan = 'free' AND COALESCE(users_limit, 0) < 1;
+      `);
+      return true;
+    });
     await runMigrationOnce(pool, 'subscription_webhook_idempotency', runSubscriptionWebhookMigration);
     await runMigrationOnce(pool, 'subscription_webhook_notification_outbox', runSubscriptionWebhookNotificationOutboxMigration);
     await runMigrationOnce(pool, 'subscription_webhook_reconciliation', runSubscriptionWebhookReconciliationMigration);

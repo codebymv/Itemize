@@ -319,7 +319,7 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
       newPlan: 'free',
     });
     const deletedOrg = await pool.query(
-      `SELECT plan, subscription_status, stripe_subscription_id, emails_limit
+      `SELECT plan, subscription_status, stripe_subscription_id, emails_limit, users_limit
        FROM organizations WHERE id = $1`,
       [deletedOwner.org.id],
     );
@@ -328,6 +328,7 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
       subscription_status: 'canceled',
       stripe_subscription_id: null,
       emails_limit: 0,
+      users_limit: 1,
     });
 
     const failedCustomer = `cus_fail_${suffix}`;
