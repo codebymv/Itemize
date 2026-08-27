@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Zap, Crown, Building2, User } from 'lucide-react';
+import { ExternalLink, Loader2, Zap, Crown, Building2, User } from 'lucide-react';
 import { useSubscriptionFeatures, useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { Plan, PLAN_METADATA, PLAN_PRICING } from '@/lib/subscription';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +22,7 @@ export function SubscriptionStatus() {
     const { subscription, planName, isLoading } = useSubscriptionState();
     const { openBillingPortal } = useSubscriptionFeatures();
     const { toast } = useToast();
+    const [isOpeningPortal, setIsOpeningPortal] = useState(false);
 
     if (isLoading) {
         return (
@@ -62,9 +63,13 @@ export function SubscriptionStatus() {
     const isPaidPlan = currentPlan !== 'free' && subscription?.status === 'active';
 
     const handleManageSubscription = async () => {
+        if (isOpeningPortal) return;
+
+        setIsOpeningPortal(true);
         try {
             await openBillingPortal();
         } catch (error) {
+            setIsOpeningPortal(false);
             toast({
                 title: 'Error',
                 description: getErrorMessage(error, 'Failed to open billing portal'),
@@ -112,9 +117,15 @@ export function SubscriptionStatus() {
                     <Button
                         className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                         onClick={handleManageSubscription}
+                        disabled={isOpeningPortal}
+                        aria-busy={isOpeningPortal}
                     >
-                        Manage Subscription
-                        <ExternalLink className="ml-2 h-4 w-4" />
+                        {isOpeningPortal ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                        )}
+                        {isOpeningPortal ? 'Opening billing…' : 'Manage Subscription'}
                     </Button>
                 )}
             </CardContent>
