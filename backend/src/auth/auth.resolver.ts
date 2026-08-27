@@ -24,6 +24,8 @@ import {
   CsrfTokenPayload,
   CurrentUser,
 } from './auth.types';
+import { AccountDataExportService } from './account-data-export.service';
+import { AccountDataExport } from './account-data-export.types';
 
 type GraphqlHttpContext = { req: Request; res: Response };
 
@@ -34,6 +36,7 @@ export class AuthResolver {
     private readonly identityLifecycle: IdentityLifecycleService,
     private readonly rateLimit: AuthRateLimitService,
     private readonly requestContext: RequestContextService,
+    private readonly accountDataExports: AccountDataExportService,
   ) {}
 
   @Public()
@@ -141,6 +144,13 @@ export class AuthResolver {
     const identity = this.requestContext.current().identity;
     if (!identity) throw new Error('Verified user identity is unavailable');
     return this.sessions.currentUser(identity.userId);
+  }
+
+  @Query(() => AccountDataExport)
+  viewerDataExport(): Promise<AccountDataExport> {
+    const identity = this.requestContext.current().identity;
+    if (!identity) throw new Error('Verified user identity is unavailable');
+    return this.accountDataExports.exportForUser(identity.userId);
   }
 
   @Public()

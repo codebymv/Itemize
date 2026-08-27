@@ -81,6 +81,7 @@ describe('Authentication lifecycle GraphQL PostgreSQL contract', () => {
     expect(emails.sendVerification).toHaveBeenCalledWith(
       expect.objectContaining({ email: primaryEmail }),
       expect.stringMatching(/^[a-f0-9]{64}$/),
+      undefined,
     );
     verificationToken = emails.sendVerification.mock.calls[0][1];
 
@@ -283,5 +284,94 @@ describe('Authentication lifecycle GraphQL PostgreSQL contract', () => {
     );
     expect(persisted.rows[0].name).toBe('Updated Lifecycle Member');
     await expect(bcrypt.compare('ChangedPass4', persisted.rows[0].password_hash)).resolves.toBe(true);
+  });
+
+  it('exports a portable account snapshot without credentials or sharing capabilities', async () => {
+    const identity = await pool.query<{ id: number; default_organization_id: number }>(
+      'SELECT id, default_organization_id FROM users WHERE email = $1',
+      [primaryEmail],
+    );
+    const userId = Number(identity.rows[0].id);
+    const organizationId = Number(identity.rows[0].default_organization_id);
+    await pool.query(
+      `INSERT INTO lists (
+         user_id, organization_id, title, items, share_token, is_public, shared_at
+       ) VALUES ($1, $2, 'Exported list', '[{"text":"Portable"}]'::jsonb,
+         '11111111-1111-4111-8111-111111111111', TRUE, NOW())`,
+      [userId, organizationId],
+    );
+    const vault = await pool.query<{ id: number }>(
+      `INSERT INTO vaults (
+         user_id, title, crypto_version, wrapped_vek, wrapped_vek_recovery,
+         master_password_hash, share_token, share_token_hash,
+         share_snapshot_ciphertext, share_snapshot_iv
+       ) VALUES ($1, 'Exported vault', 2, 'wrapped-vek', 'wrapped-recovery',
+         'password-verifier', 'vault-capability', $2, 'shared-snapshot', 'snapshot-iv')
+       RETURNING id`,
+      [userId, 'a'.repeat(64)],
+    );
+    await pool.query(
+      `INSERT INTO vault_items (
+         vault_id, item_type, label, encrypted_value, iv, order_index, crypto_version
+       ) VALUES ($1, 'secure_note', 'Encrypted note', 'ciphertext', 'item-iv', 0, 2)`,
+      [vault.rows[0].id],
+    );
+
+    const anonymous = await mutation(
+      `query { viewerDataExport { schemaVersion } }`,
+      {},
+    ).expect(200);
+    expect(anonymous.body.errors[0].extensions.code).toBe('UNAUTHENTICATED');
+
+    const agent = request.agent(app.getHttpServer());
+    await agent
+      .post('/graphql')
+      .send({
+        query: `mutation Login($input: LoginInput!) {
+          login(input: $input) { success user { uid } }
+        }`,
+        variables: { input: { email: primaryEmail, password: 'ChangedPass4' } },
+      })
+      .expect(200);
+    const exported = await agent
+      .post('/graphql')
+      .send({
+        query: `query Export {
+          viewerDataExport { schemaVersion generatedAt filename data }
+        }`,
+      })
+      .expect(200);
+
+    expect(exported.body.errors).toBeUndefined();
+    expect(exported.body.data.viewerDataExport).toMatchObject({
+      schemaVersion: 1,
+      filename: expect.stringMatching(/^itemize-account-export-\d{4}-\d{2}-\d{2}\.json$/),
+      data: {
+        account: { email: primaryEmail, name: 'Updated Lifecycle Member' },
+        memberships: [expect.objectContaining({
+          organizationId,
+          role: 'owner',
+          isDefault: true,
+        })],
+        personalContent: {
+          lists: [expect.objectContaining({ title: 'Exported list' })],
+          vaults: [expect.objectContaining({
+            title: 'Exported vault',
+            wrapped_vek: 'wrapped-vek',
+            wrapped_vek_recovery: 'wrapped-recovery',
+            items: [expect.objectContaining({
+              label: 'Encrypted note',
+              encrypted_value: 'ciphertext',
+            })],
+          })],
+        },
+      },
+    });
+    const serialized = JSON.stringify(exported.body.data.viewerDataExport.data);
+    expect(serialized).not.toContain('password_hash');
+    expect(serialized).not.toContain('password-verifier');
+    expect(serialized).not.toContain('share_token');
+    expect(serialized).not.toContain('vault-capability');
+    expect(serialized).not.toContain('shared-snapshot');
   });
 });

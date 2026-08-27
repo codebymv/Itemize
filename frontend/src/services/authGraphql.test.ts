@@ -6,6 +6,7 @@ import {
 } from '@/services/graphqlClient';
 import {
   getCurrentUserViaGraphql,
+  getViewerDataExportViaGraphql,
   changePasswordViaGraphql,
   loginViaGraphql,
   logoutViaGraphql,
@@ -47,6 +48,26 @@ describe('authentication GraphQL adapter', () => {
     await expect(logoutViaGraphql()).resolves.toBeUndefined();
     expect(graphqlMutationRequest).toHaveBeenCalledWith(
       expect.stringContaining('mutation Logout'),
+      {},
+    );
+  });
+
+  it('maps the authenticated account data export', async () => {
+    vi.mocked(graphqlRequest).mockResolvedValue({
+      viewerDataExport: {
+        schemaVersion: 1,
+        generatedAt: '2026-08-27T12:00:00.000Z',
+        filename: 'itemize-account-export-2026-08-27.json',
+        data: { account: { email: 'member@example.com' } },
+      },
+    });
+
+    await expect(getViewerDataExportViaGraphql()).resolves.toMatchObject({
+      schemaVersion: 1,
+      filename: 'itemize-account-export-2026-08-27.json',
+    });
+    expect(graphqlRequest).toHaveBeenCalledWith(
+      expect.stringContaining('query ViewerDataExport'),
       {},
     );
   });

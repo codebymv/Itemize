@@ -10,10 +10,14 @@ import { GraphqlCsrfGuard } from './graphql-csrf.guard';
 import { SessionService } from './session.service';
 import { IdentityLifecycleService } from './identity-lifecycle.service';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AccountDataExportRepository } from './account-data-export.repository';
+import { AccountDataExportService } from './account-data-export.service';
 
 @Module({
   imports: [JwtModule.register({}), NotificationsModule],
   providers: [
+    AccountDataExportRepository,
+    AccountDataExportService,
     AccessTokenService,
     AuthEmailService,
     AuthRepository,

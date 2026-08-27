@@ -24,6 +24,13 @@ export type CurrentGraphqlUser = {
 
 export type SignupMode = 'FREE' | 'TRIAL';
 
+export type ViewerDataExport = {
+  schemaVersion: number;
+  generatedAt: string;
+  filename: string;
+  data: Record<string, unknown>;
+};
+
 const SESSION_FIELDS = `
   success
   user { uid email name role photoURL }
@@ -179,6 +186,19 @@ export const getCurrentUserViaGraphql = async (): Promise<CurrentGraphqlUser> =>
     {},
   );
   return data.currentUser;
+};
+
+export const getViewerDataExportViaGraphql = async (): Promise<ViewerDataExport> => {
+  const data = await graphqlRequest<
+    { viewerDataExport: ViewerDataExport },
+    Record<string, never>
+  >(
+    `query ViewerDataExport {
+      viewerDataExport { schemaVersion generatedAt filename data }
+    }`,
+    {},
+  );
+  return data.viewerDataExport;
 };
 
 export const logoutViaGraphql = async (): Promise<void> => {

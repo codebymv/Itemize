@@ -71,6 +71,7 @@ import {
   readIntegrationOAuthResult,
 } from '@/lib/integrationOAuthReturn';
 import { disconnectStripeConnect, initiateStripeConnect } from '@/services/stripeConnectApi';
+import { AccountDataExportCard } from './settings/components/AccountDataExportCard';
 const OrganizationSettings = React.lazy(() =>
   import('./settings/OrganizationSettings').then((module) => ({
     default: module.OrganizationSettings,
@@ -248,6 +249,8 @@ function AccountInfo({
           </CardContent>
         </Card>
       )}
+
+      <AccountDataExportCard />
 
       <Card>
         <CardHeader>
