@@ -142,7 +142,8 @@ describe('OrganizationSettings', () => {
     expect(screen.getByText('Owner')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /delete organization/i })).toBeInTheDocument();
     expect(await screen.findByText('1 of 3 owned')).toBeInTheDocument();
-    expect(screen.getByText(/plans and billing belong to each workspace/i)).toBeInTheDocument();
+    expect(screen.getByText(/highest live plan across workspaces you own/i)).toBeInTheDocument();
+    expect(screen.getByText(/each workspace keeps separate billing and paid features/i)).toBeInTheDocument();
   });
 
   it('creates a free workspace and selects it', async () => {
@@ -172,6 +173,7 @@ describe('OrganizationSettings', () => {
 
     expect(await screen.findByText('1 of 1 owned')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'New workspace' })).not.toBeInTheDocument();
+    expect(screen.getByText(/existing workspaces remain available/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review plans' }));
     expect(mocks.navigate).toHaveBeenCalledWith('/settings');
   });

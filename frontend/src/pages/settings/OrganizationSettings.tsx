@@ -482,7 +482,9 @@ export function OrganizationSettings() {
                 {allowanceLoading ? '…' : allowance?.ownedCount ?? '—'}.
               </p>
               <p className="text-sm text-muted-foreground">
-                Plans and billing belong to each workspace. Transferring ownership keeps that workspace&apos;s subscription.
+                Your highest live plan across workspaces you own sets the ownership allowance:
+                Free 1, Solo 3, and Studio unlimited. Each workspace keeps separate billing
+                and paid features, including after an ownership transfer.
               </p>
             </div>
             {allowance?.canCreate ? (
@@ -534,7 +536,9 @@ export function OrganizationSettings() {
           </div>
           {allowance && !allowance.canCreate && allowance.limit >= 0 && (
             <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-muted-foreground">
-              You&apos;re at your ownership limit. Upgrade one of your workspaces or transfer ownership before creating another.
+              You&apos;re at your ownership limit. Existing workspaces remain available, but
+              you must upgrade one owned workspace or transfer ownership before creating
+              or accepting another.
             </p>
           )}
         </CardContent>

@@ -79,11 +79,21 @@ account. If a blocker appeared during the grace period, deletion is canceled
 instead of removing data. Scheduled, recovered, canceled, and completed events
 retain only a one-way email hash after the user row is gone.
 
-## Remaining policy work
+## Workspace ownership allowance
 
-Resolve the plan-language conflict between organization-scoped subscriptions
-and the Solo plan's advertised three-organization allowance before enforcing an
-organization creation limit.
+Subscriptions remain workspace-scoped, while the highest live plan among the
+workspaces a user owns sets that user's ownership allowance: Free permits one,
+Solo permits three, and Studio permits unlimited workspaces. A newly created
+workspace always starts on Free, so one paid workspace does not grant paid
+features to the owner's other workspaces.
+
+Creation serializes on the owner account before counting ownership, preventing
+concurrent requests from exceeding the allowance. Ownership transfer applies
+the incoming workspace's live plan before checking the recipient's resulting
+count, then changes both roles atomically. Transferring a paid workspace keeps
+its subscription with the workspace. Downgrades and expired trials do not
+delete or hide existing workspaces; an over-limit owner cannot create or accept
+another workspace until they upgrade or transfer ownership.
 
 Password recovery, verification resend, password change, profile updates, data
 export, and account deletion are owned by the GraphQL authentication lifecycle.
