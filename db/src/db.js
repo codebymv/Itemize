@@ -23,6 +23,7 @@ const { runCategoryContractMigration } = require('./db_category_contract_migrati
 // Import CRM migrations
 const { runAllCRMMigrations } = require('./db_crm_migrations');
 const {
+  runOrganizationInvitationsMigration,
   runOrganizationOwnerInvariantMigration,
 } = require('./db_organization_lifecycle_migrations');
 
@@ -516,6 +517,11 @@ const initializeDatabase = async (pool) => {
       pool,
       'organization_owner_invariant_v1',
       runOrganizationOwnerInvariantMigration,
+    );
+    await runMigrationOnce(
+      pool,
+      'organization_invitations_v1',
+      runOrganizationInvitationsMigration,
     );
     await runMigrationOnce(pool, 'feature_get_started', runGetStartedMigration);
     await runMigrationOnce(pool, 'activation_events_v1', runActivationEventsMigration);

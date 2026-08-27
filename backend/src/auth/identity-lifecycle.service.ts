@@ -27,10 +27,12 @@ export class IdentityLifecycleService {
     rawPassword: string,
     rawName?: string,
     signupMode: SignupMode = SignupMode.FREE,
+    rawInvitationToken?: string,
   ): Promise<AuthMessagePayload> {
     const email = this.email(rawEmail);
     const password = this.password(rawPassword);
     const name = this.name(rawName, email);
+    const invitationToken = this.invitationToken(rawInvitationToken);
     const existing = await this.users.findByEmail(email);
     if (existing) {
       const google = existing.provider === 'google' || !existing.passwordHash;
@@ -52,7 +54,11 @@ export class IdentityLifecycleService {
       verificationTokenExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
       signupMode,
     });
-    await this.emails.sendVerification(user, token);
+    await this.emails.sendVerification(
+      user,
+      token,
+      invitationToken,
+    );
     return {
       success: true,
       message: 'Account created. Please check your email to verify your account.',
@@ -84,15 +90,25 @@ export class IdentityLifecycleService {
     };
   }
 
-  async resendVerification(rawEmail: string): Promise<AuthMessagePayload> {
+  async resendVerification(
+    rawEmail: string,
+    rawInvitationToken?: string,
+  ): Promise<AuthMessagePayload> {
     const email = this.email(rawEmail);
+    const invitationToken = this.invitationToken(rawInvitationToken);
     const token = randomBytes(32).toString('hex');
     const user = await this.users.replaceVerificationToken({
       email,
       tokenHash: this.hashToken(token),
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
-    if (user) await this.emails.sendVerification(user, token);
+    if (user) {
+      await this.emails.sendVerification(
+        user,
+        token,
+        invitationToken,
+      );
+    }
     return { success: true, message: VERIFICATION_MESSAGE };
   }
 
@@ -237,6 +253,16 @@ export class IdentityLifecycleService {
     if (typeof value !== 'string' || value.length < 1 || value.length > 256) {
       throw itemizeGraphqlError(message, 'BAD_USER_INPUT', {
         field: 'token',
+      });
+    }
+    return value;
+  }
+
+  private invitationToken(value?: string): string | undefined {
+    if (value === undefined) return undefined;
+    if (!/^[a-f0-9]{64}$/.test(value)) {
+      throw itemizeGraphqlError('Invitation token is invalid', 'BAD_USER_INPUT', {
+        field: 'invitationToken',
       });
     }
     return value;

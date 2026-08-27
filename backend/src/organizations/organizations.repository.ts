@@ -489,9 +489,14 @@ export class OrganizationsRepository {
         current: string;
       }>(
         `SELECT o.plan, o.users_limit,
-                (SELECT COUNT(*)::text
-                 FROM organization_members member
-                 WHERE member.organization_id = o.id) AS current
+                ((SELECT COUNT(*)
+                  FROM organization_members member
+                  WHERE member.organization_id = o.id) +
+                 (SELECT COUNT(*)
+                  FROM organization_invitations invitation
+                  WHERE invitation.organization_id = o.id
+                    AND invitation.status = 'pending'
+                    AND invitation.expires_at > NOW()))::text AS current
          FROM organizations o
          WHERE o.id = $1
          FOR UPDATE`,

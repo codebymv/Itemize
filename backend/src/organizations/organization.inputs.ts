@@ -30,3 +30,12 @@ export class AddOrganizationMemberInput {
   @Field()
   role: string;
 }
+
+@InputType()
+export class CreateOrganizationInvitationInput {
+  @Field()
+  email: string;
+
+  @Field()
+  role: string;
+}

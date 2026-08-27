@@ -21,7 +21,11 @@ const mocks = vi.hoisted(() => ({
     updated_at: '2026-08-24T00:00:00.000Z',
   },
   getMembers: vi.fn(),
+  getInvitations: vi.fn(),
   getBusinesses: vi.fn(),
+  invite: vi.fn(),
+  resendInvitation: vi.fn(),
+  revokeInvitation: vi.fn(),
   transferOwnership: vi.fn(),
   subscription: { limits: { users: 3 } },
 }));
@@ -49,9 +53,12 @@ vi.mock('@/contexts/SubscriptionContext', () => ({
 vi.mock('@/services/contactsApi', () => ({
   deleteOrganization: vi.fn(),
   getOrganizationMembers: (...args: unknown[]) => mocks.getMembers(...args),
-  inviteMember: vi.fn(),
+  getOrganizationInvitations: (...args: unknown[]) => mocks.getInvitations(...args),
+  inviteMember: (...args: unknown[]) => mocks.invite(...args),
   leaveOrganization: vi.fn(),
   removeMember: vi.fn(),
+  resendOrganizationInvitation: (...args: unknown[]) => mocks.resendInvitation(...args),
+  revokeOrganizationInvitation: (...args: unknown[]) => mocks.revokeInvitation(...args),
   transferOrganizationOwnership: (...args: unknown[]) => mocks.transferOwnership(...args),
   updateMemberRole: vi.fn(),
   updateOrganization: vi.fn(),
@@ -65,6 +72,17 @@ describe('OrganizationSettings', () => {
     mocks.subscription.limits.users = 3;
     mocks.refresh.mockResolvedValue(undefined);
     mocks.transferOwnership.mockResolvedValue(undefined);
+    mocks.invite.mockResolvedValue({
+      id: 31,
+      email: 'invitee@example.com',
+      delivery_sent: true,
+    });
+    mocks.resendInvitation.mockResolvedValue({
+      id: 31,
+      email: 'invitee@example.com',
+      delivery_sent: true,
+    });
+    mocks.revokeInvitation.mockResolvedValue(undefined);
     mocks.getMembers.mockResolvedValue([
       {
         id: 21,
@@ -77,6 +95,7 @@ describe('OrganizationSettings', () => {
         email: 'ada@example.com',
       },
     ]);
+    mocks.getInvitations.mockResolvedValue([]);
     mocks.getBusinesses.mockResolvedValue([
       {
         id: 12,
@@ -149,5 +168,33 @@ describe('OrganizationSettings', () => {
       expect(mocks.transferOwnership).toHaveBeenCalledWith(7, 22);
       expect(mocks.refresh).toHaveBeenCalled();
     });
+  });
+
+  it('shows pending seat reservations and supports resend and revoke', async () => {
+    mocks.subscription.limits.users = 2;
+    mocks.getInvitations.mockResolvedValue([
+      {
+        id: 31,
+        organization_id: 7,
+        organization_name: 'Ada Studio',
+        email: 'invitee@example.com',
+        role: 'member',
+        status: 'pending',
+        invited_at: '2026-08-27T12:00:00.000Z',
+        expires_at: '2026-09-03T12:00:00.000Z',
+        delivery_sent: true,
+      },
+    ]);
+    render(<OrganizationSettings />);
+
+    await waitFor(() => expect(screen.getByText('2 of 2 seats')).toBeInTheDocument());
+    expect(screen.getByText('Pending invitations')).toBeInTheDocument();
+    expect(screen.getByText('invitee@example.com')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Plan limit reached' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Resend invitation to invitee@example.com' }));
+    await waitFor(() => expect(mocks.resendInvitation).toHaveBeenCalledWith(7, 31));
+    fireEvent.click(screen.getByRole('button', { name: 'Revoke invitation to invitee@example.com' }));
+    await waitFor(() => expect(mocks.revokeInvitation).toHaveBeenCalledWith(7, 31));
   });
 });

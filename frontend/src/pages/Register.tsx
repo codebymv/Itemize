@@ -18,9 +18,12 @@ function RegisterForm() {
   const { toast } = useToast();
   const { register } = useAuthActions();
   const googleSignIn = useGoogleSignIn();
+  const invitationToken = searchParams.get('invitation') || undefined;
+  const invitedEmail = searchParams.get('email') || '';
+  const redirectTo = invitationToken ? `/invite/${invitationToken}` : '/';
   
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(invitedEmail);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -68,12 +71,15 @@ function RegisterForm() {
     setLoading(true);
 
     try {
-      await register(email, password, name, signupMode);
+      await register(email, password, name, signupMode, invitationToken);
       toast({
         title: 'Account created!',
         description: 'Please check your email to verify your account.',
       });
-      navigate(`/verify-email?email=${encodeURIComponent(email)}`);
+      const invitation = invitationToken
+        ? `&invitation=${encodeURIComponent(invitationToken)}`
+        : '';
+      navigate(`/verify-email?email=${encodeURIComponent(email)}${invitation}`);
     } catch (error) {
       if (error instanceof AuthError && error.code === 'GOOGLE_ACCOUNT_EXISTS') {
         toast({
@@ -104,7 +110,7 @@ function RegisterForm() {
       return;
     }
     setGoogleLoading(true);
-    googleSignIn('/', signupMode);
+    googleSignIn(redirectTo, signupMode);
     setTimeout(() => setGoogleLoading(false), 1000);
   };
 
@@ -124,20 +130,28 @@ function RegisterForm() {
             </div>
           </Link>
           <h1 className="text-2xl font-semibold leading-none tracking-tight text-foreground">
-            {isTrial ? 'Start your 14-day Solo trial' : 'Create your Free Workspace'}
+            {invitationToken
+              ? 'Create your Itemize account'
+              : isTrial
+                ? 'Start your 14-day Solo trial'
+                : 'Create your Free Workspace'}
           </h1>
           <CardDescription className="text-muted-foreground">
-            {isTrial
-              ? 'Explore the complete Solo toolkit. No credit card required.'
-              : 'Lists, notes, whiteboards, and canvas—free for as long as you need.'}
+            {invitationToken
+              ? 'Use the invited email address to join your team workspace.'
+              : isTrial
+                ? 'Explore the complete Solo toolkit. No credit card required.'
+                : 'Lists, notes, whiteboards, and canvas—free for as long as you need.'}
           </CardDescription>
-          <p className="text-xs text-muted-foreground">
-            {isTrial ? (
-              <>Only need workspace tools? <Link className="text-blue-600 underline" to="/register?mode=free">Choose Free</Link></>
-            ) : (
-              <>Need CRM, invoicing, and signatures? <Link className="text-blue-600 underline" to="/register?mode=trial">Try Solo</Link></>
-            )}
-          </p>
+          {!invitationToken && (
+            <p className="text-xs text-muted-foreground">
+              {isTrial ? (
+                <>Only need workspace tools? <Link className="text-blue-600 underline" to="/register?mode=free">Choose Free</Link></>
+              ) : (
+                <>Need CRM, invoicing, and signatures? <Link className="text-blue-600 underline" to="/register?mode=trial">Try Solo</Link></>
+              )}
+            </p>
+          )}
         </CardHeader>
 
         <form onSubmit={handleRegister}>
@@ -177,8 +191,9 @@ function RegisterForm() {
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  readOnly={Boolean(invitationToken && invitedEmail)}
                   required
-                  className="pl-10"
+                  className={`pl-10 ${invitationToken && invitedEmail ? 'bg-muted/50' : ''}`}
                 />
               </div>
             </div>
@@ -268,7 +283,11 @@ function RegisterForm() {
                   Creating account...
                 </>
               ) : (
-                isTrial ? 'Start Solo Trial' : 'Create Free Workspace'
+                invitationToken
+                  ? 'Create account and continue'
+                  : isTrial
+                    ? 'Start Solo Trial'
+                    : 'Create Free Workspace'
               )}
             </Button>
 
@@ -317,7 +336,7 @@ function RegisterForm() {
 
             <p className="text-sm text-center text-muted-foreground">
               Already have an account?{' '}
-              <Link to="/login" className="text-blue-600 underline hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+              <Link to={invitationToken ? `/login?redirect=${encodeURIComponent(redirectTo)}` : '/login'} className="text-blue-600 underline hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
                 Sign in
               </Link>
             </p>

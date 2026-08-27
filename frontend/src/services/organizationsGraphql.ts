@@ -1,9 +1,11 @@
 import type {
   JsonRecord,
   Organization,
+  OrganizationInvitation,
+  OrganizationInvitationPreview,
   OrganizationMember,
 } from '@/types';
-import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
+import { graphqlMutationRequest, graphqlPublicRequest, graphqlRequest } from './graphqlClient';
 
 type GraphqlOrganization = {
   id: number;
@@ -28,6 +30,26 @@ type GraphqlOrganizationMember = {
   userName: string | null;
   email: string;
 };
+
+type GraphqlOrganizationInvitation = {
+  id: number;
+  organizationId: number;
+  organizationName: string;
+  email: string;
+  role: OrganizationInvitation['role'];
+  status: OrganizationInvitation['status'];
+  invitedBy: number | null;
+  invitedByName: string | null;
+  invitedAt: string;
+  expiresAt: string;
+  lastSentAt: string | null;
+  deliverySent: boolean;
+};
+
+const invitationFields = `
+  id organizationId organizationName email role status invitedBy invitedByName
+  invitedAt expiresAt lastSentAt deliverySent
+`;
 
 const organizationFields = `
   id
@@ -65,6 +87,57 @@ const organizationMembersQuery = `
       invitedBy
       userName
       email
+    }
+  }
+`;
+
+const organizationInvitationsQuery = `
+  query OrganizationInvitations($organizationId: Int!) {
+    organizationInvitations(organizationId: $organizationId) { ${invitationFields} }
+  }
+`;
+
+const organizationInvitationPreviewQuery = `
+  query OrganizationInvitationPreview($token: String!) {
+    organizationInvitationPreview(token: $token) {
+      organizationName email role status expiresAt invitedByName
+    }
+  }
+`;
+
+const createOrganizationInvitationMutation = `
+  mutation CreateOrganizationInvitation(
+    $organizationId: Int!
+    $input: CreateOrganizationInvitationInput!
+  ) {
+    createOrganizationInvitation(organizationId: $organizationId, input: $input) {
+      ${invitationFields}
+    }
+  }
+`;
+
+const resendOrganizationInvitationMutation = `
+  mutation ResendOrganizationInvitation($organizationId: Int!, $invitationId: Int!) {
+    resendOrganizationInvitation(
+      organizationId: $organizationId
+      invitationId: $invitationId
+    ) { ${invitationFields} }
+  }
+`;
+
+const revokeOrganizationInvitationMutation = `
+  mutation RevokeOrganizationInvitation($organizationId: Int!, $invitationId: Int!) {
+    revokeOrganizationInvitation(
+      organizationId: $organizationId
+      invitationId: $invitationId
+    )
+  }
+`;
+
+const acceptOrganizationInvitationMutation = `
+  mutation AcceptOrganizationInvitation($token: String!) {
+    acceptOrganizationInvitation(token: $token) {
+      organizationId organizationName role
     }
   }
 `;
@@ -185,6 +258,23 @@ const mapOrganizationMember = (
   email: member.email,
 });
 
+const mapOrganizationInvitation = (
+  invitation: GraphqlOrganizationInvitation,
+): OrganizationInvitation => ({
+  id: invitation.id,
+  organization_id: invitation.organizationId,
+  organization_name: invitation.organizationName,
+  email: invitation.email,
+  role: invitation.role,
+  status: invitation.status,
+  ...(invitation.invitedBy === null ? {} : { invited_by: invitation.invitedBy }),
+  ...(invitation.invitedByName === null ? {} : { invited_by_name: invitation.invitedByName }),
+  invited_at: invitation.invitedAt,
+  expires_at: invitation.expiresAt,
+  ...(invitation.lastSentAt === null ? {} : { last_sent_at: invitation.lastSentAt }),
+  delivery_sent: invitation.deliverySent,
+});
+
 export const getOrganizationsViaGraphql = async (): Promise<Organization[]> => {
   const data = await graphqlRequest<
     { organizations: GraphqlOrganization[] },
@@ -211,6 +301,84 @@ export const getOrganizationMembersViaGraphql = async (
     { organizationId: number }
   >(organizationMembersQuery, { organizationId });
   return data.organizationMembers.map(mapOrganizationMember);
+};
+
+export const getOrganizationInvitationsViaGraphql = async (
+  organizationId: number,
+): Promise<OrganizationInvitation[]> => {
+  const data = await graphqlRequest<
+    { organizationInvitations: GraphqlOrganizationInvitation[] },
+    { organizationId: number }
+  >(organizationInvitationsQuery, { organizationId });
+  return data.organizationInvitations.map(mapOrganizationInvitation);
+};
+
+export const getOrganizationInvitationPreviewViaGraphql = async (
+  token: string,
+): Promise<OrganizationInvitationPreview> => {
+  const data = await graphqlPublicRequest<{
+    organizationInvitationPreview: {
+      organizationName: string;
+      email: string;
+      role: OrganizationInvitationPreview['role'];
+      status: OrganizationInvitationPreview['status'];
+      expiresAt: string;
+      invitedByName: string | null;
+    };
+  }, { token: string }>(organizationInvitationPreviewQuery, { token });
+  const preview = data.organizationInvitationPreview;
+  return {
+    organization_name: preview.organizationName,
+    email: preview.email,
+    role: preview.role,
+    status: preview.status,
+    expires_at: preview.expiresAt,
+    ...(preview.invitedByName === null ? {} : { invited_by_name: preview.invitedByName }),
+  };
+};
+
+export const createOrganizationInvitationViaGraphql = async (
+  organizationId: number,
+  email: string,
+  role: string,
+): Promise<OrganizationInvitation> => {
+  const data = await graphqlMutationRequest<
+    { createOrganizationInvitation: GraphqlOrganizationInvitation },
+    { organizationId: number; input: { email: string; role: string } }
+  >(createOrganizationInvitationMutation, { organizationId, input: { email, role } });
+  return mapOrganizationInvitation(data.createOrganizationInvitation);
+};
+
+export const resendOrganizationInvitationViaGraphql = async (
+  organizationId: number,
+  invitationId: number,
+): Promise<OrganizationInvitation> => {
+  const data = await graphqlMutationRequest<
+    { resendOrganizationInvitation: GraphqlOrganizationInvitation },
+    { organizationId: number; invitationId: number }
+  >(resendOrganizationInvitationMutation, { organizationId, invitationId });
+  return mapOrganizationInvitation(data.resendOrganizationInvitation);
+};
+
+export const revokeOrganizationInvitationViaGraphql = async (
+  organizationId: number,
+  invitationId: number,
+): Promise<void> => {
+  await graphqlMutationRequest<
+    { revokeOrganizationInvitation: boolean },
+    { organizationId: number; invitationId: number }
+  >(revokeOrganizationInvitationMutation, { organizationId, invitationId });
+};
+
+export const acceptOrganizationInvitationViaGraphql = async (token: string) => {
+  const data = await graphqlMutationRequest<{
+    acceptOrganizationInvitation: {
+      organizationId: number;
+      organizationName: string;
+      role: string;
+    };
+  }, { token: string }>(acceptOrganizationInvitationMutation, { token });
+  return data.acceptOrganizationInvitation;
 };
 
 export const createOrganizationViaGraphql = async (input: {

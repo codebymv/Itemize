@@ -41,6 +41,9 @@ export class RegisterInput {
 
   @Field(() => SignupMode, { nullable: true, defaultValue: SignupMode.FREE })
   signupMode?: SignupMode;
+
+  @Field({ nullable: true })
+  invitationToken?: string;
 }
 
 @InputType()
@@ -53,6 +56,9 @@ export class VerifyEmailInput {
 export class ResendVerificationInput {
   @Field()
   email: string;
+
+  @Field({ nullable: true })
+  invitationToken?: string;
 }
 
 @InputType()

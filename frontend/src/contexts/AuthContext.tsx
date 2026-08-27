@@ -32,7 +32,7 @@ interface AuthActionsContextType {
   /** @deprecated Prefer useGoogleSignIn on login/register — kept for API compatibility */
   login: (redirectTo?: string) => void;
   loginWithEmail: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name?: string, signupMode?: SignupMode) => Promise<void>;
+  register: (email: string, password: string, name?: string, signupMode?: SignupMode, invitationToken?: string) => Promise<void>;
   logout: () => void;
   establishSession: (userData: User) => void;
   setCurrentUser: (user: User | null) => void;
@@ -62,6 +62,7 @@ export const isPublicAuthSkipPath = (pathname: string): boolean => {
   if (exact.includes(pathname)) return true;
   if (pathname.startsWith('/help')) return true;
   if (pathname.startsWith('/shared/')) return true;
+  if (pathname.startsWith('/invite/')) return true;
   if (pathname.startsWith('/p/')) return true;
   if (pathname.startsWith('/legal/')) return true;
   return false;
@@ -235,9 +236,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [establishSession]);
 
-  const register = useCallback(async (email: string, password: string, name?: string, signupMode: SignupMode = 'FREE'): Promise<void> => {
+  const register = useCallback(async (email: string, password: string, name?: string, signupMode: SignupMode = 'FREE', invitationToken?: string): Promise<void> => {
     try {
-      await registerViaGraphql(email, password, name, signupMode);
+      await registerViaGraphql(email, password, name, signupMode, invitationToken);
     } catch (error) {
       if (
         error instanceof GraphqlRequestError ||

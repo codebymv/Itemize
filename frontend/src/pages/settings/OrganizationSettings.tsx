@@ -7,7 +7,9 @@ import {
   Loader2,
   LogOut,
   Plus,
+  RefreshCw,
   Save,
+  Send,
   Trash2,
   Users,
 } from 'lucide-react';
@@ -45,16 +47,19 @@ import { useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { useToast } from '@/hooks/use-toast';
 import {
   deleteOrganization,
+  getOrganizationInvitations,
   getOrganizationMembers,
   inviteMember,
   leaveOrganization,
   removeMember,
+  resendOrganizationInvitation,
+  revokeOrganizationInvitation,
   transferOrganizationOwnership,
   updateMemberRole,
   updateOrganization,
 } from '@/services/contactsApi';
 import { getBusinesses, type Business } from '@/services/invoicesApi';
-import type { JsonRecord, OrganizationMember } from '@/types';
+import type { JsonRecord, OrganizationInvitation, OrganizationMember } from '@/types';
 
 const TIMEZONES = [
   'UTC',
@@ -114,12 +119,14 @@ export function OrganizationSettings() {
   const [locale, setLocale] = useState('en-US');
   const [defaultBusinessId, setDefaultBusinessId] = useState<number | null>(null);
   const [members, setMembers] = useState<OrganizationMember[]>([]);
+  const [invitations, setInvitations] = useState<OrganizationInvitation[]>([]);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [businessProfilesAvailable, setBusinessProfilesAvailable] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [memberSaving, setMemberSaving] = useState(false);
   const [memberActionId, setMemberActionId] = useState<number | null>(null);
+  const [invitationActionId, setInvitationActionId] = useState<number | null>(null);
   const [email, setEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'admin' | 'member' | 'viewer'>('member');
   const [lifecycleAction, setLifecycleAction] = useState<'leave' | 'delete' | null>(null);
@@ -131,7 +138,9 @@ export function OrganizationSettings() {
   const currentUserId = Number(currentUser?.uid);
   const memberLimit = subscription?.limits?.users;
   const hasMemberLimit = typeof memberLimit === 'number' && memberLimit >= 0;
-  const memberLimitReached = hasMemberLimit && members.length >= memberLimit;
+  const activeInvitationCount = invitations.filter((invitation) => invitation.status === 'pending').length;
+  const usedSeats = members.length + activeInvitationCount;
+  const memberLimitReached = hasMemberLimit && usedSeats >= memberLimit;
 
   useEffect(() => {
     if (!organization) return;
@@ -147,12 +156,18 @@ export function OrganizationSettings() {
     if (!organizationId) return;
     setLoading(true);
     try {
-      const [membersResult, businessesResult] = await Promise.allSettled([
+      const [membersResult, invitationsResult, businessesResult] = await Promise.allSettled([
         getOrganizationMembers(organizationId),
+        canManage ? getOrganizationInvitations(organizationId) : Promise.resolve([]),
         getBusinesses(organizationId),
       ]);
       if (membersResult.status === 'rejected') throw membersResult.reason;
       setMembers(membersResult.value);
+      if (invitationsResult.status === 'fulfilled') {
+        setInvitations(invitationsResult.value);
+      } else {
+        setInvitations([]);
+      }
       if (businessesResult.status === 'fulfilled') {
         setBusinesses(businessesResult.value);
         setBusinessProfilesAvailable(true);
@@ -169,7 +184,7 @@ export function OrganizationSettings() {
     } finally {
       setLoading(false);
     }
-  }, [organizationId, toast]);
+  }, [canManage, organizationId, toast]);
 
   useEffect(() => {
     void loadDetails();
@@ -211,18 +226,54 @@ export function OrganizationSettings() {
     if (!organizationId || !email.trim() || !canManage) return;
     setMemberSaving(true);
     try {
-      await inviteMember(organizationId, email.trim(), inviteRole);
+      const invitation = await inviteMember(organizationId, email.trim(), inviteRole);
       setEmail('');
       await loadDetails();
-      toast({ title: 'Member added' });
+      toast({
+        title: invitation.delivery_sent ? 'Invitation sent' : 'Invitation created',
+        description: invitation.delivery_sent
+          ? `A secure link was sent to ${invitation.email}.`
+          : 'Email delivery is currently unavailable. Resend when delivery is restored.',
+      });
     } catch (error) {
       toast({
-        title: 'Could not add member',
-        description: error instanceof Error ? error.message : 'The user must already have an Itemize account.',
+        title: 'Could not send invitation',
+        description: error instanceof Error ? error.message : 'Please try again.',
         variant: 'destructive',
       });
     } finally {
       setMemberSaving(false);
+    }
+  };
+
+  const handleInvitationAction = async (
+    invitation: OrganizationInvitation,
+    action: 'resend' | 'revoke',
+  ) => {
+    if (!organizationId) return;
+    setInvitationActionId(invitation.id);
+    try {
+      if (action === 'resend') {
+        const resent = await resendOrganizationInvitation(organizationId, invitation.id);
+        toast({
+          title: resent.delivery_sent ? 'Invitation resent' : 'Invitation renewed',
+          description: resent.delivery_sent
+            ? `A new secure link was sent to ${invitation.email}.`
+            : 'The secure link was renewed, but email delivery is currently unavailable.',
+        });
+      } else {
+        await revokeOrganizationInvitation(organizationId, invitation.id);
+        toast({ title: 'Invitation revoked' });
+      }
+      await loadDetails();
+    } catch (error) {
+      toast({
+        title: action === 'resend' ? 'Could not resend invitation' : 'Could not revoke invitation',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setInvitationActionId(null);
     }
   };
 
@@ -393,7 +444,7 @@ export function OrganizationSettings() {
           <SettingsSectionTitle icon={Users}>Members</SettingsSectionTitle>
           {hasMemberLimit && (
             <Badge variant={memberLimitReached ? 'outline' : 'secondary'}>
-              {members.length} of {memberLimit} seats
+              {usedSeats} of {memberLimit} seats
             </Badge>
           )}
         </CardHeader>
@@ -428,11 +479,61 @@ export function OrganizationSettings() {
                 disabled={memberSaving || memberLimitReached || !email.trim()}
               >
                 {memberSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                {memberLimitReached ? 'Plan limit reached' : 'Add member'}
+                {memberLimitReached ? 'Plan limit reached' : 'Send invite'}
               </Button>
               <p className="text-sm text-muted-foreground sm:col-span-3">
-                Members must already have an Itemize account.
+                Invitations expire after 7 days. Pending invitations reserve a plan seat.
               </p>
+            </div>
+          )}
+
+          {canManage && invitations.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Pending invitations</p>
+              <div className="divide-y rounded-lg border">
+                {invitations.map((invitation) => (
+                  <div key={invitation.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600/10 text-blue-600">
+                      <Send className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{invitation.email}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {invitation.status === 'expired'
+                          ? 'Expired — resend to issue a new secure link'
+                          : `Expires ${new Date(invitation.expires_at).toLocaleDateString()}`}
+                      </p>
+                    </div>
+                    <Badge variant={invitation.status === 'expired' ? 'outline' : 'secondary'}>
+                      {invitation.status === 'expired' ? 'Expired' : roleLabel(invitation.role)}
+                    </Badge>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Resend invitation to ${invitation.email}`}
+                        disabled={invitationActionId === invitation.id}
+                        onClick={() => void handleInvitationAction(invitation, 'resend')}
+                      >
+                        {invitationActionId === invitation.id
+                          ? <Loader2 className="h-4 w-4 animate-spin" />
+                          : <RefreshCw className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Revoke invitation to ${invitation.email}`}
+                        disabled={invitationActionId === invitation.id}
+                        onClick={() => void handleInvitationAction(invitation, 'revoke')}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

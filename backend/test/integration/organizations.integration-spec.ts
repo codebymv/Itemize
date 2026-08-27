@@ -3,6 +3,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { Pool } from 'pg';
 import request from 'supertest';
+import { createHash } from 'node:crypto';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
@@ -633,5 +634,186 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
       'DELETE FROM signature_file_deletion_jobs WHERE organization_id = $1',
       [organizationId],
     );
+  });
+
+  it('reserves seats and accepts, resends, and revokes secure email invitations', async () => {
+    await pool.query(
+      `UPDATE organizations
+       SET plan = 'starter', subscription_status = 'active', users_limit = 2
+       WHERE id = $1`,
+      [alphaId],
+    );
+    const invitationFields = `
+      id organizationId organizationName email role status invitedAt expiresAt
+      lastSentAt deliverySent
+    `;
+    const created = await mutation(
+      memberToken,
+      `mutation Invite($organizationId: Int!, $input: CreateOrganizationInvitationInput!) {
+        createOrganizationInvitation(organizationId: $organizationId, input: $input) {
+          ${invitationFields}
+        }
+      }`,
+      { organizationId: alphaId, input: { email: invitedEmail, role: 'member' } },
+    ).expect(200);
+    expect(created.body.errors).toBeUndefined();
+    expect(created.body.data.createOrganizationInvitation).toMatchObject({
+      organizationId: alphaId,
+      organizationName: 'Alpha Workspace',
+      email: invitedEmail,
+      role: 'member',
+      status: 'pending',
+      deliverySent: false,
+    });
+    const invitationId = Number(created.body.data.createOrganizationInvitation.id);
+
+    const duplicate = await mutation(
+      memberToken,
+      `mutation Invite($organizationId: Int!, $input: CreateOrganizationInvitationInput!) {
+        createOrganizationInvitation(organizationId: $organizationId, input: $input) { id }
+      }`,
+      { organizationId: alphaId, input: { email: invitedEmail, role: 'viewer' } },
+    ).expect(200);
+    expect(duplicate.body.errors[0].extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'INVITATION_ALREADY_PENDING',
+    });
+
+    const reservedLimit = await mutation(
+      memberToken,
+      `mutation Invite($organizationId: Int!, $input: CreateOrganizationInvitationInput!) {
+        createOrganizationInvitation(organizationId: $organizationId, input: $input) { id }
+      }`,
+      { organizationId: alphaId, input: { email: 'another-invitee@test.itemize', role: 'member' } },
+    ).expect(200);
+    expect(reservedLimit.body.errors[0].extensions).toMatchObject({
+      code: 'FORBIDDEN',
+      reason: 'PLAN_LIMIT_REACHED',
+      current: 2,
+      limit: 2,
+    });
+
+    const beforeResend = await pool.query<{ token_hash: string }>(
+      'SELECT token_hash FROM organization_invitations WHERE id = $1',
+      [invitationId],
+    );
+    const resent = await mutation(
+      memberToken,
+      `mutation Resend($organizationId: Int!, $invitationId: Int!) {
+        resendOrganizationInvitation(
+          organizationId: $organizationId
+          invitationId: $invitationId
+        ) { id status deliverySent }
+      }`,
+      { organizationId: alphaId, invitationId },
+    ).expect(200);
+    expect(resent.body.errors).toBeUndefined();
+    expect(resent.body.data.resendOrganizationInvitation).toMatchObject({
+      id: invitationId,
+      status: 'pending',
+      deliverySent: false,
+    });
+    const afterResend = await pool.query<{ token_hash: string }>(
+      'SELECT token_hash FROM organization_invitations WHERE id = $1',
+      [invitationId],
+    );
+    expect(afterResend.rows[0].token_hash).not.toBe(beforeResend.rows[0].token_hash);
+
+    const acceptanceToken = 'a'.repeat(64);
+    await pool.query(
+      'UPDATE organization_invitations SET token_hash = $1 WHERE id = $2',
+      [createHash('sha256').update(acceptanceToken).digest('hex'), invitationId],
+    );
+    const preview = await request(app.getHttpServer())
+      .post('/graphql')
+      .send({
+        query: `query Preview($token: String!) {
+          organizationInvitationPreview(token: $token) {
+            organizationName email role status expiresAt
+          }
+        }`,
+        variables: { token: acceptanceToken },
+      })
+      .expect(200);
+    expect(preview.body.errors).toBeUndefined();
+    expect(preview.body.data.organizationInvitationPreview).toMatchObject({
+      organizationName: 'Alpha Workspace',
+      email: invitedEmail,
+      role: 'member',
+      status: 'pending',
+    });
+
+    const wrongAccount = await mutation(
+      outsiderToken,
+      `mutation Accept($token: String!) {
+        acceptOrganizationInvitation(token: $token) { organizationId }
+      }`,
+      { token: acceptanceToken },
+    ).expect(200);
+    expect(wrongAccount.body.errors[0].extensions.reason).toBe(
+      'INVITATION_EMAIL_MISMATCH',
+    );
+
+    const accepted = await mutation(
+      invitedUserToken,
+      `mutation Accept($token: String!) {
+        acceptOrganizationInvitation(token: $token) {
+          organizationId organizationName role
+        }
+      }`,
+      { token: acceptanceToken },
+    ).expect(200);
+    expect(accepted.body.errors).toBeUndefined();
+    expect(accepted.body.data.acceptOrganizationInvitation).toEqual({
+      organizationId: alphaId,
+      organizationName: 'Alpha Workspace',
+      role: 'member',
+    });
+    const persisted = await pool.query<{
+      role: string;
+      default_organization_id: number;
+      invitation_status: string;
+      token_hash: string | null;
+    }>(
+      `SELECT member.role, account.default_organization_id,
+              invitation.status AS invitation_status, invitation.token_hash
+       FROM organization_members member
+       JOIN users account ON account.id = member.user_id
+       JOIN organization_invitations invitation ON invitation.id = $3
+       WHERE member.organization_id = $1 AND member.user_id = $2`,
+      [alphaId, invitedUserId, invitationId],
+    );
+    expect(persisted.rows[0]).toMatchObject({
+      role: 'member',
+      default_organization_id: alphaId,
+      invitation_status: 'accepted',
+      token_hash: null,
+    });
+
+    await pool.query('UPDATE organizations SET users_limit = 3 WHERE id = $1', [alphaId]);
+    const revocable = await mutation(
+      memberToken,
+      `mutation Invite($organizationId: Int!, $input: CreateOrganizationInvitationInput!) {
+        createOrganizationInvitation(organizationId: $organizationId, input: $input) { id }
+      }`,
+      { organizationId: alphaId, input: { email: 'revoked@test.itemize', role: 'viewer' } },
+    ).expect(200);
+    const revocableId = Number(revocable.body.data.createOrganizationInvitation.id);
+    const revoked = await mutation(
+      memberToken,
+      `mutation Revoke($organizationId: Int!, $invitationId: Int!) {
+        revokeOrganizationInvitation(
+          organizationId: $organizationId
+          invitationId: $invitationId
+        )
+      }`,
+      { organizationId: alphaId, invitationId: revocableId },
+    ).expect(200);
+    expect(revoked.body.data.revokeOrganizationInvitation).toBe(true);
+    const revokedRow = await pool.query<{ status: string; token_hash: string | null }>(
+      'SELECT status, token_hash FROM organization_invitations WHERE id = $1',
+      [revocableId],
+    );
+    expect(revokedRow.rows[0]).toEqual({ status: 'revoked', token_hash: null });
   });
 });

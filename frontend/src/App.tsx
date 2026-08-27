@@ -33,6 +33,7 @@ import Home from "./pages/Home";
 const Login = React.lazy(() => import("./pages/Login"));
 const Register = React.lazy(() => import("./pages/Register"));
 const VerifyEmail = React.lazy(() => import("./pages/VerifyEmail"));
+const OrganizationInvite = React.lazy(() => import("./pages/OrganizationInvite"));
 const ForgotPassword = React.lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
 
@@ -339,6 +340,7 @@ const AppContent = () => {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/invite/:token" element={<OrganizationInvite />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 

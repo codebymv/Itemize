@@ -297,6 +297,30 @@ export interface OrganizationMember {
   email?: string;
 }
 
+export interface OrganizationInvitation {
+  id: number;
+  organization_id: number;
+  organization_name: string;
+  email: string;
+  role: 'admin' | 'member' | 'viewer';
+  status: 'pending' | 'expired';
+  invited_by?: number;
+  invited_by_name?: string;
+  invited_at: string;
+  expires_at: string;
+  last_sent_at?: string;
+  delivery_sent: boolean;
+}
+
+export interface OrganizationInvitationPreview {
+  organization_name: string;
+  email: string;
+  role: 'admin' | 'member' | 'viewer';
+  status: 'pending' | 'expired';
+  expires_at: string;
+  invited_by_name?: string;
+}
+
 // Contact address structure
 export interface ContactAddress {
   street?: string;

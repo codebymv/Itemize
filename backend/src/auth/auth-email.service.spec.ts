@@ -53,4 +53,20 @@ describe('AuthEmailService', () => {
     expect(request.html).toContain('&lt;img src=x onerror=alert(1)&gt;');
     expect(request.html).not.toContain('<img src=x onerror=alert(1)>');
   });
+
+  it('preserves an invitation capability in the verification link', async () => {
+    const invitationToken = 'a'.repeat(64);
+
+    await new AuthEmailService().sendVerification(
+      { email: 'ada@example.com', name: 'Ada' },
+      'verification-token',
+      invitationToken,
+    );
+
+    const request = JSON.parse(String(fetchMock.mock.calls[0][1].body));
+    expect(request.text).toContain(
+      `https://itemize.cloud/verify-email?token=verification-token&invitation=${invitationToken}`,
+    );
+    expect(request.html).toContain(`invitation=${invitationToken}`);
+  });
 });

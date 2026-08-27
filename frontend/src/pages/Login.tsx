@@ -25,8 +25,14 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  // Get redirect path from location state
-  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/';
+  // Accept only same-origin path redirects from public handoff pages.
+  const requestedRedirect = searchParams.get('redirect');
+  const safeRedirect = requestedRedirect?.startsWith('/') && !requestedRedirect.startsWith('//')
+    ? requestedRedirect
+    : null;
+  const from = safeRedirect ||
+    (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/';
+  const invitationToken = safeRedirect?.match(/^\/invite\/([a-f0-9]{64})$/)?.[1];
 
   // Check if redirected due to session expiration
   const sessionExpired = searchParams.get('session') === 'expired';
@@ -61,7 +67,10 @@ function LoginForm() {
           description: 'Please check your email and verify your account.',
           variant: 'destructive',
         });
-        navigate(`/verify-email?email=${encodeURIComponent(email)}`);
+        const invitation = invitationToken
+          ? `&invitation=${encodeURIComponent(invitationToken)}`
+          : '';
+        navigate(`/verify-email?email=${encodeURIComponent(email)}${invitation}`);
         return;
       }
       

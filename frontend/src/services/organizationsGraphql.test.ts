@@ -2,14 +2,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCsrfToken } from '@/lib/api';
 import {
   addOrganizationMemberViaGraphql,
+  acceptOrganizationInvitationViaGraphql,
+  createOrganizationInvitationViaGraphql,
   createOrganizationViaGraphql,
   deleteOrganizationViaGraphql,
   ensureDefaultOrganizationViaGraphql,
   getOrganizationMembersViaGraphql,
+  getOrganizationInvitationPreviewViaGraphql,
+  getOrganizationInvitationsViaGraphql,
   getOrganizationViaGraphql,
   getOrganizationsViaGraphql,
   leaveOrganizationViaGraphql,
   removeOrganizationMemberViaGraphql,
+  resendOrganizationInvitationViaGraphql,
+  revokeOrganizationInvitationViaGraphql,
   selectOrganizationViaGraphql,
   transferOrganizationOwnershipViaGraphql,
   updateOrganizationMemberRoleViaGraphql,
@@ -181,5 +187,60 @@ describe('organization GraphQL consumer', () => {
     });
     expect(bodies[7].variables).toEqual({ organizationId: 4, memberId: 8 });
     expect(fetchCsrfToken).toHaveBeenCalledTimes(10);
+  });
+
+  it('maps the invitation preview, reservation, resend, revoke, and acceptance lifecycle', async () => {
+    const csrfCallsBefore = vi.mocked(fetchCsrfToken).mock.calls.length;
+    const invitation = {
+      id: 15,
+      organizationId: 4,
+      organizationName: 'Alpha',
+      email: 'invitee@test.itemize',
+      role: 'member' as const,
+      status: 'pending' as const,
+      invitedBy: 7,
+      invitedByName: 'Ada',
+      invitedAt: organization.createdAt,
+      expiresAt: '2026-09-03T12:00:00.000Z',
+      lastSentAt: null,
+      deliverySent: false,
+    };
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response({ data: { organizationInvitations: [invitation] } }))
+      .mockResolvedValueOnce(response({ data: {
+        organizationInvitationPreview: {
+          organizationName: 'Alpha', email: invitation.email, role: 'member',
+          status: 'pending', expiresAt: invitation.expiresAt, invitedByName: 'Ada',
+        },
+      } }))
+      .mockResolvedValueOnce(response({ data: { createOrganizationInvitation: invitation } }))
+      .mockResolvedValueOnce(response({ data: { resendOrganizationInvitation: invitation } }))
+      .mockResolvedValueOnce(response({ data: { revokeOrganizationInvitation: true } }))
+      .mockResolvedValueOnce(response({ data: {
+        acceptOrganizationInvitation: { organizationId: 4, organizationName: 'Alpha', role: 'member' },
+      } }));
+
+    await expect(getOrganizationInvitationsViaGraphql(4)).resolves.toEqual([
+      expect.objectContaining({ id: 15, organization_id: 4, delivery_sent: false }),
+    ]);
+    await expect(getOrganizationInvitationPreviewViaGraphql('a'.repeat(64)))
+      .resolves.toMatchObject({ organization_name: 'Alpha', email: invitation.email });
+    await createOrganizationInvitationViaGraphql(4, invitation.email, 'member');
+    await resendOrganizationInvitationViaGraphql(4, 15);
+    await revokeOrganizationInvitationViaGraphql(4, 15);
+    await expect(acceptOrganizationInvitationViaGraphql('a'.repeat(64)))
+      .resolves.toMatchObject({ organizationId: 4, role: 'member' });
+
+    const bodies = vi.mocked(fetch).mock.calls.map((call) =>
+      JSON.parse(String((call[1] as RequestInit).body)),
+    );
+    expect(bodies[2].variables).toEqual({
+      organizationId: 4,
+      input: { email: invitation.email, role: 'member' },
+    });
+    expect(bodies[3].variables).toEqual({ organizationId: 4, invitationId: 15 });
+    expect(bodies[4].variables).toEqual({ organizationId: 4, invitationId: 15 });
+    expect(bodies[5].variables).toEqual({ token: 'a'.repeat(64) });
+    expect(vi.mocked(fetchCsrfToken).mock.calls.length - csrfCallsBefore).toBe(4);
   });
 });

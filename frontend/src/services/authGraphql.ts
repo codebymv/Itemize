@@ -47,15 +47,24 @@ export const registerViaGraphql = async (
   password: string,
   name?: string,
   signupMode: SignupMode = 'FREE',
+  invitationToken?: string,
 ) => {
   const data = await graphqlPublicRequest<
     { register: { success: boolean; message: string; email?: string } },
-    { input: { email: string; password: string; name?: string; signupMode: SignupMode } }
+    { input: { email: string; password: string; name?: string; signupMode: SignupMode; invitationToken?: string } }
   >(
     `mutation Register($input: RegisterInput!) {
       register(input: $input) { success message email }
     }`,
-    { input: { email, password, ...(name ? { name } : {}), signupMode } },
+    {
+      input: {
+        email,
+        password,
+        ...(name ? { name } : {}),
+        signupMode,
+        ...(invitationToken ? { invitationToken } : {}),
+      },
+    },
   );
   return data.register;
 };
@@ -73,15 +82,15 @@ export const verifyEmailViaGraphql = async (token: string) => {
   return data.verifyEmail;
 };
 
-export const resendVerificationViaGraphql = async (email: string) => {
+export const resendVerificationViaGraphql = async (email: string, invitationToken?: string) => {
   const data = await graphqlPublicRequest<
     { resendVerificationEmail: { success: boolean; message: string } },
-    { input: { email: string } }
+    { input: { email: string; invitationToken?: string } }
   >(
     `mutation ResendVerificationEmail($input: ResendVerificationInput!) {
       resendVerificationEmail(input: $input) { success message }
     }`,
-    { input: { email } },
+    { input: { email, ...(invitationToken ? { invitationToken } : {}) } },
   );
   return data.resendVerificationEmail;
 };

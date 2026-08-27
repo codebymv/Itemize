@@ -81,6 +81,7 @@ describe('IdentityLifecycleService', () => {
     expect(emails.sendVerification).toHaveBeenCalledWith(
       user,
       expect.stringMatching(/^[a-f0-9]{64}$/),
+      undefined,
     );
     expect(users.registerEmailUser.mock.invocationCallOrder[0]).toBeLessThan(
       emails.sendVerification.mock.invocationCallOrder[0],
@@ -115,6 +116,55 @@ describe('IdentityLifecycleService', () => {
     expect(users.registerEmailUser).toHaveBeenCalledWith(
       expect.objectContaining({ signupMode: SignupMode.TRIAL }),
     );
+  });
+
+  it('carries a valid invitation through registration and verification resend', async () => {
+    const invitationToken = 'b'.repeat(64);
+    users.findByEmail.mockResolvedValue(null);
+    users.registerEmailUser.mockResolvedValue(user);
+    users.replaceVerificationToken.mockResolvedValue({
+      email: user.email,
+      name: user.name,
+    });
+
+    await service.register(
+      user.email,
+      'StrongPass1',
+      user.name,
+      SignupMode.FREE,
+      invitationToken,
+    );
+    await service.resendVerification(user.email, invitationToken);
+
+    expect(emails.sendVerification).toHaveBeenNthCalledWith(
+      1,
+      user,
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+      invitationToken,
+    );
+    expect(emails.sendVerification).toHaveBeenNthCalledWith(
+      2,
+      { email: user.email, name: user.name },
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+      invitationToken,
+    );
+  });
+
+  it('rejects an invalid invitation before mutating account state', async () => {
+    await expect(
+      service.register(user.email, 'StrongPass1', user.name, SignupMode.FREE, 'invalid'),
+    ).rejects.toMatchObject({
+      extensions: expect.objectContaining({ code: 'BAD_USER_INPUT' }),
+    });
+    await expect(
+      service.resendVerification(user.email, 'invalid'),
+    ).rejects.toMatchObject({
+      extensions: expect.objectContaining({ code: 'BAD_USER_INPUT' }),
+    });
+
+    expect(users.findByEmail).not.toHaveBeenCalled();
+    expect(users.registerEmailUser).not.toHaveBeenCalled();
+    expect(users.replaceVerificationToken).not.toHaveBeenCalled();
   });
 
   it('consumes a verification token once before establishing the session', async () => {

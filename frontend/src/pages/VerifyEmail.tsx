@@ -22,7 +22,7 @@ export default function VerifyEmail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const { setCurrentUser } = useAuthActions();
+  const { establishSession } = useAuthActions();
   
   const [verifying, setVerifying] = useState(false);
   const [verified, setVerified] = useState(false);
@@ -32,6 +32,7 @@ export default function VerifyEmail() {
 
   const token = searchParams.get('token');
   const email = searchParams.get('email');
+  const invitationToken = searchParams.get('invitation');
 
   // Auto-verify if token is present
   useEffect(() => {
@@ -58,21 +59,47 @@ export default function VerifyEmail() {
       const response = await verifyEmailViaGraphql(token);
       
       if (response.success) {
-        setVerified(true);
-        
         // Set user in context if returned
         if (response.user) {
-          setCurrentUser({ ...response.user, uid: String(response.user.uid) });
+          establishSession({ ...response.user, uid: String(response.user.uid) });
         }
         
+        if (invitationToken) {
+          try {
+            const { acceptOrganizationInvitationViaGraphql } = await import(
+              '@/services/organizationsGraphql'
+            );
+            await acceptOrganizationInvitationViaGraphql(invitationToken);
+          } catch (invitationError) {
+            const message = getApiErrorMessage(
+              invitationError,
+              'the workspace invitation could not be accepted.',
+            );
+            setVerified(true);
+            setError(`Your email is verified, but ${message}`);
+            toast({
+              title: 'Email verified',
+              description: 'Review the workspace invitation to finish joining.',
+              variant: 'destructive',
+            });
+            setTimeout(
+              () => navigate(`/invite/${encodeURIComponent(invitationToken)}`),
+              2500,
+            );
+            return;
+          }
+        }
+
+        setVerified(true);
         toast({
-          title: 'Email verified!',
-          description: 'Your account is now active.',
+          title: invitationToken ? 'Email verified and invitation accepted!' : 'Email verified!',
+          description: invitationToken ? 'The workspace is ready.' : 'Your account is now active.',
         });
 
-        // Let the plan-aware root route send Free users to Canvas and
-        // trial/paid users to the business dashboard.
-        setTimeout(() => navigate('/'), 2000);
+        setTimeout(
+          () => navigate(invitationToken ? '/organization-settings' : '/'),
+          2000,
+        );
       }
     } catch (err) {
       setError(getApiErrorMessage(err, 'Verification failed. The link may be invalid or expired.'));
@@ -87,7 +114,7 @@ export default function VerifyEmail() {
     setResending(true);
 
     try {
-      await resendVerificationViaGraphql(email);
+      await resendVerificationViaGraphql(email, invitationToken || undefined);
       toast({
         title: 'Verification email sent',
         description: 'Please check your inbox.',
@@ -145,8 +172,8 @@ export default function VerifyEmail() {
               <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
                 <CheckCircle className="h-10 w-10 text-green-600 dark:text-green-400" />
               </div>
-              <p className="text-muted-foreground">
-                Redirecting you to Itemize...
+              <p className={error ? 'text-destructive' : 'text-muted-foreground'}>
+                {error || 'Redirecting you to Itemize...'}
               </p>
             </div>
           ) : error ? (

@@ -77,3 +77,75 @@ export class RemoveOrganizationMemberResult {
   @Field(() => Int)
   removedMemberId: number;
 }
+
+@ObjectType()
+export class OrganizationInvitation {
+  @Field(() => Int)
+  id: number;
+
+  @Field(() => Int)
+  organizationId: number;
+
+  @Field()
+  organizationName: string;
+
+  @Field()
+  email: string;
+
+  @Field()
+  role: string;
+
+  @Field()
+  status: string;
+
+  @Field(() => Int, { nullable: true })
+  invitedBy: number | null;
+
+  @Field(() => String, { nullable: true })
+  invitedByName: string | null;
+
+  @Field(() => GraphQLISODateTime)
+  invitedAt: Date;
+
+  @Field(() => GraphQLISODateTime)
+  expiresAt: Date;
+
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  lastSentAt: Date | null;
+
+  @Field()
+  deliverySent: boolean;
+}
+
+@ObjectType()
+export class OrganizationInvitationPreview {
+  @Field()
+  organizationName: string;
+
+  @Field()
+  email: string;
+
+  @Field()
+  role: string;
+
+  @Field()
+  status: string;
+
+  @Field(() => GraphQLISODateTime)
+  expiresAt: Date;
+
+  @Field(() => String, { nullable: true })
+  invitedByName: string | null;
+}
+
+@ObjectType()
+export class OrganizationInvitationAcceptance {
+  @Field(() => Int)
+  organizationId: number;
+
+  @Field()
+  organizationName: string;
+
+  @Field()
+  role: string;
+}

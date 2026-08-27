@@ -48,6 +48,7 @@ export class AuthResolver {
       input.password,
       input.name,
       input.signupMode ?? SignupMode.FREE,
+      input.invitationToken,
     );
   }
 
@@ -68,7 +69,10 @@ export class AuthResolver {
     @Context() context: GraphqlHttpContext,
   ) {
     this.rateLimit.consumeStrict(context.req, input.email);
-    return this.identityLifecycle.resendVerification(input.email);
+    return this.identityLifecycle.resendVerification(
+      input.email,
+      input.invitationToken,
+    );
   }
 
   @Public()

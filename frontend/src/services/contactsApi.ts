@@ -3,7 +3,7 @@
  * Handles all contact-related API calls
  */
 import api from '@/lib/api';
-import { Contact, ContactActivity, ContactsResponse, JsonRecord, Organization, OrganizationMember } from '@/types';
+import { Contact, ContactActivity, ContactsResponse, JsonRecord, Organization, OrganizationInvitation, OrganizationMember } from '@/types';
 import {
   addContactActivityViaGraphql,
   bulkDeleteContactsViaGraphql,
@@ -17,15 +17,18 @@ import {
   updateContactViaGraphql,
 } from './contactsGraphql';
 import {
-  addOrganizationMemberViaGraphql,
+  createOrganizationInvitationViaGraphql,
   createOrganizationViaGraphql,
   deleteOrganizationViaGraphql,
   ensureDefaultOrganizationViaGraphql,
   getOrganizationMembersViaGraphql,
+  getOrganizationInvitationsViaGraphql,
   getOrganizationViaGraphql,
   getOrganizationsViaGraphql,
   leaveOrganizationViaGraphql,
   removeOrganizationMemberViaGraphql,
+  resendOrganizationInvitationViaGraphql,
+  revokeOrganizationInvitationViaGraphql,
   selectOrganizationViaGraphql,
   transferOrganizationOwnershipViaGraphql,
   updateOrganizationMemberRoleViaGraphql,
@@ -76,9 +79,18 @@ export const getOrganizationMembers = async (orgId: number): Promise<Organizatio
   return getOrganizationMembersViaGraphql(orgId);
 };
 
-export const inviteMember = async (orgId: number, email: string, role: string): Promise<OrganizationMember> => {
-  return addOrganizationMemberViaGraphql(orgId, email, role);
+export const inviteMember = async (orgId: number, email: string, role: string): Promise<OrganizationInvitation> => {
+  return createOrganizationInvitationViaGraphql(orgId, email, role);
 };
+
+export const getOrganizationInvitations = async (orgId: number): Promise<OrganizationInvitation[]> =>
+  getOrganizationInvitationsViaGraphql(orgId);
+
+export const resendOrganizationInvitation = async (orgId: number, invitationId: number): Promise<OrganizationInvitation> =>
+  resendOrganizationInvitationViaGraphql(orgId, invitationId);
+
+export const revokeOrganizationInvitation = async (orgId: number, invitationId: number): Promise<void> =>
+  revokeOrganizationInvitationViaGraphql(orgId, invitationId);
 
 export const updateMemberRole = async (orgId: number, memberId: number, role: string): Promise<OrganizationMember> => {
   return updateOrganizationMemberRoleViaGraphql(orgId, memberId, role);
@@ -291,7 +303,10 @@ export default {
   ensureDefaultOrganization,
   selectOrganization,
   getOrganizationMembers,
+  getOrganizationInvitations,
   inviteMember,
+  resendOrganizationInvitation,
+  revokeOrganizationInvitation,
   updateMemberRole,
   removeMember,
   transferOrganizationOwnership,

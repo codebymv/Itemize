@@ -1,23 +1,29 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected } from '../common/metadata';
+import { CsrfProtected, Public } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
   AddOrganizationMemberInput,
+  CreateOrganizationInvitationInput,
   CreateOrganizationInput,
   UpdateOrganizationInput,
 } from './organization.inputs';
 import {
   DeleteOrganizationResult,
   Organization,
+  OrganizationInvitation,
+  OrganizationInvitationAcceptance,
+  OrganizationInvitationPreview,
   OrganizationMember,
   RemoveOrganizationMemberResult,
 } from './organization.types';
+import { OrganizationInvitationsService } from './organization-invitations.service';
 import { OrganizationsService } from './organizations.service';
 
 @Resolver(() => Organization)
 export class OrganizationsResolver {
   constructor(
     private readonly organizations: OrganizationsService,
+    private readonly invitations: OrganizationInvitationsService,
     private readonly requestContext: RequestContextService,
   ) {}
 
@@ -38,6 +44,21 @@ export class OrganizationsResolver {
     @Args('organizationId', { type: () => Int }) organizationId: number,
   ): Promise<OrganizationMember[]> {
     return this.organizations.members(this.userId(), organizationId);
+  }
+
+  @Query(() => [OrganizationInvitation])
+  organizationInvitations(
+    @Args('organizationId', { type: () => Int }) organizationId: number,
+  ): Promise<OrganizationInvitation[]> {
+    return this.invitations.list(this.userId(), organizationId);
+  }
+
+  @Public()
+  @Query(() => OrganizationInvitationPreview)
+  organizationInvitationPreview(
+    @Args('token') token: string,
+  ): Promise<OrganizationInvitationPreview> {
+    return this.invitations.preview(token);
   }
 
   @CsrfProtected()
@@ -72,6 +93,46 @@ export class OrganizationsResolver {
     @Args('input') input: AddOrganizationMemberInput,
   ): Promise<OrganizationMember> {
     return this.organizations.addMember(this.userId(), organizationId, input);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => OrganizationInvitation)
+  createOrganizationInvitation(
+    @Args('organizationId', { type: () => Int }) organizationId: number,
+    @Args('input') input: CreateOrganizationInvitationInput,
+  ): Promise<OrganizationInvitation> {
+    return this.invitations.create(
+      this.userId(),
+      organizationId,
+      input.email,
+      input.role,
+    );
+  }
+
+  @CsrfProtected()
+  @Mutation(() => OrganizationInvitation)
+  resendOrganizationInvitation(
+    @Args('organizationId', { type: () => Int }) organizationId: number,
+    @Args('invitationId', { type: () => Int }) invitationId: number,
+  ): Promise<OrganizationInvitation> {
+    return this.invitations.resend(this.userId(), organizationId, invitationId);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => Boolean)
+  revokeOrganizationInvitation(
+    @Args('organizationId', { type: () => Int }) organizationId: number,
+    @Args('invitationId', { type: () => Int }) invitationId: number,
+  ): Promise<boolean> {
+    return this.invitations.revoke(this.userId(), organizationId, invitationId);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => OrganizationInvitationAcceptance)
+  acceptOrganizationInvitation(
+    @Args('token') token: string,
+  ): Promise<OrganizationInvitationAcceptance> {
+    return this.invitations.accept(this.userId(), token);
   }
 
   @CsrfProtected()

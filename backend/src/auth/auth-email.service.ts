@@ -19,8 +19,15 @@ const escapeHtml = (value: string): string =>
 export class AuthEmailService {
   private readonly logger = new Logger(AuthEmailService.name);
 
-  sendVerification(user: AuthEmailUser, token: string): Promise<boolean> {
-    const url = `${this.appUrl()}/verify-email?token=${encodeURIComponent(token)}`;
+  sendVerification(
+    user: AuthEmailUser,
+    token: string,
+    invitationToken?: string,
+  ): Promise<boolean> {
+    const invitation = invitationToken
+      ? `&invitation=${encodeURIComponent(invitationToken)}`
+      : '';
+    const url = `${this.appUrl()}/verify-email?token=${encodeURIComponent(token)}${invitation}`;
     const html = brandedTransactionalEmail({
       assetOrigin: transactionalEmailAssetOrigin(),
       previewText: 'Verify your email address to activate your Itemize account.',
