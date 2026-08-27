@@ -19,6 +19,7 @@ export interface User {
   email: string;
   photoURL?: string;
   role?: 'USER' | 'ADMIN';
+  provider?: string;
 }
 
 interface AuthStateContextType {
@@ -77,6 +78,7 @@ const normalizeUser = (data: Record<string, unknown>): User | null => {
     email: (data.email as string) || '',
     photoURL: data.photoURL as string | undefined,
     role: data.role as User['role'],
+    provider: data.provider as string | undefined,
   };
 };
 

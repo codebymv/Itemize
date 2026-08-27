@@ -103,6 +103,24 @@ export class AuthEmailService {
     );
   }
 
+  sendAccountDeleted(user: AuthEmailUser): Promise<boolean> {
+    const html = brandedTransactionalEmail({
+      assetOrigin: transactionalEmailAssetOrigin(),
+      previewText: 'Your Itemize account was deleted.',
+      heading: 'Account deleted',
+      bodyHtml: this.greeting(user) +
+        '<p style="margin:0">Your Itemize account and eligible personal workspaces have been permanently deleted.</p>' +
+        '<p style="margin:20px 0 0;color:#64748b;font-size:13px">This message confirms the deletion request. If you did not make it, contact support immediately.</p>',
+      showFooter: false,
+    });
+    return this.send(
+      user,
+      'Your Itemize account was deleted',
+      'Your Itemize account and eligible personal workspaces were permanently deleted. If you did not request this, contact support immediately.',
+      html,
+    );
+  }
+
   private greeting(user: AuthEmailUser): string {
     return `<p style="margin:0 0 16px">Hi ${escapeHtml(user.name)},</p>`;
   }

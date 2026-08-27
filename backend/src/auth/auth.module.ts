@@ -12,10 +12,14 @@ import { IdentityLifecycleService } from './identity-lifecycle.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AccountDataExportRepository } from './account-data-export.repository';
 import { AccountDataExportService } from './account-data-export.service';
+import { AccountDeletionRepository } from './account-deletion.repository';
+import { AccountDeletionService } from './account-deletion.service';
 
 @Module({
   imports: [JwtModule.register({}), NotificationsModule],
   providers: [
+    AccountDeletionRepository,
+    AccountDeletionService,
     AccountDataExportRepository,
     AccountDataExportService,
     AccessTokenService,

@@ -16,6 +16,7 @@ describe('Authentication lifecycle GraphQL PostgreSQL contract', () => {
     sendWelcome: jest.fn().mockResolvedValue(true),
     sendPasswordReset: jest.fn().mockResolvedValue(true),
     sendPasswordChanged: jest.fn().mockResolvedValue(true),
+    sendAccountDeleted: jest.fn().mockResolvedValue(true),
   };
   const createdUserIds: number[] = [];
   const suffix = `${Date.now()}-${process.pid}`;
@@ -373,5 +374,147 @@ describe('Authentication lifecycle GraphQL PostgreSQL contract', () => {
     expect(serialized).not.toContain('share_token');
     expect(serialized).not.toContain('vault-capability');
     expect(serialized).not.toContain('shared-snapshot');
+  });
+
+  it('blocks unsafe account deletion and atomically deletes an eligible account', async () => {
+    const deletionEmail = `auth-delete-${suffix}@test.itemize`;
+    const passwordHash = await bcrypt.hash('DeletePass5', 4);
+    const created = await pool.query<{ id: number }>(
+      `INSERT INTO users (
+         email, name, password_hash, provider, email_verified, created_at, updated_at
+       ) VALUES ($1, 'Deletion Member', $2, 'email', TRUE, NOW(), NOW())
+       RETURNING id`,
+      [deletionEmail, passwordHash],
+    );
+    const userId = Number(created.rows[0].id);
+    createdUserIds.push(userId);
+    const organization = await pool.query<{ id: number }>(
+      `INSERT INTO organizations (
+         name, slug, settings, plan, subscription_status, users_limit
+       ) VALUES ('Deletion Workspace', $1, '{"personal":true}'::jsonb, 'free', 'none', 1)
+       RETURNING id`,
+      [`auth-delete-${suffix}`],
+    );
+    const organizationId = Number(organization.rows[0].id);
+    await pool.query(
+      `INSERT INTO organization_members (organization_id, user_id, role, joined_at)
+       VALUES ($1, $2, 'owner', NOW())`,
+      [organizationId, userId],
+    );
+    await pool.query(
+      'UPDATE users SET default_organization_id = $1 WHERE id = $2',
+      [organizationId, userId],
+    );
+
+    const agent = request.agent(app.getHttpServer());
+    await agent.post('/graphql').send({
+      query: `mutation Login($input: LoginInput!) {
+        login(input: $input) { success user { uid } }
+      }`,
+      variables: { input: { email: deletionEmail, password: 'DeletePass5' } },
+    }).expect(200);
+    const csrf = await agent.post('/graphql')
+      .send({ query: '{ csrfToken { token } }' })
+      .expect(200);
+    const csrfToken = csrf.body.data.csrfToken.token as string;
+    const deletionDocument = `mutation Delete($input: DeleteViewerAccountInput!) {
+      deleteViewerAccount(input: $input) { success message email }
+    }`;
+    const deleteAccount = () => agent.post('/graphql')
+      .set('x-csrf-token', csrfToken)
+      .send({
+        query: deletionDocument,
+        variables: {
+          input: { confirmation: deletionEmail, currentPassword: 'DeletePass5' },
+        },
+      })
+      .expect(200);
+
+    const other = await pool.query<{ id: number }>(
+      `INSERT INTO users (email, name, provider, email_verified)
+       VALUES ($1, 'Other Member', 'google', TRUE) RETURNING id`,
+      [`auth-delete-other-${suffix}@test.itemize`],
+    );
+    const otherUserId = Number(other.rows[0].id);
+    createdUserIds.push(otherUserId);
+    await pool.query(
+      `INSERT INTO organization_members (organization_id, user_id, role, joined_at)
+       VALUES ($1, $2, 'member', NOW())`,
+      [organizationId, otherUserId],
+    );
+    const shared = await deleteAccount();
+    expect(shared.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'OWNERSHIP_TRANSFER_REQUIRED',
+    });
+    await pool.query(
+      'DELETE FROM organization_members WHERE organization_id = $1 AND user_id = $2',
+      [organizationId, otherUserId],
+    );
+
+    await pool.query(
+      `UPDATE organizations
+       SET stripe_subscription_id = 'sub_deletion_test', subscription_status = 'active'
+       WHERE id = $1`,
+      [organizationId],
+    );
+    const subscribed = await deleteAccount();
+    expect(subscribed.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'ACTIVE_SUBSCRIPTION',
+    });
+    await pool.query(
+      `UPDATE organizations
+       SET stripe_subscription_id = NULL, subscription_status = 'none'
+       WHERE id = $1`,
+      [organizationId],
+    );
+
+    const document = await pool.query<{ id: number }>(
+      `INSERT INTO signature_documents (
+         organization_id, title, status, file_url, created_by
+       ) VALUES ($1, 'Deletion evidence', 'sent', 'https://files.test/deletion.pdf', $2)
+       RETURNING id`,
+      [organizationId, userId],
+    );
+    const retained = await deleteAccount();
+    expect(retained.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'SIGNATURE_EVIDENCE_RETAINED',
+    });
+    await pool.query(
+      `UPDATE signature_documents SET status = 'draft' WHERE id = $1`,
+      [document.rows[0].id],
+    );
+
+    emails.sendAccountDeleted.mockClear();
+    const deleted = await deleteAccount();
+    expect(deleted.body.errors).toBeUndefined();
+    expect(deleted.body.data.deleteViewerAccount).toMatchObject({
+      success: true,
+      email: deletionEmail,
+    });
+    const cookies = deleted.headers['set-cookie'] as unknown as string[];
+    expect(cookies.some((cookie) => cookie.startsWith('itemize_auth=;'))).toBe(true);
+    expect(cookies.some((cookie) => cookie.startsWith('itemize_refresh=;'))).toBe(true);
+    expect(emails.sendAccountDeleted).toHaveBeenCalledWith(
+      expect.objectContaining({ email: deletionEmail }),
+    );
+
+    const persisted = await pool.query(
+      `SELECT
+         EXISTS (SELECT 1 FROM users WHERE id = $1) AS user_exists,
+         EXISTS (SELECT 1 FROM organizations WHERE id = $2) AS organization_exists,
+         EXISTS (
+           SELECT 1 FROM signature_file_deletion_jobs
+           WHERE organization_id = $2 AND file_url = 'https://files.test/deletion.pdf'
+         ) AS cleanup_queued`,
+      [userId, organizationId],
+    );
+    expect(persisted.rows[0]).toEqual({
+      user_exists: false,
+      organization_exists: false,
+      cleanup_queued: true,
+    });
   });
 });

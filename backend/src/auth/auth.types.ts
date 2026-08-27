@@ -15,6 +15,9 @@ export class AuthSessionUser {
   role: string;
 
   @Field()
+  provider: string;
+
+  @Field()
   photoURL: string;
 }
 

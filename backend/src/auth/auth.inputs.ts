@@ -90,3 +90,12 @@ export class UpdateViewerProfileInput {
   @Field()
   name: string;
 }
+
+@InputType()
+export class DeleteViewerAccountInput {
+  @Field()
+  confirmation: string;
+
+  @Field({ nullable: true })
+  currentPassword?: string;
+}

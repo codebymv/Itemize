@@ -7,6 +7,7 @@ import {
 import {
   getCurrentUserViaGraphql,
   getViewerDataExportViaGraphql,
+  deleteViewerAccountViaGraphql,
   changePasswordViaGraphql,
   loginViaGraphql,
   logoutViaGraphql,
@@ -69,6 +70,25 @@ describe('authentication GraphQL adapter', () => {
     expect(graphqlRequest).toHaveBeenCalledWith(
       expect.stringContaining('query ViewerDataExport'),
       {},
+    );
+  });
+
+  it('maps protected account deletion confirmation', async () => {
+    vi.mocked(graphqlMutationRequest).mockResolvedValue({
+      deleteViewerAccount: { success: true, message: 'Deleted' },
+    });
+
+    await expect(
+      deleteViewerAccountViaGraphql('member@example.com', 'StrongPass1'),
+    ).resolves.toMatchObject({ success: true });
+    expect(graphqlMutationRequest).toHaveBeenCalledWith(
+      expect.stringContaining('mutation DeleteViewerAccount'),
+      {
+        input: {
+          confirmation: 'member@example.com',
+          currentPassword: 'StrongPass1',
+        },
+      },
     );
   });
 

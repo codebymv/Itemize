@@ -4,6 +4,7 @@ import { CsrfProtected, Public } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
   ChangePasswordInput,
+  DeleteViewerAccountInput,
   GoogleAccessTokenInput,
   LoginInput,
   RegisterInput,
@@ -26,6 +27,7 @@ import {
 } from './auth.types';
 import { AccountDataExportService } from './account-data-export.service';
 import { AccountDataExport } from './account-data-export.types';
+import { AccountDeletionService } from './account-deletion.service';
 
 type GraphqlHttpContext = { req: Request; res: Response };
 
@@ -37,6 +39,7 @@ export class AuthResolver {
     private readonly rateLimit: AuthRateLimitService,
     private readonly requestContext: RequestContextService,
     private readonly accountDataExports: AccountDataExportService,
+    private readonly accountDeletions: AccountDeletionService,
   ) {}
 
   @Public()
@@ -151,6 +154,22 @@ export class AuthResolver {
     const identity = this.requestContext.current().identity;
     if (!identity) throw new Error('Verified user identity is unavailable');
     return this.accountDataExports.exportForUser(identity.userId);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => AuthMessagePayload)
+  deleteViewerAccount(
+    @Args('input') input: DeleteViewerAccountInput,
+    @Context() context: GraphqlHttpContext,
+  ): Promise<AuthMessagePayload> {
+    const identity = this.requestContext.current().identity;
+    if (!identity) throw new Error('Verified user identity is unavailable');
+    return this.accountDeletions.deleteViewer(
+      identity.userId,
+      input.confirmation,
+      input.currentPassword,
+      context.res,
+    );
   }
 
   @Public()

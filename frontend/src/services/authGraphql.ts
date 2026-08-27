@@ -9,6 +9,7 @@ export type AuthGraphqlUser = {
   email: string;
   name: string;
   role: 'USER' | 'ADMIN';
+  provider: string;
   photoURL: string;
 };
 
@@ -33,7 +34,7 @@ export type ViewerDataExport = {
 
 const SESSION_FIELDS = `
   success
-  user { uid email name role photoURL }
+  user { uid email name role provider photoURL }
 `;
 
 export const loginViaGraphql = async (email: string, password: string) => {
@@ -199,6 +200,27 @@ export const getViewerDataExportViaGraphql = async (): Promise<ViewerDataExport>
     {},
   );
   return data.viewerDataExport;
+};
+
+export const deleteViewerAccountViaGraphql = async (
+  confirmation: string,
+  currentPassword?: string,
+) => {
+  const data = await graphqlMutationRequest<
+    { deleteViewerAccount: { success: boolean; message: string; email?: string } },
+    { input: { confirmation: string; currentPassword?: string } }
+  >(
+    `mutation DeleteViewerAccount($input: DeleteViewerAccountInput!) {
+      deleteViewerAccount(input: $input) { success message email }
+    }`,
+    {
+      input: {
+        confirmation,
+        ...(currentPassword ? { currentPassword } : {}),
+      },
+    },
+  );
+  return data.deleteViewerAccount;
 };
 
 export const logoutViaGraphql = async (): Promise<void> => {

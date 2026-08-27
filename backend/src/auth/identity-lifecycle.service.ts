@@ -85,6 +85,7 @@ export class IdentityLifecycleService {
         email: user.email,
         name: user.name,
         role: user.role,
+        provider: user.provider || 'email',
         photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`,
       },
     };

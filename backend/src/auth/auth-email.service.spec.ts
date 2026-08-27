@@ -30,6 +30,7 @@ describe('AuthEmailService', () => {
     ['welcome', (service: AuthEmailService) => service.sendWelcome({ email: 'ada@example.com', name: 'Ada' })],
     ['password reset', (service: AuthEmailService) => service.sendPasswordReset({ email: 'ada@example.com', name: 'Ada' }, 'token')],
     ['password changed', (service: AuthEmailService) => service.sendPasswordChanged({ email: 'ada@example.com', name: 'Ada' })],
+    ['account deleted', (service: AuthEmailService) => service.sendAccountDeleted({ email: 'ada@example.com', name: 'Ada' })],
   ])('uses the branded transactional shell for %s mail', async (_name, send) => {
     await expect(send(new AuthEmailService())).resolves.toBe(true);
     const request = JSON.parse(String(fetchMock.mock.calls[0][1].body));
