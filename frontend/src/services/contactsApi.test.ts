@@ -14,11 +14,14 @@ import {
   getContactContent,
   getContacts,
   getOrganization,
+  getOrganizationInvitations,
   getOrganizationMembers,
   getOrganizations,
   inviteMember,
   leaveOrganization,
   removeMember,
+  resendOrganizationInvitation,
+  revokeOrganizationInvitation,
   selectOrganization,
   transferOrganizationOwnership,
   updateContact,
@@ -38,15 +41,18 @@ import {
   updateContactViaGraphql,
 } from './contactsGraphql';
 import {
-  addOrganizationMemberViaGraphql,
+  createOrganizationInvitationViaGraphql,
   createOrganizationViaGraphql,
   deleteOrganizationViaGraphql,
   ensureDefaultOrganizationViaGraphql,
+  getOrganizationInvitationsViaGraphql,
   getOrganizationMembersViaGraphql,
   getOrganizationViaGraphql,
   getOrganizationsViaGraphql,
   leaveOrganizationViaGraphql,
   removeOrganizationMemberViaGraphql,
+  resendOrganizationInvitationViaGraphql,
+  revokeOrganizationInvitationViaGraphql,
   selectOrganizationViaGraphql,
   transferOrganizationOwnershipViaGraphql,
   updateOrganizationMemberRoleViaGraphql,
@@ -76,15 +82,18 @@ vi.mock('./contactsGraphql', () => ({
 }));
 
 vi.mock('./organizationsGraphql', () => ({
-  addOrganizationMemberViaGraphql: vi.fn(),
+  createOrganizationInvitationViaGraphql: vi.fn(),
   createOrganizationViaGraphql: vi.fn(),
   deleteOrganizationViaGraphql: vi.fn(),
   ensureDefaultOrganizationViaGraphql: vi.fn(),
+  getOrganizationInvitationsViaGraphql: vi.fn(),
   getOrganizationMembersViaGraphql: vi.fn(),
   getOrganizationViaGraphql: vi.fn(),
   getOrganizationsViaGraphql: vi.fn(),
   leaveOrganizationViaGraphql: vi.fn(),
   removeOrganizationMemberViaGraphql: vi.fn(),
+  resendOrganizationInvitationViaGraphql: vi.fn(),
+  revokeOrganizationInvitationViaGraphql: vi.fn(),
   selectOrganizationViaGraphql: vi.fn(),
   transferOrganizationOwnershipViaGraphql: vi.fn(),
   updateOrganizationMemberRoleViaGraphql: vi.fn(),
@@ -115,12 +124,25 @@ describe('contacts API GraphQL transport', () => {
       invited_at: organization.created_at,
       email: 'member@test.itemize',
     };
+    const invitation = {
+      id: 12,
+      organization_id: 4,
+      organization_name: 'Alpha',
+      email: member.email,
+      role: 'member' as const,
+      status: 'pending' as const,
+      invited_at: organization.created_at,
+      expires_at: '2026-07-25T12:00:00.000Z',
+      delivery_sent: true,
+    };
     vi.mocked(getOrganizationsViaGraphql).mockResolvedValue([organization]);
     vi.mocked(getOrganizationViaGraphql).mockResolvedValue(organization);
     vi.mocked(createOrganizationViaGraphql).mockResolvedValue(organization);
     vi.mocked(updateOrganizationViaGraphql).mockResolvedValue(organization);
     vi.mocked(getOrganizationMembersViaGraphql).mockResolvedValue([member]);
-    vi.mocked(addOrganizationMemberViaGraphql).mockResolvedValue(member);
+    vi.mocked(getOrganizationInvitationsViaGraphql).mockResolvedValue([invitation]);
+    vi.mocked(createOrganizationInvitationViaGraphql).mockResolvedValue(invitation);
+    vi.mocked(resendOrganizationInvitationViaGraphql).mockResolvedValue(invitation);
     vi.mocked(updateOrganizationMemberRoleViaGraphql).mockResolvedValue(member);
     vi.mocked(transferOrganizationOwnershipViaGraphql).mockResolvedValue({
       ...member,
@@ -137,7 +159,10 @@ describe('contacts API GraphQL transport', () => {
     await expect(ensureDefaultOrganization()).resolves.toEqual(organization);
     await expect(selectOrganization(4)).resolves.toEqual(organization);
     await expect(getOrganizationMembers(4)).resolves.toEqual([member]);
-    await expect(inviteMember(4, member.email, 'member')).resolves.toEqual(member);
+    await expect(getOrganizationInvitations(4)).resolves.toEqual([invitation]);
+    await expect(inviteMember(4, member.email, 'member')).resolves.toEqual(invitation);
+    await expect(resendOrganizationInvitation(4, 12)).resolves.toEqual(invitation);
+    await revokeOrganizationInvitation(4, 12);
     await expect(updateMemberRole(4, 8, 'viewer')).resolves.toEqual(member);
     await expect(transferOrganizationOwnership(4, 8)).resolves.toMatchObject({
       role: 'owner',
@@ -149,11 +174,14 @@ describe('contacts API GraphQL transport', () => {
     expect(updateOrganizationViaGraphql).toHaveBeenCalledWith(4, { name: 'Alpha' });
     expect(deleteOrganizationViaGraphql).toHaveBeenCalledWith(4);
     expect(selectOrganizationViaGraphql).toHaveBeenCalledWith(4);
-    expect(addOrganizationMemberViaGraphql).toHaveBeenCalledWith(
+    expect(getOrganizationInvitationsViaGraphql).toHaveBeenCalledWith(4);
+    expect(createOrganizationInvitationViaGraphql).toHaveBeenCalledWith(
       4,
       member.email,
       'member',
     );
+    expect(resendOrganizationInvitationViaGraphql).toHaveBeenCalledWith(4, 12);
+    expect(revokeOrganizationInvitationViaGraphql).toHaveBeenCalledWith(4, 12);
     expect(updateOrganizationMemberRoleViaGraphql).toHaveBeenCalledWith(
       4,
       8,

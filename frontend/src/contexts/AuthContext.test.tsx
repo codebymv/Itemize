@@ -110,6 +110,7 @@ describe('AuthProvider GraphQL authentication', () => {
       'StrongPass1',
       'New User',
       'FREE',
+      undefined,
     );
   });
 

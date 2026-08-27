@@ -26,21 +26,21 @@ describe('CommunicationsSection', () => {
         const usersTab = screen.getByRole('tab', { name: 'Users' });
         const emailLogsTab = screen.getByRole('tab', { name: 'Email Logs' });
 
-        expect(usersTab).toHaveClass('group/tab');
+        expect(usersTab).toHaveAttribute('data-state', 'active');
         expect(usersTab).toHaveClass(
-            'hover:bg-blue-50',
+            'icon-tabs-trigger',
+            'hover:bg-sidebar-accent',
             'dark:hover:bg-blue-900/40',
+            'data-[state=active]:bg-sidebar-accent',
             'data-[state=active]:hover:bg-background',
+            '[&>svg]:transition-colors',
         );
-        expect(usersTab.querySelector('svg')).toHaveClass('text-blue-600', 'transition-colors');
-        expect(usersTab.querySelector('svg')).not.toHaveClass('group-hover/tab:text-blue-600');
 
-        expect(emailLogsTab).toHaveClass('group/tab');
-        expect(emailLogsTab.querySelector('svg')).toHaveClass(
-            'text-gray-600',
-            'dark:text-gray-400',
-            'group-hover/tab:text-blue-600',
-            'transition-colors',
+        expect(emailLogsTab).toHaveAttribute('data-state', 'inactive');
+        expect(emailLogsTab).toHaveClass(
+            'icon-tabs-trigger',
+            'hover:bg-sidebar-accent',
+            '[&>svg]:transition-colors',
         );
     });
 });
