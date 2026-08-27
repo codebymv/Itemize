@@ -19,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { IconTabsList, IconTabsTrigger, Tabs } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { getAssetUrl } from '@/lib/api';
@@ -93,32 +92,41 @@ const settingsNav = [
   { title: 'Integrations', path: '/settings/integrations', icon: Plug },
 ];
 
-function SettingsNav() {
+export function SettingsNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const activePath = location.pathname === '/settings/' ? '/settings' : location.pathname;
+  const activeItem = settingsNav.find((item) => item.path === activePath) ?? settingsNav[0];
 
-  // Mobile: Use tabs
-  const mobileTabs = (
-    <Tabs value={activePath} onValueChange={(value) => navigate(value)} className="w-full lg:hidden">
-      <IconTabsList className="grid w-full grid-cols-5">
-        {settingsNav.map((item) => (
-          <IconTabsTrigger
-            key={item.path}
-            value={item.path}
-            className="px-2 text-xs sm:px-3 sm:text-sm"
-          >
-            <item.icon className="h-3.5 w-3.5 flex-shrink-0 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">{item.title}</span>
-          </IconTabsTrigger>
-        ))}
-      </IconTabsList>
-    </Tabs>
+  // Mobile: keep every destination labeled instead of reducing navigation to
+  // ambiguous icons. The 44px trigger also provides a reliable touch target.
+  const mobileNav = (
+    <nav aria-label="Settings sections" className="w-full space-y-1.5 pb-3 lg:hidden">
+      <Label htmlFor="settings-section" className="text-xs text-muted-foreground">
+        Settings section
+      </Label>
+      <Select value={activeItem.path} onValueChange={(value) => navigate(value)}>
+        <SelectTrigger
+          id="settings-section"
+          aria-label="Settings section"
+          className="h-11 w-full bg-background"
+        >
+          <SelectValue placeholder="Choose a settings section" />
+        </SelectTrigger>
+        <SelectContent>
+          {settingsNav.map((item) => (
+            <SelectItem key={item.path} value={item.path}>
+              {item.title}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </nav>
   );
 
   // Desktop: Use sidebar navigation
   const desktopNav = (
-    <nav className="hidden flex-col gap-1 lg:flex">
+    <nav aria-label="Settings sections" className="hidden flex-col gap-1 lg:flex">
       {settingsNav.map((item) => {
         const isActive = location.pathname === item.path || (item.path === '/settings' && location.pathname === '/settings/');
         return (
@@ -143,7 +151,7 @@ function SettingsNav() {
 
   return (
     <>
-      {mobileTabs}
+      {mobileNav}
       {desktopNav}
     </>
   );

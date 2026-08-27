@@ -511,7 +511,7 @@ const { currentUser } = useAuthState();
           </div>
           <div className="flex items-center gap-2">
             <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
-              <SelectTrigger className="flex-1 h-9">
+              <SelectTrigger className="h-11 flex-1">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
@@ -525,7 +525,7 @@ const { currentUser } = useAuthState();
               </SelectContent>
             </Select>
             <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v)}>
-              <SelectTrigger className="flex-1 h-9">
+              <SelectTrigger className="h-11 flex-1">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
@@ -538,13 +538,15 @@ const { currentUser } = useAuthState();
             </Select>
             <Button
               id="mobile-new-canvas-button"
+              aria-label="Add content"
+              title="Add content"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 handleOpenMenu('mobile-new-canvas-button');
               }}
               size="icon"
-              className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
+              className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700"
             >
               <Plus className="h-4 w-4" />
             </Button>
