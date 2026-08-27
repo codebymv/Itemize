@@ -167,7 +167,7 @@ export function InboxPage() {
             icon={<Inbox className="h-5 w-5 text-blue-600 flex-shrink-0" />}
             frame="split"
             className="h-[calc(100vh-64px)]"
-            headerActions={
+            pageActions={
                 <>
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

@@ -178,7 +178,7 @@ export function DashboardPage() {
         <PageLayout
             title="DASHBOARD"
             icon={<LayoutDashboard className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
-            headerActions={
+            pageActions={
                 <>
                     <Select value={period} onValueChange={(value) => setPeriod(value as PeriodOption)}>
                         <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50">

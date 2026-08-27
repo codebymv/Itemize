@@ -260,7 +260,7 @@ export function ChatWidgetPage() {
       icon={<MessageCircle className="h-5 w-5 flex-shrink-0 text-blue-600" />}
       className="mx-auto max-w-7xl"
       mobileClassName="flex-col items-stretch gap-3"
-      headerActions={
+      pageActions={
         <>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <IconTabsList className="h-9">

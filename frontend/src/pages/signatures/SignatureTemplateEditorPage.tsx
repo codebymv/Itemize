@@ -131,7 +131,7 @@ export default function SignatureTemplateEditorPage() {
     <PageLayout
       title="EDIT SIGNATURE TEMPLATE"
       icon={<FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-      headerActions={
+      pageActions={
         <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSave} disabled={loading || !template || !isDirty}>
           <Save className="h-4 w-4 mr-2" />
           Save

@@ -197,7 +197,7 @@ export function EstimatesPage() {
             title="ESTIMATES"
             icon={<FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />}
             mobileClassName="flex-col items-stretch"
-            headerActions={
+            pageActions={
                 <Tooltip>
                     <TooltipTrigger asChild>
                     <Button

@@ -156,7 +156,7 @@ export function ReputationPage() {
         <PageLayout
             title="REVIEWS"
             icon={<Star className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            headerActions={
+            pageActions={
                 <>
                     <div className="relative w-full max-w-xs">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />

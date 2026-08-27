@@ -195,7 +195,7 @@ const handleDuplicate = async (id: number) => {
             title="LANDING PAGES"
             icon={<Layout className="h-5 w-5 text-blue-600 flex-shrink-0" />}
             mobileClassName="flex-col items-stretch"
-            headerActions={
+            pageActions={
                 <>
                     <div className="relative w-full max-w-xs">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />

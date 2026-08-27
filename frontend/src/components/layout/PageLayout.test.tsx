@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { HeaderProvider, useHeader } from '@/contexts/HeaderContext';
 import { PageLayout } from './PageLayout';
 import { PAGE_TITLE_CLASS } from '@/hooks/usePageHeader';
-import { shouldShowMobilePageHeaderIcon } from './pageHeaderLayout';
 
 function HeaderSlot() {
   const { headerContent } = useHeader();
@@ -34,27 +33,26 @@ describe('PageLayout', () => {
     expect(screen.getByTestId('app-header')).toContainElement(heading);
     const icon = screen.getByTestId('page-icon');
     expect(icon).toBeInTheDocument();
-    expect(icon.parentElement).toHaveClass('inline-flex', 'md:inline-flex');
-    expect(icon.parentElement).not.toHaveClass('hidden');
+    expect(icon.parentElement).toHaveClass('inline-flex', 'shrink-0');
+    expect(icon.parentElement).toHaveAttribute('aria-hidden', 'true');
+    expect(icon.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(heading).not.toHaveClass('truncate', 'overflow-hidden', 'text-ellipsis');
+    expect(heading).toHaveClass('whitespace-normal', 'md:whitespace-nowrap');
     expect(screen.getByText('Body')).toBeInTheDocument();
   });
 
-  it('keeps the mobile icon when the complete title fits', () => {
-    expect(shouldShowMobilePageHeaderIcon({
-      availableWidth: 220,
-      titleWidth: 105,
-      iconWidth: 20,
-      gap: 8,
-    })).toBe(true);
-  });
+  it('keeps page actions out of the shell identity header', () => {
+    renderLayout(
+      <PageLayout title="INVOICES" pageActions={<button type="button">New invoice</button>}>
+        Body
+      </PageLayout>
+    );
 
-  it('drops the mobile icon before allowing the complete title to truncate', () => {
-    expect(shouldShowMobilePageHeaderIcon({
-      availableWidth: 132,
-      titleWidth: 112,
-      iconWidth: 20,
-      gap: 8,
-    })).toBe(false);
+    const header = screen.getByTestId('app-header');
+    const actionRegion = screen.getByRole('region', { name: 'INVOICES actions' });
+    const action = screen.getByRole('button', { name: 'New invoice' });
+    expect(actionRegion).toContainElement(action);
+    expect(header).not.toContainElement(action);
   });
 
   it('renders mobile actions in the mobile controls bar', () => {
@@ -148,6 +146,7 @@ describe('PageLayout', () => {
     const header = screen.getByTestId('app-header');
     const back = screen.getByRole('button', { name: 'Back' });
     const title = screen.getByRole('heading', { name: 'ALEX' });
+    expect(back.parentElement).toHaveClass('h-11', 'w-11');
     expect(header.compareDocumentPosition(back) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(back.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });

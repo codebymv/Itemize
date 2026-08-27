@@ -232,7 +232,7 @@ export function PipelinesPage() {
       title="PIPELINES"
       icon={<Kanban className="h-5 w-5 text-blue-600 flex-shrink-0" />}
       mobileClassName="flex-col items-stretch gap-2"
-      headerActions={
+      pageActions={
         hasPipelines ? (
           <>
             <div className="relative w-full max-w-xs">

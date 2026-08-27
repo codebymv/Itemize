@@ -365,10 +365,10 @@ export function PageEditorPage() {
 
     return (
         <PageLayout
-            title={(editedName || 'Page Editor').toUpperCase()}
+            title="PAGE EDITOR"
             icon={<Layout className="h-5 w-5 text-blue-600 flex-shrink-0" />}
             leading={backButton}
-            headerActions={
+            pageActions={
                 <>
                     {page.status === 'published' && (
                         <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>

@@ -177,18 +177,19 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                     <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md">
                         Skip to main content
                     </a>
-                    {/* Top header bar */}
-                <header className="flex h-14 items-center justify-between border-b px-4 bg-background sticky top-0 z-50 w-full min-w-0">
-                    <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
-                        <SidebarTrigger className="h-11 w-11 md:hidden" />
-
-                        {/* Dynamic header content injected by pages */}
-                        <div className="flex-1 flex items-center min-w-0 overflow-hidden py-px">
-                            {headerContent}
-                        </div>
+                    {/* Global chrome and page identity remain separate on narrow screens. */}
+                <header className="sticky top-0 z-50 w-full min-w-0 border-b bg-background">
+                  <div className="grid min-w-0 grid-cols-[1fr_auto] md:flex md:h-14 md:items-center md:px-4">
+                    <div className="flex h-14 items-center px-4 md:hidden">
+                        <SidebarTrigger className="h-11 w-11" />
                     </div>
 
-                    <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                    {/* Dynamic page identity. It gets a dedicated row on mobile. */}
+                    <div className="col-span-2 row-start-2 flex min-h-12 min-w-0 items-center border-t px-4 py-2 md:order-1 md:col-auto md:row-auto md:h-full md:min-h-0 md:flex-1 md:border-t-0 md:px-0 md:py-px">
+                        {headerContent}
+                    </div>
+
+                    <div className="col-start-2 row-start-1 flex h-14 shrink-0 items-center gap-2 pr-4 md:order-2 md:ml-4 md:h-auto md:pr-0">
                         <OrganizationSwitcher />
 
                         <NotificationCenter />
@@ -206,7 +207,11 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                         {currentUser && (
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0 bg-blue-600 hover:bg-blue-700">
+                                    <Button
+                                      variant="ghost"
+                                      className="relative h-11 w-11 rounded-full bg-blue-600 p-0 hover:bg-blue-700"
+                                      aria-label={`Account menu for ${currentUser.name || currentUser.email}`}
+                                    >
                                         <span className="text-sm font-medium text-white">
                                             {getUserInitials(currentUser.name || '', currentUser.email || '')}
                                         </span>
@@ -334,6 +339,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                             </DropdownMenu>
                         )}
                     </div>
+                  </div>
                 </header>
 
                 {/* Trial lifecycle modals */}

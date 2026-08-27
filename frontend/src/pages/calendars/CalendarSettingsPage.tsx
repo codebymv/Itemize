@@ -323,7 +323,7 @@ export function CalendarSettingsPage() {
 
     return (
         <PageLayout
-            title={calendar.name || 'Calendar settings'}
+            title="CALENDAR SETTINGS"
             icon={<CalendarIcon className="h-5 w-5 text-blue-600 shrink-0" />}
             leading={backButton}
         >

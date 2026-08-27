@@ -640,7 +640,7 @@ export function SettingsPage() {
     <PageLayout
       title={activeNavItem.title.toUpperCase()}
       icon={<ActivePageIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-      headerActions={saveButton}
+      pageActions={saveButton}
       mobileActions={saveButton ? <div className="flex-1">{saveButton}</div> : undefined}
       nav={<SettingsNav />}
       navigationBreakpoint="wide"

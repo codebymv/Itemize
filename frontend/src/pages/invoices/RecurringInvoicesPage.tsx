@@ -492,7 +492,7 @@ export function RecurringInvoicesPage() {
             title="RECURRING INVOICES"
             icon={<RefreshCw className="h-5 w-5 text-blue-600 flex-shrink-0" />}
             mobileClassName="flex-col items-stretch"
-            headerActions={
+            pageActions={
                 <>
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
                         <TabsList className="h-9">

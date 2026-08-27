@@ -252,7 +252,7 @@ const UserHome = () => {
     <PageLayout
       title="LISTS"
       icon={<CheckSquare className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-      headerActions={
+      pageActions={
         <>
           {renderSearchField()}
           {renderNewListButton()}

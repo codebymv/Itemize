@@ -529,10 +529,10 @@ export default function FormEditorPage() {
 
     return (
         <PageLayout
-            title={form.name || 'Form editor'}
+            title="FORM EDITOR"
             icon={<FileText className="h-5 w-5 text-blue-600 shrink-0" />}
             leading={backButton}
-            headerActions={formActions}
+            pageActions={formActions}
             mobileActions={formActions}
         >
                     <div className="flex items-center gap-2 mb-1">

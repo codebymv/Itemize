@@ -474,7 +474,7 @@ const { currentUser } = useAuthState();
     <PageLayout
       title="CANVAS"
       icon={<MapIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-      headerActions={
+      pageActions={
         <CanvasToolbar
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}

@@ -215,7 +215,7 @@ export function ProductsPage() {
         <PageLayout
             title="PRODUCTS"
             icon={<Package className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            headerActions={
+            pageActions={
                 <>
                     <div className="flex items-center gap-2">
                         <Switch

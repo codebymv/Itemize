@@ -7,18 +7,21 @@ interface MobileControlsBarProps {
 }
 
 /**
- * A standardized container for mobile-only controls, rendered at the top of page content.
- * Hidden on desktop (md breakpoint and above).
- * Sticky positioning keeps controls visible while scrolling.
+ * A standardized page-level container for mobile-only controls.
+ * It deliberately scrolls with page content so dense controls never become a
+ * second application header.
  */
 export function MobileControlsBar({ children, className }: MobileControlsBarProps) {
     return (
-        <div className={cn(
-            "md:hidden flex flex-wrap items-center gap-2 px-4 py-3 border-b bg-background sticky top-0 z-40",
+        <section
+          aria-label="Page actions"
+          className={cn(
+            "mx-3 mt-4 flex min-w-0 flex-wrap items-center gap-2 rounded-lg border bg-muted/10 p-3 md:hidden [&_button]:min-h-11 [&_button]:min-w-11 [&_input]:min-h-11 [&_[role=combobox]]:min-h-11",
             className
-        )}>
+          )}
+        >
             {children}
-        </div>
+        </section>
     );
 }
 

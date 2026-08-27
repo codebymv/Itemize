@@ -39,15 +39,15 @@ vi.mock('@/hooks/use-toast', () => ({
 vi.mock('@/components/layout/PageLayout', () => ({
   PageLayout: ({
     children,
-    headerActions,
+    pageActions,
     mobileActions,
   }: {
     children: React.ReactNode;
-    headerActions?: React.ReactNode;
+    pageActions?: React.ReactNode;
     mobileActions?: React.ReactNode;
   }) => (
     <>
-      <div data-testid="header-actions">{headerActions}</div>
+      <div data-testid="page-actions">{pageActions}</div>
       <div data-testid="mobile-actions">{mobileActions}</div>
       {children}
     </>
@@ -111,7 +111,7 @@ describe('contact to estimate handoff', () => {
       name: /create estimate/i,
     });
     expect(createEstimateActions).toHaveLength(3);
-    expect(screen.getByTestId('header-actions')).toContainElement(createEstimateActions[0]);
+    expect(screen.getByTestId('page-actions')).toContainElement(createEstimateActions[0]);
     expect(screen.getByTestId('mobile-actions')).toContainElement(createEstimateActions[1]);
 
     fireEvent.click(createEstimateActions[1]);

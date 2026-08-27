@@ -293,10 +293,10 @@ export function ContactDetailPage() {
 
   return (
     <PageLayout
-      title={getContactDisplayName(contact).toUpperCase()}
+      title="CONTACT"
       icon={<Users className="h-5 w-5 text-blue-600 flex-shrink-0" />}
       leading={backButton}
-      headerActions={
+      pageActions={
         <>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="h-9">

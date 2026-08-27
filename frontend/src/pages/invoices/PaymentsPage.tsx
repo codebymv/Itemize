@@ -336,7 +336,7 @@ const filteredPayments = payments.filter(p => {
             title="PAYMENTS"
             icon={<DollarSign className="h-5 w-5 text-blue-600 flex-shrink-0" />}
             mobileClassName="flex-col items-stretch gap-2"
-            headerActions={
+            pageActions={
                 <>
                     <Select value={methodFilter} onValueChange={setMethodFilter}>
                         <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">

@@ -42,7 +42,7 @@ export const OrganizationSwitcher = () => {
         <Button
           variant="outline"
           size="sm"
-          className="h-8 max-w-48 gap-2"
+          className="h-11 min-w-11 max-w-48 gap-2"
           disabled={isSwitching}
           aria-label={`Current organization: ${organization.name}`}
         >

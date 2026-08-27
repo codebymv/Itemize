@@ -2,16 +2,18 @@ import React from 'react';
 import { usePageHeader } from '@/hooks/usePageHeader';
 import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
+import { PageActionsBar } from '@/components/layout/PageActionsBar';
 import { cn } from '@/lib/utils';
 
 export type PageFrame = 'surface' | 'flush' | 'split';
 export type NavigationBreakpoint = 'md' | 'wide';
 
 export interface PageLayoutProps {
-  title: React.ReactNode;
+  title: string;
   icon?: React.ReactNode;
   leading?: React.ReactNode;
-  headerActions?: React.ReactNode;
+  /** Commands and query controls rendered in a wrapping card inside the page. */
+  pageActions?: React.ReactNode;
   mobileActions?: React.ReactNode | false;
   mobileClassName?: string;
   frame?: PageFrame;
@@ -28,7 +30,7 @@ export function PageLayout({
   title,
   icon,
   leading,
-  headerActions,
+  pageActions,
   mobileActions,
   mobileClassName,
   frame = 'surface',
@@ -44,7 +46,6 @@ export function PageLayout({
     title,
     icon,
     leading,
-    rightContent: headerActions,
   });
 
   const mobileBar =
@@ -52,10 +53,17 @@ export function PageLayout({
       <MobileControlsBar className={mobileClassName}>{mobileActions}</MobileControlsBar>
     ) : null;
 
+  const desktopBar = pageActions ? (
+    <PageActionsBar label={`${title} actions`}>{pageActions}</PageActionsBar>
+  ) : null;
+
   if (frame === 'flush') {
     return (
       <>
         {mobileBar}
+        {desktopBar ? (
+          <div className="px-3 pt-4 sm:px-6 lg:px-8">{desktopBar}</div>
+        ) : null}
         {children}
       </>
     );
@@ -76,6 +84,7 @@ export function PageLayout({
     <>
       {mobileBar}
       <PageContainer className={className}>
+        {desktopBar}
         {nav ? (
           <div
             className={cn(

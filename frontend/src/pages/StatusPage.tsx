@@ -261,7 +261,7 @@ const StatusPage: React.FC = () => {
         title="STATUS"
         icon={<Server className="h-5 w-5 text-blue-600 flex-shrink-0" />}
         leading={backButton}
-        headerActions={renderRefreshButton()}
+        pageActions={renderRefreshButton()}
         mobileActions={renderRefreshButton()}
         className={cn('flex-1', !currentUser && PUBLIC_SHELL_WIDTH)}
       >
@@ -277,7 +277,7 @@ const StatusPage: React.FC = () => {
       title="STATUS"
       icon={<Server className="h-5 w-5 text-blue-600 flex-shrink-0" />}
       leading={backButton}
-      headerActions={renderRefreshButton()}
+      pageActions={renderRefreshButton()}
       mobileActions={renderRefreshButton()}
       className={cn('flex-1', !currentUser && PUBLIC_SHELL_WIDTH)}
     >

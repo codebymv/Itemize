@@ -513,7 +513,7 @@ export function WorkflowBuilderPage() {
   if (loading) {
     return (
       <PageLayout
-        title={(isNewWorkflow ? 'New Workflow' : name || 'Workflow').toUpperCase()}
+        title="WORKFLOW EDITOR"
         icon={<Zap className="h-5 w-5 text-blue-600 flex-shrink-0" />}
         leading={
           <Button
@@ -534,7 +534,7 @@ export function WorkflowBuilderPage() {
 
   return (
     <PageLayout
-      title={(isNewWorkflow ? 'New Workflow' : name || 'Workflow').toUpperCase()}
+      title="WORKFLOW EDITOR"
       icon={<Zap className="h-5 w-5 text-blue-600 flex-shrink-0" />}
       leading={
         <Button
@@ -546,7 +546,7 @@ export function WorkflowBuilderPage() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
       }
-      headerActions={
+      pageActions={
         <>
           {!isNewWorkflow && (
             <Button

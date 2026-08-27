@@ -248,7 +248,7 @@ import { semanticColors } from '@/design-system/design-tokens'
 
 ### Page Layout Pattern
 
-All authenticated pages must use `PageLayout`. It owns the shell title, mobile controls, and page frame. Do not call `setHeaderContent` or import `HeaderContext` from pages.
+All authenticated pages must use `PageLayout`. It owns the shell title, page-level actions, mobile controls, and page frame. Do not call `setHeaderContent` or import `HeaderContext` from pages.
 
 ```tsx
 import { PageLayout } from '@/components/layout/PageLayout'
@@ -260,8 +260,8 @@ function MyPage() {
     <PageLayout
       title="CONTACTS"
       icon={<Users className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-      headerActions={<>{/* desktop search / filters / primary action */}</>}
-      mobileActions={<>{/* same actions, shown below md */}</>}
+      pageActions={<>{/* wrapping desktop controls inside the page */}</>}
+      mobileActions={<>{/* mobile controls inside a page-level card */}</>}
     >
       {initError ? (
         <ErrorState title="Couldn't load" description={initError} />
@@ -280,7 +280,37 @@ Frames:
 - `flush` — no page card (canvas, workflow builder). Still sets the shell title.
 - `nav` — optional side navigation beside the surface (Settings, Admin).
 
-Title is always italic Raleway `h1` in the app header. Do not add a second in-page `h1`. Public routes (`/status`, `/help`) render the same slot through `PublicPageHeader` under `PublicLayout`.
+Title is always an italic Raleway `h1` in the app header. Do not add a second in-page `h1`. Public routes (`/status`, `/help`) render the same slot through `PublicPageHeader` under `PublicLayout`.
+
+#### Shell identity contract
+
+The shell header identifies the current section or task. It is not a toolbar.
+
+- `title` must be a stable route-level string such as `CONTACTS`, `FORM EDITOR`, or `CALENDAR SETTINGS`.
+- Never use a contact name, organization name, form name, workflow name, or other user-provided value as the shell title. Put that identity in the page surface.
+- The complete title must remain visible. Do not add `truncate`, line clamping, clipping, or horizontal scrolling to the shell heading.
+- A decorative module icon is optional. When supplied, it remains visible directly before the title at every viewport width and is hidden from assistive technology.
+- `leading` is reserved for one Back control with an accessible label and a 44 by 44 pixel target.
+- Search, filters, sorting, tabs, counts, statuses, badges, destructive commands, and multi-button command clusters are forbidden in the shell.
+- Global organization, notification, theme, and account controls belong to `AppShell`, not to pages.
+
+On mobile, global controls occupy the first shell row and page identity occupies a separate row. The identity row may grow when a stable title wraps. On desktop, the shell remains 56 pixels high.
+
+#### Action density and deferment
+
+Use the following destination rules instead of adding controls to the shell:
+
+| Content | Destination |
+| --- | --- |
+| Search, filters, sorting, result counts | `PageToolbar` inside the page surface |
+| Primary and secondary page commands | `pageActions`, rendered by `PageActionsBar` |
+| Mobile commands | `mobileActions`, rendered as a non-sticky page card |
+| Editor Save, Preview, Send, Publish | A page command card; use one primary action and overflow secondary commands when possible |
+| Record name, status, URL, owner | Page intro or entity summary card |
+| Destructive commands | Overflow menu or a dedicated danger card |
+| Cross-section navigation | Sidebar or section navigation |
+
+Page action cards wrap with 8 pixel gaps and give buttons and comboboxes a minimum 44 pixel target. Mobile actions scroll with content; they must not become a second sticky application header. If a mobile action card needs more than two frequent commands, consolidate secondary commands into an overflow menu or filter sheet.
 
 ### Empty State Pattern
 

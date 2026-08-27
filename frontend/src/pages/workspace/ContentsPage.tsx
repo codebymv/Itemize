@@ -744,7 +744,7 @@ export function ContentsPage() {
       title="CONTENTS"
       icon={<LayoutGrid className="h-5 w-5 text-blue-600 flex-shrink-0" />}
       mobileClassName="flex-col items-stretch gap-3"
-      headerActions={
+      pageActions={
         <>
           <Button size="sm" variant="outline" className="h-9 whitespace-nowrap font-light" onClick={() => navigate('/canvas')}>
             <Map className="h-4 w-4 mr-2" />
@@ -760,14 +760,11 @@ export function ContentsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10 h-9 w-full bg-muted/20 border-border/50" />
           </div>
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
-            {totalItems} {totalItems === 1 ? 'item' : 'items'}
-          </span>
           {addContentMenu(true)}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="grid min-w-0 grid-cols-2 gap-2">
           <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
-            <SelectTrigger className="flex-1 flex-shrink h-9 pr-8 min-w-0" style={{ paddingLeft: '0.375rem', flexBasis: 0 }}><SelectValue placeholder="Type" /></SelectTrigger>
+            <SelectTrigger className="h-11 w-full min-w-0 pr-8" style={{ paddingLeft: '0.375rem' }}><SelectValue placeholder="Type" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="list">Lists</SelectItem>
@@ -778,14 +775,14 @@ export function ContentsPage() {
             </SelectContent>
           </Select>
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="flex-1 flex-shrink h-9 pr-8 min-w-0" style={{ paddingLeft: '0.375rem', flexBasis: 0 }}><SelectValue placeholder="Category" /></SelectTrigger>
+            <SelectTrigger className="h-11 w-full min-w-0 pr-8" style={{ paddingLeft: '0.375rem' }}><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
               {uniqueCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
-            <SelectTrigger className="flex-1 flex-shrink h-9 pr-8 min-w-0" style={{ paddingLeft: '0.375rem', flexBasis: 0 }}><SelectValue placeholder="Sort" /></SelectTrigger>
+            <SelectTrigger className="col-span-2 h-11 w-full min-w-0 pr-8" style={{ paddingLeft: '0.375rem' }}><SelectValue placeholder="Sort" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="updated">Updated</SelectItem>
               <SelectItem value="created">Created</SelectItem>

@@ -370,7 +370,7 @@ export function SharedPage() {
       title="SHARED"
       icon={<Share2 className="h-5 w-5 text-blue-600 flex-shrink-0" />}
       mobileClassName="flex-col items-stretch gap-3"
-      headerActions={
+      pageActions={
         <Button
           size="sm"
           variant="outline"

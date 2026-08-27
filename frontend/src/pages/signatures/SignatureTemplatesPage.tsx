@@ -67,7 +67,7 @@ export default function SignatureTemplatesPage() {
     }
   }, [deleteTemplateId, toast]);
 
-  const headerActions = useMemo(() => (
+  const pageActions = useMemo(() => (
     <div className="flex items-center gap-2">
       <Button variant="outline" onClick={() => fetchTemplates()}>
         <RefreshCw className="h-4 w-4 mr-2" />
@@ -88,7 +88,7 @@ export default function SignatureTemplatesPage() {
     <PageLayout
       title="SIGNATURE TEMPLATES"
       icon={<FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-      headerActions={headerActions}
+      pageActions={pageActions}
       mobileActions={
         <div className="flex items-center gap-2 w-full">
           <Button size="icon" variant="outline" onClick={() => fetchTemplates()}>
