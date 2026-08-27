@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AppSidebar } from './AppSidebar';
+import { AppSidebar, getWorkspaceNavItems } from './AppSidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
 
 const subscriptionState = vi.hoisted(() => ({
@@ -38,14 +38,14 @@ vi.mock('@/services/getStartedGraphql', async (importOriginal) => {
   };
 });
 
-const renderSidebar = () => {
+const renderSidebar = (initialPath = '/dashboard') => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/dashboard']}>
+      <MemoryRouter initialEntries={[initialPath]}>
         <SidebarProvider>
           <AppSidebar />
         </SidebarProvider>
@@ -108,5 +108,12 @@ describe('AppSidebar first-run disclosure', () => {
 
     await waitFor(() => expect(screen.getByText('Automations')).toBeInTheDocument());
     expect(screen.queryByRole('button', { name: 'More tools' })).not.toBeInTheDocument();
+  });
+
+  it('does not offer the desktop-only Canvas route in mobile navigation', () => {
+    const [workspace] = getWorkspaceNavItems(true);
+
+    expect(workspace.path).toBe('/contents');
+    expect(workspace.items?.map((item) => item.title)).toEqual(['Contents', 'Shared']);
   });
 });

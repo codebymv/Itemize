@@ -242,6 +242,17 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
+// eslint-disable-next-line react-refresh/only-export-components -- pure navigation contract covered by unit tests
+export const getWorkspaceNavItems = (isMobile: boolean) => mainNavItems
+    .filter((item) => item.title === 'Workspace')
+    .map((item) => isMobile && item.items
+        ? {
+            ...item,
+            path: '/contents',
+            items: item.items.filter((subItem) => subItem.path !== '/canvas'),
+        }
+        : item);
+
 const FIRST_RUN_PRIMARY_NAV = new Set([
     'Dashboard',
     'Workspace',
@@ -325,7 +336,7 @@ export function AppSidebar() {
 
     const isCollapsed = state === 'collapsed';
 
-    const workspaceItems = mainNavItems.filter((item) => item.title === 'Workspace');
+    const workspaceItems = getWorkspaceNavItems(isMobile);
     const paidItems = tierLevel >= 2
         ? mainNavItems
         : mainNavItems.map((item) => item.title === 'Communications' && item.items
@@ -353,7 +364,7 @@ export function AppSidebar() {
         : secondaryNavItems.map((item) => item.title === 'Settings' && item.items
             ? { ...item, items: item.items.filter((subItem) => subItem.title !== 'Integrations') }
             : item);
-    const homePath = isSubscribed ? '/dashboard' : '/canvas';
+    const homePath = isSubscribed ? '/dashboard' : isMobile ? '/contents' : '/canvas';
 
     const isNavItemActive = React.useCallback((item: NavItem) => (
         location.pathname === item.path
