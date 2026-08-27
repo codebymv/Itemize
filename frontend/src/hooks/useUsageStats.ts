@@ -6,6 +6,7 @@
  */
 
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useOrganizationContext } from '@/contexts/organization-context';
 import { getUsageStats, type UsageStats } from '@/services/billingApi';
 
 /**
@@ -18,8 +19,10 @@ import { getUsageStats, type UsageStats } from '@/services/billingApi';
  * - Loading states
  */
 export function useUsageStats(): UseQueryResult<UsageStats, Error> {
+  const { organizationId } = useOrganizationContext();
+
   return useQuery({
-    queryKey: ['billing', 'usage'],
+    queryKey: ['billing', 'usage', organizationId],
     queryFn: async () => {
       const result = await getUsageStats();
       
@@ -29,6 +32,7 @@ export function useUsageStats(): UseQueryResult<UsageStats, Error> {
       
       return result.data;
     },
+    enabled: organizationId !== null,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: true,
     retry: 3, // Retry failed requests up to 3 times
