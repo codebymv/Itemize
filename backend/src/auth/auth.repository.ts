@@ -25,10 +25,12 @@ type AuthenticationUserRow = {
   email_verified: boolean | null;
   role: string | null;
   created_at: Date | string;
+  account_deletion_scheduled_at: Date | string | null;
 };
 
 const USER_COLUMNS = `
-  id, email, name, password_hash, provider, email_verified, role, created_at
+  id, email, name, password_hash, provider, email_verified, role, created_at,
+  account_deletion_scheduled_at
 `;
 
 const mapUser = (row: AuthenticationUserRow): AuthenticationUser => ({
@@ -51,7 +53,8 @@ export class AuthRepository {
 
   async findByEmail(email: string): Promise<AuthenticationUser | null> {
     const result = await this.pool.query<AuthenticationUserRow>(
-      `SELECT ${USER_COLUMNS} FROM users WHERE email = $1`,
+      `SELECT ${USER_COLUMNS} FROM users
+       WHERE email = $1 AND account_deletion_scheduled_at IS NULL`,
       [email],
     );
     return result.rows[0] ? mapUser(result.rows[0]) : null;
@@ -59,7 +62,8 @@ export class AuthRepository {
 
   async findById(userId: number): Promise<AuthenticationUser | null> {
     const result = await this.pool.query<AuthenticationUserRow>(
-      `SELECT ${USER_COLUMNS} FROM users WHERE id = $1`,
+      `SELECT ${USER_COLUMNS} FROM users
+       WHERE id = $1 AND account_deletion_scheduled_at IS NULL`,
       [userId],
     );
     return result.rows[0] ? mapUser(result.rows[0]) : null;
@@ -139,6 +143,7 @@ export class AuthRepository {
            updated_at = NOW()
        WHERE email = $3
          AND provider = 'email'
+         AND account_deletion_scheduled_at IS NULL
          AND email_verified = false
        RETURNING ${USER_COLUMNS}`,
       [input.tokenHash, input.expiresAt, input.email],
@@ -161,6 +166,7 @@ export class AuthRepository {
        WHERE email = $3
          AND provider = 'email'
          AND password_hash IS NOT NULL
+         AND account_deletion_scheduled_at IS NULL
        RETURNING ${USER_COLUMNS}`,
       [input.tokenHash, input.expiresAt, input.email],
     );
@@ -182,6 +188,7 @@ export class AuthRepository {
        WHERE password_reset_token = $2
          AND password_reset_expires > NOW()
          AND provider = 'email'
+         AND account_deletion_scheduled_at IS NULL
        RETURNING ${USER_COLUMNS}`,
       [input.passwordHash, input.tokenHash],
     );
@@ -204,6 +211,7 @@ export class AuthRepository {
        WHERE id = $2
          AND password_hash = $3
          AND provider = 'email'
+         AND account_deletion_scheduled_at IS NULL
        RETURNING ${USER_COLUMNS}`,
       [input.passwordHash, input.userId, input.currentHash],
     );
@@ -215,7 +223,7 @@ export class AuthRepository {
   async updateName(userId: number, name: string): Promise<AuthenticationUser | null> {
     const result = await this.pool.query<AuthenticationUserRow>(
       `UPDATE users SET name = $1, updated_at = NOW()
-       WHERE id = $2
+       WHERE id = $2 AND account_deletion_scheduled_at IS NULL
        RETURNING ${USER_COLUMNS}`,
       [name, userId],
     );
@@ -236,6 +244,13 @@ export class AuthRepository {
       );
 
       if (result.rows[0]) {
+        if (result.rows[0].account_deletion_scheduled_at) {
+          throw itemizeGraphqlError(
+            'This account is pending deletion. Use the recovery link sent by email before signing in.',
+            'UNAUTHENTICATED',
+            { reason: 'ACCOUNT_DELETION_PENDING' },
+          );
+        }
         result = await client.query<AuthenticationUserRow>(
           `UPDATE users
            SET google_id = $1,

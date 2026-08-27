@@ -4,6 +4,7 @@ import { AccountDeletionCard } from './AccountDeletionCard';
 
 const mocks = vi.hoisted(() => ({
   deleteAccount: vi.fn(),
+  preflight: vi.fn(),
   logout: vi.fn(),
   navigate: vi.fn(),
   toast: vi.fn(),
@@ -17,6 +18,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/services/authGraphql', () => ({
   deleteViewerAccountViaGraphql: (...args: unknown[]) => mocks.deleteAccount(...args),
+  getViewerAccountDeletionPreflightViaGraphql: () => mocks.preflight(),
 }));
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: mocks.toast }) }));
 vi.mock('@/contexts/AuthContext', () => ({
@@ -28,18 +30,33 @@ vi.mock('react-router-dom', async () => {
   return { ...actual, useNavigate: () => mocks.navigate };
 });
 
+const eligiblePreflight = {
+  eligible: true,
+  recoveryDays: 7,
+  membershipCount: 2,
+  ownedOrganizationCount: 1,
+  blockers: [],
+  retentionNotices: ['Audit records retain a one-way email hash.'],
+};
+
 describe('AccountDeletionCard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.user.provider = 'email';
-    mocks.deleteAccount.mockResolvedValue({ success: true });
+    mocks.preflight.mockResolvedValue(eligiblePreflight);
+    mocks.deleteAccount.mockResolvedValue({
+      success: true,
+      scheduledAt: '2026-09-03T12:00:00.000Z',
+      recoveryDays: 7,
+    });
   });
 
-  it('requires the account email and current password before deletion', async () => {
+  it('preflights and requires the account email plus current password', async () => {
     render(<AccountDeletionCard />);
     fireEvent.click(screen.getByRole('button', { name: 'Delete my account' }));
 
-    const submit = screen.getByRole('button', { name: 'Permanently delete account' });
+    expect(await screen.findByText(/permanently delete 1 owned workspace/)).toBeInTheDocument();
+    const submit = screen.getByRole('button', { name: 'Schedule account deletion' });
     expect(submit).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Type member@example.com to confirm'), {
       target: { value: 'member@example.com' },
@@ -57,18 +74,22 @@ describe('AccountDeletionCard', () => {
     ));
     expect(mocks.logout).toHaveBeenCalledTimes(1);
     expect(mocks.navigate).toHaveBeenCalledWith('/', { replace: true });
+    expect(mocks.toast).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Account deletion scheduled',
+    }));
   });
 
   it('does not request a password for Google-only accounts', async () => {
     mocks.user.provider = 'google';
     render(<AccountDeletionCard />);
     fireEvent.click(screen.getByRole('button', { name: 'Delete my account' }));
+    await screen.findByLabelText('Type member@example.com to confirm');
     expect(screen.queryByLabelText('Current password')).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Type member@example.com to confirm'), {
       target: { value: 'MEMBER@example.com' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Permanently delete account' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule account deletion' }));
 
     await waitFor(() => expect(mocks.deleteAccount).toHaveBeenCalledWith(
       'MEMBER@example.com',
@@ -76,24 +97,33 @@ describe('AccountDeletionCard', () => {
     ));
   });
 
-  it('keeps the dialog available and reports a backend blocker', async () => {
-    mocks.deleteAccount.mockRejectedValue(new Error('Transfer ownership first.'));
+  it('shows every workspace blocker before requesting deletion credentials', async () => {
+    mocks.preflight.mockResolvedValue({
+      ...eligiblePreflight,
+      eligible: false,
+      blockers: [
+        {
+          reason: 'OWNERSHIP_TRANSFER_REQUIRED',
+          organizationId: 8,
+          organizationName: 'Client Workspace',
+        },
+        {
+          reason: 'ACTIVE_SUBSCRIPTION',
+          organizationId: 9,
+          organizationName: 'Paid Workspace',
+        },
+      ],
+    });
     render(<AccountDeletionCard />);
     fireEvent.click(screen.getByRole('button', { name: 'Delete my account' }));
-    fireEvent.change(screen.getByLabelText('Type member@example.com to confirm'), {
-      target: { value: 'member@example.com' },
-    });
-    fireEvent.change(screen.getByLabelText('Current password'), {
-      target: { value: 'StrongPass1' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Permanently delete account' }));
 
-    await waitFor(() => expect(mocks.toast).toHaveBeenCalledWith({
-      title: 'Could not delete account',
-      description: 'Transfer ownership first.',
-      variant: 'destructive',
-    }));
-    expect(mocks.logout).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'Permanently delete account' })).toBeEnabled();
+    expect(await screen.findByText('Resolve these items first')).toBeInTheDocument();
+    expect(screen.getByText('Transfer ownership of Client Workspace to another member.'))
+      .toBeInTheDocument();
+    expect(screen.getByText('Cancel the active subscription for Paid Workspace.'))
+      .toBeInTheDocument();
+    expect(screen.queryByLabelText('Current password')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Review workspace settings' })).toBeEnabled();
+    expect(mocks.deleteAccount).not.toHaveBeenCalled();
   });
 });

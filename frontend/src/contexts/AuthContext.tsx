@@ -59,6 +59,7 @@ export const isPublicAuthSkipPath = (pathname: string): boolean => {
     '/verify-email',
     '/forgot-password',
     '/reset-password',
+    '/recover-account',
   ];
   if (exact.includes(pathname)) return true;
   if (pathname.startsWith('/help')) return true;

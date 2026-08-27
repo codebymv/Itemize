@@ -103,7 +103,8 @@ describe('GraphQL foundation', () => {
     });
   });
 
-  it('rejects a malformed organization header before PostgreSQL', async () => {
+  it('rejects a malformed organization header after confirming the account is active', async () => {
+    query.mockResolvedValueOnce({ rows: [{ active: true }] });
     const token = await jwt.signAsync(
       { id: 7 },
       { secret: process.env.JWT_SECRET, expiresIn: '15m' },
@@ -120,11 +121,12 @@ describe('GraphQL foundation', () => {
       reason: 'INVALID_ORGANIZATION_ID',
       field: 'x-organization-id',
     });
-    expect(query).not.toHaveBeenCalled();
+    expect(query).toHaveBeenCalledTimes(1);
   });
 
   it('denies paid GraphQL fields to a Free organization before domain reads', async () => {
     query
+      .mockResolvedValueOnce({ rows: [{ active: true }] })
       .mockResolvedValueOnce({ rows: [{ organization_id: 42, role: 'owner' }] })
       .mockResolvedValueOnce({
         rows: [{ plan: 'free', subscription_status: 'none', trial_ends_at: null }],
@@ -147,11 +149,12 @@ describe('GraphQL foundation', () => {
       plan: 'free',
       requiredPlan: 'starter',
     });
-    expect(query).toHaveBeenCalledTimes(2);
+    expect(query).toHaveBeenCalledTimes(3);
   });
 
   it('enforces Studio-only fields independently of an active Solo subscription', async () => {
     query
+      .mockResolvedValueOnce({ rows: [{ active: true }] })
       .mockResolvedValueOnce({ rows: [{ organization_id: 42, role: 'owner' }] })
       .mockResolvedValueOnce({
         rows: [{ plan: 'starter', subscription_status: 'active', trial_ends_at: null }],
@@ -174,6 +177,6 @@ describe('GraphQL foundation', () => {
       plan: 'starter',
       requiredPlan: 'unlimited',
     });
-    expect(query).toHaveBeenCalledTimes(2);
+    expect(query).toHaveBeenCalledTimes(3);
   });
 });

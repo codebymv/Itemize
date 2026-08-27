@@ -32,6 +32,20 @@ export type ViewerDataExport = {
   data: Record<string, unknown>;
 };
 
+export type AccountDeletionPreflight = {
+  eligible: boolean;
+  recoveryDays: number;
+  membershipCount: number;
+  ownedOrganizationCount: number;
+  blockers: Array<{
+    reason: 'OWNERSHIP_TRANSFER_REQUIRED' | 'ACTIVE_SUBSCRIPTION' | 'SIGNATURE_EVIDENCE_RETAINED';
+    organizationId: number;
+    organizationName: string;
+  }>;
+  retentionNotices: string[];
+  scheduledAt?: string;
+};
+
 const SESSION_FIELDS = `
   success
   user { uid email name role provider photoURL }
@@ -202,16 +216,41 @@ export const getViewerDataExportViaGraphql = async (): Promise<ViewerDataExport>
   return data.viewerDataExport;
 };
 
+export const getViewerAccountDeletionPreflightViaGraphql = async () => {
+  const data = await graphqlRequest<
+    { viewerAccountDeletionPreflight: AccountDeletionPreflight },
+    Record<string, never>
+  >(
+    `query ViewerAccountDeletionPreflight {
+      viewerAccountDeletionPreflight {
+        eligible recoveryDays membershipCount ownedOrganizationCount scheduledAt
+        blockers { reason organizationId organizationName }
+        retentionNotices
+      }
+    }`,
+    {},
+  );
+  return data.viewerAccountDeletionPreflight;
+};
+
 export const deleteViewerAccountViaGraphql = async (
   confirmation: string,
   currentPassword?: string,
 ) => {
   const data = await graphqlMutationRequest<
-    { deleteViewerAccount: { success: boolean; message: string; email?: string } },
+    { deleteViewerAccount: {
+      success: boolean;
+      message: string;
+      email: string;
+      scheduledAt: string;
+      recoveryDays: number;
+    } },
     { input: { confirmation: string; currentPassword?: string } }
   >(
     `mutation DeleteViewerAccount($input: DeleteViewerAccountInput!) {
-      deleteViewerAccount(input: $input) { success message email }
+      deleteViewerAccount(input: $input) {
+        success message email scheduledAt recoveryDays
+      }
     }`,
     {
       input: {
@@ -221,6 +260,19 @@ export const deleteViewerAccountViaGraphql = async (
     },
   );
   return data.deleteViewerAccount;
+};
+
+export const recoverViewerAccountViaGraphql = async (token: string) => {
+  const data = await graphqlMutationRequest<
+    { recoverViewerAccount: { success: boolean; message: string; email?: string } },
+    { input: { token: string } }
+  >(
+    `mutation RecoverViewerAccount($input: RecoverViewerAccountInput!) {
+      recoverViewerAccount(input: $input) { success message email }
+    }`,
+    { input: { token } },
+  );
+  return data.recoverViewerAccount;
 };
 
 export const logoutViaGraphql = async (): Promise<void> => {

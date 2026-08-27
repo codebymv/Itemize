@@ -47,8 +47,9 @@ describe('Message delivery GraphQL PostgreSQL contract', () => {
     );
     [userId, outsiderId] = users.rows.map((row) => Number(row.id));
     const organizations = await pool.query<{ id: number }>(
-      `INSERT INTO organizations (name, slug)
-       VALUES ('Delivery Primary', $1), ('Delivery Other', $2)
+      `INSERT INTO organizations (name, slug, emails_limit, sms_limit)
+       VALUES ('Delivery Primary', $1, 100, 100),
+              ('Delivery Other', $2, 100, 100)
        RETURNING id`,
       [`delivery-primary-${suffix}`, `delivery-other-${suffix}`],
     );

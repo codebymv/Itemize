@@ -46,17 +46,44 @@ after verification. Resending rotates the capability and expiry, and revoking
 an invitation releases its reserved seat. The organization settings UI shows
 pending and expired invitations with delivery, resend, and revoke controls.
 
-## Remaining account lifecycle work
+## Account data export
 
-1. Provide a user data export covering identity, memberships, workspace data,
-   client records, commercial artifacts, and retained-record disclosures.
-2. Add account deletion with recent-authentication confirmation, owned-workspace
-   preflight, ownership-transfer guidance, subscription cancellation handling,
-   and explicit retention outcomes.
-3. Resolve the plan-language conflict between organization-scoped subscriptions
-   and the Solo plan's advertised three-organization allowance before enforcing
-   an organization creation limit.
+An authenticated account can download a versioned JSON export before leaving.
+The export includes identity and membership records, personal lists, notes,
+categories, whiteboards, and the client and commercial records belonging to
+workspaces the account owns. Provider credentials, Stripe identifiers, signing
+capabilities, public access tokens, webhook secrets, and file URLs are omitted.
+The export also describes records that Itemize may retain for legal, financial,
+fraud-prevention, and signature-evidence obligations.
 
-Password recovery, verification resend, password change, and profile updates
-are already owned by the GraphQL authentication lifecycle and are not part of
-this remaining organization work.
+## Account deletion and recovery
+
+The account settings UI runs a server-authoritative preflight before accepting
+a deletion request. Every blocking workspace is listed with a direct handoff:
+
+- transfer or remove an owned workspace that still has other members;
+- cancel any active workspace subscription;
+- retain an account when an owned workspace contains signature evidence that
+  cannot legally be deleted.
+
+An eligible request requires the account email and current password. Itemize
+then schedules deletion seven days later, invalidates every existing session,
+prevents new password or provider sign-ins, stores only a hash of the recovery
+capability, and emails the recovery link. If the email provider does not accept
+that message, Itemize cancels the schedule and leaves the account active.
+Recovery consumes that capability,
+restores sign-in, and records an append-only lifecycle event. When the grace
+period ends, a background worker rechecks all blockers before deleting owned
+workspaces, memberships, integrations, pending jobs, personal content, and the
+account. If a blocker appeared during the grace period, deletion is canceled
+instead of removing data. Scheduled, recovered, canceled, and completed events
+retain only a one-way email hash after the user row is gone.
+
+## Remaining policy work
+
+Resolve the plan-language conflict between organization-scoped subscriptions
+and the Solo plan's advertised three-organization allowance before enforcing an
+organization creation limit.
+
+Password recovery, verification resend, password change, profile updates, data
+export, and account deletion are owned by the GraphQL authentication lifecycle.

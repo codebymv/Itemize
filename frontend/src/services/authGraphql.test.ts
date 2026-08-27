@@ -7,6 +7,8 @@ import {
 import {
   getCurrentUserViaGraphql,
   getViewerDataExportViaGraphql,
+  getViewerAccountDeletionPreflightViaGraphql,
+  recoverViewerAccountViaGraphql,
   deleteViewerAccountViaGraphql,
   changePasswordViaGraphql,
   loginViaGraphql,
@@ -89,6 +91,35 @@ describe('authentication GraphQL adapter', () => {
           currentPassword: 'StrongPass1',
         },
       },
+    );
+  });
+
+  it('maps deletion preflight and public recovery', async () => {
+    vi.mocked(graphqlRequest).mockResolvedValue({
+      viewerAccountDeletionPreflight: {
+        eligible: true,
+        recoveryDays: 7,
+        blockers: [],
+      },
+    });
+    await expect(getViewerAccountDeletionPreflightViaGraphql()).resolves.toMatchObject({
+      eligible: true,
+      recoveryDays: 7,
+    });
+    expect(graphqlRequest).toHaveBeenCalledWith(
+      expect.stringContaining('query ViewerAccountDeletionPreflight'),
+      {},
+    );
+
+    vi.mocked(graphqlMutationRequest).mockResolvedValue({
+      recoverViewerAccount: { success: true, email: 'member@example.com' },
+    });
+    await expect(recoverViewerAccountViaGraphql('recovery-token')).resolves.toMatchObject({
+      success: true,
+    });
+    expect(graphqlMutationRequest).toHaveBeenCalledWith(
+      expect.stringContaining('mutation RecoverViewerAccount'),
+      { input: { token: 'recovery-token' } },
     );
   });
 

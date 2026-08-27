@@ -99,3 +99,9 @@ export class DeleteViewerAccountInput {
   @Field({ nullable: true })
   currentPassword?: string;
 }
+
+@InputType()
+export class RecoverViewerAccountInput {
+  @Field()
+  token: string;
+}

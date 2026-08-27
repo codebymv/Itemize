@@ -8,6 +8,7 @@ import {
   GoogleAccessTokenInput,
   LoginInput,
   RegisterInput,
+  RecoverViewerAccountInput,
   SignupMode,
   RequestPasswordResetInput,
   ResetPasswordInput,
@@ -28,6 +29,10 @@ import {
 import { AccountDataExportService } from './account-data-export.service';
 import { AccountDataExport } from './account-data-export.types';
 import { AccountDeletionService } from './account-deletion.service';
+import {
+  AccountDeletionPreflightPayload,
+  AccountDeletionScheduledPayload,
+} from './account-deletion.types';
 
 type GraphqlHttpContext = { req: Request; res: Response };
 
@@ -101,6 +106,13 @@ export class AuthResolver {
     return this.identityLifecycle.resetPassword(input.token, input.password);
   }
 
+  @Query(() => AccountDeletionPreflightPayload)
+  viewerAccountDeletionPreflight(): Promise<AccountDeletionPreflightPayload> {
+    const identity = this.requestContext.current().identity;
+    if (!identity) throw new Error('Verified user identity is unavailable');
+    return this.accountDeletions.preflight(identity.userId);
+  }
+
   @CsrfProtected()
   @Mutation(() => AuthMessagePayload)
   changePassword(@Args('input') input: ChangePasswordInput) {
@@ -157,11 +169,11 @@ export class AuthResolver {
   }
 
   @CsrfProtected()
-  @Mutation(() => AuthMessagePayload)
+  @Mutation(() => AccountDeletionScheduledPayload)
   deleteViewerAccount(
     @Args('input') input: DeleteViewerAccountInput,
     @Context() context: GraphqlHttpContext,
-  ): Promise<AuthMessagePayload> {
+  ): Promise<AccountDeletionScheduledPayload> {
     const identity = this.requestContext.current().identity;
     if (!identity) throw new Error('Verified user identity is unavailable');
     return this.accountDeletions.deleteViewer(
@@ -170,6 +182,15 @@ export class AuthResolver {
       input.currentPassword,
       context.res,
     );
+  }
+
+  @Public()
+  @CsrfProtected()
+  @Mutation(() => AuthMessagePayload)
+  recoverViewerAccount(
+    @Args('input') input: RecoverViewerAccountInput,
+  ): Promise<AuthMessagePayload> {
+    return this.accountDeletions.recover(input.token);
   }
 
   @Public()

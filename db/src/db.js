@@ -17,6 +17,9 @@ const runMigrationOnce = async (pool, migrationName, migrationFn) => {
 // Import database migrations
 const { runCanvasMigration, runListResizeMigration, runCreateNotesTableMigration, runAddTitleAndCategoryToNotesMigration, runCategoriesTableMigration, runCategoriesDataMigration, runCleanupDefaultCategories, runSharingMigration, runEmailPasswordAuthMigration, runWireframesMigration, runWireframesDimensionsMigration, runOnboardingMigration, runGetStartedMigration } = require('./db_migrations');
 const { runActivationEventsMigration } = require('./db_activation_events_migrations');
+const {
+  runAccountDeletionGraceMigration,
+} = require('./db_account_deletion_migrations');
 
 const { runCategoryContractMigration } = require('./db_category_contract_migrations');
 
@@ -499,6 +502,11 @@ const initializeDatabase = async (pool) => {
     });
 
     await runMigrationOnce(pool, 'users_email_password_auth', runEmailPasswordAuthMigration);
+    await runMigrationOnce(
+      pool,
+      'account_deletion_grace_v1',
+      runAccountDeletionGraceMigration,
+    );
 
     // Feature migrations (tracked individually)
     await runMigrationOnce(pool, 'feature_canvas', runCanvasMigration);

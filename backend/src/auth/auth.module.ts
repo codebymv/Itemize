@@ -14,12 +14,14 @@ import { AccountDataExportRepository } from './account-data-export.repository';
 import { AccountDataExportService } from './account-data-export.service';
 import { AccountDeletionRepository } from './account-deletion.repository';
 import { AccountDeletionService } from './account-deletion.service';
+import { AccountDeletionSchedulerService } from './account-deletion-scheduler.service';
 
 @Module({
   imports: [JwtModule.register({}), NotificationsModule],
   providers: [
     AccountDeletionRepository,
     AccountDeletionService,
+    AccountDeletionSchedulerService,
     AccountDataExportRepository,
     AccountDataExportService,
     AccessTokenService,

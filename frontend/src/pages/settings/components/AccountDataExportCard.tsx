@@ -52,8 +52,9 @@ export function AccountDataExportCard() {
       <CardContent className="space-y-4">
         <div className="space-y-2 text-sm text-muted-foreground">
           <p>
-            Download a JSON copy of your profile, workspace memberships, and personal
-            canvas content. Passwords, login tokens, and sharing capabilities are excluded.
+            Download a JSON copy of your profile, memberships, personal canvas content,
+            and CRM and commercial records from workspaces you own. Passwords, login
+            tokens, provider secrets, and sharing capabilities are excluded.
           </p>
           <p>
             Vault values remain encrypted and still require the corresponding vault password

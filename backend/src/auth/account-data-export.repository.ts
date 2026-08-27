@@ -44,6 +44,58 @@ export class AccountDataExportRepository {
              JOIN organizations o ON o.id = om.organization_id
              WHERE om.user_id = u.id
            ), '[]'::jsonb),
+         'ownedWorkspaceData',
+           COALESCE((
+             SELECT jsonb_agg(
+               jsonb_build_object(
+                 'organization', to_jsonb(o) - ARRAY[
+                   'stripe_customer_id', 'stripe_subscription_id'
+                 ],
+                 'contacts', COALESCE((
+                   SELECT jsonb_agg(to_jsonb(contact) ORDER BY contact.id)
+                   FROM contacts contact WHERE contact.organization_id = o.id
+                 ), '[]'::jsonb),
+                 'deals', COALESCE((
+                   SELECT jsonb_agg(to_jsonb(deal) ORDER BY deal.id)
+                   FROM deals deal WHERE deal.organization_id = o.id
+                 ), '[]'::jsonb),
+                 'invoices', COALESCE((
+                   SELECT jsonb_agg(
+                     to_jsonb(invoice) - ARRAY[
+                       'public_token', 'payment_token', 'stripe_checkout_session_id'
+                     ] ORDER BY invoice.id
+                   )
+                   FROM invoices invoice WHERE invoice.organization_id = o.id
+                 ), '[]'::jsonb),
+                 'estimates', COALESCE((
+                   SELECT jsonb_agg(
+                     to_jsonb(estimate) - ARRAY[
+                       'public_token', 'accept_token', 'decline_token'
+                     ] ORDER BY estimate.id
+                   )
+                   FROM estimates estimate WHERE estimate.organization_id = o.id
+                 ), '[]'::jsonb),
+                 'signatureDocuments', COALESCE((
+                   SELECT jsonb_agg(
+                     to_jsonb(document) - ARRAY[
+                       'signing_token', 'access_token', 'file_url', 'signed_file_url'
+                     ] ORDER BY document.id
+                   )
+                   FROM signature_documents document
+                   WHERE document.organization_id = o.id
+                 ), '[]'::jsonb),
+                 'workflows', COALESCE((
+                   SELECT jsonb_agg(
+                     to_jsonb(workflow) - ARRAY['webhook_secret'] ORDER BY workflow.id
+                   )
+                   FROM workflows workflow WHERE workflow.organization_id = o.id
+                 ), '[]'::jsonb)
+               ) ORDER BY owner.id
+             )
+             FROM organization_members owner
+             JOIN organizations o ON o.id = owner.organization_id
+             WHERE owner.user_id = u.id AND owner.role = 'owner'
+           ), '[]'::jsonb),
          'personalContent', jsonb_build_object(
            'categories', COALESCE((
              SELECT jsonb_agg(to_jsonb(category) - 'user_id' ORDER BY category.id)
@@ -108,6 +160,12 @@ export class AccountDataExportRepository {
              FROM vaults vault
              WHERE vault.user_id = u.id
            ), '[]'::jsonb)
+         ),
+         'retentionDisclosures', jsonb_build_array(
+           'Signed-document evidence may be retained when legally or evidentially required.',
+           'Payment processors retain transaction records under their own policies.',
+           'Security audit events retain a one-way email hash after account deletion.',
+           'Encrypted backups expire under Itemize backup-retention controls.'
          )
        ) AS data
        FROM users u

@@ -53,7 +53,7 @@ const PRIVACY_SECTIONS = [
   },
   {
     heading: '6. Your choices',
-    body: 'You may access, update, or delete account information from Settings, or request deletion by contacting support@itemize.cloud. Some records may be retained where required by law or legitimate business needs such as fraud prevention.',
+    body: 'You may access, export, update, or schedule deletion of account information from Settings, or request help from support@itemize.cloud. A scheduled deletion locks the account immediately and includes a seven-day email recovery window. Some records may be retained where required by law or legitimate business needs such as fraud prevention, payment records, signing evidence, security audits, and time-limited backups.',
   },
   {
     heading: '7. Contact',

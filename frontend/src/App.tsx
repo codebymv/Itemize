@@ -36,6 +36,7 @@ const VerifyEmail = React.lazy(() => import("./pages/VerifyEmail"));
 const OrganizationInvite = React.lazy(() => import("./pages/OrganizationInvite"));
 const ForgotPassword = React.lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
+const RecoverAccount = React.lazy(() => import("./pages/RecoverAccount"));
 
 // Pages - Lazy loaded for code splitting (reduces initial bundle size)
 const UserHome = React.lazy(() => import("./pages/UserHome"));
@@ -310,7 +311,7 @@ const AppContent = () => {
   }, [location.pathname]);
 
   // Determine if this is a public route (no sidebar)
-  const publicRoutes = ['/home', '/status', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password', '/legal/terms', '/legal/privacy'];
+  const publicRoutes = ['/home', '/status', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password', '/recover-account', '/legal/terms', '/legal/privacy'];
   const isPublicRoute = publicRoutes.includes(location.pathname) ||
     location.pathname.startsWith('/shared/') ||
     location.pathname.startsWith('/form/') ||
@@ -343,6 +344,7 @@ const AppContent = () => {
       <Route path="/invite/:token" element={<OrganizationInvite />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/recover-account" element={<RecoverAccount />} />
 
       {/* Shared content routes (public, minimal layout) */}
       <Route path="/shared/list/:token" element={<SharedListPage />} />

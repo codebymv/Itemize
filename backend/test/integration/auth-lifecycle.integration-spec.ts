@@ -5,6 +5,7 @@ import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { AuthEmailService } from '../../src/auth/auth-email.service';
+import { AccountDeletionSchedulerService } from '../../src/auth/account-deletion-scheduler.service';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
 
@@ -17,6 +18,9 @@ describe('Authentication lifecycle GraphQL PostgreSQL contract', () => {
     sendPasswordReset: jest.fn().mockResolvedValue(true),
     sendPasswordChanged: jest.fn().mockResolvedValue(true),
     sendAccountDeleted: jest.fn().mockResolvedValue(true),
+    sendAccountDeletionScheduled: jest.fn().mockResolvedValue(true),
+    sendAccountDeletionRecovered: jest.fn().mockResolvedValue(true),
+    sendAccountDeletionCanceled: jest.fn().mockResolvedValue(true),
   };
   const createdUserIds: number[] = [];
   const suffix = `${Date.now()}-${process.pid}`;
@@ -376,7 +380,7 @@ describe('Authentication lifecycle GraphQL PostgreSQL contract', () => {
     expect(serialized).not.toContain('shared-snapshot');
   });
 
-  it('blocks unsafe account deletion and atomically deletes an eligible account', async () => {
+  it('preflights blockers, schedules recoverably, and purges only after the deadline', async () => {
     const deletionEmail = `auth-delete-${suffix}@test.itemize`;
     const passwordHash = await bcrypt.hash('DeletePass5', 4);
     const created = await pool.query<{ id: number }>(
@@ -418,7 +422,9 @@ describe('Authentication lifecycle GraphQL PostgreSQL contract', () => {
       .expect(200);
     const csrfToken = csrf.body.data.csrfToken.token as string;
     const deletionDocument = `mutation Delete($input: DeleteViewerAccountInput!) {
-      deleteViewerAccount(input: $input) { success message email }
+      deleteViewerAccount(input: $input) {
+        success message email scheduledAt recoveryDays
+      }
     }`;
     const deleteAccount = () => agent.post('/graphql')
       .set('x-csrf-token', csrfToken)
@@ -487,16 +493,110 @@ describe('Authentication lifecycle GraphQL PostgreSQL contract', () => {
       [document.rows[0].id],
     );
 
-    emails.sendAccountDeleted.mockClear();
-    const deleted = await deleteAccount();
-    expect(deleted.body.errors).toBeUndefined();
-    expect(deleted.body.data.deleteViewerAccount).toMatchObject({
+    const preflight = await agent.post('/graphql').send({
+      query: `query {
+        viewerAccountDeletionPreflight {
+          eligible recoveryDays membershipCount ownedOrganizationCount
+          blockers { reason organizationId organizationName }
+          retentionNotices
+        }
+      }`,
+    }).expect(200);
+    expect(preflight.body.data.viewerAccountDeletionPreflight).toMatchObject({
+      eligible: true,
+      recoveryDays: 7,
+      membershipCount: 1,
+      ownedOrganizationCount: 1,
+      blockers: [],
+    });
+
+    emails.sendAccountDeletionScheduled.mockClear();
+    emails.sendAccountDeletionScheduled.mockResolvedValueOnce(false);
+    const rejectedDelivery = await deleteAccount();
+    expect(rejectedDelivery.body.errors[0].extensions).toMatchObject({
+      code: 'SERVICE_UNAVAILABLE',
+      reason: 'ACCOUNT_RECOVERY_EMAIL_UNAVAILABLE',
+    });
+    const stillActive = await pool.query(
+      `SELECT account_deletion_scheduled_at IS NULL AS active,
+              account_deletion_token_hash IS NULL AS no_recovery_token
+       FROM users WHERE id = $1`,
+      [userId],
+    );
+    expect(stillActive.rows[0]).toEqual({ active: true, no_recovery_token: true });
+
+    const scheduled = await deleteAccount();
+    expect(scheduled.body.errors).toBeUndefined();
+    expect(scheduled.body.data.deleteViewerAccount).toMatchObject({
+      success: true,
+      email: deletionEmail,
+      recoveryDays: 7,
+      scheduledAt: expect.any(String),
+    });
+    const cookies = scheduled.headers['set-cookie'] as unknown as string[];
+    expect(cookies.some((cookie) => cookie.startsWith('itemize_auth=;'))).toBe(true);
+    expect(cookies.some((cookie) => cookie.startsWith('itemize_refresh=;'))).toBe(true);
+    expect(emails.sendAccountDeletionScheduled).toHaveBeenCalledWith(
+      expect.objectContaining({ email: deletionEmail }),
+      expect.any(String),
+      expect.any(Date),
+    );
+
+    const locked = await pool.query(
+      `SELECT account_deletion_scheduled_at IS NOT NULL AS pending,
+              account_deletion_token_hash IS NOT NULL AS has_recovery_token
+       FROM users WHERE id = $1`,
+      [userId],
+    );
+    expect(locked.rows[0]).toEqual({ pending: true, has_recovery_token: true });
+
+    const recoveryCalls = emails.sendAccountDeletionScheduled.mock.calls;
+    const recoveryToken = recoveryCalls[recoveryCalls.length - 1][1] as string;
+    const recovered = await request(app.getHttpServer()).post('/graphql')
+      .set('Cookie', `csrf-token=${csrfToken}`)
+      .set('x-csrf-token', csrfToken)
+      .send({
+        query: `mutation Recover($input: RecoverViewerAccountInput!) {
+          recoverViewerAccount(input: $input) { success email }
+        }`,
+        variables: { input: { token: recoveryToken } },
+      })
+      .expect(200);
+    expect(recovered.body.data.recoverViewerAccount).toEqual({
       success: true,
       email: deletionEmail,
     });
-    const cookies = deleted.headers['set-cookie'] as unknown as string[];
-    expect(cookies.some((cookie) => cookie.startsWith('itemize_auth=;'))).toBe(true);
-    expect(cookies.some((cookie) => cookie.startsWith('itemize_refresh=;'))).toBe(true);
+    expect(emails.sendAccountDeletionRecovered).toHaveBeenCalledWith(
+      expect.objectContaining({ email: deletionEmail }),
+    );
+
+    const relogin = request.agent(app.getHttpServer());
+    await relogin.post('/graphql').send({
+      query: `mutation Login($input: LoginInput!) {
+        login(input: $input) { success user { uid } }
+      }`,
+      variables: { input: { email: deletionEmail, password: 'DeletePass5' } },
+    }).expect(200);
+    const nextCsrf = await relogin.post('/graphql')
+      .send({ query: '{ csrfToken { token } }' })
+      .expect(200);
+    await relogin.post('/graphql')
+      .set('x-csrf-token', nextCsrf.body.data.csrfToken.token)
+      .send({
+        query: deletionDocument,
+        variables: {
+          input: { confirmation: deletionEmail, currentPassword: 'DeletePass5' },
+        },
+      })
+      .expect(200);
+
+    await pool.query(
+      `UPDATE users SET account_deletion_scheduled_at = NOW() - INTERVAL '1 minute'
+       WHERE id = $1`,
+      [userId],
+    );
+    emails.sendAccountDeleted.mockClear();
+    await app.get(AccountDeletionSchedulerService).runCycle();
     expect(emails.sendAccountDeleted).toHaveBeenCalledWith(
       expect.objectContaining({ email: deletionEmail }),
     );
@@ -516,5 +616,19 @@ describe('Authentication lifecycle GraphQL PostgreSQL contract', () => {
       organization_exists: false,
       cleanup_queued: true,
     });
+    const lifecycle = await pool.query<{ event_type: string }>(
+      `SELECT event_type FROM account_lifecycle_events
+       WHERE email_hash = encode(digest(lower($1), 'sha256'), 'hex')
+       ORDER BY id`,
+      [deletionEmail],
+    );
+    expect(lifecycle.rows.map((row) => row.event_type)).toEqual([
+      'account.deletion_scheduled',
+      'account.deletion_schedule_failed',
+      'account.deletion_scheduled',
+      'account.deletion_recovered',
+      'account.deletion_scheduled',
+      'account.deletion_completed',
+    ]);
   });
 });
