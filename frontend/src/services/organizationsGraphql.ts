@@ -123,6 +123,20 @@ const removeOrganizationMemberMutation = `
   }
 `;
 
+const transferOrganizationOwnershipMutation = `
+  mutation TransferOrganizationOwnership(
+    $organizationId: Int!
+    $memberId: Int!
+  ) {
+    transferOrganizationOwnership(
+      organizationId: $organizationId
+      memberId: $memberId
+    ) {
+      id organizationId userId role invitedAt joinedAt invitedBy userName email
+    }
+  }
+`;
+
 const leaveOrganizationMutation = `
   mutation LeaveOrganization($organizationId: Int!) {
     leaveOrganization(organizationId: $organizationId)
@@ -274,6 +288,17 @@ export const removeOrganizationMemberViaGraphql = async (
     { removeOrganizationMember: { removedMemberId: number } },
     { organizationId: number; memberId: number }
   >(removeOrganizationMemberMutation, { organizationId, memberId });
+};
+
+export const transferOrganizationOwnershipViaGraphql = async (
+  organizationId: number,
+  memberId: number,
+): Promise<OrganizationMember> => {
+  const data = await graphqlMutationRequest<
+    { transferOrganizationOwnership: GraphqlOrganizationMember },
+    { organizationId: number; memberId: number }
+  >(transferOrganizationOwnershipMutation, { organizationId, memberId });
+  return mapOrganizationMember(data.transferOrganizationOwnership);
 };
 
 export const leaveOrganizationViaGraphql = async (

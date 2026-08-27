@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   },
   getMembers: vi.fn(),
   getBusinesses: vi.fn(),
+  transferOwnership: vi.fn(),
   subscription: { limits: { users: 3 } },
 }));
 
@@ -51,6 +52,7 @@ vi.mock('@/services/contactsApi', () => ({
   inviteMember: vi.fn(),
   leaveOrganization: vi.fn(),
   removeMember: vi.fn(),
+  transferOrganizationOwnership: (...args: unknown[]) => mocks.transferOwnership(...args),
   updateMemberRole: vi.fn(),
   updateOrganization: vi.fn(),
 }));
@@ -61,6 +63,8 @@ vi.mock('@/services/invoicesApi', () => ({
 describe('OrganizationSettings', () => {
   beforeEach(() => {
     mocks.subscription.limits.users = 3;
+    mocks.refresh.mockResolvedValue(undefined);
+    mocks.transferOwnership.mockResolvedValue(undefined);
     mocks.getMembers.mockResolvedValue([
       {
         id: 21,
@@ -107,5 +111,43 @@ describe('OrganizationSettings', () => {
       target: { value: 'grace@example.com' },
     });
     expect(screen.getByRole('button', { name: 'Plan limit reached' })).toBeDisabled();
+  });
+
+  it('requires confirmation before transferring ownership to a joined member', async () => {
+    mocks.getMembers.mockResolvedValue([
+      {
+        id: 21,
+        organization_id: 7,
+        user_id: 4,
+        role: 'owner',
+        invited_at: '2026-08-24T00:00:00.000Z',
+        joined_at: '2026-08-24T00:00:00.000Z',
+        user_name: 'Ada Lovelace',
+        email: 'ada@example.com',
+      },
+      {
+        id: 22,
+        organization_id: 7,
+        user_id: 5,
+        role: 'member',
+        invited_at: '2026-08-25T00:00:00.000Z',
+        joined_at: '2026-08-25T00:05:00.000Z',
+        user_name: 'Grace Hopper',
+        email: 'grace@example.com',
+      },
+    ]);
+    render(<OrganizationSettings />);
+
+    const trigger = await screen.findByRole('button', {
+      name: 'Transfer ownership to grace@example.com',
+    });
+    fireEvent.click(trigger);
+    expect(screen.getByText(/you will remain a member with the admin role/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Transfer ownership' }));
+
+    await waitFor(() => {
+      expect(mocks.transferOwnership).toHaveBeenCalledWith(7, 22);
+      expect(mocks.refresh).toHaveBeenCalled();
+    });
   });
 });

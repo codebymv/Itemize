@@ -11,6 +11,7 @@ import {
   leaveOrganizationViaGraphql,
   removeOrganizationMemberViaGraphql,
   selectOrganizationViaGraphql,
+  transferOrganizationOwnershipViaGraphql,
   updateOrganizationMemberRoleViaGraphql,
   updateOrganizationViaGraphql,
 } from './organizationsGraphql';
@@ -123,6 +124,11 @@ describe('organization GraphQL consumer', () => {
         response({ data: { updateOrganizationMemberRole: member } }),
       )
       .mockResolvedValueOnce(
+        response({
+          data: { transferOrganizationOwnership: { ...member, role: 'owner' } },
+        }),
+      )
+      .mockResolvedValueOnce(
         response({ data: { removeOrganizationMember: { removedMemberId: 8 } } }),
       )
       .mockResolvedValueOnce(response({ data: { leaveOrganization: true } }));
@@ -148,6 +154,9 @@ describe('organization GraphQL consumer', () => {
     await deleteOrganizationViaGraphql(4);
     await addOrganizationMemberViaGraphql(4, member.email, 'member');
     await updateOrganizationMemberRoleViaGraphql(4, 8, 'viewer');
+    await expect(
+      transferOrganizationOwnershipViaGraphql(4, 8),
+    ).resolves.toMatchObject({ role: 'owner' });
     await removeOrganizationMemberViaGraphql(4, 8);
     await leaveOrganizationViaGraphql(4);
 
@@ -170,6 +179,7 @@ describe('organization GraphQL consumer', () => {
       memberId: 8,
       role: 'viewer',
     });
-    expect(fetchCsrfToken).toHaveBeenCalledTimes(9);
+    expect(bodies[7].variables).toEqual({ organizationId: 4, memberId: 8 });
+    expect(fetchCsrfToken).toHaveBeenCalledTimes(10);
   });
 });

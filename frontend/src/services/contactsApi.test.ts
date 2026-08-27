@@ -20,6 +20,7 @@ import {
   leaveOrganization,
   removeMember,
   selectOrganization,
+  transferOrganizationOwnership,
   updateContact,
   updateMemberRole,
   updateOrganization,
@@ -47,6 +48,7 @@ import {
   leaveOrganizationViaGraphql,
   removeOrganizationMemberViaGraphql,
   selectOrganizationViaGraphql,
+  transferOrganizationOwnershipViaGraphql,
   updateOrganizationMemberRoleViaGraphql,
   updateOrganizationViaGraphql,
 } from './organizationsGraphql';
@@ -84,6 +86,7 @@ vi.mock('./organizationsGraphql', () => ({
   leaveOrganizationViaGraphql: vi.fn(),
   removeOrganizationMemberViaGraphql: vi.fn(),
   selectOrganizationViaGraphql: vi.fn(),
+  transferOrganizationOwnershipViaGraphql: vi.fn(),
   updateOrganizationMemberRoleViaGraphql: vi.fn(),
   updateOrganizationViaGraphql: vi.fn(),
 }));
@@ -119,6 +122,10 @@ describe('contacts API GraphQL transport', () => {
     vi.mocked(getOrganizationMembersViaGraphql).mockResolvedValue([member]);
     vi.mocked(addOrganizationMemberViaGraphql).mockResolvedValue(member);
     vi.mocked(updateOrganizationMemberRoleViaGraphql).mockResolvedValue(member);
+    vi.mocked(transferOrganizationOwnershipViaGraphql).mockResolvedValue({
+      ...member,
+      role: 'owner',
+    });
     vi.mocked(ensureDefaultOrganizationViaGraphql).mockResolvedValue(organization);
     vi.mocked(selectOrganizationViaGraphql).mockResolvedValue(organization);
 
@@ -132,6 +139,9 @@ describe('contacts API GraphQL transport', () => {
     await expect(getOrganizationMembers(4)).resolves.toEqual([member]);
     await expect(inviteMember(4, member.email, 'member')).resolves.toEqual(member);
     await expect(updateMemberRole(4, 8, 'viewer')).resolves.toEqual(member);
+    await expect(transferOrganizationOwnership(4, 8)).resolves.toMatchObject({
+      role: 'owner',
+    });
     await removeMember(4, 8);
     await leaveOrganization(4);
 
@@ -149,6 +159,7 @@ describe('contacts API GraphQL transport', () => {
       8,
       'viewer',
     );
+    expect(transferOrganizationOwnershipViaGraphql).toHaveBeenCalledWith(4, 8);
     expect(removeOrganizationMemberViaGraphql).toHaveBeenCalledWith(4, 8);
     expect(leaveOrganizationViaGraphql).toHaveBeenCalledWith(4);
     expect(api.get).not.toHaveBeenCalled();

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Building2,
+  Crown,
   Globe2,
   Loader2,
   LogOut,
@@ -48,6 +49,7 @@ import {
   inviteMember,
   leaveOrganization,
   removeMember,
+  transferOrganizationOwnership,
   updateMemberRole,
   updateOrganization,
 } from '@/services/contactsApi';
@@ -260,6 +262,24 @@ export function OrganizationSettings() {
     }
   };
 
+  const handleTransferOwnership = async (member: OrganizationMember) => {
+    if (!organizationId || !isOwner) return;
+    setMemberActionId(member.id);
+    try {
+      await transferOrganizationOwnership(organizationId, member.id);
+      await Promise.all([refresh(), loadDetails()]);
+      toast({ title: `Ownership transferred to ${member.user_name || member.email}` });
+    } catch (error) {
+      toast({
+        title: 'Could not transfer ownership',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setMemberActionId(null);
+    }
+  };
+
   const handleLifecycle = async (action: 'leave' | 'delete') => {
     if (!organizationId) return;
     setLifecycleAction(action);
@@ -424,6 +444,8 @@ export function OrganizationSettings() {
                 const isSelf = member.user_id === currentUserId;
                 const canEdit = canManage && member.role !== 'owner' && !isSelf &&
                   (isOwner || member.role !== 'admin');
+                const canTransfer = isOwner && member.role !== 'owner' && !isSelf &&
+                  Boolean(member.joined_at);
                 return (
                   <div key={member.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
                     <Avatar className="h-9 w-9">
@@ -449,6 +471,39 @@ export function OrganizationSettings() {
                         </Select>
                       ) : (
                         <Badge variant="secondary">{roleLabel(member.role)}</Badge>
+                      )}
+                      {canTransfer && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Transfer ownership to ${member.email}`}
+                              disabled={memberActionId === member.id}
+                            >
+                              <Crown className="h-4 w-4 text-amber-600" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Transfer ownership to {member.user_name || member.email}?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                They will become the organization owner. You will remain a member with the Admin role.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => void handleTransferOwnership(member)}
+                                disabled={memberActionId !== null}
+                              >
+                                Transfer ownership
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       )}
                       {canEdit && (
                         <Button

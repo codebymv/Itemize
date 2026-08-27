@@ -27,6 +27,7 @@ import {
   leaveOrganizationViaGraphql,
   removeOrganizationMemberViaGraphql,
   selectOrganizationViaGraphql,
+  transferOrganizationOwnershipViaGraphql,
   updateOrganizationMemberRoleViaGraphql,
   updateOrganizationViaGraphql,
 } from './organizationsGraphql';
@@ -85,6 +86,13 @@ export const updateMemberRole = async (orgId: number, memberId: number, role: st
 
 export const removeMember = async (orgId: number, memberId: number): Promise<void> => {
   await removeOrganizationMemberViaGraphql(orgId, memberId);
+};
+
+export const transferOrganizationOwnership = async (
+  orgId: number,
+  memberId: number,
+): Promise<OrganizationMember> => {
+  return transferOrganizationOwnershipViaGraphql(orgId, memberId);
 };
 
 export const leaveOrganization = async (orgId: number): Promise<void> => {
@@ -286,6 +294,7 @@ export default {
   inviteMember,
   updateMemberRole,
   removeMember,
+  transferOrganizationOwnership,
   leaveOrganization,
   // Contacts
   getContacts,

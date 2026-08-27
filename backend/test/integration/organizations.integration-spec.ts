@@ -402,6 +402,77 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     ).expect(200);
     const invitedMemberId = Number(invited.body.data.addOrganizationMember.id);
 
+    const originalMembership = await pool.query<{ id: number }>(
+      `SELECT id FROM organization_members
+       WHERE organization_id = $1 AND user_id = $2`,
+      [organizationId, memberId],
+    );
+    const ownerMemberId = Number(originalMembership.rows[0].id);
+
+    const adminTransferDenied = await mutation(
+      adminUserToken,
+      `mutation Transfer($organizationId: Int!, $memberId: Int!) {
+        transferOrganizationOwnership(
+          organizationId: $organizationId
+          memberId: $memberId
+        ) { id }
+      }`,
+      { organizationId, memberId: invitedMemberId },
+    ).expect(200);
+    expect(adminTransferDenied.body.errors[0].extensions.reason).toBe(
+      'OWNER_REQUIRED',
+    );
+
+    const transferred = await mutation(
+      memberToken,
+      `mutation Transfer($organizationId: Int!, $memberId: Int!) {
+        transferOrganizationOwnership(
+          organizationId: $organizationId
+          memberId: $memberId
+        ) { ${memberFields} }
+      }`,
+      { organizationId, memberId: invitedMemberId },
+    ).expect(200);
+    expect(transferred.body.errors).toBeUndefined();
+    expect(transferred.body.data.transferOrganizationOwnership).toMatchObject({
+      id: invitedMemberId,
+      role: 'owner',
+    });
+    const ownershipRoles = await pool.query<{ user_id: number; role: string }>(
+      `SELECT user_id, role FROM organization_members
+       WHERE organization_id = $1
+       ORDER BY user_id`,
+      [organizationId],
+    );
+    expect(ownershipRoles.rows.filter((row) => row.role === 'owner')).toEqual([
+      expect.objectContaining({ user_id: invitedUserId }),
+    ]);
+    expect(ownershipRoles.rows).toContainEqual(
+      expect.objectContaining({ user_id: memberId, role: 'admin' }),
+    );
+    await expect(
+      pool.query(
+        `UPDATE organization_members SET role = 'owner'
+         WHERE id = $1`,
+        [ownerMemberId],
+      ),
+    ).rejects.toMatchObject({ code: '23505' });
+
+    const restored = await mutation(
+      invitedUserToken,
+      `mutation Transfer($organizationId: Int!, $memberId: Int!) {
+        transferOrganizationOwnership(
+          organizationId: $organizationId
+          memberId: $memberId
+        ) { id role }
+      }`,
+      { organizationId, memberId: ownerMemberId },
+    ).expect(200);
+    expect(restored.body.data.transferOrganizationOwnership).toMatchObject({
+      id: ownerMemberId,
+      role: 'owner',
+    });
+
     const limitReached = await mutation(
       memberToken,
       `mutation Add($organizationId: Int!, $input: AddOrganizationMemberInput!) {

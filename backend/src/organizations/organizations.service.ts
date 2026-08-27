@@ -251,6 +251,47 @@ export class OrganizationsService {
     }
   }
 
+  async transferOwnership(
+    userId: number,
+    organizationId: number,
+    memberId: number,
+  ): Promise<OrganizationMember> {
+    this.id(organizationId);
+    this.memberId(memberId);
+    try {
+      const outcome = await this.organizations.transferOwnership(
+        userId,
+        organizationId,
+        memberId,
+      );
+      if (outcome.kind === 'ok') return this.mapMember(outcome.row);
+      if (outcome.kind === 'forbidden' || outcome.kind === 'member_not_found') {
+        throw itemizeGraphqlError('Organization member not found', 'NOT_FOUND');
+      }
+      if (outcome.kind === 'owner_required') {
+        throw itemizeGraphqlError(
+          'Only the organization owner can transfer ownership',
+          'FORBIDDEN',
+          { reason: 'OWNER_REQUIRED' },
+        );
+      }
+      if (outcome.kind === 'ownership_unchanged') {
+        throw itemizeGraphqlError(
+          'Choose another organization member as the new owner',
+          'BAD_USER_INPUT',
+          { reason: 'OWNERSHIP_UNCHANGED' },
+        );
+      }
+      throw itemizeGraphqlError(
+        'The new owner must have joined the organization',
+        'BAD_USER_INPUT',
+        { reason: 'MEMBER_NOT_JOINED' },
+      );
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
   async leave(userId: number, organizationId: number): Promise<boolean> {
     this.id(organizationId);
     try {

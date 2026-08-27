@@ -1,4 +1,5 @@
 import {
+  OrganizationMemberRow,
   OrganizationRow,
   OrganizationsRepository,
 } from './organizations.repository';
@@ -17,6 +18,21 @@ const row = (values: Partial<OrganizationRow> = {}): OrganizationRow => ({
   ...values,
 });
 
+const memberRow = (
+  values: Partial<OrganizationMemberRow> = {},
+): OrganizationMemberRow => ({
+  id: 9,
+  organization_id: 3,
+  user_id: 8,
+  role: 'owner',
+  invited_at: new Date('2026-08-27T12:00:00.000Z'),
+  joined_at: new Date('2026-08-27T12:01:00.000Z'),
+  invited_by: 7,
+  user_name: 'New Owner',
+  email: 'owner@example.com',
+  ...values,
+});
+
 describe('OrganizationsService', () => {
   let repository: jest.Mocked<OrganizationsRepository>;
   let service: OrganizationsService;
@@ -27,6 +43,7 @@ describe('OrganizationsService', () => {
       update: jest.fn(),
       selectForUser: jest.fn(),
       ensureDefaultForUser: jest.fn(),
+      transferOwnership: jest.fn(),
     } as unknown as jest.Mocked<OrganizationsRepository>;
     service = new OrganizationsService(repository);
   });
@@ -141,6 +158,29 @@ describe('OrganizationsService', () => {
       settings: { defaultBusinessId: 99 },
     })).rejects.toMatchObject({
       extensions: { reason: 'INVALID_DEFAULT_BUSINESS' },
+    });
+  });
+
+  it('maps ownership transfer outcomes without exposing another tenant', async () => {
+    repository.transferOwnership.mockResolvedValue({
+      kind: 'ok',
+      row: memberRow(),
+    });
+    await expect(service.transferOwnership(7, 3, 9)).resolves.toMatchObject({
+      id: 9,
+      userId: 8,
+      role: 'owner',
+      email: 'owner@example.com',
+    });
+
+    repository.transferOwnership.mockResolvedValue({ kind: 'owner_required' });
+    await expect(service.transferOwnership(7, 3, 9)).rejects.toMatchObject({
+      extensions: { code: 'FORBIDDEN', reason: 'OWNER_REQUIRED' },
+    });
+
+    repository.transferOwnership.mockResolvedValue({ kind: 'member_not_found' });
+    await expect(service.transferOwnership(7, 3, 99)).rejects.toMatchObject({
+      extensions: { code: 'NOT_FOUND' },
     });
   });
 });

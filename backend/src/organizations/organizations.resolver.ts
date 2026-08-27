@@ -105,6 +105,19 @@ export class OrganizationsResolver {
   }
 
   @CsrfProtected()
+  @Mutation(() => OrganizationMember)
+  transferOrganizationOwnership(
+    @Args('organizationId', { type: () => Int }) organizationId: number,
+    @Args('memberId', { type: () => Int }) memberId: number,
+  ): Promise<OrganizationMember> {
+    return this.organizations.transferOwnership(
+      this.userId(),
+      organizationId,
+      memberId,
+    );
+  }
+
+  @CsrfProtected()
   @Mutation(() => Boolean)
   leaveOrganization(
     @Args('organizationId', { type: () => Int }) organizationId: number,

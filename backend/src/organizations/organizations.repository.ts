@@ -62,6 +62,14 @@ export type OrganizationMemberRemovalOutcome =
   | { kind: 'owner_immutable' }
   | { kind: 'admin_peer_forbidden' };
 
+export type OrganizationOwnershipTransferOutcome =
+  | { kind: 'ok'; row: OrganizationMemberRow }
+  | { kind: 'forbidden' }
+  | { kind: 'owner_required' }
+  | { kind: 'member_not_found' }
+  | { kind: 'ownership_unchanged' }
+  | { kind: 'member_not_joined' };
+
 export type OrganizationLeaveOutcome =
   | { kind: 'left' }
   | { kind: 'forbidden' }
@@ -588,6 +596,54 @@ export class OrganizationsRepository {
         [role, memberId, organizationId],
       );
       return { kind: 'ok', row: updated.rows[0] };
+    });
+  }
+
+  transferOwnership(
+    actorUserId: number,
+    organizationId: number,
+    memberId: number,
+  ): Promise<OrganizationOwnershipTransferOutcome> {
+    return this.transaction(async (client) => {
+      const actor = await this.lockMembership(
+        client,
+        actorUserId,
+        organizationId,
+      );
+      if (!actor) return { kind: 'forbidden' };
+      if (actor.role !== 'owner') return { kind: 'owner_required' };
+
+      const target = await client.query<OrganizationMemberRow>(
+        `SELECT ${organizationMemberSelection}
+         FROM organization_members om
+         JOIN users u ON u.id = om.user_id
+         WHERE om.id = $1 AND om.organization_id = $2
+         FOR UPDATE OF om`,
+        [memberId, organizationId],
+      );
+      const targetRow = target.rows[0];
+      if (!targetRow) return { kind: 'member_not_found' };
+      if (Number(targetRow.user_id) === actorUserId || targetRow.role === 'owner') {
+        return { kind: 'ownership_unchanged' };
+      }
+      if (!targetRow.joined_at) return { kind: 'member_not_joined' };
+
+      // The partial unique-owner index is immediate, so release the current
+      // owner slot before assigning it. Both writes remain invisible until
+      // this transaction commits.
+      await client.query(
+        `UPDATE organization_members
+         SET role = 'admin'
+         WHERE organization_id = $1 AND user_id = $2 AND role = 'owner'`,
+        [organizationId, actorUserId],
+      );
+      await client.query(
+        `UPDATE organization_members
+         SET role = 'owner'
+         WHERE organization_id = $1 AND id = $2`,
+        [organizationId, memberId],
+      );
+      return { kind: 'ok', row: { ...targetRow, role: 'owner' } };
     });
   }
 
