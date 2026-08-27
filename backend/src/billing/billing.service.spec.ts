@@ -120,6 +120,7 @@ describe('BillingService', () => {
     await expect(service.startSoloTrial(4)).resolves.toMatchObject({
       plan: 'starter',
       subscriptionStatus: 'trialing',
+      trialEligible: false,
       trialStartedAt: trialStart,
       trialEndsAt: trialEnd,
       stripeSubscriptionId: null,
@@ -141,6 +142,24 @@ describe('BillingService', () => {
       extensions: { code: 'BAD_USER_INPUT', reason: 'TRIAL_NOT_AVAILABLE' },
     });
     expect(repository.startSoloTrial).not.toHaveBeenCalled();
+  });
+
+  it('publishes exact Solo trial eligibility with billing status', async () => {
+    repository.status.mockResolvedValue(freeStatus);
+
+    await expect(service.status(4)).resolves.toMatchObject({
+      plan: 'free',
+      subscriptionStatus: 'none',
+      trialEligible: true,
+    });
+
+    repository.status.mockResolvedValue({
+      ...freeStatus,
+      subscription_status: 'canceled',
+    });
+    await expect(service.status(4)).resolves.toMatchObject({
+      trialEligible: false,
+    });
   });
 
   it('rejects unsupported modes, prices, redirect origins, and weak keys before provider work', async () => {

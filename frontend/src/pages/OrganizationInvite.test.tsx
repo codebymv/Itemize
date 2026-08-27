@@ -7,10 +7,18 @@ const mocks = vi.hoisted(() => ({
   currentUser: null as null | { uid: string; email: string; name: string },
   preview: vi.fn(),
   accept: vi.fn(),
+  refreshOrganizations: vi.fn(),
+  refreshSubscription: vi.fn(),
 }));
 
 vi.mock('@/contexts/AuthContext', () => ({
   useAuthState: () => ({ currentUser: mocks.currentUser, loading: false }),
+}));
+vi.mock('@/contexts/organization-context', () => ({
+  useOrganizationContext: () => ({ refresh: mocks.refreshOrganizations }),
+}));
+vi.mock('@/contexts/SubscriptionContext', () => ({
+  useSubscriptionFeatures: () => ({ refreshSubscription: mocks.refreshSubscription }),
 }));
 vi.mock('@/services/organizationsGraphql', () => ({
   getOrganizationInvitationPreviewViaGraphql: (...args: unknown[]) => mocks.preview(...args),
@@ -43,6 +51,8 @@ describe('OrganizationInvite', () => {
       organizationName: 'Alpha Studio',
       role: 'member',
     });
+    mocks.refreshOrganizations.mockResolvedValue(undefined);
+    mocks.refreshSubscription.mockResolvedValue(undefined);
   });
 
   it('preserves the secure token across account creation and login', async () => {
@@ -64,6 +74,8 @@ describe('OrganizationInvite', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Accept invitation' }));
     await waitFor(() => expect(mocks.accept).toHaveBeenCalledWith(token));
+    expect(mocks.refreshOrganizations).toHaveBeenCalled();
+    expect(mocks.refreshSubscription).toHaveBeenCalled();
     expect(screen.getByText('Invitation accepted')).toBeInTheDocument();
   });
 });

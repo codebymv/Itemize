@@ -279,7 +279,7 @@ function AccountInfo({
 
 function AccountSettings() {
   const { planName, subscription } = useSubscriptionState();
-  const starterTrialEligible = planName === 'free' && !subscription?.trialStartedAt;
+  const starterTrialEligible = Boolean(subscription?.trialEligible);
   const canSubscribeCurrentTrial =
     planName === 'starter' &&
     subscription?.status === 'trialing' &&

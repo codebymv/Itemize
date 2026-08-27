@@ -48,6 +48,7 @@ export interface BillingStatus {
     forms_limit: number;
     calendars_limit: number;
     trial_started_at: string | null;
+    trial_eligible: boolean;
     trial_ends_at: string | null;
     trial_end_acknowledged_at: string | null;
     cancel_at_period_end: boolean;

@@ -11,6 +11,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { useAuthState } from '@/contexts/AuthContext';
+import { useOrganizationContext } from '@/contexts/organization-context';
+import { useSubscriptionFeatures } from '@/contexts/SubscriptionContext';
 import {
   acceptOrganizationInvitationViaGraphql,
   getOrganizationInvitationPreviewViaGraphql,
@@ -21,6 +23,8 @@ export default function OrganizationInvite() {
   const { token = '' } = useParams();
   const navigate = useNavigate();
   const { currentUser, loading: authLoading } = useAuthState();
+  const { refresh: refreshOrganizations } = useOrganizationContext();
+  const { refreshSubscription } = useSubscriptionFeatures();
   const [preview, setPreview] = useState<OrganizationInvitationPreview | null>(null);
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
@@ -51,6 +55,8 @@ export default function OrganizationInvite() {
     setError(null);
     try {
       await acceptOrganizationInvitationViaGraphql(token);
+      await refreshOrganizations();
+      await refreshSubscription();
       setAccepted(true);
       setTimeout(() => navigate('/organization-settings', { replace: true }), 1200);
     } catch (reason) {

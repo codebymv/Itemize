@@ -22,6 +22,7 @@ import {
   getPlanTier
 } from '../lib/subscription';
 import { isPublicAuthSkipPath } from './AuthContext';
+import { useOrganizationContext } from './organization-context';
 
 // Legacy Types (re-defined here to remove dependency on subscriptionsApi.ts)
 export interface Subscription {
@@ -36,6 +37,7 @@ export interface Subscription {
     end: string;
   };
   trialStartedAt?: string | null;
+  trialEligible: boolean;
   trial?: {
     startsAt: string | null;
     endsAt: string;
@@ -137,6 +139,39 @@ const getErrorStatus = (error: unknown): number | undefined => {
   return undefined;
 };
 
+const toLegacySubscription = (status: BillingStatus): Subscription => ({
+  hasSubscription: !!status.stripe_subscription_id,
+  status: toSubscriptionStatus(status.subscription_status),
+  planName: status.plan,
+  displayName: PLAN_METADATA[status.plan as Plan]?.displayName,
+  tierLevel: getPlanTier(status.plan as Plan),
+  billingPeriod: status.billing_period,
+  trialStartedAt: status.trial_started_at,
+  trialEligible: status.trial_eligible,
+  currentPeriod: status.billing_period_start && status.billing_period_end ? {
+    start: status.billing_period_start,
+    end: status.billing_period_end,
+  } : undefined,
+  trial: status.trial_ends_at ? {
+    startsAt: status.trial_started_at,
+    endsAt: status.trial_ends_at,
+    isActive: status.subscription_status === 'trialing',
+  } : null,
+  cancelAtPeriodEnd: status.cancel_at_period_end,
+  features: {},
+  limits: {
+    emails: status.emails_limit,
+    sms: status.sms_limit,
+    api_calls: status.api_calls_limit,
+    contacts: status.contacts_limit,
+    users: status.users_limit,
+    workflows: status.workflows_limit,
+    landing_pages: status.landing_pages_limit,
+    forms: status.forms_limit,
+    calendars: status.calendars_limit,
+  },
+});
+
 interface SubscriptionStateContextType {
   subscription: Subscription | null;
   usage: UsageStats | null;
@@ -207,6 +242,7 @@ interface SubscriptionProviderProps {
 
 export function SubscriptionProvider({ children, isAuthenticated = false }: SubscriptionProviderProps) {
   const { pathname } = useLocation();
+  const { organizationId } = useOrganizationContext();
   const skipFetch = isPublicAuthSkipPath(pathname);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [usage, setUsage] = useState<UsageStats | null>(null);
@@ -219,7 +255,7 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
 
   // Fetch subscription data
   const refreshSubscription = useCallback(async () => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !organizationId) {
       setSubscription(null);
       subscriptionLimitsRef.current = undefined;
       return null;
@@ -228,38 +264,7 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
     try {
       const response = await billingApi.getBillingStatus();
       if (response.success && response.data) {
-        const status = response.data;
-        const legacySub: Subscription = {
-          hasSubscription: !!status.stripe_subscription_id,
-          status: toSubscriptionStatus(status.subscription_status),
-          planName: status.plan,
-          displayName: PLAN_METADATA[status.plan as Plan]?.displayName,
-          tierLevel: getPlanTier(status.plan as Plan),
-          billingPeriod: status.billing_period,
-          trialStartedAt: status.trial_started_at,
-          currentPeriod: status.billing_period_start && status.billing_period_end ? {
-            start: status.billing_period_start,
-            end: status.billing_period_end
-          } : undefined,
-          trial: status.trial_ends_at ? {
-            startsAt: status.trial_started_at,
-            endsAt: status.trial_ends_at,
-            isActive: status.subscription_status === 'trialing'
-          } : null,
-          cancelAtPeriodEnd: status.cancel_at_period_end,
-          features: {}, // Mapped on demand or from constants if needed
-          limits: {
-            emails: status.emails_limit,
-            sms: status.sms_limit,
-            api_calls: status.api_calls_limit,
-            contacts: status.contacts_limit,
-            users: status.users_limit,
-            workflows: status.workflows_limit,
-            landing_pages: status.landing_pages_limit,
-            forms: status.forms_limit,
-            calendars: status.calendars_limit
-          }
-        };
+        const legacySub = toLegacySubscription(response.data);
         subscriptionLimitsRef.current = legacySub.limits;
         setSubscription(legacySub);
         setError(null);
@@ -275,11 +280,11 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
       }
       return null;
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, organizationId]);
 
   // Fetch usage data
   const refreshUsage = useCallback(async () => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !organizationId) {
       setUsage(null);
       return;
     }
@@ -372,7 +377,7 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
     } catch (err: unknown) {
       console.error('Failed to fetch usage:', err);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, organizationId]);
 
   // Fetch available plans
   const fetchPlans = useCallback(async () => {
@@ -490,12 +495,15 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
 
   const startSoloTrial = useCallback(async () => {
     const result = await billingApi.startSoloTrial();
-    if (!result.success) {
+    if (!result.success || !result.data) {
       throw new Error(result.error || 'Failed to start Solo trial');
     }
-    await refreshSubscription();
+    const legacySub = toLegacySubscription(result.data);
+    subscriptionLimitsRef.current = legacySub.limits;
+    setSubscription(legacySub);
+    setError(null);
     await refreshUsage();
-  }, [refreshSubscription, refreshUsage]);
+  }, [refreshUsage]);
 
   // Open billing portal
   const openBillingPortal = useCallback(async () => {

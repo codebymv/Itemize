@@ -538,6 +538,11 @@ export class BillingService {
       formsLimit: Number(row.forms_limit ?? 0),
       calendarsLimit: Number(row.calendars_limit ?? 0),
       trialStartedAt: row.trial_started_at,
+      trialEligible:
+        row.plan === 'free' &&
+        row.subscription_status === 'none' &&
+        !row.trial_started_at &&
+        !row.stripe_subscription_id,
       trialEndsAt: row.trial_ends_at,
       trialEndAcknowledgedAt: row.trial_end_acknowledged_at,
       cancelAtPeriodEnd: Boolean(row.cancel_at_period_end),

@@ -53,7 +53,7 @@ import {
 } from '@/components/ui/dialog';
 import { useAuthState } from '@/contexts/AuthContext';
 import { useOrganizationContext } from '@/contexts/organization-context';
-import { useSubscriptionState } from '@/contexts/SubscriptionContext';
+import { useSubscriptionFeatures, useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { useToast } from '@/hooks/use-toast';
 import {
   createOrganization,
@@ -162,6 +162,7 @@ export function OrganizationSettings() {
   const { toast } = useToast();
   const { currentUser } = useAuthState();
   const { subscription } = useSubscriptionState();
+  const { refreshSubscription } = useSubscriptionFeatures();
   const {
     organization,
     organizationId,
@@ -424,7 +425,7 @@ export function OrganizationSettings() {
     setMemberActionId(member.id);
     try {
       await transferOrganizationOwnership(organizationId, member.id);
-      await Promise.all([refresh(), loadDetails()]);
+      await Promise.all([refresh(), loadDetails(), loadAllowance(), refreshSubscription()]);
       toast({ title: `Ownership transferred to ${member.user_name || member.email}` });
     } catch (error) {
       toast({
@@ -444,6 +445,7 @@ export function OrganizationSettings() {
       if (action === 'delete') await deleteOrganization(organizationId);
       else await leaveOrganization(organizationId);
       await refresh();
+      await refreshSubscription();
       navigate('/canvas');
       toast({ title: action === 'delete' ? 'Organization deleted' : 'Organization left' });
     } catch (error) {
@@ -827,17 +829,40 @@ export function OrganizationSettings() {
                         </AlertDialog>
                       )}
                       {canEdit && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label={`Remove ${member.email}`}
-                          disabled={memberActionId === member.id}
-                          onClick={() => void handleRemove(member)}
-                        >
-                          {memberActionId === member.id
-                            ? <Loader2 className="h-4 w-4 animate-spin" />
-                            : <Trash2 className="h-4 w-4 text-destructive" />}
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Remove ${member.email}`}
+                              disabled={memberActionId === member.id}
+                            >
+                              {memberActionId === member.id
+                                ? <Loader2 className="h-4 w-4 animate-spin" />
+                                : <Trash2 className="h-4 w-4 text-destructive" />}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Remove {member.user_name || member.email}?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                They will immediately lose access to this organization and its content.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={() => void handleRemove(member)}
+                                disabled={memberActionId !== null}
+                              >
+                                Remove member
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       )}
                     </div>
                   </div>

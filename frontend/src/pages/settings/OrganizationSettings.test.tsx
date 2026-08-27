@@ -29,6 +29,8 @@ const mocks = vi.hoisted(() => ({
   resendInvitation: vi.fn(),
   revokeInvitation: vi.fn(),
   transferOwnership: vi.fn(),
+  removeMember: vi.fn(),
+  refreshSubscription: vi.fn(),
   createOrganization: vi.fn(),
   getAllowance: vi.fn(),
   subscription: { limits: { users: 3 } },
@@ -54,6 +56,7 @@ vi.mock('@/contexts/organization-context', () => ({
 }));
 vi.mock('@/contexts/SubscriptionContext', () => ({
   useSubscriptionState: () => ({ subscription: mocks.subscription }),
+  useSubscriptionFeatures: () => ({ refreshSubscription: mocks.refreshSubscription }),
 }));
 vi.mock('@/services/contactsApi', () => ({
   createOrganization: (...args: unknown[]) => mocks.createOrganization(...args),
@@ -64,7 +67,7 @@ vi.mock('@/services/contactsApi', () => ({
   getViewerOrganizationAllowance: (...args: unknown[]) => mocks.getAllowance(...args),
   inviteMember: (...args: unknown[]) => mocks.invite(...args),
   leaveOrganization: vi.fn(),
-  removeMember: vi.fn(),
+  removeMember: (...args: unknown[]) => mocks.removeMember(...args),
   resendOrganizationInvitation: (...args: unknown[]) => mocks.resendInvitation(...args),
   revokeOrganizationInvitation: (...args: unknown[]) => mocks.revokeInvitation(...args),
   transferOrganizationOwnership: (...args: unknown[]) => mocks.transferOwnership(...args),
@@ -93,6 +96,8 @@ describe('OrganizationSettings', () => {
       slug: 'second-studio',
     });
     mocks.transferOwnership.mockResolvedValue(undefined);
+    mocks.removeMember.mockResolvedValue(undefined);
+    mocks.refreshSubscription.mockResolvedValue(undefined);
     mocks.invite.mockResolvedValue({
       id: 31,
       email: 'invitee@example.com',
@@ -224,7 +229,41 @@ describe('OrganizationSettings', () => {
     await waitFor(() => {
       expect(mocks.transferOwnership).toHaveBeenCalledWith(7, 22);
       expect(mocks.refresh).toHaveBeenCalled();
+      expect(mocks.refreshSubscription).toHaveBeenCalled();
     });
+  });
+
+  it('requires confirmation before removing a member', async () => {
+    mocks.getMembers.mockResolvedValue([
+      {
+        id: 21,
+        organization_id: 7,
+        user_id: 4,
+        role: 'owner',
+        invited_at: '2026-08-24T00:00:00.000Z',
+        joined_at: '2026-08-24T00:00:00.000Z',
+        user_name: 'Ada Lovelace',
+        email: 'ada@example.com',
+      },
+      {
+        id: 22,
+        organization_id: 7,
+        user_id: 5,
+        role: 'member',
+        invited_at: '2026-08-25T00:00:00.000Z',
+        joined_at: '2026-08-25T00:05:00.000Z',
+        user_name: 'Grace Hopper',
+        email: 'grace@example.com',
+      },
+    ]);
+    render(<OrganizationSettings />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove grace@example.com' }));
+    expect(mocks.removeMember).not.toHaveBeenCalled();
+    expect(screen.getByText(/immediately lose access/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove member' }));
+
+    await waitFor(() => expect(mocks.removeMember).toHaveBeenCalledWith(7, 22));
   });
 
   it('shows the durable ownership transfer activity to managers', async () => {

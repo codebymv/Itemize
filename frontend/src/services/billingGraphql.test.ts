@@ -47,6 +47,7 @@ describe('billing GraphQL adapter', () => {
           formsLimit: 10,
           calendarsLimit: 3,
           trialStartedAt: '2026-08-21T18:51:00.000Z',
+          trialEligible: false,
           trialEndsAt: null,
           trialEndAcknowledgedAt: null,
           cancelAtPeriodEnd: false,
@@ -76,6 +77,7 @@ describe('billing GraphQL adapter', () => {
       emails_used: 2,
       landing_pages_limit: 10,
       trial_started_at: '2026-08-21T18:51:00.000Z',
+      trial_eligible: false,
       cancel_at_period_end: false,
     });
     expect((await getBillingUsageViaGraphql()).usage.emails.limit).toBe(
@@ -155,6 +157,7 @@ describe('billing GraphQL adapter', () => {
           formsLimit: 10,
           calendarsLimit: 3,
           trialStartedAt: '2026-08-21T18:51:00.000Z',
+          trialEligible: false,
           trialEndsAt: '2026-09-04T00:00:00.000Z',
           trialEndAcknowledgedAt: null,
           cancelAtPeriodEnd: false,
@@ -181,6 +184,7 @@ describe('billing GraphQL adapter', () => {
     expect(await startBillingSoloTrialViaGraphql()).toMatchObject({
       plan: 'starter',
       subscription_status: 'trialing',
+      trial_eligible: false,
       emails_limit: 1000,
     });
     expect(graphqlMutationRequest).toHaveBeenNthCalledWith(

@@ -31,6 +31,7 @@ type GraphqlBillingStatus = {
   formsLimit: number;
   calendarsLimit: number;
   trialStartedAt: string | null;
+  trialEligible: boolean;
   trialEndsAt: string | null;
   trialEndAcknowledgedAt: string | null;
   cancelAtPeriodEnd: boolean;
@@ -56,7 +57,7 @@ const statusFields = `
   plan subscriptionStatus billingPeriod billingPeriodStart billingPeriodEnd
   stripeCustomerId stripeSubscriptionId emailsUsed emailsLimit smsUsed smsLimit
   apiCallsUsed apiCallsLimit contactsLimit usersLimit workflowsLimit
-  landingPagesLimit formsLimit calendarsLimit trialStartedAt trialEndsAt
+  landingPagesLimit formsLimit calendarsLimit trialStartedAt trialEligible trialEndsAt
   trialEndAcknowledgedAt cancelAtPeriodEnd canceledAt
 `;
 
@@ -139,6 +140,7 @@ const mapStatus = (status: GraphqlBillingStatus): BillingStatus => ({
   forms_limit: status.formsLimit,
   calendars_limit: status.calendarsLimit,
   trial_started_at: status.trialStartedAt,
+  trial_eligible: status.trialEligible,
   trial_ends_at: status.trialEndsAt,
   trial_end_acknowledged_at: status.trialEndAcknowledgedAt,
   cancel_at_period_end: status.cancelAtPeriodEnd,
