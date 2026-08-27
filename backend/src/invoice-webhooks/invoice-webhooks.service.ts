@@ -45,7 +45,10 @@ export class InvoiceWebhooksService {
     let session: StripeCheckoutSession | null = null;
     let connectedAccount: StripeInvoiceEvent['connectedAccount'] = null;
     let refund: StripeInvoiceEvent['refund'] = null;
-    if (type === 'checkout.session.completed') {
+    if (
+      type === 'checkout.session.completed' ||
+      type === 'checkout.session.expired'
+    ) {
       session = this.session(event.data?.object);
     } else if (
       type === 'account.updated' ||

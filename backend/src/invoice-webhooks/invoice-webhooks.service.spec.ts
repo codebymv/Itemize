@@ -121,6 +121,36 @@ describe('InvoiceWebhooksService', () => {
     );
   });
 
+  it('normalizes an expired Checkout session so its stored link can be retired', async () => {
+    await service.process({
+      id: 'evt_expired_1',
+      type: 'checkout.session.expired',
+      data: {
+        object: {
+          id: 'cs_expired_1',
+          payment_status: 'unpaid',
+          metadata: { invoice_id: '12', organization_id: '4' },
+        },
+      },
+    } as unknown as Stripe.Event);
+
+    expect(repository.process).toHaveBeenCalledWith({
+      id: 'evt_expired_1',
+      type: 'checkout.session.expired',
+      connectedAccount: null,
+      refund: null,
+      session: {
+        id: 'cs_expired_1',
+        invoiceId: 12,
+        metadataOrganizationId: '4',
+        paymentReference: 'cs_expired_1',
+        paymentStatus: 'unpaid',
+        amount: null,
+        currency: null,
+      },
+    });
+  });
+
   it('normalizes connected-account refunds with exact cents', async () => {
     await service.process({
       id: 'evt_refund_1',

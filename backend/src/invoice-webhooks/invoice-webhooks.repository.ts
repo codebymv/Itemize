@@ -61,6 +61,42 @@ export class InvoiceWebhooksRepository {
     }
 
     if (event.type === 'checkout.session.expired') {
+      const session = event.session;
+      if (!session) {
+        throw new Error('Verified Stripe expiration is missing Checkout evidence');
+      }
+      const expired = await client.query<{
+        organization_id: number;
+        invoice_id: number;
+      }>(
+        `UPDATE invoice_payment_link_intents
+         SET status = 'rejected',
+             last_error = 'Stripe Checkout session expired before payment',
+             updated_at = CURRENT_TIMESTAMP
+         WHERE provider_session_id = $1
+           AND status IN ('processing', 'ready', 'reconciliation_required')
+         RETURNING organization_id, invoice_id`,
+        [session.id],
+      );
+      const intent = expired.rows[0];
+      if (!intent) {
+        return {
+          received: true,
+          duplicateEvent: false,
+          handled: false,
+          reason: 'checkout_session_not_active',
+        };
+      }
+      await client.query(
+        `UPDATE invoices
+         SET stripe_payment_intent_id = NULL,
+             stripe_hosted_invoice_url = NULL,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1
+           AND organization_id = $2
+           AND stripe_payment_intent_id = $3`,
+        [intent.invoice_id, intent.organization_id, session.id],
+      );
       return { received: true, duplicateEvent: false, handled: true };
     }
     if (

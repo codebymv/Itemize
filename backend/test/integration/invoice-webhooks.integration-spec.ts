@@ -6,6 +6,7 @@ import Stripe from 'stripe';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
+import { InvoicesRepository } from '../../src/invoices/invoices.repository';
 
 describe('Stripe invoice webhook retained HTTP contract', () => {
   let app: NestExpressApplication;
@@ -15,6 +16,8 @@ describe('Stripe invoice webhook retained HTTP contract', () => {
   let contactId: number;
   let invoiceId: number;
   let rollbackInvoiceId: number;
+  let expiredInvoiceId: number;
+  let invoices: InvoicesRepository;
   const secret = 'whsec_invoice_webhook_integration';
   const stripe = new Stripe('sk_test_invoice_webhook_integration');
   const originalSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -23,6 +26,9 @@ describe('Stripe invoice webhook retained HTTP contract', () => {
     'evt_exact_body',
     'evt_oversized',
     'evt_nest_rollback',
+    'evt_nest_expired',
+    'evt_nest_expired_paid',
+    'evt_nest_expired_after_paid',
   ];
 
   beforeAll(async () => {
@@ -62,7 +68,7 @@ describe('Stripe invoice webhook retained HTTP contract', () => {
        ) VALUES ($1, 'Webhook', 'Customer', $2, $3) RETURNING id`,
       [organizationId, `webhook-customer-${suffix}@test.itemize`, userId],
     )).rows[0].id);
-    const invoices = await pool.query<{ id: number }>(
+    const invoiceRows = await pool.query<{ id: number }>(
       `INSERT INTO invoices (
          organization_id, invoice_number, contact_id, customer_name,
          customer_email, total, amount_paid, amount_due, currency,
@@ -71,6 +77,8 @@ describe('Stripe invoice webhook retained HTTP contract', () => {
          ($1, $2, $4, 'Webhook Customer', $5, 25.00, 0, 25.00,
           'USD', 'sent', CURRENT_DATE, CURRENT_DATE + 30, $6),
          ($1, $3, $4, 'Webhook Customer', $5, 10.00, 0, 10.00,
+          'USD', 'sent', CURRENT_DATE, CURRENT_DATE + 30, $6),
+         ($1, $7, $4, 'Webhook Customer', $5, 15.00, 0, 15.00,
           'USD', 'sent', CURRENT_DATE, CURRENT_DATE + 30, $6)
        RETURNING id`,
       [
@@ -80,9 +88,10 @@ describe('Stripe invoice webhook retained HTTP contract', () => {
         contactId,
         `webhook-customer-${suffix}@test.itemize`,
         userId,
+        `WEBHOOK-EXPIRED-${suffix}`,
       ],
     );
-    [invoiceId, rollbackInvoiceId] = invoices.rows.map((row) => Number(row.id));
+    [invoiceId, rollbackInvoiceId, expiredInvoiceId] = invoiceRows.rows.map((row) => Number(row.id));
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PG_POOL)
@@ -94,6 +103,7 @@ describe('Stripe invoice webhook retained HTTP contract', () => {
     });
     configureApp(app);
     await app.init();
+    invoices = moduleRef.get(InvoicesRepository);
   });
 
   afterAll(async () => {
@@ -241,5 +251,102 @@ describe('Stripe invoice webhook retained HTTP contract', () => {
       handled: true,
       duplicatePayment: false,
     });
+  });
+
+  it('retires expired Checkout links, permits a fresh request, and resists late events', async () => {
+    const sessionId = 'cs_evt_nest_expired_paid';
+    const intent = await pool.query<{ id: number }>(
+      `INSERT INTO invoice_payment_link_intents (
+         organization_id, invoice_id, requested_by_user_id, idempotency_key,
+         amount_due, currency, invoice_number, customer_name, customer_email,
+         status, provider_session_id, payment_url
+       ) SELECT organization_id, id, $2, 'expired-original', amount_due,
+                currency, invoice_number, customer_name, customer_email,
+                'ready', $3, 'https://checkout.stripe.test/expired'
+         FROM invoices WHERE id = $1
+       RETURNING id`,
+      [expiredInvoiceId, userId, sessionId],
+    );
+    await pool.query(
+      `UPDATE invoices
+       SET stripe_payment_intent_id = $2,
+           stripe_hosted_invoice_url = 'https://checkout.stripe.test/expired'
+       WHERE id = $1`,
+      [expiredInvoiceId, sessionId],
+    );
+    const expiredPayload = JSON.stringify({
+      id: 'evt_nest_expired',
+      type: 'checkout.session.expired',
+      data: {
+        object: {
+          id: sessionId,
+          payment_status: 'unpaid',
+          metadata: {
+            invoice_id: String(expiredInvoiceId),
+            organization_id: String(organizationId),
+          },
+        },
+      },
+    });
+    const [first, duplicate] = await Promise.all([
+      deliver(expiredPayload),
+      deliver(expiredPayload),
+    ]);
+    expect([first.body.data, duplicate.body.data]).toEqual(expect.arrayContaining([
+      expect.objectContaining({ duplicateEvent: false, handled: true }),
+      expect.objectContaining({ duplicateEvent: true, handled: false }),
+    ]));
+    expect((await pool.query(
+      `SELECT status, last_error FROM invoice_payment_link_intents WHERE id = $1`,
+      [intent.rows[0].id],
+    )).rows[0]).toEqual({
+      status: 'rejected',
+      last_error: 'Stripe Checkout session expired before payment',
+    });
+    expect((await pool.query(
+      `SELECT stripe_payment_intent_id, stripe_hosted_invoice_url
+       FROM invoices WHERE id = $1`,
+      [expiredInvoiceId],
+    )).rows[0]).toEqual({
+      stripe_payment_intent_id: null,
+      stripe_hosted_invoice_url: null,
+    });
+
+    const fresh = await invoices.preparePaymentLink(
+      organizationId,
+      userId,
+      expiredInvoiceId,
+      'expired-retry',
+    );
+    expect(fresh.kind).toBe('created');
+    if (fresh.kind === 'created') {
+      await pool.query('DELETE FROM invoice_payment_link_intents WHERE id = $1', [fresh.intent.id]);
+    }
+
+    const paid = completed(
+      'evt_nest_expired_paid',
+      expiredInvoiceId,
+      'pi_nest_expired_paid',
+      1500,
+    );
+    await deliver(paid).expect(200);
+    const lateExpiration = JSON.stringify({
+      ...JSON.parse(expiredPayload),
+      id: 'evt_nest_expired_after_paid',
+    });
+    const late = await deliver(lateExpiration).expect(200);
+    expect(late.body.data).toMatchObject({
+      duplicateEvent: false,
+      handled: false,
+      reason: 'checkout_session_not_active',
+    });
+    expect((await pool.query(
+      `SELECT status, amount_paid, amount_due FROM invoices WHERE id = $1`,
+      [expiredInvoiceId],
+    )).rows[0]).toEqual({ status: 'paid', amount_paid: '15.00', amount_due: '0.00' });
+    expect((await pool.query(
+      `SELECT status FROM invoice_payment_link_intents WHERE id = $1`,
+      [intent.rows[0].id],
+    )).rows[0]).toEqual({ status: 'paid' });
   });
 });
