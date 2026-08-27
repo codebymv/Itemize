@@ -109,14 +109,14 @@ export class AuthEmailService {
       previewText: 'Your Itemize account was deleted.',
       heading: 'Account deleted',
       bodyHtml: this.greeting(user) +
-        '<p style="margin:0">Your Itemize account and eligible personal workspaces have been permanently deleted.</p>' +
+        '<p style="margin:0">Your Itemize account and eligible personal organizations have been permanently deleted.</p>' +
         '<p style="margin:20px 0 0;color:#64748b;font-size:13px">This message confirms the deletion request. If you did not make it, contact support immediately.</p>',
       showFooter: false,
     });
     return this.send(
       user,
       'Your Itemize account was deleted',
-      'Your Itemize account and eligible personal workspaces were permanently deleted. If you did not request this, contact support immediately.',
+      'Your Itemize account and eligible personal organizations were permanently deleted. If you did not request this, contact support immediately.',
       html,
     );
   }
@@ -153,7 +153,7 @@ export class AuthEmailService {
       previewText: 'Your Itemize account deletion was canceled.',
       heading: 'Account recovered',
       bodyHtml: this.greeting(user) +
-        '<p style="margin:0">Your deletion request was canceled. Your account and workspace data remain available.</p>',
+        '<p style="margin:0">Your deletion request was canceled. Your account and organization data remain available.</p>',
       cta: { label: 'Sign in to Itemize', url },
       showFooter: false,
     });
@@ -173,7 +173,7 @@ export class AuthEmailService {
       heading: 'Account deletion canceled',
       bodyHtml: this.greeting(user) +
         '<p style="margin:0">Your scheduled deletion was canceled because the account became ineligible for automatic deletion. Your data was not deleted.</p>' +
-        '<p style="margin:20px 0 0;color:#64748b;font-size:13px">Sign in to review workspace ownership, billing, or retained-document requirements.</p>',
+        '<p style="margin:20px 0 0;color:#64748b;font-size:13px">Sign in to review organization ownership, billing, or retained-document requirements.</p>',
       cta: { label: 'Review my account', url },
       showFooter: false,
     });

@@ -131,17 +131,17 @@ const activityDescription = (activity: OrganizationActivity): string => {
     : 'member';
   switch (activity.eventType) {
     case 'organization.created':
-      return `${actor} created the workspace.`;
+      return `${actor} created the organization.`;
     case 'organization.updated':
-      return `${actor} updated the workspace.`;
+      return `${actor} updated the organization.`;
     case 'organization.member_added':
       return `${actor} added ${target} as ${role}.`;
     case 'organization.member_role_changed':
       return `${actor} changed ${target} from ${previousRole} to ${role}.`;
     case 'organization.member_removed':
-      return `${actor} removed ${target} from the workspace.`;
+      return `${actor} removed ${target} from the organization.`;
     case 'organization.member_left':
-      return `${actor} left the workspace.`;
+      return `${actor} left the organization.`;
     case 'organization.invitation_created':
       return `${actor} invited ${target} as ${role}.`;
     case 'organization.invitation_resent':
@@ -149,11 +149,11 @@ const activityDescription = (activity: OrganizationActivity): string => {
     case 'organization.invitation_revoked':
       return `${actor} revoked ${target}'s invitation.`;
     case 'organization.invitation_accepted':
-      return `${target} joined the workspace as ${role}.`;
+      return `${target} joined the organization as ${role}.`;
     case 'organization.ownership_transferred':
-      return `${actor} transferred workspace ownership to ${target}.`;
+      return `${actor} transferred organization ownership to ${target}.`;
     default:
-      return `${actor} changed the workspace.`;
+      return `${actor} changed the organization.`;
   }
 };
 
@@ -190,9 +190,9 @@ export function OrganizationSettings() {
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [allowance, setAllowance] = useState<OrganizationAllowance | null>(null);
   const [allowanceLoading, setAllowanceLoading] = useState(true);
-  const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
-  const [workspaceName, setWorkspaceName] = useState('');
-  const [creatingWorkspace, setCreatingWorkspace] = useState(false);
+  const [createOrganizationOpen, setCreateOrganizationOpen] = useState(false);
+  const [organizationName, setOrganizationName] = useState('');
+  const [creatingOrganization, setCreatingOrganization] = useState(false);
 
   const currentRole = organization?.role ?? 'viewer';
   const canManage = currentRole === 'owner' || currentRole === 'admin';
@@ -261,8 +261,8 @@ export function OrganizationSettings() {
     } catch (error) {
       setAllowance(null);
       toast({
-        title: 'Workspace allowance unavailable',
-        description: error instanceof Error ? error.message : 'Could not load workspace ownership details.',
+        title: 'Organization allowance unavailable',
+        description: error instanceof Error ? error.message : 'Could not load organization ownership details.',
         variant: 'destructive',
       });
     } finally {
@@ -281,7 +281,7 @@ export function OrganizationSettings() {
   const handleSave = async () => {
     if (!organizationId || !organization || !canManage) return;
     if (!name.trim()) {
-      toast({ title: 'Workspace name required', variant: 'destructive' });
+      toast({ title: 'Organization name required', variant: 'destructive' });
       return;
     }
     setSaving(true);
@@ -306,26 +306,26 @@ export function OrganizationSettings() {
     }
   };
 
-  const handleCreateWorkspace = async () => {
-    const trimmedName = workspaceName.trim();
+  const handleCreateOrganization = async () => {
+    const trimmedName = organizationName.trim();
     if (!trimmedName || !allowance?.canCreate) return;
-    setCreatingWorkspace(true);
+    setCreatingOrganization(true);
     try {
       const created = await createOrganization({ name: trimmedName });
       await refresh();
       await selectOrganization(created.id);
       await loadAllowance();
-      setWorkspaceName('');
-      setCreateWorkspaceOpen(false);
-      toast({ title: `${created.name} created`, description: 'Your new workspace starts on Free.' });
+      setOrganizationName('');
+      setCreateOrganizationOpen(false);
+      toast({ title: `${created.name} created`, description: 'Your new organization starts on Free.' });
     } catch (error) {
       toast({
-        title: 'Could not create workspace',
+        title: 'Could not create organization',
         description: error instanceof Error ? error.message : 'Please try again.',
         variant: 'destructive',
       });
     } finally {
-      setCreatingWorkspace(false);
+      setCreatingOrganization(false);
     }
   };
 
@@ -467,7 +467,7 @@ export function OrganizationSettings() {
     <div className="flex flex-col gap-6">
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">
-          <SettingsSectionTitle icon={Globe2}>Your workspaces</SettingsSectionTitle>
+          <SettingsSectionTitle icon={Globe2}>Your organizations</SettingsSectionTitle>
           {allowance && (
             <Badge variant={allowance.canCreate ? 'secondary' : 'outline'}>
               {allowance.limit < 0
@@ -480,52 +480,52 @@ export function OrganizationSettings() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">
-                You belong to {organizations.length} {organizations.length === 1 ? 'workspace' : 'workspaces'} and own{' '}
+                You belong to {organizations.length} {organizations.length === 1 ? 'organization' : 'organizations'} and own{' '}
                 {allowanceLoading ? '…' : allowance?.ownedCount ?? '—'}.
               </p>
               <p className="text-sm text-muted-foreground">
-                Your highest live plan across workspaces you own sets the ownership allowance:
-                Free 1, Solo 3, and Studio unlimited. Each workspace keeps separate billing
-                and paid features, including after an ownership transfer.
+                Your highest live plan across organizations you own sets the ownership allowance:
+                Free 1, Solo 3, and Studio unlimited. Each organization keeps its members,
+                billing, paid features, and Workspace content separate, including after an ownership transfer.
               </p>
             </div>
             {allowance?.canCreate ? (
-              <Dialog open={createWorkspaceOpen} onOpenChange={setCreateWorkspaceOpen}>
+              <Dialog open={createOrganizationOpen} onOpenChange={setCreateOrganizationOpen}>
                 <DialogTrigger asChild>
                   <Button type="button" disabled={allowanceLoading}>
                     <Plus className="mr-2 h-4 w-4" />
-                    New workspace
+                    New organization
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Create a workspace</DialogTitle>
+                    <DialogTitle>Create an organization</DialogTitle>
                     <DialogDescription>
-                      It starts on Free. You can upgrade this workspace independently at any time.
+                      It starts on Free. You can upgrade this organization independently at any time.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-2 py-2">
-                    <Label htmlFor="new-workspace-name">New workspace name</Label>
+                    <Label htmlFor="new-organization-name">New organization name</Label>
                     <Input
-                      id="new-workspace-name"
-                      value={workspaceName}
+                      id="new-organization-name"
+                      value={organizationName}
                       maxLength={255}
                       autoFocus
-                      disabled={creatingWorkspace}
-                      onChange={(event) => setWorkspaceName(event.target.value)}
+                      disabled={creatingOrganization}
+                      onChange={(event) => setOrganizationName(event.target.value)}
                       onKeyDown={(event) => {
-                        if (event.key === 'Enter') void handleCreateWorkspace();
+                        if (event.key === 'Enter') void handleCreateOrganization();
                       }}
                     />
                   </div>
                   <DialogFooter>
                     <Button
                       type="button"
-                      onClick={() => void handleCreateWorkspace()}
-                      disabled={creatingWorkspace || !workspaceName.trim()}
+                      onClick={() => void handleCreateOrganization()}
+                      disabled={creatingOrganization || !organizationName.trim()}
                     >
-                      {creatingWorkspace && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Create workspace
+                      {creatingOrganization && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Create organization
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -538,8 +538,8 @@ export function OrganizationSettings() {
           </div>
           {allowance && !allowance.canCreate && allowance.limit >= 0 && (
             <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-muted-foreground">
-              You&apos;re at your ownership limit. Existing workspaces remain available, but
-              you must upgrade one owned workspace or transfer ownership before creating
+              You&apos;re at your ownership limit. Existing organizations remain available, but
+              you must upgrade one owned organization or transfer ownership before creating
               or accepting another.
             </p>
           )}
@@ -549,14 +549,14 @@ export function OrganizationSettings() {
       {canManage && (
         <Card>
           <CardHeader>
-            <SettingsSectionTitle icon={History}>Recent workspace activity</SettingsSectionTitle>
+            <SettingsSectionTitle icon={History}>Recent organization activity</SettingsSectionTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
               <div className="h-20 animate-pulse rounded-lg bg-muted/50" />
             ) : activity.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Ownership and other security-sensitive workspace changes will appear here.
+                Ownership and other security-sensitive organization changes will appear here.
               </p>
             ) : (
               <div className="divide-y rounded-lg border">
@@ -581,16 +581,16 @@ export function OrganizationSettings() {
 
       <Card>
         <CardHeader>
-          <SettingsSectionTitle icon={Building2}>Workspace identity</SettingsSectionTitle>
+          <SettingsSectionTitle icon={Building2}>Organization identity</SettingsSectionTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="grid gap-2">
             <SettingsFieldLabel
               htmlFor="organization-name"
               help="Used inside Itemize. Customer-facing documents use the business identity selected below."
-              helpLabel="About workspace names"
+              helpLabel="About organization names"
             >
-              Workspace name
+              Organization name
             </SettingsFieldLabel>
             <Input
               id="organization-name"
@@ -627,13 +627,13 @@ export function OrganizationSettings() {
             <Label id="default-business-label" htmlFor="default-business">Default business identity</Label>
             {businessProfilesAvailable && businesses.length > 0 ? (
               <Select
-                value={defaultBusinessId?.toString() ?? 'workspace'}
-                onValueChange={(value) => setDefaultBusinessId(value === 'workspace' ? null : Number(value))}
+                value={defaultBusinessId?.toString() ?? 'organization'}
+                onValueChange={(value) => setDefaultBusinessId(value === 'organization' ? null : Number(value))}
                 disabled={!canManage || saving}
               >
                 <SelectTrigger id="default-business" aria-label="Default business identity"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="workspace">Use workspace name</SelectItem>
+                  <SelectItem value="organization">Use organization name</SelectItem>
                   {businesses.map((business) => (
                     <SelectItem key={business.id} value={business.id.toString()}>{business.name}</SelectItem>
                   ))}
@@ -908,8 +908,8 @@ export function OrganizationSettings() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete {organization.name}?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This permanently deletes its workspace data. Organizations containing retained signature evidence cannot be deleted.
-                    {organizations.length === 1 ? ' A new blank personal workspace will be created when needed.' : ''}
+                    This permanently deletes the organization and all of its workspace data. Organizations containing retained signature evidence cannot be deleted.
+                    {organizations.length === 1 ? ' A new blank personal organization will be created when needed.' : ''}
                   </AlertDialogDescription>
                   <div className="grid gap-2 pt-2">
                     <Label htmlFor="delete-organization-confirmation">

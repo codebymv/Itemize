@@ -518,7 +518,7 @@ export class OrganizationsRepository {
 
       const fallbackName = user.email.split('@')[0] || 'Personal';
       const displayName = user.name?.trim() || fallbackName;
-      const organizationName = `${displayName.slice(0, 90)}'s Workspace`;
+      const organizationName = `${displayName.slice(0, 90)}'s Organization`;
       const slug = `${this.slugBase(organizationName)}-${randomBytes(4).toString('hex')}`;
       const created = await client.query<OrganizationRow>(
         `INSERT INTO organizations (
@@ -884,12 +884,12 @@ export class OrganizationsRepository {
         ...event,
         recipientUserId: Number(targetRow.user_id),
         title: `You now own ${transferContext.organization_name}`.slice(0, 255),
-        body: `${actorDisplay} transferred this workspace to you. Its plan and billing stay with the workspace.`,
+        body: `${actorDisplay} transferred this organization to you. Its plan and billing stay with the organization.`,
       });
       await this.notifications.createWithClient(client, {
         ...event,
         recipientUserId: actorUserId,
-        title: 'Workspace ownership transferred',
+        title: 'Organization ownership transferred',
         body: `${targetDisplay} now owns ${transferContext.organization_name}. You remain an admin.`,
       });
 
@@ -1004,7 +1004,7 @@ export class OrganizationsRepository {
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-|-$/g, '')
-        .slice(0, 220) || 'workspace'
+        .slice(0, 220) || 'organization'
     );
   }
 

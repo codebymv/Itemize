@@ -7,7 +7,7 @@ export enum SignupMode {
 
 registerEnumType(SignupMode, {
   name: 'SignupMode',
-  description: 'The commercial state assigned to a newly-created workspace.',
+  description: 'The commercial state assigned to a newly-created organization.',
 });
 
 @InputType()

@@ -55,7 +55,7 @@ describe('AccountDeletionCard', () => {
     render(<AccountDeletionCard />);
     fireEvent.click(screen.getByRole('button', { name: 'Delete my account' }));
 
-    expect(await screen.findByText(/permanently delete 1 owned workspace/)).toBeInTheDocument();
+    expect(await screen.findByText(/permanently delete 1 owned organization/)).toBeInTheDocument();
     const submit = screen.getByRole('button', { name: 'Schedule account deletion' });
     expect(submit).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Type member@example.com to confirm'), {
@@ -97,7 +97,7 @@ describe('AccountDeletionCard', () => {
     ));
   });
 
-  it('shows every workspace blocker before requesting deletion credentials', async () => {
+  it('shows every organization blocker before requesting deletion credentials', async () => {
     mocks.preflight.mockResolvedValue({
       ...eligiblePreflight,
       eligible: false,
@@ -105,12 +105,12 @@ describe('AccountDeletionCard', () => {
         {
           reason: 'OWNERSHIP_TRANSFER_REQUIRED',
           organizationId: 8,
-          organizationName: 'Client Workspace',
+          organizationName: 'Client Organization',
         },
         {
           reason: 'ACTIVE_SUBSCRIPTION',
           organizationId: 9,
-          organizationName: 'Paid Workspace',
+          organizationName: 'Paid Organization',
         },
       ],
     });
@@ -118,12 +118,12 @@ describe('AccountDeletionCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete my account' }));
 
     expect(await screen.findByText('Resolve these items first')).toBeInTheDocument();
-    expect(screen.getByText('Transfer ownership of Client Workspace to another member.'))
+    expect(screen.getByText('Transfer ownership of Client Organization to another member.'))
       .toBeInTheDocument();
-    expect(screen.getByText('Cancel the active subscription for Paid Workspace.'))
+    expect(screen.getByText('Cancel the active subscription for Paid Organization.'))
       .toBeInTheDocument();
     expect(screen.queryByLabelText('Current password')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Review workspace settings' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Review organization settings' })).toBeEnabled();
     expect(mocks.deleteAccount).not.toHaveBeenCalled();
   });
 });

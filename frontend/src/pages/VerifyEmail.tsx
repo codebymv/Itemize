@@ -73,13 +73,13 @@ export default function VerifyEmail() {
           } catch (invitationError) {
             const message = getApiErrorMessage(
               invitationError,
-              'the workspace invitation could not be accepted.',
+              'the organization invitation could not be accepted.',
             );
             setVerified(true);
             setError(`Your email is verified, but ${message}`);
             toast({
               title: 'Email verified',
-              description: 'Review the workspace invitation to finish joining.',
+              description: 'Review the organization invitation to finish joining.',
               variant: 'destructive',
             });
             setTimeout(
@@ -93,7 +93,7 @@ export default function VerifyEmail() {
         setVerified(true);
         toast({
           title: invitationToken ? 'Email verified and invitation accepted!' : 'Email verified!',
-          description: invitationToken ? 'The workspace is ready.' : 'Your account is now active.',
+          description: invitationToken ? 'The organization is ready.' : 'Your account is now active.',
         });
 
         setTimeout(

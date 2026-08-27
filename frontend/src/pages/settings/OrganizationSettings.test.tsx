@@ -135,7 +135,7 @@ describe('OrganizationSettings', () => {
     ]);
   });
 
-  it('presents workspace identity, regional defaults, business identity, and members', async () => {
+  it('presents organization identity, regional defaults, business identity, and members', async () => {
     render(<OrganizationSettings />);
 
     expect(screen.getByDisplayValue('Ada Studio')).toBeInTheDocument();
@@ -147,18 +147,18 @@ describe('OrganizationSettings', () => {
     expect(screen.getByText('Owner')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /delete organization/i })).toBeInTheDocument();
     expect(await screen.findByText('1 of 3 owned')).toBeInTheDocument();
-    expect(screen.getByText(/highest live plan across workspaces you own/i)).toBeInTheDocument();
-    expect(screen.getByText(/each workspace keeps separate billing and paid features/i)).toBeInTheDocument();
+    expect(screen.getByText(/highest live plan across organizations you own/i)).toBeInTheDocument();
+    expect(screen.getByText(/each organization keeps its members, billing, paid features, and workspace content separate/i)).toBeInTheDocument();
   });
 
-  it('creates a free workspace and selects it', async () => {
+  it('creates a free organization and selects it', async () => {
     render(<OrganizationSettings />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'New workspace' }));
-    fireEvent.change(screen.getByLabelText('New workspace name'), {
+    fireEvent.click(await screen.findByRole('button', { name: 'New organization' }));
+    fireEvent.change(screen.getByLabelText('New organization name'), {
       target: { value: 'Second Studio' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Create workspace' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create organization' }));
 
     await waitFor(() => {
       expect(mocks.createOrganization).toHaveBeenCalledWith({ name: 'Second Studio' });
@@ -167,7 +167,7 @@ describe('OrganizationSettings', () => {
     expect(mocks.refresh).toHaveBeenCalled();
   });
 
-  it('shows the upgrade path at the workspace ownership limit', async () => {
+  it('shows the upgrade path at the organization ownership limit', async () => {
     mocks.getAllowance.mockResolvedValueOnce({
       ownedCount: 1,
       limit: 1,
@@ -177,8 +177,8 @@ describe('OrganizationSettings', () => {
     render(<OrganizationSettings />);
 
     expect(await screen.findByText('1 of 1 owned')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'New workspace' })).not.toBeInTheDocument();
-    expect(screen.getByText(/existing workspaces remain available/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'New organization' })).not.toBeInTheDocument();
+    expect(screen.getByText(/existing organizations remain available/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review plans' }));
     expect(mocks.navigate).toHaveBeenCalledWith('/settings');
   });
@@ -285,7 +285,7 @@ describe('OrganizationSettings', () => {
     render(<OrganizationSettings />);
 
     expect(await screen.findByText(
-      'Ada Lovelace transferred workspace ownership to Grace Hopper.',
+      'Ada Lovelace transferred organization ownership to Grace Hopper.',
     )).toBeInTheDocument();
     expect(mocks.getActivity).toHaveBeenCalledWith(7, 20);
   });

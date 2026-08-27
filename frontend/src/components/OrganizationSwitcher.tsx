@@ -29,7 +29,7 @@ export const OrganizationSwitcher = () => {
       await selectOrganization(organizationId);
     } catch {
       toast({
-        title: 'Workspace switch failed',
+        title: 'Organization switch failed',
         description: 'Please try again.',
         variant: 'destructive',
       });
@@ -44,7 +44,7 @@ export const OrganizationSwitcher = () => {
           size="sm"
           className="h-8 max-w-48 gap-2"
           disabled={isSwitching}
-          aria-label={`Current workspace: ${organization.name}`}
+          aria-label={`Current organization: ${organization.name}`}
         >
           <Building2 className="h-4 w-4 flex-shrink-0" />
           <span className="truncate hidden sm:inline">{organization.name}</span>

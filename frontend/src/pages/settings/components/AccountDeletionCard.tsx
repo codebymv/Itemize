@@ -112,11 +112,11 @@ export function AccountDeletionCard() {
       <CardContent className="space-y-4">
         <div className="space-y-2 text-sm text-muted-foreground">
           <p>
-            Schedule permanent deletion of your account and eligible personal workspaces.
+            Schedule permanent deletion of your account and eligible personal organizations.
             Your account is locked immediately, with seven days to recover it by email.
           </p>
           <p>
-            Itemize checks every owned workspace for members, active subscriptions, and
+            Itemize checks every owned organization for members, active subscriptions, and
             retained signing evidence before accepting the request.
           </p>
         </div>
@@ -144,7 +144,7 @@ export function AccountDeletionCard() {
             {checking ? (
               <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Checking workspaces and retention requirements...
+                Checking organizations and retention requirements...
               </div>
             ) : preflight && !preflight.eligible ? (
               <div className="space-y-4 py-2">
@@ -162,7 +162,7 @@ export function AccountDeletionCard() {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  No account or workspace data has been changed.
+                  No account or organization data has been changed.
                 </p>
               </div>
             ) : preflight ? (
@@ -171,11 +171,11 @@ export function AccountDeletionCard() {
                   <p className="font-medium">What happens next</p>
                   <p className="mt-1 text-muted-foreground">
                     You will leave {preflight.membershipCount}{' '}
-                    {preflight.membershipCount === 1 ? 'workspace' : 'workspaces'} and
+                    {preflight.membershipCount === 1 ? 'organization' : 'organizations'} and
                     permanently delete {preflight.ownedOrganizationCount}{' '}
                     {preflight.ownedOrganizationCount === 1
-                      ? 'owned workspace'
-                      : 'owned workspaces'} after {preflight.recoveryDays} days.
+                      ? 'owned organization'
+                      : 'owned organizations'} after {preflight.recoveryDays} days.
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -219,7 +219,7 @@ export function AccountDeletionCard() {
               <AlertDialogCancel disabled={deleting}>Keep my account</AlertDialogCancel>
               {preflight && !preflight.eligible ? (
                 <Button onClick={() => navigate('/organization-settings')}>
-                  Review workspace settings
+                  Review organization settings
                 </Button>
               ) : (
                 <Button

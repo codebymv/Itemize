@@ -97,7 +97,7 @@ describe('BillingService', () => {
     expect(service.plans().every((plan) => Boolean(plan.pricing))).toBe(true);
   });
 
-  it('starts one Solo trial for an eligible Free workspace without Stripe', async () => {
+  it('starts one Solo trial for an eligible Free organization without Stripe', async () => {
     const trialStart = new Date();
     const trialEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
     repository.status.mockResolvedValue(freeStatus);

@@ -80,7 +80,7 @@ export default function OrganizationInvite() {
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600/10 text-blue-600">
             {accepted ? <CheckCircle className="h-6 w-6" /> : <Users className="h-6 w-6" />}
           </div>
-          <CardTitle>{accepted ? 'Invitation accepted' : 'Join an Itemize workspace'}</CardTitle>
+          <CardTitle>{accepted ? 'Invitation accepted' : 'Join an Itemize organization'}</CardTitle>
           <CardDescription>
             {preview
               ? `${preview.invited_by_name || 'A teammate'} invited you to ${preview.organization_name}.`
@@ -107,7 +107,7 @@ export default function OrganizationInvite() {
               </div>
               {preview.status === 'expired' ? (
                 <p className="text-sm text-destructive">
-                  This invitation has expired. Ask the workspace owner to resend it.
+                  This invitation has expired. Ask the organization owner to resend it.
                 </p>
               ) : currentUser ? (
                 <Button className="w-full" onClick={() => void accept()} disabled={accepting}>

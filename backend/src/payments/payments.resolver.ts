@@ -89,7 +89,7 @@ export class PaymentsResolver {
     if (!organization) throw new Error('Verified organization context is unavailable');
     if (!['owner', 'admin'].includes(organization.organizationRole.toLowerCase())) {
       throw itemizeGraphqlError(
-        'Only workspace owners and admins can issue refunds',
+        'Only organization owners and admins can issue refunds',
         'FORBIDDEN',
         { reason: 'PAYMENT_REFUND_ROLE_REQUIRED' },
       );

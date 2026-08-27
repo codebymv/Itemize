@@ -124,15 +124,15 @@ export function PaymentsTabErrorState({
           {subscriptionRequired
             ? 'Unlock invoicing tools'
             : organizationUnavailable
-              ? 'Workspace unavailable'
+              ? 'Organization unavailable'
               : 'Unable to load payment settings'}
         </h3>
         <p className="mt-2 max-w-md text-sm text-muted-foreground">
           {subscriptionRequired
             ? 'Business profiles, invoice defaults, and payment collection are available on the Solo plan and above.'
             : organizationUnavailable
-            ? 'We could not load or repair a workspace for this account. Try again to restore access.'
-            : 'Your workspace is available, but its invoicing settings could not be loaded. Try again before making changes.'}
+            ? 'We could not load or repair an organization for this account. Try again to restore access.'
+            : 'Your organization is available, but its invoicing settings could not be loaded. Try again before making changes.'}
         </p>
         <Button onClick={subscriptionRequired ? onUpgrade : onRetry} className="mt-5">
           {subscriptionRequired ? 'View plans' : 'Try Again'}

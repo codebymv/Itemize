@@ -208,7 +208,7 @@ export class BillingService {
       current.stripe_subscription_id
     ) {
       throw itemizeGraphqlError(
-        'This workspace is not eligible for another free trial',
+        'This organization is not eligible for another free trial',
         'BAD_USER_INPUT',
         { reason: 'TRIAL_NOT_AVAILABLE' },
       );
@@ -221,7 +221,7 @@ export class BillingService {
     );
     if (!updated) {
       throw itemizeGraphqlError(
-        'This workspace is not eligible for another free trial',
+        'This organization is not eligible for another free trial',
         'BAD_USER_INPUT',
         { reason: 'TRIAL_NOT_AVAILABLE' },
       );

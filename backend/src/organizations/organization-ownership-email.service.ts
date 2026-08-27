@@ -19,7 +19,7 @@ export class OrganizationOwnershipEmailService {
   private readonly logger = new Logger(OrganizationOwnershipEmailService.name);
 
   async send(transfer: OrganizationOwnershipTransferDelivery): Promise<void> {
-    const workspaceUrl = `${this.appUrl()}/organization-settings`;
+    const organizationUrl = `${this.appUrl()}/organization-settings`;
     const organizationName = escapeHtml(transfer.organizationName);
     const previousOwnerDisplay = transfer.previousOwner.name || transfer.previousOwner.email;
     const newOwnerDisplay = transfer.newOwner.name || transfer.newOwner.email;
@@ -32,18 +32,18 @@ export class OrganizationOwnershipEmailService {
       heading: `You now own ${transfer.organizationName}`,
       bodyHtml:
         `<p style="margin:0">${previousOwner} transferred <strong>${organizationName}</strong> to you.</p>` +
-        '<p style="margin:20px 0 0">The workspace, its data, plan, and billing settings remain unchanged. You can now manage ownership, members, and billing.</p>',
-      cta: { label: 'Open workspace settings', url: workspaceUrl },
+        '<p style="margin:20px 0 0">The organization, its workspace data, plan, and billing settings remain unchanged. You can now manage ownership, members, and billing.</p>',
+      cta: { label: 'Open organization settings', url: organizationUrl },
       showFooter: false,
     });
     const previousOwnerHtml = brandedTransactionalEmail({
       assetOrigin: transactionalEmailAssetOrigin(),
       previewText: `${newOwnerDisplay} now owns ${transfer.organizationName}.`,
-      heading: 'Workspace ownership transferred',
+      heading: 'Organization ownership transferred',
       bodyHtml:
         `<p style="margin:0">${newOwner} now owns <strong>${organizationName}</strong>.</p>` +
-        '<p style="margin:20px 0 0">You remain a workspace admin. The workspace, its data, plan, and billing settings remain unchanged.</p>',
-      cta: { label: 'Open workspace settings', url: workspaceUrl },
+        '<p style="margin:20px 0 0">You remain an organization admin. The organization, its workspace data, plan, and billing settings remain unchanged.</p>',
+      cta: { label: 'Open organization settings', url: organizationUrl },
       showFooter: false,
     });
 
@@ -51,13 +51,13 @@ export class OrganizationOwnershipEmailService {
       this.deliver(
         transfer.newOwner.email,
         `You now own ${transfer.organizationName} on Itemize`,
-        `${previousOwnerDisplay} transferred ${transfer.organizationName} to you. The workspace plan and billing remain unchanged: ${workspaceUrl}`,
+        `${previousOwnerDisplay} transferred ${transfer.organizationName} to you. The organization plan and billing remain unchanged: ${organizationUrl}`,
         newOwnerHtml,
       ),
       this.deliver(
         transfer.previousOwner.email,
         `Ownership of ${transfer.organizationName} was transferred`,
-        `${newOwnerDisplay} now owns ${transfer.organizationName}. You remain an admin: ${workspaceUrl}`,
+        `${newOwnerDisplay} now owns ${transfer.organizationName}. You remain an admin: ${organizationUrl}`,
         previousOwnerHtml,
       ),
     ]);

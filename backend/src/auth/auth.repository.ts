@@ -312,7 +312,7 @@ export class AuthRepository {
        )
        RETURNING id`,
       [
-        `${user.name}'s Workspace`,
+        `${user.name}'s Organization`,
         `${slugBase}-${user.id}`,
         JSON.stringify({ personal: true }),
         isTrial ? 'starter' : 'free',
@@ -346,7 +346,7 @@ export class AuthRepository {
       entityType: 'organization',
       entityId: organizationId,
       dedupeKey: `account:${user.id}:welcome:v1`,
-      payload: { workspaceName: `${user.name}'s Workspace` },
+      payload: { organizationName: `${user.name}'s Organization` },
       category: 'system',
       priority: 'normal',
       title: 'Welcome to Itemize',

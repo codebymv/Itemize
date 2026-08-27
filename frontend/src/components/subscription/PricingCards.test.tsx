@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { PricingCards } from './PricingCards';
 
 describe('PricingCards', () => {
-  it('offers an eligible Free workspace a no-card Solo trial', () => {
+  it('offers an eligible Free organization a no-card Solo trial', () => {
     const onUpgrade = vi.fn();
     render(
       <PricingCards

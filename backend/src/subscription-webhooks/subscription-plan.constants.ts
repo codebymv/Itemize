@@ -53,7 +53,7 @@ export const CONTACTS_LIMITS: LimitMap = {
   [PLANS.PRO]: Infinity,
 };
 export const USERS_LIMITS: LimitMap = {
-  // The workspace owner occupies the one included Free seat.
+  // The organization owner occupies the one included Free seat.
   [PLANS.FREE]: 1,
   [PLANS.STARTER]: 3,
   [PLANS.UNLIMITED]: 10,

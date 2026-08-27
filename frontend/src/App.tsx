@@ -229,7 +229,7 @@ const EntitledRoute = ({ requiredPlan = 'starter' }: { requiredPlan?: Plan }) =>
             requiredPlan={requiredPlan}
             currentPlan={(planName as Plan | null) ?? 'free'}
             title="Unlock Itemize business tools"
-            description="Keep using your Free workspace, or upgrade to manage clients, documents, billing, communication, and delivery in one place."
+            description="Keep using Itemize Free, or upgrade to manage clients, documents, billing, communication, and delivery in one place."
             className="w-full bg-background"
           />
         </div>

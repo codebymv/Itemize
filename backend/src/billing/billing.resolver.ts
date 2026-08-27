@@ -91,7 +91,7 @@ export class BillingResolver {
     }
     if (organization.organizationRole.toLowerCase() !== 'owner') {
       throw itemizeGraphqlError(
-        'Only the workspace owner can manage billing',
+        'Only the organization owner can manage billing',
         'FORBIDDEN',
         { reason: 'BILLING_OWNER_REQUIRED' },
       );

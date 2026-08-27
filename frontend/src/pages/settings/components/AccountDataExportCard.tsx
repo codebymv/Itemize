@@ -53,7 +53,7 @@ export function AccountDataExportCard() {
         <div className="space-y-2 text-sm text-muted-foreground">
           <p>
             Download a JSON copy of your profile, memberships, personal canvas content,
-            and CRM and commercial records from workspaces you own. Passwords, login
+            and CRM and commercial records from organizations you own. Passwords, login
             tokens, provider secrets, and sharing capabilities are excluded.
           </p>
           <p>

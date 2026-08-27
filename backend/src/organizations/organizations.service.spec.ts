@@ -83,7 +83,7 @@ describe('OrganizationsService', () => {
       limit: 3,
       plan: 'starter',
     });
-    await expect(service.create(7, { name: 'Fourth workspace' })).rejects.toMatchObject({
+    await expect(service.create(7, { name: 'Fourth organization' })).rejects.toMatchObject({
       extensions: {
         code: 'FORBIDDEN',
         reason: 'ORGANIZATION_LIMIT_REACHED',

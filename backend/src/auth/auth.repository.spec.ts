@@ -99,7 +99,7 @@ describe('AuthRepository registration transaction', () => {
     );
   });
 
-  it('rolls back the user when personal-workspace creation fails', async () => {
+  it('rolls back the user when personal-organization creation fails', async () => {
     const query = jest.fn()
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{

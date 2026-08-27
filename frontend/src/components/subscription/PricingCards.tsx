@@ -80,7 +80,7 @@ interface PricingCardsProps {
      */
     onUpgrade?: (planId: Plan) => void;
 
-    /** Free workspaces may start one no-card Solo trial. */
+    /** Free organizations may start one no-card Solo trial. */
     starterTrialEligible?: boolean;
 
     /** A no-card Solo trial can convert its current plan through checkout. */

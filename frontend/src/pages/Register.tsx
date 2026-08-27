@@ -134,7 +134,7 @@ function RegisterForm() {
               ? 'Create your Itemize account'
               : isTrial
                 ? 'Start your 14-day Solo trial'
-                : 'Create your Free Workspace'}
+                : 'Create your free account'}
           </h1>
           <CardDescription className="text-muted-foreground">
             {invitationToken
@@ -287,7 +287,7 @@ function RegisterForm() {
                   ? 'Create account and continue'
                   : isTrial
                     ? 'Start Solo Trial'
-                    : 'Create Free Workspace'
+                    : 'Create free account'
               )}
             </Button>
 

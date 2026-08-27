@@ -155,7 +155,7 @@ describe('AccountDeletionService', () => {
       blockers: [{
         reason,
         organizationId: 9,
-        organizationName: 'Shared Workspace',
+        organizationName: 'Shared Organization',
       }],
     });
 

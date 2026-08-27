@@ -99,7 +99,7 @@ describe('usePaymentsTab', () => {
     expect(result.current.loadError).toBe('subscription');
   });
 
-  it('finishes loading with a workspace recovery state when no organization exists', async () => {
+  it('finishes loading with an organization recovery state when no organization exists', async () => {
     mocks.useOrganization.mockReturnValue({
       organizationId: null,
       organization: null,

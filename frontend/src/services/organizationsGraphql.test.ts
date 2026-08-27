@@ -81,7 +81,7 @@ describe('organization GraphQL consumer', () => {
     ]);
   });
 
-  it('reads the viewer workspace ownership allowance', async () => {
+  it('reads the viewer organization ownership allowance', async () => {
     const allowance = {
       ownedCount: 2,
       limit: 3,
@@ -157,7 +157,7 @@ describe('organization GraphQL consumer', () => {
       invitedAt: organization.createdAt,
       joinedAt: null,
       invitedBy: 7,
-      userName: 'Workspace Member',
+      userName: 'Organization Member',
       email: 'member@test.itemize',
     };
     vi.mocked(fetch)
@@ -191,7 +191,7 @@ describe('organization GraphQL consumer', () => {
         role: 'member',
         invited_at: organization.createdAt,
         invited_by: 7,
-        user_name: 'Workspace Member',
+        user_name: 'Organization Member',
         email: 'member@test.itemize',
       },
     ]);

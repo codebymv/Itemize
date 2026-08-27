@@ -11,7 +11,7 @@ describe('BillingResolver', () => {
     jest.clearAllMocks();
   });
 
-  it('starts the Solo trial for the verified workspace owner', async () => {
+  it('starts the Solo trial for the verified organization owner', async () => {
     const expected = { plan: 'starter', subscriptionStatus: 'trialing' };
     billing.startSoloTrial.mockResolvedValue(expected);
     const requestContext = {
@@ -28,7 +28,7 @@ describe('BillingResolver', () => {
     expect(billing.startSoloTrial).toHaveBeenCalledWith(42);
   });
 
-  it('rejects billing changes from non-owner workspace members', () => {
+  it('rejects billing changes from non-owner organization members', () => {
     const requestContext = {
       current: () => ({
         organization: { organizationId: 42, organizationRole: 'member' },
@@ -40,7 +40,7 @@ describe('BillingResolver', () => {
     );
 
     expect(() => resolver.startBillingSoloTrial()).toThrow(
-      'Only the workspace owner can manage billing',
+      'Only the organization owner can manage billing',
     );
     expect(billing.startSoloTrial).not.toHaveBeenCalled();
   });

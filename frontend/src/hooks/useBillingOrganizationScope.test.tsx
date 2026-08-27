@@ -40,7 +40,7 @@ describe('billing query organization scope', () => {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 
-  it('fetches fresh status and usage after the selected workspace changes', async () => {
+  it('fetches fresh status and usage after the selected organization changes', async () => {
     const { result, rerender } = renderHook(() => ({
       status: useBillingStatus(),
       usage: useUsageStats(),

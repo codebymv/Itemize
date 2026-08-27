@@ -71,7 +71,7 @@ export class OrganizationsService {
       }
       if (outcome.kind === 'limit_reached') {
         throw itemizeGraphqlError(
-          `You've reached your workspace ownership limit (${outcome.current}/${outcome.limit}). Upgrade an owned workspace or transfer ownership to create another.`,
+          `You've reached your organization ownership limit (${outcome.current}/${outcome.limit}). Upgrade an owned organization or transfer ownership to create another.`,
           'FORBIDDEN',
           {
             reason: 'ORGANIZATION_LIMIT_REACHED',
@@ -347,7 +347,7 @@ export class OrganizationsService {
       }
       if (outcome.kind === 'limit_reached') {
         throw itemizeGraphqlError(
-          `The new owner would exceed their workspace ownership limit (${outcome.current}/${outcome.limit}).`,
+          `The new owner would exceed their organization ownership limit (${outcome.current}/${outcome.limit}).`,
           'FORBIDDEN',
           {
             reason: 'ORGANIZATION_LIMIT_REACHED',
