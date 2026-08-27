@@ -54,6 +54,7 @@ import {
     getStartedProgressQueryKey,
     getStartedProgressViaGraphql,
 } from '@/services/getStartedGraphql';
+import { getWorkspaceDestinations, getWorkspaceLanding } from '@/lib/workspaceNavigation';
 
 // Navigation items for the sidebar
 interface NavItem {
@@ -77,20 +78,7 @@ const mainNavItems: NavItem[] = [
         title: 'Workspace',
         icon: Map,
         path: '/canvas',
-        items: [
-            {
-                title: 'Canvas',
-                path: '/canvas',
-            },
-            {
-                title: 'Contents',
-                path: '/contents',
-            },
-            {
-                title: 'Shared',
-                path: '/shared-items',
-            },
-        ],
+        items: getWorkspaceDestinations(false),
     },
     {
         title: 'Contacts',
@@ -242,17 +230,6 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
-// eslint-disable-next-line react-refresh/only-export-components -- pure navigation contract covered by unit tests
-export const getWorkspaceNavItems = (isMobile: boolean) => mainNavItems
-    .filter((item) => item.title === 'Workspace')
-    .map((item) => isMobile && item.items
-        ? {
-            ...item,
-            path: '/contents',
-            items: item.items.filter((subItem) => subItem.path !== '/canvas'),
-        }
-        : item);
-
 const FIRST_RUN_PRIMARY_NAV = new Set([
     'Dashboard',
     'Workspace',
@@ -336,10 +313,14 @@ export function AppSidebar() {
 
     const isCollapsed = state === 'collapsed';
 
-    const workspaceItems = getWorkspaceNavItems(isMobile);
+    const workspaceLanding = getWorkspaceLanding(isMobile);
+    const responsiveMainNavItems = mainNavItems.map((item) => item.title === 'Workspace'
+        ? { ...item, path: workspaceLanding.path, items: getWorkspaceDestinations(isMobile) }
+        : item);
+    const workspaceItems = responsiveMainNavItems.filter((item) => item.title === 'Workspace');
     const paidItems = tierLevel >= 2
-        ? mainNavItems
-        : mainNavItems.map((item) => item.title === 'Communications' && item.items
+        ? responsiveMainNavItems
+        : responsiveMainNavItems.map((item) => item.title === 'Communications' && item.items
             ? { ...item, items: item.items.filter((subItem) => subItem.title !== 'Social') }
             : item);
     const firstSendCompleted = getStartedProgress?.steps
@@ -364,7 +345,7 @@ export function AppSidebar() {
         : secondaryNavItems.map((item) => item.title === 'Settings' && item.items
             ? { ...item, items: item.items.filter((subItem) => subItem.title !== 'Integrations') }
             : item);
-    const homePath = isSubscribed ? '/dashboard' : isMobile ? '/contents' : '/canvas';
+    const homePath = isSubscribed ? '/dashboard' : workspaceLanding.path;
 
     const isNavItemActive = React.useCallback((item: NavItem) => (
         location.pathname === item.path

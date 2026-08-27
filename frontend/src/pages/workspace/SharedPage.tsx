@@ -4,6 +4,7 @@ import {
   Share2,
   Filter,
   Map,
+  LayoutGrid,
   CheckSquare,
   StickyNote,
   Palette,
@@ -64,6 +65,8 @@ import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { ErrorState } from '@/components/ErrorState';
 import { useWorkspaceContent } from './hooks/useWorkspaceContent';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { getWorkspaceLanding } from '@/lib/workspaceNavigation';
 
 // Content type definitions
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
@@ -82,6 +85,9 @@ interface SharedContent {
 
 export function SharedPage() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const workspaceLanding = getWorkspaceLanding(isMobile);
+  const WorkspaceLandingIcon = isMobile ? LayoutGrid : Map;
   const { toast } = useToast();
   const { token } = useAuthState();
 
@@ -369,10 +375,10 @@ export function SharedPage() {
           size="sm"
           variant="outline"
           className="whitespace-nowrap font-light"
-          onClick={() => navigate('/canvas')}
+          onClick={() => navigate(workspaceLanding.path)}
         >
-          <Map className="mr-2 h-4 w-4" />
-          Canvas
+          <WorkspaceLandingIcon className="mr-2 h-4 w-4" />
+          {workspaceLanding.title}
         </Button>
       }
       mobileActions={
@@ -491,11 +497,11 @@ export function SharedPage() {
               className="p-12"
               action={
                 <Button
-                  onClick={() => navigate('/canvas')}
+                  onClick={() => navigate(workspaceLanding.path)}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  <Map className="h-4 w-4 mr-2" />
-                  Go to Canvas
+                  <WorkspaceLandingIcon className="mr-2 h-4 w-4" />
+                  Go to {workspaceLanding.title}
                 </Button>
               }
             />

@@ -2,8 +2,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AppSidebar, getWorkspaceNavItems } from './AppSidebar';
+import { AppSidebar } from './AppSidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
+import { getWorkspaceDestinations, getWorkspaceLanding } from '@/lib/workspaceNavigation';
 
 const subscriptionState = vi.hoisted(() => ({
   isLoading: false,
@@ -111,9 +112,15 @@ describe('AppSidebar first-run disclosure', () => {
   });
 
   it('does not offer the desktop-only Canvas route in mobile navigation', () => {
-    const [workspace] = getWorkspaceNavItems(true);
-
-    expect(workspace.path).toBe('/contents');
-    expect(workspace.items?.map((item) => item.title)).toEqual(['Contents', 'Shared']);
+    expect(getWorkspaceLanding(true).path).toBe('/contents');
+    expect(getWorkspaceDestinations(true).map((item) => item.title)).toEqual([
+      'Contents',
+      'Shared',
+    ]);
+    expect(getWorkspaceDestinations(false).map((item) => item.title)).toEqual([
+      'Canvas',
+      'Contents',
+      'Shared',
+    ]);
   });
 });
