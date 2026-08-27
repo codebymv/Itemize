@@ -26,6 +26,9 @@ const {
   runOrganizationInvitationsMigration,
   runOrganizationOwnerInvariantMigration,
 } = require('./db_organization_lifecycle_migrations');
+const {
+  runOrganizationAllowanceMigration,
+} = require('./db_organization_allowance_migrations');
 
 // Import Automation migrations
 const { runAllAutomationMigrations } = require('./db_automation_migrations');
@@ -731,6 +734,11 @@ const initializeDatabase = async (pool) => {
       `);
       return true;
     });
+    await runMigrationOnce(
+      pool,
+      'organization_allowance_v1',
+      runOrganizationAllowanceMigration,
+    );
     await runMigrationOnce(pool, 'subscription_webhook_idempotency', runSubscriptionWebhookMigration);
     await runMigrationOnce(pool, 'subscription_webhook_notification_outbox', runSubscriptionWebhookNotificationOutboxMigration);
     await runMigrationOnce(pool, 'subscription_webhook_reconciliation', runSubscriptionWebhookReconciliationMigration);

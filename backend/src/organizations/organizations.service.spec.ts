@@ -39,13 +39,51 @@ describe('OrganizationsService', () => {
 
   beforeEach(() => {
     repository = {
+      create: jest.fn(),
       listForUser: jest.fn(),
+      organizationAllowance: jest.fn(),
       update: jest.fn(),
       selectForUser: jest.fn(),
       ensureDefaultForUser: jest.fn(),
       transferOwnership: jest.fn(),
     } as unknown as jest.Mocked<OrganizationsRepository>;
     service = new OrganizationsService(repository);
+  });
+
+  it('returns ownership allowance and enforces the creation boundary', async () => {
+    repository.organizationAllowance.mockResolvedValue({
+      ownedCount: 1,
+      limit: 3,
+      canCreate: true,
+      sourcePlan: 'starter',
+    });
+    await expect(service.allowance(7)).resolves.toEqual({
+      ownedCount: 1,
+      limit: 3,
+      canCreate: true,
+      sourcePlan: 'starter',
+    });
+
+    repository.create.mockResolvedValue({ kind: 'ok', row: row() });
+    await expect(service.create(7, { name: 'Alpha' })).resolves.toMatchObject({
+      id: 3,
+      role: 'owner',
+    });
+
+    repository.create.mockResolvedValue({
+      kind: 'limit_reached',
+      current: 3,
+      limit: 3,
+      plan: 'starter',
+    });
+    await expect(service.create(7, { name: 'Fourth workspace' })).rejects.toMatchObject({
+      extensions: {
+        code: 'FORBIDDEN',
+        reason: 'ORGANIZATION_LIMIT_REACHED',
+        current: 3,
+        limit: 3,
+      },
+    });
   });
 
   it('maps membership rows into the bounded GraphQL organization shape', async () => {
@@ -181,6 +219,21 @@ describe('OrganizationsService', () => {
     repository.transferOwnership.mockResolvedValue({ kind: 'member_not_found' });
     await expect(service.transferOwnership(7, 3, 99)).rejects.toMatchObject({
       extensions: { code: 'NOT_FOUND' },
+    });
+
+    repository.transferOwnership.mockResolvedValue({
+      kind: 'limit_reached',
+      current: 2,
+      limit: 1,
+      plan: 'free',
+    });
+    await expect(service.transferOwnership(7, 3, 9)).rejects.toMatchObject({
+      extensions: {
+        code: 'FORBIDDEN',
+        reason: 'ORGANIZATION_LIMIT_REACHED',
+        current: 2,
+        limit: 1,
+      },
     });
   });
 });

@@ -37,6 +37,21 @@ export class Organization {
 }
 
 @ObjectType()
+export class OrganizationAllowance {
+  @Field(() => Int)
+  ownedCount: number;
+
+  @Field(() => Int)
+  limit: number;
+
+  @Field()
+  canCreate: boolean;
+
+  @Field()
+  sourcePlan: string;
+}
+
+@ObjectType()
 export class OrganizationMember {
   @Field(() => Int)
   id: number;

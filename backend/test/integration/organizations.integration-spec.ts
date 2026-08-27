@@ -67,10 +67,15 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
       users.rows.map((row) => Number(row.id));
 
     const organizations = await pool.query<{ id: number }>(
-      `INSERT INTO organizations (name, slug, settings)
-       VALUES ('Alpha Workspace', $1, '{"marker":"alpha"}'::jsonb),
-              ('Beta Workspace', $2, '{"marker":"beta"}'::jsonb),
-              ('Outsider Workspace', $3, '{}'::jsonb)
+      `INSERT INTO organizations (
+         name, slug, settings, plan, subscription_status,
+         emails_limit, sms_limit, api_calls_limit, contacts_limit,
+         users_limit, workflows_limit, landing_pages_limit, forms_limit,
+         calendars_limit
+       ) VALUES
+         ('Alpha Workspace', $1, '{"marker":"alpha"}'::jsonb, 'free', 'none', 0, 0, 0, 0, 1, 0, 0, 0, 0),
+         ('Beta Workspace', $2, '{"marker":"beta"}'::jsonb, 'free', 'none', 0, 0, 0, 0, 1, 0, 0, 0, 0),
+         ('Outsider Workspace', $3, '{}'::jsonb, 'free', 'none', 0, 0, 0, 0, 1, 0, 0, 0, 0)
        RETURNING id`,
       [
         `workspace-alpha-${suffix}`,
@@ -320,6 +325,163 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     });
     expect(Number(persisted.rows[0].default_organization_id)).toBe(
       first.body.data.ensureDefaultOrganization.id,
+    );
+  });
+
+  it('enforces Free, Solo, Studio, downgrade, and ownership-transfer allowances', async () => {
+    const allowanceDocument = `{
+      viewerOrganizationAllowance { ownedCount limit canCreate sourcePlan }
+    }`;
+    const free = await query(memberToken, allowanceDocument).expect(200);
+    expect(free.body.data.viewerOrganizationAllowance).toEqual({
+      ownedCount: 1,
+      limit: 1,
+      canCreate: false,
+      sourcePlan: 'free',
+    });
+
+    const freeBlocked = await mutation(
+      memberToken,
+      `mutation Create($input: CreateOrganizationInput!) {
+        createOrganization(input: $input) { id }
+      }`,
+      { input: { name: 'Free overflow' } },
+    ).expect(200);
+    expect(freeBlocked.body.errors[0].extensions).toMatchObject({
+      code: 'FORBIDDEN',
+      reason: 'ORGANIZATION_LIMIT_REACHED',
+      current: 1,
+      limit: 1,
+    });
+
+    await pool.query(
+      `UPDATE organizations
+       SET plan = 'starter', subscription_status = 'active', users_limit = 3
+       WHERE id = $1`,
+      [alphaId],
+    );
+    const solo = await query(memberToken, allowanceDocument).expect(200);
+    expect(solo.body.data.viewerOrganizationAllowance).toEqual({
+      ownedCount: 1,
+      limit: 3,
+      canCreate: true,
+      sourcePlan: 'starter',
+    });
+
+    const createdIds: number[] = [];
+    for (const name of ['Solo second', 'Solo third']) {
+      const created = await mutation(
+        memberToken,
+        `mutation Create($input: CreateOrganizationInput!) {
+          createOrganization(input: $input) { id name }
+        }`,
+        { input: { name } },
+      ).expect(200);
+      expect(created.body.errors).toBeUndefined();
+      createdIds.push(Number(created.body.data.createOrganization.id));
+    }
+
+    const freeDefaults = await pool.query<{
+      plan: string;
+      subscription_status: string;
+      users_limit: number;
+      contacts_limit: number;
+      workflows_limit: number;
+    }>(
+      `SELECT plan, subscription_status, users_limit, contacts_limit, workflows_limit
+       FROM organizations WHERE id = ANY($1::int[]) ORDER BY id`,
+      [createdIds],
+    );
+    expect(freeDefaults.rows).toEqual([
+      expect.objectContaining({
+        plan: 'free',
+        subscription_status: 'none',
+        users_limit: 1,
+        contacts_limit: 0,
+        workflows_limit: 0,
+      }),
+      expect.objectContaining({
+        plan: 'free',
+        subscription_status: 'none',
+        users_limit: 1,
+        contacts_limit: 0,
+        workflows_limit: 0,
+      }),
+    ]);
+
+    const soloBlocked = await mutation(
+      memberToken,
+      `mutation Create($input: CreateOrganizationInput!) {
+        createOrganization(input: $input) { id }
+      }`,
+      { input: { name: 'Solo fourth' } },
+    ).expect(200);
+    expect(soloBlocked.body.errors[0].extensions).toMatchObject({
+      reason: 'ORGANIZATION_LIMIT_REACHED',
+      current: 3,
+      limit: 3,
+    });
+
+    const recipientMembership = await pool.query<{ id: number }>(
+      `INSERT INTO organization_members (organization_id, user_id, role, joined_at)
+       VALUES ($1, $2, 'member', NOW()) RETURNING id`,
+      [createdIds[0], outsiderId],
+    );
+    const transferBlocked = await mutation(
+      memberToken,
+      `mutation Transfer($organizationId: Int!, $memberId: Int!) {
+        transferOrganizationOwnership(organizationId: $organizationId, memberId: $memberId) { id }
+      }`,
+      {
+        organizationId: createdIds[0],
+        memberId: Number(recipientMembership.rows[0].id),
+      },
+    ).expect(200);
+    expect(transferBlocked.body.errors[0].extensions).toMatchObject({
+      reason: 'ORGANIZATION_LIMIT_REACHED',
+      current: 2,
+      limit: 1,
+    });
+    await pool.query('DELETE FROM organization_members WHERE id = $1', [
+      Number(recipientMembership.rows[0].id),
+    ]);
+
+    await pool.query(
+      `UPDATE organizations
+       SET plan = 'free', subscription_status = 'none', users_limit = 1
+       WHERE id = $1`,
+      [alphaId],
+    );
+    const downgraded = await query(memberToken, allowanceDocument).expect(200);
+    expect(downgraded.body.data.viewerOrganizationAllowance).toEqual({
+      ownedCount: 3,
+      limit: 1,
+      canCreate: false,
+      sourcePlan: 'free',
+    });
+
+    await pool.query(
+      `UPDATE organizations
+       SET plan = 'unlimited', subscription_status = 'active', users_limit = 10
+       WHERE id = $1`,
+      [alphaId],
+    );
+    const studio = await query(memberToken, allowanceDocument).expect(200);
+    expect(studio.body.data.viewerOrganizationAllowance).toEqual({
+      ownedCount: 3,
+      limit: -1,
+      canCreate: true,
+      sourcePlan: 'unlimited',
+    });
+
+    await pool.query('DELETE FROM organizations WHERE id = ANY($1::int[])', [
+      createdIds,
+    ]);
+    await pool.query(
+      `UPDATE organizations
+       SET plan = 'starter', subscription_status = 'active', users_limit = 3
+       WHERE id = $1`,
+      [alphaId],
     );
   });
 

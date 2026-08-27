@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   toast: vi.fn(),
   refresh: vi.fn(),
+  selectOrganization: vi.fn(),
   organization: {
     id: 7,
     name: 'Ada Studio',
@@ -27,6 +28,8 @@ const mocks = vi.hoisted(() => ({
   resendInvitation: vi.fn(),
   revokeInvitation: vi.fn(),
   transferOwnership: vi.fn(),
+  createOrganization: vi.fn(),
+  getAllowance: vi.fn(),
   subscription: { limits: { users: 3 } },
 }));
 
@@ -45,15 +48,18 @@ vi.mock('@/contexts/organization-context', () => ({
     organizationId: mocks.organization.id,
     organizations: [mocks.organization],
     refresh: mocks.refresh,
+    selectOrganization: mocks.selectOrganization,
   }),
 }));
 vi.mock('@/contexts/SubscriptionContext', () => ({
   useSubscriptionState: () => ({ subscription: mocks.subscription }),
 }));
 vi.mock('@/services/contactsApi', () => ({
+  createOrganization: (...args: unknown[]) => mocks.createOrganization(...args),
   deleteOrganization: vi.fn(),
   getOrganizationMembers: (...args: unknown[]) => mocks.getMembers(...args),
   getOrganizationInvitations: (...args: unknown[]) => mocks.getInvitations(...args),
+  getViewerOrganizationAllowance: (...args: unknown[]) => mocks.getAllowance(...args),
   inviteMember: (...args: unknown[]) => mocks.invite(...args),
   leaveOrganization: vi.fn(),
   removeMember: vi.fn(),
@@ -71,6 +77,19 @@ describe('OrganizationSettings', () => {
   beforeEach(() => {
     mocks.subscription.limits.users = 3;
     mocks.refresh.mockResolvedValue(undefined);
+    mocks.selectOrganization.mockResolvedValue(mocks.organization);
+    mocks.getAllowance.mockResolvedValue({
+      ownedCount: 1,
+      limit: 3,
+      canCreate: true,
+      sourcePlan: 'starter',
+    });
+    mocks.createOrganization.mockResolvedValue({
+      ...mocks.organization,
+      id: 8,
+      name: 'Second Studio',
+      slug: 'second-studio',
+    });
     mocks.transferOwnership.mockResolvedValue(undefined);
     mocks.invite.mockResolvedValue({
       id: 31,
@@ -119,6 +138,39 @@ describe('OrganizationSettings', () => {
     expect(screen.getByText('1 of 3 seats')).toBeInTheDocument();
     expect(screen.getByText('Owner')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /delete organization/i })).toBeInTheDocument();
+    expect(await screen.findByText('1 of 3 owned')).toBeInTheDocument();
+    expect(screen.getByText(/plans and billing belong to each workspace/i)).toBeInTheDocument();
+  });
+
+  it('creates a free workspace and selects it', async () => {
+    render(<OrganizationSettings />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'New workspace' }));
+    fireEvent.change(screen.getByLabelText('New workspace name'), {
+      target: { value: 'Second Studio' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create workspace' }));
+
+    await waitFor(() => {
+      expect(mocks.createOrganization).toHaveBeenCalledWith({ name: 'Second Studio' });
+      expect(mocks.selectOrganization).toHaveBeenCalledWith(8);
+    });
+    expect(mocks.refresh).toHaveBeenCalled();
+  });
+
+  it('shows the upgrade path at the workspace ownership limit', async () => {
+    mocks.getAllowance.mockResolvedValueOnce({
+      ownedCount: 1,
+      limit: 1,
+      canCreate: false,
+      sourcePlan: 'free',
+    });
+    render(<OrganizationSettings />);
+
+    expect(await screen.findByText('1 of 1 owned')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'New workspace' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review plans' }));
+    expect(mocks.navigate).toHaveBeenCalledWith('/settings');
   });
 
   it('prevents another invitation when the plan seat limit is reached', async () => {

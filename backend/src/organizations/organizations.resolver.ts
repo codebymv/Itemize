@@ -10,6 +10,7 @@ import {
 import {
   DeleteOrganizationResult,
   Organization,
+  OrganizationAllowance,
   OrganizationInvitation,
   OrganizationInvitationAcceptance,
   OrganizationInvitationPreview,
@@ -30,6 +31,11 @@ export class OrganizationsResolver {
   @Query(() => [Organization], { name: 'organizations' })
   organizationsList(): Promise<Organization[]> {
     return this.organizations.list(this.userId());
+  }
+
+  @Query(() => OrganizationAllowance)
+  viewerOrganizationAllowance(): Promise<OrganizationAllowance> {
+    return this.organizations.allowance(this.userId());
   }
 
   @Query(() => Organization, { name: 'organization' })

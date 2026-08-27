@@ -6,7 +6,11 @@ import {
   CreateOrganizationInput,
   UpdateOrganizationInput,
 } from './organization.inputs';
-import { Organization, OrganizationMember } from './organization.types';
+import {
+  Organization,
+  OrganizationAllowance,
+  OrganizationMember,
+} from './organization.types';
 import {
   OrganizationAccessRole,
   OrganizationMemberRow,
@@ -52,14 +56,36 @@ export class OrganizationsService {
     const name = this.name(input.name);
     const settings = this.settingsInput(input.settings ?? {});
     try {
-      const organization = await this.organizations.create(userId, {
+      const outcome = await this.organizations.create(userId, {
         name,
         settings,
       });
-      if (!organization) {
+      if (outcome.kind === 'not_found') {
         throw itemizeGraphqlError('User not found', 'NOT_FOUND');
       }
-      return this.map(organization);
+      if (outcome.kind === 'limit_reached') {
+        throw itemizeGraphqlError(
+          `You've reached your workspace ownership limit (${outcome.current}/${outcome.limit}). Upgrade an owned workspace or transfer ownership to create another.`,
+          'FORBIDDEN',
+          {
+            reason: 'ORGANIZATION_LIMIT_REACHED',
+            current: outcome.current,
+            limit: outcome.limit,
+            plan: outcome.plan,
+          },
+        );
+      }
+      return this.map(outcome.row);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async allowance(userId: number): Promise<OrganizationAllowance> {
+    try {
+      const allowance = await this.organizations.organizationAllowance(userId);
+      if (!allowance) throw itemizeGraphqlError('User not found', 'NOT_FOUND');
+      return allowance;
     } catch (error) {
       this.rethrow(error);
     }
@@ -280,6 +306,18 @@ export class OrganizationsService {
           'Choose another organization member as the new owner',
           'BAD_USER_INPUT',
           { reason: 'OWNERSHIP_UNCHANGED' },
+        );
+      }
+      if (outcome.kind === 'limit_reached') {
+        throw itemizeGraphqlError(
+          `The new owner would exceed their workspace ownership limit (${outcome.current}/${outcome.limit}).`,
+          'FORBIDDEN',
+          {
+            reason: 'ORGANIZATION_LIMIT_REACHED',
+            current: outcome.current,
+            limit: outcome.limit,
+            plan: outcome.plan,
+          },
         );
       }
       throw itemizeGraphqlError(

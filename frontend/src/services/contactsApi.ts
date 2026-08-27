@@ -25,6 +25,7 @@ import {
   getOrganizationInvitationsViaGraphql,
   getOrganizationViaGraphql,
   getOrganizationsViaGraphql,
+  getViewerOrganizationAllowanceViaGraphql,
   leaveOrganizationViaGraphql,
   removeOrganizationMemberViaGraphql,
   resendOrganizationInvitationViaGraphql,
@@ -33,6 +34,7 @@ import {
   transferOrganizationOwnershipViaGraphql,
   updateOrganizationMemberRoleViaGraphql,
   updateOrganizationViaGraphql,
+  type OrganizationAllowance,
 } from './organizationsGraphql';
 
 const unwrapResponse = <T>(payload: unknown): T => {
@@ -48,6 +50,10 @@ const unwrapResponse = <T>(payload: unknown): T => {
 
 export const getOrganizations = async (): Promise<Organization[]> => {
   return getOrganizationsViaGraphql();
+};
+
+export const getViewerOrganizationAllowance = async (): Promise<OrganizationAllowance> => {
+  return getViewerOrganizationAllowanceViaGraphql();
 };
 
 export const getOrganization = async (id: number): Promise<Organization> => {
@@ -296,6 +302,7 @@ export const importContactsCSV = async (
 export default {
   // Organizations
   getOrganizations,
+  getViewerOrganizationAllowance,
   getOrganization,
   createOrganization,
   updateOrganization,

@@ -46,6 +46,13 @@ type GraphqlOrganizationInvitation = {
   deliverySent: boolean;
 };
 
+export type OrganizationAllowance = {
+  ownedCount: number;
+  limit: number;
+  canCreate: boolean;
+  sourcePlan: string;
+};
+
 const invitationFields = `
   id organizationId organizationName email role status invitedBy invitedByName
   invitedAt expiresAt lastSentAt deliverySent
@@ -66,6 +73,12 @@ const organizationFields = `
 const organizationsQuery = `
   query Organizations {
     organizations { ${organizationFields} }
+  }
+`;
+
+const viewerOrganizationAllowanceQuery = `
+  query ViewerOrganizationAllowance {
+    viewerOrganizationAllowance { ownedCount limit canCreate sourcePlan }
   }
 `;
 
@@ -281,6 +294,14 @@ export const getOrganizationsViaGraphql = async (): Promise<Organization[]> => {
     Record<string, never>
   >(organizationsQuery, {});
   return data.organizations.map(mapOrganization);
+};
+
+export const getViewerOrganizationAllowanceViaGraphql = async (): Promise<OrganizationAllowance> => {
+  const data = await graphqlRequest<
+    { viewerOrganizationAllowance: OrganizationAllowance },
+    Record<string, never>
+  >(viewerOrganizationAllowanceQuery, {});
+  return data.viewerOrganizationAllowance;
 };
 
 export const getOrganizationViaGraphql = async (

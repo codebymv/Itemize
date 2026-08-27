@@ -39,6 +39,18 @@ export type OrganizationAccessOutcome<T> =
   | { kind: 'not_found' }
   | { kind: 'invalid_default_business' };
 
+export type OrganizationCreateOutcome =
+  | { kind: 'ok'; row: OrganizationRow }
+  | { kind: 'not_found' }
+  | { kind: 'limit_reached'; current: number; limit: number; plan: string };
+
+export type OrganizationAllowanceRow = {
+  ownedCount: number;
+  limit: number;
+  canCreate: boolean;
+  sourcePlan: string;
+};
+
 export type OrganizationDeleteOutcome =
   | { kind: 'deleted' }
   | { kind: 'forbidden' }
@@ -68,7 +80,8 @@ export type OrganizationOwnershipTransferOutcome =
   | { kind: 'owner_required' }
   | { kind: 'member_not_found' }
   | { kind: 'ownership_unchanged' }
-  | { kind: 'member_not_joined' };
+  | { kind: 'member_not_joined' }
+  | { kind: 'limit_reached'; current: number; limit: number; plan: string };
 
 export type OrganizationLeaveOutcome =
   | { kind: 'left' }
@@ -139,18 +152,35 @@ export class OrganizationsRepository {
   create(
     userId: number,
     values: { name: string; settings: Record<string, unknown> },
-  ): Promise<OrganizationRow | null> {
+  ): Promise<OrganizationCreateOutcome> {
     return this.transaction(async (client) => {
       const user = await client.query<{ id: number }>(
         'SELECT id FROM users WHERE id = $1 FOR UPDATE',
         [userId],
       );
-      if (!user.rows[0]) return null;
+      if (!user.rows[0]) return { kind: 'not_found' };
+
+      const allowance = await this.allowanceWithClient(client, userId);
+      if (!allowance.canCreate) {
+        return {
+          kind: 'limit_reached',
+          current: allowance.ownedCount,
+          limit: allowance.limit,
+          plan: allowance.sourcePlan,
+        };
+      }
 
       const slug = `${this.slugBase(values.name)}-${randomBytes(4).toString('hex')}`;
       const created = await client.query<OrganizationRow>(
-        `INSERT INTO organizations (name, slug, settings)
-         VALUES ($1, $2, $3::jsonb)
+        `INSERT INTO organizations (
+           name, slug, settings, plan, subscription_status,
+           emails_limit, sms_limit, api_calls_limit, contacts_limit,
+           users_limit, workflows_limit, landing_pages_limit, forms_limit,
+           calendars_limit
+         ) VALUES (
+           $1, $2, $3::jsonb, 'free', 'none',
+           0, 0, 0, 0, 1, 0, 0, 0, 0
+         )
          RETURNING
            id, name, slug, settings, logo_url,
            'owner'::text AS role,
@@ -173,10 +203,21 @@ export class OrganizationsRepository {
         [organization.id, userId],
       );
       return {
-        ...organization,
-        is_default: selected.rows[0]?.selected === true,
+        kind: 'ok',
+        row: {
+          ...organization,
+          is_default: selected.rows[0]?.selected === true,
+        },
       };
     });
+  }
+
+  async organizationAllowance(
+    userId: number,
+  ): Promise<OrganizationAllowanceRow | null> {
+    const user = await this.pool.query('SELECT id FROM users WHERE id = $1', [userId]);
+    if (!user.rows[0]) return null;
+    return this.allowanceWithClient(this.pool, userId);
   }
 
   update(
@@ -388,8 +429,15 @@ export class OrganizationsRepository {
       const organizationName = `${displayName.slice(0, 90)}'s Workspace`;
       const slug = `${this.slugBase(organizationName)}-${randomBytes(4).toString('hex')}`;
       const created = await client.query<OrganizationRow>(
-        `INSERT INTO organizations (name, slug, settings)
-         VALUES ($1, $2, '{"personal":true}'::jsonb)
+        `INSERT INTO organizations (
+           name, slug, settings, plan, subscription_status,
+           emails_limit, sms_limit, api_calls_limit, contacts_limit,
+           users_limit, workflows_limit, landing_pages_limit, forms_limit,
+           calendars_limit
+         ) VALUES (
+           $1, $2, '{"personal":true}'::jsonb, 'free', 'none',
+           0, 0, 0, 0, 1, 0, 0, 0, 0
+         )
          RETURNING
            id,
            name,
@@ -633,6 +681,27 @@ export class OrganizationsRepository {
       }
       if (!targetRow.joined_at) return { kind: 'member_not_joined' };
 
+      await client.query(
+        `SELECT id FROM users
+         WHERE id = ANY($1::int[])
+         ORDER BY id
+         FOR UPDATE`,
+        [[actorUserId, Number(targetRow.user_id)]],
+      );
+      const allowance = await this.allowanceWithClient(
+        client,
+        Number(targetRow.user_id),
+        organizationId,
+      );
+      if (allowance.limit >= 0 && allowance.ownedCount > allowance.limit) {
+        return {
+          kind: 'limit_reached',
+          current: allowance.ownedCount,
+          limit: allowance.limit,
+          plan: allowance.sourcePlan,
+        };
+      }
+
       // The partial unique-owner index is immediate, so release the current
       // owner slot before assigning it. Both writes remain invisible until
       // this transaction commits.
@@ -724,6 +793,58 @@ export class OrganizationsRepository {
         .replace(/^-|-$/g, '')
         .slice(0, 220) || 'workspace'
     );
+  }
+
+  private async allowanceWithClient(
+    queryable: Pick<Pool, 'query'> | Pick<PoolClient, 'query'>,
+    userId: number,
+    includeOrganizationId?: number,
+  ): Promise<OrganizationAllowanceRow> {
+    const result = await queryable.query<{
+      id: number | string;
+      plan: string | null;
+      subscription_status: string | null;
+      trial_ends_at: Date | string | null;
+    }>(
+      `SELECT DISTINCT
+         o.id, o.plan, o.subscription_status, o.trial_ends_at
+       FROM organizations o
+       WHERE EXISTS (
+         SELECT 1 FROM organization_members owner
+         WHERE owner.organization_id = o.id
+           AND owner.user_id = $1
+           AND owner.role = 'owner'
+       ) OR ($2::int IS NOT NULL AND o.id = $2)
+       ORDER BY o.id`,
+      [userId, includeOrganizationId ?? null],
+    );
+    let sourcePlan = 'free';
+    let limit = 1;
+    for (const organization of result.rows) {
+      const trialEnd = organization.trial_ends_at
+        ? new Date(organization.trial_ends_at).getTime()
+        : 0;
+      const live = organization.subscription_status === 'active' || (
+        organization.subscription_status === 'trialing' && trialEnd > Date.now()
+      );
+      if (!live) continue;
+      if (organization.plan === 'unlimited' || organization.plan === 'pro') {
+        sourcePlan = organization.plan;
+        limit = -1;
+        break;
+      }
+      if (organization.plan === 'starter') {
+        sourcePlan = 'starter';
+        limit = 3;
+      }
+    }
+    const ownedCount = result.rows.length;
+    return {
+      ownedCount,
+      limit,
+      canCreate: limit < 0 || ownedCount < limit,
+      sourcePlan,
+    };
   }
 
   private record(value: unknown): Record<string, unknown> {

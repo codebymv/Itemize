@@ -17,6 +17,7 @@ import {
   getOrganizationInvitations,
   getOrganizationMembers,
   getOrganizations,
+  getViewerOrganizationAllowance,
   inviteMember,
   leaveOrganization,
   removeMember,
@@ -49,6 +50,7 @@ import {
   getOrganizationMembersViaGraphql,
   getOrganizationViaGraphql,
   getOrganizationsViaGraphql,
+  getViewerOrganizationAllowanceViaGraphql,
   leaveOrganizationViaGraphql,
   removeOrganizationMemberViaGraphql,
   resendOrganizationInvitationViaGraphql,
@@ -90,6 +92,7 @@ vi.mock('./organizationsGraphql', () => ({
   getOrganizationMembersViaGraphql: vi.fn(),
   getOrganizationViaGraphql: vi.fn(),
   getOrganizationsViaGraphql: vi.fn(),
+  getViewerOrganizationAllowanceViaGraphql: vi.fn(),
   leaveOrganizationViaGraphql: vi.fn(),
   removeOrganizationMemberViaGraphql: vi.fn(),
   resendOrganizationInvitationViaGraphql: vi.fn(),
@@ -136,6 +139,12 @@ describe('contacts API GraphQL transport', () => {
       delivery_sent: true,
     };
     vi.mocked(getOrganizationsViaGraphql).mockResolvedValue([organization]);
+    vi.mocked(getViewerOrganizationAllowanceViaGraphql).mockResolvedValue({
+      ownedCount: 1,
+      limit: 3,
+      canCreate: true,
+      sourcePlan: 'starter',
+    });
     vi.mocked(getOrganizationViaGraphql).mockResolvedValue(organization);
     vi.mocked(createOrganizationViaGraphql).mockResolvedValue(organization);
     vi.mocked(updateOrganizationViaGraphql).mockResolvedValue(organization);
@@ -152,6 +161,11 @@ describe('contacts API GraphQL transport', () => {
     vi.mocked(selectOrganizationViaGraphql).mockResolvedValue(organization);
 
     await expect(getOrganizations()).resolves.toEqual([organization]);
+    await expect(getViewerOrganizationAllowance()).resolves.toMatchObject({
+      ownedCount: 1,
+      limit: 3,
+      canCreate: true,
+    });
     await expect(getOrganization(4)).resolves.toEqual(organization);
     await expect(createOrganization({ name: 'Alpha' })).resolves.toEqual(organization);
     await expect(updateOrganization(4, { name: 'Alpha' })).resolves.toEqual(organization);

@@ -12,6 +12,7 @@ import {
   getOrganizationInvitationsViaGraphql,
   getOrganizationViaGraphql,
   getOrganizationsViaGraphql,
+  getViewerOrganizationAllowanceViaGraphql,
   leaveOrganizationViaGraphql,
   removeOrganizationMemberViaGraphql,
   resendOrganizationInvitationViaGraphql,
@@ -77,6 +78,23 @@ describe('organization GraphQL consumer', () => {
         updated_at: organization.updatedAt,
       },
     ]);
+  });
+
+  it('reads the viewer workspace ownership allowance', async () => {
+    const allowance = {
+      ownedCount: 2,
+      limit: 3,
+      canCreate: true,
+      sourcePlan: 'starter',
+    };
+    vi.mocked(fetch).mockResolvedValueOnce(
+      response({ data: { viewerOrganizationAllowance: allowance } }),
+    );
+
+    await expect(getViewerOrganizationAllowanceViaGraphql()).resolves.toEqual(allowance);
+    const body = JSON.parse(String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body));
+    expect(body.query).toContain('viewerOrganizationAllowance');
+    expect(fetchCsrfToken).not.toHaveBeenCalled();
   });
 
   it('uses CSRF-protected mutations for selection and default repair', async () => {

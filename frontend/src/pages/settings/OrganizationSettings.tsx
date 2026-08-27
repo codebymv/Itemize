@@ -41,14 +41,25 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { useAuthState } from '@/contexts/AuthContext';
 import { useOrganizationContext } from '@/contexts/organization-context';
 import { useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { useToast } from '@/hooks/use-toast';
 import {
+  createOrganization,
   deleteOrganization,
   getOrganizationInvitations,
   getOrganizationMembers,
+  getViewerOrganizationAllowance,
   inviteMember,
   leaveOrganization,
   removeMember,
@@ -58,6 +69,7 @@ import {
   updateMemberRole,
   updateOrganization,
 } from '@/services/contactsApi';
+import type { OrganizationAllowance } from '@/services/organizationsGraphql';
 import { getBusinesses, type Business } from '@/services/invoicesApi';
 import type { JsonRecord, OrganizationInvitation, OrganizationMember } from '@/types';
 
@@ -113,6 +125,7 @@ export function OrganizationSettings() {
     organizationId,
     organizations,
     refresh,
+    selectOrganization,
   } = useOrganizationContext();
   const [name, setName] = useState('');
   const [timezone, setTimezone] = useState('UTC');
@@ -131,6 +144,11 @@ export function OrganizationSettings() {
   const [inviteRole, setInviteRole] = useState<'admin' | 'member' | 'viewer'>('member');
   const [lifecycleAction, setLifecycleAction] = useState<'leave' | 'delete' | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [allowance, setAllowance] = useState<OrganizationAllowance | null>(null);
+  const [allowanceLoading, setAllowanceLoading] = useState(true);
+  const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
+  const [workspaceName, setWorkspaceName] = useState('');
+  const [creatingWorkspace, setCreatingWorkspace] = useState(false);
 
   const currentRole = organization?.role ?? 'viewer';
   const canManage = currentRole === 'owner' || currentRole === 'admin';
@@ -190,6 +208,26 @@ export function OrganizationSettings() {
     void loadDetails();
   }, [loadDetails]);
 
+  const loadAllowance = useCallback(async () => {
+    setAllowanceLoading(true);
+    try {
+      setAllowance(await getViewerOrganizationAllowance());
+    } catch (error) {
+      setAllowance(null);
+      toast({
+        title: 'Workspace allowance unavailable',
+        description: error instanceof Error ? error.message : 'Could not load workspace ownership details.',
+        variant: 'destructive',
+      });
+    } finally {
+      setAllowanceLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    void loadAllowance();
+  }, [loadAllowance]);
+
   const availableTimezones = useMemo(() => {
     return TIMEZONES.includes(timezone) ? TIMEZONES : [timezone, ...TIMEZONES];
   }, [timezone]);
@@ -219,6 +257,29 @@ export function OrganizationSettings() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCreateWorkspace = async () => {
+    const trimmedName = workspaceName.trim();
+    if (!trimmedName || !allowance?.canCreate) return;
+    setCreatingWorkspace(true);
+    try {
+      const created = await createOrganization({ name: trimmedName });
+      await refresh();
+      await selectOrganization(created.id);
+      await loadAllowance();
+      setWorkspaceName('');
+      setCreateWorkspaceOpen(false);
+      toast({ title: `${created.name} created`, description: 'Your new workspace starts on Free.' });
+    } catch (error) {
+      toast({
+        title: 'Could not create workspace',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setCreatingWorkspace(false);
     }
   };
 
@@ -357,6 +418,83 @@ export function OrganizationSettings() {
 
   return (
     <div className="flex flex-col gap-6">
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <SettingsSectionTitle icon={Globe2}>Your workspaces</SettingsSectionTitle>
+          {allowance && (
+            <Badge variant={allowance.canCreate ? 'secondary' : 'outline'}>
+              {allowance.limit < 0
+                ? `${allowance.ownedCount} owned · Unlimited`
+                : `${allowance.ownedCount} of ${allowance.limit} owned`}
+            </Badge>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">
+                You belong to {organizations.length} {organizations.length === 1 ? 'workspace' : 'workspaces'} and own{' '}
+                {allowanceLoading ? '…' : allowance?.ownedCount ?? '—'}.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Plans and billing belong to each workspace. Transferring ownership keeps that workspace&apos;s subscription.
+              </p>
+            </div>
+            {allowance?.canCreate ? (
+              <Dialog open={createWorkspaceOpen} onOpenChange={setCreateWorkspaceOpen}>
+                <DialogTrigger asChild>
+                  <Button type="button" disabled={allowanceLoading}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    New workspace
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create a workspace</DialogTitle>
+                    <DialogDescription>
+                      It starts on Free. You can upgrade this workspace independently at any time.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-2 py-2">
+                    <Label htmlFor="new-workspace-name">New workspace name</Label>
+                    <Input
+                      id="new-workspace-name"
+                      value={workspaceName}
+                      maxLength={255}
+                      autoFocus
+                      disabled={creatingWorkspace}
+                      onChange={(event) => setWorkspaceName(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') void handleCreateWorkspace();
+                      }}
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      onClick={() => void handleCreateWorkspace()}
+                      disabled={creatingWorkspace || !workspaceName.trim()}
+                    >
+                      {creatingWorkspace && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Create workspace
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            ) : allowance ? (
+              <Button type="button" variant="outline" onClick={() => navigate('/settings')}>
+                Review plans
+              </Button>
+            ) : null}
+          </div>
+          {allowance && !allowance.canCreate && allowance.limit >= 0 && (
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-muted-foreground">
+              You&apos;re at your ownership limit. Upgrade one of your workspaces or transfer ownership before creating another.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <SettingsSectionTitle icon={Building2}>Workspace identity</SettingsSectionTitle>
