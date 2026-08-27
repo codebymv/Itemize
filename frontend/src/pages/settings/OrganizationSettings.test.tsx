@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OrganizationSettings } from './OrganizationSettings';
 
@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   },
   getMembers: vi.fn(),
   getBusinesses: vi.fn(),
+  subscription: { limits: { users: 3 } },
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -41,6 +42,9 @@ vi.mock('@/contexts/organization-context', () => ({
     refresh: mocks.refresh,
   }),
 }));
+vi.mock('@/contexts/SubscriptionContext', () => ({
+  useSubscriptionState: () => ({ subscription: mocks.subscription }),
+}));
 vi.mock('@/services/contactsApi', () => ({
   deleteOrganization: vi.fn(),
   getOrganizationMembers: (...args: unknown[]) => mocks.getMembers(...args),
@@ -56,6 +60,7 @@ vi.mock('@/services/invoicesApi', () => ({
 
 describe('OrganizationSettings', () => {
   beforeEach(() => {
+    mocks.subscription.limits.users = 3;
     mocks.getMembers.mockResolvedValue([
       {
         id: 21,
@@ -88,7 +93,19 @@ describe('OrganizationSettings', () => {
     expect(screen.getByLabelText('Time zone')).toHaveTextContent('America/Phoenix');
     await waitFor(() => expect(screen.getByText('Ada Lovelace')).toBeInTheDocument());
     expect(screen.getByLabelText('Default business identity')).toHaveTextContent('Ada Consulting');
+    expect(screen.getByText('1 of 3 seats')).toBeInTheDocument();
     expect(screen.getByText('Owner')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /delete organization/i })).toBeInTheDocument();
+  });
+
+  it('prevents another invitation when the plan seat limit is reached', async () => {
+    mocks.subscription.limits.users = 1;
+    render(<OrganizationSettings />);
+
+    await waitFor(() => expect(screen.getByText('1 of 1 seats')).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('Member email'), {
+      target: { value: 'grace@example.com' },
+    });
+    expect(screen.getByRole('button', { name: 'Plan limit reached' })).toBeDisabled();
   });
 });

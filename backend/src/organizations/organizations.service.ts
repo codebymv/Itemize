@@ -188,6 +188,18 @@ export class OrganizationsService {
           { field: 'email', reason: 'ALREADY_MEMBER' },
         );
       }
+      if (outcome.kind === 'limit_reached') {
+        throw itemizeGraphqlError(
+          `You've reached your team member limit (${outcome.current}/${outcome.limit}). Please upgrade your plan.`,
+          'FORBIDDEN',
+          {
+            reason: 'PLAN_LIMIT_REACHED',
+            current: outcome.current,
+            limit: outcome.limit,
+            plan: outcome.plan,
+          },
+        );
+      }
       if (outcome.kind !== 'ok') {
         throw itemizeGraphqlError('Member cannot be added', 'FORBIDDEN');
       }

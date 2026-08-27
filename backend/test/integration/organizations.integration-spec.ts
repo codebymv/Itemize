@@ -25,6 +25,7 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
   let outsiderOrganizationId: number;
   let adminEmail: string;
   let invitedEmail: string;
+  let outsiderEmail: string;
   const jwt = new JwtService();
 
   beforeAll(async () => {
@@ -44,6 +45,7 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     const suffix = `${Date.now()}-${process.pid}`;
     adminEmail = `workspace-admin-${suffix}@test.itemize`;
     invitedEmail = `workspace-invitee-${suffix}@test.itemize`;
+    outsiderEmail = `workspace-outsider-${suffix}@test.itemize`;
     const users = await pool.query<{ id: number }>(
       `INSERT INTO users (email, name, provider, email_verified)
        VALUES ($1, 'Workspace Member', 'email', true),
@@ -54,7 +56,7 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
        RETURNING id`,
       [
         `workspace-member-${suffix}@test.itemize`,
-        `workspace-outsider-${suffix}@test.itemize`,
+        outsiderEmail,
         `workspace-empty-${suffix}@test.itemize`,
         adminEmail,
         invitedEmail,
@@ -335,6 +337,12 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
       role: 'owner',
       settings: { tier: 'test' },
     });
+    await pool.query(
+      `UPDATE organizations
+       SET plan = 'starter', subscription_status = 'active', users_limit = 3
+       WHERE id = $1`,
+      [organizationId],
+    );
 
     const detail = await query(
       memberToken,
@@ -393,6 +401,21 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
       { organizationId, input: { email: invitedEmail, role: 'member' } },
     ).expect(200);
     const invitedMemberId = Number(invited.body.data.addOrganizationMember.id);
+
+    const limitReached = await mutation(
+      memberToken,
+      `mutation Add($organizationId: Int!, $input: AddOrganizationMemberInput!) {
+        addOrganizationMember(organizationId: $organizationId, input: $input) { id }
+      }`,
+      { organizationId, input: { email: outsiderEmail, role: 'member' } },
+    ).expect(200);
+    expect(limitReached.body.errors[0].extensions).toMatchObject({
+      code: 'FORBIDDEN',
+      reason: 'PLAN_LIMIT_REACHED',
+      current: 3,
+      limit: 3,
+      plan: 'starter',
+    });
 
     const duplicate = await mutation(
       memberToken,

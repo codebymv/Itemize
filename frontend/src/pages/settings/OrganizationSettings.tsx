@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useAuthState } from '@/contexts/AuthContext';
 import { useOrganizationContext } from '@/contexts/organization-context';
+import { useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { useToast } from '@/hooks/use-toast';
 import {
   deleteOrganization,
@@ -99,6 +100,7 @@ export function OrganizationSettings() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { currentUser } = useAuthState();
+  const { subscription } = useSubscriptionState();
   const {
     organization,
     organizationId,
@@ -125,6 +127,9 @@ export function OrganizationSettings() {
   const canManage = currentRole === 'owner' || currentRole === 'admin';
   const isOwner = currentRole === 'owner';
   const currentUserId = Number(currentUser?.uid);
+  const memberLimit = subscription?.limits?.users;
+  const hasMemberLimit = typeof memberLimit === 'number' && memberLimit >= 0;
+  const memberLimitReached = hasMemberLimit && members.length >= memberLimit;
 
   useEffect(() => {
     if (!organization) return;
@@ -364,8 +369,13 @@ export function OrganizationSettings() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
           <SettingsSectionTitle icon={Users}>Members</SettingsSectionTitle>
+          {hasMemberLimit && (
+            <Badge variant={memberLimitReached ? 'outline' : 'secondary'}>
+              {members.length} of {memberLimit} seats
+            </Badge>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           {canManage && (
@@ -377,10 +387,15 @@ export function OrganizationSettings() {
                 value={email}
                 placeholder="teammate@example.com"
                 aria-label="Member email"
+                disabled={memberLimitReached}
                 onChange={(event) => setEmail(event.target.value)}
               />
               <Label htmlFor="member-role" className="sr-only">Member role</Label>
-              <Select value={inviteRole} onValueChange={(value) => setInviteRole(value as typeof inviteRole)}>
+              <Select
+                value={inviteRole}
+                onValueChange={(value) => setInviteRole(value as typeof inviteRole)}
+                disabled={memberLimitReached}
+              >
                 <SelectTrigger id="member-role" aria-label="Member role"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {isOwner && <SelectItem value="admin">Admin</SelectItem>}
@@ -388,9 +403,12 @@ export function OrganizationSettings() {
                   <SelectItem value="viewer">Viewer</SelectItem>
                 </SelectContent>
               </Select>
-              <Button onClick={() => void handleAddMember()} disabled={memberSaving || !email.trim()}>
+              <Button
+                onClick={() => void handleAddMember()}
+                disabled={memberSaving || memberLimitReached || !email.trim()}
+              >
                 {memberSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                Add member
+                {memberLimitReached ? 'Plan limit reached' : 'Add member'}
               </Button>
               <p className="text-sm text-muted-foreground sm:col-span-3">
                 Members must already have an Itemize account.

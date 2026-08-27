@@ -51,6 +51,7 @@ export type OrganizationMemberMutationOutcome =
   | { kind: 'member_not_found' }
   | { kind: 'user_not_found' }
   | { kind: 'already_member' }
+  | { kind: 'limit_reached'; current: number; limit: number; plan: string }
   | { kind: 'owner_immutable' }
   | { kind: 'admin_peer_forbidden' };
 
@@ -474,6 +475,39 @@ export class OrganizationsRepository {
         [organizationId, user.rows[0].id],
       );
       if (existing.rows[0]) return { kind: 'already_member' };
+      const quota = await client.query<{
+        plan: string | null;
+        users_limit: number | null;
+        current: string;
+      }>(
+        `SELECT o.plan, o.users_limit,
+                (SELECT COUNT(*)::text
+                 FROM organization_members member
+                 WHERE member.organization_id = o.id) AS current
+         FROM organizations o
+         WHERE o.id = $1
+         FOR UPDATE`,
+        [organizationId],
+      );
+      const quotaRow = quota.rows[0];
+      if (!quotaRow) return { kind: 'forbidden' };
+      const fallbackLimit = quotaRow.plan === 'starter'
+        ? 3
+        : quotaRow.plan === 'unlimited'
+          ? 10
+          : quotaRow.plan === 'pro'
+            ? -1
+            : 1;
+      const limit = quotaRow.users_limit ?? fallbackLimit;
+      const current = Number(quotaRow.current);
+      if (limit >= 0 && current >= limit) {
+        return {
+          kind: 'limit_reached',
+          current,
+          limit,
+          plan: quotaRow.plan ?? 'free',
+        };
+      }
       const inserted = await client.query<OrganizationMemberRow>(
         `WITH inserted AS (
            INSERT INTO organization_members (
