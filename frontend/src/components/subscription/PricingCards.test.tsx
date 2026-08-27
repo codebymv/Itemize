@@ -36,6 +36,15 @@ describe('PricingCards', () => {
     ).toBeInTheDocument();
   });
 
+  it('describes tenant ownership limits as organizations', () => {
+    render(<PricingCards hideFree={false} showYearlyToggle={false} />);
+
+    expect(screen.getByText('Own 1 organization')).toBeInTheDocument();
+    expect(screen.getByText('Own up to 3 organizations')).toBeInTheDocument();
+    expect(screen.getByText('Own unlimited organizations')).toBeInTheDocument();
+    expect(screen.queryByText(/Own .*workspaces/i)).not.toBeInTheDocument();
+  });
+
   it('lets a no-card Solo trial subscribe to its current plan', () => {
     const onUpgrade = vi.fn();
     render(

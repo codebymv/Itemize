@@ -19,15 +19,15 @@ import {
 // Plan features - aligned with actual itemize.cloud capabilities
 const PLAN_FEATURES: Record<Plan, string[]> = {
     free: [
-        'Full workspace: lists, notes, whiteboards, and canvas',
+        'Full Workspace: lists, notes, whiteboards, and canvas',
         'Organize, share, and keep work in one place',
-        'Own 1 workspace',
+        'Own 1 organization',
         '1 team member',
         'Upgrade when you need CRM and billing',
     ],
     starter: [
-        'Full workspace included',
-        'Own up to 3 workspaces',
+        'Full Workspace included',
+        'Own up to 3 organizations',
         'Contacts, pipelines, and calendars',
         'Invoices and 25 e-signatures / month',
         'Inbox, forms, and landing pages',
@@ -36,7 +36,7 @@ const PLAN_FEATURES: Record<Plan, string[]> = {
     ],
     unlimited: [
         'Everything in Solo',
-        'Own unlimited workspaces',
+        'Own unlimited organizations',
         'Unlimited e-signatures',
         '25,000 contacts and 10 teammates',
         'Automations and higher sending limits',

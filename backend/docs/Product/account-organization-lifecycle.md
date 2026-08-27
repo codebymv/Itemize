@@ -13,7 +13,7 @@ of the same organization. The transfer is one atomic database operation:
 
 The settings UI requires an explicit confirmation and explains the former
 owner's resulting role. Ownership transfer is the required handoff before an
-owner can leave a workspace or later delete an account without deleting the
+owner can leave an organization or later delete an account without deleting the
 organization.
 
 ## Existing organization lifecycle
@@ -31,14 +31,14 @@ organization.
 
 Owners and administrators can invite a person by email as an administrator,
 member, or viewer, subject to the same peer-administrator rules as direct
-member management. An active pending invitation reserves one plan seat so a
-workspace cannot overbook its limit while recipients decide whether to join.
+member management. An active pending invitation reserves one plan seat so an
+organization cannot overbook its limit while recipients decide whether to join.
 
 Invitation links are seven-day, single-use capabilities. Only a SHA-256 hash
 of the capability is stored. Acceptance requires an authenticated, verified
 account whose normalized email exactly matches the invited address; acceptance
 then atomically creates the membership, consumes the capability, and selects
-the invited organization as the account's default workspace.
+the invited organization as the account's default organization.
 
 Recipients without an account can register from the invitation page. The
 capability is preserved through email verification and accepted immediately
@@ -51,7 +51,7 @@ pending and expired invitations with delivery, resend, and revoke controls.
 An authenticated account can download a versioned JSON export before leaving.
 The export includes identity and membership records, personal lists, notes,
 categories, whiteboards, and the client and commercial records belonging to
-workspaces the account owns. Provider credentials, Stripe identifiers, signing
+organizations the account owns. Provider credentials, Stripe identifiers, signing
 capabilities, public access tokens, webhook secrets, and file URLs are omitted.
 The export also describes records that Itemize may retain for legal, financial,
 fraud-prevention, and signature-evidence obligations.
@@ -59,11 +59,11 @@ fraud-prevention, and signature-evidence obligations.
 ## Account deletion and recovery
 
 The account settings UI runs a server-authoritative preflight before accepting
-a deletion request. Every blocking workspace is listed with a direct handoff:
+a deletion request. Every blocking organization is listed with a direct handoff:
 
-- transfer or remove an owned workspace that still has other members;
-- cancel any active workspace subscription;
-- retain an account when an owned workspace contains signature evidence that
+- transfer or remove an owned organization that still has other members;
+- cancel any active organization subscription;
+- retain an account when an owned organization contains signature evidence that
   cannot legally be deleted.
 
 An eligible request requires the account email and current password. Itemize
@@ -74,26 +74,26 @@ that message, Itemize cancels the schedule and leaves the account active.
 Recovery consumes that capability,
 restores sign-in, and records an append-only lifecycle event. When the grace
 period ends, a background worker rechecks all blockers before deleting owned
-workspaces, memberships, integrations, pending jobs, personal content, and the
+organizations, memberships, integrations, pending jobs, personal content, and the
 account. If a blocker appeared during the grace period, deletion is canceled
 instead of removing data. Scheduled, recovered, canceled, and completed events
 retain only a one-way email hash after the user row is gone.
 
-## Workspace ownership allowance
+## Organization ownership allowance
 
-Subscriptions remain workspace-scoped, while the highest live plan among the
-workspaces a user owns sets that user's ownership allowance: Free permits one,
-Solo permits three, and Studio permits unlimited workspaces. A newly created
-workspace always starts on Free, so one paid workspace does not grant paid
-features to the owner's other workspaces.
+Subscriptions remain organization-scoped, while the highest live plan among the
+organizations a user owns sets that user's ownership allowance: Free permits one,
+Solo permits three, and Studio permits unlimited organizations. A newly created
+organization always starts on Free, so one paid organization does not grant paid
+features to the owner's other organizations.
 
 Creation serializes on the owner account before counting ownership, preventing
 concurrent requests from exceeding the allowance. Ownership transfer applies
-the incoming workspace's live plan before checking the recipient's resulting
-count, then changes both roles atomically. Transferring a paid workspace keeps
-its subscription with the workspace. Downgrades and expired trials do not
-delete or hide existing workspaces; an over-limit owner cannot create or accept
-another workspace until they upgrade or transfer ownership.
+the incoming organization's live plan before checking the recipient's resulting
+count, then changes both roles atomically. Transferring a paid organization keeps
+its subscription with the organization. Downgrades and expired trials do not
+delete or hide existing organizations; an over-limit owner cannot create or accept
+another organization until they upgrade or transfer ownership.
 
 Password recovery, verification resend, password change, profile updates, data
 export, and account deletion are owned by the GraphQL authentication lifecycle.
