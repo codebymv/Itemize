@@ -933,7 +933,8 @@ export function InvoicesPage() {
                                                         {Math.floor((new Date().getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24))}d overdue
                                                     </span>
                                                 )}
-                                                {(invoice.amount_due > 0 && invoice.status !== 'draft') && (
+                                                {invoice.amount_due > 0 &&
+                                                  !['draft', 'paid', 'cancelled', 'refunded'].includes(invoice.status) && (
                                                     <span className="text-muted-foreground">
                                                         Due: {formatCurrency(invoice.amount_due)}
                                                     </span>

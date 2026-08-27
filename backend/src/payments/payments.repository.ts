@@ -503,7 +503,10 @@ export class PaymentsRepository {
        )
        UPDATE invoices invoice
        SET amount_paid=balance.net_paid,
-           amount_due=GREATEST(0,invoice.total-balance.net_paid),
+           amount_due=CASE
+             WHEN balance.net_paid <= 0 THEN 0
+             ELSE GREATEST(0,invoice.total-balance.net_paid)
+           END,
            status=CASE
              WHEN balance.net_paid <= 0 THEN 'refunded'
              WHEN invoice.total-balance.net_paid <= 0 THEN 'paid'

@@ -86,6 +86,7 @@ const {
 } = require('./db_invoice_payment_result_migrations');
 const {
   runPaymentRefundMigration,
+  runRefundedInvoiceTerminalBalanceMigration,
 } = require('./db_payment_refund_migrations');
 const {
   runInvoiceHostedUrlMigration,
@@ -609,6 +610,11 @@ const initializeDatabase = async (pool) => {
       pool,
       'payment_refunds_v1',
       runPaymentRefundMigration,
+    );
+    await runMigrationOnce(
+      pool,
+      'refunded_invoice_terminal_balance_v1',
+      runRefundedInvoiceTerminalBalanceMigration,
     );
     await runMigrationOnce(
       pool,

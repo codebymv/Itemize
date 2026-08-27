@@ -39,4 +39,24 @@ async function runPaymentRefundMigration(pool) {
   return true;
 }
 
-module.exports = { runPaymentRefundMigration };
+async function runRefundedInvoiceTerminalBalanceMigration(pool) {
+  await pool.query(`
+    UPDATE invoices
+    SET amount_paid = 0,
+        amount_due = 0,
+        paid_at = NULL,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE status = 'refunded'
+      AND (
+        COALESCE(amount_paid, 0) <> 0
+        OR COALESCE(amount_due, 0) <> 0
+        OR paid_at IS NOT NULL
+      );
+  `);
+  return true;
+}
+
+module.exports = {
+  runPaymentRefundMigration,
+  runRefundedInvoiceTerminalBalanceMigration,
+};
