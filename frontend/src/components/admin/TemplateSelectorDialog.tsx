@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { Mail } from 'lucide-react';
 import { EmailTemplateBrowserDialog } from '@/components/email/EmailTemplateBrowserDialog';
+import { toBadgeStatus } from '@/lib/statusVisuals';
+import { getCatalogStatusVisual } from '@/pages/campaigns/constants/campaignVisuals';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { getEmailTemplates, type EmailTemplate as AdminEmailTemplate } from '@/services/adminEmailApi';
@@ -54,12 +56,7 @@ export function TemplateSelectorDialog({
 
     const browserTemplates: BrowserTemplate[] = templates.map(template => ({
         ...template,
-        status: {
-            label: template.isActive ? 'Active' : 'Inactive',
-            className: template.isActive
-                ? 'border-blue-500/30 bg-blue-500/15 text-blue-700 dark:text-blue-300'
-                : 'border-orange-500/30 bg-orange-500/15 text-orange-700 dark:text-orange-300',
-        },
+        status: toBadgeStatus(getCatalogStatusVisual(template.isActive)),
     }));
 
     return (

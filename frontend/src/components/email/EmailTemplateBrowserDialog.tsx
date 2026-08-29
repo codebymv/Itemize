@@ -13,6 +13,7 @@ export interface EmailTemplateBrowserItem {
   subject: string;
   category?: string | null;
   status?: { label: string; className?: string };
+
   meta?: ReactNode;
 }
 
@@ -163,7 +164,7 @@ export function EmailTemplateBrowserDialog<T extends EmailTemplateBrowserItem>({
                           <span className="min-w-0 flex-1">
                             <span className="flex min-w-0 items-center gap-2">
                               <span className="truncate text-sm font-medium">{item.name}</span>
-                              {item.status && <Badge variant="outline" className={cn('hidden shrink-0 text-xs sm:inline-flex', item.status.className)}>{item.status.label}</Badge>}
+                              {item.status && <Badge className={cn('hidden shrink-0 text-xs sm:inline-flex', item.status.className)}>{item.status.label}</Badge>}
                             </span>
                             <span className="mt-0.5 block truncate text-xs text-muted-foreground">{item.subject}</span>
                             {(item.category || item.meta) && <span className="mt-1 flex gap-2 text-xs text-muted-foreground">{item.category && <span>{categoryLabel(item.category)}</span>}{item.meta}</span>}

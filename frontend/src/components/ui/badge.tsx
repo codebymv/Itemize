@@ -15,13 +15,8 @@ const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground",
         outline: "text-foreground",
-        // Semantic status variants
-        success:
-          "border-transparent bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-        warning:
-          "border-transparent bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300",
-        info:
-          "border-transparent bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-300",
+        // Status color is not a Badge variant: pass a StatusVisual's badgeClass
+        // (see lib/statusVisuals) so every status pill reads from one contract.
       },
     },
     defaultVariants: {

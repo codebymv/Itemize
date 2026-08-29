@@ -26,7 +26,11 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { getCatalogStatusVisual } from '@/pages/campaigns/constants/campaignVisuals';
+import {
+  getEmailTemplateCatalogVisual,
+  getEmailTemplatePublicationVisual,
+} from './constants/emailTemplateVisuals';
+import { toBadgeStatus } from '@/lib/statusVisuals';
 import {
   createEmailTemplateDraft,
   getEmailTemplate,
@@ -222,14 +226,13 @@ export function EmailTemplateEditorPage() {
   }, [currentUser?.email, isDirty, isNew, navigate, organizationId, persistDraft, template, toast]);
 
   const busy = saving || testing || publishing;
-  const status = template?.has_unpublished_changes || (!template && isDirty)
-    ? { label: 'Draft', className: 'border-blue-500/30 bg-blue-500/15 text-blue-700 dark:text-blue-300' }
-    : template?.published_version
-      ? template.is_active
-        ? { label: 'Active', className: 'border-blue-500/30 bg-blue-500/15 text-blue-700 dark:text-blue-300' }
-        : { label: 'Inactive', className: 'border-orange-500/30 bg-orange-500/15 text-orange-700 dark:text-orange-300' }
-      : { label: 'New', className: 'border-blue-500/30 bg-blue-500/15 text-blue-700 dark:text-blue-300' };
-  const catalogVisual = getCatalogStatusVisual(state.isActive);
+  const status = getEmailTemplatePublicationVisual({
+    exists: Boolean(template),
+    hasUnpublishedChanges: Boolean(template?.has_unpublished_changes),
+    hasPublishedVersion: Boolean(template?.published_version),
+    isActive: Boolean(template?.is_active),
+    isDirty,
+  });
 
   const closeStudio = (open: boolean) => {
     if (open) { setStudioOpen(true); return; }
@@ -264,16 +267,16 @@ export function EmailTemplateEditorPage() {
       icon={<Mail className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
       leading={leading}
       desktopTools={{
-        status: <Badge variant="outline" className={status.className}>{status.label}</Badge>,
+        status: <Badge className={cn('pointer-events-none whitespace-nowrap', status.badgeClass)}>{status.label}</Badge>,
         primaryAction: <HeaderAction label="Edit email" icon={<Pencil className="h-4 w-4" />} onClick={() => setStudioOpen(true)} />,
       }}
-      mobileActions={<div className="flex w-full items-center gap-2"><Badge variant="outline" className={status.className}>{status.label}</Badge><Button className="ml-auto bg-blue-600 text-white hover:bg-blue-700" onClick={() => setStudioOpen(true)}><Pencil className="h-4 w-4" />Edit email</Button></div>}
+      mobileActions={<div className="flex w-full items-center gap-2"><Badge className={status.badgeClass}>{status.label}</Badge><Button className="ml-auto bg-blue-600 text-white hover:bg-blue-700" onClick={() => setStudioOpen(true)}><Pencil className="h-4 w-4" />Edit email</Button></div>}
     >
       <EntityDetailHeader
-        icon={<Mail className={cn('h-6 w-6', catalogVisual.iconClass)} />}
-        iconClassName={catalogVisual.iconBackgroundClass}
+        icon={<Mail className={cn('h-6 w-6', status.iconClass)} />}
+        iconClassName={status.iconBackgroundClass}
         title={state.name || 'New email template'}
-        mobileStatus={<Badge variant="outline" className={status.className}>{status.label}</Badge>}
+        mobileStatus={<Badge className={status.badgeClass}>{status.label}</Badge>}
         descriptor={state.subject || 'Add an email subject'}
         metadata={<><span>{categoryLabel(state.category)}</span>{template?.published_version ? <span>Version {template.published_version}</span> : <span>Not published yet</span>}{template?.has_unpublished_changes && <span>Unpublished changes</span>}</>}
       />
@@ -330,9 +333,7 @@ export function EmailTemplateEditorPage() {
         description="Choose a template to edit."
         items={templateLibrary.map(item => ({
           ...item,
-          status: item.is_active
-            ? { label: 'Active', className: 'border-blue-500/30 bg-blue-500/15 text-blue-700 dark:text-blue-300' }
-            : { label: 'Inactive', className: 'border-orange-500/30 bg-orange-500/15 text-orange-700 dark:text-orange-300' },
+          status: toBadgeStatus(getEmailTemplateCatalogVisual(item.is_active)),
           meta: item.published_version ? `Version ${item.published_version}` : 'Not published',
         }))}
         loading={templateLibraryLoading}

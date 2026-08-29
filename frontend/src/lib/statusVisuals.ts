@@ -62,3 +62,11 @@ export function getUnknownStatusVisual(status: string): StatusVisual {
       .replace(/\b\w/g, character => character.toUpperCase()),
   };
 }
+
+/**
+ * Narrows a StatusVisual to the label/class pair used by surfaces that render
+ * a bare pill without an icon (list dialogs, compact pickers).
+ */
+export function toBadgeStatus(visual: StatusVisual): { label: string; className: string } {
+  return { label: visual.label, className: visual.badgeClass };
+}

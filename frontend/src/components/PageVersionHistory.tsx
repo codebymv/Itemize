@@ -32,6 +32,8 @@ import {
 } from '@/services/pageVersionsApi';
 import { useOrganization } from '@/hooks/useOrganization';
 import { formatDistanceToNow } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
 
 interface PageVersionHistoryProps {
     pageId: number;
@@ -170,7 +172,7 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className="font-medium">Version {version.version_number}</span>
                                             {currentVersionId === version.id && (
-                                                <Badge className="bg-green-100 text-green-800 text-xs">Current</Badge>
+                                                <Badge className={cn('text-xs', STATUS_THEME_CLASSES.green.badgeClass)}>Current</Badge>
                                             )}
                                             {version.published_at && (
                                                 <Badge variant="outline" className="text-xs">Published</Badge>

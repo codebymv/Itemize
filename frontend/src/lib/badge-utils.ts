@@ -1,68 +1,72 @@
 /**
- * Centralized badge color utilities for consistent status styling across the app.
- * 
- * Color semantics:
- * - Blue: Itemize-owned active, draft, and live working states
- * - Green: Successful outcomes such as completed, paid, and accepted
- * - Orange: Parked or transitional states such as pending, sent, paused, and inactive
- * - Red: Error, cancelled, destructive, negative
- * - Purple: Special states (rarely used)
- * - Gray: Neutral and historical states
+ * Badge classes for pages that key styling off a raw status string rather than
+ * a declared `StatusVisual`.
+ *
+ * These are lookups into the one palette contract in `./statusVisuals`, not a
+ * second set of colors: every entry names a `StatusTheme`, so the semantics
+ * documented there hold here too. Prefer `defineStatus` for new work — it
+ * carries the label and icon alongside the theme. Reach for this only when all
+ * you have is a string.
  */
+import { STATUS_THEME_CLASSES } from './statusVisuals';
+import type { StatTheme } from '@/hooks/useStatStyles';
 
-// Status badge color classes with dark mode support
-export const STATUS_BADGE_CLASSES = {
-  // Success states
-  completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  success: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  paid: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  active: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-  accepted: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  confirmed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  published: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  positive: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+const badgeClass = (theme: StatTheme): string => STATUS_THEME_CLASSES[theme].badgeClass;
 
-  // Warning/Pending states
-  pending: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-  in_progress: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-  processing: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-  sent: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-  viewed: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-  partial: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-  inactive: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-  paused: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-  scheduled: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+const NEUTRAL_BADGE_CLASS = badgeClass('gray');
 
-  // Info/Draft states
-  draft: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-  info: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-  new: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+const STATUS_THEMES = {
+  // Successful outcomes
+  completed: 'green',
+  success: 'green',
+  paid: 'green',
+  accepted: 'green',
+  confirmed: 'green',
+  published: 'green',
+  positive: 'green',
 
-  // Error/Destructive states
-  cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-  declined: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-  failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-  error: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-  expired: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-  overdue: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-  archived: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-  negative: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+  // Parked or transitional states
+  pending: 'orange',
+  in_progress: 'orange',
+  processing: 'orange',
+  sent: 'orange',
+  viewed: 'orange',
+  partial: 'orange',
+  inactive: 'orange',
+  paused: 'orange',
+  scheduled: 'orange',
 
-  // Neutral/Historical states
-  refunded: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-  neutral: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-} as const;
+  // Itemize-owned active, draft, and live working states
+  active: 'blue',
+  draft: 'blue',
+  info: 'blue',
+  new: 'blue',
 
-export type StatusKey = keyof typeof STATUS_BADGE_CLASSES;
+  // Error, cancelled, destructive, negative
+  cancelled: 'red',
+  declined: 'red',
+  failed: 'red',
+  error: 'red',
+  expired: 'red',
+  overdue: 'red',
+  archived: 'red',
+  negative: 'red',
 
-/**
- * Get badge classes for a given status string.
- * Falls back to gray for unknown statuses.
- */
+  // Neutral and historical states
+  refunded: 'gray',
+  neutral: 'gray',
+} as const satisfies Record<string, StatTheme>;
+
+export type StatusKey = keyof typeof STATUS_THEMES;
+
+export const STATUS_BADGE_CLASSES = Object.fromEntries(
+  Object.entries(STATUS_THEMES).map(([status, theme]) => [status, badgeClass(theme)]),
+) as Record<StatusKey, string>;
+
+/** Badge classes for a status string. Unknown statuses read neutral. */
 export function getStatusBadgeClass(status: string): string {
   const normalizedStatus = status.toLowerCase().replace(/[- ]/g, '_') as StatusKey;
-  return STATUS_BADGE_CLASSES[normalizedStatus] ?? 
-    'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+  return STATUS_BADGE_CLASSES[normalizedStatus] ?? NEUTRAL_BADGE_CLASS;
 }
 
 // Contact status badge classes
@@ -79,32 +83,34 @@ export function getContactStatusBadgeClass(status: string): string {
   return CONTACT_STATUS_CLASSES[normalizedStatus] ?? '';
 }
 
-// Widget type badge classes (for reputation widgets)
+/**
+ * Reputation widget types are a categorical scale, not a status: the colors
+ * separate one type from the next and carry no success/warning meaning. They
+ * deliberately reach past the five status themes for that reason.
+ */
 export const WIDGET_TYPE_CLASSES = {
-  carousel: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-  grid: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+  carousel: badgeClass('blue'),
+  grid: badgeClass('green'),
   list: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
-  badge: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+  badge: badgeClass('orange'),
   floating: 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-300',
 } as const;
 
 export type WidgetTypeKey = keyof typeof WIDGET_TYPE_CLASSES;
 
 export function getWidgetTypeBadgeClass(type: string): string {
-  return WIDGET_TYPE_CLASSES[type as WidgetTypeKey] ?? 
-    'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+  return WIDGET_TYPE_CLASSES[type as WidgetTypeKey] ?? NEUTRAL_BADGE_CLASS;
 }
 
 // Sentiment badge classes (for reviews)
 export const SENTIMENT_CLASSES = {
-  positive: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  neutral: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-  negative: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+  positive: STATUS_BADGE_CLASSES.positive,
+  neutral: STATUS_BADGE_CLASSES.pending,
+  negative: STATUS_BADGE_CLASSES.negative,
 } as const;
 
 export type SentimentKey = keyof typeof SENTIMENT_CLASSES;
 
 export function getSentimentBadgeClass(sentiment: string): string {
-  return SENTIMENT_CLASSES[sentiment as SentimentKey] ?? 
-    'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+  return SENTIMENT_CLASSES[sentiment as SentimentKey] ?? NEUTRAL_BADGE_CLASS;
 }
