@@ -7,7 +7,6 @@ import {
     Plus,
     Trash2,
     GripVertical,
-    Settings,
     Layout,
     Type,
     Image,
@@ -24,22 +23,17 @@ import {
     Share2,
     Menu,
     MoreHorizontal,
-    ExternalLink,
-    Copy,
     ChevronUp,
     ChevronDown,
-    Monitor,
-    Smartphone,
-    Tablet,
-    Play,
-    Pause,
     History as HistoryIcon,
+    Settings2,
+    Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
     Select,
@@ -49,29 +43,18 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetDescription,
-} from '@/components/ui/sheet';
-import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
     DialogDescription,
-    DialogFooter,
 } from '@/components/ui/dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-    DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -79,6 +62,9 @@ import { ErrorState } from '@/components/ErrorState';
 import { EmptyState } from '@/components/EmptyState';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { ShellBackButton } from '@/components/layout/ShellBackButton';
+import { EntityDetailHeader } from '@/components/layout/EntityDetailHeader';
+import { HeaderAction, HeaderActionLabel } from '@/components/layout/DesktopHeaderTools';
+import { SectionCardTitle } from '@/components/ui/section-card-title';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useDirtyState } from '@/hooks/useDirtyState';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
@@ -97,7 +83,9 @@ import {
 } from '@/services/pagesApi';
 import { PagePreviewDialog } from '@/components/PagePreviewDialog';
 import { PageVersionHistory } from '@/components/PageVersionHistory';
-import { formatStatus, formatSectionType, titleCase } from '@/utils/textUtils';
+import { formatSectionType } from '@/utils/textUtils';
+import { getContentStatusVisual } from '@/pages/contentVisuals';
+import { cn } from '@/lib/utils';
 
 // Icon mapping for section types
 const SECTION_ICONS: Record<SectionType, React.ReactNode> = {
@@ -323,8 +311,8 @@ export function PageEditorPage() {
     if (loading) {
         return (
             <PageLayout
-                title="LOADING..."
-                icon={<Layout className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+                title="PAGE"
+                icon={<Layout className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
                 leading={backButton}
             >
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -345,13 +333,13 @@ export function PageEditorPage() {
         return (
             <PageLayout
                 title="PAGE EDITOR"
-                icon={<Layout className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+                icon={<Layout className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
                 leading={backButton}
             >
                 <ErrorState
                     title="Page not found"
                     description="This page could not be loaded."
-                    actionLabel="Back to Pages"
+                    actionLabel="Back to pages"
                     onAction={() => {
                         if (confirmLeave()) navigate('/pages');
                     }}
@@ -360,67 +348,78 @@ export function PageEditorPage() {
         );
     }
 
+    const statusVisual = getContentStatusVisual(page.status);
+    const StatusIcon = statusVisual.icon;
+    const moreActions = (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-11 min-w-11 gap-2 px-3 font-light" aria-label="Page actions">
+                    <MoreHorizontal className="h-4 w-4" />
+                    <HeaderActionLabel>More</HeaderActionLabel>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                {page.status === 'published' && (
+                    <DropdownMenuItem onClick={() => setShowPreview(true)} className="group/menu">
+                        <Eye className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                        Preview page
+                    </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => setShowVersionHistory(true)} className="group/menu">
+                    <HistoryIcon className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                    Version history
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+    const publishAction = (
+        <Button variant="outline" className="h-11 min-w-11 gap-2 px-3 font-light" onClick={handleTogglePublish} disabled={saving || isDirty} aria-label={page.status === 'published' ? 'Unpublish page' : 'Publish page'}>
+            {page.status === 'published' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            <span className="hidden xl:inline">{page.status === 'published' ? 'Unpublish' : 'Publish'}</span>
+        </Button>
+    );
+
     return (
         <PageLayout
-            title="PAGE EDITOR"
-            icon={<Layout className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            title="PAGE"
+            icon={<Layout className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
             leading={backButton}
-            pageActions={
-                <>
-                    {page.status === 'published' && (
-                        <Button variant="outline" size="sm" onClick={() => setShowPreview(true)}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            Preview
-                        </Button>
-                    )}
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                        onClick={handleSave}
-                        disabled={saving || !isDirty}
-                    >
-                        <Save className="h-4 w-4 mr-2" />
-                        {saving ? 'Saving...' : 'Save'}
-                    </Button>
-                </>
-            }
+            desktopTools={{
+                status: <Badge className={cn('pointer-events-none whitespace-nowrap', statusVisual.badgeClass)}>{statusVisual.label}</Badge>,
+                secondaryAction: <>{moreActions}{publishAction}</>,
+                primaryAction: <HeaderAction label={saving ? 'Saving...' : 'Save changes'} icon={<Save className="h-4 w-4" />} onClick={handleSave} disabled={saving || !isDirty} />,
+            }}
             mobileActions={
-                <>
-                    {page.status === 'published' && (
-                        <Button variant="outline" size="sm" onClick={() => setShowPreview(true)} className="flex-1">
-                            <Eye className="h-4 w-4 mr-2" />
-                            Preview
-                        </Button>
-                    )}
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
-                        onClick={handleSave}
-                        disabled={saving || !isDirty}
-                    >
-                        <Save className="h-4 w-4 mr-2" />
+                <div className="flex w-full gap-2">
+                    {moreActions}
+                    {publishAction}
+                    <Button className="h-11 min-w-0 flex-1 bg-blue-600 text-white hover:bg-blue-700" onClick={handleSave} disabled={saving || !isDirty}>
+                        <Save className="mr-2 h-4 w-4" />
                         {saving ? 'Saving...' : 'Save'}
                     </Button>
-                </>
+                </div>
             }
         >
+                <EntityDetailHeader
+                    icon={<StatusIcon className={cn('h-6 w-6', statusVisual.iconClass)} />}
+                    iconClassName={statusVisual.iconBackgroundClass}
+                    title={page.name}
+                    mobileStatus={<Badge className={statusVisual.badgeClass}>{statusVisual.label}</Badge>}
+                    descriptor={<span className="whitespace-nowrap">/p/{page.slug}</span>}
+                    metadata={<><span>{page.view_count || 0} views</span><span>{page.unique_visitors || 0} visitors</span></>}
+                />
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Main Content - Sections */}
                 <div className="lg:col-span-2 space-y-4">
                     <Card>
                         <CardHeader className="pb-3">
                             <div className="flex items-center justify-between">
-                                <CardTitle className="text-lg">Page Sections</CardTitle>
-                                {page.sections && page.sections.length > 0 && (
-                                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setShowAddSection(true)}>
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Add Section
-                                    </Button>
-                                )}
+                                <SectionCardTitle icon={Layout}>Page sections</SectionCardTitle>
+                                <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => setShowAddSection(true)}>
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Add section
+                                </Button>
                             </div>
-                            <CardDescription>
-                                Drag to reorder sections. Click to edit content.
-                            </CardDescription>
                         </CardHeader>
                         <CardContent>
                             {(!page.sections || page.sections.length === 0) ? (
@@ -428,7 +427,7 @@ export function PageEditorPage() {
                                     icon={Layout}
                                     title="No sections yet"
                                     description="Add a section to start building this page."
-                                    actionLabel="Add Your First Section"
+                                    actionLabel="Add section"
                                     onAction={() => setShowAddSection(true)}
                                 />
                             ) : (
@@ -445,7 +444,7 @@ export function PageEditorPage() {
                                                 <span className="font-medium truncate">
                                                     {section.name || SECTION_TEMPLATES[section.section_type]?.name || section.section_type}
                                                 </span>
-<Badge variant="outline" className="text-xs">
+                                                <Badge variant="outline" className="text-xs">
                                                     {formatSectionType(section.section_type)}
                                                 </Badge>
                                             </div>
@@ -489,7 +488,7 @@ export function PageEditorPage() {
                         <Card>
                             <CardHeader className="pb-3">
                                 <div className="flex items-center justify-between">
-                                    <CardTitle className="text-lg flex items-center gap-2">
+                                    <CardTitle className="flex items-center gap-2 text-base">
                                         {SECTION_ICONS[selectedSection.section_type]}
                                         Edit {SECTION_TEMPLATES[selectedSection.section_type]?.name || selectedSection.section_type}
                                     </CardTitle>
@@ -512,11 +511,11 @@ export function PageEditorPage() {
                 <div className="space-y-4">
                     <Card>
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-lg">Page Settings</CardTitle>
+                            <SectionCardTitle icon={Settings2}>Page settings</SectionCardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
-                                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Name</Label>
+                                <Label>Name</Label>
                                 <Input
                                     value={editedName}
                                     onChange={(e) => setEditedName(e.target.value)}
@@ -524,7 +523,7 @@ export function PageEditorPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Slug</Label>
+                                <Label>Slug</Label>
                                 <Input
                                     value={editedSlug}
                                     onChange={(e) => setEditedSlug(e.target.value)}
@@ -533,7 +532,7 @@ export function PageEditorPage() {
                                 <p className="text-xs text-muted-foreground">URL: /p/{editedSlug}</p>
                             </div>
                             <div className="space-y-2">
-                                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Description</Label>
+                                <Label>Description</Label>
                                 <Textarea
                                     value={editedDescription}
                                     onChange={(e) => setEditedDescription(e.target.value)}
@@ -541,33 +540,16 @@ export function PageEditorPage() {
                                     rows={2}
                                 />
                             </div>
-                            <div className="flex items-center justify-between pt-2">
-                                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Status</Label>
-                                <div className="flex items-center gap-2">
-<Badge className={page.status === 'published' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-yellow-100 text-yellow-800 border-yellow-200'}>
-                                        {formatStatus(page.status)}
-                                    </Badge>
-                                    <Button
-                                        size="sm"
-                                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                                        onClick={handleTogglePublish}
-                                        disabled={saving || isDirty}
-                                    >
-                                        {page.status === 'published' ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
-                                        {page.status === 'published' ? 'Unpublish' : 'Publish'}
-                                    </Button>
-                                </div>
-                            </div>
                         </CardContent>
                     </Card>
 
                     <Card>
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-lg">SEO Settings</CardTitle>
+                            <SectionCardTitle icon={Search}>SEO settings</SectionCardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
-                                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>SEO Title</Label>
+                                <Label>SEO title</Label>
                                 <Input
                                     value={editedSeoTitle}
                                     onChange={(e) => setEditedSeoTitle(e.target.value)}
@@ -575,7 +557,7 @@ export function PageEditorPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>SEO Description</Label>
+                                <Label>SEO description</Label>
                                 <Textarea
                                     value={editedSeoDescription}
                                     onChange={(e) => setEditedSeoDescription(e.target.value)}
@@ -586,39 +568,6 @@ export function PageEditorPage() {
                         </CardContent>
                     </Card>
 
-<Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-lg">Version History</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <Button
-                                onClick={() => setShowVersionHistory(true)}
-                                className="w-full"
-                                variant="outline"
-                            >
-                                <HistoryIcon className="h-4 w-4 mr-2" />
-                                Manage Versions
-                            </Button>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-lg">Stats</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-2 gap-4 text-center">
-                                <div>
-                                    <p className="text-2xl font-bold">{page.view_count || 0}</p>
-                                    <p className="text-xs text-muted-foreground">Views</p>
-                                </div>
-                                <div>
-                                    <p className="text-2xl font-bold">{page.unique_visitors || 0}</p>
-                                    <p className="text-xs text-muted-foreground">Visitors</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
                 </div>
             </div>
 
@@ -628,10 +577,10 @@ export function PageEditorPage() {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Plus className="h-5 w-5 text-blue-600" />
-                            Add Section
+                            Add section
                         </DialogTitle>
                         <DialogDescription>
-                            Choose a section type to add to your page
+                            Choose a section type.
                         </DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="max-h-[60vh]">

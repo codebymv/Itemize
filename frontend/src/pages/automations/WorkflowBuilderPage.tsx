@@ -56,6 +56,8 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { ShellBackButton } from '@/components/layout/ShellBackButton';
 import { HeaderAction } from '@/components/layout/DesktopHeaderTools';
 import { ErrorState } from '@/components/ErrorState';
+import { EmailPreviewPane } from '@/components/email/EmailPreviewPane';
+import { EmailTemplateBrowserDialog } from '@/components/email/EmailTemplateBrowserDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useDirtyState } from '@/hooks/useDirtyState';
@@ -226,6 +228,7 @@ export function WorkflowBuilderPage() {
   const [showEnrollments, setShowEnrollments] = useState(false);
   const [showWorkflowSettings, setShowWorkflowSettings] = useState(false);
   const [showStepPalette, setShowStepPalette] = useState(false);
+  const [showTemplateBrowser, setShowTemplateBrowser] = useState(false);
 
   // Email templates for email step config
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([]);
@@ -927,23 +930,17 @@ export function WorkflowBuilderPage() {
 
               {/* Step-specific configuration */}
               {selectedNode.data.step_type === 'send_email' && (
-                <div>
-                  <Label>Email Template</Label>
-                  <Select
-                    value={selectedNode.data.step_config?.template_id?.toString() || ''}
-                    onValueChange={(v) => handleUpdateNodeConfig({ ...selectedNode.data.step_config, template_id: parseInt(v) })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select template" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {emailTemplates.map((t) => (
-                        <SelectItem key={t.id} value={t.id.toString()}>
-                          {t.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="space-y-2">
+                  <Label>Email template</Label>
+                  <div className="flex min-w-0 items-center gap-3 rounded-lg border p-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{emailTemplates.find(template => template.id === selectedNode.data.step_config?.template_id)?.name || 'No template selected'}</p>
+                      <p className="truncate text-xs text-muted-foreground">{emailTemplates.find(template => template.id === selectedNode.data.step_config?.template_id)?.subject || 'Choose a published automation email.'}</p>
+                    </div>
+                    <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => setShowTemplateBrowser(true)}>
+                      {selectedNode.data.step_config?.template_id ? 'Change' : 'Browse'}
+                    </Button>
+                  </div>
                 </div>
               )}
 
@@ -1172,6 +1169,24 @@ export function WorkflowBuilderPage() {
           )}
         </SheetContent>
       </Sheet>
+      {organizationId && <EmailTemplateBrowserDialog
+        open={showTemplateBrowser}
+        onOpenChange={setShowTemplateBrowser}
+        title="Choose an automation template"
+        description="Active templates available to this organization."
+        items={emailTemplates.map(template => ({
+          ...template,
+          meta: `${template.variables.length} variable${template.variables.length === 1 ? '' : 's'}`,
+        }))}
+        selectedId={selectedNode?.data.step_config?.template_id || null}
+        onSelect={template => {
+          if (!selectedNode) return;
+          handleUpdateNodeConfig({ ...selectedNode.data.step_config, template_id: template.id, template_name: template.name });
+        }}
+        renderPreview={template => <EmailPreviewPane organizationId={organizationId} content={{ subject: template.subject, preheader: template.preheader || '', bodyHtml: template.body_html, bodyText: template.body_text || '' }} className="h-full" />}
+        emptyTitle="No active automation templates"
+        emptyDescription="Create and publish an email template before selecting it here."
+      />}
       {!isNewWorkflow && organizationId && id && (
         <WorkflowEnrollmentsDialog
           open={showEnrollments}

@@ -19,7 +19,8 @@ describe('workflow enrollment utilities', () => {
     expect(replaceWorkflowVariables('Hi {{first_name}} {{score}} {{campaign}} {{missing}}', data))
       .toBe('Hi Ada 9 Summer {{missing}}');
     const wrapped = wrapWorkflowEmail('<p class="callout-info">Hello</p>', 'Greeting');
-    expect(wrapped).toContain('class="callout-info" style="background-color:#eff6ff');
+    expect(wrapped).toContain('class="callout-info"');
+    expect(wrapped).toContain('background:#eff6ff');
     expect(wrapped).toContain('https://itemize.cloud/cover.png');
     expect(wrapped).toContain('height:4px;background:#2563eb');
     expect(wrapWorkflowEmail('<html><body>Complete</body></html>', 'Greeting'))

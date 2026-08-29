@@ -1,38 +1,47 @@
-import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Plus, Save, Send, FileSignature, X } from 'lucide-react';
+import { AlertCircle, Check, CheckCircle, Clock, Download, FileSignature, FileText, History, Info, Mail, MoreHorizontal, Plus, RefreshCw, Route, Save, Send, Settings2, Trash2, Upload, Users, X, XCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PageLayout } from '@/components/layout/PageLayout';
-import { ShellBackButton } from '@/components/layout/ShellBackButton';
-import { HeaderAction } from '@/components/layout/DesktopHeaderTools';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { HeaderAction, HeaderActionLabel } from '@/components/layout/DesktopHeaderTools';
+import { PageLayout } from '@/components/layout/PageLayout';
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { ShellBackButton } from '@/components/layout/ShellBackButton';
+import { StatCard } from '@/components/StatCard';
 import { CardGridSkeleton } from '@/components/ui/loading-skeletons';
-import { useToast } from '@/hooks/use-toast';
+import { SectionCardTitle } from '@/components/ui/section-card-title';
 import { useAuthState } from '@/contexts/AuthContext';
-import { useOrganization } from '@/hooks/useOrganization';
 import { useDirtyState } from '@/hooks/useDirtyState';
+import { useOrganization } from '@/hooks/useOrganization';
+import { useToast } from '@/hooks/use-toast';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
+import { cn } from '@/lib/utils';
 import { getInvoice, getInvoicePdf } from '@/services/invoicesApi';
-import {
-  SignatureDocument,
-  SignatureRecipient,
-  SignatureField,
-  createSignatureDocument,
-  updateSignatureDocument,
-  uploadSignatureDocument,
-  deleteSignatureDocumentFile,
-  getSignatureDocument,
-  sendSignatureDocument
-} from '@/services/signaturesApi';
+import { cancelSignatureDocument, createSignatureDocument, deleteSignatureDocument, deleteSignatureDocumentFile, downloadSignedDocument, getSignatureDocument, remindSignatureDocument, retrySignatureDocument, sendSignatureDocument, type SignatureDocument, type SignatureDocumentDetails, type SignatureField, type SignatureRecipient, updateSignatureDocument, uploadSignatureDocument } from '@/services/signaturesApi';
 import FieldPlacementCanvas from './components/FieldPlacementCanvas';
 import SendSignatureModal from './components/SendSignatureModal';
+import { getRecipientStatusVisual, getSignatureOperationalVisual, getSignatureStatusVisual } from './constants/signatureConstants';
+import { getSignatureDraftReadiness, getSignatureRecipientSummary, hasSignatureProcessingFailure, isSignatureDocumentEditable } from './signatureDetailModel';
+
+const formatDateTime = (value?: string | null): string => {
+  if (!value) return 'Not available';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Not available';
+  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }).format(date);
+};
+
+const formatAuditEvent = (eventType: string): string => eventType.replace(/[_-]+/g, ' ').replace(/\b\w/g, character => character.toUpperCase());
 
 export default function SignatureEditorPage() {
   const navigate = useNavigate();
@@ -43,6 +52,7 @@ export default function SignatureEditorPage() {
   const { organizationId } = useOrganization();
 
   const [document, setDocument] = useState<SignatureDocument | null>(null);
+  const [audit, setAudit] = useState<SignatureDocumentDetails['audit']>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [message, setMessage] = useState('');
@@ -51,18 +61,18 @@ export default function SignatureEditorPage() {
   const [fields, setFields] = useState<SignatureField[]>([]);
   const [routingMode, setRoutingMode] = useState<'parallel' | 'sequential'>('parallel');
   const [loading, setLoading] = useState(Boolean(id));
+  const [working, setWorking] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(!id);
   const [showSendModal, setShowSendModal] = useState(false);
-  const roleChoices = useMemo(() => ['Signer', 'Witness', 'Approver', 'Observer'], []);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const invoicePrefillStartedRef = useRef(false);
-  const roleOptions = useMemo(
-    () => recipients.map((recipient) => recipient.role_name).filter((role): role is string => Boolean(role)),
-    [recipients]
-  );
 
-  const isEditing = Boolean(id);
+  const isExisting = Boolean(id);
+  const editable = isSignatureDocumentEditable(document);
+  const roleChoices = useMemo(() => ['Signer', 'Witness', 'Approver', 'Observer'], []);
+  const roleOptions = useMemo(() => recipients.map(recipient => recipient.role_name).filter((role): role is string => Boolean(role)), [recipients]);
 
   const loadDocument = useCallback(async () => {
     if (!id) return;
@@ -74,10 +84,11 @@ export default function SignatureEditorPage() {
       setTitle(data.document.title || '');
       setDescription(data.document.description || '');
       setMessage(data.document.message || '');
-      setRoutingMode((data.document.routing_mode as 'parallel' | 'sequential') || 'parallel');
+      setRoutingMode(data.document.routing_mode || 'parallel');
       setRecipients(data.recipients || []);
       setFields(data.fields || []);
-    } catch (error) {
+      setAudit(data.audit || []);
+    } catch {
       setLoadError('This document could not be loaded. Please try again.');
     } finally {
       setLoading(false);
@@ -85,455 +96,313 @@ export default function SignatureEditorPage() {
     }
   }, [id]);
 
-  useEffect(() => {
-    void loadDocument();
-  }, [loadDocument]);
+  useEffect(() => { void loadDocument(); }, [loadDocument]);
 
-  // Pre-fill recipient from URL (e.g. from Contact "Send Document").
   useEffect(() => {
     if (id) return;
     const contactName = searchParams.get('contactName');
     const contactEmail = searchParams.get('contactEmail');
-    if (contactName || contactEmail) {
-      setRecipients((prev) => {
-        if (prev.length > 0) return prev;
-        return [
-          {
-            id: 0,
-            name: contactName || '',
-            email: contactEmail || '',
-            role_name: 'Signer',
-            order_index: 0,
-          } as unknown as SignatureRecipient,
-        ];
-      });
-    }
-  }, [searchParams, id]);
+    if (!contactName && !contactEmail) return;
+    setRecipients(current => current.length ? current : [{ id: 0, name: contactName || '', email: contactEmail || '', role_name: 'Signer', order_index: 0 } as unknown as SignatureRecipient]);
+  }, [id, searchParams]);
 
-  // An invoice handoff should arrive as a ready-to-place document, not a bare ID.
   useEffect(() => {
-    const invoiceIdParam = searchParams.get('invoiceId');
-    const invoiceId = Number(invoiceIdParam);
-    if (id || !organizationId || !Number.isSafeInteger(invoiceId) || invoiceId < 1) return;
-    if (invoicePrefillStartedRef.current) return;
+    const invoiceId = Number(searchParams.get('invoiceId'));
+    if (id || !organizationId || !Number.isSafeInteger(invoiceId) || invoiceId < 1 || invoicePrefillStartedRef.current) return;
     invoicePrefillStartedRef.current = true;
-
-    setLoading(true);
-    Promise.all([
-      getInvoice(invoiceId, organizationId),
-      getInvoicePdf(invoiceId, organizationId),
-    ])
+    setWorking(true);
+    Promise.all([getInvoice(invoiceId, organizationId), getInvoicePdf(invoiceId, organizationId)])
       .then(([invoice, pdf]) => {
         const recipientEmail = invoice.customer_email || invoice.contact_email;
         const invoiceFilename = `${invoice.invoice_number.replace(/[^A-Za-z0-9._-]+/g, '_')}.pdf`;
-        setTitle((current) => current || `Invoice ${invoice.invoice_number} - Signature`);
-        setMessage((current) => current || 'Please review and sign the attached invoice.');
-        setFile(new File([pdf.blob], invoiceFilename || pdf.filename, {
-          type: pdf.blob.type || 'application/pdf',
-        }));
-        if (recipientEmail) {
-          setRecipients((current) => current.length > 0 ? current : [{
-            id: 0,
-            document_id: 0,
-            organization_id: organizationId,
-            name: invoice.customer_name || [invoice.contact_first_name, invoice.contact_last_name].filter(Boolean).join(' '),
-            email: recipientEmail,
-            role_name: 'Signer',
-            status: 'pending',
-            signing_order: 1,
-          } as SignatureRecipient]);
-        }
+        setTitle(current => current || `Invoice ${invoice.invoice_number} - Signature`);
+        setMessage(current => current || 'Please review and sign the attached invoice.');
+        setFile(new File([pdf.blob], invoiceFilename || pdf.filename, { type: pdf.blob.type || 'application/pdf' }));
+        if (recipientEmail) setRecipients(current => current.length ? current : [{ id: 0, document_id: 0, organization_id: organizationId, name: invoice.customer_name || [invoice.contact_first_name, invoice.contact_last_name].filter(Boolean).join(' '), email: recipientEmail, role_name: 'Signer', status: 'pending', signing_order: 1 } as SignatureRecipient]);
       })
       .catch(() => {
         invoicePrefillStartedRef.current = false;
-        toast({
-          title: 'Invoice could not be prepared',
-          description: 'Return to the invoice and try Send for Signature again.',
-          variant: 'destructive',
-        });
+        toast({ title: 'Invoice could not be prepared', description: 'Return to the invoice and try Send for Signature again.', variant: 'destructive' });
       })
-      .finally(() => setLoading(false));
+      .finally(() => setWorking(false));
   }, [id, organizationId, searchParams, toast]);
 
-  const canUpload = useMemo(() => Boolean(document?.id), [document]);
-  const documentDraft = useMemo(() => ({
-    title,
-    description,
-    message,
-    routingMode,
-    recipients,
-    fields,
-    pendingFile: file ? {
-      name: file.name,
-      size: file.size,
-      lastModified: file.lastModified,
-    } : null,
-  }), [description, fields, file, message, recipients, routingMode, title]);
-  const { isDirty, markClean } = useDirtyState({
-    value: documentDraft,
-    ready: initialized,
-    resetKey: id ?? 'new',
-  });
-  const { confirmLeave } = useUnsavedChangesGuard({
-    when: isDirty,
-    message: 'This signature document has unsaved changes. Leave without saving them?',
-  });
+  const documentDraft = useMemo(() => ({ title, description, message, routingMode, recipients, fields, pendingFile: file ? { name: file.name, size: file.size, lastModified: file.lastModified } : null }), [description, fields, file, message, recipients, routingMode, title]);
+  const { isDirty, markClean } = useDirtyState({ value: documentDraft, ready: initialized && editable, resetKey: id ?? 'new' });
+  const { confirmLeave } = useUnsavedChangesGuard({ when: editable && isDirty, message: 'This document has unsaved changes. Leave without saving them?' });
+  const readiness = useMemo(() => getSignatureDraftReadiness({ title, hasFile: Boolean(file || document?.file_url), recipients, fields }), [document?.file_url, fields, file, recipients, title]);
+  const recipientSummary = useMemo(() => getSignatureRecipientSummary(recipients), [recipients]);
+  const statusVisual = document ? getSignatureOperationalVisual(document) : getSignatureStatusVisual('draft');
+  const StatusIcon = statusVisual.icon;
+  const processingFailure = Boolean(document && hasSignatureProcessingFailure(document));
 
   const handleCreateOrSave = async () => {
+    if (!editable) return;
+    setWorking(true);
     try {
-      setLoading(true);
-      if (!document) {
-        const created = await createSignatureDocument({ title, description, message, routing_mode: routingMode });
-        const readyDocument = file
-          ? await uploadSignatureDocument(created.id, file)
-          : created;
-        const updated = await updateSignatureDocument(readyDocument.id, {
-          title,
-          description,
-          message,
-          sender_name: currentUser?.name || readyDocument.sender_name || undefined,
-          sender_email: currentUser?.email || readyDocument.sender_email || undefined,
-          routing_mode: routingMode,
-          recipients,
-          fields,
-        });
-        setDocument(updated);
-        setFile(null);
-        markClean({ ...documentDraft, pendingFile: null });
-        toast({ title: 'Draft created' });
-      } else {
-        const updated = await updateSignatureDocument(document.id, {
-          title,
-          description,
-          message,
-          sender_name: currentUser?.name || document.sender_name || undefined,
-          sender_email: currentUser?.email || document.sender_email || undefined,
-          routing_mode: routingMode,
-          recipients,
-          fields
-        });
-        setDocument(updated);
-        setFile(null);
-        markClean({ ...documentDraft, pendingFile: null });
-        toast({ title: 'Document updated' });
-      }
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to save document', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpload = async (nextFile?: File | null) => {
-    const activeFile = nextFile ?? file;
-    if (!activeFile) return;
-    try {
-      setLoading(true);
-      let targetDocument = document;
-      if (!targetDocument) {
-        const fallbackTitle = title || activeFile.name.replace(/\.[^/.]+$/, '');
-        if (!title && fallbackTitle) {
-          setTitle(fallbackTitle);
-        }
-        targetDocument = await createSignatureDocument({
-          title: title || fallbackTitle || 'Untitled document',
-          description,
-          message,
-          routing_mode: routingMode
-        });
-        setDocument(targetDocument);
-      }
-      const updated = await uploadSignatureDocument(targetDocument.id, activeFile);
+      let target = document;
+      const created = !target;
+      if (!target) target = await createSignatureDocument({ title: title.trim() || 'Untitled document', description, message, routing_mode: routingMode });
+      if (file) target = await uploadSignatureDocument(target.id, file);
+      const updated = await updateSignatureDocument(target.id, { title: title.trim() || 'Untitled document', description, message, sender_name: currentUser?.name || target.sender_name || undefined, sender_email: currentUser?.email || target.sender_email || undefined, routing_mode: routingMode, recipients, fields });
       setDocument(updated);
+      setTitle(updated.title || title);
       setFile(null);
-      toast({ title: 'File uploaded' });
-    } catch (error) {
-      toast({ title: 'Upload failed', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
+      markClean({ ...documentDraft, title: updated.title || title, pendingFile: null });
+      toast({ title: created ? 'Draft created' : 'Document updated' });
+      if (created) navigate(`/documents/${updated.id}`, { replace: true });
+    } catch {
+      toast({ title: 'Document could not be saved', description: 'Review the draft and try again.', variant: 'destructive' });
+    } finally { setWorking(false); }
   };
 
   const handleClearFile = async () => {
-    if (document?.id && document.file_url) {
+    if (!editable) return;
+    if (document?.id && document.file_url && !file) {
+      setWorking(true);
       try {
-        setLoading(true);
-        const updated = await deleteSignatureDocumentFile(document.id);
-        setDocument(updated);
-        setFile(null);
-        toast({ title: 'File removed' });
-      } catch (error) {
-        toast({ title: 'Error', description: 'Failed to remove file', variant: 'destructive' });
-      } finally {
-        setLoading(false);
-      }
+        setDocument(await deleteSignatureDocumentFile(document.id));
+        toast({ title: 'PDF removed' });
+      } catch { toast({ title: 'PDF could not be removed', variant: 'destructive' }); }
+      finally { setWorking(false); }
       return;
     }
     setFile(null);
   };
 
   const handleSend = async (options: { message: string }) => {
-    if (!document) return;
+    if (!document || !readiness.ready || isDirty) return;
+    setWorking(true);
     try {
-      setLoading(true);
       setMessage(options.message);
-      await updateSignatureDocument(document.id, {
-        recipients,
-        fields,
-        routing_mode: routingMode,
-        message: options.message,
-        sender_name: currentUser?.name || document.sender_name || undefined,
-        sender_email: currentUser?.email || document.sender_email || undefined
-      });
+      await updateSignatureDocument(document.id, { recipients, fields, routing_mode: routingMode, message: options.message, sender_name: currentUser?.name || document.sender_name || undefined, sender_email: currentUser?.email || document.sender_email || undefined });
       await sendSignatureDocument(document.id);
       toast({ title: 'Signature request sent' });
       setShowSendModal(false);
       navigate('/documents');
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to send signature request', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
+    } catch { toast({ title: 'Signature request could not be sent', variant: 'destructive' }); }
+    finally { setWorking(false); }
   };
 
-  const addRecipient = () => {
-    setRecipients((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        document_id: document?.id || 0,
-        organization_id: document?.organization_id || 0,
-        name: '',
-        email: '',
-        role_name: 'Signer',
-        status: 'pending',
-        signing_order: prev.length + 1
-      }
-    ]);
+  const handleRemind = async () => {
+    if (!document) return;
+    setWorking(true);
+    try { await remindSignatureDocument(document.id); toast({ title: 'Signature reminder queued' }); await loadDocument(); }
+    catch { toast({ title: 'Reminder could not be sent', variant: 'destructive' }); }
+    finally { setWorking(false); }
   };
 
-  const updateRecipient = (index: number, updates: Partial<SignatureRecipient>) => {
-    setRecipients((prev) => prev.map((recipient, idx) => (idx === index ? { ...recipient, ...updates } : recipient)));
+  const handleRetry = async () => {
+    if (!document) return;
+    setWorking(true);
+    try { await retrySignatureDocument(document.id); toast({ title: 'Failed step queued for retry' }); await loadDocument(); }
+    catch { toast({ title: 'Retry unavailable', variant: 'destructive' }); }
+    finally { setWorking(false); }
   };
 
-  const removeRecipient = (index: number) => {
-    setRecipients((prev) => prev.filter((_, idx) => idx !== index));
+  const handleCancel = async () => {
+    if (!document) return;
+    setWorking(true);
+    try { await cancelSignatureDocument(document.id); toast({ title: 'Signature request cancelled' }); await loadDocument(); }
+    catch { toast({ title: 'Request could not be cancelled', variant: 'destructive' }); }
+    finally { setWorking(false); }
   };
+
+  const handleDownload = () => { if (document) window.open(downloadSignedDocument(document.id).url, '_blank', 'noopener,noreferrer'); };
+  const handleDelete = async (): Promise<boolean> => {
+    if (!document) return false;
+    try { await deleteSignatureDocument(document.id); navigate('/documents'); return true; }
+    catch { return false; }
+  };
+
+  const addRecipient = () => setRecipients(current => [...current, { id: Date.now(), document_id: document?.id || 0, organization_id: document?.organization_id || 0, name: '', email: '', role_name: 'Signer', status: 'pending', signing_order: current.length + 1 }]);
+  const updateRecipient = (index: number, updates: Partial<SignatureRecipient>) => setRecipients(current => current.map((recipient, position) => position === index ? { ...recipient, ...updates } : recipient));
+  const removeRecipient = (index: number) => setRecipients(current => current.filter((_, position) => position !== index));
+  const goBack = () => { if (confirmLeave()) navigate('/documents'); };
+
+  const hasMoreActions = Boolean(document && ['draft', 'sent', 'in_progress'].includes(document.status));
+  const moreActions = document && hasMoreActions ? (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild><Button variant="outline" className="h-11 min-w-11 gap-2 px-3 font-light" aria-label="Document actions" disabled={working}><MoreHorizontal className="h-4 w-4" /><HeaderActionLabel>More</HeaderActionLabel></Button></DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {(document.status === 'sent' || document.status === 'in_progress') && <DropdownMenuItem onClick={() => void handleCancel()} className="text-destructive focus:text-destructive"><XCircle className="mr-2 h-4 w-4" />Cancel request</DropdownMenuItem>}
+        {document.status === 'draft' && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setDeleteOpen(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete document</DropdownMenuItem></>}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ) : null;
+
+  const primaryAction = !document
+    ? <HeaderAction label="Create document" icon={<Save className="h-4 w-4" />} onClick={() => void handleCreateOrSave()} disabled={working || !isDirty || !title.trim()} />
+    : editable
+      ? <HeaderAction label="Send document" icon={<Send className="h-4 w-4" />} onClick={() => setShowSendModal(true)} disabled={working || isDirty || !readiness.ready} />
+      : processingFailure
+        ? <HeaderAction label="Retry" icon={<RefreshCw className="h-4 w-4" />} onClick={() => void handleRetry()} disabled={working} />
+        : document.status === 'sent' || document.status === 'in_progress'
+          ? <HeaderAction label="Send reminder" icon={<Mail className="h-4 w-4" />} onClick={() => void handleRemind()} disabled={working} />
+          : document.status === 'completed'
+            ? <HeaderAction label="Download" icon={<Download className="h-4 w-4" />} onClick={handleDownload} disabled={working} />
+            : undefined;
+
+  const secondaryAction = editable && document ? <div className="flex items-center gap-2"><HeaderAction label="Save changes" icon={<Save className="h-4 w-4" />} onClick={() => void handleCreateOrSave()} disabled={working || !isDirty} prominence="secondary" />{moreActions}</div> : moreActions;
+
+  const mobilePrimary = () => {
+    if (!document) void handleCreateOrSave();
+    else if (editable) setShowSendModal(true);
+    else if (processingFailure) void handleRetry();
+    else if (document.status === 'sent' || document.status === 'in_progress') void handleRemind();
+    else if (document.status === 'completed') handleDownload();
+  };
+
+  const mobilePrimaryLabel = !document ? 'Create' : editable ? 'Send' : processingFailure ? 'Retry' : document.status === 'completed' ? 'Download' : 'Remind';
 
   return (
     <PageLayout
-      title={isEditing ? 'EDIT DOCUMENT' : 'NEW DOCUMENT'}
-      icon={<FileSignature className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
-      leading={
-        <ShellBackButton label="Back to documents" onClick={() => {
-          if (confirmLeave()) navigate('/documents');
-        }} />
-      }
-      desktopTools={{
-        secondaryAction: (
-          <HeaderAction
-            label="Save document"
-            icon={<Save className="h-4 w-4" />}
-            onClick={() => void handleCreateOrSave()}
-            disabled={loading || !isDirty}
-            prominence="secondary"
-          />
-        ),
-        primaryAction: (
-          <HeaderAction
-            label="Send document"
-            icon={<Send className="h-4 w-4" />}
-            onClick={() => setShowSendModal(true)}
-            disabled={loading || !document}
-          />
-        ),
-      }}
-      mobileActions={
-        <>
-          <Button variant="outline" onClick={handleCreateOrSave} disabled={loading || !isDirty} className="h-11 flex-1">
-            <Save className="h-4 w-4 mr-2" />
-            Save
-          </Button>
-          <Button className="h-11 flex-1 bg-blue-600 text-white hover:bg-blue-700" onClick={() => setShowSendModal(true)} disabled={loading || !document}>
-            <Send className="h-4 w-4 mr-2" />
-            Send
-          </Button>
-        </>
-      }
+      title={isExisting ? 'DOCUMENT' : 'NEW DOCUMENT'}
+      icon={<FileSignature className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+      leading={<ShellBackButton label="Back to documents" onClick={goBack} />}
+      desktopTools={{ status: document ? <Badge className={cn('pointer-events-none whitespace-nowrap', statusVisual.badgeClass)}>{statusVisual.label}</Badge> : undefined, secondaryAction, primaryAction }}
+      mobileActions={<div className="flex w-full items-center gap-2">{document && <Badge className={cn('pointer-events-none shrink-0', statusVisual.badgeClass)}>{statusVisual.label}</Badge>}<div className="ml-auto flex min-w-0 gap-2">{editable && document && <Button variant="outline" className="h-11" onClick={() => void handleCreateOrSave()} disabled={working || !isDirty}><Save className="mr-2 h-4 w-4" />Save</Button>}{moreActions}{primaryAction && <Button className="h-11 bg-blue-600 text-white hover:bg-blue-700" onClick={mobilePrimary} disabled={working || (!document ? !isDirty || !title.trim() : editable ? isDirty || !readiness.ready : false)}>{!document ? <Save className="mr-2 h-4 w-4" /> : editable ? <Send className="mr-2 h-4 w-4" /> : processingFailure ? <RefreshCw className="mr-2 h-4 w-4" /> : document.status === 'completed' ? <Download className="mr-2 h-4 w-4" /> : <Mail className="mr-2 h-4 w-4" />}{mobilePrimaryLabel}</Button>}</div></div>}
     >
-        {loadError ? (
-          <ErrorState
-            title="Document unavailable"
-            description={loadError}
-            onAction={() => void loadDocument()}
-          />
-        ) : loading && isEditing && !document ? (
-          <CardGridSkeleton count={2} columns={2} height="h-80" />
-        ) : (
-        <>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Document Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="title">Title</Label>
-                <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
-              </div>
-              <div>
-                <Label htmlFor="message">Message</Label>
-                <Textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} />
-              </div>
-              <Separator />
-              <div className="space-y-2">
-                <Label>Upload PDF</Label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="application/pdf"
-                  className="hidden"
-                  onChange={(e) => {
-                    const selected = e.target.files?.[0] || null;
-                    setFile(selected);
-                    if (selected) {
-                      handleUpload(selected);
-                    }
-                  }}
-                />
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    Choose File
-                  </Button>
-                  <span className="text-sm text-muted-foreground truncate">
-                    {file?.name || document?.file_name || 'No file chosen'}
-                  </span>
-                </div>
-                {(file || document?.file_name) && (
-                  <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                    <span className="truncate">
-                      {file?.name || document?.file_name}
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleClearFile}
-                      aria-label="Remove file"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Recipients</CardTitle>
-              <Button variant="outline" size="sm" onClick={addRecipient}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {recipients.length === 0 && (
-                <EmptyState icon={FileSignature} title="No recipients yet" size="compact" />
-              )}
-              {recipients.map((recipient, index) => (
-                <div key={recipient.id} className="grid grid-cols-1 gap-2 border rounded-md p-3">
-                  <Input
-                    placeholder="Name"
-                    value={recipient.name || ''}
-                    onChange={(e) => updateRecipient(index, { name: e.target.value })}
-                  />
-                  <Input
-                    placeholder="Email"
-                    value={recipient.email || ''}
-                    onChange={(e) => updateRecipient(index, { email: e.target.value })}
-                  />
-                  <div className="space-y-2">
-                    <Select
-                      value={roleChoices.includes(recipient.role_name || '') ? recipient.role_name || '' : 'custom'}
-                      onValueChange={(value) => {
-                        if (value === 'custom') {
-                          updateRecipient(index, { role_name: '' });
-                        } else {
-                          updateRecipient(index, { role_name: value });
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {roleChoices.map((role) => (
-                          <SelectItem key={role} value={role}>
-                            {role}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="custom">Custom…</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {!roleChoices.includes(recipient.role_name || '') && (
-                      <Input
-                        placeholder="Custom role"
-                        value={recipient.role_name || ''}
-                        onChange={(e) => updateRecipient(index, { role_name: e.target.value })}
-                      />
-                    )}
-                  </div>
-                  <Button variant="ghost" size="sm" onClick={() => removeRecipient(index)}>
-                    Remove
-                  </Button>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+      {loadError ? <ErrorState title="Document unavailable" description={loadError} onAction={() => void loadDocument()} /> : loading && isExisting && !document ? <CardGridSkeleton count={2} columns={2} height="h-80" /> : <>
+        <div className="mb-6 flex items-start gap-4">
+          <div className={cn('flex h-14 w-14 shrink-0 items-center justify-center rounded-full', statusVisual.iconBackgroundClass)}><StatusIcon className={cn('h-6 w-6', statusVisual.iconClass)} /></div>
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-2"><h2 className="min-w-0 text-xl font-medium">{title || 'New document'}</h2>{document && <Badge className={cn('shrink-0 xl:hidden', statusVisual.badgeClass)}>{statusVisual.label}</Badge>}</div>
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">{document?.document_number && <span>{document.document_number}</span>}<span>{recipients.length} recipient{recipients.length === 1 ? '' : 's'}</span>{document ? <span>Created {formatDateTime(document.created_at)}</span> : <span>Not saved yet</span>}{document?.sent_at && <span>Sent {formatDateTime(document.sent_at)}</span>}{document?.completed_at && <span className="text-green-600 dark:text-green-400">Completed {formatDateTime(document.completed_at)}</span>}</div>
+          </div>
         </div>
 
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Field Placement</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FieldPlacementCanvas
-              fields={fields}
-              onChange={setFields}
-              fileUrl={document?.file_url || ''}
-              roles={roleOptions}
-              localFile={file}
-              documentId={document?.id}
-            />
-          </CardContent>
-        </Card>
-        <SendSignatureModal
-          open={showSendModal}
-          onOpenChange={setShowSendModal}
-          onSend={handleSend}
-          sending={loading}
-          documentTitle={title}
-          senderName={document?.sender_name || currentUser?.name || 'Itemize'}
-          senderEmail={document?.sender_email || currentUser?.email}
-          recipients={recipients}
+        {editable ? <DraftDocumentEditor
+          document={document}
+          title={title}
+          setTitle={setTitle}
+          description={description}
+          setDescription={setDescription}
           message={message}
-          onMessageChange={setMessage}
-          hasFile={Boolean(file || document?.file_url)}
-          expiresAt={document?.expires_at || null}
+          setMessage={setMessage}
+          file={file}
+          setFile={setFile}
+          recipients={recipients}
+          fields={fields}
+          setFields={setFields}
           routingMode={routingMode}
-          onRoutingModeChange={setRoutingMode}
-        />
-        </>
-        )}
+          setRoutingMode={setRoutingMode}
+          roleChoices={roleChoices}
+          roleOptions={roleOptions}
+          readiness={readiness}
+          working={working}
+          fileInputRef={fileInputRef}
+          addRecipient={addRecipient}
+          updateRecipient={updateRecipient}
+          removeRecipient={removeRecipient}
+          clearFile={handleClearFile}
+        /> : document ? <ReadOnlyDocumentDetail document={document} recipients={recipients} fields={fields} audit={audit} roleOptions={roleOptions} summary={recipientSummary} /> : null}
+
+        {document && editable && <SendSignatureModal open={showSendModal} onOpenChange={setShowSendModal} onSend={handleSend} sending={working} documentTitle={title} senderName={document.sender_name || currentUser?.name || 'Itemize'} senderEmail={document.sender_email || currentUser?.email} recipients={recipients} message={message} onMessageChange={setMessage} hasFile={Boolean(file || document.file_url)} expiresAt={document.expires_at || null} routingMode={routingMode} onRoutingModeChange={setRoutingMode} />}
+        {document && <DeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} itemType="document" itemTitle={document.title} />}
+      </>}
     </PageLayout>
   );
+}
+
+interface DraftEditorProps {
+  document: SignatureDocument | null;
+  title: string;
+  setTitle: (value: string) => void;
+  description: string;
+  setDescription: (value: string) => void;
+  message: string;
+  setMessage: (value: string) => void;
+  file: File | null;
+  setFile: (value: File | null) => void;
+  recipients: SignatureRecipient[];
+  fields: SignatureField[];
+  setFields: (value: SignatureField[]) => void;
+  routingMode: 'parallel' | 'sequential';
+  setRoutingMode: (value: 'parallel' | 'sequential') => void;
+  roleChoices: string[];
+  roleOptions: string[];
+  readiness: ReturnType<typeof getSignatureDraftReadiness>;
+  working: boolean;
+  fileInputRef: React.RefObject<HTMLInputElement>;
+  addRecipient: () => void;
+  updateRecipient: (index: number, updates: Partial<SignatureRecipient>) => void;
+  removeRecipient: (index: number) => void;
+  clearFile: () => Promise<void>;
+}
+
+function DraftDocumentEditor({ document, title, setTitle, description, setDescription, message, setMessage, file, setFile, recipients, fields, setFields, routingMode, setRoutingMode, roleChoices, roleOptions, readiness, working, fileInputRef, addRecipient, updateRecipient, removeRecipient, clearFile }: DraftEditorProps) {
+  const checks = [
+    { label: 'Document title', complete: readiness.hasTitle },
+    { label: 'PDF attached', complete: readiness.hasFile },
+    { label: 'Recipients complete', complete: readiness.recipientsComplete },
+    { label: 'Signature fields placed', complete: readiness.hasFields },
+  ];
+  return <div className="space-y-6">
+    <div className="grid items-start gap-6 xl:grid-cols-3">
+      <div className="space-y-6 xl:col-span-2">
+        <Card><CardHeader><SectionCardTitle icon={Settings2}>Document setup</SectionCardTitle></CardHeader><CardContent className="space-y-4">
+          <div className="space-y-2"><Label htmlFor="document-title">Title</Label><Input id="document-title" value={title} onChange={event => setTitle(event.target.value)} placeholder="Client service agreement" /></div>
+          <div className="space-y-2"><Label htmlFor="document-description">Description</Label><Input id="document-description" value={description} onChange={event => setDescription(event.target.value)} placeholder="Optional context shown in Itemize" /></div>
+          <div className="space-y-2"><Label htmlFor="document-message">Recipient message</Label><Textarea id="document-message" value={message} onChange={event => setMessage(event.target.value)} placeholder="Please review and sign this document." className="min-h-24" /></div>
+        </CardContent></Card>
+        <Card><CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0"><SectionCardTitle icon={Users}>Recipients and routing</SectionCardTitle><Button variant="outline" size="sm" onClick={addRecipient}><Plus className="mr-2 h-4 w-4" />Add recipient</Button></CardHeader><CardContent className="space-y-4">
+          <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[minmax(0,1fr)_13rem] sm:items-center"><div className="flex items-center gap-1"><p className="text-sm font-medium">Signing order</p><Tooltip><TooltipTrigger asChild><button type="button" aria-label="About signing order" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><Info className="h-4 w-4" /></button></TooltipTrigger><TooltipContent>Choose whether recipients sign together or in sequence.</TooltipContent></Tooltip></div><Select value={routingMode} onValueChange={value => setRoutingMode(value as 'parallel' | 'sequential')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="parallel">Any order</SelectItem><SelectItem value="sequential">In sequence</SelectItem></SelectContent></Select></div>
+          {recipients.length === 0 ? <EmptyState icon={Users} title="No recipients yet" description="Add someone who needs to sign or approve." size="compact" /> : recipients.map((recipient, index) => <div key={recipient.id} className="grid gap-3 rounded-lg border p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_11rem_auto] md:items-start">
+            <Input aria-label={`Recipient ${index + 1} name`} placeholder="Name" value={recipient.name || ''} onChange={event => updateRecipient(index, { name: event.target.value })} />
+            <Input aria-label={`Recipient ${index + 1} email`} type="email" placeholder="Email" value={recipient.email || ''} onChange={event => updateRecipient(index, { email: event.target.value })} />
+            <div className="space-y-2"><Select value={roleChoices.includes(recipient.role_name || '') ? recipient.role_name || '' : 'custom'} onValueChange={value => updateRecipient(index, { role_name: value === 'custom' ? '' : value })}><SelectTrigger aria-label={`Recipient ${index + 1} role`}><SelectValue placeholder="Role" /></SelectTrigger><SelectContent>{roleChoices.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}<SelectItem value="custom">Custom...</SelectItem></SelectContent></Select>{!roleChoices.includes(recipient.role_name || '') && <Input aria-label={`Recipient ${index + 1} custom role`} placeholder="Custom role" value={recipient.role_name || ''} onChange={event => updateRecipient(index, { role_name: event.target.value })} />}</div>
+            <Button variant="ghost" size="icon" aria-label={`Remove recipient ${index + 1}`} onClick={() => removeRecipient(index)}><X className="h-4 w-4" /></Button>
+          </div>)}
+        </CardContent></Card>
+      </div>
+      <div className="space-y-6">
+        <Card><CardHeader><SectionCardTitle icon={Upload}>PDF source</SectionCardTitle></CardHeader><CardContent className="space-y-3">
+          <input ref={fileInputRef} type="file" accept="application/pdf" className="hidden" onChange={event => setFile(event.target.files?.[0] || null)} />
+          <Button type="button" variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()} disabled={working}><Upload className="mr-2 h-4 w-4" />{file || document?.file_name ? 'Replace PDF' : 'Choose PDF'}</Button>
+          {file || document?.file_name ? <div className="flex items-center gap-3 rounded-lg border p-3"><FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{file?.name || document?.file_name}</p><p className="text-xs text-muted-foreground">{file ? 'Ready to save' : `${document?.page_count || 1} page${document?.page_count === 1 ? '' : 's'}`}</p></div><Button type="button" variant="ghost" size="icon" aria-label="Remove PDF" onClick={() => void clearFile()} disabled={working}><X className="h-4 w-4" /></Button></div> : null}
+        </CardContent></Card>
+        <Card><CardHeader><SectionCardTitle icon={CheckCircle}>Send readiness</SectionCardTitle></CardHeader><CardContent className="space-y-3">
+          {checks.map(item => <div key={item.label} className="flex items-center gap-2 text-sm"><span className={cn('flex h-5 w-5 items-center justify-center rounded-full', item.complete ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400' : 'bg-muted text-muted-foreground')}>{item.complete ? <Check className="h-3.5 w-3.5" /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}</span><span>{item.label}</span></div>)}
+        </CardContent></Card>
+      </div>
+    </div>
+    <Card><CardHeader><SectionCardTitle icon={FileSignature}>Field placement</SectionCardTitle></CardHeader><CardContent><FieldPlacementCanvas fields={fields} onChange={setFields} fileUrl={document?.file_url || ''} roles={roleOptions} localFile={file} documentId={document?.id} /></CardContent></Card>
+  </div>;
+}
+
+function ReadOnlyDocumentDetail({ document, recipients, fields, audit, roleOptions, summary }: { document: SignatureDocument; recipients: SignatureRecipient[]; fields: SignatureField[]; audit: SignatureDocumentDetails['audit']; roleOptions: string[]; summary: ReturnType<typeof getSignatureRecipientSummary> }) {
+  return <div className="space-y-6">
+    <ResponsiveCardRail label="Document recipient summary" desktopColumns="md:grid-cols-2 lg:grid-cols-4" className="responsive-stat-summary">
+      <StatCard title="Document recipients" badgeText="Recipients" value={summary.total} icon={Users} description="Assigned to this request" colorTheme="blue" />
+      <StatCard title="Recipients still active" badgeText="Waiting" value={summary.waiting} icon={Clock} description="Sent or underway" colorTheme="orange" />
+      <StatCard title="Completed signatures" badgeText="Signed" value={summary.signed} icon={CheckCircle} description="Signatures collected" colorTheme="green" />
+      <StatCard title="Recipients needing attention" badgeText="Attention" value={summary.attention} icon={AlertCircle} description="Declined or failed" colorTheme="red" />
+    </ResponsiveCardRail>
+    <div className="grid items-stretch gap-6 xl:grid-cols-3">
+      <Card className="xl:col-span-2"><CardHeader><SectionCardTitle icon={FileSignature}>{document.status === 'completed' ? 'Signed document' : 'Document snapshot'}</SectionCardTitle></CardHeader><CardContent>{(document.status === 'completed' ? document.signed_file_url : document.file_url) ? <FieldPlacementCanvas fields={document.status === 'completed' ? [] : fields} onChange={() => undefined} fileUrl={(document.status === 'completed' ? document.signed_file_url : document.file_url) || ''} roles={roleOptions} documentId={document.id} readOnly /> : <div className="flex min-h-48 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">No PDF is available for this document.</div>}</CardContent></Card>
+      <Card><CardHeader><SectionCardTitle icon={Settings2}>Document details</SectionCardTitle></CardHeader><CardContent className="space-y-4 text-sm">
+        <Detail label="Routing" value={document.routing_mode === 'sequential' ? 'In sequence' : 'Any order'} />
+        <Detail label="Sender" value={`${document.sender_name || 'Not set'}${document.sender_email ? ` · ${document.sender_email}` : ''}`} />
+        <Detail label="Source PDF" value={document.file_name || 'Not available'} />
+        <Detail label="Pages" value={String(document.page_count || 'Not available')} />
+        <Detail label="Sent" value={formatDateTime(document.sent_at)} />
+        {document.expires_at && <Detail label="Expires" value={formatDateTime(document.expires_at)} />}
+        {document.completed_at && <Detail label="Completed" value={formatDateTime(document.completed_at)} success />}
+      </CardContent></Card>
+    </div>
+    <Card><CardHeader><SectionCardTitle icon={Route}>Recipient delivery</SectionCardTitle></CardHeader><CardContent className="p-0">{recipients.length === 0 ? <EmptyState icon={Users} title="No recipient records" description="Delivery records will appear after recipients are added." size="compact" className="py-10" /> : <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Recipient</TableHead><TableHead>Role</TableHead><TableHead>Status</TableHead><TableHead>Latest activity</TableHead></TableRow></TableHeader><TableBody>{recipients.map(recipient => {
+      const visual = getRecipientStatusVisual(recipient);
+      const latestActivity = recipient.signed_at || recipient.declined_at || recipient.viewed_at || recipient.sent_at;
+      return <TableRow key={recipient.id}><TableCell><p className="font-medium">{recipient.name || 'Unnamed recipient'}</p><p className="text-xs text-muted-foreground">{recipient.email}</p></TableCell><TableCell>{recipient.role_name || 'Signer'}</TableCell><TableCell><Badge className={visual.badgeClass}>{visual.label}</Badge>{recipient.decline_reason && <p className="mt-1 max-w-xs text-xs text-red-600 dark:text-red-400">{recipient.decline_reason}</p>}</TableCell><TableCell className="text-sm text-muted-foreground">{formatDateTime(latestActivity)}</TableCell></TableRow>;
+    })}</TableBody></Table></div>}</CardContent></Card>
+    <Card><CardHeader><SectionCardTitle icon={History}>Audit history</SectionCardTitle></CardHeader><CardContent>{audit.length === 0 ? <div className="flex min-h-28 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">No audit events are available.</div> : <div className="divide-y rounded-lg border">{audit.map(event => {
+      const recipient = recipients.find(item => item.id === event.recipient_id);
+      return <div key={event.id} className="flex flex-col gap-1 p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4"><div className="min-w-0"><p className="text-sm font-medium">{formatAuditEvent(event.event_type)}</p><p className="mt-1 text-xs text-muted-foreground">{event.description || (recipient ? `${recipient.name || recipient.email} · ${recipient.email}` : 'Document activity')}</p></div><time className="shrink-0 text-xs text-muted-foreground">{formatDateTime(event.created_at)}</time></div>;
+    })}</div>}</CardContent></Card>
+  </div>;
+}
+
+function Detail({ label, value, success = false }: { label: string; value: string; success?: boolean }) {
+  return <div><p className="text-xs text-muted-foreground">{label}</p><p className={cn('mt-1 break-words font-medium', success && 'text-green-600 dark:text-green-400')}>{value}</p></div>;
 }

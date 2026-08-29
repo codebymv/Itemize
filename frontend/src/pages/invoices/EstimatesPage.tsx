@@ -42,6 +42,7 @@ import {
     sendEstimate,
 } from '@/services/estimatesApi';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import {
     HeaderAction,
     HeaderCombinedQuery,
@@ -60,6 +61,7 @@ import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { InvoicePreviewCard } from './components/InvoicePreviewCard';
 import { cn } from '@/lib/utils';
 import { getEstimateStatusVisual } from './constants/estimateConstants';
+import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expanded-row';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -322,40 +324,35 @@ export function EstimatesPage() {
                 ),
             }}
             mobileActions={
-                <>
-                <div className="flex items-center gap-2 w-full">
+                <MobileQueryBar
+                  search={
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
+                            aria-label="Search estimates"
                             placeholder="Search estimates..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
                         />
                     </div>
+                  }
+                  filters={
+                    <HeaderCombinedQuery label="Search and filter estimates" placeholder="Search estimates..." value={searchQuery} onChange={setSearchQuery} activeCount={headerQueryCount}>
+                      <Select value={activeTab} onValueChange={setActiveTab}><SelectTrigger className="h-11 w-full"><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="all">All estimates</SelectItem><SelectItem value="draft">Draft</SelectItem><SelectItem value="sent">Sent</SelectItem><SelectItem value="accepted">Accepted</SelectItem><SelectItem value="declined">Declined</SelectItem><SelectItem value="expired">Expired</SelectItem></SelectContent></Select>
+                    </HeaderCombinedQuery>
+                  }
+                  actions={
                     <Button
-                        size="sm"
+                        size="icon"
                         aria-label="Create estimate"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700"
                         onClick={() => navigate('/estimates/new')}
                     >
                         <Plus className="h-4 w-4" />
                     </Button>
-                </div>
-                <Select value={activeTab} onValueChange={setActiveTab}>
-                    <SelectTrigger className="h-9 w-full">
-                        <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">All Estimates</SelectItem>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="sent">Sent</SelectItem>
-                        <SelectItem value="accepted">Accepted</SelectItem>
-                        <SelectItem value="declined">Declined</SelectItem>
-                        <SelectItem value="expired">Expired</SelectItem>
-                    </SelectContent>
-                </Select>
-                </>
+                  }
+                />
             }
         >
             {!loadError && (
@@ -548,6 +545,24 @@ export function EstimatesPage() {
 
                                         {isExpanded && (
                                             <div className="border-t bg-muted/30 px-6 py-6">
+                                                <ExpandedRowActions>
+                                                    <Button variant="outline" size="sm" onClick={() => navigate(`/estimates/${estimate.id}`)}>
+                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                        <ExpandedRowActionLabel full="Edit estimate" compact="Edit" />
+                                                    </Button>
+                                                    {estimate.status === 'draft' && (
+                                                        <Button size="sm" onClick={() => handleSendEstimate(estimate.id)}>
+                                                            <Send className="mr-2 h-4 w-4" />
+                                                            <ExpandedRowActionLabel full="Send estimate" compact="Send" />
+                                                        </Button>
+                                                    )}
+                                                    {['sent', 'accepted'].includes(estimate.status) && !estimate.converted_invoice_id && (
+                                                        <Button size="sm" onClick={() => handleConvertToInvoice(estimate.id)}>
+                                                            <ArrowRight className="mr-2 h-4 w-4" />
+                                                            <ExpandedRowActionLabel full="Convert to invoice" compact="Convert" />
+                                                        </Button>
+                                                    )}
+                                                </ExpandedRowActions>
                                                 {loadingPreview ? (
                                                     <div className="flex items-center justify-center py-12">
                                                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -580,21 +595,6 @@ export function EstimatesPage() {
                                                             termsAndConditions={expandedEstimateData.terms_and_conditions || undefined}
                                                         />
 
-                                                        <div className="mt-6 flex flex-wrap justify-center gap-2 border-t pt-4 sm:gap-3">
-                                                            <Button variant="outline" size="sm" onClick={() => navigate(`/estimates/${estimate.id}`)}>
-                                                                <Pencil className="mr-2 h-4 w-4" />Edit estimate
-                                                            </Button>
-                                                            {estimate.status === 'draft' && (
-                                                                <Button size="sm" onClick={() => handleSendEstimate(estimate.id)}>
-                                                                    <Send className="mr-2 h-4 w-4" />Send estimate
-                                                                </Button>
-                                                            )}
-                                                            {['sent', 'accepted'].includes(estimate.status) && !estimate.converted_invoice_id && (
-                                                                <Button size="sm" onClick={() => handleConvertToInvoice(estimate.id)}>
-                                                                    <ArrowRight className="mr-2 h-4 w-4" />Convert to invoice
-                                                                </Button>
-                                                            )}
-                                                        </div>
                                                     </div>
                                                 ) : null}
                                             </div>

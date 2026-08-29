@@ -21,13 +21,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { createSmsTemplate, getMessageInfo, MessageInfo, type SmsTemplate } from '@/services/smsApi';
+import { createSmsTemplate, getMessageInfo, MessageInfo, updateSmsTemplate, type SmsTemplate } from '@/services/smsApi';
 import { debounce } from 'lodash';
 
 interface CreateSMSTemplateModalProps {
   organizationId: number;
   onClose: () => void;
   onCreated: (template: SmsTemplate) => void;
+  template?: SmsTemplate;
+  onUpdated?: (template: SmsTemplate) => void;
 }
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
@@ -54,14 +56,17 @@ export function CreateSMSTemplateModal({
   organizationId,
   onClose,
   onCreated,
+  template,
+  onUpdated,
 }: CreateSMSTemplateModalProps) {
+  const isEditing = Boolean(template);
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    message: '',
-    category: '',
-    is_active: true,
+    name: template?.name ?? '',
+    message: template?.message ?? '',
+    category: template?.category ?? '',
+    is_active: template?.is_active ?? true,
   });
   const [messageInfo, setMessageInfo] = useState<MessageInfo>({
     length: 0,
@@ -108,6 +113,8 @@ export function CreateSMSTemplateModal({
     fetchMessageInfo(formData.message);
   }, [formData.message, fetchMessageInfo]);
 
+  useEffect(() => () => fetchMessageInfo.cancel(), [fetchMessageInfo]);
+
   const handleChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -136,20 +143,27 @@ export function CreateSMSTemplateModal({
 
     setLoading(true);
     try {
-      const template = await createSmsTemplate({
+      const values = {
         organization_id: organizationId,
         name: formData.name.trim(),
         message: formData.message,
         category: formData.category || undefined,
         is_active: formData.is_active,
+      };
+      const savedTemplate = template
+        ? await updateSmsTemplate(template.id, values)
+        : await createSmsTemplate(values);
+      toast({
+        title: isEditing ? 'Template updated' : 'Template created',
+        description: isEditing ? 'Your SMS template changes have been saved.' : 'SMS template has been created successfully',
       });
-      toast({ title: 'Template created', description: 'SMS template has been created successfully' });
-      onCreated(template);
+      if (isEditing) onUpdated?.(savedTemplate);
+      else onCreated(savedTemplate);
     } catch (error) {
-      console.error('Error creating template:', error);
+      console.error(`Error ${isEditing ? 'updating' : 'creating'} template:`, error);
       toast({
         title: 'Error',
-        description: getApiErrorMessage(error, 'Failed to create template'),
+        description: getApiErrorMessage(error, `Failed to ${isEditing ? 'update' : 'create'} template`),
         variant: 'destructive',
       });
     } finally {
@@ -170,10 +184,10 @@ export function CreateSMSTemplateModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5 text-blue-600" />
-            Create SMS Template
+            {isEditing ? 'Edit SMS Template' : 'Create SMS Template'}
           </DialogTitle>
           <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
-            Create a reusable campaign and automation template.
+            {isEditing ? 'Update this reusable campaign and automation message.' : 'Create a reusable campaign and automation template.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -203,6 +217,9 @@ export function CreateSMSTemplateModal({
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
+                    {formData.category && !TEMPLATE_CATEGORIES.some((category) => category.value === formData.category) && (
+                      <SelectItem value={formData.category}>{formData.category}</SelectItem>
+                    )}
                     {TEMPLATE_CATEGORIES.map((cat) => (
                       <SelectItem key={cat.value} value={cat.value}>
                         {cat.label}
@@ -283,9 +300,9 @@ export function CreateSMSTemplateModal({
               disabled={loading}
               className="bg-blue-600 hover:bg-blue-700 text-white"
               style={{ fontFamily: '"Raleway", sans-serif' }}
-              aria-label={loading ? 'Creating template...' : 'Create template'}
+              aria-label={loading ? `${isEditing ? 'Saving' : 'Creating'} template...` : isEditing ? 'Save template changes' : 'Create template'}
             >
-              {loading ? 'Creating...' : 'Create Template'}
+              {loading ? (isEditing ? 'Saving...' : 'Creating...') : (isEditing ? 'Save Changes' : 'Create Template')}
             </Button>
           </DialogFooter>
         </form>

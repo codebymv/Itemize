@@ -58,6 +58,7 @@ import {
 } from '@/services/api';
 import { List, Note, Whiteboard, Wireframe, Vault } from '@/types';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import {
   HeaderActionLabel,
   HeaderCombinedQuery,
@@ -411,7 +412,7 @@ export function SharedPage() {
   return (
     <PageLayout
       title="SHARED"
-      icon={<Share2 className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      icon={<Share2 className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
       mobileClassName="flex-col items-stretch gap-3"
       desktopTools={{
         search: (
@@ -469,42 +470,20 @@ export function SharedPage() {
         ),
       }}
       mobileActions={
-        <>
-        <div className="relative flex-1">
+        <MobileQueryBar
+        search={<div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
+            aria-label="Search shared content"
             placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 h-9 w-full bg-muted/20 border-border/50 focus:bg-background"
           />
-        </div>
-        <div className="flex items-center gap-2">
-          <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
-            <SelectTrigger className="flex-1 h-9">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="list">Lists</SelectItem>
-              <SelectItem value="note">Notes</SelectItem>
-              <SelectItem value="whiteboard">Whiteboards</SelectItem>
-              <SelectItem value="wireframe">Wireframes</SelectItem>
-              <SelectItem value="vault">Vaults</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as 'recent' | 'title')}>
-            <SelectTrigger className="flex-1 h-9">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="recent">Most Recent</SelectItem>
-              <SelectItem value="title">Title A-Z</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        </>
+        </div>}
+        filters={<HeaderCombinedQuery label="Search and filter shared content" placeholder="Search shared content..." value={searchQuery} onChange={setSearchQuery} activeCount={headerQueryCount}><div className="space-y-2 [&_[role=combobox]]:w-full">{headerFilters}</div></HeaderCombinedQuery>}
+        actions={<Button variant="outline" size="icon" className="h-11 w-11" onClick={() => navigate('/canvas')} aria-label="Open Canvas"><Map className="h-4 w-4" /></Button>}
+        />
       }
     >
           {/* Content */}

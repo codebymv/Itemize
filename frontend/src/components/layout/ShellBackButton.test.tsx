@@ -14,7 +14,15 @@ describe('ShellBackButton', () => {
 
     const button = screen.getByRole('button', { name: 'Back to contacts' });
     const icon = button.querySelector('svg');
-    expect(button).toHaveClass('h-11', 'w-11', 'text-blue-600', 'dark:text-blue-400');
+    expect(button).toHaveClass(
+      'h-11',
+      'w-11',
+      'text-blue-600',
+      'dark:text-blue-400',
+      'hover:bg-accent',
+      'hover:text-accent-foreground',
+    );
+    expect(button).not.toHaveClass('hover:bg-blue-50', 'dark:hover:bg-blue-950/40');
     expect(button).not.toHaveTextContent('Back to contacts');
     expect(icon).toHaveAttribute('aria-hidden', 'true');
 

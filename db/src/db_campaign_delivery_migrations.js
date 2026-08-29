@@ -39,7 +39,7 @@ async function runCampaignDeliveryMigration(pool) {
           ADD CONSTRAINT campaign_recipient_delivery_status_check
           CHECK (delivery_status IN (
             'queued', 'processing', 'retry', 'sent', 'dead_letter',
-            'reconciliation_required'
+            'reconciliation_required', 'suppressed'
           ));
       END IF;
       IF NOT EXISTS (

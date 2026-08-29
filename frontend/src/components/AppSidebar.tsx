@@ -35,9 +35,9 @@ import {
     Kanban,
     Zap,
     Calendar,
-    FileText,
+    Layout,
     MessageSquare,
-    Mail,
+    Megaphone,
     Star,
     Receipt,
     Search,
@@ -135,7 +135,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Campaigns',
-        icon: Mail,
+        icon: Megaphone,
         path: '/campaigns',
         items: [
             {
@@ -158,7 +158,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Pages & Forms',
-        icon: FileText,
+        icon: Layout,
         path: '/pages',
         items: [
             {
@@ -412,7 +412,7 @@ export function AppSidebar() {
                                 }}
                             >
                                 <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400")} />
-                                <span>{item.title}</span>
+                                <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.title}</span>
                                 <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-gray-600 dark:text-gray-400" />
                             </SidebarMenuButton>
                         </CollapsibleTrigger>
@@ -426,7 +426,7 @@ export function AppSidebar() {
                                             className="font-raleway"
                                         >
                                             <div onClick={() => handleNavigate(subItem.path)} className="cursor-pointer">
-                                                <span>{subItem.title}</span>
+                                                <span className="block min-w-0 truncate whitespace-nowrap">{subItem.title}</span>
                                             </div>
                                         </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>
@@ -451,7 +451,7 @@ export function AppSidebar() {
                     )}
                 >
                     <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400")} />
-                    <span>{item.title}</span>
+                    <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.title}</span>
                     {item.disabled && (
                         <span className="ml-auto text-xs text-muted-foreground">Soon</span>
                     )}
@@ -460,36 +460,54 @@ export function AppSidebar() {
         );
     };
 
-    const brandIcon = (sizeClass: string) => (
+    const brandIcon = () => (
         <span
             className={cn(
-                'relative shrink-0 transition-[transform,filter] duration-500 ease-out',
+                'relative block h-8 w-10 min-h-8 min-w-10 max-h-8 max-w-10 shrink-0 overflow-hidden',
+                'transition-[transform,filter] duration-500 ease-out',
                 'group-hover:-translate-y-1 group-hover:translate-x-0.5',
                 'group-hover:drop-shadow-[0_6px_10px_rgba(37,99,235,0.32)]',
-                sizeClass,
             )}
         >
             <span className="relative block h-full w-full overflow-hidden">
                 <img
                     src="/icon.png"
+                    width={40}
+                    height={32}
                     alt=""
                     aria-hidden="true"
-                    className="h-full w-full object-contain dark:hidden"
+                    className="block h-8 w-10 object-contain dark:hidden"
                 />
                 <img
                     src="/icon-blue-400.png"
+                    width={40}
+                    height={32}
                     alt=""
                     aria-hidden="true"
-                    className="hidden h-full w-full object-contain dark:block"
+                    className="hidden h-8 w-10 object-contain dark:block"
                 />
                 <span
                     aria-hidden="true"
-                    className="pointer-events-none absolute inset-0 -translate-x-full transition-transform duration-1000 ease-out group-hover:translate-x-full"
+                    className="pointer-events-none absolute inset-0 overflow-hidden"
                     style={{
-                        background:
-                            'linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.45) 50%, transparent 65%)',
+                        WebkitMaskImage: 'url("/icon.png")',
+                        maskImage: 'url("/icon.png")',
+                        WebkitMaskPosition: 'center',
+                        maskPosition: 'center',
+                        WebkitMaskRepeat: 'no-repeat',
+                        maskRepeat: 'no-repeat',
+                        WebkitMaskSize: 'contain',
+                        maskSize: 'contain',
                     }}
-                />
+                >
+                    <span
+                        className="absolute inset-0 -translate-x-full transition-transform duration-1000 ease-out group-hover:translate-x-full"
+                        style={{
+                            background:
+                                'linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.55) 50%, transparent 65%)',
+                        }}
+                    />
+                </span>
             </span>
         </span>
     );
@@ -498,31 +516,44 @@ export function AppSidebar() {
         <Sidebar collapsible="icon" className="border-r">
             <SidebarHeader className={cn("border-b py-4", isCollapsed ? "px-2" : "px-3")}>
                 <div className={cn("flex items-center", isCollapsed ? "flex-col gap-2 justify-center" : "justify-between gap-2")}>
-                    {!isCollapsed ? (
-                        <div className="group flex items-center gap-2 flex-1 cursor-pointer" onClick={() => navigate(homePath)}>
-                            {brandIcon('h-7 w-9')}
+                    <div
+                        className={cn(
+                            "group flex min-w-0 items-center cursor-pointer",
+                            isCollapsed ? "justify-center" : "flex-1 gap-2",
+                        )}
+                        onClick={() => navigate(homePath)}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                navigate(homePath);
+                            }
+                        }}
+                        role="link"
+                        tabIndex={0}
+                        aria-label="Itemize"
+                    >
+                        {brandIcon()}
+                        <span
+                            aria-hidden={isCollapsed}
+                            className={cn(
+                                "relative block h-6 shrink-0 overflow-hidden transition-[width,opacity] duration-200 ease-linear",
+                                isCollapsed ? "w-0 opacity-0" : "w-[7.5rem] opacity-100",
+                            )}
+                        >
                             <img
                                 src="/textblack.png"
-                                alt="Itemize"
-                                className="h-6 w-auto object-contain object-left dark:hidden"
+                                alt=""
+                                aria-hidden="true"
+                                className="absolute inset-y-0 left-0 h-6 w-auto max-w-none object-contain object-left dark:hidden"
                             />
                             <img
                                 src="/textwhite.png"
                                 alt=""
                                 aria-hidden="true"
-                                className="hidden h-6 w-auto object-contain object-left dark:block"
+                                className="absolute inset-y-0 left-0 hidden h-6 w-auto max-w-none object-contain object-left dark:block"
                             />
-                        </div>
-                    ) : (
-                        <div
-                            className="group cursor-pointer"
-                            onClick={() => navigate(homePath)}
-                            role="link"
-                            aria-label="Itemize"
-                        >
-                            {brandIcon('h-8 w-10')}
-                        </div>
-                    )}
+                        </span>
+                    </div>
                     <AppHeaderIconButton
                         onClick={toggleSidebar}
                         aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -578,7 +609,7 @@ export function AppSidebar() {
                                                 }}
                                             >
                                                 <Ellipsis className={cn("h-4 w-4 transition-colors", isMoreToolsRouteActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400")} />
-                                                <span>More tools</span>
+                                                <span className="min-w-0 flex-1 truncate whitespace-nowrap">More tools</span>
                                                 <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/more-tools:rotate-90 text-gray-600 dark:text-gray-400" />
                                             </SidebarMenuButton>
                                         </CollapsibleTrigger>
@@ -634,7 +665,7 @@ export function AppSidebar() {
                                                             }}
                                                         >
                                                             <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400")} />
-                                                            <span>{item.title}</span>
+                                                            <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.title}</span>
                                                             <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-gray-600 dark:text-gray-400" />
                                                         </SidebarMenuButton>
                                                     </CollapsibleTrigger>
@@ -648,7 +679,7 @@ export function AppSidebar() {
                                                                         className="font-raleway"
                                                                     >
                                                                         <div onClick={() => handleNavigate(subItem.path)} className="cursor-pointer">
-                                                                            <span>{subItem.title}</span>
+                                                                            <span className="block min-w-0 truncate whitespace-nowrap">{subItem.title}</span>
                                                                         </div>
                                                                     </SidebarMenuSubButton>
                                                                 </SidebarMenuSubItem>
@@ -672,7 +703,7 @@ export function AppSidebar() {
                                                 )}
                                             >
                                                 <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400")} />
-                                                <span>{item.title}</span>
+                                                <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.title}</span>
                                             </SidebarMenuButton>
                                         </SidebarMenuItem>
                                     );

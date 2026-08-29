@@ -42,6 +42,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import {
     HeaderAction,
     HeaderCombinedQuery,
@@ -321,17 +322,21 @@ export function ProductsPage() {
                 ),
             }}
             mobileActions={
-                <>
-                <div className="flex w-full items-center gap-2">
+                <MobileQueryBar
+                  search={
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
+                            aria-label="Search products"
                             placeholder="Search products..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="h-9 w-full border-border/50 bg-muted/20 pl-10"
                         />
                     </div>
+                  }
+                  filters={<HeaderCombinedQuery label="Search and filter products" placeholder="Search products..." value={searchQuery} onChange={setSearchQuery} activeCount={headerQueryCount}><div className="space-y-2">{statusSelect(true)}{typeSelect(true)}</div></HeaderCombinedQuery>}
+                  actions={
                     <Button
                         size="icon"
                         aria-label="Add product"
@@ -340,10 +345,8 @@ export function ProductsPage() {
                     >
                         <Plus className="h-4 w-4" />
                     </Button>
-                </div>
-                {statusSelect(true)}
-                {typeSelect(true)}
-                </>
+                  }
+                />
             }
         >
             {!loadError && (

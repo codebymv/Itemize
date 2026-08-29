@@ -218,7 +218,7 @@ const campaignDefinitions = () => [
   },
   {
     name: `${PREFIX}Fall Service Announcement`, status: 'sending', templateName: `${PREFIX}Monthly Product Update`,
-    subject: 'A service update for the season ahead', recipients: 3, sent: 3, delivered: 2, opened: 1, clicked: 0,
+    subject: 'A service update for the season ahead', recipients: 3, sent: 2, delivered: 2, opened: 1, clicked: 0,
     bounced: 0, openRate: 50, clickRate: 0, bounceRate: 0, createdDaysAgo: 7, startedDaysAgo: 1,
   },
   {
@@ -433,7 +433,7 @@ async function upsertCampaign(client, target, sample, templateIds, index) {
 }
 
 const recipientStatusesFor = (campaignStatus) => {
-  if (campaignStatus === 'sending') return ['opened', 'delivered', 'sent'];
+  if (campaignStatus === 'sending') return ['opened', 'delivered', 'pending'];
   if (campaignStatus === 'paused') return ['opened', 'delivered', 'pending'];
   if (campaignStatus === 'sent') return ['clicked', 'opened', 'bounced'];
   if (campaignStatus === 'failed') return ['failed', 'bounced', 'failed'];
@@ -447,6 +447,9 @@ async function seedCampaignActivity(client, target, contacts, campaignSamples, c
 
   const deliverableContacts = contacts.filter(contact => contact.email).slice(0, 3);
   for (const sample of campaignSamples) {
+    if (sample.status === 'sending' && sample.sent >= sample.recipients) {
+      throw new Error(`Sending sample must retain at least one unsent recipient: ${sample.name}`);
+    }
     const campaignId = campaignIds.get(sample.name);
     const statuses = recipientStatusesFor(sample.status);
     const eventAt = daysAgo(sample.startedDaysAgo ?? sample.createdDaysAgo);

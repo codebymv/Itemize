@@ -50,6 +50,7 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { InvoicesWidget, SignaturesWidget, WorkspaceWidget, ContactsWidget } from '@/design-system/widgets';
 import { GetStartedCard } from '@/components/GetStartedCard';
 import { getInvoiceStatusVisual } from './invoices/constants/invoiceConstants';
+import { getSignatureStatusVisual } from './signatures/constants/signatureConstants';
 
 interface QuickAction {
     title: string;
@@ -344,12 +345,15 @@ export function DashboardPage() {
                                 { label: 'Overdue', value: analytics?.invoiceMetrics?.overdue ?? 0, color: getInvoiceStatusVisual('overdue').iconClass },
                                 { label: 'Paid This Month', value: `$${(analytics?.invoiceMetrics?.paidThisMonth ?? 0).toLocaleString()}`, color: 'text-green-600 dark:text-green-400' },
                             ]}
-                            recentItems={analytics?.invoiceMetrics?.recentInvoices?.map(inv => ({
-                                id: inv.id,
-                                title: inv.number,
-                                subtitle: `$${inv.amount.toLocaleString()}`,
-                                status: { label: inv.status === 'paid' ? 'Paid' : inv.status === 'overdue' ? 'Overdue' : inv.status, color: inv.status === 'paid' ? 'text-green-600 dark:text-green-400' : inv.status === 'overdue' ? getInvoiceStatusVisual('overdue').iconClass : 'text-blue-600 dark:text-blue-400' }
-                            })) ?? []}
+                            recentItems={analytics?.invoiceMetrics?.recentInvoices?.map(inv => {
+                                const visual = getInvoiceStatusVisual(inv.status);
+                                return {
+                                    id: inv.id,
+                                    title: inv.number,
+                                    subtitle: `$${inv.amount.toLocaleString()}`,
+                                    status: { label: visual.label, color: visual.iconClass },
+                                };
+                            }) ?? []}
                             action={{ label: 'View Invoices', compactLabel: 'View', onClick: () => navigate('/invoices') }}
                             loading={isLoading}
                             compact={isMobile}
@@ -358,16 +362,20 @@ export function DashboardPage() {
                         />
                         <SignaturesWidget
                             primaryStat={analytics?.signatureMetrics?.awaiting ?? 0}
-                            primaryStatColor="text-blue-600 dark:text-blue-400"
+                            primaryStatColor={getSignatureStatusVisual('in_progress').iconClass}
                             secondaryStats={[
                                 { label: 'Signed This Week', value: analytics?.signatureMetrics?.signedThisWeek ?? 0, color: 'text-green-600 dark:text-green-400' },
-                                { label: 'Total Documents', value: analytics?.signatureMetrics?.total ?? 0, color: 'text-gray-600 dark:text-gray-400' },
+                                { label: 'Total Documents', value: analytics?.signatureMetrics?.total ?? 0, color: 'text-blue-600 dark:text-blue-400' },
                             ]}
-                            recentItems={analytics?.signatureMetrics?.recentDocuments?.map(sig => ({
-                                id: sig.id,
-                                title: sig.title,
-                                status: { label: sig.status === 'signed' ? 'Signed' : sig.status === 'sent' ? 'Awaiting' : sig.status, color: sig.status === 'signed' ? 'text-green-600 dark:text-green-400' : sig.status === 'sent' ? 'text-orange-600 dark:text-orange-400' : 'text-gray-600 dark:text-gray-400' }
-                            })) ?? []}
+                            recentItems={analytics?.signatureMetrics?.recentDocuments?.map(sig => {
+                                const normalizedStatus = sig.status === 'signed' ? 'completed' : sig.status;
+                                const visual = getSignatureStatusVisual(normalizedStatus);
+                                return {
+                                    id: sig.id,
+                                    title: sig.title,
+                                    status: { label: sig.status === 'signed' ? 'Signed' : visual.label, color: visual.iconClass },
+                                };
+                            }) ?? []}
                             action={{ label: 'View Documents', compactLabel: 'View', onClick: () => navigate('/documents') }}
                             loading={isLoading}
                             compact={isMobile}

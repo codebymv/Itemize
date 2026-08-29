@@ -19,6 +19,12 @@ const CAMPAIGN_STATUS_VISUALS: Record<Campaign['status'], StatusVisual> = {
   cancelled: defineStatus('Cancelled', 'red', XCircle),
 };
 
+export const CAMPAIGN_SUMMARY_VISUALS = {
+  draft: CAMPAIGN_STATUS_VISUALS.draft,
+  inProgress: CAMPAIGN_STATUS_VISUALS.sending,
+  delivered: CAMPAIGN_STATUS_VISUALS.sent,
+} as const;
+
 export const ACTIVE_CATALOG_VISUAL = defineStatus('Active', 'blue', CheckCircle);
 export const INACTIVE_CATALOG_VISUAL = defineStatus('Inactive', 'orange', Pause);
 

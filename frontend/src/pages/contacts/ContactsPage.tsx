@@ -24,6 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import {
   HeaderAction,
   HeaderActionLabel,
@@ -308,7 +309,6 @@ export function ContactsPage() {
     <PageLayout
       title="CONTACTS"
       icon={<Users className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
-      mobileClassName="flex-col items-stretch"
       desktopTools={{
         search: (
           <HeaderSearch
@@ -344,40 +344,35 @@ export function ContactsPage() {
         ),
       }}
       mobileActions={
-        <>
-          <div className="flex items-center gap-2 w-full">
+        <MobileQueryBar
+          search={
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
+                aria-label="Search contacts"
                 placeholder="Search contacts..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 h-9 w-full bg-muted/20 border-border/50"
               />
             </div>
-            <Button
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-              onClick={() => setShowCreateModal(true)}
+          }
+          filters={
+            <HeaderCombinedQuery
+              label="Search and filter contacts"
+              placeholder="Search contacts..."
+              value={searchQuery}
+              onChange={setSearchQuery}
+              activeCount={headerQueryCount}
             >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="flex items-center gap-2 w-full">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="flex-1 h-9">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="archived">Archived</SelectItem>
-              </SelectContent>
-            </Select>
+              <div className="[&_[role=combobox]]:w-full">{headerFilters}</div>
+            </HeaderCombinedQuery>
+          }
+          actions={
+            <>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9">
+                <Button variant="outline" size="icon" className="h-11 w-11" aria-label="Contact import and export actions">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -392,8 +387,17 @@ export function ContactsPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-        </>
+            <Button
+              size="icon"
+              aria-label="Add contact"
+              className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700"
+              onClick={() => setShowCreateModal(true)}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+            </>
+          }
+        />
       }
     >
       <OnboardingModal

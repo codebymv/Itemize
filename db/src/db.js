@@ -117,6 +117,9 @@ const {
   runCampaignDeliveryMigration,
 } = require('./db_campaign_delivery_migrations');
 const {
+  runCampaignSuppressionMigration,
+} = require('./db_campaign_suppression_migrations');
+const {
   runAdminEmailDeliveryMigration,
 } = require('./db_admin_email_delivery_migrations');
 const {
@@ -672,6 +675,7 @@ const initializeDatabase = async (pool) => {
     );
     await runMigrationOnce(pool, 'campaign_test_email_deliveries', runCampaignTestEmailDeliveryMigration);
     await runMigrationOnce(pool, 'campaign_deliveries', runCampaignDeliveryMigration);
+    await runMigrationOnce(pool, 'campaign_delivery_suppression_v1', runCampaignSuppressionMigration);
     
     // Non-destructive recurring invoice columns (source_invoice_id, is_recurring_source)
     await runMigrationOnce(pool, 'recurring_source_invoice_columns', async (p) => {

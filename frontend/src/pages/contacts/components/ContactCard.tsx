@@ -11,6 +11,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expanded-row';
 import { Contact } from '@/types';
 
 interface ContactCardProps {
@@ -94,7 +95,8 @@ export function ContactCard({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8"
+                                    className="h-9 w-9"
+                                    aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${getContactName()}`}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         onToggleExpand(contact.id);
@@ -104,7 +106,7 @@ export function ContactCard({
                                 </Button>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={`More actions for ${getContactName()}`}>
                                             <MoreHorizontal className="h-4 w-4" />
                                         </Button>
                                     </DropdownMenuTrigger>
@@ -177,16 +179,7 @@ export function ContactCard({
 
                         {isExpanded && (
                             <div className="mt-4 -mx-4 px-4 py-4 border-t bg-muted/30 w-full" onClick={(e) => e.stopPropagation()}>
-                                <div className="grid gap-2 text-sm text-muted-foreground w-full">
-                                    {getAddressLine() && (
-                                        <div className="flex items-start gap-2">
-                                            <span className="mt-0.5 text-xs font-medium text-muted-foreground">Address</span>
-                                            <span className="text-sm">{getAddressLine()}</span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-4 pt-4 border-t w-full">
+                                <ExpandedRowActions className="w-full">
                                     <Button
                                         variant="outline"
                                         size="sm"
@@ -197,13 +190,13 @@ export function ContactCard({
                                         className="text-xs sm:text-sm"
                                     >
                                         <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                        Edit
+                                        <ExpandedRowActionLabel full="Edit contact" compact="Edit" />
                                     </Button>
                                     {contact.email && (
                                         <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm" asChild>
                                             <a href={`mailto:${contact.email}`} onClick={(e) => e.stopPropagation()}>
                                                 <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                                Email
+                                                <ExpandedRowActionLabel full="Email contact" compact="Email" />
                                             </a>
                                         </Button>
                                     )}
@@ -217,8 +210,17 @@ export function ContactCard({
                                         className="text-xs sm:text-sm"
                                     >
                                         <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                        Delete
+                                        <ExpandedRowActionLabel full="Delete contact" compact="Delete" />
                                     </Button>
+                                </ExpandedRowActions>
+
+                                <div className="grid gap-2 text-sm text-muted-foreground w-full">
+                                    {getAddressLine() && (
+                                        <div className="flex items-start gap-2">
+                                            <span className="mt-0.5 text-xs font-medium text-muted-foreground">Address</span>
+                                            <span className="text-sm">{getAddressLine()}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}

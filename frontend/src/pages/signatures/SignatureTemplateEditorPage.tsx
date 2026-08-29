@@ -1,18 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Plus, UploadCloud, Save, FileSignature } from 'lucide-react';
+import { FileSignature, MousePointer2, Plus, Save, Trash2, UploadCloud, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { ShellBackButton } from '@/components/layout/ShellBackButton';
 import { HeaderAction } from '@/components/layout/DesktopHeaderTools';
+import { EntityDetailHeader } from '@/components/layout/EntityDetailHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { CardGridSkeleton } from '@/components/ui/loading-skeletons';
+import { SectionCardTitle } from '@/components/ui/section-card-title';
 import { useToast } from '@/hooks/use-toast';
 import { useDirtyState } from '@/hooks/useDirtyState';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
@@ -25,7 +27,9 @@ import {
   uploadSignatureTemplate
 } from '@/services/signaturesApi';
 import FieldPlacementCanvas from './components/FieldPlacementCanvas';
+import { getTemplateReadinessVisual } from './constants/signatureConstants';
 import { getApiUrl } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 export default function SignatureTemplateEditorPage() {
   const navigate = useNavigate();
@@ -136,9 +140,12 @@ export default function SignatureTemplateEditorPage() {
     setRoles((prev) => prev.filter((_, idx) => idx !== index));
   };
 
+  const readinessVisual = getTemplateReadinessVisual(Boolean(template?.is_ready));
+  const ReadinessIcon = readinessVisual.icon;
+
   return (
     <PageLayout
-      title="EDIT TEMPLATE"
+      title="TEMPLATE"
       icon={<FileSignature className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
       leading={
         <ShellBackButton label="Back to templates" onClick={() => {
@@ -146,6 +153,11 @@ export default function SignatureTemplateEditorPage() {
         }} />
       }
       desktopTools={{
+        status: template ? (
+          <Badge className={cn('pointer-events-none whitespace-nowrap', readinessVisual.badgeClass)}>
+            {readinessVisual.label}
+          </Badge>
+        ) : undefined,
         primaryAction: (
           <HeaderAction
             label="Save template"
@@ -172,10 +184,27 @@ export default function SignatureTemplateEditorPage() {
             <CardGridSkeleton count={2} columns={2} height="h-80" />
           ) : (
           <>
+          {template ? (
+            <EntityDetailHeader
+              icon={<ReadinessIcon className={cn('h-6 w-6', readinessVisual.iconClass)} />}
+              iconClassName={readinessVisual.iconBackgroundClass}
+              title={title || 'Untitled template'}
+              mobileStatus={(
+                <Badge className={readinessVisual.badgeClass}>{readinessVisual.label}</Badge>
+              )}
+              metadata={(
+                <>
+                  <span>{template.file_name || (template.file_url ? 'PDF attached' : 'PDF needed')}</span>
+                  <span>{roles.length} role{roles.length === 1 ? '' : 's'}</span>
+                  <span>{fields.length} field{fields.length === 1 ? '' : 's'}</span>
+                </>
+              )}
+            />
+          ) : null}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Template Details</CardTitle>
+                <SectionCardTitle icon={FileSignature}>Template settings</SectionCardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -190,10 +219,10 @@ export default function SignatureTemplateEditorPage() {
                   <Label htmlFor="message">Message</Label>
                   <Textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} />
                 </div>
-                <Separator />
-                <div className="space-y-2">
-                  <Label>Upload PDF</Label>
+                <div className="space-y-2 rounded-lg border p-3">
+                  <Label htmlFor="template-pdf">PDF</Label>
                   <Input
+                    id="template-pdf"
                     type="file"
                     accept="application/pdf"
                     onChange={(e) => setFile(e.target.files?.[0] || null)}
@@ -208,7 +237,7 @@ export default function SignatureTemplateEditorPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Roles</CardTitle>
+                <SectionCardTitle icon={Users}>Roles</SectionCardTitle>
                 <Button variant="outline" size="sm" onClick={addRole}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add
@@ -232,8 +261,14 @@ export default function SignatureTemplateEditorPage() {
                       value={role.signing_order || 1}
                       onChange={(e) => updateRole(index, { signing_order: Number(e.target.value) })}
                     />
-                    <Button variant="ghost" size="sm" onClick={() => removeRole(index)}>
-                      Remove
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="ml-auto h-9 w-9 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
+                      aria-label={`Remove ${role.role_name || `role ${index + 1}`}`}
+                      onClick={() => removeRole(index)}
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
@@ -243,7 +278,7 @@ export default function SignatureTemplateEditorPage() {
 
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Field Placement</CardTitle>
+              <SectionCardTitle icon={MousePointer2}>Field placement</SectionCardTitle>
             </CardHeader>
             <CardContent>
               <FieldPlacementCanvas

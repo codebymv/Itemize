@@ -146,4 +146,14 @@ describe('buildLandingPageDocument', () => {
 
     expect(html.match(/class="lp-section"/g)).toHaveLength(types.length);
   });
+
+  it('uses the canonical short route for embedded form links', () => {
+    const html = buildLandingPageDocument(
+      page([section('form', { heading: 'Contact us', form_id: 'frm_public' })]),
+      'https://itemize.cloud',
+    );
+
+    expect(html).toContain('href="/f/frm_public"');
+    expect(html).not.toContain('href="/form/frm_public"');
+  });
 });

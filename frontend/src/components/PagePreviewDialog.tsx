@@ -1,19 +1,18 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Monitor, QrCode, Share2, Smartphone, Tablet } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Monitor, QrCode, Share2, Smartphone, Tablet, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { Page } from '@/services/pagesApi';
 import { getPageVersion, type PageVersion } from '@/services/pageVersionsApi';
-import {
-  buildLandingPageDocument,
-  type LandingPageDocument,
-} from '@/lib/landingPageDocument';
+import type { LandingPageDocument } from '@/lib/landingPageDocument';
+import { LandingPagePreviewFrame } from '@/components/LandingPagePreviewFrame';
 
 type Device = 'desktop' | 'tablet' | 'mobile';
 
@@ -81,14 +80,6 @@ export function PagePreviewDialog({
       ? versionDocument(page, version)
       : null
     : page;
-  const documentHtml = useMemo(
-    () =>
-      previewPage
-        ? buildLandingPageDocument(previewPage, window.location.origin)
-        : '',
-    [previewPage],
-  );
-
   const deviceWidths: Record<Device, string> = {
     desktop: '100%',
     tablet: '768px',
@@ -112,26 +103,28 @@ export function PagePreviewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl h-[90vh] p-0 flex flex-col">
-        <DialogHeader className="px-4 py-3 border-b">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <DialogTitle className="text-lg font-semibold">
+      <DialogContent hideCloseButton className="flex h-[90vh] max-w-7xl flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="shrink-0 border-b px-4 py-3">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex min-w-0 items-center gap-3">
+              <DialogTitle className="truncate text-lg font-semibold">
                 {page.name}
               </DialogTitle>
-              <Badge variant="outline" className="text-xs">
-                {versionId ? 'Version Preview' : 'Live Preview'}
+              <Badge variant="outline" className="shrink-0 text-xs">
+                {versionId ? 'Version preview' : page.status === 'published' ? 'Live preview' : 'Draft preview'}
               </Badge>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 w-full items-center gap-2 sm:ml-auto sm:w-auto sm:shrink-0">
               <DeviceSelector device={device} onChange={setDevice} />
-              {!versionId && (
+              {!versionId && page.status === 'published' && (
                 <>
                   <Button
                     variant="outline"
                     size="icon"
                     onClick={copyLink}
                     title="Copy public link"
+                    aria-label="Copy public link"
+                    className="h-10 w-10 shrink-0"
                   >
                     <Share2 className="h-4 w-4" />
                   </Button>
@@ -140,11 +133,24 @@ export function PagePreviewDialog({
                     size="icon"
                     onClick={generateQRCode}
                     title="Public page QR code"
+                    aria-label="Open public page QR code"
+                    className="h-10 w-10 shrink-0"
                   >
                     <QrCode className="h-4 w-4" />
                   </Button>
                 </>
               )}
+              <DialogClose asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 shrink-0"
+                  aria-label="Close page preview"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </DialogClose>
             </div>
           </div>
         </DialogHeader>
@@ -162,13 +168,7 @@ export function PagePreviewDialog({
                 {error}
               </div>
             ) : (
-              <iframe
-                srcDoc={documentHtml}
-                className="w-full h-full border-0"
-                title={`${page.name} preview`}
-                sandbox="allow-forms allow-popups allow-scripts"
-                referrerPolicy="no-referrer"
-              />
+              previewPage && <LandingPagePreviewFrame page={previewPage} title={`${page.name} preview`} />
             )}
           </div>
         </div>
@@ -191,14 +191,15 @@ function DeviceSelector({
   ];
 
   return (
-    <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+    <div className="flex min-w-0 flex-1 items-center gap-1 rounded-lg bg-muted/50 p-1 sm:flex-none">
       {options.map(({ value, label, icon: Icon }) => (
         <Button
           key={value}
           variant={device === value ? 'default' : 'ghost'}
           size="sm"
           onClick={() => onChange(value)}
-          className="gap-2 h-8 px-3"
+          className="h-8 min-w-0 flex-1 gap-2 px-2 sm:flex-none sm:px-3"
+          aria-label={`${label} preview`}
         >
           <Icon className="h-4 w-4" />
           <span className="hidden sm:inline">{label}</span>

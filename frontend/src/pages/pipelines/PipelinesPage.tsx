@@ -32,6 +32,7 @@ import { KanbanBoard } from './components/KanbanBoard';
 import { CreateDealModal } from './components/CreateDealModal';
 import { CreatePipelineModal } from './components/CreatePipelineModal';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import {
   HeaderAction,
   HeaderActionLabel,
@@ -471,7 +472,7 @@ export function PipelinesPage() {
     return (
       <PageLayout
         title="PIPELINES"
-        icon={<Kanban className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+        icon={<Kanban className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
       >
         <ErrorState
           title="CRM Not Ready"
@@ -525,39 +526,35 @@ export function PipelinesPage() {
       }}
       mobileActions={
         hasPipelines ? (
-          <>
-            <div className="flex items-center gap-2 w-full">
+          <MobileQueryBar
+            search={
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
+                  aria-label="Search deals"
                   placeholder="Search deals..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 h-9 w-full bg-muted/20 border-border/50"
                 />
               </div>
-              <Button
-                size="icon"
-                className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
-                onClick={() => activePipelineId !== null && openCreateDeal(activePipelineId)}
-                aria-label="Add deal"
+            }
+            filters={
+              <HeaderCombinedQuery
+                label="Search deals and select primary pipeline"
+                placeholder="Search deals..."
+                value={searchQuery}
+                onChange={setSearchQuery}
+                activeCount={Number(Boolean(searchQuery.trim()))}
               >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex items-center gap-2 w-full">
-              <Select
-                value={activePipelineId?.toString() || ''}
-                onValueChange={(v) => setSelectedPipelineId(parseInt(v))}
-              >
-                <SelectTrigger className="flex-1 h-9" aria-label="Select primary pipeline">
-                  <SelectValue placeholder="Select primary pipeline" />
-                </SelectTrigger>
-                <SelectContent>{pipelineOptions()}</SelectContent>
-              </Select>
+                {pipelineSelect(true)}
+              </HeaderCombinedQuery>
+            }
+            actions={
+              <>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-9 w-9">
+                  <Button variant="outline" size="icon" className="h-11 w-11" aria-label="Pipeline actions">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -584,8 +581,17 @@ export function PipelinesPage() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </div>
-          </>
+              <Button
+                size="icon"
+                className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700"
+                onClick={() => activePipelineId !== null && openCreateDeal(activePipelineId)}
+                aria-label="Add deal"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+              </>
+            }
+          />
         ) : (
           renderNewPipelineButton()
         )

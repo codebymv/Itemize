@@ -7,6 +7,7 @@ import { PG_POOL } from '../database/database.module';
 
 export type CampaignDeliveryPayload = {
   subject: string;
+  preheader?: string | null;
   html: string;
   text: string | null;
   fromName: string | null;
@@ -58,14 +59,15 @@ export class CampaignSendRepository {
         id: number; organization_id: number; status: string; subject: string;
         from_name: string | null; from_email: string | null; reply_to: string | null;
         content_html: string | null; content_text: string | null;
-        template_html: string | null; template_text: string | null;
+        template_html: string | null; template_text: string | null; template_preheader: string | null;
         segment_type: string; segment_id: number | null; segment_filter: unknown;
         tag_ids: number[] | null; excluded_tag_ids: number[] | null;
       }>(
         `SELECT c.id, c.organization_id, c.status, c.subject, c.from_name, c.from_email,
                 c.reply_to, c.content_html, c.content_text, c.segment_type, c.segment_id,
                 c.segment_filter, c.tag_ids, c.excluded_tag_ids,
-                et.body_html AS template_html, et.body_text AS template_text
+                et.body_html AS template_html, et.body_text AS template_text,
+                et.preheader AS template_preheader
          FROM email_campaigns c
          LEFT JOIN email_templates et
            ON et.id=c.template_id AND et.organization_id=c.organization_id
@@ -144,6 +146,7 @@ export class CampaignSendRepository {
 
       const payload: CampaignDeliveryPayload = {
         subject: campaign.subject,
+        preheader: campaign.template_preheader,
         html: campaign.content_html ?? campaign.template_html ?? '',
         text: campaign.content_text ?? campaign.template_text,
         fromName: campaign.from_name,
@@ -301,8 +304,38 @@ export class CampaignSendRepository {
   }
 
   async claim(organizationId: number, recipientId: number): Promise<ClaimedCampaignRecipient | null> {
-    const result = await this.pool.query<ClaimedCampaignRecipient>(
-      `UPDATE campaign_recipients recipient SET
+    return this.transaction(async (client) => {
+      const suppressed = await client.query<{ delivery_job_id: number }>(
+        `UPDATE campaign_recipients recipient SET
+           delivery_status='suppressed',
+           status=CASE WHEN contact.email_unsubscribed THEN 'unsubscribed' ELSE 'bounced' END,
+           suppression_reason=CASE WHEN contact.email_unsubscribed THEN 'unsubscribed' ELSE 'bounced' END,
+           suppressed_at=COALESCE(suppressed_at,CURRENT_TIMESTAMP),
+           unsubscribed_at=CASE WHEN contact.email_unsubscribed
+             THEN COALESCE(recipient.unsubscribed_at,CURRENT_TIMESTAMP)
+             ELSE recipient.unsubscribed_at END,
+           updated_at=CURRENT_TIMESTAMP
+         FROM contacts contact, email_campaigns campaign
+         WHERE recipient.id=$1 AND recipient.organization_id=$2
+           AND contact.id=recipient.contact_id
+           AND contact.organization_id=recipient.organization_id
+           AND campaign.id=recipient.campaign_id
+           AND campaign.organization_id=recipient.organization_id
+           AND campaign.status='sending'
+           AND recipient.delivery_job_id IS NOT NULL
+           AND recipient.delivery_status IN ('queued','retry')
+           AND (COALESCE(contact.email_unsubscribed,FALSE)=TRUE
+             OR COALESCE(contact.email_bounced,FALSE)=TRUE)
+         RETURNING recipient.delivery_job_id`,
+        [recipientId, organizationId],
+      );
+      if (suppressed.rows[0]) {
+        await this.finalize(client, Number(suppressed.rows[0].delivery_job_id));
+        return null;
+      }
+
+      const result = await client.query<ClaimedCampaignRecipient>(
+        `UPDATE campaign_recipients recipient SET
          delivery_status='processing', delivery_attempt_count=delivery_attempt_count+1,
          delivery_lease_expires_at=CURRENT_TIMESTAMP + INTERVAL '30 seconds',
          delivery_claimed_by=$3, updated_at=CURRENT_TIMESTAMP
@@ -321,16 +354,17 @@ export class CampaignSendRepository {
        RETURNING recipient.id, recipient.organization_id, recipient.campaign_id,
          recipient.delivery_job_id, recipient.email, recipient.first_name, recipient.last_name,
          recipient.delivery_attempt_count, job.payload`,
-      [recipientId, organizationId, `nest:${process.pid}`],
-    );
-    if (result.rows[0]) {
-      await this.pool.query(
+        [recipientId, organizationId, `nest:${process.pid}`],
+      );
+      if (result.rows[0]) {
+        await client.query(
         `UPDATE campaign_delivery_jobs SET status='processing', updated_at=CURRENT_TIMESTAMP
          WHERE id=$1 AND status='queued'`,
-        [result.rows[0].delivery_job_id],
-      );
-    }
-    return result.rows[0] ?? null;
+          [result.rows[0].delivery_job_id],
+        );
+      }
+      return result.rows[0] ?? null;
+    });
   }
 
   async complete(
@@ -377,11 +411,13 @@ export class CampaignSendRepository {
   private async finalize(client: PoolClient, jobId: number): Promise<void> {
     const counts = await client.query<{
       campaign_id: number; active: number; sent: number; ambiguous: number;
+      unsubscribed: number;
     }>(
       `SELECT job.campaign_id,
          COUNT(*) FILTER (WHERE recipient.delivery_status IN ('queued','processing','retry'))::int active,
          COUNT(*) FILTER (WHERE recipient.delivery_status='sent')::int sent,
-         COUNT(*) FILTER (WHERE recipient.delivery_status='reconciliation_required')::int ambiguous
+         COUNT(*) FILTER (WHERE recipient.delivery_status='reconciliation_required')::int ambiguous,
+         COUNT(*) FILTER (WHERE recipient.status='unsubscribed')::int unsubscribed
        FROM campaign_delivery_jobs job
        JOIN campaign_recipients recipient ON recipient.delivery_job_id=job.id
        WHERE job.id=$1 GROUP BY job.campaign_id`,
@@ -390,9 +426,10 @@ export class CampaignSendRepository {
     const row = counts.rows[0];
     if (!row) throw new Error('Campaign delivery job has no recipients');
     await client.query(
-      `UPDATE email_campaigns SET total_sent=$2, updated_at=CURRENT_TIMESTAMP
+      `UPDATE email_campaigns SET total_sent=$2, total_unsubscribed=$3,
+         updated_at=CURRENT_TIMESTAMP
        WHERE id=$1`,
-      [row.campaign_id, row.sent],
+      [row.campaign_id, row.sent, row.unsubscribed],
     );
     if (Number(row.active) > 0) return;
     const ambiguous = Number(row.ambiguous) > 0;

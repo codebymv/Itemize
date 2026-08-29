@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -14,6 +15,7 @@ import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { ListRowSkeleton } from '@/components/ui/loading-skeletons';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expanded-row';
 import { useToast } from '@/hooks/use-toast';
 import FieldPlacementCanvas from './components/FieldPlacementCanvas';
 import {
@@ -187,17 +189,21 @@ export default function SignatureTemplatesPage() {
         ),
       }}
       mobileActions={
-        <>
-          <div className="flex w-full items-center gap-2">
+        <MobileQueryBar
+          search={
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
+                aria-label="Search signature templates"
                 placeholder="Search templates..."
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 className="h-11 w-full border-border/50 bg-muted/20 pl-10"
               />
             </div>
+          }
+          filters={<HeaderCombinedQuery label="Search and filter templates" placeholder="Search templates..." value={searchQuery} onChange={setSearchQuery} activeCount={queryCount}>{readinessSelect(true)}</HeaderCombinedQuery>}
+          actions={
             <Button
               size="icon"
               aria-label="New template"
@@ -207,9 +213,8 @@ export default function SignatureTemplatesPage() {
             >
               <Plus className="h-4 w-4" />
             </Button>
-          </div>
-          {readinessSelect(true)}
-        </>
+          }
+        />
       }
     >
           {!loadError && (
@@ -345,6 +350,51 @@ export default function SignatureTemplatesPage() {
 
                         {isExpanded && (
                           <div className="bg-muted/30 border-t px-6 py-6">
+                            <ExpandedRowActions>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/templates/${template.id}`);
+                                }}
+                                className="text-xs sm:text-sm"
+                              >
+                                <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                <ExpandedRowActionLabel full="View template" compact="View" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (template.is_ready) handleUseTemplate(template.id);
+                                  else navigate(`/templates/${template.id}`);
+                                }}
+                              >
+                                {template.is_ready ? (
+                                  <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                ) : (
+                                  <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                )}
+                                <ExpandedRowActionLabel
+                                  full={template.is_ready ? 'Use Template' : 'Finish Setup'}
+                                  compact={template.is_ready ? 'Use' : 'Finish'}
+                                />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus:text-destructive text-xs sm:text-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteTemplateId(template.id);
+                                }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                <ExpandedRowActionLabel full="Delete template" compact="Delete" />
+                              </Button>
+                            </ExpandedRowActions>
                             {loadingPreview ? (
                               <div className="flex items-center justify-center py-8 text-muted-foreground">
                                 Loading preview...
@@ -376,48 +426,6 @@ export default function SignatureTemplatesPage() {
                                   </div>
                                 )}
 
-                                <div className="flex flex-wrap justify-center gap-2 border-t pt-4 sm:gap-3">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/templates/${template.id}`);
-                                  }}
-                                  className="text-xs sm:text-sm"
-                                >
-                                  <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                  View
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (template.is_ready) handleUseTemplate(template.id);
-                                    else navigate(`/templates/${template.id}`);
-                                  }}
-                                >
-                                  {template.is_ready ? (
-                                    <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                  ) : (
-                                    <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                  )}
-                                  {template.is_ready ? 'Use Template' : 'Finish Setup'}
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus:text-destructive text-xs sm:text-sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setDeleteTemplateId(template.id);
-                                  }}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                  Delete
-                                </Button>
-                              </div>
                               </div>
                             ) : null}
                           </div>

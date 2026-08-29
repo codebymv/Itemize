@@ -6,14 +6,20 @@ import {
     Copy,
     ExternalLink,
     FileText,
+    Eye,
+    EyeOff,
     Loader2,
+    MoreHorizontal,
     Plus,
     Save,
+    Settings2,
+    ListPlus,
+    Inbox,
     Trash2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -28,6 +34,12 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -39,6 +51,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { ShellBackButton } from '@/components/layout/ShellBackButton';
+import { EntityDetailHeader } from '@/components/layout/EntityDetailHeader';
+import { HeaderAction, HeaderActionLabel } from '@/components/layout/DesktopHeaderTools';
+import { SectionCardTitle } from '@/components/ui/section-card-title';
 import { ErrorState } from '@/components/ErrorState';
 import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/hooks/use-toast';
@@ -58,6 +73,9 @@ import type {
     FormFieldType,
     FormSubmission,
 } from '@/types';
+import { getContentStatusVisual } from '@/pages/contentVisuals';
+import { cn } from '@/lib/utils';
+import { publicFormPath } from '@/lib/publicContentRoutes';
 
 const FIELD_TYPES: Array<{ value: FormFieldType; label: string }> = [
     { value: 'text', label: 'Short text' },
@@ -268,7 +286,7 @@ export default function FormEditorPage() {
         }
     }, [activeTab, loadSubmissions]);
 
-    const publicPath = form ? `/form/${form.public_id || form.slug}` : '';
+    const publicPath = form ? publicFormPath(form.public_id || form.slug) : '';
     const publicUrl = form ? `${window.location.origin}${publicPath}` : '';
 
     const copyPublicLink = async () => {
@@ -466,36 +484,11 @@ export default function FormEditorPage() {
         />
     );
 
-    const formActions = !form ? null : (
-        <>
-            <Button variant="outline" onClick={() => void copyPublicLink()}>
-                <Copy className="h-4 w-4 mr-2" />
-                Copy link
-            </Button>
-            {form.status === 'published' && (
-                <Button variant="outline" asChild>
-                    <a href={publicPath} target="_blank" rel="noreferrer">
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Preview
-                    </a>
-                </Button>
-            )}
-            <Button
-                variant={form.status === 'published' ? 'outline' : 'default'}
-                onClick={() => void changeStatus()}
-                disabled={changingStatus || settingsDirty || fieldsDirty}
-            >
-                {changingStatus && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {form.status === 'published' ? 'Unpublish' : 'Publish'}
-            </Button>
-        </>
-    );
-
     if (loading || organizationLoading) {
         return (
             <PageLayout
-                title="Form editor"
-                icon={<FileText className="h-5 w-5 text-blue-600 shrink-0" />}
+                title="FORM"
+                icon={<FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
                 leading={backButton}
             >
                 <div className="space-y-4">
@@ -510,8 +503,8 @@ export default function FormEditorPage() {
     if (error || !form || !settings) {
         return (
             <PageLayout
-                title="Form editor"
-                icon={<FileText className="h-5 w-5 text-blue-600 shrink-0" />}
+                title="FORM"
+                icon={<FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
                 leading={backButton}
             >
                 <ErrorState
@@ -523,20 +516,71 @@ export default function FormEditorPage() {
         );
     }
 
+    const statusVisual = getContentStatusVisual(form.status);
+    const StatusIcon = statusVisual.icon;
+    const moreActions = (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-11 min-w-11 gap-2 px-3 font-light" aria-label="Form actions">
+                    <MoreHorizontal className="h-4 w-4" />
+                    <HeaderActionLabel>More</HeaderActionLabel>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => void copyPublicLink()} className="group/menu">
+                    <Copy className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                    Copy link
+                </DropdownMenuItem>
+                {form.status === 'published' && (
+                    <DropdownMenuItem asChild className="group/menu">
+                        <a href={publicPath} target="_blank" rel="noreferrer">
+                            <ExternalLink className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                            Preview form
+                        </a>
+                    </DropdownMenuItem>
+                )}
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+    const publishAction = (
+        <Button variant="outline" className="h-11 min-w-11 gap-2 px-3 font-light" onClick={() => void changeStatus()} disabled={changingStatus || settingsDirty || fieldsDirty} aria-label={form.status === 'published' ? 'Unpublish form' : 'Publish form'}>
+            {changingStatus ? <Loader2 className="h-4 w-4 animate-spin" /> : form.status === 'published' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            <span className="hidden xl:inline">{form.status === 'published' ? 'Unpublish' : 'Publish'}</span>
+        </Button>
+    );
+    const saveActive = activeTab === 'settings'
+        ? () => void saveSettings()
+        : activeTab === 'fields'
+            ? () => void saveFields()
+            : undefined;
+    const saveDisabled = activeTab === 'settings'
+        ? savingSettings || !settingsDirty
+        : activeTab === 'fields'
+            ? savingFields || !fieldsDirty
+            : true;
+    const savingActive = activeTab === 'settings' ? savingSettings : savingFields;
+    const saveLabel = activeTab === 'fields' ? 'Save fields' : 'Save settings';
+
     return (
         <PageLayout
-            title="FORM EDITOR"
-            icon={<FileText className="h-5 w-5 text-blue-600 shrink-0" />}
+            title="FORM"
+            icon={<FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
             leading={backButton}
-            pageActions={formActions}
-            mobileActions={formActions}
+            desktopTools={{
+                status: <Badge className={cn('pointer-events-none whitespace-nowrap', statusVisual.badgeClass)}>{statusVisual.label}</Badge>,
+                secondaryAction: <>{moreActions}{publishAction}</>,
+                primaryAction: saveActive ? <HeaderAction label={savingActive ? 'Saving...' : saveLabel} icon={<Save className="h-4 w-4" />} onClick={saveActive} disabled={saveDisabled} /> : undefined,
+            }}
+            mobileActions={<div className="flex w-full gap-2">{moreActions}{publishAction}{saveActive && <Button aria-label={saveLabel} className="h-11 min-w-0 flex-1 bg-blue-600 text-white hover:bg-blue-700" onClick={saveActive} disabled={saveDisabled}><Save className="mr-2 h-4 w-4" />{savingActive ? 'Saving...' : 'Save'}</Button>}</div>}
         >
-                    <div className="flex items-center gap-2 mb-1">
-                        <Badge variant={form.status === 'published' ? 'default' : 'secondary'}>
-                            {form.status}
-                        </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground truncate mb-6">{publicPath}</p>
+                    <EntityDetailHeader
+                        icon={<StatusIcon className={cn('h-6 w-6', statusVisual.iconClass)} />}
+                        iconClassName={statusVisual.iconBackgroundClass}
+                        title={form.name}
+                        mobileStatus={<Badge className={statusVisual.badgeClass}>{statusVisual.label}</Badge>}
+                        descriptor={<span className="whitespace-nowrap">{publicPath}</span>}
+                        metadata={<><span>{form.field_count || fields.length} fields</span><span>{form.submission_count || 0} submissions</span><span>{form.type === 'form' ? 'Form' : form.type === 'survey' ? 'Survey' : 'Quiz'}</span></>}
+                    />
 
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
                         <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-grid">
@@ -550,7 +594,7 @@ export default function FormEditorPage() {
                         <TabsContent value="settings" className="pt-4">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Form settings</CardTitle>
+                                    <SectionCardTitle icon={Settings2}>Form settings</SectionCardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-6">
                                     <div className="grid gap-5 md:grid-cols-2">
@@ -692,23 +736,22 @@ export default function FormEditorPage() {
                                         </div>
                                     )}
 
-                                    <div className="flex justify-end">
-                                        <Button
-                                            onClick={() => void saveSettings()}
-                                            disabled={savingSettings || !settingsDirty}
-                                        >
-                                            {savingSettings
-                                                ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                : <Save className="h-4 w-4 mr-2" />}
-                                            Save settings
-                                        </Button>
-                                    </div>
                                 </CardContent>
                             </Card>
                         </TabsContent>
 
                         <TabsContent value="fields" className="pt-4">
                             <div className="space-y-4">
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                                        <SectionCardTitle icon={ListPlus}>Form fields</SectionCardTitle>
+                                        <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={addField}>
+                                            <Plus className="mr-2 h-4 w-4" />
+                                            Add field
+                                        </Button>
+                                    </CardHeader>
+                                    {fieldValidationError && <CardContent className="pt-0 text-sm text-destructive">{fieldValidationError}</CardContent>}
+                                </Card>
                                 {fields.map((field, index) => (
                                     <Card key={field.editor_key}>
                                         <CardContent className="p-5">
@@ -846,33 +889,14 @@ export default function FormEditorPage() {
                                     </Card>
                                 ))}
 
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                    <Button variant="outline" onClick={addField}>
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Add field
-                                    </Button>
-                                    <div className="flex items-center gap-3">
-                                        {fieldValidationError && (
-                                            <p className="text-sm text-destructive">{fieldValidationError}</p>
-                                        )}
-                                        <Button
-                                            onClick={() => void saveFields()}
-                                            disabled={savingFields || !fieldsDirty}
-                                        >
-                                            {savingFields
-                                                ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                : <Save className="h-4 w-4 mr-2" />}
-                                            Save fields
-                                        </Button>
-                                    </div>
-                                </div>
                             </div>
                         </TabsContent>
 
                         <TabsContent value="submissions" className="pt-4">
                             <Card>
-                                <CardHeader>
-                                    <CardTitle>{submissionTotal} submissions</CardTitle>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                                    <SectionCardTitle icon={Inbox}>Submissions</SectionCardTitle>
+                                    <span className="text-sm text-muted-foreground">{submissionTotal} total</span>
                                 </CardHeader>
                                 <CardContent>
                                     {loadingSubmissions ? (

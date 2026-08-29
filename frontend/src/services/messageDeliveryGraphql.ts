@@ -92,11 +92,13 @@ export const sendEmailTemplateTestViaGraphql = async (
   toEmail: string,
   sampleData?: Record<string, unknown>,
   organizationId?: number,
+  useDraft = false,
 ) => {
   const input = {
     templateId,
     toEmail,
     ...(sampleData === undefined ? {} : { sampleData }),
+    ...(useDraft ? { useDraft: true } : {}),
     idempotencyKey: crypto.randomUUID(),
   };
   const data = await graphqlMutationRequest<

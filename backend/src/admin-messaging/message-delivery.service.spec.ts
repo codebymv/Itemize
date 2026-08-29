@@ -125,6 +125,38 @@ describe('MessageDeliveryService', () => {
     expect(repository.enqueueTestSms).not.toHaveBeenCalled();
   });
 
+  it('snapshots the requested draft version for an exact test send', async () => {
+    repository.enqueueTestEmail.mockImplementation(async (input, build) => {
+      expect(input.useDraft).toBe(true);
+      const payload = build({
+        id: 3,
+        name: 'Draft welcome',
+        subject: 'Draft for {{first_name}}',
+        preheader: 'Draft preview',
+        body_html: '<p class="callout-info">Draft body for {{email}}</p>',
+        body_text: 'Draft body for {{email}}',
+      }, 'Itemize');
+      return { kind: 'created', job: job({ kind: 'test_email', payload }) };
+    });
+
+    await expect(service.sendEmailTemplateTest(4, 7, {
+      templateId: 3,
+      toEmail: 'owner@example.com',
+      useDraft: true,
+      sampleData: { first_name: 'Grace', email: 'grace@example.com' },
+      idempotencyKey: 'request-key-12345',
+    })).resolves.toMatchObject({ accepted: true, replayed: false });
+
+    const queued = repository.enqueueTestEmail.mock.results[0].value;
+    await expect(queued).resolves.toMatchObject({
+      job: { payload: expect.objectContaining({ subject: '[TEST] Draft for Grace' }) },
+    });
+    const payload = (await queued as { job: { payload: { html: string; text: string } } }).job.payload;
+    expect(payload.html).toContain('TEST EMAIL');
+    expect(payload.html).toContain('Draft body for grace@example.com');
+    expect(payload.text).toBe('Draft body for grace@example.com');
+  });
+
   it('replays the same idempotency key without creating another job', async () => {
     repository.enqueueContactSms.mockResolvedValue({
       kind: 'replayed',

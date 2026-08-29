@@ -132,13 +132,16 @@ export const sendEmailToContact = async (
  * Send a test email
  */
 export const sendTestEmail = async (
-    templateId: number,
-    organizationId?: number,
-    toEmail?: string,
-    sampleData?: Record<string, string>
+  templateId: number,
+  organizationId?: number,
+  toEmail?: string,
+  sampleData?: Record<string, string>,
+  useDraft = false,
 ): Promise<SendEmailResult> => {
-    if (!toEmail) throw new Error('A destination email address is required');
-    return sendEmailTemplateTestViaGraphql(templateId, toEmail, sampleData, organizationId);
+  if (!toEmail) throw new Error('A destination email address is required');
+    return sendEmailTemplateTestViaGraphql(
+      templateId, toEmail, sampleData, organizationId, useDraft,
+    );
 };
 
 /**

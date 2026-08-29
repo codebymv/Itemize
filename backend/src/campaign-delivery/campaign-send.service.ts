@@ -8,17 +8,13 @@ import {
 import { CampaignSendRepository } from './campaign-send.repository';
 import { CampaignSendResult } from './campaign-send.types';
 import { CampaignResumeResult } from './campaign-send.types';
+import { renderEmailTemplateDocument } from '../email-templates/email-template-renderer';
+import {
+  campaignUnsubscribeToken,
+  campaignUnsubscribeUrl,
+} from './campaign-unsubscribe.token';
 
 const KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
-
-const substitute = (value: string | null, data: Record<string, string>): string | null => {
-  if (value === null) return null;
-  let result = value;
-  for (const [key, replacement] of Object.entries(data)) {
-    result = result.replace(new RegExp(`{{\\s*${key}\\s*}}`, 'gi'), () => replacement);
-  }
-  return result;
-};
 
 @Injectable()
 export class CampaignSendService {
@@ -100,14 +96,35 @@ export class CampaignSendService {
         full_name: [claimed.first_name, claimed.last_name].filter(Boolean).join(' '),
       };
       try {
+        const unsubscribeUrl = campaignUnsubscribeUrl(campaignUnsubscribeToken({
+          recipientId: claimed.id,
+          organizationId: claimed.organization_id,
+          campaignId: claimed.campaign_id,
+          email: claimed.email,
+        }));
+        const rendered = renderEmailTemplateDocument({
+          subject: claimed.payload.subject,
+          preheader: claimed.payload.preheader,
+          bodyHtml: claimed.payload.html,
+          bodyText: claimed.payload.text,
+          data: { ...data, unsubscribe_url: unsubscribeUrl },
+          footerHtml: `Sent with Itemize. <a href="${unsubscribeUrl}" style="color:#2563eb;text-decoration:underline">Unsubscribe</a>`,
+        });
         const result = await this.provider.send({
           to: claimed.email,
-          subject: substitute(claimed.payload.subject, data) ?? claimed.payload.subject,
-          html: substitute(claimed.payload.html, data) ?? '',
-          text: substitute(claimed.payload.text, data),
+          subject: rendered.subject,
+          html: rendered.html,
+          text: rendered.text
+            ? `${rendered.text}\n\nUnsubscribe: ${unsubscribeUrl}`
+            : rendered.text,
           fromName: claimed.payload.fromName,
           fromEmail: claimed.payload.fromEmail,
           replyTo: claimed.payload.replyTo,
+          headers: {
+            'List-Unsubscribe': `<${unsubscribeUrl}>`,
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+            'List-ID': `<organization-${claimed.organization_id}.campaigns.itemize.cloud>`,
+          },
           idempotencyKey: `campaign-recipient-email:${claimed.organization_id}:${claimed.id}`,
         });
         if (result.kind === 'rejected') {

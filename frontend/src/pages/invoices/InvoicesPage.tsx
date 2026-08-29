@@ -65,6 +65,7 @@ import { PaymentLinkModal } from '@/components/PaymentLinkModal';
 import { RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import {
     HeaderAction,
     HeaderCombinedQuery,
@@ -81,6 +82,7 @@ import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { getInvoiceStatusVisual } from './constants/invoiceConstants';
 import { getPaidAgeLabel, getWholeDaysSince } from './invoiceRowMetadata';
 import { InvoiceViewSelect, type InvoiceView } from './components/InvoiceViewSelect';
+import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expanded-row';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
     if (error && typeof error === 'object') {
@@ -707,35 +709,35 @@ export function InvoicesPage() {
                 ),
             }}
             mobileActions={
-                <>
-                <div className="flex items-center gap-2 w-full">
+                <MobileQueryBar
+                  search={
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
+                            aria-label="Search invoices"
                             placeholder="Search invoices..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
                         />
                     </div>
+                  }
+                  filters={
+                    <HeaderCombinedQuery label="Search and filter invoices" placeholder="Search invoices..." value={searchQuery} onChange={setSearchQuery} activeCount={headerQueryCount}>
+                      <div className="space-y-2"><InvoiceViewSelect value="invoices" onValueChange={handleInvoiceViewChange} compact />{statusFilter(true)}</div>
+                    </HeaderCombinedQuery>
+                  }
+                  actions={
                     <Button
-                        size="sm"
+                        size="icon"
                         aria-label="New invoice"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700"
                         onClick={handleCreateInvoice}
                     >
                         <Plus className="h-4 w-4" />
                     </Button>
-                </div>
-                <div className="grid w-full grid-cols-2 gap-2">
-                    <InvoiceViewSelect
-                        value="invoices"
-                        onValueChange={handleInvoiceViewChange}
-                        compact
-                    />
-                    {statusFilter(true)}
-                </div>
-                </>
+                  }
+                />
             }
         >
             <OnboardingModal
@@ -1005,6 +1007,98 @@ export function InvoicesPage() {
                                         {/* Expanded Preview */}
                                         {isExpanded && (
                                             <div className="bg-muted/30 border-t px-6 py-6">
+                                                <ExpandedRowActions>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            navigate(`/invoices/${invoice.id}`);
+                                                        }}
+                                                        className="text-xs sm:text-sm"
+                                                    >
+                                                        <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                                        <ExpandedRowActionLabel full="Edit invoice" compact="Edit" />
+                                                    </Button>
+                                                    {invoice.status === 'draft' && (
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleOpenSendModal(invoice, false);
+                                                            }}
+                                                        >
+                                                            <Send className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
+                                                            <ExpandedRowActionLabel full="Send Invoice" compact="Send" />
+                                                        </Button>
+                                                    )}
+                                                    {['sent', 'viewed', 'partial', 'overdue'].includes(invoice.status) && (
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleOpenSendModal(invoice, true);
+                                                            }}
+                                                        >
+                                                            <RefreshCw className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
+                                                            <ExpandedRowActionLabel full="Resend Invoice" compact="Resend" />
+                                                        </Button>
+                                                    )}
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={(e) => handleDownloadPdf(invoice, e)}
+                                                        disabled={downloadingInvoiceId !== null}
+                                                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                                    >
+                                                        {downloadingInvoiceId === invoice.id
+                                                            ? <Loader2 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2 animate-spin" />
+                                                            : <Download className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />}
+                                                        <ExpandedRowActionLabel full="Download PDF" compact="Download" />
+                                                    </Button>
+                                                    {invoice.amount_due > 0 && !['cancelled', 'refunded', 'paid'].includes(invoice.status) && (
+                                                        <>
+                                                            <Button
+                                                                size="sm"
+                                                                onClick={(e) => handleOpenPaymentModal(invoice, e)}
+                                                                className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                                            >
+                                                                <Wallet className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
+                                                                <ExpandedRowActionLabel full="Record Payment" compact="Record" />
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                onClick={(e) => handleCreatePaymentLink(invoice, e)}
+                                                                className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                                            >
+                                                                <CreditCard className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
+                                                                <ExpandedRowActionLabel full="Payment Link" compact="Link" />
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                    {!['cancelled', 'refunded'].includes(invoice.status)
+                                                        && !invoice.is_recurring_source
+                                                        && !invoice.recurring_template_id && (
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={(e) => handleOpenRecurringModal(invoice, e)}
+                                                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                                        >
+                                                            <Repeat className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
+                                                            <ExpandedRowActionLabel full="Make Recurring" compact="Recur" />
+                                                        </Button>
+                                                    )}
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus:text-destructive text-xs sm:text-sm"
+                                                        onClick={(e) => handleDeleteClick(invoice, e)}
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                                        <ExpandedRowActionLabel full="Delete invoice" compact="Delete" />
+                                                    </Button>
+                                                </ExpandedRowActions>
                                                 {loadingPreview ? (
                                                     <div className="flex items-center justify-center py-12">
                                                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -1038,106 +1132,6 @@ export function InvoicesPage() {
                                                             termsAndConditions={expandedInvoiceData.terms_and_conditions}
                                                         />
 
-                                                        {/* Action Buttons */}
-                                                        <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-6 pt-4 border-t">
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    navigate(`/invoices/${invoice.id}`);
-                                                                }}
-                                                                className="text-xs sm:text-sm"
-                                                            >
-                                                                <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                                                <span className="hidden xs:inline">Edit</span>
-                                                                <span className="xs:hidden">Edit</span>
-                                                            </Button>
-                                                            {invoice.status === 'draft' && (
-                                                                <Button
-                                                                    size="sm"
-                                                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleOpenSendModal(invoice, false);
-                                                                    }}
-                                                                >
-                                                                    <Send className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
-                                                                    <span className="hidden md:inline">Send Invoice</span>
-                                                                    <span className="md:hidden">Send</span>
-                                                                </Button>
-                                                            )}
-                                                            {['sent', 'viewed', 'partial', 'overdue'].includes(invoice.status) && (
-                                                                <Button
-                                                                    size="sm"
-                                                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleOpenSendModal(invoice, true);
-                                                                    }}
-                                                                >
-                                                                    <RefreshCw className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
-                                                                    <span className="hidden md:inline">Resend Invoice</span>
-                                                                    <span className="md:hidden">Resend</span>
-                                                                </Button>
-                                                            )}
-                                                            <Button 
-                                                                size="sm"
-                                                                onClick={(e) => handleDownloadPdf(invoice, e)}
-                                                                disabled={downloadingInvoiceId !== null}
-                                                                className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
-                                                            >
-                                                                {downloadingInvoiceId === invoice.id
-                                                                    ? <Loader2 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2 animate-spin" />
-                                                                    : <Download className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />}
-                                                                <span className="hidden md:inline">Download PDF</span>
-                                                                <span className="md:hidden">PDF</span>
-                                                            </Button>
-                                                            {invoice.amount_due > 0 && !['cancelled', 'refunded', 'paid'].includes(invoice.status) && (
-                                                                <>
-                                                                    <Button
-                                                                        size="sm"
-                                                                        onClick={(e) => handleOpenPaymentModal(invoice, e)}
-                                                                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
-                                                                    >
-                                                                        <Wallet className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
-                                                                        <span className="hidden md:inline">Record Payment</span>
-                                                                        <span className="md:hidden">Payment</span>
-                                                                    </Button>
-                                                                    <Button
-                                                                        size="sm"
-                                                                        onClick={(e) => handleCreatePaymentLink(invoice, e)}
-                                                                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
-                                                                    >
-                                                                        <CreditCard className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
-                                                                        <span className="hidden md:inline">Payment Link</span>
-                                                                        <span className="md:hidden">Link</span>
-                                                                    </Button>
-                                                                </>
-                                                            )}
-                                                            {!['cancelled', 'refunded'].includes(invoice.status)
-                                                                && !invoice.is_recurring_source
-                                                                && !invoice.recurring_template_id && (
-                                                                <Button
-                                                                    size="sm"
-                                                                    onClick={(e) => handleOpenRecurringModal(invoice, e)}
-                                                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
-                                                                >
-                                                                    <Repeat className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
-                                                                    <span className="hidden md:inline">Make Recurring</span>
-                                                                    <span className="md:hidden">Recurring</span>
-                                                                </Button>
-                                                            )}
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus:text-destructive text-xs sm:text-sm"
-                                                                onClick={(e) => handleDeleteClick(invoice, e)}
-                                                            >
-                                                                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                                                Delete
-                                                            </Button>
-                                                        </div>
                                                     </div>
                                                 ) : null}
                                             </div>

@@ -387,7 +387,7 @@ export function KanbanBoard({
                           </h4>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 -mt-1 -mr-1">
+                              <Button variant="ghost" size="icon" className="-mr-1 -mt-1 h-9 w-9" aria-label={`More actions for ${deal.title}`}>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>

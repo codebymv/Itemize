@@ -1,6 +1,6 @@
 import { isIP } from 'node:net';
 import ipaddr from 'ipaddr.js';
-import { brandedTransactionalEmail } from '../common/branded-transactional-email';
+import { renderEmailTemplateDocument } from '../email-templates/email-template-renderer';
 
 export type JsonRecord = Record<string, unknown>;
 
@@ -25,43 +25,9 @@ export const workflowTemplateData = (contact: JsonRecord, context: unknown = {})
   ...asRecord(context),
 });
 
-const workflowEmailClassStyles: Record<string, string> = {
-  'button-primary': 'display:inline-block;background:linear-gradient(135deg,#2563eb 0%,#4f46e5 100%);color:white!important;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin:10px 0',
-  'button-secondary': 'display:inline-block;background-color:#f1f5f9;color:#475569!important;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin:10px 0',
-  'callout-info': 'background-color:#eff6ff;border-left:4px solid #2563eb;padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0',
-  'callout-success': 'background-color:#f0fdf4;border-left:4px solid #22c55e;padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0',
-  'callout-warning': 'background-color:#fefce8;border-left:4px solid #eab308;padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0',
-  'callout-error': 'background-color:#fef2f2;border-left:4px solid #ef4444;padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0',
-  'callout-slate': 'background-color:#f1f5f9;border-left:4px solid #64748b;padding:16px 20px;border-radius:0 8px 8px 0;margin:20px 0',
-  'badge-blue': 'display:inline-block;background-color:#dbeafe;color:#1e40af;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600',
-  'badge-green': 'display:inline-block;background-color:#dcfce7;color:#166534;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600',
-  'badge-yellow': 'display:inline-block;background-color:#fef3c7;color:#92400e;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600',
-  'badge-red': 'display:inline-block;background-color:#fee2e2;color:#991b1b;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600',
-  'badge-slate': 'display:inline-block;background-color:#e2e8f0;color:#475569;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600',
-  'text-center': 'text-align:center', 'text-left': 'text-align:left', 'text-right': 'text-align:right',
-  'text-muted': 'color:#64748b', 'text-small': 'font-size:13px', 'text-large': 'font-size:18px',
-};
-
-const inlineWorkflowEmailClasses = (body: string): string => {
-  let result = body;
-  for (const [className, style] of Object.entries(workflowEmailClassStyles)) {
-    const expression = new RegExp(`class="([^"]*\\b${className}\\b[^"]*)"`, 'gi');
-    result = result.replace(expression, (_match, classes: string) => `class="${classes}" style="${style}"`);
-  }
-  return result;
-};
-
 export const wrapWorkflowEmail = (body: string, subject: string): string => {
   if (/<!doctype|<html/i.test(body)) return body;
-  const origin = String(process.env.PROD_URL || 'https://itemize.cloud').replace(/\/+$/, '');
-  const content = inlineWorkflowEmailClasses(body);
-  return brandedTransactionalEmail({
-    assetOrigin: origin,
-    previewText: subject,
-    heading: subject,
-    bodyHtml: content,
-    footerText: 'Sent with Itemize.',
-  });
+  return renderEmailTemplateDocument({ subject, bodyHtml: body }).html;
 };
 
 export const normalizeWorkflowPhone = (value: unknown): string => {

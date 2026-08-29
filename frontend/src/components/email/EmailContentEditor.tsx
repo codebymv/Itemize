@@ -1,10 +1,12 @@
-import { useState } from 'react';
-import { Braces } from 'lucide-react';
-import { RichTextEditor } from '@/components/admin/RichTextEditor';
+import { useState, type ReactNode } from 'react';
+import { Braces, ChevronDown, Info } from 'lucide-react';
+import { RichTextEditor } from '@/components/email/RichTextEditor';
 import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export interface EmailContentValue {
   subject: string;
@@ -17,11 +19,19 @@ interface EmailContentEditorProps {
   value: EmailContentValue;
   onChange: (value: EmailContentValue) => void;
   disabled?: boolean;
+  header?: ReactNode;
 }
 
-const variables = ['first_name', 'last_name', 'full_name', 'email', 'company', 'job_title'];
+const variables = [
+  { value: 'first_name', label: 'First name' },
+  { value: 'last_name', label: 'Last name' },
+  { value: 'full_name', label: 'Full name' },
+  { value: 'email', label: 'Email' },
+  { value: 'company', label: 'Company' },
+  { value: 'job_title', label: 'Job title' },
+];
 
-export function EmailContentEditor({ value, onChange, disabled = false }: EmailContentEditorProps) {
+export function EmailContentEditor({ value, onChange, disabled = false, header }: EmailContentEditorProps) {
   const [variableTarget, setVariableTarget] = useState<'subject' | 'preheader' | 'bodyText' | 'bodyHtml'>('bodyHtml');
   const [insertText, setInsertText] = useState('');
   const [insertTextNonce, setInsertTextNonce] = useState(0);
@@ -39,6 +49,23 @@ export function EmailContentEditor({ value, onChange, disabled = false }: EmailC
 
   return (
     <div className="space-y-5">
+      <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+        {header && <div className="min-w-0">{header}</div>}
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="outline" size="sm" disabled={disabled} className="h-9 gap-2">
+                <Braces className="h-4 w-4" />Insert variable<ChevronDown className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-60">
+              {variables.map(variable => <DropdownMenuItem key={variable.value} onSelect={() => insertVariable(variable.value)} className="flex items-center justify-between gap-4"><span>{variable.label}</span><span className="font-mono text-xs text-muted-foreground">{`{{${variable.value}}}`}</span></DropdownMenuItem>)}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Tooltip><TooltipTrigger asChild><button type="button" aria-label="About recipient variables" className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><Info className="h-4 w-4" /></button></TooltipTrigger><TooltipContent>Inserts into the field you last selected.</TooltipContent></Tooltip>
+        </div>
+      </div>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="email-subject">Subject</Label>
@@ -64,28 +91,6 @@ export function EmailContentEditor({ value, onChange, disabled = false }: EmailC
             onChange={event => update({ preheader: event.target.value })}
           />
         </div>
-      </div>
-
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <Braces className="h-3.5 w-3.5" /> Insert for this recipient
-          </span>
-          {variables.map(variable => (
-            <Button
-              key={variable}
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={disabled}
-              className="h-7 px-2 font-mono text-[11px]"
-              onClick={() => insertVariable(variable)}
-            >
-              {variable}
-            </Button>
-          ))}
-        </div>
-        <p className="text-xs text-muted-foreground">Click the subject, preview text, message, or fallback first to choose where a variable is inserted.</p>
       </div>
 
       <div className="space-y-2" onFocus={() => setVariableTarget('bodyHtml')}>

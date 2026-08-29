@@ -648,7 +648,7 @@ const CanvasPage: React.FC = () => {
   return (
     <PageLayout
       title="CANVAS"
-      icon={<MapIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      icon={<MapIcon className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
       desktopTools={createCanvasHeaderTools({
         searchQuery,
         setSearchQuery,

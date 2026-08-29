@@ -58,7 +58,7 @@ export default function FieldPlacementCanvas<TField extends FieldPlacementField>
   const pdfFile = useMemo(() => {
     if (localFile) return localFile;
     if (!resolvedUrl) return '';
-    if (documentId) {
+    if (documentId && !resolvedUrl.includes(`/api/signatures/documents/${documentId}/download`)) {
       return {
         url: `${getApiUrl()}/api/signatures/documents/${documentId}/file`,
         withCredentials: true
@@ -210,9 +210,11 @@ export default function FieldPlacementCanvas<TField extends FieldPlacementField>
               <span className="text-sm text-muted-foreground">of {numPages}</span>
             </div>
           </div>
-          <div className="text-sm text-muted-foreground">
-            Click on the canvas to place a field.
-          </div>
+          {pdfFile && (
+            <div className="text-sm text-muted-foreground">
+              Click on the canvas to place a field.
+            </div>
+          )}
         </div>
       )}
 

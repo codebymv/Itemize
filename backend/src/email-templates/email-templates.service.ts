@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { brandedTransactionalEmail, transactionalEmailAssetOrigin } from '../common/branded-transactional-email';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { PageInput, pageInfo } from '../common/pagination';
 import {
@@ -16,10 +15,9 @@ import {
 } from './email-template.types';
 import { extractEmailTemplateVariables } from './email-template.variables';
 import {
-  renderEmailHtmlVariables,
-  renderEmailTextVariables,
   sanitizeEmailTemplateHtml,
 } from './email-template-content';
+import { renderEmailTemplateDocument } from './email-template-renderer';
 import {
   EmailTemplateRow,
   EmailTemplatesRepository,
@@ -169,15 +167,13 @@ export class EmailTemplatesService {
       email: 'test@example.com', phone: '+1 555-555-0100', company: 'Example Company',
       job_title: 'Customer',
     };
-    const renderedSubject = renderEmailTextVariables(subject, sample);
-    const renderedBody = renderEmailHtmlVariables(bodyHtml, sample);
+    const rendered = renderEmailTemplateDocument({
+      subject, preheader, bodyHtml, bodyText, data: sample,
+    });
     return {
-      subject: renderedSubject,
-      html: brandedTransactionalEmail({
-        assetOrigin: transactionalEmailAssetOrigin(), previewText: renderEmailTextVariables(preheader, sample),
-        heading: renderedSubject, bodyHtml: renderedBody, footerText: 'Sent with Itemize.',
-      }),
-      text: bodyText ? renderEmailTextVariables(bodyText, sample) : null,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text,
       variables: extractEmailTemplateVariables(subject, preheader, bodyHtml, bodyText),
     };
   }

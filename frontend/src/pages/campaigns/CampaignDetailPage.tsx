@@ -75,6 +75,8 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ErrorState } from '@/components/ErrorState';
+import { EmailPreviewPane } from '@/components/email/EmailPreviewPane';
+import { EmailTemplateBrowserDialog } from '@/components/email/EmailTemplateBrowserDialog';
 import { HeaderAction, HeaderActionLabel } from '@/components/layout/DesktopHeaderTools';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { PageToolbar } from '@/components/layout/PageToolbar';
@@ -89,6 +91,7 @@ import { defineStatus } from '@/lib/statusVisuals';
 import {
   deleteCampaign,
   duplicateCampaign,
+  createCampaign,
   getCampaign,
   getCampaignRecipients,
   pauseCampaign,
@@ -135,7 +138,7 @@ type CampaignForm = {
 
 const EMPTY_FORM: CampaignForm = {
   name: '', subject: '', fromName: '', fromEmail: '', replyTo: '',
-  contentSource: 'custom', templateId: null, contentHtml: '', contentText: '',
+  contentSource: 'template', templateId: null, contentHtml: '', contentText: '',
   segmentType: 'all', segmentId: null, contactStatus: 'active', tagIds: [], excludedTagIds: [],
 };
 
@@ -199,6 +202,7 @@ const formatInteger = (value: number): string => new Intl.NumberFormat().format(
 export function CampaignDetailPage() {
   const navigate = useNavigate();
   const params = useParams<{ id: string }>();
+  const isNew = !params.id || params.id === 'new';
   const campaignId = Number(params.id);
   const { toast } = useToast();
   const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({
@@ -218,6 +222,7 @@ export function CampaignDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const [testOpen, setTestOpen] = useState(false);
+  const [templateBrowserOpen, setTemplateBrowserOpen] = useState(false);
   const [testEmail, setTestEmail] = useState('');
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('09:00');
@@ -243,7 +248,35 @@ export function CampaignDetailPage() {
 
   const loadCampaign = useCallback(async () => {
     if (orgLoading) return;
-    if (!organizationId || !Number.isSafeInteger(campaignId) || campaignId < 1) {
+    if (!organizationId) {
+      setLoading(false);
+      return;
+    }
+    if (isNew) {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const [templateResponse, nextSegments, options] = await Promise.all([
+          getEmailTemplates(organizationId),
+          getSegments({}, organizationId),
+          getFilterOptions(organizationId),
+        ]);
+        setCampaign(null);
+        setForm(EMPTY_FORM);
+        setSavedFormKey(formKey(EMPTY_FORM));
+        setTemplates(templateResponse.templates || []);
+        setSegments(nextSegments);
+        setFilterOptions(options);
+        setAudiencePreview(null);
+      } catch (error) {
+        console.error('Unable to initialize campaign editor:', error);
+        setLoadError('We could not prepare a new campaign. No campaign was created.');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+    if (!Number.isSafeInteger(campaignId) || campaignId < 1) {
       setLoadError('This campaign link is invalid.');
       setLoading(false);
       return;
@@ -273,11 +306,11 @@ export function CampaignDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [campaignId, orgLoading, organizationId, resetForm]);
+  }, [campaignId, isNew, orgLoading, organizationId, resetForm]);
 
   useEffect(() => { void loadCampaign(); }, [loadCampaign]);
 
-  const editable = campaign ? isCampaignEditable(campaign.status) : false;
+  const editable = isNew || (campaign ? isCampaignEditable(campaign.status) : false);
   const dirty = editable && formKey(form) !== savedFormKey;
 
   const loadRecipients = useCallback(async () => {
@@ -329,7 +362,7 @@ export function CampaignDetailPage() {
   };
 
   const handleSave = async () => {
-    if (!campaign || !organizationId || !editable) return;
+    if (!organizationId || !editable) return;
     if (!form.name.trim() || !form.subject.trim()) {
       toast({ title: 'Campaign details required', description: 'Add a campaign name and email subject before saving.', variant: 'destructive' });
       return;
@@ -352,7 +385,7 @@ export function CampaignDetailPage() {
     }
     setWorking(true);
     try {
-      const updated = await updateCampaign(campaign.id, {
+      const payload = {
         name: form.name.trim(),
         subject: form.subject.trim(),
         from_name: form.fromName.trim() || null,
@@ -366,11 +399,20 @@ export function CampaignDetailPage() {
         segment_filter: form.segmentType === 'status' ? { status: form.contactStatus } : {},
         tag_ids: form.segmentType === 'tag' ? form.tagIds : [],
         excluded_tag_ids: form.excludedTagIds,
-      }, organizationId);
+      };
+      const updated = campaign
+        ? await updateCampaign(campaign.id, payload, organizationId)
+        : await createCampaign({ ...payload, status: 'draft', timezone: scheduleTimezone }, organizationId);
       setCampaign(updated);
       resetForm(updated);
-      setAudiencePreview(await previewCampaign(updated.id, organizationId));
-      toast({ title: 'Campaign saved', description: 'The campaign setup is up to date.' });
+      if (!campaign) navigate(`/campaigns/${updated.id}`, { replace: true });
+      toast({ title: campaign ? 'Campaign saved' : 'Campaign created', description: 'The campaign setup is up to date.' });
+      try {
+        setAudiencePreview(await previewCampaign(updated.id, organizationId));
+      } catch {
+        setAudiencePreview(null);
+        toast({ title: 'Audience preview unavailable', description: 'The campaign was saved, but its eligible recipient count could not be refreshed.', variant: 'destructive' });
+      }
     } catch (error) {
       toast({ title: 'Unable to save campaign', description: 'Your changes remain in the editor.', variant: 'destructive' });
     } finally {
@@ -517,11 +559,11 @@ export function CampaignDetailPage() {
     return <PageLayout title="CAMPAIGN" icon={<Megaphone className="h-5 w-5 text-blue-600 dark:text-blue-400" />} leading={<ShellBackButton label="Back to campaigns" onClick={() => navigate('/campaigns')} />}><PageLoading message="Loading campaign..." /></PageLayout>;
   }
 
-  if (loadError || !campaign) {
+  if (loadError || (!isNew && !campaign)) {
     return <PageLayout title="CAMPAIGN" icon={<Megaphone className="h-5 w-5 text-blue-600 dark:text-blue-400" />} leading={<ShellBackButton label="Back to campaigns" onClick={() => navigate('/campaigns')} />}><ErrorState title="Campaign unavailable" description={loadError || 'This campaign could not be found.'} icon={Megaphone} onAction={() => void loadCampaign()} /></PageLayout>;
   }
 
-  const statusVisual = getCampaignStatusVisual(campaign.status as Campaign['status']);
+  const statusVisual = getCampaignStatusVisual((campaign?.status || 'draft') as Campaign['status']);
   const StatusIcon = statusVisual.icon;
 
   const campaignActions = (
@@ -541,29 +583,29 @@ export function CampaignDetailPage() {
         <DropdownMenuItem onClick={scrollToPreview} className="group/menu">
           <Eye className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Preview email
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTestOpen(true)} disabled={dirty} className="group/menu">
+        <DropdownMenuItem onClick={() => setTestOpen(true)} disabled={!campaign || dirty} className="group/menu">
           <Mail className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Send test
         </DropdownMenuItem>
-        {editable && <DropdownMenuItem onClick={() => void openSendConfirmation()} disabled={dirty} className="group/menu"><Send className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Send now</DropdownMenuItem>}
-        {campaign.status === 'scheduled' && <DropdownMenuItem onClick={() => void handleUnschedule()} disabled={dirty}><CalendarClock className="mr-2 h-4 w-4" />Remove schedule</DropdownMenuItem>}
-        {campaign.status === 'sending' && <DropdownMenuItem onClick={() => void handlePause()}><Pause className="mr-2 h-4 w-4" />Pause delivery</DropdownMenuItem>}
-        <DropdownMenuItem onClick={() => void handleDuplicate()} className="group/menu"><Copy className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Duplicate</DropdownMenuItem>
-        {campaign.status !== 'sending' && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setDeleteOpen(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete campaign</DropdownMenuItem></>}
+        {campaign && editable && <DropdownMenuItem onClick={() => void openSendConfirmation()} disabled={dirty} className="group/menu"><Send className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Send now</DropdownMenuItem>}
+        {campaign?.status === 'scheduled' && <DropdownMenuItem onClick={() => void handleUnschedule()} disabled={dirty}><CalendarClock className="mr-2 h-4 w-4" />Remove schedule</DropdownMenuItem>}
+        {campaign?.status === 'sending' && <DropdownMenuItem onClick={() => void handlePause()}><Pause className="mr-2 h-4 w-4" />Pause delivery</DropdownMenuItem>}
+        {campaign && <DropdownMenuItem onClick={() => void handleDuplicate()} className="group/menu"><Copy className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Duplicate</DropdownMenuItem>}
+        {campaign && campaign.status !== 'sending' && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setDeleteOpen(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete campaign</DropdownMenuItem></>}
       </DropdownMenuContent>
     </DropdownMenu>
   );
 
   const primaryAction = editable ? (
-    <HeaderAction label={working ? 'Saving...' : 'Save changes'} icon={<Save className="h-4 w-4" />} onClick={() => void handleSave()} disabled={!dirty || working} />
-  ) : campaign.status === 'paused' ? (
+    <HeaderAction label={working ? 'Saving...' : isNew ? 'Create campaign' : 'Save changes'} icon={<Save className="h-4 w-4" />} onClick={() => void handleSave()} disabled={!dirty || working} />
+  ) : campaign?.status === 'paused' ? (
     <HeaderAction label={working ? 'Resuming...' : 'Resume'} icon={<Play className="h-4 w-4" />} onClick={() => void handleResume()} disabled={working} />
   ) : undefined;
 
-  const audienceLabel = campaign.segment_type === 'segment'
+  const audienceLabel = campaign?.segment_type === 'segment'
     ? segments.find(segment => segment.id === campaign.segment_id)?.name || 'Saved segment'
-    : campaign.segment_type === 'tag'
+    : campaign?.segment_type === 'tag'
       ? `${campaign.tag_ids.length} included tag${campaign.tag_ids.length === 1 ? '' : 's'}`
-      : campaign.segment_type === 'status'
+      : campaign?.segment_type === 'status'
         ? `${String(campaign.segment_filter.status || 'active')} contacts`
         : 'All eligible contacts';
 
@@ -574,7 +616,7 @@ export function CampaignDetailPage() {
 
   return (
     <PageLayout
-      title="CAMPAIGN"
+      title={isNew ? 'NEW CAMPAIGN' : 'CAMPAIGN'}
       icon={<Megaphone className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
       leading={<ShellBackButton label="Back to campaigns" onClick={goBack} />}
       desktopTools={{
@@ -582,25 +624,25 @@ export function CampaignDetailPage() {
         secondaryAction: campaignActions,
         primaryAction,
       }}
-      mobileActions={<div className="flex w-full gap-2">{campaignActions}{editable ? <Button className="h-11 min-w-0 flex-1 bg-blue-600 text-white hover:bg-blue-700" onClick={() => void handleSave()} disabled={!dirty || working}><Save className="mr-2 h-4 w-4" />Save changes</Button> : campaign.status === 'paused' ? <Button className="h-11 min-w-0 flex-1 bg-blue-600 text-white hover:bg-blue-700" onClick={() => void handleResume()} disabled={working}><Play className="mr-2 h-4 w-4" />Resume</Button> : null}</div>}
+      mobileActions={<div className="flex w-full gap-2">{campaignActions}{editable ? <Button className="h-11 min-w-0 flex-1 bg-blue-600 text-white hover:bg-blue-700" onClick={() => void handleSave()} disabled={!dirty || working}><Save className="mr-2 h-4 w-4" />{isNew ? 'Create campaign' : 'Save changes'}</Button> : campaign?.status === 'paused' ? <Button className="h-11 min-w-0 flex-1 bg-blue-600 text-white hover:bg-blue-700" onClick={() => void handleResume()} disabled={working}><Play className="mr-2 h-4 w-4" />Resume</Button> : null}</div>}
     >
       <div className="mb-6 flex items-start gap-4">
         <div className={cn('flex h-14 w-14 shrink-0 items-center justify-center rounded-full', statusVisual.iconBackgroundClass)}>
           <StatusIcon className={cn('h-6 w-6', statusVisual.iconClass)} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <div className="flex min-w-0 items-center gap-2">
-              <h2 className="min-w-0 text-xl font-medium">{campaign.name}</h2>
+              <h2 className="min-w-0 text-xl font-medium">{campaign?.name || form.name || 'New campaign'}</h2>
               <Badge className={cn('shrink-0 md:hidden', statusVisual.badgeClass)}>{statusVisual.label}</Badge>
             </div>
-            <p className="min-w-0 flex-1 text-sm text-muted-foreground sm:min-w-max sm:whitespace-nowrap">{campaign.subject}</p>
+            <p className="min-w-0 text-sm text-muted-foreground sm:ml-auto sm:min-w-max sm:whitespace-nowrap sm:text-right">{campaign?.subject || form.subject || 'Build the message, audience, and delivery setup'}</p>
           </div>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            <span>Created {formatDateTime(campaign.created_at)}</span>
-            {campaign.created_by_name && <span>by {campaign.created_by_name}</span>}
-            {campaign.scheduled_at && <span>Scheduled {formatDateTime(campaign.scheduled_at)}</span>}
-            {campaign.completed_at && campaign.status === 'sent' && <span>Delivered {formatDateTime(campaign.completed_at)}</span>}
+            {campaign ? <span>Created {formatDateTime(campaign.created_at)}</span> : <span>Not saved yet</span>}
+            {campaign?.created_by_name && <span>by {campaign.created_by_name}</span>}
+            {campaign?.scheduled_at && <span>Scheduled {formatDateTime(campaign.scheduled_at)}</span>}
+            {campaign?.completed_at && campaign.status === 'sent' && <span>Delivered {formatDateTime(campaign.completed_at)}</span>}
           </div>
         </div>
       </div>
@@ -627,7 +669,16 @@ export function CampaignDetailPage() {
                 <CardContent className="space-y-4">
                   <div className="space-y-2"><Label>Content source</Label><Select value={form.contentSource} onValueChange={value => updateForm('contentSource', value as CampaignForm['contentSource'])}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="template">Email template</SelectItem><SelectItem value="custom">Custom HTML</SelectItem></SelectContent></Select></div>
                   {form.contentSource === 'template' ? (
-                    <div className="space-y-2"><Label>Email template</Label><Select value={form.templateId?.toString() || ''} onValueChange={value => updateForm('templateId', Number(value))}><SelectTrigger><SelectValue placeholder="Select a template" /></SelectTrigger><SelectContent>{templates.filter(template => template.is_active || template.id === form.templateId).map(template => <SelectItem key={template.id} value={template.id.toString()}>{template.name}</SelectItem>)}</SelectContent></Select></div>
+                    <div className="space-y-2">
+                      <Label>Email template</Label>
+                      <div className="flex min-w-0 items-center gap-3 rounded-lg border p-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{selectedTemplate?.name || 'No template selected'}</p>
+                          <p className="truncate text-xs text-muted-foreground">{selectedTemplate?.subject || 'Choose from your reusable email templates.'}</p>
+                        </div>
+                        <Button type="button" variant="outline" className="shrink-0" onClick={() => setTemplateBrowserOpen(true)}>{selectedTemplate ? 'Change' : 'Browse templates'}</Button>
+                      </div>
+                    </div>
                   ) : (
                     <><div className="space-y-2"><Label htmlFor="campaign-html">HTML content</Label><Textarea id="campaign-html" value={form.contentHtml} onChange={event => updateForm('contentHtml', event.target.value)} className="min-h-44 font-mono text-sm" /></div><div className="space-y-2"><Label htmlFor="campaign-text">Plain-text fallback</Label><Textarea id="campaign-text" value={form.contentText} onChange={event => updateForm('contentText', event.target.value)} className="min-h-24" /></div></>
                   )}
@@ -652,11 +703,13 @@ export function CampaignDetailPage() {
               <Card>
                 <CardHeader><SectionCardTitle icon={CalendarClock}>Delivery</SectionCardTitle></CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3"><div className="space-y-2"><Label htmlFor="campaign-date">Date</Label><Input id="campaign-date" type="date" value={scheduleDate} onChange={event => setScheduleDate(event.target.value)} /></div><div className="space-y-2"><Label htmlFor="campaign-time">Time</Label><Input id="campaign-time" type="time" value={scheduleTime} onChange={event => setScheduleTime(event.target.value)} /></div></div>
-                  <div className="space-y-2"><Label>Timezone</Label><Select value={scheduleTimezone} onValueChange={setScheduleTimezone}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{TIMEZONES.map(timezone => <SelectItem key={timezone} value={timezone}>{timezone.replaceAll('_', ' ')}</SelectItem>)}</SelectContent></Select></div>
-                  <Button variant="outline" className="w-full" onClick={() => void handleSchedule()} disabled={working || dirty}>{campaign.status === 'scheduled' ? 'Update schedule' : 'Schedule campaign'}</Button>
-                  <Button className="w-full bg-blue-600 text-white hover:bg-blue-700" onClick={() => void openSendConfirmation()} disabled={working || dirty}><Send className="mr-2 h-4 w-4" />Send now</Button>
-                  {dirty && <p className="text-xs text-muted-foreground">Save campaign changes before scheduling or sending.</p>}
+                  {campaign ? <>
+                    <div className="grid grid-cols-2 gap-3"><div className="space-y-2"><Label htmlFor="campaign-date">Date</Label><Input id="campaign-date" type="date" value={scheduleDate} onChange={event => setScheduleDate(event.target.value)} /></div><div className="space-y-2"><Label htmlFor="campaign-time">Time</Label><Input id="campaign-time" type="time" value={scheduleTime} onChange={event => setScheduleTime(event.target.value)} /></div></div>
+                    <div className="space-y-2"><Label>Timezone</Label><Select value={scheduleTimezone} onValueChange={setScheduleTimezone}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{TIMEZONES.map(timezone => <SelectItem key={timezone} value={timezone}>{timezone.replaceAll('_', ' ')}</SelectItem>)}</SelectContent></Select></div>
+                    <Button variant="outline" className="w-full" onClick={() => void handleSchedule()} disabled={working || dirty}>{campaign.status === 'scheduled' ? 'Update schedule' : 'Schedule campaign'}</Button>
+                    <Button className="w-full bg-blue-600 text-white hover:bg-blue-700" onClick={() => void openSendConfirmation()} disabled={working || dirty}><Send className="mr-2 h-4 w-4" />Send now</Button>
+                    {dirty && <p className="text-xs text-muted-foreground">Save campaign changes before scheduling or sending.</p>}
+                  </> : <div className="rounded-lg border border-dashed p-4"><p className="text-sm font-medium">Create the draft first</p><p className="mt-1 text-xs text-muted-foreground">Scheduling and sending become available after this campaign has a saved audience and message.</p></div>}
                 </CardContent>
               </Card>
             </div>
@@ -669,7 +722,7 @@ export function CampaignDetailPage() {
             </CardContent>
           </Card>
         </div>
-      ) : (
+      ) : campaign ? (
         <div className="space-y-6">
           <ResponsiveCardRail label="Campaign performance summary" desktopColumns="md:grid-cols-2 lg:grid-cols-5" className="responsive-stat-summary">
             <StatCard title="Bounced campaign messages" badgeText="Bounced" value={formatInteger(campaign.total_bounced)} icon={XCircle} description={`${campaign.bounce_rate}% of sent`} colorTheme="red" />
@@ -747,17 +800,33 @@ export function CampaignDetailPage() {
             <CardContent>{previewHtml ? <div className="overflow-hidden rounded-lg border bg-white"><iframe srcDoc={previewHtml} sandbox="allow-same-origin" title="Campaign email snapshot" className="h-[32rem] w-full border-0" /></div> : <div className="flex h-64 items-center justify-center rounded-lg border text-sm text-muted-foreground">No campaign content is available.</div>}</CardContent>
           </Card>
         </div>
-      )}
+      ) : null}
 
-      <AlertDialog open={sendOpen} onOpenChange={setSendOpen}>
+      {campaign && <AlertDialog open={sendOpen} onOpenChange={setSendOpen}>
         <AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Send {campaign.name} now?</AlertDialogTitle><AlertDialogDescription>{audiencePreview ? `This will start delivery to ${audiencePreview.recipientCount} eligible recipient${audiencePreview.recipientCount === 1 ? '' : 's'}. Delivery cannot be undone after it begins.` : 'Recipient eligibility must be verified before sending.'}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel disabled={working}>Keep campaign</AlertDialogCancel><AlertDialogAction disabled={working || !audiencePreview || audiencePreview.recipientCount < 1} onClick={event => { event.preventDefault(); void handleSend(); }} className="bg-blue-600 text-white hover:bg-blue-700">Send campaign</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog>}
 
       <Dialog open={testOpen} onOpenChange={setTestOpen}>
         <DialogContent><DialogHeader><DialogTitle>Send a test email</DialogTitle><DialogDescription>Send the current saved campaign content to one address. This does not enroll a recipient or change campaign statistics.</DialogDescription></DialogHeader><div className="space-y-2"><Label htmlFor="campaign-test-email">Destination email</Label><Input id="campaign-test-email" type="email" value={testEmail} onChange={event => setTestEmail(event.target.value)} placeholder="you@example.com" /></div><DialogFooter><Button variant="outline" onClick={() => setTestOpen(false)} disabled={working}>Cancel</Button><Button onClick={() => void handleSendTest()} disabled={working || !testEmail.trim()} className="bg-blue-600 text-white hover:bg-blue-700"><Send className="mr-2 h-4 w-4" />Send test</Button></DialogFooter></DialogContent>
       </Dialog>
 
-      <DeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} itemType="campaign" itemTitle={campaign.name} />
+      {organizationId && <EmailTemplateBrowserDialog
+        open={templateBrowserOpen}
+        onOpenChange={setTemplateBrowserOpen}
+        title="Choose a campaign template"
+        description="Active templates available to this organization."
+        items={templates.filter(template => template.is_active || template.id === form.templateId).map(template => ({
+          ...template,
+          meta: `${template.variables.length} variable${template.variables.length === 1 ? '' : 's'}`,
+        }))}
+        selectedId={form.templateId}
+        onSelect={template => updateForm('templateId', template.id)}
+        renderPreview={template => <EmailPreviewPane organizationId={organizationId} content={{ subject: template.subject, preheader: template.preheader || '', bodyHtml: template.body_html, bodyText: template.body_text || '' }} className="h-full" />}
+        emptyTitle="No active campaign templates"
+        emptyDescription="Create and publish an email template before selecting it here."
+      />}
+
+      {campaign && <DeleteDialog open={deleteOpen} onOpenChange={setDeleteOpen} onConfirm={handleDelete} itemType="campaign" itemTitle={campaign.name} />}
     </PageLayout>
   );
 }

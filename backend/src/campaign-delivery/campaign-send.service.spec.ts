@@ -22,6 +22,8 @@ describe('CampaignSendService worker', () => {
   let service: CampaignSendService;
 
   beforeEach(() => {
+    process.env.JWT_SECRET = 'campaign-send-test-secret-at-least-32-characters';
+    process.env.PUBLIC_API_URL = 'https://api.itemize.test';
     repository = {
       due: jest.fn(), claim: jest.fn(), complete: jest.fn(), fail: jest.fn(), prepare: jest.fn(),
       pause: jest.fn(), resume: jest.fn(),
@@ -39,11 +41,26 @@ describe('CampaignSendService worker', () => {
     await expect(service.runDue()).resolves.toEqual({ attempted: 1, sent: 1 });
     expect(provider.send).toHaveBeenCalledWith(expect.objectContaining({
       to: 'recipient@example.com', subject: 'Hello Ada',
-      html: '<p>Ada Lovelace / recipient@example.com</p>', text: 'Hello Lovelace',
+      text: expect.stringContaining('Hello Lovelace'),
       idempotencyKey: 'campaign-recipient-email:4:12',
+    }));
+    const message = provider.send.mock.calls[0][0];
+    expect(message.html).toContain('<!doctype html>');
+    expect(message.html).toContain('Ada Lovelace / recipient@example.com');
+    expect(message.html).toContain('https://itemize.cloud/cover.png');
+    expect(message.html).toContain('Unsubscribe</a>');
+    expect(message.text).toContain('Unsubscribe: https://api.itemize.test/api/campaigns/unsubscribe/12.');
+    expect(message.headers).toEqual(expect.objectContaining({
+      'List-Unsubscribe': expect.stringMatching(/^<https:\/\/api\.itemize\.test\/api\/campaigns\/unsubscribe\/12\.[A-Za-z0-9_-]{43}>$/),
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      'List-ID': '<organization-4.campaigns.itemize.cloud>',
     }));
     expect(repository.complete).toHaveBeenCalledWith(4, 12, 'provider-12');
     expect(repository.fail).not.toHaveBeenCalled();
+  });
+
+  afterEach(() => {
+    delete process.env.PUBLIC_API_URL;
   });
 
   it('retries definite rejection but quarantines an ambiguous provider exception', async () => {

@@ -47,6 +47,7 @@ import {
   Workflow 
 } from '@/services/automationsApi';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import {
@@ -338,8 +339,8 @@ export function AutomationsPage() {
         ),
       }}
       mobileActions={
-        <>
-          <div className="flex items-center gap-2 w-full">
+        <MobileQueryBar
+          search={
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -350,39 +351,19 @@ export function AutomationsPage() {
                 className="pl-9 h-9 w-full"
               />
             </div>
-          </div>
-          <div className="flex items-center gap-2 w-full">
-            <Select value={triggerFilter} onValueChange={setTriggerFilter}>
-              <SelectTrigger className="flex-1 h-9">
-                <SelectValue placeholder="Trigger" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All triggers</SelectItem>
-                {WORKFLOW_TRIGGER_OPTIONS.map(({ type, label }) => (
-                  <SelectItem key={type} value={type}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="flex-1 h-9">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+          }
+          filters={<HeaderCombinedQuery label="Search and filter automations" placeholder="Search automations..." value={searchQuery} onChange={setSearchQuery} activeCount={activeFilterCount + Number(Boolean(searchQuery.trim()))}><div className="space-y-2"><Select value={triggerFilter} onValueChange={setTriggerFilter}><SelectTrigger className="h-11 w-full"><SelectValue placeholder="Trigger" /></SelectTrigger><SelectContent><SelectItem value="all">All triggers</SelectItem>{WORKFLOW_TRIGGER_OPTIONS.map(({ type, label }) => <SelectItem key={type} value={type}>{label}</SelectItem>)}</SelectContent></Select><Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="h-11 w-full"><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem></SelectContent></Select></div></HeaderCombinedQuery>}
+          actions={
             <Button
               size="icon"
-              className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
+              className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700"
               onClick={() => navigate('/automations/new')}
               aria-label="Create automation"
             >
               <Plus className="h-4 w-4" />
             </Button>
-          </div>
-        </>
+          }
+        />
       }
     >
       <OnboardingModal

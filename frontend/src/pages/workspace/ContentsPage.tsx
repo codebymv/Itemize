@@ -71,6 +71,7 @@ import type { CreateItemPresetPayload } from "@/config/contentPresets";
 import { CreateItemModal } from "@/components/CreateItemModal";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PageLayout } from "@/components/layout/PageLayout";
+import { MobileQueryBar } from "@/components/layout/MobileQueryBar";
 import {
   HeaderActionLabel,
   HeaderCombinedQuery,
@@ -1321,7 +1322,7 @@ export function ContentsPage() {
   return (
     <PageLayout
       title="CONTENTS"
-      icon={<LayoutGrid className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      icon={<LayoutGrid className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
       mobileClassName="flex-col items-stretch gap-3"
       desktopTools={{
         search: (
@@ -1379,73 +1380,22 @@ export function ContentsPage() {
         primaryAction: addContentMenu("header"),
       }}
       mobileActions={
-        <>
-          <div className="flex items-center gap-2 w-full">
+        <MobileQueryBar
+          search={
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
+                aria-label="Search workspace content"
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 h-9 w-full bg-muted/20 border-border/50"
               />
             </div>
-            {addContentMenu("compact")}
-          </div>
-          <div className="grid min-w-0 grid-cols-2 gap-2">
-            <Select
-              value={typeFilter}
-              onValueChange={(v) => setTypeFilter(v as ContentType)}
-            >
-              <SelectTrigger
-                className="h-11 w-full min-w-0 pr-8"
-                style={{ paddingLeft: "0.375rem" }}
-              >
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="list">Lists</SelectItem>
-                <SelectItem value="note">Notes</SelectItem>
-                <SelectItem value="whiteboard">Whiteboards</SelectItem>
-                <SelectItem value="wireframe">Wireframes</SelectItem>
-                <SelectItem value="vault">Vaults</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger
-                className="h-11 w-full min-w-0 pr-8"
-                style={{ paddingLeft: "0.375rem" }}
-              >
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {uniqueCategories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={sortBy}
-              onValueChange={(value) => setSortBy(value as SortOption)}
-            >
-              <SelectTrigger
-                className="col-span-2 h-11 w-full min-w-0 pr-8"
-                style={{ paddingLeft: "0.375rem" }}
-              >
-                <SelectValue placeholder="Sort" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="updated">Updated</SelectItem>
-                <SelectItem value="created">Created</SelectItem>
-                <SelectItem value="title">Title A-Z</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </>
+          }
+          filters={<HeaderCombinedQuery label="Search and filter content" placeholder="Search content..." value={searchQuery} onChange={setSearchQuery} activeCount={headerQueryCount}><div className="space-y-2 [&_[role=combobox]]:w-full">{headerFilters}</div></HeaderCombinedQuery>}
+          actions={addContentMenu("compact")}
+        />
       }
     >
       <Card aria-busy={refreshing}>

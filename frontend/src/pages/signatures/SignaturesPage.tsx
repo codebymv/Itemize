@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -14,6 +15,7 @@ import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expanded-row';
 import { useToast } from '@/hooks/use-toast';
 import { ListRowSkeleton } from '@/components/ui/loading-skeletons';
 import FieldPlacementCanvas from './components/FieldPlacementCanvas';
@@ -219,23 +221,26 @@ export function SignaturesPage() {
         ),
       }}
       mobileActions={
-        <>
-          <div className="flex items-center gap-2 w-full">
+        <MobileQueryBar
+          search={
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
+                aria-label="Search documents"
                 placeholder="Search documents..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-11 w-full border-border/50 bg-muted/20 pl-10"
               />
             </div>
+          }
+          filters={<HeaderCombinedQuery label="Search and filter documents" placeholder="Search documents..." value={searchQuery} onChange={setSearchQuery} activeCount={queryCount}>{statusSelect(true)}</HeaderCombinedQuery>}
+          actions={
             <Button size="icon" aria-label="New document" className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700" onClick={() => navigate('/documents/new')}>
               <Plus className="h-4 w-4" />
             </Button>
-          </div>
-          {statusSelect(true)}
-        </>
+          }
+        />
       }
     >
           {!loadError && (
@@ -449,6 +454,100 @@ export function SignaturesPage() {
 
                         {isExpanded && (
                           <div className="bg-muted/30 border-t px-6 py-6">
+                            <ExpandedRowActions>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/documents/${doc.id}`);
+                                }}
+                                className="text-xs sm:text-sm"
+                              >
+                                <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                <ExpandedRowActionLabel full="View document" compact="View" />
+                              </Button>
+                              {doc.status === 'draft' && (
+                                <Button
+                                  size="sm"
+                                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSend(doc.id);
+                                  }}
+                                >
+                                  <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                  <ExpandedRowActionLabel full="Send document" compact="Send" />
+                                </Button>
+                              )}
+                              {hasProcessingFailure && (
+                                <Button
+                                  size="sm"
+                                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRetry(doc.id);
+                                  }}
+                                >
+                                  <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                  <ExpandedRowActionLabel full="Retry failed step" compact="Retry" />
+                                </Button>
+                              )}
+                              {!hasProcessingFailure && (doc.status === 'sent' || doc.status === 'in_progress') && (
+                                <Button
+                                  size="sm"
+                                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleResend(doc.id);
+                                  }}
+                                >
+                                  <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                  <ExpandedRowActionLabel full="Resend document" compact="Resend" />
+                                </Button>
+                              )}
+                              {(doc.status === 'sent' || doc.status === 'in_progress') && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCancel(doc.id);
+                                  }}
+                                  className="text-xs sm:text-sm"
+                                >
+                                  <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                  <ExpandedRowActionLabel full="Cancel document" compact="Cancel" />
+                                </Button>
+                              )}
+                              {doc.status === 'completed' && (
+                                <Button
+                                  size="sm"
+                                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDownload(doc.id);
+                                  }}
+                                >
+                                  <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                  <ExpandedRowActionLabel full="Download document" compact="Download" />
+                                </Button>
+                              )}
+                              {doc.status === 'draft' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus:text-destructive text-xs sm:text-sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteDocumentId(doc.id);
+                                  }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                  <ExpandedRowActionLabel full="Delete document" compact="Delete" />
+                                </Button>
+                              )}
+                            </ExpandedRowActions>
                             {loadingPreview ? (
                               <div className="flex items-center justify-center py-8 text-muted-foreground">Loading preview...</div>
                             ) : expandedDocumentData ? (
@@ -474,100 +573,6 @@ export function SignaturesPage() {
                                   </div>
                                 )}
 
-                                <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-4 pt-4 border-t">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      navigate(`/documents/${doc.id}`);
-                                    }}
-                                    className="text-xs sm:text-sm"
-                                  >
-                                    <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                    View
-                                  </Button>
-                                  {doc.status === 'draft' && (
-                                    <Button
-                                      size="sm"
-                                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleSend(doc.id);
-                                      }}
-                                    >
-                                      <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                      Send
-                                    </Button>
-                                  )}
-                                  {hasProcessingFailure && (
-                                    <Button
-                                      size="sm"
-                                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleRetry(doc.id);
-                                      }}
-                                    >
-                                      <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                      Retry failed step
-                                    </Button>
-                                  )}
-                                  {!hasProcessingFailure && (doc.status === 'sent' || doc.status === 'in_progress') && (
-                                    <Button
-                                      size="sm"
-                                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleResend(doc.id);
-                                      }}
-                                    >
-                                      <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                      Resend
-                                    </Button>
-                                  )}
-                                  {(doc.status === 'sent' || doc.status === 'in_progress') && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleCancel(doc.id);
-                                      }}
-                                      className="text-xs sm:text-sm"
-                                    >
-                                      <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                      Cancel
-                                    </Button>
-                                  )}
-                                  {doc.status === 'completed' && (
-                                    <Button
-                                      size="sm"
-                                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDownload(doc.id);
-                                      }}
-                                    >
-                                      <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                      Download
-                                    </Button>
-                                  )}
-                                  {doc.status === 'draft' && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus:text-destructive text-xs sm:text-sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setDeleteDocumentId(doc.id);
-                                      }}
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                                      Delete
-                                    </Button>
-                                  )}
-                                </div>
                               </div>
                             ) : (
                               <div className="text-sm text-muted-foreground">No details available.</div>

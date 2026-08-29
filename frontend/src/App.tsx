@@ -19,6 +19,7 @@ import { isAvailablePlansLocation } from "@/lib/settingsNavigation";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
 import { HeaderProvider } from '@/contexts/HeaderContext';
 import { ThemeFavicon } from '@/components/ThemeFavicon';
+import { publicFormPath } from '@/lib/publicContentRoutes';
 
 // Layout components
 import Navbar from "@/components/Navbar";
@@ -76,11 +77,13 @@ const SharedPage = React.lazy(() => import("./pages/workspace").then(m => ({ def
 
 // New pages for expanded navigation
 const SegmentsPage = React.lazy(() => import("./pages/segments/SegmentsPage"));
+const SegmentEditorPage = React.lazy(() => import("./pages/segments/SegmentEditorPage"));
 const CampaignsPage = React.lazy(() => import("./pages/campaigns/CampaignsPage"));
 const CampaignDetailPage = React.lazy(() => import("./pages/campaigns/CampaignDetailPage"));
 const EmailTemplatesPage = React.lazy(() => import("./pages/email-templates/EmailTemplatesPage"));
 const EmailTemplateEditorPage = React.lazy(() => import("./pages/email-templates/EmailTemplateEditorPage"));
 const SMSTemplatesPage = React.lazy(() => import("./pages/sms-templates/SMSTemplatesPage"));
+const SMSTemplateEditorPage = React.lazy(() => import("./pages/sms-templates/SMSTemplateEditorPage"));
 const LandingPagesPage = React.lazy(() => import("./pages/pages/LandingPagesPage"));
 const PageEditorPage = React.lazy(() => import("./pages/pages/PageEditorPage"));
 const PublicLandingPage = React.lazy(() => import("./pages/pages/PublicLandingPage"));
@@ -289,6 +292,12 @@ const AppContent = () => {
     return <Navigate to={token ? `/review/${token}` : '/home'} replace />;
   };
 
+  const LegacyFormRedirect = () => {
+    const { identifier } = useParams();
+    const { search, hash } = useLocation();
+    return <Navigate to={`${identifier ? publicFormPath(identifier) : '/home'}${search}${hash}`} replace />;
+  };
+
   const LegacyIntegrationsRedirect = () => {
     const { search, hash } = useLocation();
     return <Navigate to={`/settings/integrations${search}${hash}`} replace />;
@@ -324,6 +333,7 @@ const AppContent = () => {
   const publicRoutes = ['/home', '/status', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password', '/recover-account', '/legal/terms', '/legal/privacy'];
   const isPublicRoute = publicRoutes.includes(location.pathname) ||
     location.pathname.startsWith('/shared/') ||
+    location.pathname.startsWith('/f/') ||
     location.pathname.startsWith('/form/') ||
     location.pathname.startsWith('/p/') ||
     location.pathname.startsWith('/review/') ||
@@ -366,7 +376,8 @@ const AppContent = () => {
       <Route path="/estimate/:token" element={<PublicEstimatePage />} />
       <Route path="/invoice/payment/success" element={<PublicInvoicePaymentPage />} />
       <Route path="/invoice/payment/cancelled" element={<PublicInvoicePaymentPage />} />
-      <Route path="/form/:identifier" element={<PublicFormPage />} />
+      <Route path="/f/:identifier" element={<PublicFormPage />} />
+      <Route path="/form/:identifier" element={<LegacyFormRedirect />} />
       <Route path="/p/:slug" element={<PublicLandingPage />} />
       <Route path="/review/:token" element={<PublicReviewPage />} />
       <Route path="/r/:token" element={<LegacyReviewRedirect />} />
@@ -403,12 +414,17 @@ const AppContent = () => {
           <Route path="/automations/new" element={<WorkflowBuilderPage />} />
           <Route path="/automations/:id" element={<WorkflowBuilderPage />} />
           <Route path="/segments" element={<SegmentsPage />} />
+          <Route path="/segments/new" element={<SegmentEditorPage />} />
+          <Route path="/segments/:id" element={<SegmentEditorPage />} />
           <Route path="/campaigns" element={<CampaignsPage />} />
+          <Route path="/campaigns/new" element={<CampaignDetailPage />} />
           <Route path="/campaigns/:id" element={<CampaignDetailPage />} />
           <Route path="/email-templates" element={<EmailTemplatesPage />} />
           <Route path="/email-templates/new" element={<EmailTemplateEditorPage />} />
           <Route path="/email-templates/:id" element={<EmailTemplateEditorPage />} />
           <Route path="/sms-templates" element={<SMSTemplatesPage />} />
+          <Route path="/sms-templates/new" element={<SMSTemplateEditorPage />} />
+          <Route path="/sms-templates/:id" element={<SMSTemplateEditorPage />} />
           <Route path="/pages" element={<LandingPagesPage />} />
           <Route path="/pages/:id" element={<PageEditorPage />} />
           <Route path="/chat-widget" element={<ChatWidgetPage />} />

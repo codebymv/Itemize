@@ -2,6 +2,7 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
+  Eye,
   FileText,
   Send,
   XCircle,
@@ -60,7 +61,7 @@ export const getRecipientStatusVisual = (
   }
   if (recipient.status === 'signed') return defineStatus('Signed', 'green', CheckCircle);
   if (recipient.status === 'declined') return defineStatus('Declined', 'red', XCircle);
-  if (recipient.status === 'viewed') return defineStatus('Viewed', 'orange', Clock);
+  if (recipient.status === 'viewed') return defineStatus('Viewed', 'orange', Eye);
   if (recipient.status === 'sent') return defineStatus('Sent', 'orange', Send);
   return defineStatus('Waiting', 'blue', Clock);
 };

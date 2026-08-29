@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Copy,
   Eye,
-  Mail,
   Megaphone,
   MoreHorizontal,
   Pause,
@@ -37,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import {
   Select,
   SelectContent,
@@ -74,8 +74,7 @@ import {
   type EmailCampaign,
 } from '@/services/campaignsApi';
 import type { Campaign } from '@/types/campaigns';
-import { CreateCampaignModal } from './CreateCampaignModal';
-import { getCampaignStatusVisual } from './constants/campaignVisuals';
+import { CAMPAIGN_SUMMARY_VISUALS, getCampaignStatusVisual } from './constants/campaignVisuals';
 
 const CAMPAIGN_STATUSES: Array<{ value: Campaign['status']; label: string }> = [
   { value: 'draft', label: 'Draft' },
@@ -126,7 +125,6 @@ export function CampaignsPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
   const [campaignToSend, setCampaignToSend] = useState<Campaign | null>(null);
   const [sendPreview, setSendPreview] = useState<CampaignPreview | null>(null);
@@ -342,20 +340,20 @@ export function CampaignsPage() {
           </HeaderCombinedQuery>
         ),
         primaryAction: (
-          <HeaderAction label="New campaign" icon={<Plus className="h-4 w-4" />} onClick={() => setShowCreateModal(true)} />
+          <HeaderAction label="New campaign" icon={<Plus className="h-4 w-4" />} onClick={() => navigate('/campaigns/new')} />
         ),
       }}
       mobileActions={(
-        <div className="flex w-full items-center gap-2">
-          <div className="relative min-w-0 flex-1">
+        <MobileQueryBar
+          search={<div className="relative min-w-0 flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input aria-label="Search campaigns" placeholder="Search campaigns..." value={searchQuery} onChange={event => setSearchQuery(event.target.value)} className="h-11 w-full bg-muted/20 pl-10" />
-          </div>
-          <div className="w-[6.25rem] shrink-0">{statusSelect(true)}</div>
-          <Button size="icon" aria-label="New campaign" className="h-11 w-11 shrink-0 bg-blue-600 text-white hover:bg-blue-700" onClick={() => setShowCreateModal(true)}>
+          </div>}
+          filters={<div className="w-[6.25rem]">{statusSelect(true)}</div>}
+          actions={<Button size="icon" aria-label="New campaign" className="h-11 w-11 shrink-0 bg-blue-600 text-white hover:bg-blue-700" onClick={() => navigate('/campaigns/new')}>
             <Plus className="h-4 w-4" />
-          </Button>
-        </div>
+          </Button>}
+        />
       )}
     >
       <OnboardingModal isOpen={onboarding.showModal} onClose={onboarding.handleClose} onComplete={onboarding.handleComplete} onDismiss={onboarding.handleDismiss} content={ONBOARDING_CONTENT.campaigns} />
@@ -364,9 +362,9 @@ export function CampaignsPage() {
         <ResponsiveCardRail label="Campaign status summary" desktopColumns="md:grid-cols-2 lg:grid-cols-5" className="responsive-stat-summary">
           <StatCard title="Campaigns needing attention" badgeText="Not completed" value={stats.failed} icon={XCircle} description={`${stats.failed} failed or cancelled`} colorTheme="red" isLoading={loading} />
           <StatCard title="Total campaigns" badgeText="Total" value={stats.total} icon={Megaphone} description={`${stats.total} configured`} colorTheme="blue" isLoading={loading} />
-          <StatCard title="Draft campaigns" badgeText="Draft" value={stats.draft} icon={Mail} description="Being prepared" colorTheme="blue" isLoading={loading} />
-          <StatCard title="Campaigns in progress" badgeText="In progress" value={stats.inProgress} icon={Play} description="Scheduled, sending, or paused" colorTheme="orange" isLoading={loading} />
-          <StatCard title="Delivered campaigns" badgeText="Delivered" value={stats.delivered} icon={Send} description="Successfully sent" colorTheme="green" isLoading={loading} />
+          <StatCard title="Draft campaigns" badgeText="Draft" value={stats.draft} icon={CAMPAIGN_SUMMARY_VISUALS.draft.icon} description="Being prepared" colorTheme={CAMPAIGN_SUMMARY_VISUALS.draft.theme} isLoading={loading} />
+          <StatCard title="Campaigns in progress" badgeText="In progress" value={stats.inProgress} icon={CAMPAIGN_SUMMARY_VISUALS.inProgress.icon} description="Scheduled, sending, or paused" colorTheme={CAMPAIGN_SUMMARY_VISUALS.inProgress.theme} isLoading={loading} />
+          <StatCard title="Delivered campaigns" badgeText="Delivered" value={stats.delivered} icon={CAMPAIGN_SUMMARY_VISUALS.delivered.icon} description="Successfully sent" colorTheme={CAMPAIGN_SUMMARY_VISUALS.delivered.theme} isLoading={loading} />
         </ResponsiveCardRail>
       )}
 
@@ -382,7 +380,7 @@ export function CampaignsPage() {
               title={hasQuery ? 'No matching campaigns' : 'No campaigns yet'}
               description={hasQuery ? 'Try a different search or clear the current filters.' : 'Create a campaign draft to begin preparing your message.'}
               actionLabel={hasQuery ? 'Clear filters' : 'New campaign'}
-              onAction={hasQuery ? clearQuery : () => setShowCreateModal(true)}
+              onAction={hasQuery ? clearQuery : () => navigate('/campaigns/new')}
               className="p-12"
             />
           ) : (
@@ -467,13 +465,6 @@ export function CampaignsPage() {
           )}
         </CardContent>
       </Card>
-
-      {showCreateModal && organizationId && (
-        <CreateCampaignModal organizationId={organizationId} onClose={() => setShowCreateModal(false)} onCreated={campaign => {
-          setCampaigns(current => [toCampaignListItem(campaign), ...current]);
-          setShowCreateModal(false);
-        }} />
-      )}
 
       <AlertDialog open={Boolean(campaignToSend)} onOpenChange={open => !open && setCampaignToSend(null)}>
         <AlertDialogContent>

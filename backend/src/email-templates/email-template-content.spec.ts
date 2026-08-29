@@ -1,4 +1,5 @@
 import {
+  compileEmailTemplateBody,
   renderEmailHtmlVariables,
   renderEmailTextVariables,
   sanitizeEmailTemplateHtml,
@@ -34,5 +35,18 @@ describe('email template content', () => {
       .toBe('<p>Hello &lt;img src=x onerror=alert(1)&gt; at A &amp; B</p>');
     expect(renderEmailTextVariables('Hello {{first_name}} at {{ company }}', data))
       .toBe('Hello <img src=x onerror=alert(1)> at A & B');
+  });
+
+  it('compiles the complete editor vocabulary into delivery-safe inline styles', () => {
+    const result = compileEmailTemplateBody(
+      '<p class="callout-success">Approved</p>' +
+      '<a class="button-primary" href="https://example.test">Continue</a>' +
+      '<span class="badge-amber">Pending</span><hr class="email-divider">',
+    );
+    expect(result).toContain('background:#f0fdf4');
+    expect(result).toContain('background:#2563eb');
+    expect(result).toContain('background:#fef3c7');
+    expect(result).toContain('border-top:1px solid #e2e8f0');
+    expect(result).not.toMatch(/<script|javascript:/i);
   });
 });

@@ -46,6 +46,7 @@ import {
     type RevenueFlow,
 } from '@/services/invoicePaymentsApi';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import {
     HeaderAction,
     HeaderCombinedQuery,
@@ -78,6 +79,7 @@ import {
 import { CreatePaymentModal } from './components/CreatePaymentModal';
 import type { PaymentData } from './components/CreatePaymentModal';
 import { getPaymentStatusVisual } from './constants/paymentConstants';
+import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expanded-row';
 
 type Payment = InvoicePayment;
 
@@ -490,26 +492,26 @@ export function PaymentsPage() {
                 ),
             }}
             mobileActions={
-                <>
-                <div className="flex items-center gap-2 w-full">
+                <MobileQueryBar
+                  search={
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
+                            aria-label="Search payments"
                             placeholder="Search payments..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-10 h-9 w-full bg-muted/20 border-border/50"
                         />
                     </div>
-                    <Button size="sm" aria-label="Add payment" className="bg-blue-600 hover:bg-blue-700 text-white font-light" onClick={() => setShowCreateModal(true)}>
+                  }
+                  filters={<HeaderCombinedQuery label="Search and filter payments" placeholder="Search payments..." value={searchQuery} onChange={setSearchQuery} activeCount={headerQueryCount}><div className="space-y-2">{periodSelect(true)}{paymentFilters(true)}</div></HeaderCombinedQuery>}
+                  actions={
+                    <Button size="icon" aria-label="Add payment" className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700" onClick={() => setShowCreateModal(true)}>
                         <Plus className="h-4 w-4" />
                     </Button>
-                </div>
-                {periodSelect(true)}
-                <div className="grid w-full grid-cols-2 gap-2">
-                    {paymentFilters(true)}
-                </div>
-                </>
+                  }
+                />
             }
         >
             {!loadError && overviewCurrencies.map((currencyOverview) => {
@@ -770,6 +772,36 @@ export function PaymentsPage() {
                                         {/* Expanded Payment Details */}
                                         {isExpanded && (
                                             <div className="bg-muted/30 border-t px-6 py-6">
+                                                {(payment.invoice_id || payment.receipt_url) && (
+                                                    <ExpandedRowActions>
+                                                        {payment.invoice_id && (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    navigate(`/invoices/${payment.invoice_id}`);
+                                                                }}
+                                                            >
+                                                                <Receipt className="h-4 w-4 mr-2" />
+                                                                <ExpandedRowActionLabel full="View Invoice" compact="Invoice" />
+                                                            </Button>
+                                                        )}
+                                                        {payment.receipt_url && (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    window.open(payment.receipt_url, '_blank', 'noopener,noreferrer');
+                                                                }}
+                                                            >
+                                                                <Download className="h-4 w-4 mr-2" />
+                                                                <ExpandedRowActionLabel full="Download Receipt" compact="Download" />
+                                                            </Button>
+                                                        )}
+                                                    </ExpandedRowActions>
+                                                )}
                                                 <div className="max-w-3xl mx-auto">
                                                     <div className="grid grid-cols-1 overflow-hidden rounded-lg border bg-card md:grid-cols-2">
                                                         {/* Payment Details Card */}
@@ -892,35 +924,6 @@ export function PaymentsPage() {
                                                                 )}
                                                             </div>
 
-                                                            {/* Action Buttons */}
-                                                            <div className="mt-6 pt-4 border-t space-y-2">
-                                                                {payment.invoice_id && (
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        className="w-full justify-start"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            navigate(`/invoices/${payment.invoice_id}`);
-                                                                        }}
-                                                                    >
-                                                                        <Receipt className="h-4 w-4 mr-2" />View Invoice
-                                                                    </Button>
-                                                                )}
-                                                                {payment.receipt_url && (
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        className="w-full justify-start"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            window.open(payment.receipt_url, '_blank', 'noopener,noreferrer');
-                                                                        }}
-                                                                    >
-                                                                        <Download className="h-4 w-4 mr-2" />Download Receipt
-                                                                    </Button>
-                                                                )}
-                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>

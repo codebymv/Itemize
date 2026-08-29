@@ -69,6 +69,7 @@ import {
 import { useOrganization } from '@/hooks/useOrganization';
 import { InvoicePreviewCard } from './components/InvoicePreviewCard';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import {
     HeaderAction,
     HeaderCombinedQuery,
@@ -85,6 +86,7 @@ import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { cn } from '@/lib/utils';
 import { InvoiceViewSelect, type InvoiceView } from './components/InvoiceViewSelect';
 import { getRecurringStatusVisual } from './constants/recurringConstants';
+import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expanded-row';
 
 const RECURRING_FREQUENCIES: RecurringFrequency[] = ['weekly', 'monthly', 'quarterly', 'yearly'];
 
@@ -576,35 +578,31 @@ export function RecurringInvoicesPage() {
                 ),
             }}
             mobileActions={
-                <>
-                <div className="flex items-center gap-2 w-full">
+                <MobileQueryBar
+                  search={
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
+                            aria-label="Search recurring invoice schedules"
                             placeholder="Search schedules..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
                         />
                     </div>
+                  }
+                  filters={<HeaderCombinedQuery label="Search and filter schedules" placeholder="Search schedules..." value={searchQuery} onChange={setSearchQuery} activeCount={headerQueryCount}><div className="space-y-2"><InvoiceViewSelect value="recurring" onValueChange={handleInvoiceViewChange} compact />{statusFilter(true)}</div></HeaderCombinedQuery>}
+                  actions={
                     <Button
-                        size="sm"
+                        size="icon"
                         aria-label="New schedule"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700"
                         onClick={openCreateDialog}
                     >
                         <Plus className="h-4 w-4" />
                     </Button>
-                </div>
-                <div className="grid w-full grid-cols-2 gap-2">
-                    <InvoiceViewSelect
-                        value="recurring"
-                        onValueChange={handleInvoiceViewChange}
-                        compact
-                    />
-                    {statusFilter(true)}
-                </div>
-                </>
+                  }
+                />
             }
         >
                 {!loadError && (
@@ -796,6 +794,74 @@ export function RecurringInvoicesPage() {
                                         {/* Expanded Preview */}
                                         {isExpanded && (
                                             <div className="bg-muted/30 border-t px-6 py-6">
+                                                <ExpandedRowActions>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <Edit className="h-4 w-4 mr-2" />
+                                                        <ExpandedRowActionLabel full="Edit Template" compact="Edit" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <History className="h-4 w-4 mr-2" />
+                                                        <ExpandedRowActionLabel full="View History" compact="History" />
+                                                    </Button>
+                                                    {recurring.status !== 'completed' && (
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                            onClick={(e) => handleGenerateNow(recurring.id, e)}
+                                                            disabled={generatingInvoice === recurring.id}
+                                                        >
+                                                            <FileText className="h-4 w-4 mr-2" />
+                                                            <ExpandedRowActionLabel
+                                                                full={generatingInvoice === recurring.id ? 'Generating...' : 'Generate Next Invoice'}
+                                                                compact={generatingInvoice === recurring.id ? 'Wait' : 'Generate'}
+                                                            />
+                                                        </Button>
+                                                    )}
+                                                    {recurring.status === 'active' && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handlePause(recurring.id);
+                                                            }}
+                                                        >
+                                                            <Pause className="h-4 w-4 mr-2" />
+                                                            <ExpandedRowActionLabel full="Pause Schedule" compact="Pause" />
+                                                        </Button>
+                                                    )}
+                                                    {recurring.status === 'paused' && (
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-green-600 hover:bg-green-700 text-white"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleResume(recurring.id);
+                                                            }}
+                                                        >
+                                                            <Play className="h-4 w-4 mr-2" />
+                                                            <ExpandedRowActionLabel full="Resume Schedule" compact="Resume" />
+                                                        </Button>
+                                                    )}
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="border-destructive text-destructive hover:bg-destructive/10"
+                                                        onClick={(e) => handleDeleteClick(recurring, e)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4 mr-2" />
+                                                        <ExpandedRowActionLabel full="Delete Template" compact="Delete" />
+                                                    </Button>
+                                                </ExpandedRowActions>
                                                 {loadingPreview ? (
                                                     <div className="flex items-center justify-center py-12">
                                                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -897,69 +963,6 @@ export function RecurringInvoicesPage() {
                                                                         )}
                                                                     </div>
 
-                                                                    {/* Quick Actions in Schedule Card */}
-                                                                    <div className="mt-6 pt-4 border-t space-y-2">
-                                                                        <Button
-                                                                            variant="outline"
-                                                                            size="sm"
-                                                                            className="w-full justify-start"
-                                                                            onClick={(e) => e.stopPropagation()}
-                                                                        >
-                                                                            <Edit className="h-4 w-4 mr-2" />Edit Template
-                                                                        </Button>
-                                                                        <Button
-                                                                            variant="outline"
-                                                                            size="sm"
-                                                                            className="w-full justify-start"
-                                                                            onClick={(e) => e.stopPropagation()}
-                                                                        >
-                                                                            <History className="h-4 w-4 mr-2" />View History
-                                                                        </Button>
-                                                                        {recurring.status !== 'completed' && (
-                                                                            <Button
-                                                                                size="sm"
-                                                                                className="w-full justify-start bg-blue-600 hover:bg-blue-700 text-white"
-                                                                                onClick={(e) => handleGenerateNow(recurring.id, e)}
-                                                                                disabled={generatingInvoice === recurring.id}
-                                                                            >
-                                                                                <FileText className="h-4 w-4 mr-2" />
-                                                                                {generatingInvoice === recurring.id ? 'Generating...' : 'Generate Next Invoice'}
-                                                                            </Button>
-                                                                        )}
-                                                                        {recurring.status === 'active' && (
-                                                                            <Button
-                                                                                variant="outline"
-                                                                                size="sm"
-                                                                                className="w-full justify-start border-yellow-500 text-yellow-600 hover:bg-yellow-50"
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    handlePause(recurring.id);
-                                                                                }}
-                                                                            >
-                                                                                <Pause className="h-4 w-4 mr-2" />Pause Schedule
-                                                                            </Button>
-                                                                        )}
-                                                                        {recurring.status === 'paused' && (
-                                                                            <Button
-                                                                                size="sm"
-                                                                                className="w-full justify-start bg-green-600 hover:bg-green-700 text-white"
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    handleResume(recurring.id);
-                                                                                }}
-                                                                            >
-                                                                                <Play className="h-4 w-4 mr-2" />Resume Schedule
-                                                                            </Button>
-                                                                        )}
-                                                                        <Button
-                                                                            variant="outline"
-                                                                            size="sm"
-                                                                            className="w-full justify-start border-destructive text-destructive hover:bg-destructive/10"
-                                                                            onClick={(e) => handleDeleteClick(recurring, e)}
-                                                                        >
-                                                                            <Trash2 className="h-4 w-4 mr-2" />Delete Template
-                                                                        </Button>
-                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>

@@ -12,9 +12,13 @@ import { CampaignTestEmailRepository } from './campaign-test-email.repository';
 import { CampaignTestEmailService } from './campaign-test-email.service';
 import { CampaignSendRepository } from './campaign-send.repository';
 import { CampaignSendService } from './campaign-send.service';
+import { CampaignUnsubscribeController } from './campaign-unsubscribe.controller';
+import { CampaignUnsubscribeRepository } from './campaign-unsubscribe.repository';
+import { CampaignUnsubscribeService } from './campaign-unsubscribe.service';
 
 @Module({
   imports: [CampaignsModule],
+  controllers: [CampaignUnsubscribeController],
   providers: [
     CampaignRecipientsRepository,
     CampaignRecipientsService,
@@ -24,6 +28,8 @@ import { CampaignSendService } from './campaign-send.service';
     CampaignDeliveryResolver,
     CampaignSendRepository,
     CampaignSendService,
+    CampaignUnsubscribeRepository,
+    CampaignUnsubscribeService,
     ResendCampaignTestEmailProvider,
     {
       provide: CAMPAIGN_TEST_EMAIL_PROVIDER,

@@ -57,6 +57,7 @@ export type DeliveryEmailTemplate = {
   id: number;
   name: string;
   subject: string;
+  preheader?: string | null;
   body_html: string;
   body_text: string | null;
 };
@@ -163,11 +164,13 @@ export class MessageDeliveryRepository {
   }
 
   enqueueTestEmail(
-    input: EnqueueBase & { templateId: number },
+    input: EnqueueBase & { templateId: number; useDraft: boolean },
     build: (template: DeliveryEmailTemplate, organizationName: string) => MessageDeliveryPayload,
   ): Promise<Prepared> {
     return this.enqueue(input, async (client) => {
-      const template = await this.emailTemplate(client, input.organizationId, input.templateId);
+      const template = await this.emailTemplate(
+        client, input.organizationId, input.templateId, input.useDraft,
+      );
       if (!template) return { kind: 'template_not_found' as const };
       return {
         kind: 'ready' as const,
@@ -466,13 +469,23 @@ export class MessageDeliveryRepository {
     client: PoolClient,
     organizationId: number,
     templateId: number,
+    useDraft = false,
   ): Promise<DeliveryEmailTemplate | null> {
     const result = await client.query<DeliveryEmailTemplate>(
-      `SELECT id, name, subject, body_html, body_text
-       FROM email_templates
-       WHERE organization_id=$1 AND id=$2
-       FOR KEY SHARE`,
-      [organizationId, templateId],
+      `SELECT template.id, template.name,
+              CASE WHEN $3 THEN draft.subject ELSE template.subject END AS subject,
+              CASE WHEN $3 THEN draft.preheader ELSE template.preheader END AS preheader,
+              CASE WHEN $3 THEN draft.body_html ELSE template.body_html END AS body_html,
+              CASE WHEN $3 THEN draft.body_text ELSE template.body_text END AS body_text
+       FROM email_templates template
+       LEFT JOIN email_template_versions draft
+         ON draft.id=template.draft_version_id
+        AND draft.organization_id=template.organization_id
+        AND draft.state='draft'
+       WHERE template.organization_id=$1 AND template.id=$2
+         AND ($3=FALSE OR draft.id IS NOT NULL)
+       FOR KEY SHARE OF template`,
+      [organizationId, templateId, useDraft],
     );
     return result.rows[0] ?? null;
   }

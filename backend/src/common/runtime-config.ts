@@ -81,6 +81,11 @@ export function validateRuntimeEnvironment(
   integerEnvironmentValue(environment, 'PORT', 3100, 1, 65_535);
   integerEnvironmentValue(environment, 'DATABASE_POOL_MAX', 10, 1, 100);
 
+  const campaignUnsubscribeSecret = present(environment.CAMPAIGN_UNSUBSCRIBE_SECRET);
+  if (campaignUnsubscribeSecret && campaignUnsubscribeSecret.length < 32) {
+    throw new Error('CAMPAIGN_UNSUBSCRIBE_SECRET must be at least 32 characters');
+  }
+
   if (environment.NODE_ENV === 'production') {
     for (const key of ['DATABASE_URL', 'JWT_SECRET', 'FRONTEND_URL'] as const) {
       if (!present(environment[key])) throw new Error(`${key} is required in production`);

@@ -8,6 +8,7 @@ export type CampaignTestEmailMessage = {
   fromName: string | null;
   fromEmail: string | null;
   replyTo: string | null;
+  headers?: Record<string, string>;
   idempotencyKey: string;
 };
 
@@ -45,6 +46,7 @@ export class ResendCampaignTestEmailProvider implements CampaignTestEmailProvide
         html: message.html,
         ...(message.text ? { text: message.text } : {}),
         ...(message.replyTo ? { reply_to: message.replyTo } : {}),
+        ...(message.headers ? { headers: message.headers } : {}),
       }),
       signal: AbortSignal.timeout(10_000),
     });

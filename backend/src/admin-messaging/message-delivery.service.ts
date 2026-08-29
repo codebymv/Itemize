@@ -1,10 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
-import {
-  brandedTransactionalEmail,
-  transactionalEmailAssetOrigin,
-} from '../common/branded-transactional-email';
 import { itemizeGraphqlError } from '../common/graphql-error';
+import { renderEmailTemplateDocument } from '../email-templates/email-template-renderer';
 import { smsMessageInfo } from '../sms-templates/sms-message-info';
 import {
   EnqueueContactEmailInput,
@@ -65,33 +62,23 @@ export class MessageDeliveryService {
       { organizationId, userId, idempotencyKey: key, fingerprint, contactId, templateId },
       (contact, template, organizationName) => {
         const data = this.contactData(contact);
-        const renderedSubject = this.required(
-          this.render(template?.subject ?? subject!, data),
-          500,
-          'renderedSubject',
-          false,
-        );
-        const renderedBody = this.required(
-          this.render(template?.body_html ?? bodyHtml!, data),
-          1_000_000,
-          'renderedBodyHtml',
-          false,
-        );
-        const renderedHtml = this.wrapEmail(
-          renderedBody,
-          renderedSubject,
-        );
-        const renderedText = this.renderOptional(template?.body_text ?? bodyText, data);
-        if (renderedText && renderedText.length > 1_000_000) {
+        const rendered = renderEmailTemplateDocument({
+          subject: template?.subject ?? subject!,
+          preheader: template?.preheader,
+          bodyHtml: template?.body_html ?? bodyHtml!,
+          bodyText: template?.body_text ?? bodyText,
+          data,
+        });
+        if (rendered.text && rendered.text.length > 1_000_000) {
           this.bad('Rendered body text must not exceed 1000000 characters', 'input.bodyText');
         }
         return {
           to: this.email(contact.email!, 'contact.email'),
           from: process.env.EMAIL_FROM?.trim() ||
             `${organizationName} <noreply@itemize.cloud>`,
-          subject: renderedSubject,
-          html: renderedHtml,
-          text: renderedText,
+          subject: rendered.subject,
+          html: rendered.html,
+          text: rendered.text,
           replyTo,
           templateName: template?.name ?? null,
         };
@@ -146,36 +133,30 @@ export class MessageDeliveryService {
     const templateId = this.id(input.templateId, 'input.templateId');
     const to = this.email(input.toEmail, 'input.toEmail');
     const sampleData = this.sampleData(input.sampleData);
+    const useDraft = input.useDraft === true;
     const key = this.key(input.idempotencyKey);
     const fingerprint = this.fingerprint({
-      operation: 'test_email', templateId, to, sampleData,
+      operation: 'test_email', templateId, to, sampleData, useDraft,
     });
     const result = await this.repository.enqueueTestEmail(
-      { organizationId, userId, idempotencyKey: key, fingerprint, templateId },
+      { organizationId, userId, idempotencyKey: key, fingerprint, templateId, useDraft },
       (template, organizationName) => {
         const data = { ...this.defaultSample(), ...sampleData };
-        const subject = this.required(
-          `[TEST] ${this.render(template.subject, data)}`,
-          500,
-          'renderedSubject',
-          false,
-        );
-        const renderedBody = this.required(
-          this.render(template.body_html, data),
-          1_000_000,
-          'renderedBodyHtml',
-          false,
-        );
+        const rendered = renderEmailTemplateDocument({
+          subject: template.subject,
+          preheader: template.preheader,
+          bodyHtml: template.body_html,
+          bodyText: template.body_text,
+          data,
+          test: true,
+        });
         return {
           to,
           from: process.env.EMAIL_FROM?.trim() ||
             `${organizationName} <noreply@itemize.cloud>`,
-          subject,
-          html: this.wrapEmail(
-            `<div style="padding:10px;background:#fef3c7;color:#92400e;font-weight:600">TEST EMAIL</div>${renderedBody}`,
-            subject,
-          ),
-          text: this.renderOptional(template.body_text, data),
+          subject: rendered.subject,
+          html: rendered.html,
+          text: rendered.text,
           templateName: template.name,
         };
       },
@@ -355,18 +336,6 @@ export class MessageDeliveryService {
     data: Record<string, unknown>,
   ): string | null {
     return template ? this.render(template, data) : null;
-  }
-
-  private wrapEmail(html: string, subject: string): string {
-    const lower = html.toLowerCase();
-    if (lower.includes('<!doctype') || lower.includes('<html')) return html;
-    return brandedTransactionalEmail({
-      assetOrigin: transactionalEmailAssetOrigin(),
-      previewText: subject,
-      heading: subject,
-      bodyHtml: html,
-      footerText: 'Sent with Itemize.',
-    });
   }
 
   private tags(job: MessageDeliveryJobRow): Array<{ name: string; value: string }> {

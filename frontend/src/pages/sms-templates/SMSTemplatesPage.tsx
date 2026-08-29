@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Copy, FolderOpen, MessageSquare, MoreHorizontal, Plus, Search, Send, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Copy, FolderOpen, MessageSquare, MoreHorizontal, Pencil, Plus, Search, Send, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,6 +15,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { StatCard } from '@/components/StatCard';
@@ -24,11 +26,11 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { getCatalogStatusVisual } from '@/pages/campaigns/constants/campaignVisuals';
 import { deleteSmsTemplate, duplicateSmsTemplate, getSmsTemplates, sendTestSms, type SmsTemplate } from '@/services/smsApi';
-import { CreateSMSTemplateModal } from './CreateSMSTemplateModal';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
 
 export function SMSTemplatesPage() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const onboarding = useRouteOnboarding();
   const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
@@ -38,7 +40,6 @@ export function SMSTemplatesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [templateToDelete, setTemplateToDelete] = useState<SmsTemplate | null>(null);
   const [testTemplate, setTestTemplate] = useState<SmsTemplate | null>(null);
   const [testPhone, setTestPhone] = useState('');
@@ -118,9 +119,9 @@ export function SMSTemplatesPage() {
       search: <HeaderSearch label="Search SMS templates" placeholder="Search SMS templates..." value={searchQuery} onChange={setSearchQuery} width="wide" />,
       filters: <HeaderFilters label="Filter SMS templates" activeCount={Number(categoryFilter !== 'all') + Number(statusFilter !== 'all')} compactChildren={filters(true)} preferExpanded="wide-lane">{filters()}</HeaderFilters>,
       combinedQuery: <HeaderCombinedQuery label="Search and filter SMS templates" placeholder="Search SMS templates..." value={searchQuery} onChange={setSearchQuery} activeCount={Number(Boolean(searchQuery.trim())) + Number(categoryFilter !== 'all') + Number(statusFilter !== 'all')}>{filters(true)}</HeaderCombinedQuery>,
-      primaryAction: <HeaderAction label="New template" icon={<Plus className="h-4 w-4" />} onClick={() => setShowCreateModal(true)} />,
+      primaryAction: <HeaderAction label="New template" icon={<Plus className="h-4 w-4" />} onClick={() => navigate('/sms-templates/new')} />,
     }}
-    mobileActions={<div className="flex w-full items-center gap-2"><div className="relative min-w-0 flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label="Search SMS templates" placeholder="Search templates..." value={searchQuery} onChange={event => setSearchQuery(event.target.value)} className="h-11 pl-10" /></div><HeaderCombinedQuery label="Filter SMS templates" placeholder="Search SMS templates..." value={searchQuery} onChange={setSearchQuery} activeCount={Number(categoryFilter !== 'all') + Number(statusFilter !== 'all')}>{filters(true)}</HeaderCombinedQuery><Button size="icon" aria-label="New template" className="h-11 w-11 shrink-0 bg-blue-600 text-white hover:bg-blue-700" onClick={() => setShowCreateModal(true)}><Plus className="h-4 w-4" /></Button></div>}
+    mobileActions={<MobileQueryBar search={<div className="relative min-w-0 flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label="Search SMS templates" placeholder="Search templates..." value={searchQuery} onChange={event => setSearchQuery(event.target.value)} className="h-11 pl-10" /></div>} filters={<HeaderCombinedQuery label="Filter SMS templates" placeholder="Search SMS templates..." value={searchQuery} onChange={setSearchQuery} activeCount={Number(categoryFilter !== 'all') + Number(statusFilter !== 'all')}>{filters(true)}</HeaderCombinedQuery>} actions={<Button size="icon" aria-label="New template" className="h-11 w-11 shrink-0 bg-blue-600 text-white hover:bg-blue-700" onClick={() => navigate('/sms-templates/new')}><Plus className="h-4 w-4" /></Button>} />}
   >
     {!loadError && <ResponsiveCardRail label="SMS template summary" desktopColumns="md:grid-cols-2 lg:grid-cols-4" className="responsive-stat-summary">
       <StatCard title="Total SMS templates" badgeText="Total" value={stats.total} icon={MessageSquare} description={`${stats.total} reusable`} colorTheme="blue" isLoading={loading} />
@@ -130,15 +131,14 @@ export function SMSTemplatesPage() {
     </ResponsiveCardRail>}
     <Card><CardContent className="p-0">{loading ? <div className="space-y-4 p-6">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-20 w-full" />)}</div>
       : loadError ? <ErrorState title="SMS templates unavailable" description={loadError} icon={MessageSquare} onAction={() => void fetchTemplates()} className="p-12" />
-      : filteredTemplates.length === 0 ? <EmptyState icon={MessageSquare} title={hasQuery ? 'No matching SMS templates' : 'No SMS templates yet'} description={hasQuery ? 'Try a different search or clear the current filters.' : 'Create a reusable template for campaign messages.'} actionLabel={hasQuery ? 'Clear filters' : 'New template'} onAction={hasQuery ? clearQuery : () => setShowCreateModal(true)} className="p-12" />
+      : filteredTemplates.length === 0 ? <EmptyState icon={MessageSquare} title={hasQuery ? 'No matching SMS templates' : 'No SMS templates yet'} description={hasQuery ? 'Try a different search or clear the current filters.' : 'Create a reusable template for campaign messages.'} actionLabel={hasQuery ? 'Clear filters' : 'New template'} onAction={hasQuery ? clearQuery : () => navigate('/sms-templates/new')} className="p-12" />
       : <div className="divide-y">{filteredTemplates.map(template => {
         const visual = getCatalogStatusVisual(template.is_active);
         const characterCount = template.message.length;
         const segmentCount = Math.max(1, Math.ceil(characterCount / 160));
-        return <div key={template.id} className="flex items-center gap-3 px-3 py-4 transition-colors hover:bg-muted/50 sm:px-4"><div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}><MessageSquare className={cn('h-5 w-5', visual.iconClass)} /></div><div className="min-w-0 flex-1"><div className="flex min-w-0 items-center gap-2"><h3 className="truncate text-sm font-medium md:text-base">{template.name}</h3><Badge className={cn('shrink-0 text-xs', visual.badgeClass)}>{visual.label}</Badge></div><p className="mt-1 truncate text-sm text-muted-foreground">{template.message}</p><div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">{template.category && <span>{template.category}</span>}<span>{characterCount} characters</span><span>{segmentCount} SMS segment{segmentCount === 1 ? '' : 's'}</span></div></div><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" disabled={workingId === template.id} aria-label={`More actions for ${template.name}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => { setTestTemplate(template); setTestPhone(''); }}><Send className="mr-2 h-4 w-4" />Send test</DropdownMenuItem><DropdownMenuItem onClick={() => void handleDuplicate(template)}><Copy className="mr-2 h-4 w-4" />Duplicate</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setTemplateToDelete(template)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>;
+        return <div key={template.id} role="link" tabIndex={0} aria-label={`Open ${template.name}`} className="group flex cursor-pointer items-center gap-3 px-3 py-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4" onClick={() => navigate(`/sms-templates/${template.id}`)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigate(`/sms-templates/${template.id}`); } }}><div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}><MessageSquare className={cn('h-5 w-5', visual.iconClass)} /></div><div className="min-w-0 flex-1"><div className="flex min-w-0 items-center gap-2"><h3 className="truncate text-sm font-medium md:text-base">{template.name}</h3><Badge className={cn('shrink-0 text-xs', visual.badgeClass)}>{visual.label}</Badge></div><p className="mt-1 truncate text-sm text-muted-foreground">{template.message}</p><div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">{template.category && <span>{template.category}</span>}<span>{characterCount} characters</span><span>{segmentCount} SMS segment{segmentCount === 1 ? '' : 's'}</span></div></div><DropdownMenu><DropdownMenuTrigger asChild onClick={event => event.stopPropagation()}><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" disabled={workingId === template.id} aria-label={`More actions for ${template.name}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" onClick={event => event.stopPropagation()}><DropdownMenuItem onClick={() => navigate(`/sms-templates/${template.id}`)} className="group/menu"><Pencil className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Edit template</DropdownMenuItem><DropdownMenuItem onClick={() => { setTestTemplate(template); setTestPhone(''); }}><Send className="mr-2 h-4 w-4" />Send test</DropdownMenuItem><DropdownMenuItem onClick={() => void handleDuplicate(template)}><Copy className="mr-2 h-4 w-4" />Duplicate</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setTemplateToDelete(template)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>;
       })}</div>}
     </CardContent></Card>
-    {showCreateModal && organizationId && <CreateSMSTemplateModal organizationId={organizationId} onClose={() => setShowCreateModal(false)} onCreated={template => { setTemplates(current => [template, ...current]); setShowCreateModal(false); }} />}
     {onboarding.featureKey && ONBOARDING_CONTENT[onboarding.featureKey] && <OnboardingModal isOpen={onboarding.showModal} onClose={onboarding.handleClose} onComplete={onboarding.handleComplete} onDismiss={onboarding.handleDismiss} content={ONBOARDING_CONTENT[onboarding.featureKey]} />}
     <Dialog open={Boolean(testTemplate)} onOpenChange={open => { if (!open && workingId !== testTemplate?.id) { setTestTemplate(null); setTestPhone(''); } }}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Send a test SMS</DialogTitle><DialogDescription>Send {testTemplate?.name} to a phone number before using it in a campaign.</DialogDescription></DialogHeader><div className="space-y-2"><Label htmlFor="test-sms-phone">Destination phone number</Label><Input id="test-sms-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="+1 555 555 0100" value={testPhone} onChange={event => setTestPhone(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') void handleSendTest(); }} /></div><DialogFooter><Button variant="outline" onClick={() => { setTestTemplate(null); setTestPhone(''); }} disabled={workingId === testTemplate?.id}>Cancel</Button><Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => void handleSendTest()} disabled={!testPhone.trim() || workingId === testTemplate?.id}><Send className="mr-2 h-4 w-4" />Send test</Button></DialogFooter></DialogContent></Dialog>
     <DeleteDialog open={Boolean(templateToDelete)} onOpenChange={open => !open && setTemplateToDelete(null)} onConfirm={handleDelete} itemType="sms-template" itemTitle={templateToDelete?.name} />

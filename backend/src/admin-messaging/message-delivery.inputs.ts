@@ -24,6 +24,7 @@ export class EnqueueContactSmsInput {
 export class SendEmailTemplateTestInput {
   @Field(() => Int) templateId: number;
   @Field() toEmail: string;
+  @Field(() => Boolean, { nullable: true }) useDraft?: boolean | null;
   @Field(() => GraphQLJSON, { nullable: true })
   sampleData?: Record<string, unknown> | null;
   @Field() idempotencyKey: string;

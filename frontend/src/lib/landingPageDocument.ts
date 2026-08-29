@@ -5,6 +5,7 @@ import type {
   PageTheme,
   PublicPage,
 } from '@/services/pagesApi';
+import { publicFormPath } from '@/lib/publicContentRoutes';
 
 export type LandingPageDocument = Pick<
   PublicPage,
@@ -244,7 +245,7 @@ const renderSection = (section: PageSection): string => {
         content.heading || 'Contact us',
       )}</h2><p>${escapeHtml(content.subheading)}</p>${
         content.form_id
-          ? `<a class="lp-button" href="/form/${encodeURIComponent(
+          ? `<a class="lp-button" href="${publicFormPath(
               String(content.form_id),
             )}">Open form</a>`
           : '<p class="lp-muted">Select a form to publish this section.</p>'

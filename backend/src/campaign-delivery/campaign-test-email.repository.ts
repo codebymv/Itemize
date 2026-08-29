@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import { renderEmailTemplateDocument } from '../email-templates/email-template-renderer';
 
 export type CampaignTestEmailPayload = {
   html: string;
@@ -25,15 +26,6 @@ export type CampaignTestEmailPreparation =
   | { kind: 'not_found' }
   | { kind: 'key_conflict' };
 
-const substitute = (value: string | null, data: Record<string, string>): string | null => {
-  if (value === null) return null;
-  let result = value;
-  for (const [key, replacement] of Object.entries(data)) {
-    result = result.replace(new RegExp(`{{\\s*${key}\\s*}}`, 'gi'), replacement);
-  }
-  return result;
-};
-
 @Injectable()
 export class CampaignTestEmailRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
@@ -49,11 +41,12 @@ export class CampaignTestEmailRepository {
       const campaignResult = await client.query<{
         subject: string; from_name: string | null; from_email: string | null;
         reply_to: string | null; content_html: string | null; content_text: string | null;
-        template_html: string | null; template_text: string | null;
+        template_html: string | null; template_text: string | null; template_preheader: string | null;
       }>(
         `SELECT c.subject, c.from_name, c.from_email, c.reply_to,
                 c.content_html, c.content_text,
-                et.body_html AS template_html, et.body_text AS template_text
+                et.body_html AS template_html, et.body_text AS template_text,
+                et.preheader AS template_preheader
          FROM email_campaigns c
          LEFT JOIN email_templates et
            ON et.id = c.template_id AND et.organization_id = c.organization_id
@@ -77,14 +70,22 @@ export class CampaignTestEmailRepository {
         first_name: 'Test', last_name: 'User', email: recipientEmail,
         company: 'Test Company',
       };
+      const rendered = renderEmailTemplateDocument({
+        subject: campaign.subject,
+        preheader: campaign.template_preheader,
+        bodyHtml: campaign.content_html ?? campaign.template_html ?? '',
+        bodyText: campaign.content_text ?? campaign.template_text,
+        data,
+        test: true,
+      });
       const payload: CampaignTestEmailPayload = {
-        html: substitute(campaign.content_html ?? campaign.template_html ?? '', data) ?? '',
-        text: substitute(campaign.content_text ?? campaign.template_text, data),
+        html: rendered.html,
+        text: rendered.text,
         fromName: campaign.from_name,
         fromEmail: campaign.from_email,
         replyTo: campaign.reply_to,
       };
-      const subject = `[TEST] ${campaign.subject}`.slice(0, 255);
+      const subject = rendered.subject.slice(0, 255);
       const inserted = await client.query<CampaignTestEmailDeliveryRow>(
         `INSERT INTO campaign_test_email_deliveries (
            organization_id, campaign_id, requested_by_user_id, idempotency_key,
