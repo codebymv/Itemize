@@ -39,16 +39,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { getAssetUrl } from '@/lib/api';
@@ -147,7 +138,6 @@ export function InvoicesPage() {
     const [activeTab, setActiveTab] = useState<string>('all');
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
-    const [deleting, setDeleting] = useState(false);
     const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<number | null>(null);
     
     // Expanded invoice state
@@ -487,19 +477,14 @@ export function InvoicesPage() {
         }
     };
 
-    const confirmDelete = async () => {
-        if (!organizationId || !invoiceToDelete) return;
-        setDeleting(true);
+    const confirmDelete = async (): Promise<boolean> => {
+        if (!organizationId || !invoiceToDelete) return false;
         try {
             await deleteInvoice(invoiceToDelete.id, organizationId);
             setInvoices(prev => prev.filter(i => i.id !== invoiceToDelete.id));
-            toast({ title: 'Deleted', description: `Invoice ${invoiceToDelete.invoice_number} deleted successfully` });
-            setDeleteDialogOpen(false);
-            setInvoiceToDelete(null);
+            return true;
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to delete invoice', variant: 'destructive' });
-        } finally {
-            setDeleting(false);
+            return false;
         }
     };
 
@@ -1165,36 +1150,22 @@ export function InvoicesPage() {
                 </CardContent>
             </Card>
 
-            {/* Delete Confirmation Dialog */}
-            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Invoice</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Are you sure you want to delete invoice{' '}
-                            <span className="font-semibold">{invoiceToDelete?.invoice_number}</span>?
-                            {invoiceToDelete?.status !== 'draft' && (
-                                <span className="block mt-2 text-yellow-600 dark:text-yellow-500">
-                                    This invoice has been sent to the customer. Deleting it will remove all records.
-                                </span>
-                            )}
-                            <span className="block mt-2">
-                                This action cannot be undone.
-                            </span>
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={confirmDelete}
-                            disabled={deleting}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                            {deleting ? 'Deleting...' : 'Delete'}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <DeleteDialog
+                open={deleteDialogOpen}
+                onOpenChange={(open) => {
+                    setDeleteDialogOpen(open);
+                    if (!open) setInvoiceToDelete(null);
+                }}
+                onConfirm={confirmDelete}
+                itemType="invoice"
+                itemTitle={invoiceToDelete?.invoice_number}
+                description={invoiceToDelete?.status !== 'draft'
+                    ? 'This invoice has been sent to the customer. Deleting it removes the invoice record and cannot be undone.'
+                    : undefined}
+                successDescription={invoiceToDelete
+                    ? `Invoice ${invoiceToDelete.invoice_number} has been permanently deleted.`
+                    : undefined}
+            />
 
             {/* Send Invoice Modal */}
             {selectedInvoiceForSend && (

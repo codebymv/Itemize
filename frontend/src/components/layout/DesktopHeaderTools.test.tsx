@@ -7,7 +7,27 @@ import {
   HeaderAction,
   HeaderFilters,
   HeaderRefreshAction,
+  HeaderSearch,
 } from './DesktopHeaderTools';
+
+describe('HeaderSearch', () => {
+  it('marks longer dataset searches to claim available shell width', () => {
+    const { container } = render(
+      <TooltipProvider>
+        <HeaderSearch
+          label="Search documents"
+          placeholder="Search documents..."
+          value=""
+          onChange={vi.fn()}
+          width="wide"
+        />
+      </TooltipProvider>,
+    );
+
+    expect(container.querySelector('.desktop-header-search__wide')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Search documents...')).toBeInTheDocument();
+  });
+});
 
 describe('HeaderRefreshAction', () => {
   it('uses the typed primary-action slot and responsive action label', () => {
@@ -82,6 +102,18 @@ describe('HeaderAction', () => {
   });
 });
 
+describe('DesktopHeaderTools status', () => {
+  it('renders entity state in the typed, width-aware shell slot', () => {
+    const { container } = render(
+      <TooltipProvider>
+        <DesktopHeaderTools status={<span>Active</span>} />
+      </TooltipProvider>,
+    );
+
+    expect(container.querySelector('.desktop-header-tools__status')).toHaveTextContent('Active');
+  });
+});
+
 describe('HeaderFilters', () => {
   it('supports a popover-specific arrangement without changing the full filter row', () => {
     const { container } = render(
@@ -136,6 +168,23 @@ describe('HeaderFilters', () => {
     );
     expect(container.querySelector('.desktop-header-filters__compact')).toHaveClass(
       'desktop-header-filters__compact--roomy',
+    );
+  });
+
+  it('can defer a wider secondary filter until the complete lane fits', () => {
+    const { container } = render(
+      <TooltipProvider>
+        <HeaderFilters label="Filter status" preferExpanded="wide-lane">
+          <div>Status dropdown</div>
+        </HeaderFilters>
+      </TooltipProvider>,
+    );
+
+    expect(container.querySelector('.desktop-header-filters__full')).toHaveClass(
+      'desktop-header-filters__full--wide-lane',
+    );
+    expect(container.querySelector('.desktop-header-filters__compact')).toHaveClass(
+      'desktop-header-filters__compact--wide-lane',
     );
   });
 });

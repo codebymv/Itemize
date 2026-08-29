@@ -3,10 +3,11 @@ import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { signatureDeliveryTokenHash } from '../signature-delivery/signature-delivery.token';
 import {
-  PublicSigningFieldValue,
+  PublicSigningSubmission,
   PublicSigningValidationError,
   validatePublicSigningFieldValue,
 } from './public-signing.validation';
+import { SIGNATURE_CONSENT_SHA256 } from './signature-consent';
 import { NotificationsService } from '../notifications/notifications.service';
 
 export type PublicSigningAudit = {
@@ -164,7 +165,7 @@ export class PublicSigningRepository {
 
   submit(
     tokenHash: string,
-    fields: PublicSigningFieldValue[],
+    submission: PublicSigningSubmission,
     audit: PublicSigningAudit,
   ): Promise<PublicSigningSubmitResult | null> {
     return this.transaction(async (client) => {
@@ -180,7 +181,7 @@ export class PublicSigningRepository {
          FOR UPDATE`,
         [capability.document_id, capability.recipient_id],
       );
-      const submitted = new Map(fields.map((field) => [field.id, field.value]));
+      const submitted = new Map(submission.fields.map((field) => [field.id, field.value]));
       const byId = new Map(
         allowed.rows.filter((field) => !field.locked).map((field) => [field.id, field]),
       );
@@ -213,9 +214,16 @@ export class PublicSigningRepository {
       await client.query(
         `UPDATE signature_recipients SET status='signed',signed_at=CURRENT_TIMESTAMP,
            signing_token_hash=NULL,token_expires_at=NULL,routing_status='locked',
-           ip_address=$2,user_agent=$3
+           ip_address=$2,user_agent=$3,electronic_consent_version=$4,
+           electronic_consent_sha256=$5,electronic_consented_at=CURRENT_TIMESTAMP
          WHERE id=$1`,
-        [capability.recipient_id, audit.ipAddress, audit.userAgent],
+        [
+          capability.recipient_id,
+          audit.ipAddress,
+          audit.userAgent,
+          submission.consent.version,
+          SIGNATURE_CONSENT_SHA256,
+        ],
       );
       await this.cancelRecipientDeliveries(
         client,
@@ -229,6 +237,10 @@ export class PublicSigningRepository {
         'signed',
         'Recipient signed document',
         audit,
+        {
+          consentVersion: submission.consent.version,
+          consentSha256: SIGNATURE_CONSENT_SHA256,
+        },
       );
       await this.enqueueSignerCompleted(client, capability);
 
@@ -648,6 +660,7 @@ export class PublicSigningRepository {
     eventType: string,
     description: string,
     audit: PublicSigningAudit,
+    evidence: Record<string, unknown> = {},
   ): Promise<unknown> {
     return client.query(
       `INSERT INTO signature_audit_log
@@ -665,6 +678,7 @@ export class PublicSigningRepository {
           actor_class: 'signing_capability',
           request_id: audit.requestId,
           version: 1,
+          ...evidence,
         }),
       ],
     );

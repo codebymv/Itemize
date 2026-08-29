@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ActivationModule } from '../activation/activation.module';
 import { SignatureDocumentsModule } from '../signature-documents/signature-documents.module';
+import { SignatureFilesModule } from '../signature-files/signature-files.module';
 import { WorkflowJobsModule } from '../workflow-jobs/workflow-jobs.module';
 import { SignatureDeliveryJobsRepository } from './signature-delivery-jobs.repository';
 import { SignatureDeliveryJobsService } from './signature-delivery-jobs.service';
@@ -9,7 +10,7 @@ import { SignatureDeliveryResolver } from './signature-delivery.resolver';
 import { SignatureDeliveryService } from './signature-delivery.service';
 
 @Module({
-  imports: [ActivationModule, SignatureDocumentsModule, WorkflowJobsModule],
+  imports: [ActivationModule, SignatureDocumentsModule, SignatureFilesModule, WorkflowJobsModule],
   providers: [
     SignatureDeliveryRepository,
     SignatureDeliveryService,

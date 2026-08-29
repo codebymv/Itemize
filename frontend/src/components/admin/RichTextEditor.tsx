@@ -37,6 +37,8 @@ interface RichTextEditorProps {
     placeholder?: string;
     minHeight?: string;
     disabled?: boolean;
+    insertText?: string;
+    insertTextNonce?: number;
 }
 
 /**
@@ -50,6 +52,8 @@ export function RichTextEditor({
     placeholder = 'Write your message...',
     minHeight = '200px',
     disabled = false,
+    insertText,
+    insertTextNonce,
 }: RichTextEditorProps) {
     const [showHeadingOptions, setShowHeadingOptions] = useState(false);
     const [showLinkInput, setShowLinkInput] = useState(false);
@@ -117,6 +121,11 @@ export function RichTextEditor({
         editable: !disabled,
         immediatelyRender: false,
     });
+
+    useEffect(() => {
+        if (!editor || !insertText || insertTextNonce === undefined) return;
+        editor.chain().focus().insertContent(insertText).run();
+    }, [editor, insertText, insertTextNonce]);
 
     // Sync content from props
     useEffect(() => {

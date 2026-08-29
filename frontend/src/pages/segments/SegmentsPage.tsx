@@ -1,305 +1,154 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, MoreHorizontal, Trash2, Copy, Users, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Filter, MoreHorizontal, Plus, RefreshCw, Search, Trash2, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
-import { useOrganization } from '@/hooks/useOrganization';
-import { getSegments, deleteSegment, calculateSegment } from '@/services/segmentsApi';
-import { CreateSegmentModal } from './CreateSegmentModal';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
-import { Segment } from '@/types/segments';
-import { StatCard } from '@/components/StatCard';
-import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { OnboardingModal } from '@/components/OnboardingModal';
+import { StatCard } from '@/components/StatCard';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
-import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { useOrganization } from '@/hooks/useOrganization';
+import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import { getCatalogStatusVisual } from '@/pages/campaigns/constants/campaignVisuals';
+import { calculateSegment, deleteSegment, getSegments, type Segment } from '@/services/segmentsApi';
+import { CreateSegmentModal } from './CreateSegmentModal';
+
+type StatusFilter = 'all' | 'active' | 'inactive';
 
 export function SegmentsPage() {
-    const navigate = useNavigate();
-    const { toast } = useToast();
-    // Route-aware onboarding (will show 'campaigns' onboarding for all Marketing routes)
-    const {
-        showModal: showOnboarding,
-        handleComplete: handleOnboardingComplete,
-        handleDismiss: handleOnboardingDismiss,
-        handleClose: handleOnboardingClose,
-        featureKey: onboardingFeatureKey,
-    } = useRouteOnboarding();
+  const { toast } = useToast();
+  const onboarding = useRouteOnboarding();
+  const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
+  const [segments, setSegments] = useState<Segment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [segmentToDelete, setSegmentToDelete] = useState<Segment | null>(null);
+  const [workingId, setWorkingId] = useState<number | null>(null);
+  const requestRef = useRef(0);
 
-    const [segments, setSegments] = useState<Segment[]>([]);
-    const [loading, setLoading] = useState(true);
-    const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
-    const [searchQuery, setSearchQuery] = useState('');
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [segmentToDelete, setSegmentToDelete] = useState<Segment | null>(null);
-
-    const stats = useMemo(() => {
-        const total = segments.length;
-        const dynamic = segments.filter(s => (s.segment_type ?? s.type) === 'dynamic').length;
-        const staticCount = segments.filter(s => (s.segment_type ?? s.type) === 'static').length;
-        const contacts = segments.reduce((sum, s) => sum + (s.contact_count || 0), 0);
-        return { total, dynamic, staticCount, contacts };
-    }, [segments]);
-
-    useEffect(() => {
-        if (orgLoading) {
-            setLoading(true);
-            return;
-        }
-
-        if (!organizationId) {
-            setLoading(false);
-        }
-    }, [organizationId, initError, orgLoading]);
-
-    const fetchSegments = useCallback(async () => {
-        if (!organizationId) {
-            if (!orgLoading) {
-                setSegments([]);
-                setLoading(false);
-            }
-            return;
-        }
-        setLoading(true);
-        try {
-            const segments = await getSegments({}, organizationId);
-            setSegments(Array.isArray(segments) ? segments : []);
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to load segments', variant: 'destructive' });
-        } finally {
-            setLoading(false);
-        }
-    }, [organizationId, orgLoading, toast]);
-
-    useEffect(() => {
-        fetchSegments();
-    }, [fetchSegments]);
-
-    const handleRecalculate = async (id: number) => {
-        if (!organizationId) return;
-        try {
-            const result = await calculateSegment(id, organizationId);
-            setSegments(prev => prev.map(s => s.id === id ? { ...s, contact_count: result.contact_count } : s));
-            toast({ title: 'Recalculated', description: `${result.contact_count} contacts match this segment` });
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to recalculate', variant: 'destructive' });
-        }
-    };
-
-    const handleDelete = async (): Promise<boolean> => {
-        if (!organizationId || !segmentToDelete) return false;
-        try {
-            await deleteSegment(segmentToDelete.id, organizationId);
-            setSegments(prev => prev.filter(s => s.id !== segmentToDelete.id));
-            setSegmentToDelete(null);
-            return true;
-        } catch (error) {
-            return false;
-        }
-    };
-
-    const filteredSegments = segments.filter(s => 
-        s.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    if (initError) {
-        return (
-            <PageLayout
-                title="SEGMENTS"
-                icon={<Filter className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            >
-                <ErrorState
-                    title="Unable to load segments"
-                    description={initError}
-                    onAction={() => void fetchSegments()}
-                />
-            </PageLayout>
-        );
+  const fetchSegments = useCallback(async () => {
+    if (orgLoading) return setLoading(true);
+    if (!organizationId) { setSegments([]); setLoading(false); return; }
+    const requestId = ++requestRef.current;
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const next = await getSegments({}, organizationId);
+      if (requestId === requestRef.current) setSegments(next);
+    } catch (error) {
+      console.error('Error fetching segments:', error);
+      if (requestId === requestRef.current) setLoadError('We could not load your segments. Existing segments have not been changed.');
+    } finally {
+      if (requestId === requestRef.current) setLoading(false);
     }
+  }, [organizationId, orgLoading]);
 
-    return (
-        <PageLayout
-            title="SEGMENTS"
-            icon={<Filter className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            pageActions={
-                <>
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search segments..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
-                    </div>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={() => setShowCreateModal(true)}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Segment
-                    </Button>
-                </>
-            }
-            mobileActions={
-                <>
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search segments..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
-                        />
-                    </div>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={() => setShowCreateModal(true)}
-                    >
-                        <Plus className="h-4 w-4" />
-                    </Button>
-                </>
-            }
-        >
-                    <ResponsiveCardRail
-                        label="Segment summary"
-                        desktopColumns="md:grid-cols-2 lg:grid-cols-4"
-                    >
-                        <StatCard
-                            title="Total Segments"
-                            badgeText="Total"
-                            value={stats.total}
-                            icon={Filter}
-                            colorTheme="blue"
-                            isLoading={loading}
-                        />
-                        <StatCard
-                            title="Dynamic"
-                            badgeText="Dynamic"
-                            value={stats.dynamic}
-                            icon={RefreshCw}
-                            colorTheme="orange"
-                            isLoading={loading}
-                        />
-                        <StatCard
-                            title="Static"
-                            badgeText="Static"
-                            value={stats.staticCount}
-                            icon={Users}
-                            colorTheme="gray"
-                            isLoading={loading}
-                        />
-                        <StatCard
-                            title="Contacts"
-                            badgeText="Total"
-                            value={stats.contacts}
-                            icon={Users}
-                            colorTheme="green"
-                            isLoading={loading}
-                        />
-                    </ResponsiveCardRail>
-                        {loading ? (
-                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40" />)}
-                            </div>
-                        ) : filteredSegments.length === 0 ? (
-                            <EmptyState
-                                title="No segments yet"
-                                description="Create segments to group and target contacts"
-                                icon={Filter}
-                                actionLabel="New Segment"
-                                onAction={() => setShowCreateModal(true)}
-                                className="p-12"
-                            />
-                        ) : (
-                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {filteredSegments.map((segment) => (
-                                    <Card key={segment.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                                        <CardHeader className="pb-3">
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex-1 min-w-0">
-                                                    <CardTitle className="text-lg truncate">{segment.name}</CardTitle>
-                                                    {segment.description && <CardDescription className="line-clamp-2">{segment.description}</CardDescription>}
-                                                </div>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2" aria-label="Segment actions">
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => handleRecalculate(segment.id)}>
-                                                            <RefreshCw className="h-4 w-4 mr-2" />Recalculate
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem onClick={() => setSegmentToDelete(segment)} className="text-destructive focus:text-destructive">
-                                                            <Trash2 className="h-4 w-4 mr-2" />Delete
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent className="pt-0">
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <Badge variant={(segment.segment_type ?? segment.type) === 'dynamic' ? 'default' : 'secondary'}>
-                                                    {segment.segment_type ?? segment.type}
-                                                </Badge>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                <Users className="h-4 w-4" />
-                                                <span>{segment.contact_count} contacts</span>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                        )}
+  useEffect(() => { void fetchSegments(); }, [fetchSegments]);
 
-                {showCreateModal && organizationId && (
-                    <CreateSegmentModal
-                        organizationId={organizationId}
-                        onClose={() => setShowCreateModal(false)}
-                        onCreated={(segment) => {
-                            setSegments(prev => [segment, ...prev]);
-                            setShowCreateModal(false);
-                        }}
-                    />
-                )}
+  const stats = useMemo(() => ({
+    total: segments.length,
+    dynamic: segments.filter(segment => segment.segment_type === 'dynamic').length,
+    staticCount: segments.filter(segment => segment.segment_type === 'static').length,
+    contacts: segments.reduce((sum, segment) => sum + (segment.contact_count || 0), 0),
+  }), [segments]);
 
-            {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
-                <OnboardingModal
-                    isOpen={showOnboarding}
-                    onClose={handleOnboardingClose}
-                    onComplete={handleOnboardingComplete}
-                    onDismiss={handleOnboardingDismiss}
-                    content={ONBOARDING_CONTENT[onboardingFeatureKey]}
-                />
-            )}
-            <DeleteDialog
-                open={Boolean(segmentToDelete)}
-                onOpenChange={(open) => !open && setSegmentToDelete(null)}
-                onConfirm={handleDelete}
-                itemType="segment"
-                itemTitle={segmentToDelete?.name}
-            />
-        </PageLayout>
-    );
+  const filteredSegments = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return segments.filter(segment => {
+      const matchesQuery = !query || segment.name.toLowerCase().includes(query) || segment.description?.toLowerCase().includes(query);
+      const matchesStatus = statusFilter === 'all' || segment.is_active === (statusFilter === 'active');
+      return matchesQuery && matchesStatus;
+    });
+  }, [searchQuery, segments, statusFilter]);
+
+  const statusSelect = (compact = false) => (
+    <Select value={statusFilter} onValueChange={value => setStatusFilter(value as StatusFilter)}>
+      <SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[132px] bg-muted/20'}><SelectValue placeholder="Status" /></SelectTrigger>
+      <SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem></SelectContent>
+    </Select>
+  );
+
+  const handleRecalculate = async (segment: Segment) => {
+    if (!organizationId) return;
+    setWorkingId(segment.id);
+    try {
+      const updated = await calculateSegment(segment.id, organizationId);
+      setSegments(current => current.map(item => item.id === updated.id ? updated : item));
+      toast({ title: 'Recalculated', description: `${updated.contact_count} contacts match this segment.` });
+    } catch {
+      toast({ title: 'Unable to recalculate', description: 'The saved segment is unchanged.', variant: 'destructive' });
+    } finally { setWorkingId(null); }
+  };
+
+  const handleDelete = async (): Promise<boolean> => {
+    if (!organizationId || !segmentToDelete) return false;
+    try {
+      await deleteSegment(segmentToDelete.id, organizationId);
+      setSegments(current => current.filter(segment => segment.id !== segmentToDelete.id));
+      setSegmentToDelete(null);
+      return true;
+    } catch { return false; }
+  };
+
+  const hasQuery = Boolean(searchQuery.trim()) || statusFilter !== 'all';
+  const clearQuery = () => { setSearchQuery(''); setStatusFilter('all'); };
+
+  if (initError) return <PageLayout title="SEGMENTS" icon={<Filter className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}><ErrorState title="Unable to load segments" description={initError} icon={Filter} onAction={() => void fetchSegments()} /></PageLayout>;
+
+  return (
+    <PageLayout
+      title="SEGMENTS"
+      icon={<Filter className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+      mobileClassName="items-stretch"
+      desktopTools={{
+        search: <HeaderSearch label="Search segments" placeholder="Search segments..." value={searchQuery} onChange={setSearchQuery} width="wide" />,
+        filters: <HeaderFilters label="Filter segments by status" activeCount={Number(statusFilter !== 'all')} compactChildren={statusSelect(true)} preferExpanded="when-roomy">{statusSelect()}</HeaderFilters>,
+        combinedQuery: <HeaderCombinedQuery label="Search and filter segments" placeholder="Search segments..." value={searchQuery} onChange={setSearchQuery} activeCount={Number(Boolean(searchQuery.trim())) + Number(statusFilter !== 'all')}>{statusSelect(true)}</HeaderCombinedQuery>,
+        primaryAction: <HeaderAction label="New segment" icon={<Plus className="h-4 w-4" />} onClick={() => setShowCreateModal(true)} />,
+      }}
+      mobileActions={<div className="flex w-full items-center gap-2"><div className="relative min-w-0 flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label="Search segments" placeholder="Search segments..." value={searchQuery} onChange={event => setSearchQuery(event.target.value)} className="h-11 pl-10" /></div><div className="w-[6.25rem] shrink-0">{statusSelect(true)}</div><Button size="icon" aria-label="New segment" className="h-11 w-11 shrink-0 bg-blue-600 text-white hover:bg-blue-700" onClick={() => setShowCreateModal(true)}><Plus className="h-4 w-4" /></Button></div>}
+    >
+      {!loadError && <ResponsiveCardRail label="Segment summary" desktopColumns="md:grid-cols-2 lg:grid-cols-4" className="responsive-stat-summary">
+        <StatCard title="Total segments" badgeText="Total" value={stats.total} icon={Filter} description={`${stats.total} configured`} colorTheme="blue" isLoading={loading} />
+        <StatCard title="Dynamic segments" badgeText="Dynamic" value={stats.dynamic} icon={RefreshCw} description="Rule-based audiences" colorTheme="blue" isLoading={loading} />
+        <StatCard title="Static segments" badgeText="Static" value={stats.staticCount} icon={Users} description="Saved contact groups" colorTheme="blue" isLoading={loading} />
+        <StatCard title="Segment contacts" badgeText="Contacts" value={stats.contacts} icon={Users} description="Across all segments" colorTheme="blue" isLoading={loading} />
+      </ResponsiveCardRail>}
+
+      <Card><CardContent className="p-0">
+        {loading ? <div className="space-y-4 p-6">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-20 w-full" />)}</div>
+          : loadError ? <ErrorState title="Segments unavailable" description={loadError} icon={Filter} onAction={() => void fetchSegments()} className="p-12" />
+          : filteredSegments.length === 0 ? <EmptyState icon={Filter} title={hasQuery ? 'No matching segments' : 'No segments yet'} description={hasQuery ? 'Try a different search or clear the current filters.' : 'Create a segment to group and target contacts.'} actionLabel={hasQuery ? 'Clear filters' : 'New segment'} onAction={hasQuery ? clearQuery : () => setShowCreateModal(true)} className="p-12" />
+          : <div className="divide-y">{filteredSegments.map(segment => {
+            const visual = getCatalogStatusVisual(segment.is_active);
+            const TypeIcon = segment.segment_type === 'dynamic' ? RefreshCw : Users;
+            return <div key={segment.id} className="flex items-center gap-3 px-3 py-4 transition-colors hover:bg-muted/50 sm:px-4">
+              <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}><TypeIcon className={cn('h-5 w-5', visual.iconClass)} /></div>
+              <div className="min-w-0 flex-1"><div className="flex min-w-0 items-center gap-2"><h3 className="truncate text-sm font-medium md:text-base">{segment.name}</h3><Badge className={cn('shrink-0 text-xs', visual.badgeClass)}>{visual.label}</Badge></div>{segment.description && <p className="mt-1 truncate text-sm text-muted-foreground">{segment.description}</p>}<div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground"><span>{segment.segment_type === 'dynamic' ? 'Dynamic' : 'Static'}</span><span>{segment.contact_count} contact{segment.contact_count === 1 ? '' : 's'}</span>{segment.used_in_campaigns > 0 && <span>{segment.used_in_campaigns} campaign{segment.used_in_campaigns === 1 ? '' : 's'}</span>}{segment.used_in_automations > 0 && <span>{segment.used_in_automations} automation{segment.used_in_automations === 1 ? '' : 's'}</span>}</div></div>
+              <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" disabled={workingId === segment.id} aria-label={`More actions for ${segment.name}`}><MoreHorizontal className={cn('h-4 w-4', workingId === segment.id && 'animate-pulse')} /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">{segment.segment_type === 'dynamic' && <DropdownMenuItem onClick={() => void handleRecalculate(segment)}><RefreshCw className="mr-2 h-4 w-4" />Recalculate</DropdownMenuItem>}<DropdownMenuSeparator /><DropdownMenuItem onClick={() => setSegmentToDelete(segment)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
+            </div>;
+          })}</div>}
+      </CardContent></Card>
+
+      {showCreateModal && organizationId && <CreateSegmentModal organizationId={organizationId} onClose={() => setShowCreateModal(false)} onCreated={segment => { setSegments(current => [segment, ...current]); setShowCreateModal(false); }} />}
+      {onboarding.featureKey && ONBOARDING_CONTENT[onboarding.featureKey] && <OnboardingModal isOpen={onboarding.showModal} onClose={onboarding.handleClose} onComplete={onboarding.handleComplete} onDismiss={onboarding.handleDismiss} content={ONBOARDING_CONTENT[onboarding.featureKey]} />}
+      <DeleteDialog open={Boolean(segmentToDelete)} onOpenChange={open => !open && setSegmentToDelete(null)} onConfirm={handleDelete} itemType="segment" itemTitle={segmentToDelete?.name} />
+    </PageLayout>
+  );
 }
 
 export default SegmentsPage;

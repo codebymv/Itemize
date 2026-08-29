@@ -5,6 +5,8 @@ import { RequestContextService } from '../request-context/request-context.servic
 import {
   CreateEmailTemplateInput,
   EmailTemplateFilterInput,
+  PreviewEmailTemplateInput,
+  PublishEmailTemplateInput,
   UpdateEmailTemplateInput,
 } from './email-template.inputs';
 import {
@@ -12,6 +14,7 @@ import {
   EmailTemplate,
   EmailTemplateCategory,
   EmailTemplatePage,
+  EmailTemplatePreview,
 } from './email-template.types';
 import { EmailTemplatesService } from './email-templates.service';
 
@@ -49,6 +52,42 @@ export class EmailTemplatesResolver {
   @Mutation(() => EmailTemplate)
   createEmailTemplate(@Args('input') input: CreateEmailTemplateInput): Promise<EmailTemplate> {
     return this.templates.create(this.organizationId(), this.userId(), input);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => EmailTemplate)
+  createEmailTemplateDraft(@Args('input') input: CreateEmailTemplateInput): Promise<EmailTemplate> {
+    return this.templates.createDraft(this.organizationId(), this.userId(), input);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => EmailTemplate)
+  saveEmailTemplateDraft(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('input') input: CreateEmailTemplateInput,
+  ): Promise<EmailTemplate> {
+    return this.templates.saveDraft(this.organizationId(), id, this.userId(), input);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => EmailTemplate)
+  publishEmailTemplate(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('input', { nullable: true }) input?: PublishEmailTemplateInput,
+  ): Promise<EmailTemplate> {
+    return this.templates.publishDraft(this.organizationId(), id, this.userId(), input?.isActive);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => EmailTemplatePreview)
+  previewEmailTemplate(@Args('input') input: PreviewEmailTemplateInput): EmailTemplatePreview {
+    return this.templates.preview(Object.assign(new CreateEmailTemplateInput(), {
+      name: 'Preview', category: 'preview', isActive: false, ...input,
+    }));
   }
 
   @CsrfProtected()

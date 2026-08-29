@@ -27,6 +27,11 @@ import {
   publicSigningTokenHash,
   PublicSigningValidationError,
 } from './public-signing.validation';
+import {
+  SIGNATURE_CONSENT_SHA256,
+  SIGNATURE_CONSENT_TEXT,
+  SIGNATURE_CONSENT_VERSION,
+} from './signature-consent';
 
 @Injectable()
 export class PublicSigningService {
@@ -81,6 +86,11 @@ export class PublicSigningService {
         label: field.label,
         is_required: field.is_required,
       })),
+      consent: {
+        version: SIGNATURE_CONSENT_VERSION,
+        text: SIGNATURE_CONSENT_TEXT,
+        sha256: SIGNATURE_CONSENT_SHA256,
+      },
     };
   }
 
@@ -98,8 +108,8 @@ export class PublicSigningService {
   async submit(token: string, payload: unknown, audit: PublicSigningAudit) {
     const tokenHash = this.tokenHash(token);
     try {
-      const fields = normalizePublicSigningSubmission(payload);
-      const result = await this.repository.submit(tokenHash, fields, audit);
+      const submission = normalizePublicSigningSubmission(payload);
+      const result = await this.repository.submit(tokenHash, submission, audit);
       if (!result) throw this.notFound();
       await this.activation.recordArtifactAdvanced({
         organizationId: result.organizationId,

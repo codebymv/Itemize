@@ -50,16 +50,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { getContacts } from '@/services/contactsApi';
 import { getProducts, Product, getBusinesses, Business } from '@/services/invoicesApi';
@@ -85,6 +76,7 @@ import {
     HeaderSearch,
 } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
@@ -148,6 +140,7 @@ export function RecurringInvoicesPage() {
 
     const [recurringInvoices, setRecurringInvoices] = useState<RecurringInvoice[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<string>('all');
@@ -162,7 +155,6 @@ export function RecurringInvoicesPage() {
     // Delete confirmation dialog state
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [recurringToDelete, setRecurringToDelete] = useState<RecurringInvoice | null>(null);
-    const [deleting, setDeleting] = useState(false);
 
     // Generate invoice state
     const [generatingInvoice, setGeneratingInvoice] = useState<number | null>(null);
@@ -190,6 +182,7 @@ export function RecurringInvoicesPage() {
     useEffect(() => {
         if (!initError) return;
         toast({ title: 'Error', description: initError, variant: 'destructive' });
+        setLoadError(initError);
         setLoading(false);
     }, [initError, toast]);
 
@@ -209,7 +202,6 @@ export function RecurringInvoicesPage() {
                 }
             } catch (error) {
                 toast({ title: 'Error', description: 'Failed to load supporting data', variant: 'destructive' });
-                setLoading(false);
             }
         };
         loadSupportData();
@@ -218,11 +210,11 @@ export function RecurringInvoicesPage() {
     const fetchRecurringInvoices = useCallback(async () => {
         if (!organizationId) return;
         setLoading(true);
+        setLoadError(null);
         try {
             setRecurringInvoices(await getRecurringInvoices('all', organizationId));
         } catch (error) {
-            // Endpoint might not exist yet
-            setRecurringInvoices([]);
+            setLoadError('Recurring schedules could not be loaded. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -362,26 +354,34 @@ export function RecurringInvoicesPage() {
         setDeleteDialogOpen(true);
     };
 
-    const confirmDelete = async () => {
-        if (!organizationId || !recurringToDelete) return;
-        setDeleting(true);
+    const confirmDelete = async (): Promise<boolean> => {
+        if (!organizationId || !recurringToDelete) return false;
         try {
             await deleteRecurringInvoice(recurringToDelete.id, organizationId);
             setRecurringInvoices(prev => prev.filter(r => r.id !== recurringToDelete.id));
-            toast({ title: 'Deleted', description: 'Recurring invoice deleted successfully' });
-            setDeleteDialogOpen(false);
-            setRecurringToDelete(null);
             // Collapse if deleted item was expanded
             if (expandedId === recurringToDelete.id) {
                 setExpandedId(null);
                 setExpandedData(null);
             }
+            return true;
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' });
-        } finally {
-            setDeleting(false);
+            return false;
         }
     };
+
+    const generatedInvoiceCount = recurringToDelete?.invoices_generated ?? 0;
+    const recurringDeleteDescription = recurringToDelete
+        ? [
+            recurringToDelete.status === 'active'
+                ? 'Deleting this active schedule stops all future invoice generation.'
+                : 'Deletes this recurring schedule and stops future invoice generation.',
+            generatedInvoiceCount > 0
+                ? `${generatedInvoiceCount} previously generated invoice${generatedInvoiceCount === 1 ? '' : 's'} will stay unchanged.`
+                : null,
+            'This action cannot be undone.',
+        ].filter(Boolean).join(' ')
+        : undefined;
 
     const loadExpandedRecurring = useCallback(async (recurringId: number) => {
         if (!organizationId) return;
@@ -607,7 +607,7 @@ export function RecurringInvoicesPage() {
                 </>
             }
         >
-                {/* Summary Cards */}
+                {!loadError && (
                 <ResponsiveCardRail
                     label="Recurring invoice summary"
                     desktopColumns="md:grid-cols-3"
@@ -641,6 +641,7 @@ export function RecurringInvoicesPage() {
                     isLoading={loading}
                 />
                 </ResponsiveCardRail>
+                )}
 
             {/* Recurring List */}
             <Card>
@@ -649,6 +650,13 @@ export function RecurringInvoicesPage() {
                         <div className="p-6 space-y-4">
                             {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20" />)}
                         </div>
+                    ) : loadError ? (
+                        <ErrorState
+                            title="Unable to load recurring schedules"
+                            description={loadError}
+                            actionLabel="Try again"
+                            onAction={() => void fetchRecurringInvoices()}
+                        />
                     ) : filteredRecurring.length === 0 ? (
                         <EmptyState
                             icon={RefreshCw}
@@ -1118,41 +1126,18 @@ export function RecurringInvoicesPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Delete Confirmation Dialog */}
-            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Delete recurring schedule?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Are you sure you want to delete recurring schedule{' '}
-                            <span className="font-semibold">{recurringToDelete?.template_name}</span>?
-                            {recurringToDelete?.status === 'active' && (
-                                <span className="block mt-2 text-yellow-600 dark:text-yellow-500">
-                                    Active schedule stops after deletion.
-                                </span>
-                            )}
-                            {(recurringToDelete?.invoices_generated || 0) > 0 && (
-                                <span className="block mt-2 text-muted-foreground">
-                                    Generated invoices stay unchanged ({recurringToDelete?.invoices_generated}).
-                                </span>
-                            )}
-                            <span className="block mt-2">
-                                This action cannot be undone.
-                            </span>
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={confirmDelete}
-                            disabled={deleting}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                            {deleting ? 'Deleting...' : 'Delete'}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            <DeleteDialog
+                open={deleteDialogOpen}
+                onOpenChange={(open) => {
+                    setDeleteDialogOpen(open);
+                    if (!open) setRecurringToDelete(null);
+                }}
+                onConfirm={confirmDelete}
+                itemType="recurring-schedule"
+                itemTitle={recurringToDelete?.template_name}
+                title="Delete Recurring Schedule"
+                description={recurringDeleteDescription}
+            />
         {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
             <OnboardingModal
                 isOpen={showOnboarding}

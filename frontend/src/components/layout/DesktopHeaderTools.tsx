@@ -11,6 +11,8 @@ export interface DesktopHeaderToolsProps {
   search?: ReactNode;
   filters?: ReactNode;
   combinedQuery?: ReactNode;
+  /** Read-only entity state shown only when the command lane has room. */
+  status?: ReactNode;
   secondaryAction?: ReactNode;
   primaryAction?: ReactNode;
 }
@@ -20,6 +22,8 @@ interface HeaderSearchProps {
   onChange: (value: string) => void;
   label: string;
   placeholder?: string;
+  /** Allows longer dataset labels to use available shell width before compacting. */
+  width?: 'default' | 'wide';
 }
 
 interface HeaderFiltersProps {
@@ -29,10 +33,10 @@ interface HeaderFiltersProps {
   activeCount?: number;
   /**
    * Surfaces a high-value scope control before the complete filter lane fits.
-   * `true` is the first control to expose; `when-roomy` is for a useful second
-   * control that should wait until the compact command lane can hold it.
+   * `true` is the first control to expose; `when-roomy` and `wide-lane`
+   * progressively expose useful secondary controls as the command lane grows.
    */
-  preferExpanded?: boolean | 'when-roomy';
+  preferExpanded?: boolean | 'when-roomy' | 'wide-lane';
 }
 
 interface HeaderCombinedQueryProps extends HeaderSearchProps, HeaderFiltersProps {}
@@ -60,6 +64,7 @@ export function DesktopHeaderTools({
   search,
   filters,
   combinedQuery,
+  status,
   secondaryAction,
   primaryAction,
 }: DesktopHeaderToolsProps) {
@@ -71,6 +76,7 @@ export function DesktopHeaderTools({
         ) : null}
         {search ? <div className="desktop-header-tools__search">{search}</div> : null}
         {filters ? <div className="desktop-header-tools__filters">{filters}</div> : null}
+        {status ? <div className="desktop-header-tools__status">{status}</div> : null}
         {secondaryAction ? (
           <div className="desktop-header-tools__secondary">{secondaryAction}</div>
         ) : null}
@@ -82,9 +88,21 @@ export function DesktopHeaderTools({
   );
 }
 
-export function HeaderSearch({ value, onChange, label, placeholder = 'Search' }: HeaderSearchProps) {
+export function HeaderSearch({
+  value,
+  onChange,
+  label,
+  placeholder = 'Search',
+  width = 'default',
+}: HeaderSearchProps) {
   const input = (compact = false) => (
-    <div className={cn('relative', compact ? 'w-full' : 'w-44 xl:w-56')}>
+    <div
+      className={cn(
+        'relative',
+        compact ? 'w-full' : 'w-44 xl:w-56',
+        !compact && width === 'wide' && 'desktop-header-search__wide',
+      )}
+    >
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         aria-label={label}
@@ -143,6 +161,7 @@ export function HeaderFilters({
           'desktop-header-filters__full',
           preferExpanded === true && 'desktop-header-filters__full--priority',
           preferExpanded === 'when-roomy' && 'desktop-header-filters__full--roomy',
+          preferExpanded === 'wide-lane' && 'desktop-header-filters__full--wide-lane',
         )}
       >
         {children}
@@ -152,6 +171,7 @@ export function HeaderFilters({
           'desktop-header-filters__compact',
           preferExpanded === true && 'desktop-header-filters__compact--priority',
           preferExpanded === 'when-roomy' && 'desktop-header-filters__compact--roomy',
+          preferExpanded === 'wide-lane' && 'desktop-header-filters__compact--wide-lane',
         )}
       >
         <Popover>

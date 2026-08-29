@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WorkflowEnrollmentsDialog } from './WorkflowEnrollmentsDialog';
 
 const api = vi.hoisted(() => ({
@@ -31,9 +32,17 @@ const enrollment = (id: number, status: 'active' | 'paused' | 'failed') => ({
 });
 
 describe('WorkflowEnrollmentsDialog', () => {
+  beforeAll(() => {
+    Object.defineProperties(HTMLElement.prototype, {
+      hasPointerCapture: { configurable: true, value: () => false },
+      setPointerCapture: { configurable: true, value: () => undefined },
+      releasePointerCapture: { configurable: true, value: () => undefined },
+      scrollIntoView: { configurable: true, value: () => undefined },
+    });
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     api.getContacts.mockResolvedValue({
       contacts: [{
         id: 22, organization_id: 4, first_name: 'Ada', last_name: 'Lovelace',
@@ -53,9 +62,10 @@ describe('WorkflowEnrollmentsDialog', () => {
   it('enrolls a selected contact and exposes state-appropriate lifecycle actions', async () => {
     render(<WorkflowEnrollmentsDialog open onOpenChange={vi.fn()} organizationId={4} workflowId={9} />);
 
-    expect(await screen.findByRole('dialog', { name: 'Enrollments' })).toBeInTheDocument();
-    expect(await screen.findByRole('option', { name: /Ada Lovelace/ })).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Contact'), { target: { value: '22' } });
+    const user = userEvent.setup();
+    expect(await screen.findByRole('dialog', { name: 'Automation runs' })).toBeInTheDocument();
+    await user.click(screen.getByRole('combobox', { name: 'Contact' }));
+    await user.click(await screen.findByRole('option', { name: /Ada Lovelace/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Enroll' }));
     await waitFor(() => expect(api.enrollContact).toHaveBeenCalledWith(9, 22, 4, { source: 'manual' }));
 
@@ -67,11 +77,13 @@ describe('WorkflowEnrollmentsDialog', () => {
     await waitFor(() => expect(api.retryEnrollment).toHaveBeenCalledWith(9, 3, 4));
   });
 
-  it('requires confirmation before terminal cancellation', async () => {
+  it('requires the shared confirmation dialog before terminal cancellation', async () => {
     render(<WorkflowEnrollmentsDialog open onOpenChange={vi.fn()} organizationId={4} workflowId={9} />);
     await screen.findByText('active Contact');
     fireEvent.click(screen.getAllByRole('button', { name: 'Cancel' })[0]);
+    expect(await screen.findByRole('alertdialog', { name: 'Cancel this run?' })).toBeInTheDocument();
+    expect(api.cancelEnrollment).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel run' }));
     await waitFor(() => expect(api.cancelEnrollment).toHaveBeenCalledWith(9, 1, 4));
-    expect(window.confirm).toHaveBeenCalledWith('Cancel this enrollment? This cannot be resumed.');
   });
 });

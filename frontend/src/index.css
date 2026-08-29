@@ -20,6 +20,7 @@
 .desktop-header-tools__lane,
 .desktop-header-tools__search,
 .desktop-header-tools__filters,
+.desktop-header-tools__status,
 .desktop-header-tools__secondary,
 .desktop-header-tools__primary,
 .desktop-header-search__compact,
@@ -48,6 +49,18 @@
   align-items: center;
   gap: 0.5rem;
   white-space: nowrap;
+}
+
+/* Entity state belongs in the shell, but only after the command lane can hold it. */
+.desktop-header-tools__status {
+  display: none;
+  flex-shrink: 0;
+}
+
+@container desktop-header-tools (min-width: 600px) {
+  .desktop-header-tools__status {
+    display: flex;
+  }
 }
 
 .desktop-header-filters__full > * {
@@ -101,6 +114,13 @@
   }
 }
 
+/* Longer dataset names may claim more room only after the full command lane fits. */
+@container desktop-header-tools (min-width: 560px) {
+  .desktop-header-search__wide {
+    width: 13rem;
+  }
+}
+
 /* Surface the primary dataset control as soon as the compact lane can hold it. */
 @container desktop-header-tools (min-width: 380px) {
   .desktop-header-filters__full--priority {
@@ -119,6 +139,17 @@
   }
 
   .desktop-header-filters__compact--roomy {
+    display: none;
+  }
+}
+
+/* Wider secondary scopes join after the priority control and compact query fit. */
+@container desktop-header-tools (min-width: 540px) {
+  .desktop-header-filters__full--wide-lane {
+    display: flex;
+  }
+
+  .desktop-header-filters__compact--wide-lane {
     display: none;
   }
 }
@@ -145,8 +176,8 @@
 }
 
 @container desktop-header-tools (max-width: 199px) {
-  .desktop-header-tools__search,
-  .desktop-header-tools__filters {
+  .desktop-header-tools__lane:has(.desktop-header-tools__combined-query) .desktop-header-tools__search,
+  .desktop-header-tools__lane:has(.desktop-header-tools__combined-query) .desktop-header-tools__filters {
     display: none;
   }
 

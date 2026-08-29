@@ -7,6 +7,7 @@ const row = (extra: Record<string, unknown> = {}) => ({
   organization_id: 4,
   name: 'Welcome',
   subject: 'Hello {{first_name}}',
+  preheader: null,
   body_html: '<p>{{company}} {{first_name}}</p>',
   body_text: null,
   variables: ['first_name', 'company'],
@@ -16,6 +17,8 @@ const row = (extra: Record<string, unknown> = {}) => ({
   created_by_name: 'Template Owner',
   created_at: new Date('2026-07-20T10:00:00.000Z'),
   updated_at: new Date('2026-07-20T11:00:00.000Z'),
+  draft_version_id: null,
+  published_version_id: 1,
   ...extra,
 });
 
@@ -29,6 +32,9 @@ describe('EmailTemplatesService', () => {
       findById: jest.fn(),
       categories: jest.fn(),
       create: jest.fn(),
+      createDraft: jest.fn(),
+      saveDraft: jest.fn(),
+      publishDraft: jest.fn(),
       update: jest.fn(),
       duplicate: jest.fn(),
       delete: jest.fn(),
@@ -89,8 +95,48 @@ describe('EmailTemplatesService', () => {
     await expect(service.update(4, 9, { subject: null })).rejects.toMatchObject({
       extensions: { code: 'BAD_USER_INPUT' },
     });
+    expect(() => service.preview(Object.assign({
+      name: 'Preview', category: 'preview', isActive: false,
+      subject: 'Injected\r\nBcc: attacker@example.test', bodyHtml: '<p>Body</p>',
+    }))).toThrow('subject must be a single line');
     expect(repository.create).not.toHaveBeenCalled();
     expect(repository.update).not.toHaveBeenCalled();
+  });
+
+  it('keeps draft content separate until explicitly published', async () => {
+    repository.createDraft.mockResolvedValue(row({
+      draft_version_id: 20, published_version_id: null, draft_version: 1,
+      draft_is_active: true, draft_subject: 'Draft {{first_name}}',
+    }));
+    repository.publishDraft.mockResolvedValue(row({
+      draft_version_id: null, published_version_id: 20, published_version: 1,
+      subject: 'Draft {{first_name}}',
+    }));
+    const input = {
+      name: 'Draft', subject: 'Draft {{first_name}}', preheader: 'For {{company}}',
+      bodyHtml: '<p>Hello {{first_name}}</p>', bodyText: null,
+      category: 'marketing', isActive: true,
+    };
+    await expect(service.createDraft(4, 7, input)).resolves.toMatchObject({
+      draftVersion: 1, publishedVersion: null, hasUnpublishedChanges: true,
+    });
+    expect(repository.createDraft).toHaveBeenCalledWith(4, 7, expect.objectContaining({
+      variables: ['first_name', 'company'], isActive: true,
+    }));
+    await expect(service.publishDraft(4, 9, 7, true)).resolves.toMatchObject({
+      draftVersion: null, publishedVersion: 1, hasUnpublishedChanges: false,
+    });
+  });
+
+  it('renders a sanitized branded preview with escaped sample variables', () => {
+    const preview = service.preview(Object.assign({
+      name: 'Preview', category: 'preview', isActive: false,
+      subject: 'Hello {{first_name}}', preheader: 'For {{company}}',
+      bodyHtml: '<p>{{first_name}}</p><script>alert(1)</script>', bodyText: null,
+    }));
+    expect(preview.subject).toBe('Hello Test');
+    expect(preview.html).toContain('Example Company');
+    expect(preview.html).not.toContain('<script');
   });
 
   it('conceals foreign IDs for detail, duplicate, and delete', async () => {

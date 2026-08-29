@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Plus, UploadCloud, Save, Send, FileSignature, X } from 'lucide-react';
+import { Plus, Save, Send, FileSignature, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,7 +10,10 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { ShellBackButton } from '@/components/layout/ShellBackButton';
+import { HeaderAction } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { CardGridSkeleton } from '@/components/ui/loading-skeletons';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthState } from '@/contexts/AuthContext';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -47,7 +50,8 @@ export default function SignatureEditorPage() {
   const [recipients, setRecipients] = useState<SignatureRecipient[]>([]);
   const [fields, setFields] = useState<SignatureField[]>([]);
   const [routingMode, setRoutingMode] = useState<'parallel' | 'sequential'>('parallel');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(Boolean(id));
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(!id);
   const [showSendModal, setShowSendModal] = useState(false);
   const roleChoices = useMemo(() => ['Signer', 'Witness', 'Approver', 'Observer'], []);
@@ -60,27 +64,30 @@ export default function SignatureEditorPage() {
 
   const isEditing = Boolean(id);
 
-  useEffect(() => {
+  const loadDocument = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    getSignatureDocument(Number(id))
-      .then((data) => {
-        setDocument(data.document);
-        setTitle(data.document.title || '');
-        setDescription(data.document.description || '');
-        setMessage(data.document.message || '');
-        setRoutingMode((data.document.routing_mode as 'parallel' | 'sequential') || 'parallel');
-        setRecipients(data.recipients || []);
-        setFields(data.fields || []);
-      })
-      .catch(() => {
-        toast({ title: 'Error', description: 'Failed to load document', variant: 'destructive' });
-      })
-      .finally(() => {
-        setLoading(false);
-        setInitialized(true);
-      });
-  }, [id, toast]);
+    setLoadError(null);
+    try {
+      const data = await getSignatureDocument(Number(id));
+      setDocument(data.document);
+      setTitle(data.document.title || '');
+      setDescription(data.document.description || '');
+      setMessage(data.document.message || '');
+      setRoutingMode((data.document.routing_mode as 'parallel' | 'sequential') || 'parallel');
+      setRecipients(data.recipients || []);
+      setFields(data.fields || []);
+    } catch (error) {
+      setLoadError('This document could not be loaded. Please try again.');
+    } finally {
+      setLoading(false);
+      setInitialized(true);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    void loadDocument();
+  }, [loadDocument]);
 
   // Pre-fill recipient from URL (e.g. from Contact "Send Document").
   useEffect(() => {
@@ -315,38 +322,55 @@ export default function SignatureEditorPage() {
 
   return (
     <PageLayout
-      title={isEditing ? 'EDIT SIGNATURE DOCUMENT' : 'NEW SIGNATURE DOCUMENT'}
-      icon={<FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      title={isEditing ? 'EDIT DOCUMENT' : 'NEW DOCUMENT'}
+      icon={<FileSignature className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
       leading={
         <ShellBackButton label="Back to documents" onClick={() => {
           if (confirmLeave()) navigate('/documents');
         }} />
       }
-      pageActions={
-        <>
-          <Button variant="outline" onClick={handleCreateOrSave} disabled={loading || !isDirty}>
-            <Save className="h-4 w-4 mr-2" />
-            Save
-          </Button>
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setShowSendModal(true)} disabled={loading || !document}>
-            <Send className="h-4 w-4 mr-2" />
-            Send
-          </Button>
-        </>
-      }
+      desktopTools={{
+        secondaryAction: (
+          <HeaderAction
+            label="Save document"
+            icon={<Save className="h-4 w-4" />}
+            onClick={() => void handleCreateOrSave()}
+            disabled={loading || !isDirty}
+            prominence="secondary"
+          />
+        ),
+        primaryAction: (
+          <HeaderAction
+            label="Send document"
+            icon={<Send className="h-4 w-4" />}
+            onClick={() => setShowSendModal(true)}
+            disabled={loading || !document}
+          />
+        ),
+      }}
       mobileActions={
         <>
-          <Button variant="outline" onClick={handleCreateOrSave} disabled={loading || !isDirty} className="flex-1">
+          <Button variant="outline" onClick={handleCreateOrSave} disabled={loading || !isDirty} className="h-11 flex-1">
             <Save className="h-4 w-4 mr-2" />
             Save
           </Button>
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white flex-1" onClick={() => setShowSendModal(true)} disabled={loading || !document}>
+          <Button className="h-11 flex-1 bg-blue-600 text-white hover:bg-blue-700" onClick={() => setShowSendModal(true)} disabled={loading || !document}>
             <Send className="h-4 w-4 mr-2" />
             Send
           </Button>
         </>
       }
     >
+        {loadError ? (
+          <ErrorState
+            title="Document unavailable"
+            description={loadError}
+            onAction={() => void loadDocument()}
+          />
+        ) : loading && isEditing && !document ? (
+          <CardGridSkeleton count={2} columns={2} height="h-80" />
+        ) : (
+        <>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -356,6 +380,10 @@ export default function SignatureEditorPage() {
               <div>
                 <Label htmlFor="title">Title</Label>
                 <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
               </div>
               <div>
                 <Label htmlFor="message">Message</Label>
@@ -504,6 +532,8 @@ export default function SignatureEditorPage() {
           routingMode={routingMode}
           onRoutingModeChange={setRoutingMode}
         />
+        </>
+        )}
     </PageLayout>
   );
 }

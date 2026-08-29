@@ -247,7 +247,11 @@ export default function SignPage() {
         fields: fields.map((field) => ({
           id: field.id,
           value: fieldValues[field.id] || ''
-        }))
+        })),
+        consent: {
+          agreed: true,
+          version: data?.consent.version || ''
+        }
       });
       setTerminalState('signed');
       toast({ title: 'Signature submitted' });
@@ -468,7 +472,9 @@ export default function SignPage() {
 
           <div className="flex items-center gap-2">
             <Checkbox checked={consent} onCheckedChange={(checked) => setConsent(Boolean(checked))} />
-            <span className="text-sm">I agree to sign electronically.</span>
+            <span className="text-sm">
+              {data?.consent.text || 'I agree to use electronic records and signatures.'}
+            </span>
           </div>
 
           <div className="flex gap-2">

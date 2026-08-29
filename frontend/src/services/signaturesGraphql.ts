@@ -11,7 +11,11 @@ import type {
   SignatureTemplateField,
   SignatureTemplateRole,
 } from './signaturesApi';
-import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
+import {
+  GraphqlRequestError,
+  graphqlMutationRequest,
+  graphqlRequest,
+} from './graphqlClient';
 
 type GqlDocumentStatus =
   | 'DRAFT'
@@ -44,6 +48,9 @@ type GqlDocument = {
   fileName: string | null;
   fileType: string | null;
   fileSize: number | null;
+  pageCount?: number | null;
+  deliveryState?: SignatureDocument['delivery_state'] | null;
+  completionState?: SignatureDocument['completion_state'] | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -66,6 +73,7 @@ type GqlRecipient = {
   declineReason: string | null;
   identityMethod: SignatureRecipient['identity_method'];
   identityVerifiedAt: string | null;
+  deliveryState?: SignatureRecipient['delivery_state'] | null;
 };
 
 type GqlField = {
@@ -107,6 +115,8 @@ type GqlTemplate = {
   fileName: string | null;
   fileType: string | null;
   fileSize: number | null;
+  pageCount?: number | null;
+  isReady?: boolean;
   createdById: number | null;
   createdAt: string;
   updatedAt: string;
@@ -140,15 +150,51 @@ type GqlTemplateField = {
 const documentFields = `id organizationId title documentNumber description message
   status recipientCount routingMode templateId expirationDays expiresAt senderName
   senderEmail createdById sentAt completedAt hasFile hasSignedFile fileName fileType
+  fileSize pageCount deliveryState completionState createdAt updatedAt`;
+const legacyDocumentFields = `id organizationId title documentNumber description message
+  status recipientCount routingMode templateId expirationDays expiresAt senderName
+  senderEmail createdById sentAt completedAt hasFile hasSignedFile fileName fileType
   fileSize createdAt updatedAt`;
 const recipientFields = `id documentId organizationId contactId name email signingOrder
+  roleName routingStatus status sentAt viewedAt signedAt declinedAt declineReason
+  identityMethod identityVerifiedAt deliveryState`;
+const legacyRecipientFields = `id documentId organizationId contactId name email signingOrder
   roleName routingStatus status sentAt viewedAt signedAt declinedAt declineReason
   identityMethod identityVerifiedAt`;
 const fieldFields = `id documentId recipientId roleName fieldType pageNumber xPosition
   yPosition width height label isRequired value fontSize fontFamily textAlign locked`;
 const auditFields = 'id documentId recipientId eventType description createdAt';
 const templateFields = `id organizationId title description message hasFile fileName
+  fileType fileSize pageCount isReady createdById createdAt updatedAt`;
+const legacyTemplateFields = `id organizationId title description message hasFile fileName
   fileType fileSize createdById createdAt updatedAt`;
+
+const isReliabilitySchemaMismatch = (error: unknown): boolean =>
+  error instanceof GraphqlRequestError
+  && /Cannot query field \"(?:pageCount|deliveryState|completionState|isReady)\"/.test(error.message);
+
+const withLegacyReliabilitySelection = async <T>(
+  currentRequest: () => Promise<T>,
+  legacyRequest: () => Promise<T>,
+): Promise<T> => {
+  try {
+    return await currentRequest();
+  } catch (error) {
+    if (!isReliabilitySchemaMismatch(error)) throw error;
+    return legacyRequest();
+  }
+};
+
+const mutationWithLegacyReliabilitySelection = <TData, TVariables extends object>(
+  query: (fields: string) => string,
+  variables: TVariables,
+  organizationId?: number,
+  fields = documentFields,
+  legacyFields = legacyDocumentFields,
+): Promise<TData> => withLegacyReliabilitySelection(
+  () => graphqlMutationRequest<TData, TVariables>(query(fields), variables, organizationId),
+  () => graphqlMutationRequest<TData, TVariables>(query(legacyFields), variables, organizationId),
+);
 
 const mapDocument = (document: GqlDocument): SignatureDocument => ({
   id: document.id,
@@ -175,6 +221,9 @@ const mapDocument = (document: GqlDocument): SignatureDocument => ({
     ? { signed_file_url: `${getApiUrl()}/api/signatures/documents/${document.id}/download` }
     : {}),
   ...(document.fileName === null ? {} : { file_name: document.fileName }),
+  ...(document.pageCount == null ? {} : { page_count: document.pageCount }),
+  ...(document.deliveryState == null ? {} : { delivery_state: document.deliveryState }),
+  ...(document.completionState == null ? {} : { completion_state: document.completionState }),
   created_at: document.createdAt,
   updated_at: document.updatedAt,
 });
@@ -199,6 +248,7 @@ const mapRecipient = (recipient: GqlRecipient): SignatureRecipient => ({
   ...(recipient.identityVerifiedAt === null
     ? {}
     : { identity_verified_at: recipient.identityVerifiedAt }),
+  ...(recipient.deliveryState == null ? {} : { delivery_state: recipient.deliveryState }),
 });
 
 const mapField = (field: GqlField): SignatureField => ({
@@ -241,6 +291,8 @@ const mapTemplate = (template: GqlTemplate): SignatureTemplate => ({
     : {}),
   ...(template.fileName === null ? {} : { file_name: template.fileName }),
   ...(template.fileType === null ? {} : { file_type: template.fileType }),
+  ...(template.pageCount == null ? {} : { page_count: template.pageCount }),
+  is_ready: template.isReady ?? template.hasFile,
   created_at: template.createdAt,
 });
 
@@ -323,35 +375,47 @@ export const listSignatureDocumentsViaGraphql = async (
   params: { status?: SignatureStatus; page?: number; limit?: number } = {},
   organizationId?: number,
 ) => {
-  const data = await graphqlRequest<
-    {
-      signatureDocuments: {
-        nodes: GqlDocument[];
-        pageInfo: {
-          page: number;
-          pageSize: number;
-          total: number;
-          totalPages: number;
-          hasNextPage: boolean;
-          hasPreviousPage: boolean;
-        };
+  type DocumentListData = {
+    signatureDocuments: {
+      nodes: GqlDocument[];
+      pageInfo: {
+        page: number;
+        pageSize: number;
+        total: number;
+        totalPages: number;
+        hasNextPage: boolean;
+        hasPreviousPage: boolean;
       };
-    },
-    { filter: { status?: GqlDocumentStatus }; page: { page: number; pageSize: number } }
-  >(
+    };
+  };
+  type DocumentListVariables = {
+    filter: { status?: GqlDocumentStatus };
+    page: { page: number; pageSize: number };
+  };
+  const variables: DocumentListVariables = {
+    filter: params.status
+      ? { status: params.status.toUpperCase() as GqlDocumentStatus }
+      : {},
+    page: { page: params.page ?? 1, pageSize: params.limit ?? 20 },
+  };
+  const query = (fields: string) =>
     `query SignatureDocumentReads($filter:SignatureDocumentFilterInput,$page:PageInput){
       signatureDocuments(filter:$filter,page:$page){
-        nodes{${documentFields}}
+        nodes{${fields}}
         pageInfo{page pageSize total totalPages hasNextPage hasPreviousPage}
       }
-    }`,
-    {
-      filter: params.status
-        ? { status: params.status.toUpperCase() as GqlDocumentStatus }
-        : {},
-      page: { page: params.page ?? 1, pageSize: params.limit ?? 20 },
-    },
-    organizationId,
+    }`;
+  const data = await withLegacyReliabilitySelection(
+    () => graphqlRequest<DocumentListData, DocumentListVariables>(
+      query(documentFields),
+      variables,
+      organizationId,
+    ),
+    () => graphqlRequest<DocumentListData, DocumentListVariables>(
+      query(legacyDocumentFields),
+      variables,
+      organizationId,
+    ),
   );
 
   return {
@@ -369,27 +433,34 @@ export const getSignatureDocumentViaGraphql = async (
   id: number,
   organizationId?: number,
 ): Promise<SignatureDocumentDetails> => {
-  const data = await graphqlRequest<
-    {
-      signatureDocument: {
-        document: GqlDocument;
-        recipients: GqlRecipient[];
-        fields: GqlField[];
-        audit: GqlAudit[];
-      };
-    },
-    { id: number }
-  >(
+  type DocumentDetailData = {
+    signatureDocument: {
+      document: GqlDocument;
+      recipients: GqlRecipient[];
+      fields: GqlField[];
+      audit: GqlAudit[];
+    };
+  };
+  const query = (documentSelection: string, recipientSelection: string) =>
     `query SignatureDocumentRead($id:Int!){
       signatureDocument(id:$id){
-        document{${documentFields}}
-        recipients{${recipientFields}}
+        document{${documentSelection}}
+        recipients{${recipientSelection}}
         fields{${fieldFields}}
         audit{${auditFields}}
       }
-    }`,
-    { id },
-    organizationId,
+    }`;
+  const data = await withLegacyReliabilitySelection(
+    () => graphqlRequest<DocumentDetailData, { id: number }>(
+      query(documentFields, recipientFields),
+      { id },
+      organizationId,
+    ),
+    () => graphqlRequest<DocumentDetailData, { id: number }>(
+      query(legacyDocumentFields, legacyRecipientFields),
+      { id },
+      organizationId,
+    ),
   );
 
   return {
@@ -415,13 +486,19 @@ export const getSignatureAuditViaGraphql = async (
 export const listSignatureTemplatesViaGraphql = async (
   organizationId?: number,
 ): Promise<SignatureTemplate[]> => {
-  const data = await graphqlRequest<
-    { signatureTemplates: GqlTemplate[] },
-    Record<string, never>
-  >(
-    `query SignatureTemplateReads{signatureTemplates{${templateFields}}}`,
-    {},
-    organizationId,
+  const query = (fields: string) =>
+    `query SignatureTemplateReads{signatureTemplates{${fields}}}`;
+  const data = await withLegacyReliabilitySelection(
+    () => graphqlRequest<{ signatureTemplates: GqlTemplate[] }, Record<string, never>>(
+      query(templateFields),
+      {},
+      organizationId,
+    ),
+    () => graphqlRequest<{ signatureTemplates: GqlTemplate[] }, Record<string, never>>(
+      query(legacyTemplateFields),
+      {},
+      organizationId,
+    ),
   );
   return data.signatureTemplates.map(mapTemplate);
 };
@@ -430,26 +507,33 @@ export const getSignatureTemplateViaGraphql = async (
   id: number,
   organizationId?: number,
 ) => {
-  const data = await graphqlRequest<
-    {
-      signatureTemplate: {
-        template: GqlTemplate;
-        roles: GqlTemplateRole[];
-        fields: GqlTemplateField[];
-      };
-    },
-    { id: number }
-  >(
+  type TemplateDetailData = {
+    signatureTemplate: {
+      template: GqlTemplate;
+      roles: GqlTemplateRole[];
+      fields: GqlTemplateField[];
+    };
+  };
+  const query = (fields: string) =>
     `query SignatureTemplateRead($id:Int!){
       signatureTemplate(id:$id){
-        template{${templateFields}}
+        template{${fields}}
         roles{id templateId roleName signingOrder}
         fields{id templateId roleName fieldType pageNumber xPosition yPosition
           width height label isRequired fontSize fontFamily textAlign locked}
       }
-    }`,
-    { id },
-    organizationId,
+    }`;
+  const data = await withLegacyReliabilitySelection(
+    () => graphqlRequest<TemplateDetailData, { id: number }>(
+      query(templateFields),
+      { id },
+      organizationId,
+    ),
+    () => graphqlRequest<TemplateDetailData, { id: number }>(
+      query(legacyTemplateFields),
+      { id },
+      organizationId,
+    ),
   );
 
   return {
@@ -481,38 +565,43 @@ export const getSignatureTemplateViaGraphql = async (
 };
 
 export const createSignatureDocumentViaGraphql = async (payload: DocumentMutationPayload, organizationId?: number): Promise<SignatureDocument> => {
-  const data = await graphqlMutationRequest<{createSignatureDocument:GqlDocument},{input:ReturnType<typeof documentInput>}>(`mutation CreateSignatureDocument($input:CreateSignatureDocumentInput!){createSignatureDocument(input:$input){${documentFields}}}`,{input:documentInput(payload)},organizationId);
+  const data = await mutationWithLegacyReliabilitySelection<{createSignatureDocument:GqlDocument},{input:ReturnType<typeof documentInput>}>(fields=>`mutation CreateSignatureDocument($input:CreateSignatureDocumentInput!){createSignatureDocument(input:$input){${fields}}}`,{input:documentInput(payload)},organizationId);
   return mapDocument(data.createSignatureDocument);
 };
 
 export const updateSignatureDocumentViaGraphql = async (id:number,payload:DocumentMutationPayload,organizationId?:number):Promise<SignatureDocument>=>{
-  const data=await graphqlMutationRequest<{updateSignatureDraft:GqlDocument},{id:number;input:ReturnType<typeof documentInput>}>(`mutation UpdateSignatureDraft($id:Int!,$input:UpdateSignatureDraftInput!){updateSignatureDraft(id:$id,input:$input){${documentFields}}}`,{id,input:documentInput(payload)},organizationId);
+  const data=await mutationWithLegacyReliabilitySelection<{updateSignatureDraft:GqlDocument},{id:number;input:ReturnType<typeof documentInput>}>(fields=>`mutation UpdateSignatureDraft($id:Int!,$input:UpdateSignatureDraftInput!){updateSignatureDraft(id:$id,input:$input){${fields}}}`,{id,input:documentInput(payload)},organizationId);
   return mapDocument(data.updateSignatureDraft);
 };
 
 export const deleteSignatureDocumentViaGraphql=async(id:number,organizationId?:number):Promise<SignatureDocument>=>{
-  const data=await graphqlMutationRequest<{deleteSignatureDraft:GqlDocument},{id:number}>(`mutation DeleteSignatureDraft($id:Int!){deleteSignatureDraft(id:$id){${documentFields}}}`,{id},organizationId);
+  const data=await mutationWithLegacyReliabilitySelection<{deleteSignatureDraft:GqlDocument},{id:number}>(fields=>`mutation DeleteSignatureDraft($id:Int!){deleteSignatureDraft(id:$id){${fields}}}`,{id},organizationId);
   return mapDocument(data.deleteSignatureDraft);
 };
 
 export const removeSignatureDocumentFileViaGraphql=async(id:number,organizationId?:number):Promise<SignatureDocument>=>{
-  const data=await graphqlMutationRequest<{removeSignatureDraftPdf:GqlDocument},{id:number}>(`mutation RemoveSignatureDraftPdf($id:Int!){removeSignatureDraftPdf(id:$id){${documentFields}}}`,{id},organizationId);
+  const data=await mutationWithLegacyReliabilitySelection<{removeSignatureDraftPdf:GqlDocument},{id:number}>(fields=>`mutation RemoveSignatureDraftPdf($id:Int!){removeSignatureDraftPdf(id:$id){${fields}}}`,{id},organizationId);
   return mapDocument(data.removeSignatureDraftPdf);
 };
 
 export const cancelSignatureDocumentViaGraphql=async(id:number,organizationId?:number):Promise<SignatureDocument>=>{
-  const data=await graphqlMutationRequest<{cancelSignatureDocument:GqlDocument},{id:number}>(`mutation CancelSignatureDocument($id:Int!){cancelSignatureDocument(id:$id){${documentFields}}}`,{id},organizationId);
+  const data=await mutationWithLegacyReliabilitySelection<{cancelSignatureDocument:GqlDocument},{id:number}>(fields=>`mutation CancelSignatureDocument($id:Int!){cancelSignatureDocument(id:$id){${fields}}}`,{id},organizationId);
   return mapDocument(data.cancelSignatureDocument);
 };
 
 export const sendSignatureDocumentViaGraphql=async(id:number,organizationId?:number):Promise<SignatureDocument>=>{
-  const data=await graphqlMutationRequest<{sendSignatureDocument:GqlDocument},{id:number}>(`mutation SendSignatureDocument($id:Int!){sendSignatureDocument(id:$id){${documentFields}}}`,{id},organizationId);
+  const data=await mutationWithLegacyReliabilitySelection<{sendSignatureDocument:GqlDocument},{id:number}>(fields=>`mutation SendSignatureDocument($id:Int!){sendSignatureDocument(id:$id){${fields}}}`,{id},organizationId);
   return mapDocument(data.sendSignatureDocument);
 };
 
 export const remindSignatureDocumentViaGraphql=async(id:number,organizationId?:number):Promise<SignatureDocument>=>{
-  const data=await graphqlMutationRequest<{sendSignatureReminder:GqlDocument},{id:number}>(`mutation SendSignatureReminder($id:Int!){sendSignatureReminder(id:$id){${documentFields}}}`,{id},organizationId);
+  const data=await mutationWithLegacyReliabilitySelection<{sendSignatureReminder:GqlDocument},{id:number}>(fields=>`mutation SendSignatureReminder($id:Int!){sendSignatureReminder(id:$id){${fields}}}`,{id},organizationId);
   return mapDocument(data.sendSignatureReminder);
+};
+
+export const retrySignatureDocumentViaGraphql=async(id:number,organizationId?:number):Promise<SignatureDocument>=>{
+  const data=await mutationWithLegacyReliabilitySelection<{retrySignatureDocument:GqlDocument},{id:number}>(fields=>`mutation RetrySignatureDocument($id:Int!){retrySignatureDocument(id:$id){${fields}}}`,{id},organizationId);
+  return mapDocument(data.retrySignatureDocument);
 };
 
 export const scheduleSignatureRemindersViaGraphql=async(id:number,days=2,organizationId?:number):Promise<{scheduledAt:string;reminderCount:number}>=>{
@@ -527,23 +616,23 @@ export const getSignatureEmailPreviewViaGraphql=async(input:SignatureEmailPrevie
 };
 
 export const createSignatureTemplateViaGraphql=async(payload:Partial<SignatureTemplate>,organizationId?:number):Promise<SignatureTemplate>=>{
-  const data=await graphqlMutationRequest<{createSignatureTemplate:GqlTemplate},{input:ReturnType<typeof templateInput>}>(`mutation CreateSignatureTemplate($input:CreateSignatureTemplateInput!){createSignatureTemplate(input:$input){${templateFields}}}`,{input:templateInput(payload)},organizationId);
+  const data=await mutationWithLegacyReliabilitySelection<{createSignatureTemplate:GqlTemplate},{input:ReturnType<typeof templateInput>}>(fields=>`mutation CreateSignatureTemplate($input:CreateSignatureTemplateInput!){createSignatureTemplate(input:$input){${fields}}}`,{input:templateInput(payload)},organizationId,templateFields,legacyTemplateFields);
   return mapTemplate(data.createSignatureTemplate);
 };
 
 export const updateSignatureTemplateViaGraphql=async(id:number,payload:Partial<SignatureTemplate>&{roles?:SignatureTemplateRole[];fields?:SignatureTemplateField[]},organizationId?:number):Promise<SignatureTemplate>=>{
-  const data=await graphqlMutationRequest<{updateSignatureTemplate:GqlTemplate},{id:number;input:ReturnType<typeof templateInput>}>(`mutation UpdateSignatureTemplate($id:Int!,$input:UpdateSignatureTemplateInput!){updateSignatureTemplate(id:$id,input:$input){${templateFields}}}`,{id,input:templateInput(payload)},organizationId);
+  const data=await mutationWithLegacyReliabilitySelection<{updateSignatureTemplate:GqlTemplate},{id:number;input:ReturnType<typeof templateInput>}>(fields=>`mutation UpdateSignatureTemplate($id:Int!,$input:UpdateSignatureTemplateInput!){updateSignatureTemplate(id:$id,input:$input){${fields}}}`,{id,input:templateInput(payload)},organizationId,templateFields,legacyTemplateFields);
   return mapTemplate(data.updateSignatureTemplate);
 };
 
 export const deleteSignatureTemplateViaGraphql=async(id:number,organizationId?:number):Promise<SignatureTemplate>=>{
-  const data=await graphqlMutationRequest<{deleteSignatureTemplate:GqlTemplate},{id:number}>(`mutation DeleteSignatureTemplate($id:Int!){deleteSignatureTemplate(id:$id){${templateFields}}}`,{id},organizationId);
+  const data=await mutationWithLegacyReliabilitySelection<{deleteSignatureTemplate:GqlTemplate},{id:number}>(fields=>`mutation DeleteSignatureTemplate($id:Int!){deleteSignatureTemplate(id:$id){${fields}}}`,{id},organizationId,templateFields,legacyTemplateFields);
   return mapTemplate(data.deleteSignatureTemplate);
 };
 
 export const instantiateSignatureTemplateViaGraphql=async(id:number,payload:Record<string,unknown>,organizationId?:number):Promise<SignatureDocument>=>{
   const source=payload as {title?:string;description?:string;message?:string;routing_mode?:string;expiration_days?:number;sender_name?:string;sender_email?:string;recipients?:SignatureRecipient[]};
   const input={...(source.title===undefined?{}:{title:source.title}),...(source.description===undefined?{}:{description:source.description}),...(source.message===undefined?{}:{message:source.message}),...(source.routing_mode===undefined?{}:{routingMode:source.routing_mode}),...(source.expiration_days===undefined?{}:{expirationDays:source.expiration_days}),...(source.sender_name===undefined?{}:{senderName:source.sender_name}),...(source.sender_email===undefined?{}:{senderEmail:source.sender_email}),...(source.recipients===undefined?{}:{recipients:source.recipients.map(recipientInput)})};
-  const data=await graphqlMutationRequest<{instantiateSignatureTemplate:GqlDocument},{id:number;input:typeof input}>(`mutation InstantiateSignatureTemplate($id:Int!,$input:InstantiateSignatureTemplateInput!){instantiateSignatureTemplate(id:$id,input:$input){${documentFields}}}`,{id,input},organizationId);
+  const data=await mutationWithLegacyReliabilitySelection<{instantiateSignatureTemplate:GqlDocument},{id:number;input:typeof input}>(fields=>`mutation InstantiateSignatureTemplate($id:Int!,$input:InstantiateSignatureTemplateInput!){instantiateSignatureTemplate(id:$id,input:$input){${fields}}}`,{id,input},organizationId);
   return mapDocument(data.instantiateSignatureTemplate);
 };

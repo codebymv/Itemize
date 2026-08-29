@@ -3,6 +3,7 @@ import {
   publicSigningTokenHash,
   validatePublicSigningFieldValue,
 } from './public-signing.validation';
+import { SIGNATURE_CONSENT_VERSION } from './signature-consent';
 
 const png =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZC3sAAAAASUVORK5CYII=';
@@ -18,16 +19,27 @@ describe('public signing validation', () => {
   it('requires an exact bounded fields payload with unique positive IDs', () => {
     expect(normalizePublicSigningSubmission({
       fields: [{ id: 1, value: 'yes' }],
-    })).toEqual([{ id: 1, value: 'yes' }]);
+      consent: { agreed: true, version: SIGNATURE_CONSENT_VERSION },
+    })).toEqual({
+      fields: [{ id: 1, value: 'yes' }],
+      consent: { agreed: true, version: SIGNATURE_CONSENT_VERSION },
+    });
     expect(() => normalizePublicSigningSubmission({
       fields: [{ id: 1, value: 'yes' }, { id: 1, value: 'again' }],
+      consent: { agreed: true, version: SIGNATURE_CONSENT_VERSION },
     })).toThrow('must be unique');
     expect(() => normalizePublicSigningSubmission({
-      fields: [], extra: true,
-    })).toThrow('only a fields array');
+      fields: [], consent: { agreed: true, version: SIGNATURE_CONSENT_VERSION }, extra: true,
+    })).toThrow('fields and consent');
     expect(() => normalizePublicSigningSubmission({
       fields: [{ id: 0, value: '' }],
+      consent: { agreed: true, version: SIGNATURE_CONSENT_VERSION },
     })).toThrow('is invalid');
+    expect(() => normalizePublicSigningSubmission({ fields: [] }))
+      .toThrow('consent is required');
+    expect(() => normalizePublicSigningSubmission({
+      fields: [], consent: { agreed: false, version: SIGNATURE_CONSENT_VERSION },
+    })).toThrow('invalid or outdated');
   });
 
   it('enforces type-specific required semantics and calendar dates', () => {

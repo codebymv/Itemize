@@ -187,7 +187,7 @@ export class SignatureFilesService {
     resourceId: number,
     scope: SignatureFileScope,
     file: UploadFile | undefined,
-  ): Promise<{ url: string; name: string; size: number; sha256: string }> {
+  ): Promise<{ url: string; name: string; size: number; sha256: string; pageCount: number }> {
     if (!file?.buffer?.length) {
       throw new BadRequestException({
         success: false,
@@ -206,8 +206,9 @@ export class SignatureFilesService {
         },
       });
     }
+    let pageCount: number;
     try {
-      await inspectSignaturePdf(file.buffer);
+      pageCount = (await inspectSignaturePdf(file.buffer)).pageCount;
     } catch (error) {
       if (!(error instanceof SignaturePdfValidationError)) throw error;
       throw new BadRequestException({
@@ -262,6 +263,7 @@ export class SignatureFilesService {
       name: this.filename(file.originalname, `${scope}.pdf`),
       size: file.buffer.length,
       sha256: createHash('sha256').update(file.buffer).digest('hex'),
+      pageCount,
     };
   }
 

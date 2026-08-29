@@ -49,6 +49,7 @@ import { RevenueFlowChart } from '@/components/payments/RevenueFlowChart';
 import { useOrganization } from '@/hooks/useOrganization';
 import { InvoicesWidget, SignaturesWidget, WorkspaceWidget, ContactsWidget } from '@/design-system/widgets';
 import { GetStartedCard } from '@/components/GetStartedCard';
+import { getInvoiceStatusVisual } from './invoices/constants/invoiceConstants';
 
 interface QuickAction {
     title: string;
@@ -340,14 +341,14 @@ export function DashboardPage() {
                             primaryStat={analytics?.invoiceMetrics?.pending ?? 0}
                             primaryStatColor="text-blue-600 dark:text-blue-400"
                             secondaryStats={[
-                                { label: 'Overdue', value: analytics?.invoiceMetrics?.overdue ?? 0, color: 'text-orange-600 dark:text-orange-400' },
+                                { label: 'Overdue', value: analytics?.invoiceMetrics?.overdue ?? 0, color: getInvoiceStatusVisual('overdue').iconClass },
                                 { label: 'Paid This Month', value: `$${(analytics?.invoiceMetrics?.paidThisMonth ?? 0).toLocaleString()}`, color: 'text-green-600 dark:text-green-400' },
                             ]}
                             recentItems={analytics?.invoiceMetrics?.recentInvoices?.map(inv => ({
                                 id: inv.id,
                                 title: inv.number,
                                 subtitle: `$${inv.amount.toLocaleString()}`,
-                                status: { label: inv.status === 'paid' ? 'Paid' : inv.status === 'overdue' ? 'Overdue' : inv.status, color: inv.status === 'paid' ? 'text-green-600 dark:text-green-400' : inv.status === 'overdue' ? 'text-orange-600 dark:text-orange-400' : 'text-blue-600 dark:text-blue-400' }
+                                status: { label: inv.status === 'paid' ? 'Paid' : inv.status === 'overdue' ? 'Overdue' : inv.status, color: inv.status === 'paid' ? 'text-green-600 dark:text-green-400' : inv.status === 'overdue' ? getInvoiceStatusVisual('overdue').iconClass : 'text-blue-600 dark:text-blue-400' }
                             })) ?? []}
                             action={{ label: 'View Invoices', compactLabel: 'View', onClick: () => navigate('/invoices') }}
                             loading={isLoading}
@@ -586,7 +587,7 @@ export function DashboardPage() {
                                             <div className="flex items-center justify-between mb-3">
                                                 <div className="flex items-center gap-2">
                                                     <div
-                                                        className="p-2 rounded-full bg-muted text-green-600"
+                                                        className="p-2 rounded-full bg-muted text-blue-600 dark:text-blue-400"
                                                         data-dashboard-analytics-icon
                                                     >
                                                         <DollarSign className="h-5 w-5" />
@@ -601,19 +602,19 @@ export function DashboardPage() {
                                             </div>
                                             <div className="grid grid-cols-3 gap-4 text-center">
                                                 <div>
-                                                    <div className="text-lg font-bold text-green-600">
+                                                    <div className="text-lg font-bold text-green-600 dark:text-green-400">
                                                         {conversionData?.dealWinRate?.valuesByCurrency?.[0]?.wonValue.toLocaleString() ?? 0}
                                                     </div>
                                                     <div className="text-xs text-muted-foreground">Won</div>
                                                 </div>
                                                 <div>
-                                                    <div className="text-lg font-bold text-green-600">
+                                                    <div className="text-lg font-bold text-red-600 dark:text-red-400">
                                                         {conversionData?.dealWinRate?.valuesByCurrency?.[0]?.lostValue.toLocaleString() ?? 0}
                                                     </div>
                                                     <div className="text-xs text-muted-foreground">Lost</div>
                                                 </div>
                                                 <div>
-                                                    <div className="text-lg font-bold text-green-600">
+                                                    <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
                                                         {conversionData?.dealWinRate?.totalClosed ?? 0}
                                                     </div>
                                                     <div className="text-xs text-muted-foreground">Closed</div>
@@ -678,31 +679,31 @@ export function DashboardPage() {
                     {!proTipDismissed && (
                         <Card className="bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-100 dark:border-blue-900">
                             <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                                        <CardTitle className="text-base">Pro Tip: Automation</CardTitle>
+                                <div className="flex items-start gap-3">
+                                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
+                                        <div className="flex shrink-0 items-center gap-2">
+                                            <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                            <CardTitle className="text-base">Pro Tip: Automation</CardTitle>
+                                        </div>
+                                        <p className="min-w-0 basis-[max-content] grow text-sm text-muted-foreground">
+                                            Automate emails, tasks, and contact updates in{' '}
+                                            <button
+                                                onClick={() => navigate('/automations')}
+                                                className="text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                                            >
+                                                Automations
+                                            </button>.
+                                        </p>
                                     </div>
                                     <button
                                         onClick={() => setProTipDismissed(true)}
-                                        className="text-muted-foreground hover:text-foreground transition-colors"
+                                        className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
                                         aria-label="Dismiss"
                                     >
                                         <X className="h-4 w-4" />
                                     </button>
                                 </div>
                             </CardHeader>
-                            <CardContent>
-                                <p className="text-sm text-muted-foreground">
-                                    Automate emails, tasks, and contact updates in{' '}
-                                    <button
-                                        onClick={() => navigate('/automations')}
-                                        className="text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
-                                    >
-                                        Automations
-                                    </button>.
-                                </p>
-                            </CardContent>
                         </Card>
                     )}
         </PageLayout>

@@ -34,6 +34,48 @@ const redactedError = (error: unknown): string =>
 export class SignatureDeliveryJobsRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
+  expireActiveDocuments(): Promise<number> {
+    return this.transaction(async (client) => {
+      const expired = await client.query<{ id: number }>(
+        `UPDATE signature_documents SET status='expired',updated_at=CURRENT_TIMESTAMP
+         WHERE status IN ('sent','in_progress')
+           AND expires_at IS NOT NULL AND expires_at<CURRENT_TIMESTAMP
+         RETURNING id`,
+      );
+      const ids = expired.rows.map((row) => row.id);
+      if (ids.length === 0) return 0;
+      await client.query(
+        `UPDATE signature_recipients SET signing_token_hash=NULL,token_expires_at=NULL,
+           routing_status='locked'
+         WHERE document_id=ANY($1::int[]) AND status IN ('pending','sent','viewed')`,
+        [ids],
+      );
+      await client.query(
+        `UPDATE signature_reminders SET status='cancelled'
+         WHERE document_id=ANY($1::int[]) AND status IN ('pending','queued')`,
+        [ids],
+      );
+      await client.query(
+        `UPDATE signature_delivery_outbox SET status='cancelled',
+           cancelled_at=CURRENT_TIMESTAMP,cancellation_reason='document_expired',
+           lease_expires_at=NULL,updated_at=CURRENT_TIMESTAMP
+         WHERE document_id=ANY($1::int[])
+           AND delivery_type IN ('signature_request','signature_reminder')
+           AND status IN ('queued','processing','retry')`,
+        [ids],
+      );
+      await client.query(
+        `INSERT INTO signature_audit_log (
+           document_id,event_type,description,metadata,created_at
+         ) SELECT id,'expired','Signature document expired',
+           '{"actor_class":"system","version":1}'::jsonb,CURRENT_TIMESTAMP
+         FROM UNNEST($1::int[]) AS expired_document(id)`,
+        [ids],
+      );
+      return ids.length;
+    });
+  }
+
   async enqueueDueReminders(limit: number): Promise<number> {
     await this.pool.query(
       `UPDATE signature_reminders reminder SET status='skipped'
@@ -41,6 +83,7 @@ export class SignatureDeliveryJobsRepository {
        WHERE reminder.document_id=document.id AND reminder.status='pending'
          AND reminder.scheduled_at<=CURRENT_TIMESTAMP
          AND (document.status NOT IN ('sent','in_progress')
+           OR (document.expires_at IS NOT NULL AND document.expires_at<CURRENT_TIMESTAMP)
            OR reminder.recipient_id IS NULL
            OR NOT EXISTS (
              SELECT 1 FROM signature_recipients recipient
@@ -80,6 +123,7 @@ export class SignatureDeliveryJobsRepository {
            AND recipient.organization_id=document.organization_id
          WHERE reminder.status='pending' AND reminder.scheduled_at<=CURRENT_TIMESTAMP
            AND document.status IN ('sent','in_progress')
+           AND (document.expires_at IS NULL OR document.expires_at>=CURRENT_TIMESTAMP)
            AND recipient.status IN ('pending','sent','viewed')
            AND ${paidEntitlementSql('organization')}
            AND (COALESCE(document.routing_mode,'parallel')='parallel'
@@ -150,7 +194,8 @@ export class SignatureDeliveryJobsRepository {
          FROM signature_documents document
          WHERE outbox.document_id=document.id AND outbox.status IN ('queued','retry')
            AND outbox.delivery_type IN ('signature_request','signature_reminder')
-           AND (document.status NOT IN ('sent','in_progress')
+            AND (document.status NOT IN ('sent','in_progress')
+              OR (document.expires_at IS NOT NULL AND document.expires_at<CURRENT_TIMESTAMP)
              OR outbox.recipient_id IS NULL
              OR NOT EXISTS (
                SELECT 1 FROM signature_recipients recipient

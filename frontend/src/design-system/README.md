@@ -118,6 +118,11 @@ All components support light and dark themes through CSS variables defined in `s
 4. **Follow the pattern library** for common UI patterns
 5. **Use PageLayout** for all authenticated pages (and public Status/Docs via `PublicPageHeader`)
 
+Status semantics are fixed across modules: blue is active/draft Itemize work, orange is
+parked or transitional, green is a successful outcome, red requires attention, and gray
+is neutral or historical. Domain status maps should be built with `defineStatus` from
+`@/lib/statusVisuals` rather than hardcoded class strings.
+
 ## Roadmap
 
 - [ ] Add more module widgets (Campaigns, Automations, Forms, etc.)

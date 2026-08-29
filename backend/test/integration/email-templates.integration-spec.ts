@@ -101,8 +101,9 @@ describe('Email templates GraphQL PostgreSQL contract', () => {
   };
 
   const fields = `
-    id organizationId name subject bodyHtml bodyText variables category isActive
-    createdById createdByName createdAt updatedAt
+    id organizationId name subject preheader bodyHtml bodyText variables category isActive
+    createdById createdByName createdAt updatedAt draftVersion publishedVersion
+    draftSubject draftPreheader draftBodyHtml draftBodyText draftIsActive hasUnpublishedChanges
   `;
 
   it('creates, filters, pages, and exposes numeric category counts', async () => {
@@ -204,6 +205,77 @@ describe('Email templates GraphQL PostgreSQL contract', () => {
     expect(duplicate.body.errors).toBeUndefined();
     expect(duplicate.body.data.duplicateEmailTemplate).toMatchObject({
       name: 'Renamed (Copy)', isActive: false, variables: ['first_name', 'company'],
+    });
+  });
+
+  it('sanitizes previews and preserves published content while a newer draft is edited', async () => {
+    const created = await graphql(
+      memberToken,
+      organizationId,
+      `mutation Draft($input: CreateEmailTemplateInput!) {
+        createEmailTemplateDraft(input: $input) { ${fields} }
+      }`,
+      { input: {
+        name: 'Lifecycle', subject: 'Draft {{first_name}}', preheader: 'For {{company}}',
+        bodyHtml: '<p>Draft {{first_name}}</p><script>alert(1)</script>',
+        category: 'marketing', isActive: true,
+      } },
+    ).expect(200);
+    expect(created.body.errors).toBeUndefined();
+    expect(created.body.data.createEmailTemplateDraft).toMatchObject({
+      subject: 'Draft {{first_name}}', draftVersion: 1, publishedVersion: null,
+      draftIsActive: true, hasUnpublishedChanges: true,
+    });
+    expect(created.body.data.createEmailTemplateDraft.draftBodyHtml).not.toContain('<script');
+    const id = Number(created.body.data.createEmailTemplateDraft.id);
+
+    const preview = await graphql(
+      memberToken,
+      organizationId,
+      `mutation Preview($input: PreviewEmailTemplateInput!) {
+        previewEmailTemplate(input: $input) { subject html variables }
+      }`,
+      { input: {
+        subject: 'Hello {{first_name}}', preheader: 'For {{company}}',
+        bodyHtml: '<p>{{first_name}}</p><img src=x onerror=alert(1)>',
+      } },
+    ).expect(200);
+    expect(preview.body.errors).toBeUndefined();
+    expect(preview.body.data.previewEmailTemplate).toMatchObject({
+      subject: 'Hello Test', variables: ['first_name', 'company'],
+    });
+    expect(preview.body.data.previewEmailTemplate.html).not.toContain('onerror');
+
+    const published = await graphql(
+      memberToken,
+      organizationId,
+      `mutation Publish($id: Int!) {
+        publishEmailTemplate(id: $id, input: { isActive: true }) { ${fields} }
+      }`,
+      { id },
+    ).expect(200);
+    expect(published.body.errors).toBeUndefined();
+    expect(published.body.data.publishEmailTemplate).toMatchObject({
+      subject: 'Draft {{first_name}}', draftVersion: null, publishedVersion: 1,
+      isActive: true, hasUnpublishedChanges: false,
+    });
+
+    const saved = await graphql(
+      memberToken,
+      organizationId,
+      `mutation Save($id: Int!, $input: CreateEmailTemplateInput!) {
+        saveEmailTemplateDraft(id: $id, input: $input) { ${fields} }
+      }`,
+      { id, input: {
+        name: 'Lifecycle', subject: 'New unpublished subject', preheader: null,
+        bodyHtml: '<p>New unpublished body</p>', category: 'marketing', isActive: false,
+      } },
+    ).expect(200);
+    expect(saved.body.errors).toBeUndefined();
+    expect(saved.body.data.saveEmailTemplateDraft).toMatchObject({
+      subject: 'Draft {{first_name}}', draftSubject: 'New unpublished subject',
+      draftVersion: 2, publishedVersion: 1, draftIsActive: false,
+      hasUnpublishedChanges: true,
     });
   });
 

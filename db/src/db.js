@@ -38,6 +38,9 @@ const {
 
 // Import Automation migrations
 const { runAllAutomationMigrations } = require('./db_automation_migrations');
+const {
+  runEmailTemplateVersionsMigration,
+} = require('./db_email_template_versions_migrations');
 const { runWorkflowRegistryMigration } = require('./db_workflow_registry_migrations');
 const { runWorkflowWebhookIdempotencyMigration } = require('./db_workflow_webhook_migrations');
 const { runWorkflowTriggerQueueMigration } = require('./db_workflow_trigger_queue_migrations');
@@ -217,6 +220,7 @@ const {
 
 // Import E-Signature migrations
 const { runAllESignatureMigrations, runESignatureMvpPlusMigrations } = require('./db_esignature_migrations');
+const { runSignatureReliabilityMigration } = require('./db_signature_reliability_migrations');
 
 // Import Vault migrations (encrypted storage)
 const { runVaultMigrations } = require('./db_vault_migrations');
@@ -545,6 +549,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'feature_get_started', runGetStartedMigration);
     await runMigrationOnce(pool, 'activation_events_v1', runActivationEventsMigration);
     await runMigrationOnce(pool, 'module_automation', runAllAutomationMigrations);
+    await runMigrationOnce(pool, 'email_template_versions_v1', runEmailTemplateVersionsMigration);
     await runMigrationOnce(pool, 'workflow_registry', runWorkflowRegistryMigration);
     await runMigrationOnce(pool, 'workflow_webhook_secrets', async (p) => {
       await p.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto;`);
@@ -764,6 +769,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'signature_file_deletion_jobs', runSignatureFileDeletionMigration);
     await runMigrationOnce(pool, 'signature_completion_jobs', runSignatureCompletionMigration);
     await runMigrationOnce(pool, 'signature_evidence_retention', runSignatureEvidenceRetentionMigration);
+    await runMigrationOnce(pool, 'signature_reliability_v1', runSignatureReliabilityMigration);
     await runMigrationOnce(pool, 'module_vault', runVaultMigrations);
     
     // Admin email communications - extend email_logs for admin use

@@ -1,304 +1,148 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, MessageSquare, MoreHorizontal, Trash2, Copy, Send } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Copy, FolderOpen, MessageSquare, MoreHorizontal, Plus, Search, Send, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
-import { useOrganization } from '@/hooks/useOrganization';
-import { getSmsTemplates as getSMSTemplates, deleteSmsTemplate as deleteSMSTemplate, duplicateSmsTemplate as duplicateSMSTemplate, sendTestSms as sendTestSMS } from '@/services/smsApi';
-import { CreateSMSTemplateModal } from './CreateSMSTemplateModal';
-import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
-import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
+import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
+import { PageLayout } from '@/components/layout/PageLayout';
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { OnboardingModal } from '@/components/OnboardingModal';
+import { StatCard } from '@/components/StatCard';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
-import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { useOrganization } from '@/hooks/useOrganization';
+import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import { getCatalogStatusVisual } from '@/pages/campaigns/constants/campaignVisuals';
+import { deleteSmsTemplate, duplicateSmsTemplate, getSmsTemplates, sendTestSms, type SmsTemplate } from '@/services/smsApi';
+import { CreateSMSTemplateModal } from './CreateSMSTemplateModal';
 
-interface SMSTemplate {
-    id: number;
-    name: string;
-    content: string;
-    category?: string;
-    is_active: boolean;
-    variables: string[];
-    character_count: number;
-    segment_count: number;
-    created_at: string;
-}
+type StatusFilter = 'all' | 'active' | 'inactive';
 
 export function SMSTemplatesPage() {
-    const { toast } = useToast();
-    // Route-aware onboarding (will show 'campaigns' onboarding for all Marketing routes)
-    const {
-        showModal: showOnboarding,
-        handleComplete: handleOnboardingComplete,
-        handleDismiss: handleOnboardingDismiss,
-        handleClose: handleOnboardingClose,
-        featureKey: onboardingFeatureKey,
-    } = useRouteOnboarding();
+  const { toast } = useToast();
+  const onboarding = useRouteOnboarding();
+  const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
+  const [templates, setTemplates] = useState<SmsTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState<SmsTemplate | null>(null);
+  const [testTemplate, setTestTemplate] = useState<SmsTemplate | null>(null);
+  const [testPhone, setTestPhone] = useState('');
+  const [workingId, setWorkingId] = useState<number | null>(null);
+  const requestRef = useRef(0);
 
-    const [templates, setTemplates] = useState<SMSTemplate[]>([]);
-    const [loading, setLoading] = useState(true);
-    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
-    const [searchQuery, setSearchQuery] = useState('');
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [templateToDelete, setTemplateToDelete] = useState<SMSTemplate | null>(null);
+  const fetchTemplates = useCallback(async () => {
+    if (orgLoading) return setLoading(true);
+    if (!organizationId) { setTemplates([]); setLoading(false); return; }
+    const requestId = ++requestRef.current;
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const response = await getSmsTemplates(organizationId);
+      if (requestId === requestRef.current) setTemplates(response.templates ?? []);
+    } catch (error) {
+      console.error('Error fetching SMS templates:', error);
+      if (requestId === requestRef.current) setLoadError('We could not load your SMS templates. Existing templates have not been changed.');
+    } finally { if (requestId === requestRef.current) setLoading(false); }
+  }, [organizationId, orgLoading]);
 
-    useEffect(() => {
-        if (!initError) return;
-        setLoading(false);
-    }, [initError]);
+  useEffect(() => { void fetchTemplates(); }, [fetchTemplates]);
 
-    const fetchTemplates = useCallback(async () => {
-        if (!organizationId) return;
-        setLoading(true);
-        try {
-            const response = await getSMSTemplates(organizationId);
-            setTemplates((response.templates || []).map((template) => ({
-                id: template.id,
-                name: template.name,
-                content: template.message,
-                category: template.category,
-                is_active: template.is_active,
-                variables: template.variables || [],
-                character_count: template.message?.length || 0,
-                segment_count: Math.max(1, Math.ceil((template.message?.length || 0) / 160)),
-                created_at: template.created_at,
-            })));
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to load templates', variant: 'destructive' });
-        } finally {
-            setLoading(false);
-        }
-    }, [organizationId]);
+  const categories = useMemo(() => Array.from(new Set(templates.map(template => template.category).filter(Boolean))).sort(), [templates]);
+  const stats = useMemo(() => ({ total: templates.length, active: templates.filter(template => template.is_active).length, inactive: templates.filter(template => !template.is_active).length, categories: categories.length }), [categories.length, templates]);
+  const filteredTemplates = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return templates.filter(template => {
+      const matchesQuery = !query || template.name.toLowerCase().includes(query) || template.message.toLowerCase().includes(query);
+      const matchesCategory = categoryFilter === 'all' || template.category === categoryFilter;
+      const matchesStatus = statusFilter === 'all' || template.is_active === (statusFilter === 'active');
+      return matchesQuery && matchesCategory && matchesStatus;
+    });
+  }, [categoryFilter, searchQuery, statusFilter, templates]);
 
-    useEffect(() => {
-        fetchTemplates();
-    }, [fetchTemplates]);
+  const filters = (compact = false) => <div className={cn('flex gap-2', compact && 'flex-col')}>
+    <Select value={categoryFilter} onValueChange={setCategoryFilter}><SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[142px] bg-muted/20'}><SelectValue placeholder="Category" /></SelectTrigger><SelectContent><SelectItem value="all">All categories</SelectItem>{categories.map(category => <SelectItem key={category} value={category}>{category}</SelectItem>)}</SelectContent></Select>
+    <Select value={statusFilter} onValueChange={value => setStatusFilter(value as StatusFilter)}><SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[126px] bg-muted/20'}><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem></SelectContent></Select>
+  </div>;
 
-    const handleDuplicate = async (id: number) => {
-        if (!organizationId) return;
-        try {
-            const copy = await duplicateSMSTemplate(id, organizationId);
-            setTemplates(prev => [{
-                id: copy.id,
-                name: copy.name,
-                content: copy.message,
-                category: copy.category,
-                is_active: copy.is_active,
-                variables: copy.variables || [],
-                character_count: copy.message?.length || 0,
-                segment_count: Math.max(1, Math.ceil((copy.message?.length || 0) / 160)),
-                created_at: copy.created_at,
-            }, ...prev]);
-            toast({ title: 'Duplicated', description: 'Template duplicated successfully' });
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to duplicate', variant: 'destructive' });
-        }
-    };
+  const handleDuplicate = async (template: SmsTemplate) => {
+    if (!organizationId) return;
+    setWorkingId(template.id);
+    try { const copy = await duplicateSmsTemplate(template.id, organizationId); setTemplates(current => [copy, ...current]); toast({ title: 'Duplicated', description: 'Template duplicated successfully.' }); }
+    catch { toast({ title: 'Unable to duplicate', description: 'The template was not duplicated.', variant: 'destructive' }); }
+    finally { setWorkingId(null); }
+  };
 
-    const handleSendTest = async (id: number) => {
-        if (!organizationId) return;
-        const toPhone = window.prompt('Send test SMS to:');
-        if (!toPhone?.trim()) return;
-        try {
-            await sendTestSMS(id, toPhone.trim(), organizationId);
-            toast({ title: 'Test queued', description: `Sending to ${toPhone.trim()}` });
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to send test', variant: 'destructive' });
-        }
-    };
+  const handleSendTest = async () => {
+    if (!organizationId || !testTemplate || !testPhone.trim()) return;
+    setWorkingId(testTemplate.id);
+    try {
+      await sendTestSms(testTemplate.id, testPhone.trim(), organizationId);
+      toast({ title: 'Test SMS queued', description: `Sending to ${testPhone.trim()}.` });
+      setTestTemplate(null);
+      setTestPhone('');
+    } catch { toast({ title: 'Unable to send test', description: 'The test SMS was not queued.', variant: 'destructive' }); }
+    finally { setWorkingId(null); }
+  };
 
-    const handleDelete = async (): Promise<boolean> => {
-        if (!organizationId || !templateToDelete) return false;
-        try {
-            await deleteSMSTemplate(templateToDelete.id, organizationId);
-            setTemplates(prev => prev.filter(t => t.id !== templateToDelete.id));
-            setTemplateToDelete(null);
-            return true;
-        } catch (error) {
-            return false;
-        }
-    };
+  const handleDelete = async (): Promise<boolean> => {
+    if (!organizationId || !templateToDelete) return false;
+    try { await deleteSmsTemplate(templateToDelete.id, organizationId); setTemplates(current => current.filter(template => template.id !== templateToDelete.id)); setTemplateToDelete(null); return true; }
+    catch { return false; }
+  };
 
-    const filteredTemplates = templates.filter(t => 
-        t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.content.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  const hasQuery = Boolean(searchQuery.trim()) || categoryFilter !== 'all' || statusFilter !== 'all';
+  const clearQuery = () => { setSearchQuery(''); setCategoryFilter('all'); setStatusFilter('all'); };
 
-    if (initError) {
-        return (
-            <PageLayout
-                title="SMS TEMPLATES"
-                icon={<MessageSquare className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            >
-                <ErrorState
-                    description={initError}
-                    icon={MessageSquare}
-                    onAction={() => void fetchTemplates()}
-                />
-            </PageLayout>
-        );
-    }
+  if (initError) return <PageLayout title="SMS TEMPLATES" icon={<MessageSquare className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}><ErrorState title="Unable to load SMS templates" description={initError} icon={MessageSquare} onAction={() => void fetchTemplates()} /></PageLayout>;
 
-    return (
-        <PageLayout
-            title="SMS TEMPLATES"
-            icon={<MessageSquare className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            pageActions={
-                <>
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search templates..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
-                    </div>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={() => setShowCreateModal(true)}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Template
-                    </Button>
-                </>
-            }
-            mobileActions={
-                <>
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search templates..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
-                        />
-                    </div>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={() => setShowCreateModal(true)}
-                    >
-                        <Plus className="h-4 w-4" />
-                    </Button>
-                </>
-            }
-        >
-                    {loading ? (
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40" />)}
-                        </div>
-                    ) : filteredTemplates.length === 0 ? (
-                        <EmptyState
-                            icon={MessageSquare}
-                            title="No SMS templates yet"
-                            description="Create reusable SMS templates for your campaigns"
-                            actionLabel="Create Template"
-                            onAction={() => setShowCreateModal(true)}
-                            className="p-12"
-                        />
-                    ) : (
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {filteredTemplates.map((template) => (
-                                <Card key={template.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                                    <CardHeader className="pb-3">
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex-1 min-w-0">
-                                                <CardTitle className="text-lg truncate">{template.name}</CardTitle>
-                                                <CardDescription className="line-clamp-2 mt-1">{template.content}</CardDescription>
-                                            </div>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => handleSendTest(template.id)}>
-                                                        <Send className="h-4 w-4 mr-2" />Send Test
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleDuplicate(template.id)}>
-                                                        <Copy className="h-4 w-4 mr-2" />Duplicate
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem onClick={() => setTemplateToDelete(template)} className="text-destructive focus:text-destructive">
-                                                        <Trash2 className="h-4 w-4 mr-2" />Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="pt-0">
-                                        <div className="flex flex-wrap gap-2 mb-3">
-                                            <Badge variant={template.is_active ? 'default' : 'secondary'}>
-                                                {template.is_active ? 'Active' : 'Inactive'}
-                                            </Badge>
-                                            {template.category && (
-                                                <Badge variant="outline">{template.category}</Badge>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                            <span>{template.character_count} chars</span>
-                                            <span>{template.segment_count} segment{template.segment_count !== 1 ? 's' : ''}</span>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    )}
-
-            {showCreateModal && organizationId && (
-                <CreateSMSTemplateModal
-                    organizationId={organizationId}
-                    onClose={() => setShowCreateModal(false)}
-                    onCreated={(template) => {
-                        setTemplates(prev => [{
-                            id: template.id,
-                            name: template.name,
-                            content: template.message,
-                            category: template.category,
-                            is_active: template.is_active,
-                            variables: template.variables,
-                            character_count: template.message.length,
-                            segment_count: 1,
-                            created_at: template.created_at,
-                        }, ...prev]);
-                        setShowCreateModal(false);
-                    }}
-                />
-            )}
-
-            {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
-                <OnboardingModal
-                    isOpen={showOnboarding}
-                    onClose={handleOnboardingClose}
-                    onComplete={handleOnboardingComplete}
-                    onDismiss={handleOnboardingDismiss}
-                    content={ONBOARDING_CONTENT[onboardingFeatureKey]}
-                />
-            )}
-            <DeleteDialog
-                open={Boolean(templateToDelete)}
-                onOpenChange={(open) => !open && setTemplateToDelete(null)}
-                onConfirm={handleDelete}
-                itemType="sms-template"
-                itemTitle={templateToDelete?.name}
-            />
-        </PageLayout>
-    );
+  return <PageLayout
+    title="SMS TEMPLATES"
+    icon={<MessageSquare className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+    mobileClassName="items-stretch"
+    desktopTools={{
+      search: <HeaderSearch label="Search SMS templates" placeholder="Search SMS templates..." value={searchQuery} onChange={setSearchQuery} width="wide" />,
+      filters: <HeaderFilters label="Filter SMS templates" activeCount={Number(categoryFilter !== 'all') + Number(statusFilter !== 'all')} compactChildren={filters(true)} preferExpanded="wide-lane">{filters()}</HeaderFilters>,
+      combinedQuery: <HeaderCombinedQuery label="Search and filter SMS templates" placeholder="Search SMS templates..." value={searchQuery} onChange={setSearchQuery} activeCount={Number(Boolean(searchQuery.trim())) + Number(categoryFilter !== 'all') + Number(statusFilter !== 'all')}>{filters(true)}</HeaderCombinedQuery>,
+      primaryAction: <HeaderAction label="New template" icon={<Plus className="h-4 w-4" />} onClick={() => setShowCreateModal(true)} />,
+    }}
+    mobileActions={<div className="flex w-full items-center gap-2"><div className="relative min-w-0 flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label="Search SMS templates" placeholder="Search templates..." value={searchQuery} onChange={event => setSearchQuery(event.target.value)} className="h-11 pl-10" /></div><HeaderCombinedQuery label="Filter SMS templates" placeholder="Search SMS templates..." value={searchQuery} onChange={setSearchQuery} activeCount={Number(categoryFilter !== 'all') + Number(statusFilter !== 'all')}>{filters(true)}</HeaderCombinedQuery><Button size="icon" aria-label="New template" className="h-11 w-11 shrink-0 bg-blue-600 text-white hover:bg-blue-700" onClick={() => setShowCreateModal(true)}><Plus className="h-4 w-4" /></Button></div>}
+  >
+    {!loadError && <ResponsiveCardRail label="SMS template summary" desktopColumns="md:grid-cols-2 lg:grid-cols-4" className="responsive-stat-summary">
+      <StatCard title="Total SMS templates" badgeText="Total" value={stats.total} icon={MessageSquare} description={`${stats.total} reusable`} colorTheme="blue" isLoading={loading} />
+      <StatCard title="Active SMS templates" badgeText="Active" value={stats.active} icon={MessageSquare} description="Available to use" colorTheme="blue" isLoading={loading} />
+      <StatCard title="Inactive SMS templates" badgeText="Inactive" value={stats.inactive} icon={MessageSquare} description="Parked templates" colorTheme="orange" isLoading={loading} />
+      <StatCard title="SMS template categories" badgeText="Categories" value={stats.categories} icon={FolderOpen} description="Catalog groups" colorTheme="blue" isLoading={loading} />
+    </ResponsiveCardRail>}
+    <Card><CardContent className="p-0">{loading ? <div className="space-y-4 p-6">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-20 w-full" />)}</div>
+      : loadError ? <ErrorState title="SMS templates unavailable" description={loadError} icon={MessageSquare} onAction={() => void fetchTemplates()} className="p-12" />
+      : filteredTemplates.length === 0 ? <EmptyState icon={MessageSquare} title={hasQuery ? 'No matching SMS templates' : 'No SMS templates yet'} description={hasQuery ? 'Try a different search or clear the current filters.' : 'Create a reusable template for campaign messages.'} actionLabel={hasQuery ? 'Clear filters' : 'New template'} onAction={hasQuery ? clearQuery : () => setShowCreateModal(true)} className="p-12" />
+      : <div className="divide-y">{filteredTemplates.map(template => {
+        const visual = getCatalogStatusVisual(template.is_active);
+        const characterCount = template.message.length;
+        const segmentCount = Math.max(1, Math.ceil(characterCount / 160));
+        return <div key={template.id} className="flex items-center gap-3 px-3 py-4 transition-colors hover:bg-muted/50 sm:px-4"><div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}><MessageSquare className={cn('h-5 w-5', visual.iconClass)} /></div><div className="min-w-0 flex-1"><div className="flex min-w-0 items-center gap-2"><h3 className="truncate text-sm font-medium md:text-base">{template.name}</h3><Badge className={cn('shrink-0 text-xs', visual.badgeClass)}>{visual.label}</Badge></div><p className="mt-1 truncate text-sm text-muted-foreground">{template.message}</p><div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">{template.category && <span>{template.category}</span>}<span>{characterCount} characters</span><span>{segmentCount} SMS segment{segmentCount === 1 ? '' : 's'}</span></div></div><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" disabled={workingId === template.id} aria-label={`More actions for ${template.name}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => { setTestTemplate(template); setTestPhone(''); }}><Send className="mr-2 h-4 w-4" />Send test</DropdownMenuItem><DropdownMenuItem onClick={() => void handleDuplicate(template)}><Copy className="mr-2 h-4 w-4" />Duplicate</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setTemplateToDelete(template)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>;
+      })}</div>}
+    </CardContent></Card>
+    {showCreateModal && organizationId && <CreateSMSTemplateModal organizationId={organizationId} onClose={() => setShowCreateModal(false)} onCreated={template => { setTemplates(current => [template, ...current]); setShowCreateModal(false); }} />}
+    {onboarding.featureKey && ONBOARDING_CONTENT[onboarding.featureKey] && <OnboardingModal isOpen={onboarding.showModal} onClose={onboarding.handleClose} onComplete={onboarding.handleComplete} onDismiss={onboarding.handleDismiss} content={ONBOARDING_CONTENT[onboarding.featureKey]} />}
+    <Dialog open={Boolean(testTemplate)} onOpenChange={open => { if (!open && workingId !== testTemplate?.id) { setTestTemplate(null); setTestPhone(''); } }}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Send a test SMS</DialogTitle><DialogDescription>Send {testTemplate?.name} to a phone number before using it in a campaign.</DialogDescription></DialogHeader><div className="space-y-2"><Label htmlFor="test-sms-phone">Destination phone number</Label><Input id="test-sms-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="+1 555 555 0100" value={testPhone} onChange={event => setTestPhone(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') void handleSendTest(); }} /></div><DialogFooter><Button variant="outline" onClick={() => { setTestTemplate(null); setTestPhone(''); }} disabled={workingId === testTemplate?.id}>Cancel</Button><Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => void handleSendTest()} disabled={!testPhone.trim() || workingId === testTemplate?.id}><Send className="mr-2 h-4 w-4" />Send test</Button></DialogFooter></DialogContent></Dialog>
+    <DeleteDialog open={Boolean(templateToDelete)} onOpenChange={open => !open && setTemplateToDelete(null)} onConfirm={handleDelete} itemType="sms-template" itemTitle={templateToDelete?.name} />
+  </PageLayout>;
 }
 
 export default SMSTemplatesPage;

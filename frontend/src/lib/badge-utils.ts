@@ -2,12 +2,12 @@
  * Centralized badge color utilities for consistent status styling across the app.
  * 
  * Color semantics:
- * - Green: Success, completed, active, positive
- * - Orange: Warning, pending, in-progress, sent
- * - Sky/Blue: Info, draft, default
+ * - Blue: Itemize-owned active, draft, and live working states
+ * - Green: Successful outcomes such as completed, paid, and accepted
+ * - Orange: Parked or transitional states such as pending, sent, paused, and inactive
  * - Red: Error, cancelled, destructive, negative
  * - Purple: Special states (rarely used)
- * - Gray: Neutral, inactive, archived
+ * - Gray: Neutral and historical states
  */
 
 // Status badge color classes with dark mode support
@@ -16,7 +16,7 @@ export const STATUS_BADGE_CLASSES = {
   completed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
   success: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
   paid: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  active: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+  active: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
   accepted: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
   confirmed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
   published: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
@@ -25,10 +25,13 @@ export const STATUS_BADGE_CLASSES = {
   // Warning/Pending states
   pending: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
   in_progress: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+  processing: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
   sent: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-  overdue: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+  viewed: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+  partial: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+  inactive: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
+  paused: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
   scheduled: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-  neutral: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
 
   // Info/Draft states
   draft: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
@@ -41,12 +44,13 @@ export const STATUS_BADGE_CLASSES = {
   failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
   error: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
   expired: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+  overdue: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+  archived: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
   negative: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
 
-  // Inactive/Neutral states
-  inactive: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-  archived: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-  paused: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
+  // Neutral/Historical states
+  refunded: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
+  neutral: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
 } as const;
 
 export type StatusKey = keyof typeof STATUS_BADGE_CLASSES;
@@ -63,9 +67,9 @@ export function getStatusBadgeClass(status: string): string {
 
 // Contact status badge classes
 export const CONTACT_STATUS_CLASSES = {
-  active: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  inactive: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-  archived: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+  active: STATUS_BADGE_CLASSES.active,
+  inactive: STATUS_BADGE_CLASSES.inactive,
+  archived: STATUS_BADGE_CLASSES.archived,
 } as const;
 
 export type ContactStatusKey = keyof typeof CONTACT_STATUS_CLASSES;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, MoreHorizontal, Trash2, Tag, UserPlus, Download, Upload, Users, CheckCircle, AlertCircle, Archive } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Trash2, Tag, UserPlus, Download, Upload, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,6 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { PageLayout } from '@/components/layout/PageLayout';
 import {
+  HeaderAction,
   HeaderActionLabel,
   HeaderCombinedQuery,
   HeaderFilters,
@@ -48,6 +49,7 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { getContactStatusVisual } from './constants/contactStatusConstants';
 
 const getApiStatus = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
@@ -334,19 +336,11 @@ export function ContactsPage() {
         ),
         secondaryAction: contactActions,
         primaryAction: (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                className="h-11 min-w-11 gap-2 bg-blue-600 px-3 font-light text-white hover:bg-blue-700"
-                onClick={() => setShowCreateModal(true)}
-                aria-label="Add contact"
-              >
-                <Plus className="h-4 w-4" />
-                <HeaderActionLabel>Add</HeaderActionLabel>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Add contact</TooltipContent>
-          </Tooltip>
+          <HeaderAction
+            label="Add contact"
+            icon={<Plus className="h-4 w-4" />}
+            onClick={() => setShowCreateModal(true)}
+          />
         ),
       }}
       mobileActions={
@@ -418,9 +412,9 @@ export function ContactsPage() {
               title="Archived Contacts"
               badgeText="Archived"
               value={contactStats.archived}
-              icon={Archive}
+              icon={getContactStatusVisual('archived').icon}
               description={`${contactStats.archived} contact${contactStats.archived !== 1 ? 's' : ''}`}
-              colorTheme="red"
+              colorTheme={getContactStatusVisual('archived').theme}
               isLoading={loading}
             />
             <StatCard
@@ -436,18 +430,18 @@ export function ContactsPage() {
               title="Active Contacts"
               badgeText="Active"
               value={contactStats.active}
-              icon={CheckCircle}
+              icon={getContactStatusVisual('active').icon}
               description={`${contactStats.active} contact${contactStats.active !== 1 ? 's' : ''}`}
-              colorTheme="green"
+              colorTheme={getContactStatusVisual('active').theme}
               isLoading={loading}
             />
             <StatCard
               title="Inactive Contacts"
               badgeText="Inactive"
               value={contactStats.inactive}
-              icon={AlertCircle}
+              icon={getContactStatusVisual('inactive').icon}
               description={`${contactStats.inactive} contact${contactStats.inactive !== 1 ? 's' : ''}`}
-              colorTheme="orange"
+              colorTheme={getContactStatusVisual('inactive').theme}
               isLoading={loading}
             />
           </ResponsiveCardRail>

@@ -20,4 +20,20 @@ describe('PageToolbar', () => {
     expect(toolbar).toHaveTextContent('2 items');
     expect(toolbar).toContainElement(screen.getByRole('button', { name: 'Clear' }));
   });
+
+  it('keeps a compact query lane on one line when requested', () => {
+    render(
+      <PageToolbar
+        label="Recipient controls"
+        singleLine
+        search={<input aria-label="Search recipients" />}
+        filters={<button type="button">Status</button>}
+        meta={<span>3 recipients</span>}
+      />,
+    );
+
+    const toolbar = screen.getByRole('region', { name: 'Recipient controls' });
+    expect(toolbar).toHaveClass('flex-nowrap');
+    expect(screen.getByRole('textbox', { name: 'Search recipients' }).parentElement).toHaveClass('min-w-0');
+  });
 });

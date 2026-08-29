@@ -540,7 +540,7 @@ export function PaymentsPage() {
                         badgeText="Gross volume"
                         value={formatCurrency(currencyOverview.grossAmount, currencyOverview.currency)}
                         icon={CreditCard}
-                        description={`${currencyOverview.grossCount} successful payment${currencyOverview.grossCount !== 1 ? 's' : ''}`}
+                        description={`${currencyOverview.grossCount} successful`}
                         colorTheme="blue"
                         isLoading={loading}
                     />

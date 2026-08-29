@@ -12,7 +12,8 @@ import { DraggableNoteCard } from './DraggableNoteCard';
 import { DraggableWhiteboardCard } from './DraggableWhiteboardCard';
 import { DraggableWireframeCard } from './DraggableWireframeCard';
 import { DraggableVaultCard } from './DraggableVaultCard';
-import { Plus, Minus, RotateCcw, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
+import { CanvasViewControls } from './CanvasViewControls';
 
 interface CanvasContainerProps {
   existingCategories: Category[];
@@ -920,128 +921,16 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
           )}
       </div>
 
-      {/* Canvas Control Panel */}
-      <div
-        aria-label="Canvas view controls"
-        data-canvas-controls
-        role="toolbar"
+      <CanvasViewControls
+        zoom={canvasTransform.scale}
+        onZoomOut={handleZoomOut}
+        onResetView={handleResetView}
+        onZoomIn={handleZoomIn}
+        className="fixed bottom-4 z-[1002] transition-[left] duration-200 ease-in-out"
         style={{
-          position: 'fixed',
-          bottom: '16px',
           left: `${sidebarWidth + 16}px`,
-          zIndex: 1002,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '12px',
-          backgroundColor: 'var(--background)',
-          border: '1px solid var(--border)',
-          borderRadius: '12px',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-          userSelect: 'none',
-          transition: 'left 0.2s ease-in-out'
         }}
-      >
-        {/* Zoom Out */}
-        <button
-          aria-label="Zoom out"
-          onClick={handleZoomOut}
-          style={{
-            width: '36px',
-            height: '36px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'var(--background)',
-            border: '1px solid var(--border)',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            color: 'var(--text)',
-            transition: 'all 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--accent)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--background)';
-          }}
-          title="Zoom Out"
-        >
-          <Minus size={18} />
-        </button>
-
-        {/* Reset/Center */}
-        <button
-          aria-label="Reset canvas view"
-          onClick={handleResetView}
-          style={{
-            width: '36px',
-            height: '36px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'var(--background)',
-            border: '1px solid var(--border)',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            color: 'var(--text)',
-            transition: 'all 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--accent)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--background)';
-          }}
-          title="Reset View"
-        >
-          <RotateCcw size={18} />
-        </button>
-
-        {/* Zoom Level Display */}
-        <div
-          style={{
-            padding: '0 12px',
-            fontSize: '14px',
-            fontWeight: '500',
-            color: 'var(--text-muted)',
-            fontFamily: 'monospace',
-            minWidth: '60px',
-            textAlign: 'center'
-          }}
-        >
-          {Math.round(canvasTransform.scale * 100)}%
-        </div>
-
-        {/* Zoom In */}
-        <button
-          aria-label="Zoom in"
-          onClick={handleZoomIn}
-          style={{
-            width: '36px',
-            height: '36px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'var(--background)',
-            border: '1px solid var(--border)',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            color: 'var(--text)',
-            transition: 'all 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--accent)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--background)';
-          }}
-          title="Zoom In"
-        >
-          <Plus size={18} />
-        </button>
-
-      </div>
+      />
 
 
     </div>

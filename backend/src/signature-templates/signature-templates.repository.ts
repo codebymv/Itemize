@@ -14,6 +14,8 @@ export type SignatureTemplateRow = {
   file_name: string | null;
   file_type: string | null;
   file_size: number | string | null;
+  page_count: number | null;
+  is_ready: boolean;
   created_by: number | null;
   created_at: Date;
   updated_at: Date;
@@ -49,11 +51,32 @@ export type SignatureTemplateFieldWrite={roleName:string|null;fieldType:string;p
 export type SignatureTemplateValues={title:string;description:string|null;message:string|null;roles?:SignatureTemplateRoleWrite[];fields?:SignatureTemplateFieldWrite[]};
 export type SignatureTemplateUpdates=Partial<Omit<SignatureTemplateValues,'roles'|'fields'>>&{roles?:SignatureTemplateRoleWrite[];fields?:SignatureTemplateFieldWrite[]};
 export type InstantiateSignatureTemplateValues={title:string|null;description:string|null|undefined;message:string|null|undefined;routingMode:string;expirationDays:number;senderName:string|null;senderEmail:string|null;recipients:SignatureRecipientWrite[]};
+export class SignatureTemplateNotReadyError extends Error {}
 
 const columns = `t.id,t.organization_id,t.title,t.description,t.message,
-  t.file_url IS NOT NULL AS has_file,t.file_name,t.file_type,t.file_size,
+  t.file_url IS NOT NULL AS has_file,t.file_name,t.file_type,t.file_size,t.page_count,
+  (t.file_url IS NOT NULL AND t.page_count IS NOT NULL
+    AND EXISTS (SELECT 1 FROM signature_template_roles readiness_role
+      WHERE readiness_role.template_id=t.id)
+    AND NOT EXISTS (
+      SELECT 1 FROM signature_template_roles readiness_role
+      WHERE readiness_role.template_id=t.id AND NOT EXISTS (
+        SELECT 1 FROM signature_template_fields readiness_signature
+        WHERE readiness_signature.template_id=t.id
+          AND LOWER(readiness_signature.role_name)=LOWER(readiness_role.role_name)
+          AND readiness_signature.field_type IN ('signature','initials')
+          AND readiness_signature.is_required=true AND readiness_signature.locked=false
+      )
+    )
+    AND NOT EXISTS (
+      SELECT 1 FROM signature_template_fields readiness_field
+      WHERE readiness_field.template_id=t.id
+        AND (readiness_field.page_number>t.page_count
+          OR (readiness_field.locked=false AND readiness_field.role_name IS NULL))
+    )
+  ) AS is_ready,
   t.created_by,t.created_at,t.updated_at`;
-const documentColumns=`d.id,d.organization_id,d.title,d.document_number,d.description,d.message,d.status,d.routing_mode,d.template_id,d.expiration_days,d.expires_at,d.sender_name,d.sender_email,d.created_by,d.sent_at,d.completed_at,d.file_url IS NOT NULL AS has_file,d.signed_file_url IS NOT NULL AS has_signed_file,d.file_name,d.file_type,d.file_size,d.created_at,d.updated_at`;
+const documentColumns=`d.id,d.organization_id,d.title,d.document_number,d.description,d.message,d.status,d.routing_mode,d.template_id,d.expiration_days,d.expires_at,d.sender_name,d.sender_email,d.created_by,d.sent_at,d.completed_at,d.file_url IS NOT NULL AS has_file,d.signed_file_url IS NOT NULL AS has_signed_file,d.file_name,d.file_type,d.file_size,d.page_count,NULL::text AS delivery_state,NULL::text AS completion_state,d.created_at,d.updated_at`;
 
 @Injectable()
 export class SignatureTemplatesRepository {
@@ -144,7 +167,88 @@ export class SignatureTemplatesRepository {
   }
 
   async instantiate(organizationId:number,userId:number,id:number,values:InstantiateSignatureTemplateValues):Promise<SignatureDocumentRow|null>{
-    return this.transaction(async client=>{await this.lockQuota(client,organizationId);const template=await client.query<{id:number;title:string;description:string|null;message:string|null;file_url:string|null;file_name:string|null;file_size:number|null;file_type:string|null;original_sha256:string|null}>(`SELECT id,title,description,message,file_url,file_name,file_size,file_type,original_sha256 FROM signature_templates WHERE id=$1 AND organization_id=$2 FOR SHARE`,[id,organizationId]);if(!template.rows[0])return null;const t=template.rows[0];const roles=await client.query<{role_name:string;signing_order:number}>('SELECT role_name,signing_order FROM signature_template_roles WHERE template_id=$1 ORDER BY signing_order,id',[id]);const order=new Map(roles.rows.map(r=>[r.role_name,r.signing_order]));const contacts=[...new Set(values.recipients.map(r=>r.contactId).filter((v):v is number=>v!==null))];if(contacts.length){const found=await client.query('SELECT id FROM contacts WHERE organization_id=$1 AND id=ANY($2::int[])',[organizationId,contacts]);if(found.rows.length!==contacts.length)throw new SignatureReferenceError('Recipient contact must belong to the active organization');}const inserted=await client.query<{id:number}>(`INSERT INTO signature_documents (organization_id,title,description,message,file_url,file_name,file_size,file_type,original_sha256,template_id,routing_mode,expiration_days,sender_name,sender_email,created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,[organizationId,values.title??t.title,values.description===undefined?t.description:values.description,values.message===undefined?t.message:values.message,t.file_url,t.file_name,t.file_size,t.file_type,t.original_sha256,t.id,values.routingMode,values.expirationDays,values.senderName,values.senderEmail,userId]);const documentId=Number(inserted.rows[0].id);const recipientMap=new Map<string,number>();for(const recipient of values.recipients){const result=await client.query<{id:number}>(`INSERT INTO signature_recipients (document_id,organization_id,contact_id,name,email,signing_order,role_name,identity_method,routing_status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'locked') RETURNING id`,[documentId,organizationId,recipient.contactId,recipient.name,recipient.email,order.get(recipient.roleName??'')??recipient.signingOrder,recipient.roleName,recipient.identityMethod]);if(recipient.roleName)recipientMap.set(recipient.roleName,Number(result.rows[0].id));}const fields=await client.query<SignatureTemplateFieldRow>('SELECT id,template_id,role_name,field_type,page_number,x_position,y_position,width,height,label,is_required,font_size,font_family,text_align,locked FROM signature_template_fields WHERE template_id=$1 ORDER BY id',[id]);for(const field of fields.rows)await client.query(`INSERT INTO signature_fields (document_id,recipient_id,role_name,field_type,page_number,x_position,y_position,width,height,label,is_required,font_size,font_family,text_align,locked) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,[documentId,field.role_name?recipientMap.get(field.role_name)??null:null,field.role_name,field.field_type,field.page_number,field.x_position,field.y_position,field.width,field.height,field.label,field.is_required,field.font_size,field.font_family,field.text_align,field.locked]);return this.selectDocument(client,organizationId,documentId);});
+    return this.transaction(async client=>{
+      await this.lockQuota(client,organizationId);
+      const template=await client.query<{
+        id:number;title:string;description:string|null;message:string|null;
+        file_url:string|null;file_name:string|null;file_size:number|null;
+        file_type:string|null;original_sha256:string|null;page_count:number|null;
+      }>(
+        `SELECT id,title,description,message,file_url,file_name,file_size,file_type,
+           original_sha256,page_count
+         FROM signature_templates WHERE id=$1 AND organization_id=$2 FOR SHARE`,
+        [id,organizationId],
+      );
+      if(!template.rows[0])return null;
+      const t=template.rows[0];
+      const roles=await client.query<{role_name:string;signing_order:number}>(
+        'SELECT role_name,signing_order FROM signature_template_roles WHERE template_id=$1 ORDER BY signing_order,id',
+        [id],
+      );
+      const fields=await client.query<SignatureTemplateFieldRow>(
+        'SELECT id,template_id,role_name,field_type,page_number,x_position,y_position,width,height,label,is_required,font_size,font_family,text_align,locked FROM signature_template_fields WHERE template_id=$1 ORDER BY id',
+        [id],
+      );
+      const signatureRoles=new Set(
+        fields.rows
+          .filter(field=>field.role_name&&['signature','initials'].includes(field.field_type)&&field.is_required&&!field.locked)
+          .map(field=>field.role_name!.toLowerCase()),
+      );
+      const invalidField=fields.rows.some(field=>
+        field.page_number>(t.page_count??0)||(!field.locked&&!field.role_name),
+      );
+      if(!t.file_url||!t.page_count||roles.rows.length===0||invalidField
+        ||roles.rows.some(role=>!signatureRoles.has(role.role_name.toLowerCase()))){
+        throw new SignatureTemplateNotReadyError('Finish the PDF, roles, and signer fields before using this template');
+      }
+      const order=new Map(roles.rows.map(r=>[r.role_name,r.signing_order]));
+      const contacts=[...new Set(values.recipients.map(r=>r.contactId).filter((v):v is number=>v!==null))];
+      if(contacts.length){
+        const found=await client.query(
+          'SELECT id FROM contacts WHERE organization_id=$1 AND id=ANY($2::int[])',
+          [organizationId,contacts],
+        );
+        if(found.rows.length!==contacts.length)throw new SignatureReferenceError('Recipient contact must belong to the active organization');
+      }
+      const inserted=await client.query<{id:number}>(
+        `INSERT INTO signature_documents (
+           organization_id,title,description,message,file_url,file_name,file_size,
+           file_type,original_sha256,page_count,template_id,routing_mode,
+           expiration_days,sender_name,sender_email,created_by
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+         RETURNING id`,
+        [organizationId,values.title??t.title,
+          values.description===undefined?t.description:values.description,
+          values.message===undefined?t.message:values.message,t.file_url,t.file_name,
+          t.file_size,t.file_type,t.original_sha256,t.page_count,t.id,values.routingMode,
+          values.expirationDays,values.senderName,values.senderEmail,userId],
+      );
+      const documentId=Number(inserted.rows[0].id);
+      const recipientMap=new Map<string,number>();
+      for(const recipient of values.recipients){
+        const result=await client.query<{id:number}>(
+          `INSERT INTO signature_recipients (
+             document_id,organization_id,contact_id,name,email,signing_order,
+             role_name,identity_method,routing_status
+           ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'locked') RETURNING id`,
+          [documentId,organizationId,recipient.contactId,recipient.name,recipient.email,
+            order.get(recipient.roleName??'')??recipient.signingOrder,
+            recipient.roleName,recipient.identityMethod],
+        );
+        if(recipient.roleName)recipientMap.set(recipient.roleName,Number(result.rows[0].id));
+      }
+      for(const field of fields.rows)await client.query(
+        `INSERT INTO signature_fields (
+           document_id,recipient_id,role_name,field_type,page_number,x_position,
+           y_position,width,height,label,is_required,font_size,font_family,text_align,locked
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+        [documentId,field.role_name?recipientMap.get(field.role_name)??null:null,
+          field.role_name,field.field_type,field.page_number,field.x_position,
+          field.y_position,field.width,field.height,field.label,field.is_required,
+          field.font_size,field.font_family,field.text_align,field.locked],
+      );
+      return this.selectDocument(client,organizationId,documentId);
+    });
   }
 
   private async replaceRoles(client:PoolClient,id:number,roles:SignatureTemplateRoleWrite[]):Promise<void>{await client.query('DELETE FROM signature_template_roles WHERE template_id=$1',[id]);for(const role of roles)await client.query('INSERT INTO signature_template_roles (template_id,role_name,signing_order) VALUES ($1,$2,$3)',[id,role.roleName,role.signingOrder]);}

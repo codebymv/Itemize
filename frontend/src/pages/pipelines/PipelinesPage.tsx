@@ -380,11 +380,15 @@ export function PipelinesPage() {
       </Tooltip>
       <DropdownMenuContent align="end">
         <DropdownMenuItem
-          onClick={() => activePipelineId !== null && openCreateDeal(activePipelineId)}
+          onClick={() => {
+            setEditingPipeline(null);
+            setCreatePipelineAsStacked(false);
+            setShowCreatePipelineModal(true);
+          }}
           className="group/menu"
         >
           <Plus className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
-          Add Deal
+          New Pipeline
         </DropdownMenuItem>
         <DropdownMenuItem
           disabled={!activePipelineForEditing}
@@ -410,6 +414,14 @@ export function PipelinesPage() {
         setCreatePipelineAsStacked(false);
         setShowCreatePipelineModal(true);
       }}
+    />
+  );
+  const addDealAction = (
+    <HeaderAction
+      label="Add deal"
+      icon={<Plus className="h-4 w-4" />}
+      onClick={() => activePipelineId !== null && openCreateDeal(activePipelineId)}
+      disabled={activePipelineId === null}
     />
   );
   const renderNewPipelineButton = () => (
@@ -507,7 +519,7 @@ export function PipelinesPage() {
           </HeaderCombinedQuery>
         ),
         secondaryAction: pipelineActions,
-        primaryAction: newPipelineAction,
+        primaryAction: addDealAction,
       } : {
         primaryAction: newPipelineAction,
       }}
@@ -528,6 +540,7 @@ export function PipelinesPage() {
                 size="icon"
                 className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
                 onClick={() => activePipelineId !== null && openCreateDeal(activePipelineId)}
+                aria-label="Add deal"
               >
                 <Plus className="h-4 w-4" />
               </Button>

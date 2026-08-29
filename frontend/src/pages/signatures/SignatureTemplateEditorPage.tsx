@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, UploadCloud, Save, FileSignature } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { ShellBackButton } from '@/components/layout/ShellBackButton';
+import { HeaderAction } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { CardGridSkeleton } from '@/components/ui/loading-skeletons';
 import { useToast } from '@/hooks/use-toast';
 import { useDirtyState } from '@/hooks/useDirtyState';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
@@ -35,26 +39,31 @@ export default function SignatureTemplateEditorPage() {
   const [file, setFile] = useState<File | null>(null);
   const [roles, setRoles] = useState<SignatureTemplateRole[]>([]);
   const [fields, setFields] = useState<SignatureTemplateField[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadTemplate = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    getSignatureTemplate(Number(id))
-      .then((data) => {
-        setTemplate(data.template);
-        setTitle(data.template.title || '');
-        setDescription(data.template.description || '');
-        setMessage(data.template.message || '');
-        setRoles(data.roles || []);
-        setFields(data.fields || []);
-      })
-      .catch(() => {
-        toast({ title: 'Error', description: 'Failed to load template', variant: 'destructive' });
-        navigate('/templates');
-      })
-      .finally(() => setLoading(false));
-  }, [id, toast, navigate]);
+    setLoadError(null);
+    try {
+      const data = await getSignatureTemplate(Number(id));
+      setTemplate(data.template);
+      setTitle(data.template.title || '');
+      setDescription(data.template.description || '');
+      setMessage(data.template.message || '');
+      setRoles(data.roles || []);
+      setFields(data.fields || []);
+    } catch (error) {
+      setLoadError('This template could not be loaded. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    void loadTemplate();
+  }, [loadTemplate]);
 
   const roleNames = useMemo(
     () => roles.map((role) => role.role_name).filter(Boolean),
@@ -72,7 +81,7 @@ export default function SignatureTemplateEditorPage() {
     ready: Boolean(template) && !loading,
     resetKey: id ?? 'template',
   });
-  useUnsavedChangesGuard({
+  const { confirmLeave } = useUnsavedChangesGuard({
     when: isDirty,
     message: 'This signature template has unsaved changes. Leave without saving them?',
   });
@@ -129,21 +138,40 @@ export default function SignatureTemplateEditorPage() {
 
   return (
     <PageLayout
-      title="EDIT SIGNATURE TEMPLATE"
-      icon={<FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-      pageActions={
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSave} disabled={loading || !template || !isDirty}>
-          <Save className="h-4 w-4 mr-2" />
-          Save
-        </Button>
+      title="EDIT TEMPLATE"
+      icon={<FileSignature className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+      leading={
+        <ShellBackButton label="Back to templates" onClick={() => {
+          if (confirmLeave()) navigate('/templates');
+        }} />
       }
+      desktopTools={{
+        primaryAction: (
+          <HeaderAction
+            label="Save template"
+            icon={<Save className="h-4 w-4" />}
+            onClick={() => void handleSave()}
+            disabled={loading || !template || !isDirty}
+          />
+        ),
+      }}
       mobileActions={
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white flex-1" onClick={handleSave} disabled={loading || !template || !isDirty}>
+        <Button className="h-11 flex-1 bg-blue-600 text-white hover:bg-blue-700" onClick={handleSave} disabled={loading || !template || !isDirty}>
           <Save className="h-4 w-4 mr-2" />
-          Save
+          Save template
         </Button>
       }
     >
+          {loadError ? (
+            <ErrorState
+              title="Template unavailable"
+              description={loadError}
+              onAction={() => void loadTemplate()}
+            />
+          ) : loading && !template ? (
+            <CardGridSkeleton count={2} columns={2} height="h-80" />
+          ) : (
+          <>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
@@ -226,6 +254,8 @@ export default function SignatureTemplateEditorPage() {
               />
             </CardContent>
           </Card>
+          </>
+          )}
     </PageLayout>
   );
 }

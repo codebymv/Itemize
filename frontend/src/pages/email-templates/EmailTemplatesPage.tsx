@@ -1,310 +1,149 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, FileText, MoreHorizontal, Trash2, Copy, Send, Eye } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Copy, FileText, FolderOpen, Mail, MoreHorizontal, Pencil, Plus, Search, Send, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
-import { useOrganization } from '@/hooks/useOrganization';
-import { getEmailTemplates, deleteEmailTemplate, duplicateEmailTemplate, sendTestEmail } from '@/services/emailApi';
-import { CreateEmailTemplateModal } from './CreateEmailTemplateModal';
-import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
-import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
+import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
+import { PageLayout } from '@/components/layout/PageLayout';
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { OnboardingModal } from '@/components/OnboardingModal';
+import { StatCard } from '@/components/StatCard';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { useAuthState } from '@/contexts/AuthContext';
-import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { useOrganization } from '@/hooks/useOrganization';
+import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import { getCatalogStatusVisual } from '@/pages/campaigns/constants/campaignVisuals';
+import { deleteEmailTemplate, duplicateEmailTemplate, getEmailTemplates, sendTestEmail, type EmailTemplate } from '@/services/emailApi';
 
-interface EmailTemplate {
-    id: number;
-    name: string;
-    subject: string;
-    category?: string;
-    is_active: boolean;
-    variables: string[];
-    created_at: string;
-    updated_at: string;
-}
+type StatusFilter = 'all' | 'active' | 'inactive';
 
 export function EmailTemplatesPage() {
-    const { toast } = useToast();
-    const { currentUser } = useAuthState();
-    // Route-aware onboarding (will show 'campaigns' onboarding for all Marketing routes)
-    const {
-        showModal: showOnboarding,
-        handleComplete: handleOnboardingComplete,
-        handleDismiss: handleOnboardingDismiss,
-        handleClose: handleOnboardingClose,
-        featureKey: onboardingFeatureKey,
-    } = useRouteOnboarding();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { currentUser } = useAuthState();
+  const onboarding = useRouteOnboarding();
+  const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [templateToDelete, setTemplateToDelete] = useState<EmailTemplate | null>(null);
+  const [workingId, setWorkingId] = useState<number | null>(null);
+  const requestRef = useRef(0);
 
-    const [templates, setTemplates] = useState<EmailTemplate[]>([]);
-    const [loading, setLoading] = useState(true);
-    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
-    const [searchQuery, setSearchQuery] = useState('');
-    const [categoryFilter, setCategoryFilter] = useState<string>('all');
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [templateToDelete, setTemplateToDelete] = useState<EmailTemplate | null>(null);
+  const fetchTemplates = useCallback(async () => {
+    if (orgLoading) return setLoading(true);
+    if (!organizationId) { setTemplates([]); setLoading(false); return; }
+    const requestId = ++requestRef.current;
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const response = await getEmailTemplates(organizationId);
+      if (requestId === requestRef.current) setTemplates(response.templates ?? []);
+    } catch (error) {
+      console.error('Error fetching email templates:', error);
+      if (requestId === requestRef.current) setLoadError('We could not load your email templates. Existing templates have not been changed.');
+    } finally { if (requestId === requestRef.current) setLoading(false); }
+  }, [organizationId, orgLoading]);
 
-    useEffect(() => {
-        if (!initError) return;
-        setLoading(false);
-    }, [initError]);
+  useEffect(() => { void fetchTemplates(); }, [fetchTemplates]);
 
-    const fetchTemplates = useCallback(async () => {
-        if (!organizationId) return;
-        setLoading(true);
-        try {
-            const response = await getEmailTemplates(organizationId, categoryFilter !== 'all' ? { category: categoryFilter } : undefined);
-            setTemplates(response.templates || []);
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to load templates', variant: 'destructive' });
-        } finally {
-            setLoading(false);
-        }
-    }, [organizationId, categoryFilter]);
+  const categories = useMemo(() => Array.from(new Set(templates.map(template => template.category).filter(Boolean))).sort(), [templates]);
+  const stats = useMemo(() => ({
+    total: templates.length,
+    active: templates.filter(template => template.is_active).length,
+    inactive: templates.filter(template => !template.is_active).length,
+    categories: categories.length,
+  }), [categories.length, templates]);
 
-    useEffect(() => {
-        fetchTemplates();
-    }, [fetchTemplates]);
+  const filteredTemplates = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return templates.filter(template => {
+      const matchesQuery = !query || template.name.toLowerCase().includes(query) || template.subject.toLowerCase().includes(query);
+      const matchesCategory = categoryFilter === 'all' || template.category === categoryFilter;
+      const matchesStatus = statusFilter === 'all' || template.is_active === (statusFilter === 'active');
+      return matchesQuery && matchesCategory && matchesStatus;
+    });
+  }, [categoryFilter, searchQuery, statusFilter, templates]);
 
-    const handleDuplicate = async (id: number) => {
-        if (!organizationId) return;
-        try {
-            const copy = await duplicateEmailTemplate(id, organizationId);
-            setTemplates(prev => [copy, ...prev]);
-            toast({ title: 'Duplicated', description: 'Template duplicated successfully' });
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to duplicate', variant: 'destructive' });
-        }
-    };
+  const filters = (compact = false) => <div className={cn('flex gap-2', compact && 'flex-col')}>
+    <Select value={categoryFilter} onValueChange={setCategoryFilter}><SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[142px] bg-muted/20'}><SelectValue placeholder="Category" /></SelectTrigger><SelectContent><SelectItem value="all">All categories</SelectItem>{categories.map(category => <SelectItem key={category} value={category}>{category}</SelectItem>)}</SelectContent></Select>
+    <Select value={statusFilter} onValueChange={value => setStatusFilter(value as StatusFilter)}><SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[126px] bg-muted/20'}><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem></SelectContent></Select>
+  </div>;
 
-    const handleSendTest = async (id: number) => {
-        if (!organizationId || !currentUser?.email) return;
-        try {
-            await sendTestEmail(id, organizationId, currentUser.email);
-            toast({ title: 'Test email queued', description: `Sending to ${currentUser.email}` });
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to send test', variant: 'destructive' });
-        }
-    };
+  const handleDuplicate = async (template: EmailTemplate) => {
+    if (!organizationId) return;
+    setWorkingId(template.id);
+    try {
+      const copy = await duplicateEmailTemplate(template.id, organizationId);
+      setTemplates(current => [copy, ...current]);
+      toast({ title: 'Duplicated', description: 'Template duplicated successfully.' });
+    } catch { toast({ title: 'Unable to duplicate', description: 'The template was not duplicated.', variant: 'destructive' }); }
+    finally { setWorkingId(null); }
+  };
 
-    const handleDelete = async (): Promise<boolean> => {
-        if (!organizationId || !templateToDelete) return false;
-        try {
-            await deleteEmailTemplate(templateToDelete.id, organizationId);
-            setTemplates(prev => prev.filter(t => t.id !== templateToDelete.id));
-            setTemplateToDelete(null);
-            return true;
-        } catch (error) {
-            return false;
-        }
-    };
+  const handleSendTest = async (template: EmailTemplate) => {
+    if (!organizationId || !currentUser?.email) return;
+    setWorkingId(template.id);
+    try {
+      await sendTestEmail(template.id, organizationId, currentUser.email);
+      toast({ title: 'Test email queued', description: `Sending to ${currentUser.email}.` });
+    } catch { toast({ title: 'Unable to send test', description: 'The test email was not queued.', variant: 'destructive' }); }
+    finally { setWorkingId(null); }
+  };
 
-    const filteredTemplates = templates.filter(t => 
-        t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.subject.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  const handleDelete = async (): Promise<boolean> => {
+    if (!organizationId || !templateToDelete) return false;
+    try { await deleteEmailTemplate(templateToDelete.id, organizationId); setTemplates(current => current.filter(template => template.id !== templateToDelete.id)); setTemplateToDelete(null); return true; }
+    catch { return false; }
+  };
 
-    if (initError) {
-        return (
-            <PageLayout
-                title="EMAIL TEMPLATES"
-                icon={<FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            >
-                <ErrorState
-                    description={initError}
-                    icon={FileText}
-                    onAction={() => void fetchTemplates()}
-                />
-            </PageLayout>
-        );
-    }
+  const hasQuery = Boolean(searchQuery.trim()) || categoryFilter !== 'all' || statusFilter !== 'all';
+  const clearQuery = () => { setSearchQuery(''); setCategoryFilter('all'); setStatusFilter('all'); };
 
-    return (
-        <PageLayout
-            title="EMAIL TEMPLATES"
-            icon={<FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            pageActions={
-                <>
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search templates..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
-                        />
-                    </div>
-                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                        <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
-                            <SelectValue placeholder="Category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Categories</SelectItem>
-                            <SelectItem value="marketing">Marketing</SelectItem>
-                            <SelectItem value="welcome">Welcome</SelectItem>
-                            <SelectItem value="notification">Notification</SelectItem>
-                            <SelectItem value="system">System</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={() => setShowCreateModal(true)}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Template
-                    </Button>
-                </>
-            }
-            mobileActions={
-                <>
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search templates..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 w-full bg-muted/20 border-border/50"
-                        />
-                    </div>
-                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                        <SelectTrigger className="w-[100px] h-9">
-                            <SelectValue placeholder="Category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Categories</SelectItem>
-                            <SelectItem value="marketing">Marketing</SelectItem>
-                            <SelectItem value="welcome">Welcome</SelectItem>
-                            <SelectItem value="notification">Notification</SelectItem>
-                            <SelectItem value="system">System</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={() => setShowCreateModal(true)}
-                    >
-                        <Plus className="h-4 w-4" />
-                    </Button>
-                </>
-            }
-        >
-                    {loading ? (
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40" />)}
-                        </div>
-                    ) : filteredTemplates.length === 0 ? (
-                        <EmptyState
-                            icon={FileText}
-                            title="No email templates yet"
-                            description="Create reusable email templates for your campaigns"
-                            actionLabel="Create Template"
-                            onAction={() => setShowCreateModal(true)}
-                            className="p-12"
-                        />
-                    ) : (
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {filteredTemplates.map((template) => (
-                                <Card key={template.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                                    <CardHeader className="pb-3">
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex-1 min-w-0">
-                                                <CardTitle className="text-lg truncate">{template.name}</CardTitle>
-                                                <CardDescription className="line-clamp-1">{template.subject}</CardDescription>
-                                            </div>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem>
-                                                        <Eye className="h-4 w-4 mr-2" />Preview
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleSendTest(template.id)}>
-                                                        <Send className="h-4 w-4 mr-2" />Send Test
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleDuplicate(template.id)}>
-                                                        <Copy className="h-4 w-4 mr-2" />Duplicate
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem onClick={() => setTemplateToDelete(template)} className="text-destructive focus:text-destructive">
-                                                        <Trash2 className="h-4 w-4 mr-2" />Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="pt-0">
-                                        <div className="flex flex-wrap gap-2 mb-3">
-                                            <Badge variant={template.is_active ? 'default' : 'secondary'}>
-                                                {template.is_active ? 'Active' : 'Inactive'}
-                                            </Badge>
-                                            {template.category && (
-                                                <Badge variant="outline">{template.category}</Badge>
-                                            )}
-                                        </div>
-                                        {template.variables.length > 0 && (
-                                            <p className="text-xs text-muted-foreground">
-                                                Variables: {template.variables.slice(0, 3).join(', ')}
-                                                {template.variables.length > 3 && ` +${template.variables.length - 3} more`}
-                                            </p>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    )}
+  if (initError) return <PageLayout title="EMAIL TEMPLATES" icon={<FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}><ErrorState title="Unable to load email templates" description={initError} icon={FileText} onAction={() => void fetchTemplates()} /></PageLayout>;
 
-            {showCreateModal && organizationId && (
-                <CreateEmailTemplateModal
-                    organizationId={organizationId}
-                    onClose={() => setShowCreateModal(false)}
-                    onCreated={(template) => {
-                        setTemplates(prev => [template, ...prev]);
-                        setShowCreateModal(false);
-                    }}
-                />
-            )}
-
-            {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
-                <OnboardingModal
-                    isOpen={showOnboarding}
-                    onClose={handleOnboardingClose}
-                    onComplete={handleOnboardingComplete}
-                    onDismiss={handleOnboardingDismiss}
-                    content={ONBOARDING_CONTENT[onboardingFeatureKey]}
-                />
-            )}
-            <DeleteDialog
-                open={Boolean(templateToDelete)}
-                onOpenChange={(open) => !open && setTemplateToDelete(null)}
-                onConfirm={handleDelete}
-                itemType="email-template"
-                itemTitle={templateToDelete?.name}
-            />
-        </PageLayout>
-    );
+  return <PageLayout
+    title="EMAIL TEMPLATES"
+    icon={<FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+    mobileClassName="items-stretch"
+    desktopTools={{
+      search: <HeaderSearch label="Search email templates" placeholder="Search email templates..." value={searchQuery} onChange={setSearchQuery} width="wide" />,
+      filters: <HeaderFilters label="Filter email templates" activeCount={Number(categoryFilter !== 'all') + Number(statusFilter !== 'all')} compactChildren={filters(true)} preferExpanded="wide-lane">{filters()}</HeaderFilters>,
+      combinedQuery: <HeaderCombinedQuery label="Search and filter email templates" placeholder="Search email templates..." value={searchQuery} onChange={setSearchQuery} activeCount={Number(Boolean(searchQuery.trim())) + Number(categoryFilter !== 'all') + Number(statusFilter !== 'all')}>{filters(true)}</HeaderCombinedQuery>,
+      primaryAction: <HeaderAction label="New template" icon={<Plus className="h-4 w-4" />} onClick={() => navigate('/email-templates/new')} />,
+    }}
+    mobileActions={<div className="flex w-full items-center gap-2"><div className="relative min-w-0 flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label="Search email templates" placeholder="Search templates..." value={searchQuery} onChange={event => setSearchQuery(event.target.value)} className="h-11 pl-10" /></div><HeaderCombinedQuery label="Filter email templates" placeholder="Search email templates..." value={searchQuery} onChange={setSearchQuery} activeCount={Number(categoryFilter !== 'all') + Number(statusFilter !== 'all')}>{filters(true)}</HeaderCombinedQuery><Button size="icon" aria-label="New template" className="h-11 w-11 shrink-0 bg-blue-600 text-white hover:bg-blue-700" onClick={() => navigate('/email-templates/new')}><Plus className="h-4 w-4" /></Button></div>}
+  >
+    {!loadError && <ResponsiveCardRail label="Email template summary" desktopColumns="md:grid-cols-2 lg:grid-cols-4" className="responsive-stat-summary">
+      <StatCard title="Total email templates" badgeText="Total" value={stats.total} icon={FileText} description={`${stats.total} reusable`} colorTheme="blue" isLoading={loading} />
+      <StatCard title="Active email templates" badgeText="Active" value={stats.active} icon={Mail} description="Available to use" colorTheme="blue" isLoading={loading} />
+      <StatCard title="Inactive email templates" badgeText="Inactive" value={stats.inactive} icon={FileText} description="Parked templates" colorTheme="orange" isLoading={loading} />
+      <StatCard title="Email template categories" badgeText="Categories" value={stats.categories} icon={FolderOpen} description="Catalog groups" colorTheme="blue" isLoading={loading} />
+    </ResponsiveCardRail>}
+    <Card><CardContent className="p-0">{loading ? <div className="space-y-4 p-6">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-20 w-full" />)}</div>
+      : loadError ? <ErrorState title="Email templates unavailable" description={loadError} icon={FileText} onAction={() => void fetchTemplates()} className="p-12" />
+      : filteredTemplates.length === 0 ? <EmptyState icon={FileText} title={hasQuery ? 'No matching email templates' : 'No email templates yet'} description={hasQuery ? 'Try a different search or clear the current filters.' : 'Create a reusable template for campaign and automation emails.'} actionLabel={hasQuery ? 'Clear filters' : 'New template'} onAction={hasQuery ? clearQuery : () => navigate('/email-templates/new')} className="p-12" />
+      : <div className="divide-y">{filteredTemplates.map(template => {
+        const visual = getCatalogStatusVisual(template.is_active);
+        return <div key={template.id} className="flex items-center gap-3 px-3 py-4 transition-colors hover:bg-muted/50 sm:px-4"><div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}><Mail className={cn('h-5 w-5', visual.iconClass)} /></div><div className="min-w-0 flex-1"><div className="flex min-w-0 items-center gap-2"><button type="button" onClick={() => navigate(`/email-templates/${template.id}`)} className="truncate text-left text-sm font-medium hover:underline md:text-base">{template.name}</button><Badge className={cn('shrink-0 text-xs', visual.badgeClass)}>{visual.label}</Badge>{template.has_unpublished_changes && <Badge variant="outline" className="shrink-0 border-blue-500/30 bg-blue-500/15 text-xs text-blue-700 dark:text-blue-300">Draft</Badge>}</div><p className="mt-1 truncate text-sm text-muted-foreground">{template.subject}</p><div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">{template.category && <span>{template.category}</span>}<span>{template.variables.length} variable{template.variables.length === 1 ? '' : 's'}</span></div></div><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" disabled={workingId === template.id} aria-label={`More actions for ${template.name}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => navigate(`/email-templates/${template.id}`)}><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem><DropdownMenuItem onClick={() => void handleSendTest(template)} disabled={!template.published_version || Boolean(template.has_unpublished_changes)}><Send className="mr-2 h-4 w-4" />Send published test</DropdownMenuItem><DropdownMenuItem onClick={() => void handleDuplicate(template)}><Copy className="mr-2 h-4 w-4" />Duplicate</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setTemplateToDelete(template)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>;
+      })}</div>}
+    </CardContent></Card>
+    {onboarding.featureKey && ONBOARDING_CONTENT[onboarding.featureKey] && <OnboardingModal isOpen={onboarding.showModal} onClose={onboarding.handleClose} onComplete={onboarding.handleComplete} onDismiss={onboarding.handleDismiss} content={ONBOARDING_CONTENT[onboarding.featureKey]} />}
+    <DeleteDialog open={Boolean(templateToDelete)} onOpenChange={open => !open && setTemplateToDelete(null)} onConfirm={handleDelete} itemType="email-template" itemTitle={templateToDelete?.name} />
+  </PageLayout>;
 }
 
 export default EmailTemplatesPage;

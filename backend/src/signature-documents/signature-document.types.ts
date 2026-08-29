@@ -26,6 +26,9 @@ export class SignatureDocument {
   @Field(() => String, { nullable: true }) fileName: string | null;
   @Field(() => String, { nullable: true }) fileType: string | null;
   @Field(() => Float, { nullable: true }) fileSize: number | null;
+  @Field(() => Int, { nullable: true }) pageCount: number | null;
+  @Field(() => String, { nullable: true }) deliveryState: string | null;
+  @Field(() => String, { nullable: true }) completionState: string | null;
   @Field(() => GraphQLISODateTime) createdAt: Date;
   @Field(() => GraphQLISODateTime) updatedAt: Date;
 }
@@ -49,6 +52,7 @@ export class SignatureRecipient {
   @Field(() => String, { nullable: true }) declineReason: string | null;
   @Field() identityMethod: string;
   @Field(() => GraphQLISODateTime, { nullable: true }) identityVerifiedAt: Date | null;
+  @Field(() => String, { nullable: true }) deliveryState: string | null;
 }
 
 @ObjectType()

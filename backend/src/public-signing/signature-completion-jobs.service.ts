@@ -252,6 +252,22 @@ export class SignatureCompletionJobsService {
         `Signed at: ${recipient.signed_at?.toISOString() || 'Unavailable'}`,
         { indent: 16, size: 8 },
       );
+      line(
+        `Electronic consent: ${recipient.electronic_consent_version || 'Unavailable'}`,
+        { indent: 16, size: 8 },
+      );
+      if (recipient.electronic_consented_at) {
+        line(
+          `Consent recorded at: ${recipient.electronic_consented_at.toISOString()}`,
+          { indent: 16, size: 8 },
+        );
+      }
+      if (recipient.electronic_consent_sha256) {
+        line(
+          `Consent SHA-256: ${recipient.electronic_consent_sha256}`,
+          { indent: 16, size: 8 },
+        );
+      }
     }
     y -= 8;
     line('Audit Log', { bold: true, size: 11 });
@@ -261,6 +277,22 @@ export class SignatureCompletionJobsService {
           + `${event.description ? ` - ${event.description}` : ''}`,
         { indent: 8, size: 8 },
       );
+      const requestId = typeof event.metadata?.request_id === 'string'
+        ? event.metadata.request_id
+        : null;
+      const actorUserId = typeof event.metadata?.actor_user_id === 'number'
+        ? event.metadata.actor_user_id
+        : null;
+      if (event.ip_address || requestId || actorUserId) {
+        line(
+          [event.ip_address ? `IP: ${event.ip_address}` : null,
+            requestId ? `Request: ${requestId}` : null,
+            actorUserId ? `Actor user: ${actorUserId}` : null]
+            .filter(Boolean)
+            .join(' | '),
+          { indent: 16, size: 7 },
+        );
+      }
     }
   }
 

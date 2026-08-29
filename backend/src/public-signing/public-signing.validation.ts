@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { SIGNATURE_CONSENT_VERSION } from './signature-consent';
 
 const TOKEN = /^[A-Za-z0-9_-]{32,128}$/;
 const MAX_FIELDS = 500;
@@ -20,6 +21,11 @@ export class PublicSigningValidationError extends Error {
 }
 
 export type PublicSigningFieldValue = { id: number; value: string };
+export type PublicSigningConsent = { agreed: true; version: string };
+export type PublicSigningSubmission = {
+  fields: PublicSigningFieldValue[];
+  consent: PublicSigningConsent;
+};
 
 export const publicSigningTokenHash = (token: string): string | null => {
   if (!TOKEN.test(token)) return null;
@@ -28,7 +34,7 @@ export const publicSigningTokenHash = (token: string): string | null => {
 
 export const normalizePublicSigningSubmission = (
   payload: unknown,
-): PublicSigningFieldValue[] => {
+): PublicSigningSubmission => {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     throw new PublicSigningValidationError(
       'Signature payload is invalid',
@@ -37,12 +43,29 @@ export const normalizePublicSigningSubmission = (
   }
   const record = payload as Record<string, unknown>;
   if (
-    Object.keys(record).some((key) => key !== 'fields')
+    Object.keys(record).some((key) => !['fields', 'consent'].includes(key))
     || !Array.isArray(record.fields)
   ) {
     throw new PublicSigningValidationError(
-      'Signature payload must contain only a fields array',
+      'Signature payload must contain fields and consent',
       'INVALID_SIGNATURE_PAYLOAD',
+    );
+  }
+  if (!record.consent || typeof record.consent !== 'object' || Array.isArray(record.consent)) {
+    throw new PublicSigningValidationError(
+      'Electronic signature consent is required',
+      'SIGNATURE_CONSENT_REQUIRED',
+    );
+  }
+  const consent = record.consent as Record<string, unknown>;
+  if (
+    Object.keys(consent).some((key) => !['agreed', 'version'].includes(key))
+    || consent.agreed !== true
+    || consent.version !== SIGNATURE_CONSENT_VERSION
+  ) {
+    throw new PublicSigningValidationError(
+      'Electronic signature consent is invalid or outdated',
+      'INVALID_SIGNATURE_CONSENT',
     );
   }
   if (record.fields.length > MAX_FIELDS) {
@@ -89,7 +112,10 @@ export const normalizePublicSigningSubmission = (
     }
     return { id, value: field.value };
   });
-  return fields;
+  return {
+    fields,
+    consent: { agreed: true, version: SIGNATURE_CONSENT_VERSION },
+  };
 };
 
 export const validatePublicSigningFieldValue = (

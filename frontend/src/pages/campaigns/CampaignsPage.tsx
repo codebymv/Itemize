@@ -1,385 +1,513 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Copy,
+  Eye,
+  Mail,
+  Megaphone,
+  MoreHorizontal,
+  Pause,
+  Pencil,
+  Play,
+  Plus,
+  Search,
+  Send,
+  Trash2,
+  XCircle,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Mail, MoreHorizontal, Trash2, Copy, Play, Pause, Send, BarChart3, Clock, Pencil } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { getStatusBadgeClass } from '@/lib/badge-utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
-import { useOrganization } from '@/hooks/useOrganization';
-import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
-import { OnboardingModal } from '@/components/OnboardingModal';
-import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
-import { getCampaigns, deleteCampaign, duplicateCampaign, sendCampaign, pauseCampaign, resumeCampaign } from '@/services/campaignsApi';
-import { CreateCampaignModal } from './CreateCampaignModal';
+import {
+  HeaderAction,
+  HeaderCombinedQuery,
+  HeaderFilters,
+  HeaderSearch,
+} from '@/components/layout/DesktopHeaderTools';
+import { PageLayout } from '@/components/layout/PageLayout';
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
-import { Campaign } from '@/types/campaigns';
-import type { EmailCampaign } from '@/services/campaignsApi';
+import { OnboardingModal } from '@/components/OnboardingModal';
 import { StatCard } from '@/components/StatCard';
-import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
-import { PageLayout } from '@/components/layout/PageLayout';
-import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
+import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
+import { useOrganization } from '@/hooks/useOrganization';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import {
+  deleteCampaign,
+  duplicateCampaign,
+  getCampaigns,
+  pauseCampaign,
+  previewCampaign,
+  resumeCampaign,
+  sendCampaign,
+  type CampaignPreview,
+  type EmailCampaign,
+} from '@/services/campaignsApi';
+import type { Campaign } from '@/types/campaigns';
+import { CreateCampaignModal } from './CreateCampaignModal';
+import { getCampaignStatusVisual } from './constants/campaignVisuals';
+
+const CAMPAIGN_STATUSES: Array<{ value: Campaign['status']; label: string }> = [
+  { value: 'draft', label: 'Draft' },
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'sending', label: 'Sending' },
+  { value: 'paused', label: 'Paused' },
+  { value: 'sent', label: 'Delivered' },
+  { value: 'failed', label: 'Failed' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
+
+function toCampaignListItem(campaign: EmailCampaign): Campaign {
+  return {
+    id: campaign.id,
+    name: campaign.name,
+    subject: campaign.subject,
+    status: campaign.status,
+    recipient_count: campaign.total_recipients ?? 0,
+    sent_count: campaign.total_sent ?? 0,
+    open_rate: campaign.open_rate,
+    click_rate: campaign.click_rate,
+    scheduled_at: campaign.scheduled_at,
+    sent_at: campaign.completed_at,
+    created_at: campaign.created_at,
+  };
+}
+
+function formatCampaignDate(value?: string): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(date);
+}
 
 export function CampaignsPage() {
-    const navigate = useNavigate();
-    const { toast } = useToast();
-    // Onboarding
-    const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('campaigns');
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const onboarding = useOnboardingTrigger('campaigns');
+  const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({
+    onError: () => 'Failed to initialize.',
+  });
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
+  const [campaignToSend, setCampaignToSend] = useState<Campaign | null>(null);
+  const [sendPreview, setSendPreview] = useState<CampaignPreview | null>(null);
+  const [sendPreviewLoading, setSendPreviewLoading] = useState(false);
+  const [sendPreviewError, setSendPreviewError] = useState<string | null>(null);
+  const [workingCampaignId, setWorkingCampaignId] = useState<number | null>(null);
+  const loadRequestRef = useRef(0);
 
-    const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-    const [loading, setLoading] = useState(true);
-    const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
-    const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState<string>('all');
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
-
-    const toCampaignListItem = useCallback((campaign: EmailCampaign): Campaign => ({
-        id: campaign.id,
-        name: campaign.name,
-        subject: campaign.subject,
-        status: campaign.status,
-        recipient_count: campaign.total_recipients ?? 0,
-        sent_count: campaign.total_sent ?? 0,
-        open_rate: campaign.open_rate,
-        click_rate: campaign.click_rate,
-        scheduled_at: campaign.scheduled_at,
-        sent_at: campaign.completed_at,
-        created_at: campaign.created_at,
-    }), []);
-
-    const stats = useMemo(() => {
-        const total = campaigns.length;
-        const draft = campaigns.filter(c => c.status === 'draft').length;
-        const scheduled = campaigns.filter(c => c.status === 'scheduled' || c.status === 'sending').length;
-        const sent = campaigns.filter(c => c.status === 'sent').length;
-        return { total, draft, scheduled, sent };
-    }, [campaigns]);
-
-    useEffect(() => {
-        if (orgLoading) {
-            setLoading(true);
-            return;
-        }
-
-        if (!organizationId) {
-            setLoading(false);
-        }
-    }, [organizationId, initError, orgLoading]);
-
-    const fetchCampaigns = useCallback(async () => {
-        if (!organizationId) {
-            if (!orgLoading) {
-                setCampaigns([]);
-                setLoading(false);
-            }
-            return;
-        }
-        setLoading(true);
-        try {
-            const response = await getCampaigns(
-                { status: statusFilter !== 'all' ? statusFilter as EmailCampaign['status'] : undefined },
-                organizationId
-            );
-            setCampaigns((response.campaigns || []).map(c => ({
-                id: c.id,
-                name: c.name,
-                subject: c.subject,
-                status: c.status,
-                recipient_count: c.total_recipients || 0,
-                sent_count: c.total_sent || 0,
-                open_rate: c.open_rate,
-                click_rate: c.click_rate,
-                scheduled_at: c.scheduled_at,
-                sent_at: c.completed_at,
-                created_at: c.created_at,
-            })));
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to load campaigns', variant: 'destructive' });
-        } finally {
-            setLoading(false);
-        }
-    }, [organizationId, orgLoading, statusFilter, toast]);
-
-    useEffect(() => {
-        fetchCampaigns();
-    }, [fetchCampaigns]);
-
-    const handleDuplicate = async (id: number) => {
-        if (!organizationId) return;
-        try {
-            const copy = await duplicateCampaign(id, organizationId);
-            setCampaigns(prev => [{
-                id: copy.id,
-                name: copy.name,
-                subject: copy.subject,
-                status: copy.status,
-                recipient_count: copy.total_recipients || 0,
-                sent_count: copy.total_sent || 0,
-                open_rate: copy.open_rate,
-                click_rate: copy.click_rate,
-                scheduled_at: copy.scheduled_at,
-                sent_at: copy.completed_at,
-                created_at: copy.created_at,
-            }, ...prev]);
-            toast({ title: 'Duplicated', description: 'Campaign duplicated successfully' });
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to duplicate', variant: 'destructive' });
-        }
-    };
-
-    const handleDelete = async (): Promise<boolean> => {
-        if (!organizationId || !campaignToDelete) return false;
-        try {
-            await deleteCampaign(campaignToDelete.id, organizationId);
-            setCampaigns(prev => prev.filter(c => c.id !== campaignToDelete.id));
-            setCampaignToDelete(null);
-            return true;
-        } catch (error) {
-            return false;
-        }
-    };
-
-    const filteredCampaigns = campaigns.filter(c => 
-        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.subject.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    if (initError) {
-        return (
-            <PageLayout
-                title="CAMPAIGNS"
-                icon={<Mail className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            >
-                <ErrorState
-                    title="Unable to load campaigns"
-                    description={initError}
-                    onAction={() => void fetchCampaigns()}
-                />
-            </PageLayout>
-        );
+  const fetchCampaigns = useCallback(async () => {
+    if (orgLoading) {
+      setLoading(true);
+      return;
+    }
+    if (!organizationId) {
+      setCampaigns([]);
+      setLoading(false);
+      return;
     }
 
+    const requestId = ++loadRequestRef.current;
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const first = await getCampaigns({ page: 1, limit: 100 }, organizationId);
+      const remaining = first.pagination.totalPages > 1
+        ? await Promise.all(
+            Array.from({ length: first.pagination.totalPages - 1 }, (_, index) =>
+              getCampaigns({ page: index + 2, limit: 100 }, organizationId),
+            ),
+          )
+        : [];
+      if (requestId === loadRequestRef.current) {
+        setCampaigns(
+          [first, ...remaining].flatMap(response => response.campaigns).map(toCampaignListItem),
+        );
+      }
+    } catch (error) {
+      console.error('Error fetching campaigns:', error);
+      if (requestId === loadRequestRef.current) {
+        setLoadError('We could not load your campaigns. Existing campaigns have not been changed.');
+      }
+    } finally {
+      if (requestId === loadRequestRef.current) setLoading(false);
+    }
+  }, [organizationId, orgLoading]);
+
+  useEffect(() => {
+    void fetchCampaigns();
+  }, [fetchCampaigns]);
+
+  const stats = useMemo(() => ({
+    total: campaigns.length,
+    draft: campaigns.filter(campaign => campaign.status === 'draft').length,
+    inProgress: campaigns.filter(campaign => ['scheduled', 'sending', 'paused'].includes(campaign.status)).length,
+    delivered: campaigns.filter(campaign => campaign.status === 'sent').length,
+    failed: campaigns.filter(campaign => ['failed', 'cancelled'].includes(campaign.status)).length,
+  }), [campaigns]);
+
+  const filteredCampaigns = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return campaigns.filter(campaign => {
+      const matchesSearch = !query
+        || campaign.name.toLowerCase().includes(query)
+        || campaign.subject.toLowerCase().includes(query);
+      const matchesStatus = statusFilter === 'all' || campaign.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [campaigns, searchQuery, statusFilter]);
+
+  const hasQuery = Boolean(searchQuery.trim()) || statusFilter !== 'all';
+  const clearQuery = () => {
+    setSearchQuery('');
+    setStatusFilter('all');
+  };
+
+  const statusSelect = (compact = false) => (
+    <Select value={statusFilter} onValueChange={setStatusFilter}>
+      <SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[140px] bg-muted/20'}>
+        <SelectValue placeholder="Status" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">All statuses</SelectItem>
+        {CAMPAIGN_STATUSES.map(status => (
+          <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  const updateCampaign = (campaign: EmailCampaign) => {
+    const next = toCampaignListItem(campaign);
+    setCampaigns(current => current.map(item => item.id === next.id ? next : item));
+  };
+
+  const handleDuplicate = async (campaign: Campaign) => {
+    if (!organizationId) return;
+    setWorkingCampaignId(campaign.id);
+    try {
+      const copy = await duplicateCampaign(campaign.id, organizationId);
+      setCampaigns(current => [toCampaignListItem(copy), ...current]);
+      toast({ title: 'Duplicated', description: 'Campaign duplicated as a draft.' });
+    } catch (error) {
+      toast({ title: 'Unable to duplicate', description: 'The campaign was not duplicated.', variant: 'destructive' });
+    } finally {
+      setWorkingCampaignId(null);
+    }
+  };
+
+  const handlePause = async (campaign: Campaign) => {
+    if (!organizationId) return;
+    setWorkingCampaignId(campaign.id);
+    try {
+      updateCampaign(await pauseCampaign(campaign.id, organizationId));
+      toast({ title: 'Paused', description: 'Campaign delivery has been paused.' });
+    } catch (error) {
+      toast({ title: 'Unable to pause', description: 'Campaign delivery is unchanged.', variant: 'destructive' });
+    } finally {
+      setWorkingCampaignId(null);
+    }
+  };
+
+  const handleResume = async (campaign: Campaign) => {
+    if (!organizationId) return;
+    setWorkingCampaignId(campaign.id);
+    try {
+      await resumeCampaign(campaign.id, organizationId);
+      await fetchCampaigns();
+      toast({ title: 'Resumed', description: 'Campaign delivery has resumed.' });
+    } catch (error) {
+      toast({ title: 'Unable to resume', description: 'Campaign delivery remains paused.', variant: 'destructive' });
+    } finally {
+      setWorkingCampaignId(null);
+    }
+  };
+
+  const requestSend = async (campaign: Campaign) => {
+    if (!organizationId) return;
+    setCampaignToSend(campaign);
+    setSendPreview(null);
+    setSendPreviewError(null);
+    setSendPreviewLoading(true);
+    try {
+      setSendPreview(await previewCampaign(campaign.id, organizationId));
+    } catch (error) {
+      setSendPreviewError('Recipient eligibility could not be verified. Sending is disabled until the preview succeeds.');
+    } finally {
+      setSendPreviewLoading(false);
+    }
+  };
+
+  const confirmSend = async () => {
+    if (!organizationId || !campaignToSend || !sendPreview || sendPreview.recipientCount < 1) return;
+    const campaign = campaignToSend;
+    setWorkingCampaignId(campaign.id);
+    try {
+      const result = await sendCampaign(campaign.id, organizationId);
+      updateCampaign(result.campaign);
+      setCampaignToSend(null);
+      toast({
+        title: 'Campaign started',
+        description: `Sending to ${result.recipientCount} eligible recipient${result.recipientCount === 1 ? '' : 's'}.`,
+      });
+    } catch (error) {
+      toast({ title: 'Unable to send', description: 'The campaign remains unchanged.', variant: 'destructive' });
+    } finally {
+      setWorkingCampaignId(null);
+    }
+  };
+
+  const handleDelete = async (): Promise<boolean> => {
+    if (!organizationId || !campaignToDelete) return false;
+    try {
+      await deleteCampaign(campaignToDelete.id, organizationId);
+      setCampaigns(current => current.filter(campaign => campaign.id !== campaignToDelete.id));
+      setCampaignToDelete(null);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  if (initError) {
     return (
-        <PageLayout
-            title="CAMPAIGNS"
-            icon={<Mail className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            pageActions={
-                <>
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search campaigns..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
-                    </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[120px] h-9">
-                            <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                            <SelectItem value="draft">Draft</SelectItem>
-                            <SelectItem value="scheduled">Scheduled</SelectItem>
-                            <SelectItem value="sending">Sending</SelectItem>
-                            <SelectItem value="sent">Sent</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={() => setShowCreateModal(true)}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Campaign
-                    </Button>
-                </>
-            }
-            mobileActions={
-                <>
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search campaigns..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
-                        />
-                    </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[100px] h-9">
-                            <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                            <SelectItem value="draft">Draft</SelectItem>
-                            <SelectItem value="scheduled">Scheduled</SelectItem>
-                            <SelectItem value="sending">Sending</SelectItem>
-                            <SelectItem value="sent">Sent</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={() => setShowCreateModal(true)}
-                    >
-                        <Plus className="h-4 w-4" />
-                    </Button>
-                </>
-            }
-        >
-            <OnboardingModal
-                isOpen={showOnboarding}
-                onClose={closeOnboarding}
-                onComplete={completeOnboarding}
-                onDismiss={dismissOnboarding}
-                content={ONBOARDING_CONTENT.campaigns}
-            />
-
-                <ResponsiveCardRail
-                    label="Campaign status summary"
-                    desktopColumns="md:grid-cols-2 lg:grid-cols-4"
-                >
-                    <StatCard
-                        title="Total Campaigns"
-                        badgeText="Total"
-                        value={stats.total}
-                        icon={Mail}
-                        colorTheme="blue"
-                        isLoading={loading}
-                    />
-                    <StatCard
-                        title="Drafts"
-                        badgeText="Draft"
-                        value={stats.draft}
-                        icon={Pencil}
-                        colorTheme="gray"
-                        isLoading={loading}
-                    />
-                    <StatCard
-                        title="Scheduled/Sending"
-                        badgeText="In Progress"
-                        value={stats.scheduled}
-                        icon={Clock}
-                        colorTheme="orange"
-                        isLoading={loading}
-                    />
-                    <StatCard
-                        title="Sent"
-                        badgeText="Delivered"
-                        value={stats.sent}
-                        icon={Send}
-                        colorTheme="green"
-                        isLoading={loading}
-                    />
-                </ResponsiveCardRail>
-                    {loading ? (
-                        <div className="p-6 space-y-4">
-                            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24" />)}
-                        </div>
-                    ) : filteredCampaigns.length === 0 ? (
-                        <EmptyState
-                            title="No campaigns yet"
-                            description="Create your first email campaign to engage your contacts"
-                            icon={Mail}
-                            actionLabel="New Campaign"
-                            onAction={() => setShowCreateModal(true)}
-                            className="p-12"
-                        />
-                    ) : (
-                        <div className="divide-y">
-                            {filteredCampaigns.map((campaign) => (
-                                <div key={campaign.id} className="p-4 hover:bg-muted/50 transition-colors">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <h3 className="font-medium truncate">{campaign.name}</h3>
-                                                <Badge className={`text-xs ${getStatusBadgeClass(campaign.status)}`}>
-                                                    {campaign.status}
-                                                </Badge>
-                                            </div>
-                                            <p className="text-sm text-muted-foreground truncate">{campaign.subject}</p>
-                                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                                                <span className="flex items-center gap-1">
-                                                    <Send className="h-3 w-3" />
-                                                    {campaign.sent_count}/{campaign.recipient_count} sent
-                                                </span>
-                                                {campaign.open_rate !== undefined && (
-                                                    <span className="flex items-center gap-1">
-                                                        <BarChart3 className="h-3 w-3" />
-                                                        {campaign.open_rate}% opened
-                                                    </span>
-                                                )}
-                                                {campaign.scheduled_at && (
-                                                    <span className="flex items-center gap-1">
-                                                        <Clock className="h-3 w-3" />
-                                                        Scheduled: {new Date(campaign.scheduled_at).toLocaleDateString()}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" aria-label="Campaign actions">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem className="group/menu">
-                                                    <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleDuplicate(campaign.id)} className="group/menu">
-                                                    <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Duplicate
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem onClick={() => setCampaignToDelete(campaign)} className="text-destructive focus:text-destructive">
-                                                    <Trash2 className="h-4 w-4 mr-2" />Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-            {showCreateModal && organizationId && (
-                <CreateCampaignModal
-                    organizationId={organizationId}
-                    onClose={() => setShowCreateModal(false)}
-                    onCreated={(campaign) => {
-                        setCampaigns(prev => [toCampaignListItem(campaign), ...prev]);
-                        setShowCreateModal(false);
-                    }}
-                />
-            )}
-            <DeleteDialog
-                open={Boolean(campaignToDelete)}
-                onOpenChange={(open) => !open && setCampaignToDelete(null)}
-                onConfirm={handleDelete}
-                itemType="campaign"
-                itemTitle={campaignToDelete?.name}
-            />
-        </PageLayout>
+      <PageLayout title="CAMPAIGNS" icon={<Megaphone className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}>
+        <ErrorState title="Unable to load campaigns" description={initError} icon={Megaphone} onAction={() => void fetchCampaigns()} />
+      </PageLayout>
     );
+  }
+
+  return (
+    <PageLayout
+      title="CAMPAIGNS"
+      icon={<Megaphone className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+      mobileClassName="items-stretch"
+      desktopTools={{
+        search: (
+          <HeaderSearch label="Search campaigns" placeholder="Search campaigns..." value={searchQuery} onChange={setSearchQuery} width="wide" />
+        ),
+        filters: (
+          <HeaderFilters label="Filter campaigns by status" activeCount={Number(statusFilter !== 'all')} compactChildren={statusSelect(true)} preferExpanded="when-roomy">
+            {statusSelect()}
+          </HeaderFilters>
+        ),
+        combinedQuery: (
+          <HeaderCombinedQuery
+            label="Search and filter campaigns"
+            placeholder="Search campaigns..."
+            value={searchQuery}
+            onChange={setSearchQuery}
+            activeCount={Number(Boolean(searchQuery.trim())) + Number(statusFilter !== 'all')}
+          >
+            {statusSelect(true)}
+          </HeaderCombinedQuery>
+        ),
+        primaryAction: (
+          <HeaderAction label="New campaign" icon={<Plus className="h-4 w-4" />} onClick={() => setShowCreateModal(true)} />
+        ),
+      }}
+      mobileActions={(
+        <div className="flex w-full items-center gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input aria-label="Search campaigns" placeholder="Search campaigns..." value={searchQuery} onChange={event => setSearchQuery(event.target.value)} className="h-11 w-full bg-muted/20 pl-10" />
+          </div>
+          <div className="w-[6.25rem] shrink-0">{statusSelect(true)}</div>
+          <Button size="icon" aria-label="New campaign" className="h-11 w-11 shrink-0 bg-blue-600 text-white hover:bg-blue-700" onClick={() => setShowCreateModal(true)}>
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+    >
+      <OnboardingModal isOpen={onboarding.showModal} onClose={onboarding.handleClose} onComplete={onboarding.handleComplete} onDismiss={onboarding.handleDismiss} content={ONBOARDING_CONTENT.campaigns} />
+
+      {!loadError && (
+        <ResponsiveCardRail label="Campaign status summary" desktopColumns="md:grid-cols-2 lg:grid-cols-5" className="responsive-stat-summary">
+          <StatCard title="Campaigns needing attention" badgeText="Not completed" value={stats.failed} icon={XCircle} description={`${stats.failed} failed or cancelled`} colorTheme="red" isLoading={loading} />
+          <StatCard title="Total campaigns" badgeText="Total" value={stats.total} icon={Megaphone} description={`${stats.total} configured`} colorTheme="blue" isLoading={loading} />
+          <StatCard title="Draft campaigns" badgeText="Draft" value={stats.draft} icon={Mail} description="Being prepared" colorTheme="blue" isLoading={loading} />
+          <StatCard title="Campaigns in progress" badgeText="In progress" value={stats.inProgress} icon={Play} description="Scheduled, sending, or paused" colorTheme="orange" isLoading={loading} />
+          <StatCard title="Delivered campaigns" badgeText="Delivered" value={stats.delivered} icon={Send} description="Successfully sent" colorTheme="green" isLoading={loading} />
+        </ResponsiveCardRail>
+      )}
+
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="space-y-4 p-6">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-20 w-full" />)}</div>
+          ) : loadError ? (
+            <ErrorState title="Campaigns unavailable" description={loadError} icon={Megaphone} onAction={() => void fetchCampaigns()} className="p-12" />
+          ) : filteredCampaigns.length === 0 ? (
+            <EmptyState
+              icon={Megaphone}
+              title={hasQuery ? 'No matching campaigns' : 'No campaigns yet'}
+              description={hasQuery ? 'Try a different search or clear the current filters.' : 'Create a campaign draft to begin preparing your message.'}
+              actionLabel={hasQuery ? 'Clear filters' : 'New campaign'}
+              onAction={hasQuery ? clearQuery : () => setShowCreateModal(true)}
+              className="p-12"
+            />
+          ) : (
+            <div className="divide-y">
+              {filteredCampaigns.map(campaign => {
+                const visual = getCampaignStatusVisual(campaign.status);
+                const StatusIcon = visual.icon;
+                const working = workingCampaignId === campaign.id;
+                const scheduledDate = formatCampaignDate(campaign.scheduled_at);
+                const sentDate = formatCampaignDate(campaign.sent_at);
+                return (
+                  <div
+                    key={campaign.id}
+                    role="link"
+                    tabIndex={0}
+                    aria-label={`${campaign.status === 'draft' || campaign.status === 'scheduled' ? 'Edit' : 'View'} ${campaign.name}`}
+                    className="group flex cursor-pointer items-center gap-3 px-3 py-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4"
+                    onClick={() => navigate(`/campaigns/${campaign.id}`)}
+                    onKeyDown={event => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        navigate(`/campaigns/${campaign.id}`);
+                      }
+                    }}
+                  >
+                    <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}>
+                      <StatusIcon className={cn('h-5 w-5', visual.iconClass)} aria-hidden="true" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <h3 className="truncate text-sm font-medium md:text-base">{campaign.name}</h3>
+                        <Badge className={cn('shrink-0 text-xs', visual.badgeClass)}>{visual.label}</Badge>
+                      </div>
+                      <p className="mt-1 truncate text-sm text-muted-foreground">{campaign.subject}</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        <span>{campaign.sent_count}/{campaign.recipient_count} sent</span>
+                        {campaign.open_rate !== undefined && <span>{campaign.open_rate}% opened</span>}
+                        {campaign.click_rate !== undefined && <span>{campaign.click_rate}% clicked</span>}
+                        {scheduledDate && <span>Scheduled {scheduledDate}</span>}
+                        {sentDate && <span>Delivered {sentDate}</span>}
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={event => event.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" disabled={working} aria-label={`More actions for ${campaign.name}`}>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onClick={event => event.stopPropagation()}>
+                        <DropdownMenuItem onClick={() => navigate(`/campaigns/${campaign.id}`)} className="group/menu">
+                          {campaign.status === 'draft' || campaign.status === 'scheduled' ? (
+                            <Pencil className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                          ) : (
+                            <Eye className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                          )}
+                          {campaign.status === 'draft' || campaign.status === 'scheduled' ? 'Edit campaign' : 'View campaign'}
+                        </DropdownMenuItem>
+                        {(campaign.status === 'draft' || campaign.status === 'scheduled') && (
+                          <DropdownMenuItem onClick={() => void requestSend(campaign)} className="group/menu">
+                            <Send className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Send now
+                          </DropdownMenuItem>
+                        )}
+                        {campaign.status === 'sending' && (
+                          <DropdownMenuItem onClick={() => void handlePause(campaign)}><Pause className="mr-2 h-4 w-4" />Pause delivery</DropdownMenuItem>
+                        )}
+                        {campaign.status === 'paused' && (
+                          <DropdownMenuItem onClick={() => void handleResume(campaign)} className="group/menu"><Play className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Resume delivery</DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={() => void handleDuplicate(campaign)} className="group/menu"><Copy className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Duplicate</DropdownMenuItem>
+                        {campaign.status !== 'sending' && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => setCampaignToDelete(campaign)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {showCreateModal && organizationId && (
+        <CreateCampaignModal organizationId={organizationId} onClose={() => setShowCreateModal(false)} onCreated={campaign => {
+          setCampaigns(current => [toCampaignListItem(campaign), ...current]);
+          setShowCreateModal(false);
+        }} />
+      )}
+
+      <AlertDialog open={Boolean(campaignToSend)} onOpenChange={open => !open && setCampaignToSend(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send {campaignToSend?.name} now?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {sendPreviewLoading
+                ? 'Checking the eligible audience…'
+                : sendPreviewError
+                  ? sendPreviewError
+                  : sendPreview
+                    ? `This will start delivery to ${sendPreview.recipientCount} eligible recipient${sendPreview.recipientCount === 1 ? '' : 's'}. This action cannot be undone after delivery begins.`
+                    : 'Recipient eligibility must be verified before sending.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={workingCampaignId === campaignToSend?.id}>Keep draft</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={sendPreviewLoading || Boolean(sendPreviewError) || !sendPreview || sendPreview.recipientCount < 1 || workingCampaignId === campaignToSend?.id}
+              onClick={event => {
+                event.preventDefault();
+                void confirmSend();
+              }}
+              className="bg-blue-600 text-white hover:bg-blue-700"
+            >
+              Send campaign
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <DeleteDialog open={Boolean(campaignToDelete)} onOpenChange={open => !open && setCampaignToDelete(null)} onConfirm={handleDelete} itemType="campaign" itemTitle={campaignToDelete?.name} />
+    </PageLayout>
+  );
 }
 
 export default CampaignsPage;

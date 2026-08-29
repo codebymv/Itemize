@@ -12,6 +12,7 @@ import {
 } from './signature-delivery-jobs.repository';
 
 export type SignatureDeliveryRun = {
+  expired: number;
   remindersQueued: number;
   claimed: number;
   sent: number;
@@ -48,6 +49,7 @@ export class SignatureDeliveryJobsService {
       boundedInteger(options.maximumDelayMs, 86_400_000, 1, 86_400_000),
     );
     const summary: SignatureDeliveryRun = {
+      expired: options.outboxId ? 0 : await this.repository.expireActiveDocuments(),
       remindersQueued: options.outboxId
         ? 0
         : await this.repository.enqueueDueReminders(reminderBatchSize),

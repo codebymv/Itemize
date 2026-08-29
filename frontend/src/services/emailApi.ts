@@ -3,10 +3,16 @@
  * Handles email sending and template operations
  */
 import {
+    createEmailTemplateDraftViaGraphql,
     deleteEmailTemplateViaGraphql,
     duplicateEmailTemplateViaGraphql,
     getEmailTemplateViaGraphql,
     getEmailTemplatesViaGraphql,
+    previewEmailTemplateViaGraphql,
+    publishEmailTemplateViaGraphql,
+    saveEmailTemplateDraftViaGraphql,
+    type EmailTemplateInput,
+    type EmailTemplatePreview,
 } from './emailTemplatesGraphql';
 import {
     enqueueContactEmailViaGraphql,
@@ -22,6 +28,7 @@ export interface EmailTemplate {
     organization_id: number;
     name: string;
     subject: string;
+    preheader?: string | null;
     body_html: string;
     body_text?: string | null;
     variables: string[];
@@ -31,7 +38,19 @@ export interface EmailTemplate {
     created_by_name?: string;
     created_at: string;
     updated_at: string;
+    draft_version?: number | null;
+    published_version?: number | null;
+    draft_subject?: string | null;
+    draft_preheader?: string | null;
+    draft_body_html?: string | null;
+    draft_body_text?: string | null;
+    draft_updated_at?: string | null;
+    draft_is_active?: boolean | null;
+    has_unpublished_changes?: boolean;
 }
+
+export type EmailTemplateDraftInput = EmailTemplateInput;
+export type { EmailTemplatePreview };
 
 export interface SendEmailToContactParams {
     contact_id: number;
@@ -76,6 +95,28 @@ export const getEmailTemplate = async (
 ): Promise<EmailTemplate> => {
     return getEmailTemplateViaGraphql(templateId, organizationId);
 };
+
+export const createEmailTemplateDraft = async (
+    input: EmailTemplateDraftInput,
+    organizationId?: number
+): Promise<EmailTemplate> => createEmailTemplateDraftViaGraphql(input, organizationId);
+
+export const saveEmailTemplateDraft = async (
+    templateId: number,
+    input: EmailTemplateDraftInput,
+    organizationId?: number
+): Promise<EmailTemplate> => saveEmailTemplateDraftViaGraphql(templateId, input, organizationId);
+
+export const publishEmailTemplate = async (
+    templateId: number,
+    isActive = true,
+    organizationId?: number
+): Promise<EmailTemplate> => publishEmailTemplateViaGraphql(templateId, isActive, organizationId);
+
+export const previewEmailTemplate = async (
+    input: Pick<EmailTemplateDraftInput, 'subject' | 'preheader' | 'body_html' | 'body_text'>,
+    organizationId?: number
+): Promise<EmailTemplatePreview> => previewEmailTemplateViaGraphql(input, organizationId);
 
 /**
  * Send email to a specific contact
@@ -123,6 +164,10 @@ export const duplicateEmailTemplate = async (
 export default {
     getEmailTemplates,
     getEmailTemplate,
+    createEmailTemplateDraft,
+    saveEmailTemplateDraft,
+    publishEmailTemplate,
+    previewEmailTemplate,
     sendEmailToContact,
     sendTestEmail,
     deleteEmailTemplate,

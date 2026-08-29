@@ -77,7 +77,9 @@ const SharedPage = React.lazy(() => import("./pages/workspace").then(m => ({ def
 // New pages for expanded navigation
 const SegmentsPage = React.lazy(() => import("./pages/segments/SegmentsPage"));
 const CampaignsPage = React.lazy(() => import("./pages/campaigns/CampaignsPage"));
+const CampaignDetailPage = React.lazy(() => import("./pages/campaigns/CampaignDetailPage"));
 const EmailTemplatesPage = React.lazy(() => import("./pages/email-templates/EmailTemplatesPage"));
+const EmailTemplateEditorPage = React.lazy(() => import("./pages/email-templates/EmailTemplateEditorPage"));
 const SMSTemplatesPage = React.lazy(() => import("./pages/sms-templates/SMSTemplatesPage"));
 const LandingPagesPage = React.lazy(() => import("./pages/pages/LandingPagesPage"));
 const PageEditorPage = React.lazy(() => import("./pages/pages/PageEditorPage"));
@@ -402,7 +404,10 @@ const AppContent = () => {
           <Route path="/automations/:id" element={<WorkflowBuilderPage />} />
           <Route path="/segments" element={<SegmentsPage />} />
           <Route path="/campaigns" element={<CampaignsPage />} />
+          <Route path="/campaigns/:id" element={<CampaignDetailPage />} />
           <Route path="/email-templates" element={<EmailTemplatesPage />} />
+          <Route path="/email-templates/new" element={<EmailTemplateEditorPage />} />
+          <Route path="/email-templates/:id" element={<EmailTemplateEditorPage />} />
           <Route path="/sms-templates" element={<SMSTemplatesPage />} />
           <Route path="/pages" element={<LandingPagesPage />} />
           <Route path="/pages/:id" element={<PageEditorPage />} />

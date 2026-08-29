@@ -17,6 +17,7 @@ import {
   Package,
   Receipt,
   Clock,
+  RefreshCw,
   Zap,
   type LucideIcon
 } from 'lucide-react';
@@ -52,6 +53,7 @@ type PredefinedItemType =
   | 'review-request'
   | 'product'
   | 'invoice'
+  | 'recurring-schedule'
   | 'estimate'
   | 'document'
   | 'campaign'
@@ -245,6 +247,14 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
     successTitle: 'Form deleted',
     successDescription: 'The form has been permanently deleted.',
     errorDescription: 'Failed to delete the form. Please try again.',
+  },
+  'recurring-schedule': {
+    icon: RefreshCw,
+    typeLabel: 'Recurring Schedule',
+    description: 'Stops this schedule and deletes its configuration. Generated invoices stay unchanged.',
+    successTitle: 'Recurring schedule deleted',
+    successDescription: 'The recurring schedule has been permanently deleted.',
+    errorDescription: 'Failed to delete the recurring schedule. Please try again.',
   },
   workflow: {
     icon: Zap,

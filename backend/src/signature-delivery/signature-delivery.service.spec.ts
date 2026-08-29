@@ -1,34 +1,45 @@
 import { SignatureDeliveryRepository } from './signature-delivery.repository';
 import { SignatureDeliveryService } from './signature-delivery.service';
 import { SignatureDocumentsService } from '../signature-documents/signature-documents.service';
+import { SignatureFileStorage } from '../signature-files/signature-file-storage.provider';
 
 describe('SignatureDeliveryService', () => {
   const repository = {
     hasFeatureAccess: jest.fn(),
+    preflightSource: jest.fn(),
     enqueueInitial: jest.fn(),
     enqueueReminder: jest.fn(),
+    retryFailures: jest.fn(),
     scheduleReminders: jest.fn(),
   } as unknown as jest.Mocked<SignatureDeliveryRepository>;
   const documents = {
     detail: jest.fn(),
   } as unknown as jest.Mocked<SignatureDocumentsService>;
-  const service = new SignatureDeliveryService(repository, documents);
+  const storage = { read: jest.fn() } as unknown as jest.Mocked<SignatureFileStorage>;
+  const service = new SignatureDeliveryService(repository, documents, storage);
 
   beforeEach(() => {
     jest.clearAllMocks();
     repository.hasFeatureAccess.mockResolvedValue(true);
+    repository.preflightSource.mockResolvedValue({
+      status: 'draft',
+      fileUrl: '/private/nda.pdf',
+      originalSha256: 'a'.repeat(64),
+      pageCount: 1,
+    });
     repository.enqueueInitial.mockResolvedValue(true);
     repository.enqueueReminder.mockResolvedValue(true);
+    repository.retryFailures.mockResolvedValue(true);
     documents.detail.mockResolvedValue({
       document: { id: 7, title: 'NDA' },
     } as Awaited<ReturnType<SignatureDocumentsService['detail']>>);
   });
 
   it('queues send and reminder intents before returning authoritative document state', async () => {
-    await expect(service.send(3, 7)).resolves.toMatchObject({ id: 7 });
-    await expect(service.remind(3, 7)).resolves.toMatchObject({ id: 7 });
-    expect(repository.enqueueInitial).toHaveBeenCalledWith(3, 7);
-    expect(repository.enqueueReminder).toHaveBeenCalledWith(3, 7);
+    await expect(service.send(3, 7, 19)).resolves.toMatchObject({ id: 7 });
+    await expect(service.remind(3, 7, 19)).resolves.toMatchObject({ id: 7 });
+    expect(repository.enqueueInitial).toHaveBeenCalledWith(3, 7, 19, undefined);
+    expect(repository.enqueueReminder).toHaveBeenCalledWith(3, 7, 19);
     expect(documents.detail).toHaveBeenNthCalledWith(1, 3, 7);
     expect(documents.detail).toHaveBeenNthCalledWith(2, 3, 7);
   });
@@ -38,10 +49,16 @@ describe('SignatureDeliveryService', () => {
       scheduledAt: new Date('2026-08-01T00:00:00Z'),
       reminderCount: 2,
     });
-    await expect(service.schedule(3, 7, 5)).resolves.toMatchObject({ reminderCount: 2 });
-    await expect(service.schedule(3, 7, 0)).rejects.toMatchObject({
+    await expect(service.schedule(3, 7, 5, 19)).resolves.toMatchObject({ reminderCount: 2 });
+    await expect(service.schedule(3, 7, 0, 19)).rejects.toMatchObject({
       extensions: { code: 'BAD_USER_INPUT', reason: 'INVALID_SIGNATURE_REMINDER_DAYS' },
     });
+  });
+
+  it('queues an operator-requested retry for failed delivery or completion work', async () => {
+    await expect(service.retry(3, 7, 19)).resolves.toMatchObject({ id: 7 });
+    expect(repository.retryFailures).toHaveBeenCalledWith(3, 7, 19);
+    expect(documents.detail).toHaveBeenCalledWith(3, 7);
   });
 
   it('renders a bounded server-controlled preview and escapes user content', async () => {

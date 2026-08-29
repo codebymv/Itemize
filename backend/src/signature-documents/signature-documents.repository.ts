@@ -12,6 +12,8 @@ export type SignatureDocumentRow = {
   sender_email: string | null; created_by: number | null; sent_at: Date | null;
   completed_at: Date | null; has_file: boolean; has_signed_file: boolean;
   file_name: string | null; file_type: string | null; file_size: number | string | null;
+  page_count?: number | null;
+  delivery_state?: string | null; completion_state?: string | null;
   created_at: Date; updated_at: Date;
 };
 
@@ -21,6 +23,7 @@ export type SignatureRecipientRow = {
   routing_status: string; status: string; sent_at: Date | null; viewed_at: Date | null;
   signed_at: Date | null; declined_at: Date | null; decline_reason: string | null;
   identity_method: string; identity_verified_at: Date | null;
+  delivery_state?: string | null;
 };
 
 export type SignatureFieldRow = {
@@ -67,7 +70,23 @@ const documentColumns = `d.id, d.organization_id, d.title, d.document_number,
   d.expiration_days, d.expires_at, d.sender_name, d.sender_email, d.created_by,
   d.sent_at, d.completed_at, d.file_url IS NOT NULL AS has_file,
   d.signed_file_url IS NOT NULL AS has_signed_file, d.file_name, d.file_type,
-  d.file_size, d.created_at, d.updated_at`;
+  d.file_size, d.page_count,
+  CASE WHEN d.status IN ('sent','in_progress') THEN COALESCE((
+    SELECT CASE
+      WHEN BOOL_OR(delivery.status='dead_letter') THEN 'failed'
+      WHEN BOOL_OR(delivery.status='retry') THEN 'retrying'
+      WHEN BOOL_OR(delivery.status IN ('queued','processing')) THEN 'sending'
+      WHEN BOOL_OR(delivery.status='sent') THEN 'delivered'
+      ELSE 'pending'
+    END
+    FROM signature_delivery_outbox delivery
+    WHERE delivery.document_id=d.id
+      AND delivery.delivery_type IN ('signature_request','signature_reminder')
+      AND delivery.cancelled_at IS NULL
+  ),'pending') ELSE NULL END AS delivery_state,
+  (SELECT completion.status FROM signature_completion_jobs completion
+   WHERE completion.document_id=d.id ORDER BY completion.id DESC LIMIT 1) AS completion_state,
+  d.created_at, d.updated_at`;
 
 @Injectable()
 export class SignatureDocumentsRepository {
@@ -113,7 +132,11 @@ export class SignatureDocumentsRepository {
       const recipients = await client.query<SignatureRecipientRow>(
         `SELECT r.id,r.document_id,r.organization_id,r.contact_id,r.name,r.email,r.signing_order,
            r.role_name,r.routing_status,r.status,r.sent_at,r.viewed_at,r.signed_at,r.declined_at,
-           r.decline_reason,r.identity_method,r.identity_verified_at
+           r.decline_reason,r.identity_method,r.identity_verified_at,
+           (SELECT delivery.status FROM signature_delivery_outbox delivery
+            WHERE delivery.recipient_id=r.id
+              AND delivery.delivery_type IN ('signature_request','signature_reminder')
+            ORDER BY delivery.created_at DESC,delivery.id DESC LIMIT 1) AS delivery_state
          FROM signature_recipients r WHERE r.document_id=$1 AND r.organization_id=$2
          ORDER BY r.signing_order ASC, r.id ASC`, [id, organizationId],
       );
@@ -226,7 +249,8 @@ export class SignatureDocumentsRepository {
       await this.enqueueDocumentFiles(client,organizationId,id);
       await client.query(
         `UPDATE signature_documents SET file_url=NULL,file_name=NULL,file_size=NULL,
-           file_type=NULL,original_sha256=NULL,signed_file_url=NULL,signed_sha256=NULL,
+           file_type=NULL,original_sha256=NULL,page_count=NULL,
+           signed_file_url=NULL,signed_sha256=NULL,
            updated_at=CURRENT_TIMESTAMP
          WHERE id=$1 AND organization_id=$2 AND status='draft'`,
         [id,organizationId],

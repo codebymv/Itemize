@@ -3,12 +3,17 @@ import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { hasPaidEntitlement, PaidEntitlementState } from '../billing/billing-entitlement';
 import { signatureDeliveryTokenHash } from './signature-delivery.token';
+import {
+  SIGNATURE_CONSENT_SHA256,
+  SIGNATURE_CONSENT_VERSION,
+} from '../public-signing/signature-consent';
 
 type SignatureDeliveryDocument = {
   id: number; organization_id: number; title: string; message: string | null;
   status: string; routing_mode: string | null; expiration_days: number | null;
   expires_at: Date | null; sender_name: string | null; sender_email: string | null;
-  created_by: number | null; file_url: string | null;
+  created_by: number | null; file_url: string | null; original_sha256: string | null;
+  page_count: number | null;
 };
 
 type SignatureDeliveryRecipient = {
@@ -35,7 +40,35 @@ export class SignatureDeliveryRepository {
     return hasPaidEntitlement(result.rows[0]);
   }
 
-  async enqueueInitial(organizationId: number, documentId: number): Promise<boolean> {
+  async preflightSource(organizationId: number, documentId: number): Promise<{
+    status: string;
+    fileUrl: string | null;
+    originalSha256: string | null;
+    pageCount: number | null;
+  } | null> {
+    const result = await this.pool.query<{
+      status: string; file_url: string | null; original_sha256: string | null;
+      page_count: number | null;
+    }>(
+      `SELECT status,file_url,original_sha256,page_count
+       FROM signature_documents WHERE id=$1 AND organization_id=$2`,
+      [documentId, organizationId],
+    );
+    const row = result.rows[0];
+    return row ? {
+      status: row.status,
+      fileUrl: row.file_url,
+      originalSha256: row.original_sha256,
+      pageCount: row.page_count,
+    } : null;
+  }
+
+  async enqueueInitial(
+    organizationId: number,
+    documentId: number,
+    actorUserId: number,
+    inspection?: { fileUrl: string; originalSha256: string; pageCount: number },
+  ): Promise<boolean> {
     return this.transaction(async (client) => {
       const document = await this.lockDocument(client, organizationId, documentId);
       if (!document) return false;
@@ -51,6 +84,31 @@ export class SignatureDeliveryRepository {
           'SIGNATURE_DOCUMENT_FILE_REQUIRED',
         );
       }
+      if (inspection) {
+        if (
+          document.file_url !== inspection.fileUrl
+          || (document.original_sha256 !== null
+            && document.original_sha256 !== inspection.originalSha256)
+        ) {
+          throw new SignatureDeliveryStateError(
+            'The PDF changed during send preparation. Please try again',
+            'SIGNATURE_DOCUMENT_FILE_CHANGED',
+          );
+        }
+        await client.query(
+          `UPDATE signature_documents SET page_count=$3,
+             original_sha256=COALESCE(original_sha256,$4),updated_at=CURRENT_TIMESTAMP
+           WHERE id=$1 AND organization_id=$2`,
+          [documentId, organizationId, inspection.pageCount, inspection.originalSha256],
+        );
+        document.page_count = inspection.pageCount;
+      }
+      if (!document.page_count) {
+        throw new SignatureDeliveryStateError(
+          'The PDF must be inspected before sending',
+          'SIGNATURE_DOCUMENT_INSPECTION_REQUIRED',
+        );
+      }
       const recipients = await this.lockRecipients(client, organizationId, documentId);
       if (recipients.length === 0) {
         throw new SignatureDeliveryStateError(
@@ -58,6 +116,13 @@ export class SignatureDeliveryRepository {
           'SIGNATURE_RECIPIENTS_REQUIRED',
         );
       }
+      await this.assertSendReady(
+        client,
+        organizationId,
+        documentId,
+        document.page_count,
+        recipients,
+      );
       const sender = await this.sender(client, document);
       const routingMode = document.routing_mode || 'parallel';
       const now = new Date();
@@ -100,22 +165,35 @@ export class SignatureDeliveryRepository {
         );
         await client.query(
           `INSERT INTO signature_audit_log
-             (document_id,recipient_id,event_type,description,created_at)
-           VALUES ($1,$2,'delivery_queued','Signature request queued',CURRENT_TIMESTAMP)`,
-          [documentId, recipient.id],
+             (document_id,recipient_id,event_type,description,metadata,created_at)
+           VALUES ($1,$2,'delivery_queued','Signature request queued',$3::jsonb,CURRENT_TIMESTAMP)`,
+          [documentId, recipient.id, JSON.stringify({
+            actor_class: 'authenticated_user', actor_user_id: actorUserId, version: 1,
+          })],
         );
       }
       await client.query(
         `UPDATE signature_documents SET status='sent',sent_at=CURRENT_TIMESTAMP,
-           expires_at=$3,updated_at=CURRENT_TIMESTAMP
+           expires_at=$3,consent_disclosure_version=$4,
+           consent_disclosure_sha256=$5,updated_at=CURRENT_TIMESTAMP
          WHERE id=$1 AND organization_id=$2`,
-        [documentId, organizationId, expiresAt],
+        [
+          documentId,
+          organizationId,
+          expiresAt,
+          SIGNATURE_CONSENT_VERSION,
+          SIGNATURE_CONSENT_SHA256,
+        ],
       );
       return true;
     });
   }
 
-  async enqueueReminder(organizationId: number, documentId: number): Promise<boolean> {
+  async enqueueReminder(
+    organizationId: number,
+    documentId: number,
+    actorUserId: number,
+  ): Promise<boolean> {
     return this.transaction(async (client) => {
       const document = await this.lockDocument(client, organizationId, documentId);
       if (!document) return false;
@@ -123,6 +201,12 @@ export class SignatureDeliveryRepository {
         throw new SignatureDeliveryStateError(
           'Only active signature documents can be reminded',
           'SIGNATURE_DOCUMENT_NOT_ACTIVE',
+        );
+      }
+      if (document.expires_at && document.expires_at.getTime() < Date.now()) {
+        throw new SignatureDeliveryStateError(
+          'Expired signature documents cannot be reminded',
+          'SIGNATURE_DOCUMENT_EXPIRED',
         );
       }
       const recipients = await client.query<SignatureDeliveryRecipient>(
@@ -190,11 +274,73 @@ export class SignatureDeliveryRepository {
         );
         await client.query(
           `INSERT INTO signature_audit_log
-             (document_id,recipient_id,event_type,description,created_at)
-           VALUES ($1,$2,'reminder_queued','Signature reminder queued',CURRENT_TIMESTAMP)`,
-          [documentId, recipient.id],
+             (document_id,recipient_id,event_type,description,metadata,created_at)
+           VALUES ($1,$2,'reminder_queued','Signature reminder queued',$3::jsonb,CURRENT_TIMESTAMP)`,
+          [documentId, recipient.id, JSON.stringify({
+            actor_class: 'authenticated_user', actor_user_id: actorUserId, version: 1,
+          })],
         );
       }
+      return true;
+    });
+  }
+
+  async retryFailures(
+    organizationId: number,
+    documentId: number,
+    actorUserId: number,
+  ): Promise<boolean> {
+    return this.transaction(async (client) => {
+      const document = await this.lockDocument(client, organizationId, documentId);
+      if (!document) return false;
+      if (!['sent', 'in_progress'].includes(document.status)) {
+        throw new SignatureDeliveryStateError(
+          'Only active signature documents can be retried',
+          'SIGNATURE_DOCUMENT_NOT_ACTIVE',
+        );
+      }
+      if (document.expires_at && document.expires_at.getTime() < Date.now()) {
+        throw new SignatureDeliveryStateError(
+          'Expired signature documents cannot be retried',
+          'SIGNATURE_DOCUMENT_EXPIRED',
+        );
+      }
+      const delivery = await client.query(
+        `UPDATE signature_delivery_outbox SET status='retry',attempt_count=0,
+           next_attempt_at=CURRENT_TIMESTAMP,lease_expires_at=NULL,last_error=NULL,
+           updated_at=CURRENT_TIMESTAMP
+         WHERE document_id=$1 AND organization_id=$2 AND status='dead_letter'
+           AND delivery_type IN ('signature_request','signature_reminder')
+         RETURNING id`,
+        [documentId, organizationId],
+      );
+      const completion = await client.query(
+        `UPDATE signature_completion_jobs SET status='retry',attempt_count=0,
+           next_attempt_at=CURRENT_TIMESTAMP,lease_expires_at=NULL,last_error=NULL,
+           cancelled_at=NULL,cancellation_reason=NULL,updated_at=CURRENT_TIMESTAMP
+         WHERE document_id=$1 AND organization_id=$2 AND status='dead_letter'
+         RETURNING id`,
+        [documentId, organizationId],
+      );
+      if (delivery.rows.length === 0 && completion.rows.length === 0) {
+        throw new SignatureDeliveryStateError(
+          'This signature document has no failed work to retry',
+          'SIGNATURE_RETRY_NOT_AVAILABLE',
+        );
+      }
+      await client.query(
+        `INSERT INTO signature_audit_log
+           (document_id,event_type,description,metadata,created_at)
+         VALUES ($1,'retry_queued','Failed signature processing queued for retry',
+           $2::jsonb,CURRENT_TIMESTAMP)`,
+        [documentId, JSON.stringify({
+          actor_class: 'authenticated_user',
+          actor_user_id: actorUserId,
+          delivery_count: delivery.rows.length,
+          completion_count: completion.rows.length,
+          version: 1,
+        })],
+      );
       return true;
     });
   }
@@ -203,10 +349,17 @@ export class SignatureDeliveryRepository {
     organizationId: number,
     documentId: number,
     days: number,
+    actorUserId: number,
   ): Promise<{ scheduledAt: Date; reminderCount: number } | null> {
     return this.transaction(async (client) => {
       const document = await this.lockDocument(client, organizationId, documentId);
       if (!document || !['sent', 'in_progress'].includes(document.status)) return null;
+      if (document.expires_at && document.expires_at.getTime() < Date.now()) {
+        throw new SignatureDeliveryStateError(
+          'Expired signature documents cannot be reminded',
+          'SIGNATURE_DOCUMENT_EXPIRED',
+        );
+      }
       const scheduledAt = new Date(Date.now() + days * 86_400_000);
       const inserted = await client.query(
         `INSERT INTO signature_reminders (document_id,recipient_id,scheduled_at,status)
@@ -223,9 +376,11 @@ export class SignatureDeliveryRepository {
       }
       await client.query(
         `INSERT INTO signature_audit_log
-           (document_id,event_type,description,created_at)
-         VALUES ($1,'reminder_scheduled','Signature reminders scheduled',CURRENT_TIMESTAMP)`,
-        [documentId],
+           (document_id,event_type,description,metadata,created_at)
+         VALUES ($1,'reminder_scheduled','Signature reminders scheduled',$2::jsonb,CURRENT_TIMESTAMP)`,
+        [documentId, JSON.stringify({
+          actor_class: 'authenticated_user', actor_user_id: actorUserId, version: 1,
+        })],
       );
       return { scheduledAt, reminderCount: inserted.rows.length };
     });
@@ -237,8 +392,8 @@ export class SignatureDeliveryRepository {
     documentId: number,
   ): Promise<SignatureDeliveryDocument | null> {
     const result = await client.query<SignatureDeliveryDocument>(
-      `SELECT id,organization_id,title,message,status,routing_mode,expiration_days,
-         expires_at,sender_name,sender_email,created_by,file_url
+       `SELECT id,organization_id,title,message,status,routing_mode,expiration_days,
+          expires_at,sender_name,sender_email,created_by,file_url,original_sha256,page_count
        FROM signature_documents WHERE id=$1 AND organization_id=$2 FOR UPDATE`,
       [documentId, organizationId],
     );
@@ -257,6 +412,61 @@ export class SignatureDeliveryRepository {
       [documentId, organizationId],
     );
     return result.rows;
+  }
+
+  private async assertSendReady(
+    client: PoolClient,
+    organizationId: number,
+    documentId: number,
+    pageCount: number,
+    recipients: SignatureDeliveryRecipient[],
+  ): Promise<void> {
+    const result = await client.query<{
+      id: number; recipient_id: number | null; field_type: string;
+      page_number: number; is_required: boolean; locked: boolean;
+    }>(
+      `SELECT field.id,field.recipient_id,field.field_type,field.page_number,
+         field.is_required,field.locked
+       FROM signature_fields field
+       JOIN signature_documents document ON document.id=field.document_id
+       WHERE field.document_id=$1 AND document.organization_id=$2
+       ORDER BY field.id FOR UPDATE OF field`,
+      [documentId, organizationId],
+    );
+    if (result.rows.length === 0) {
+      throw new SignatureDeliveryStateError(
+        'Add signature fields before sending',
+        'SIGNATURE_FIELDS_REQUIRED',
+      );
+    }
+    const recipientIds = new Set(recipients.map((recipient) => recipient.id));
+    for (const field of result.rows) {
+      if (field.page_number > pageCount) {
+        throw new SignatureDeliveryStateError(
+          `A signature field references page ${field.page_number}, but the PDF has ${pageCount} page${pageCount === 1 ? '' : 's'}`,
+          'SIGNATURE_FIELD_PAGE_OUT_OF_RANGE',
+        );
+      }
+      if (!field.locked && (!field.recipient_id || !recipientIds.has(field.recipient_id))) {
+        throw new SignatureDeliveryStateError(
+          'Assign every signer field to a recipient before sending',
+          'SIGNATURE_FIELD_RECIPIENT_REQUIRED',
+        );
+      }
+    }
+    for (const recipient of recipients) {
+      const hasRequiredSignature = result.rows.some((field) =>
+        field.recipient_id === recipient.id
+        && !field.locked
+        && field.is_required
+        && (field.field_type === 'signature' || field.field_type === 'initials'));
+      if (!hasRequiredSignature) {
+        throw new SignatureDeliveryStateError(
+          `Add a required signature or initials field for ${recipient.name || recipient.email}`,
+          'SIGNATURE_RECIPIENT_SIGNATURE_REQUIRED',
+        );
+      }
+    }
   }
 
   private async sender(

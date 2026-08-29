@@ -15,6 +15,9 @@ export class EmailTemplate {
   @Field(() => String)
   subject: string;
 
+  @Field(() => String, { nullable: true })
+  preheader: string | null;
+
   @Field(() => String)
   bodyHtml: string;
 
@@ -41,6 +44,48 @@ export class EmailTemplate {
 
   @Field(() => GraphQLISODateTime)
   updatedAt: Date;
+
+  @Field(() => Int, { nullable: true })
+  draftVersion: number | null;
+
+  @Field(() => Int, { nullable: true })
+  publishedVersion: number | null;
+
+  @Field(() => String, { nullable: true })
+  draftSubject: string | null;
+
+  @Field(() => String, { nullable: true })
+  draftPreheader: string | null;
+
+  @Field(() => String, { nullable: true })
+  draftBodyHtml: string | null;
+
+  @Field(() => String, { nullable: true })
+  draftBodyText: string | null;
+
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  draftUpdatedAt: Date | null;
+
+  @Field(() => Boolean, { nullable: true })
+  draftIsActive: boolean | null;
+
+  @Field(() => Boolean)
+  hasUnpublishedChanges: boolean;
+}
+
+@ObjectType()
+export class EmailTemplatePreview {
+  @Field(() => String)
+  subject: string;
+
+  @Field(() => String)
+  html: string;
+
+  @Field(() => String, { nullable: true })
+  text: string | null;
+
+  @Field(() => [String])
+  variables: string[];
 }
 
 @ObjectType()

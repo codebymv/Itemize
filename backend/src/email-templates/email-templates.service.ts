@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { brandedTransactionalEmail, transactionalEmailAssetOrigin } from '../common/branded-transactional-email';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { PageInput, pageInfo } from '../common/pagination';
 import {
@@ -11,12 +12,19 @@ import {
   EmailTemplate,
   EmailTemplateCategory,
   EmailTemplatePage,
+  EmailTemplatePreview,
 } from './email-template.types';
 import { extractEmailTemplateVariables } from './email-template.variables';
+import {
+  renderEmailHtmlVariables,
+  renderEmailTextVariables,
+  sanitizeEmailTemplateHtml,
+} from './email-template-content';
 import {
   EmailTemplateRow,
   EmailTemplatesRepository,
   EmailTemplateUpdates,
+  EmailTemplateValues,
 } from './email-templates.repository';
 
 @Injectable()
@@ -64,15 +72,17 @@ export class EmailTemplatesService {
     input: CreateEmailTemplateInput,
   ): Promise<EmailTemplate> {
     const name = this.required(input.name, 'name', 255);
-    const subject = this.required(input.subject, 'subject', 500, false);
-    const bodyHtml = this.required(input.bodyHtml, 'bodyHtml', 1_000_000, false);
+    const subject = this.singleLineRequired(input.subject, 'subject', 500);
+    const preheader = this.optionalSingleLine(input.preheader, 'preheader', 255);
+    const bodyHtml = this.sanitizedHtml(input.bodyHtml);
     const bodyText = this.optional(input.bodyText, 'bodyText', 1_000_000, false);
     return this.map(await this.templates.create(organizationId, userId, {
       name,
       subject,
+      preheader,
       bodyHtml,
       bodyText,
-      variables: extractEmailTemplateVariables(subject, bodyHtml, bodyText),
+      variables: extractEmailTemplateVariables(subject, preheader, bodyHtml, bodyText),
       category: this.category(input.category),
       isActive: input.isActive,
     }));
@@ -89,8 +99,11 @@ export class EmailTemplatesService {
     }
     const updates: EmailTemplateUpdates = {
       ...(input.name === undefined ? {} : { name: this.required(input.name as string, 'name', 255) }),
-      ...(input.subject === undefined ? {} : { subject: this.required(input.subject as string, 'subject', 500, false) }),
-      ...(input.bodyHtml === undefined ? {} : { bodyHtml: this.required(input.bodyHtml as string, 'bodyHtml', 1_000_000, false) }),
+      ...(input.subject === undefined ? {} : { subject: this.singleLineRequired(input.subject as string, 'subject', 500) }),
+      ...(Object.prototype.hasOwnProperty.call(input, 'preheader')
+        ? { preheader: this.optionalSingleLine(input.preheader, 'preheader', 255) }
+        : {}),
+      ...(input.bodyHtml === undefined ? {} : { bodyHtml: this.sanitizedHtml(input.bodyHtml as string) }),
       ...(Object.prototype.hasOwnProperty.call(input, 'bodyText')
         ? { bodyText: this.optional(input.bodyText, 'bodyText', 1_000_000, false) }
         : {}),
@@ -107,6 +120,79 @@ export class EmailTemplatesService {
     const row = await this.templates.duplicate(organizationId, id, userId);
     if (!row) this.notFound();
     return this.map(row);
+  }
+
+  async createDraft(
+    organizationId: number,
+    userId: number,
+    input: CreateEmailTemplateInput,
+  ): Promise<EmailTemplate> {
+    const values = this.contentValues(input);
+    return this.map(await this.templates.createDraft(organizationId, userId, values));
+  }
+
+  async saveDraft(
+    organizationId: number,
+    id: number,
+    userId: number,
+    input: CreateEmailTemplateInput,
+  ): Promise<EmailTemplate> {
+    this.id(id);
+    const row = await this.templates.saveDraft(organizationId, id, userId, this.contentValues(input));
+    if (!row) this.notFound();
+    return this.map(row);
+  }
+
+  async publishDraft(
+    organizationId: number,
+    id: number,
+    userId: number,
+    isActive?: boolean,
+  ): Promise<EmailTemplate> {
+    this.id(id);
+    const row = await this.templates.publishDraft(organizationId, id, userId, isActive);
+    if (!row) {
+      throw itemizeGraphqlError('Email template has no draft to publish', 'CONFLICT', {
+        field: 'id', reason: 'EMAIL_TEMPLATE_DRAFT_REQUIRED',
+      });
+    }
+    return this.map(row);
+  }
+
+  preview(input: CreateEmailTemplateInput): EmailTemplatePreview {
+    const subject = this.singleLineRequired(input.subject, 'subject', 500);
+    const preheader = this.optionalSingleLine(input.preheader, 'preheader', 255) || subject;
+    const bodyHtml = this.sanitizedHtml(input.bodyHtml);
+    const bodyText = this.optional(input.bodyText, 'bodyText', 1_000_000, false);
+    const sample = {
+      first_name: 'Test', last_name: 'Recipient', full_name: 'Test Recipient',
+      email: 'test@example.com', phone: '+1 555-555-0100', company: 'Example Company',
+      job_title: 'Customer',
+    };
+    const renderedSubject = renderEmailTextVariables(subject, sample);
+    const renderedBody = renderEmailHtmlVariables(bodyHtml, sample);
+    return {
+      subject: renderedSubject,
+      html: brandedTransactionalEmail({
+        assetOrigin: transactionalEmailAssetOrigin(), previewText: renderEmailTextVariables(preheader, sample),
+        heading: renderedSubject, bodyHtml: renderedBody, footerText: 'Sent with Itemize.',
+      }),
+      text: bodyText ? renderEmailTextVariables(bodyText, sample) : null,
+      variables: extractEmailTemplateVariables(subject, preheader, bodyHtml, bodyText),
+    };
+  }
+
+  private contentValues(input: CreateEmailTemplateInput): EmailTemplateValues {
+    const name = this.required(input.name, 'name', 255);
+    const subject = this.singleLineRequired(input.subject, 'subject', 500);
+    const preheader = this.optionalSingleLine(input.preheader, 'preheader', 255);
+    const bodyHtml = this.sanitizedHtml(input.bodyHtml);
+    const bodyText = this.optional(input.bodyText, 'bodyText', 1_000_000, false);
+    return {
+      name, subject, preheader, bodyHtml, bodyText,
+    variables: extractEmailTemplateVariables(subject, preheader, bodyHtml, bodyText),
+      category: this.category(input.category), isActive: input.isActive,
+    };
   }
 
   async delete(organizationId: number, id: number): Promise<DeleteEmailTemplateResult> {
@@ -142,6 +228,17 @@ export class EmailTemplatesService {
     return trim ? value.trim() : value;
   }
 
+  private sanitizedHtml(value: string): string {
+    const required = this.required(value, 'bodyHtml', 1_000_000, false);
+    const sanitized = sanitizeEmailTemplateHtml(required);
+    if (sanitized.trim().length === 0) {
+      throw itemizeGraphqlError('bodyHtml must contain supported email content', 'BAD_USER_INPUT', {
+        field: 'bodyHtml', reason: 'INVALID_EMAIL_TEMPLATE_BODYHTML',
+      });
+    }
+    return sanitized;
+  }
+
   private optional(
     value: string | null | undefined,
     field: string,
@@ -155,6 +252,30 @@ export class EmailTemplatesService {
       });
     }
     return trim ? value.trim() : value;
+  }
+
+  private singleLineRequired(value: string, field: string, max: number): string {
+    const normalized = this.required(value, field, max);
+    if (/[\r\n]/.test(normalized)) {
+      throw itemizeGraphqlError(`${field} must be a single line`, 'BAD_USER_INPUT', {
+        field, reason: `INVALID_EMAIL_TEMPLATE_${field.toUpperCase()}`,
+      });
+    }
+    return normalized;
+  }
+
+  private optionalSingleLine(
+    value: string | null | undefined,
+    field: string,
+    max: number,
+  ): string | null {
+    const normalized = this.optional(value, field, max);
+    if (normalized && /[\r\n]/.test(normalized)) {
+      throw itemizeGraphqlError(`${field} must be a single line`, 'BAD_USER_INPUT', {
+        field, reason: `INVALID_EMAIL_TEMPLATE_${field.toUpperCase()}`,
+      });
+    }
+    return normalized;
   }
 
   private category(value: string): string {
@@ -199,6 +320,7 @@ export class EmailTemplatesService {
     organizationId: Number(row.organization_id),
     name: row.name,
     subject: row.subject,
+    preheader: row.preheader ?? null,
     bodyHtml: row.body_html,
     bodyText: row.body_text,
     variables: this.variables(row.variables),
@@ -208,5 +330,16 @@ export class EmailTemplatesService {
     createdByName: row.created_by_name ?? null,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
+    draftVersion: row.draft_version === undefined || row.draft_version === null
+      ? null : Number(row.draft_version),
+    publishedVersion: row.published_version === undefined || row.published_version === null
+      ? null : Number(row.published_version),
+    draftSubject: row.draft_subject ?? null,
+    draftPreheader: row.draft_preheader ?? null,
+    draftBodyHtml: row.draft_body_html ?? null,
+    draftBodyText: row.draft_body_text ?? null,
+    draftUpdatedAt: row.draft_updated_at ? new Date(row.draft_updated_at) : null,
+    draftIsActive: row.draft_is_active ?? null,
+    hasUnpublishedChanges: row.draft_version_id !== null,
   });
 }

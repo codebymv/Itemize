@@ -26,14 +26,21 @@ export class SignatureDeliveryResolver {
   @OrganizationScoped()
   @Mutation(() => SignatureDocument)
   sendSignatureDocument(@Args('id', { type: () => Int }) id: number): Promise<SignatureDocument> {
-    return this.service.send(this.organizationId(), id);
+    return this.service.send(this.organizationId(), id, this.userId());
   }
 
   @CsrfProtected()
   @OrganizationScoped()
   @Mutation(() => SignatureDocument)
   sendSignatureReminder(@Args('id', { type: () => Int }) id: number): Promise<SignatureDocument> {
-    return this.service.remind(this.organizationId(), id);
+    return this.service.remind(this.organizationId(), id, this.userId());
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => SignatureDocument)
+  retrySignatureDocument(@Args('id', { type: () => Int }) id: number): Promise<SignatureDocument> {
+    return this.service.retry(this.organizationId(), id, this.userId());
   }
 
   @CsrfProtected()
@@ -43,12 +50,18 @@ export class SignatureDeliveryResolver {
     @Args('id', { type: () => Int }) id: number,
     @Args('days', { type: () => Int, defaultValue: 2 }) days: number,
   ): Promise<SignatureReminderSchedule> {
-    return this.service.schedule(this.organizationId(), id, days);
+    return this.service.schedule(this.organizationId(), id, days, this.userId());
   }
 
   private organizationId(): number {
     const organization = this.context.current().organization;
     if (!organization) throw new Error('Verified organization context is unavailable');
     return organization.organizationId;
+  }
+
+  private userId(): number {
+    const identity = this.context.current().identity;
+    if (!identity) throw new Error('Verified identity context is unavailable');
+    return identity.userId;
   }
 }

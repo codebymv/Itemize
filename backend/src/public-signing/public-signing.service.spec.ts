@@ -3,6 +3,7 @@ import { PublicSigningRepository } from './public-signing.repository';
 import { PublicSigningService } from './public-signing.service';
 import { SignatureFileStorage } from '../signature-files/signature-file-storage.provider';
 import { ActivationService } from '../activation/activation.service';
+import { SIGNATURE_CONSENT_VERSION } from './signature-consent';
 
 describe('PublicSigningService', () => {
   const head = jest.fn();
@@ -94,7 +95,10 @@ describe('PublicSigningService', () => {
       organizationId: 3,
       completionQueued: false,
     });
-    await expect(service.submit(token, { fields: [] }, audit)).resolves.toEqual({
+    await expect(service.submit(token, {
+      fields: [],
+      consent: { agreed: true, version: SIGNATURE_CONSENT_VERSION },
+    }, audit)).resolves.toEqual({
       recipientId: 7,
       documentId: 11,
       completionQueued: false,

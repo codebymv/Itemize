@@ -3,8 +3,6 @@ import {
     Plus,
     Search,
     Package,
-    PackageCheck,
-    PackageX,
     RefreshCw,
     MoreHorizontal,
     Trash2,
@@ -51,6 +49,7 @@ import {
     HeaderSearch,
 } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
@@ -71,6 +70,7 @@ import {
     type ProductStatusFilter,
     type ProductTypeFilter,
 } from './productCatalog';
+import { getProductStatusVisual } from './constants/productConstants';
 
 interface ProductFormData {
     name: string;
@@ -117,7 +117,8 @@ export function ProductsPage() {
 
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
-    const { organizationId } = useOrganization({
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const { organizationId, error: initError } = useOrganization({
         onError: () => {
             toast({ title: 'Error', description: 'Failed to initialize', variant: 'destructive' });
             return 'Failed to initialize';
@@ -140,18 +141,23 @@ export function ProductsPage() {
         }
     }, [organizationId]);
 
+    useEffect(() => {
+        if (initError) setLoadError(initError);
+    }, [initError]);
+
     const fetchProducts = useCallback(async () => {
         if (!organizationId) return;
         setLoading(true);
+        setLoadError(null);
         try {
             const data = await getProducts({}, organizationId);
             setProducts(data || []);
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to load products', variant: 'destructive' });
+            setLoadError('Products could not be loaded. Please try again.');
         } finally {
             setLoading(false);
         }
-    }, [organizationId, toast]);
+    }, [organizationId]);
 
     useEffect(() => {
         fetchProducts();
@@ -340,6 +346,7 @@ export function ProductsPage() {
                 </>
             }
         >
+            {!loadError && (
             <ResponsiveCardRail
                 label="Product catalog summary"
                 desktopColumns="md:grid-cols-4"
@@ -349,9 +356,9 @@ export function ProductsPage() {
                     title="Active products"
                     badgeText="Active"
                     value={stats.active}
-                    icon={PackageCheck}
+                    icon={getProductStatusVisual(true).icon}
                     description="Available on new invoices"
-                    colorTheme="blue"
+                    colorTheme={getProductStatusVisual(true).theme}
                     isLoading={loading}
                 />
                 <StatCard
@@ -376,12 +383,13 @@ export function ProductsPage() {
                     title="Inactive products"
                     badgeText="Inactive"
                     value={stats.inactive}
-                    icon={PackageX}
+                    icon={getProductStatusVisual(false).icon}
                     description="Hidden from new invoices"
-                    colorTheme="orange"
+                    colorTheme={getProductStatusVisual(false).theme}
                     isLoading={loading}
                 />
             </ResponsiveCardRail>
+            )}
 
             <Card>
                 <CardContent className="p-0">
@@ -389,6 +397,13 @@ export function ProductsPage() {
                         <div className="p-6 space-y-4">
                             {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20" />)}
                         </div>
+                    ) : loadError ? (
+                        <ErrorState
+                            title="Unable to load products"
+                            description={loadError}
+                            actionLabel="Try again"
+                            onAction={() => void fetchProducts()}
+                        />
                     ) : filteredProducts.length === 0 ? (
                         <EmptyState
                             icon={Package}
@@ -404,13 +419,14 @@ export function ProductsPage() {
                         <div className="divide-y">
                             {filteredProducts.map((product) => {
                                 const ProductTypeIcon = product.product_type === 'recurring' ? RefreshCw : Tag;
+                                const statusVisual = getProductStatusVisual(product.is_active);
 
                                 return (
                                 <div key={product.id} className="group p-4 transition-colors hover:bg-muted/50">
                                     <div className="flex items-center justify-between gap-2">
                                         <div className="flex min-w-0 flex-1 items-center gap-2">
-                                            <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full md:h-10 md:w-10 ${product.is_active ? 'bg-blue-100 dark:bg-blue-900' : 'bg-orange-100 dark:bg-orange-900'}`}>
-                                                <ProductTypeIcon className={`h-4 w-4 ${product.is_active ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`} aria-hidden="true" />
+                                            <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full md:h-10 md:w-10 ${statusVisual.iconBackgroundClass}`}>
+                                                <ProductTypeIcon className={`h-4 w-4 ${statusVisual.iconClass}`} aria-hidden="true" />
                                             </div>
                                             <button
                                                 type="button"
@@ -425,8 +441,8 @@ export function ProductsPage() {
                                         </div>
                                         <div className="flex flex-shrink-0 items-center gap-2">
                                             <div className="hidden lg:block">
-                                                <Badge className={`pointer-events-none cursor-default text-xs ${product.is_active ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300'}`}>
-                                                    {product.is_active ? 'Active' : 'Inactive'}
+                                                <Badge className={`pointer-events-none cursor-default text-xs ${statusVisual.badgeClass}`}>
+                                                    {statusVisual.label}
                                                 </Badge>
                                             </div>
                                             <div className="hidden text-right sm:block">
@@ -464,8 +480,8 @@ export function ProductsPage() {
 
                                     <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-6">
                                         <span className="lg:hidden">
-                                            <Badge className={`pointer-events-none cursor-default text-xs ${product.is_active ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300'}`}>
-                                                {product.is_active ? 'Active' : 'Inactive'}
+                                            <Badge className={`pointer-events-none cursor-default text-xs ${statusVisual.badgeClass}`}>
+                                                {statusVisual.label}
                                             </Badge>
                                         </span>
                                         {product.product_type === 'recurring' && product.billing_period && (

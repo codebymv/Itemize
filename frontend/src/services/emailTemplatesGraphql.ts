@@ -6,6 +6,7 @@ type GraphqlEmailTemplate = {
   organizationId: number;
   name: string;
   subject: string;
+  preheader: string | null;
   bodyHtml: string;
   bodyText: string | null;
   variables: string[];
@@ -15,12 +16,22 @@ type GraphqlEmailTemplate = {
   createdByName: string | null;
   createdAt: string;
   updatedAt: string;
+  draftVersion: number | null;
+  publishedVersion: number | null;
+  draftSubject: string | null;
+  draftPreheader: string | null;
+  draftBodyHtml: string | null;
+  draftBodyText: string | null;
+  draftUpdatedAt: string | null;
+  draftIsActive: boolean | null;
+  hasUnpublishedChanges: boolean;
 };
 
-type EmailTemplateInput = {
+export type EmailTemplateInput = {
   organization_id?: number;
   name: string;
   subject: string;
+  preheader?: string | null;
   body_html: string;
   body_text?: string | null;
   category?: string;
@@ -30,8 +41,9 @@ type EmailTemplateInput = {
 type EmailTemplateUpdate = Partial<Omit<EmailTemplateInput, 'organization_id'>>;
 
 const fields = `
-  id organizationId name subject bodyHtml bodyText variables category isActive
-  createdById createdByName createdAt updatedAt
+  id organizationId name subject preheader bodyHtml bodyText variables category isActive
+  createdById createdByName createdAt updatedAt draftVersion publishedVersion
+  draftSubject draftPreheader draftBodyHtml draftBodyText draftUpdatedAt draftIsActive hasUnpublishedChanges
 `;
 
 const mapTemplate = (template: GraphqlEmailTemplate): EmailTemplate => ({
@@ -39,6 +51,7 @@ const mapTemplate = (template: GraphqlEmailTemplate): EmailTemplate => ({
   organization_id: template.organizationId,
   name: template.name,
   subject: template.subject,
+  preheader: template.preheader,
   body_html: template.bodyHtml,
   body_text: template.bodyText,
   variables: template.variables,
@@ -48,11 +61,21 @@ const mapTemplate = (template: GraphqlEmailTemplate): EmailTemplate => ({
   ...(template.createdByName === null ? {} : { created_by_name: template.createdByName }),
   created_at: template.createdAt,
   updated_at: template.updatedAt,
+  draft_version: template.draftVersion,
+  published_version: template.publishedVersion,
+  draft_subject: template.draftSubject,
+  draft_preheader: template.draftPreheader,
+  draft_body_html: template.draftBodyHtml,
+  draft_body_text: template.draftBodyText,
+  draft_updated_at: template.draftUpdatedAt,
+  draft_is_active: template.draftIsActive,
+  has_unpublished_changes: template.hasUnpublishedChanges,
 });
 
 const mapCreateInput = (input: EmailTemplateInput) => ({
   name: input.name,
   subject: input.subject,
+  ...(input.preheader === undefined ? {} : { preheader: input.preheader }),
   bodyHtml: input.body_html,
   ...(input.body_text === undefined ? {} : { bodyText: input.body_text }),
   ...(input.category === undefined ? {} : { category: input.category }),
@@ -62,6 +85,7 @@ const mapCreateInput = (input: EmailTemplateInput) => ({
 const mapUpdateInput = (input: EmailTemplateUpdate) => ({
   ...(input.name === undefined ? {} : { name: input.name }),
   ...(input.subject === undefined ? {} : { subject: input.subject }),
+  ...(input.preheader === undefined ? {} : { preheader: input.preheader }),
   ...(input.body_html === undefined ? {} : { bodyHtml: input.body_html }),
   ...(input.body_text === undefined ? {} : { bodyText: input.body_text }),
   ...(input.category === undefined ? {} : { category: input.category }),
@@ -148,6 +172,23 @@ export const createEmailTemplateViaGraphql = async (
   return mapTemplate(data.createEmailTemplate);
 };
 
+export const createEmailTemplateDraftViaGraphql = async (
+  input: EmailTemplateInput,
+  organizationId?: number,
+): Promise<EmailTemplate> => {
+  const data = await graphqlMutationRequest<
+    { createEmailTemplateDraft: GraphqlEmailTemplate },
+    { input: ReturnType<typeof mapCreateInput> }
+  >(
+    `mutation CreateEmailTemplateDraft($input: CreateEmailTemplateInput!) {
+      createEmailTemplateDraft(input: $input) { ${fields} }
+    }`,
+    { input: mapCreateInput(input) },
+    organizationId,
+  );
+  return mapTemplate(data.createEmailTemplateDraft);
+};
+
 export const updateEmailTemplateViaGraphql = async (
   id: number,
   input: EmailTemplateUpdate,
@@ -164,6 +205,73 @@ export const updateEmailTemplateViaGraphql = async (
     organizationId,
   );
   return mapTemplate(data.updateEmailTemplate);
+};
+
+export const saveEmailTemplateDraftViaGraphql = async (
+  id: number,
+  input: EmailTemplateInput,
+  organizationId?: number,
+): Promise<EmailTemplate> => {
+  const data = await graphqlMutationRequest<
+    { saveEmailTemplateDraft: GraphqlEmailTemplate },
+    { id: number; input: ReturnType<typeof mapUpdateInput> }
+  >(
+    `mutation SaveEmailTemplateDraft($id: Int!, $input: UpdateEmailTemplateInput!) {
+      saveEmailTemplateDraft(id: $id, input: $input) { ${fields} }
+    }`,
+    { id, input: mapUpdateInput(input) },
+    organizationId,
+  );
+  return mapTemplate(data.saveEmailTemplateDraft);
+};
+
+export const publishEmailTemplateViaGraphql = async (
+  id: number,
+  isActive = true,
+  organizationId?: number,
+): Promise<EmailTemplate> => {
+  const data = await graphqlMutationRequest<
+    { publishEmailTemplate: GraphqlEmailTemplate },
+    { id: number; input: { isActive: boolean } }
+  >(
+    `mutation PublishEmailTemplate($id: Int!, $input: PublishEmailTemplateInput!) {
+      publishEmailTemplate(id: $id, input: $input) { ${fields} }
+    }`,
+    { id, input: { isActive } },
+    organizationId,
+  );
+  return mapTemplate(data.publishEmailTemplate);
+};
+
+export type EmailTemplatePreview = {
+  subject: string;
+  html: string;
+  text: string | null;
+  variables: string[];
+};
+
+export const previewEmailTemplateViaGraphql = async (
+  input: Pick<EmailTemplateInput, 'subject' | 'preheader' | 'body_html' | 'body_text'>,
+  organizationId?: number,
+): Promise<EmailTemplatePreview> => {
+  const data = await graphqlMutationRequest<
+    { previewEmailTemplate: EmailTemplatePreview },
+    { input: { subject: string; preheader?: string | null; bodyHtml: string; bodyText?: string | null } }
+  >(
+    `mutation PreviewEmailTemplate($input: PreviewEmailTemplateInput!) {
+      previewEmailTemplate(input: $input) { subject html text variables }
+    }`,
+    {
+      input: {
+        subject: input.subject,
+        ...(input.preheader === undefined ? {} : { preheader: input.preheader }),
+        bodyHtml: input.body_html,
+        ...(input.body_text === undefined ? {} : { bodyText: input.body_text }),
+      },
+    },
+    organizationId,
+  );
+  return data.previewEmailTemplate;
 };
 
 export const duplicateEmailTemplateViaGraphql = async (

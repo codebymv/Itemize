@@ -1,7 +1,7 @@
 import { SignatureTemplatesRepository } from './signature-templates.repository';
 import { SignatureTemplatesService } from './signature-templates.service';
 
-const template={id:5,organization_id:3,title:'Agreement',description:null,message:null,has_file:true,file_name:'agreement.pdf',file_type:'application/pdf',file_size:'800',created_by:4,created_at:new Date('2026-01-01'),updated_at:new Date('2026-01-02')};
+const template={id:5,organization_id:3,title:'Agreement',description:null,message:null,has_file:true,file_name:'agreement.pdf',file_type:'application/pdf',file_size:'800',page_count:1,is_ready:true,created_by:4,created_at:new Date('2026-01-01'),updated_at:new Date('2026-01-02')};
 describe('SignatureTemplatesService',()=>{
   const repository={hasFeatureAccess:jest.fn(),findAll:jest.fn(),findDetail:jest.fn(),create:jest.fn(),update:jest.fn(),delete:jest.fn(),instantiate:jest.fn()} as unknown as jest.Mocked<SignatureTemplatesRepository>;
   const service=new SignatureTemplatesService(repository);

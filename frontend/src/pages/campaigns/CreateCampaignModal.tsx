@@ -25,10 +25,11 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { createCampaign, previewCampaign } from '@/services/campaignsApi';
+import { createCampaign, previewCampaign, scheduleCampaign } from '@/services/campaignsApi';
 import type { EmailCampaign } from '@/services/campaignsApi';
 import { getEmailTemplates, EmailTemplate } from '@/services/emailApi';
 import { getSegments, Segment, getFilterOptions, FilterOptions } from '@/services/segmentsApi';
+import { campaignScheduleToIso } from './utils/campaignSchedule';
 
 interface CreateCampaignModalProps {
   organizationId: number;
@@ -51,7 +52,7 @@ type CampaignFormData = {
   excluded_tag_ids: number[];
   status_filter: string;
   segment_id: number | null;
-  send_immediately: boolean;
+  delivery_mode: 'draft' | 'scheduled';
   scheduled_at: string;
   scheduled_time: string;
   timezone: string;
@@ -73,7 +74,7 @@ const STEPS = [
   { id: 'basic', label: 'Basic Info', icon: Mail },
   { id: 'content', label: 'Content', icon: FileText },
   { id: 'audience', label: 'Audience', icon: Users },
-  { id: 'schedule', label: 'Schedule', icon: Clock },
+  { id: 'delivery', label: 'Delivery', icon: Clock },
 ];
 
 const TIMEZONES = [
@@ -129,8 +130,8 @@ export function CreateCampaignModal({
     status_filter: 'active',
     segment_id: null as number | null,
     
-    // Schedule
-    send_immediately: true,
+    // Delivery
+    delivery_mode: 'draft',
     scheduled_at: '',
     scheduled_time: '',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
@@ -160,7 +161,7 @@ export function CreateCampaignModal({
       }
     };
     loadData();
-  }, [organizationId]);
+  }, [organizationId, toast]);
 
   const handleChange = <K extends keyof CampaignFormData>(field: K, value: CampaignFormData[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -207,8 +208,8 @@ export function CreateCampaignModal({
           return false;
         }
         return true;
-      case 3: // Schedule
-        if (!formData.send_immediately && !formData.scheduled_at) {
+      case 3: // Delivery
+        if (formData.delivery_mode === 'scheduled' && !formData.scheduled_at) {
           toast({ title: 'Error', description: 'Please select a send date', variant: 'destructive' });
           return false;
         }
@@ -239,13 +240,13 @@ export function CreateCampaignModal({
 
     setLoading(true);
     try {
-      // Build scheduled_at datetime
       let scheduledAt: string | undefined;
-      if (!formData.send_immediately && formData.scheduled_at) {
-        const dateTime = formData.scheduled_time 
-          ? `${formData.scheduled_at}T${formData.scheduled_time}:00`
-          : `${formData.scheduled_at}T09:00:00`;
-        scheduledAt = new Date(dateTime).toISOString();
+      if (formData.delivery_mode === 'scheduled' && formData.scheduled_at) {
+        scheduledAt = campaignScheduleToIso(
+          formData.scheduled_at,
+          formData.scheduled_time || '09:00',
+          formData.timezone,
+        );
       }
 
       const campaignData: CampaignCreatePayload = {
@@ -255,8 +256,6 @@ export function CreateCampaignModal({
         from_email: formData.from_email.trim() || undefined,
         reply_to: formData.reply_to.trim() || undefined,
         segment_type: formData.segment_type,
-        send_immediately: formData.send_immediately,
-        timezone: formData.timezone,
       };
 
       // Add content
@@ -280,13 +279,16 @@ export function CreateCampaignModal({
         campaignData.excluded_tag_ids = formData.excluded_tag_ids;
       }
 
-      // Add scheduling
-      if (scheduledAt) {
-        campaignData.scheduled_at = scheduledAt;
-      }
-
-      const campaign = await createCampaign(campaignData, organizationId);
-      toast({ title: 'Campaign created', description: 'Your campaign has been created successfully' });
+      const draft = await createCampaign(campaignData, organizationId);
+      const campaign = scheduledAt
+        ? await scheduleCampaign(draft.id, scheduledAt, formData.timezone, organizationId)
+        : draft;
+      toast({
+        title: scheduledAt ? 'Campaign scheduled' : 'Draft created',
+        description: scheduledAt
+          ? 'The campaign will be delivered at the selected time.'
+          : 'Review the recipient preview before sending when you are ready.',
+      });
       onCreated(campaign);
     } catch (error: unknown) {
       console.error('Error creating campaign:', error);
@@ -335,7 +337,7 @@ export function CreateCampaignModal({
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="from_name" style={{ fontFamily: '"Raleway", sans-serif' }}>
                   From Name
@@ -616,22 +618,22 @@ export function CreateCampaignModal({
           </div>
         );
 
-      case 3: // Schedule
+      case 3: // Delivery
         return (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label style={{ fontFamily: '"Raleway", sans-serif' }}>When to Send</Label>
+              <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Delivery</Label>
               <RadioGroup
-                value={formData.send_immediately ? 'now' : 'scheduled'}
-                onValueChange={(v) => handleChange('send_immediately', v === 'now')}
+                value={formData.delivery_mode}
+                onValueChange={(value) => handleChange('delivery_mode', value as CampaignFormData['delivery_mode'])}
                 className="space-y-2"
               >
                 <div className="flex items-center space-x-2 p-3 rounded border hover:bg-muted">
-                  <RadioGroupItem value="now" id="send-now" />
-                  <Label htmlFor="send-now" className="flex-1 cursor-pointer">
-                    <span className="font-medium">Send Immediately</span>
+                  <RadioGroupItem value="draft" id="save-draft" />
+                  <Label htmlFor="save-draft" className="flex-1 cursor-pointer">
+                    <span className="font-medium">Save as Draft</span>
                     <p className="text-sm text-muted-foreground">
-                      Campaign will start sending right after creation
+                      Review the eligible recipient count before sending
                     </p>
                   </Label>
                 </div>
@@ -647,9 +649,9 @@ export function CreateCampaignModal({
               </RadioGroup>
             </div>
 
-            {!formData.send_immediately && (
+            {formData.delivery_mode === 'scheduled' && (
               <div className="space-y-4 p-4 border rounded-md bg-muted/30">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="scheduled_at" style={{ fontFamily: '"Raleway", sans-serif' }}>
                       Send Date <span className="text-red-500">*</span>
@@ -711,7 +713,7 @@ export function CreateCampaignModal({
                   formData.segment_type === 'status' ? `Status: ${formData.status_filter}` :
                   formData.segment_type === 'segment' ? (selectedSegment?.name || 'Segment not selected') : ''
                 }</p>
-                <p><strong>Send:</strong> {formData.send_immediately ? 'Immediately' : formData.scheduled_at ? `${formData.scheduled_at} ${formData.scheduled_time || '09:00'}` : 'Not scheduled'}</p>
+                <p><strong>Delivery:</strong> {formData.delivery_mode === 'draft' ? 'Save as draft' : formData.scheduled_at ? `${formData.scheduled_at} ${formData.scheduled_time || '09:00'} (${formData.timezone})` : 'Not scheduled'}</p>
               </CardContent>
             </Card>
           </div>

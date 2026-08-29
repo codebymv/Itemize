@@ -1,21 +1,24 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Send, XCircle, Download, Eye, FileSignature, FileText, CheckCircle, Clock, ChevronDown, MoreVertical, Trash2, Search, RefreshCw } from 'lucide-react';
+import { Plus, Send, XCircle, Download, Eye, FileSignature, FileText, CheckCircle, ChevronDown, MoreVertical, Trash2, Search, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { getStatusBadgeClass } from '@/lib/badge-utils';
 import { ListRowSkeleton } from '@/components/ui/loading-skeletons';
 import FieldPlacementCanvas from './components/FieldPlacementCanvas';
+import { getRecipientStatusVisual, getSignatureOperationalVisual } from './constants/signatureConstants';
+import { filterDocuments, getDocumentStats, type DocumentStatusFilter } from './signatureCatalog';
 import {
   SignatureDocument,
   SignatureDocumentDetails,
@@ -23,6 +26,7 @@ import {
   getSignatureDocument,
   sendSignatureDocument,
   remindSignatureDocument,
+  retrySignatureDocument,
   cancelSignatureDocument,
   deleteSignatureDocument,
   downloadSignedDocument
@@ -32,131 +36,61 @@ export function SignaturesPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [documents, setDocuments] = useState<SignatureDocument[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [expandedDocumentId, setExpandedDocumentId] = useState<number | null>(null);
   const [expandedDocumentData, setExpandedDocumentData] = useState<SignatureDocumentDetails | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<DocumentStatusFilter>('all');
   const [deleteDocumentId, setDeleteDocumentId] = useState<number | null>(null);
 
-  const stats = useMemo(() => {
-    const draftCount = documents.filter((doc) => doc.status === 'draft').length;
-    const sentCount = documents.filter((doc) => doc.status === 'sent').length;
-    const inProgressCount = documents.filter((doc) => doc.status === 'in_progress').length;
-    const completedCount = documents.filter((doc) => doc.status === 'completed').length;
-    const activeCount = sentCount + inProgressCount;
-    return { draftCount, sentCount, inProgressCount, completedCount, activeCount };
-  }, [documents]);
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed': return <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />;
-      case 'sent': return <Send className="h-5 w-5 text-orange-600 dark:text-orange-400" />;
-      case 'in_progress': return <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />;
-      case 'draft': return <Clock className="h-5 w-5 text-sky-600 dark:text-sky-400" />;
-      case 'cancelled': return <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />;
-      default: return <Clock className="h-5 w-5 text-gray-400 dark:text-gray-500" />;
-    }
-  };
-
-  const getStatusIconBg = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-green-100 dark:bg-green-900';
-      case 'sent': return 'bg-orange-100 dark:bg-orange-900';
-      case 'in_progress': return 'bg-orange-100 dark:bg-orange-900';
-      case 'draft': return 'bg-sky-100 dark:bg-sky-900';
-      case 'cancelled': return 'bg-red-100 dark:bg-red-900';
-      default: return 'bg-gray-100 dark:bg-gray-800';
-    }
-  };
+  const stats = useMemo(() => getDocumentStats(documents), [documents]);
 
   const fetchDocuments = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const response = await listSignatureDocuments();
       setDocuments(response.items || []);
     } catch (error) {
-      toast({ title: 'Error', description: 'Failed to load documents', variant: 'destructive' });
+      setLoadError('Documents could not be loaded. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [toast]);
-
-  const pageActions = useMemo(() => (
-    <>
-      <div className="relative w-full max-w-xs">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search documents..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
-        />
-      </div>
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="h-9">
-          <TabsTrigger value="all" className="text-xs">
-            All
-            <Badge variant="secondary" className="ml-2">{documents.length}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="active" className="text-xs">
-            Active
-            <Badge variant="secondary" className="ml-2">{stats.activeCount}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="draft" className="text-xs">
-            Draft
-            <Badge variant="secondary" className="ml-2">{stats.draftCount}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="completed" className="text-xs">
-            Done
-            <Badge variant="secondary" className="ml-2">{stats.completedCount}</Badge>
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-      <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => navigate('/documents/new')}>
-        <Plus className="h-4 w-4 mr-2" />
-        New Document
-      </Button>
-    </>
-  ), [activeTab, documents.length, navigate, searchQuery, stats.activeCount, stats.completedCount, stats.draftCount]);
+  }, []);
 
   useEffect(() => {
     fetchDocuments();
   }, [fetchDocuments]);
 
-  const filteredDocuments = useMemo(() => {
-    let filtered = documents;
+  const filteredDocuments = useMemo(
+    () => filterDocuments(documents, { search: searchQuery, status: statusFilter }),
+    [documents, searchQuery, statusFilter],
+  );
 
-    switch (activeTab) {
-      case 'active':
-        filtered = filtered.filter((doc) => doc.status === 'sent' || doc.status === 'in_progress');
-        break;
-      case 'draft':
-        filtered = filtered.filter((doc) => doc.status === 'draft');
-        break;
-      case 'completed':
-        filtered = filtered.filter((doc) => doc.status === 'completed');
-        break;
-      default:
-        break;
-    }
+  const statusSelect = (compact = false) => (
+    <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as DocumentStatusFilter)}>
+      <SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[10rem] bg-muted/20'}>
+        <SelectValue placeholder="Status" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">All documents</SelectItem>
+        <SelectItem value="active">Active</SelectItem>
+        <SelectItem value="draft">Draft</SelectItem>
+        <SelectItem value="completed">Completed</SelectItem>
+        <SelectItem value="invalid">Invalid</SelectItem>
+      </SelectContent>
+    </Select>
+  );
 
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((doc) =>
-        doc.title?.toLowerCase().includes(query) ||
-        doc.message?.toLowerCase().includes(query)
-      );
-    }
-
-    return filtered;
-  }, [documents, activeTab, searchQuery]);
+  const filterCount = Number(statusFilter !== 'all');
+  const queryCount = filterCount + Number(searchQuery.trim().length > 0);
 
   const handleSend = async (id: number) => {
     try {
       await sendSignatureDocument(id);
-      toast({ title: 'Signature request sent' });
+      toast({ title: 'Signature request queued' });
       fetchDocuments();
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to send signature request', variant: 'destructive' });
@@ -166,10 +100,20 @@ export function SignaturesPage() {
   const handleResend = async (id: number) => {
     try {
       await remindSignatureDocument(id);
-      toast({ title: 'Signature request resent' });
+      toast({ title: 'Signature reminder queued' });
       fetchDocuments();
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to resend signature request', variant: 'destructive' });
+    }
+  };
+
+  const handleRetry = async (id: number) => {
+    try {
+      await retrySignatureDocument(id);
+      toast({ title: 'Failed processing queued for retry' });
+      fetchDocuments();
+    } catch (error) {
+      toast({ title: 'Retry unavailable', description: 'The failed step could not be retried.', variant: 'destructive' });
     }
   };
 
@@ -194,16 +138,15 @@ export function SignaturesPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteDocumentId) return;
+  const handleDelete = async (): Promise<boolean> => {
+    if (!deleteDocumentId) return false;
     try {
       await deleteSignatureDocument(deleteDocumentId);
-      toast({ title: 'Draft deleted' });
-      fetchDocuments();
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to delete draft', variant: 'destructive' });
-    } finally {
+      setDocuments((current) => current.filter((document) => document.id !== deleteDocumentId));
       setDeleteDocumentId(null);
+      return true;
+    } catch (error) {
+      return false;
     }
   };
 
@@ -234,9 +177,47 @@ export function SignaturesPage() {
   return (
     <PageLayout
       title="DOCUMENTS"
-      icon={<FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-      mobileClassName="flex-col items-stretch"
-      pageActions={pageActions}
+      icon={<FileSignature className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+      mobileClassName="flex-col items-stretch gap-2"
+      desktopTools={{
+        search: (
+          <HeaderSearch
+            label="Search documents"
+            placeholder="Search documents..."
+            value={searchQuery}
+            onChange={setSearchQuery}
+            width="wide"
+          />
+        ),
+        filters: (
+          <HeaderFilters
+            label="Filter documents by status"
+            activeCount={filterCount}
+            compactChildren={statusSelect(true)}
+            preferExpanded
+          >
+            {statusSelect()}
+          </HeaderFilters>
+        ),
+        combinedQuery: (
+          <HeaderCombinedQuery
+            label="Search and filter documents"
+            placeholder="Search documents..."
+            value={searchQuery}
+            onChange={setSearchQuery}
+            activeCount={queryCount}
+          >
+            {statusSelect(true)}
+          </HeaderCombinedQuery>
+        ),
+        primaryAction: (
+          <HeaderAction
+            label="New document"
+            icon={<Plus className="h-4 w-4" />}
+            onClick={() => navigate('/documents/new')}
+          />
+        ),
+      }}
       mobileActions={
         <>
           <div className="flex items-center gap-2 w-full">
@@ -246,77 +227,61 @@ export function SignaturesPage() {
                 placeholder="Search documents..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
+                className="h-11 w-full border-border/50 bg-muted/20 pl-10"
               />
             </div>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white h-9" onClick={() => navigate('/documents/new')}>
+            <Button size="icon" aria-label="New document" className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700" onClick={() => navigate('/documents/new')}>
               <Plus className="h-4 w-4" />
             </Button>
           </div>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="w-full h-9">
-              <TabsTrigger value="all" className="flex-1 text-xs">
-                All
-                <Badge variant="secondary" className="ml-1">{documents.length}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="active" className="flex-1 text-xs">
-                Active
-                <Badge variant="secondary" className="ml-1">{stats.activeCount}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="draft" className="flex-1 text-xs">
-                Draft
-                <Badge variant="secondary" className="ml-1">{stats.draftCount}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="completed" className="flex-1 text-xs">
-                Done
-                <Badge variant="secondary" className="ml-1">{stats.completedCount}</Badge>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          {statusSelect(true)}
         </>
       }
     >
+          {!loadError && (
           <ResponsiveCardRail
             label="Document status summary"
             desktopColumns="md:grid-cols-4"
+            className="responsive-stat-summary"
           >
+            <StatCard
+              title="Invalid"
+              badgeText="Invalid"
+              value={stats.invalid}
+              icon={XCircle}
+              description="Not completed"
+              colorTheme="red"
+              isLoading={loading}
+            />
             <StatCard
               title="Drafts"
               badgeText="Drafts"
-              value={stats.draftCount}
+              value={stats.draft}
               icon={FileText}
-              description={`document${stats.draftCount !== 1 ? 's' : ''}`}
-              colorTheme="gray"
+              description="In preparation"
+              colorTheme="blue"
               isLoading={loading}
             />
             <StatCard
-              title="Sent"
-              badgeText="Sent"
-              value={stats.sentCount}
+              title="Active"
+              badgeText="Active"
+              value={stats.active}
               icon={Send}
-              description={`document${stats.sentCount !== 1 ? 's' : ''}`}
-              colorTheme="orange"
-              isLoading={loading}
-            />
-            <StatCard
-              title="In Progress"
-              badgeText="In Progress"
-              value={stats.inProgressCount}
-              icon={Clock}
-              description={`document${stats.inProgressCount !== 1 ? 's' : ''}`}
+              description="Sent or underway"
               colorTheme="orange"
               isLoading={loading}
             />
             <StatCard
               title="Completed"
               badgeText="Completed"
-              value={stats.completedCount}
+              value={stats.completed}
               icon={CheckCircle}
-              description={`document${stats.completedCount !== 1 ? 's' : ''}`}
+              description="All collected"
               colorTheme="green"
               isLoading={loading}
             />
           </ResponsiveCardRail>
+          )}
 
           <Card>
             <CardContent className="p-0">
@@ -324,19 +289,32 @@ export function SignaturesPage() {
                 <div className="p-6">
                   <ListRowSkeleton count={5} />
                 </div>
+              ) : loadError ? (
+                <ErrorState
+                  title="Documents unavailable"
+                  description={loadError}
+                  onAction={() => void fetchDocuments()}
+                  className="px-6"
+                />
               ) : filteredDocuments.length === 0 ? (
                 <EmptyState
                   icon={FileSignature}
-                  title="No signature documents yet"
-                  description="Create a document to start collecting signatures."
-                  actionLabel="New Document"
-                  onAction={() => navigate('/documents/new')}
+                  title={documents.length === 0 ? 'No documents yet' : 'No documents match your search'}
+                  description={documents.length === 0
+                    ? 'Create a document to start collecting signatures.'
+                    : 'Adjust the search or status filter to see more documents.'}
+                  actionLabel={documents.length === 0 ? 'New document' : undefined}
+                  onAction={documents.length === 0 ? () => navigate('/documents/new') : undefined}
                   className="p-12"
                 />
               ) : (
                 <div className="divide-y">
                   {filteredDocuments.map((doc) => {
                     const isExpanded = expandedDocumentId === doc.id;
+                    const statusVisual = getSignatureOperationalVisual(doc);
+                    const StatusIcon = statusVisual.icon;
+                    const hasProcessingFailure = doc.delivery_state === 'failed'
+                      || doc.completion_state === 'dead_letter';
                     return (
                       <div key={doc.id}>
                         <div
@@ -345,23 +323,30 @@ export function SignaturesPage() {
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getStatusIconBg(doc.status)}`}>
-                                {getStatusIcon(doc.status)}
+                              <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full md:h-10 md:w-10 ${statusVisual.iconBackgroundClass}`}>
+                                <StatusIcon className={`h-5 w-5 ${statusVisual.iconClass}`} />
                               </div>
-                              <p className="font-medium text-sm md:text-base truncate">{doc.title}</p>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium md:text-base">{doc.title}</p>
+                                {doc.document_number && (
+                                  <p className="truncate text-xs text-muted-foreground">{doc.document_number}</p>
+                                )}
+                              </div>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 w-8 p-0"
+                                aria-label={isExpanded ? `Collapse ${doc.title}` : `Expand ${doc.title}`}
+                                aria-expanded={isExpanded}
                                 onClick={(e) => handleToggleExpand(doc.id, e)}
                               >
-                                <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? '' : 'transform rotate-180'}`} />
+                                <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                               </Button>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                  <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <Button variant="ghost" className="h-8 w-8 p-0" aria-label={`Actions for ${doc.title}`}>
                                     <MoreVertical className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
@@ -374,7 +359,12 @@ export function SignaturesPage() {
                                       <Send className="h-4 w-4 mr-2" />Send
                                     </DropdownMenuItem>
                                   )}
-                                  {(doc.status === 'sent' || doc.status === 'in_progress') && (
+                                  {hasProcessingFailure && (
+                                    <DropdownMenuItem onClick={() => handleRetry(doc.id)}>
+                                      <RefreshCw className="h-4 w-4 mr-2" />Retry failed step
+                                    </DropdownMenuItem>
+                                  )}
+                                  {!hasProcessingFailure && (doc.status === 'sent' || doc.status === 'in_progress') && (
                                     <DropdownMenuItem onClick={() => handleResend(doc.id)}>
                                       <RefreshCw className="h-4 w-4 mr-2" />Resend
                                     </DropdownMenuItem>
@@ -390,7 +380,7 @@ export function SignaturesPage() {
                                       </DropdownMenuItem>
                                     </>
                                   )}
-                                  {doc.status !== 'completed' && doc.status !== 'cancelled' && doc.status !== 'draft' && (
+                                  {(doc.status === 'sent' || doc.status === 'in_progress') && (
                                     <DropdownMenuItem onClick={() => handleCancel(doc.id)}>
                                       <XCircle className="h-4 w-4 mr-2" />Cancel
                                     </DropdownMenuItem>
@@ -406,8 +396,8 @@ export function SignaturesPage() {
                           </div>
 
                           <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                            <Badge className={`text-xs pointer-events-none cursor-default ${getStatusBadgeClass(doc.status)}`}>
-                              {doc.status.replace('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase())}
+                            <Badge className={`pointer-events-none cursor-default text-xs ${statusVisual.badgeClass}`}>
+                              {statusVisual.label}
                             </Badge>
                             {(() => {
                               const expandedRecipients = expandedDocumentData?.document.id === doc.id
@@ -423,8 +413,13 @@ export function SignaturesPage() {
                                 </span>
                               );
                             })()}
-                            <span className="text-xs text-muted-foreground">Sent {doc.sent_at ? new Date(doc.sent_at).toLocaleDateString() : '-'}</span>
-                            <span className="text-xs text-muted-foreground">Completed {doc.completed_at ? new Date(doc.completed_at).toLocaleDateString() : '-'}</span>
+                            <span className="text-xs text-muted-foreground">Created {new Date(doc.created_at).toLocaleDateString()}</span>
+                            {doc.sent_at && (
+                              <span className="text-xs text-muted-foreground">Sent {new Date(doc.sent_at).toLocaleDateString()}</span>
+                            )}
+                            {doc.completed_at && (
+                              <span className="text-xs text-green-600 dark:text-green-400">Completed {new Date(doc.completed_at).toLocaleDateString()}</span>
+                            )}
                           </div>
 
                           {isExpanded && expandedDocumentData?.document.id === doc.id && (
@@ -436,11 +431,16 @@ export function SignaturesPage() {
                               )}
                               {expandedDocumentData.recipients.length > 0 && (
                                 <div className="mt-2 px-6 flex flex-wrap gap-2">
-                                  {expandedDocumentData.recipients.map((recipient) => (
-                                    <Badge key={recipient.id} variant="secondary">
-                                      {recipient.name || recipient.email}
-                                    </Badge>
-                                  ))}
+                                  {expandedDocumentData.recipients.map((recipient) => {
+                                    const visual = getRecipientStatusVisual(recipient);
+                                    return (
+                                      <Badge key={recipient.id} className={`gap-1.5 ${visual.badgeClass}`}>
+                                        {recipient.name || recipient.email}
+                                        <span aria-hidden="true">·</span>
+                                        {visual.label}
+                                      </Badge>
+                                    );
+                                  })}
                                 </div>
                               )}
                             </>
@@ -453,11 +453,17 @@ export function SignaturesPage() {
                               <div className="flex items-center justify-center py-8 text-muted-foreground">Loading preview...</div>
                             ) : expandedDocumentData ? (
                               <div className="space-y-4">
-                                {expandedDocumentData.document.file_url ? (
+                                {(expandedDocumentData.document.status === 'completed'
+                                  ? expandedDocumentData.document.signed_file_url
+                                  : expandedDocumentData.document.file_url) ? (
                                   <FieldPlacementCanvas
-                                    fields={expandedDocumentData.fields}
+                                    fields={expandedDocumentData.document.status === 'completed'
+                                      ? []
+                                      : expandedDocumentData.fields}
                                     onChange={() => undefined}
-                                    fileUrl={expandedDocumentData.document.file_url}
+                                    fileUrl={expandedDocumentData.document.status === 'completed'
+                                      ? expandedDocumentData.document.signed_file_url!
+                                      : expandedDocumentData.document.file_url!}
                                     roles={expandedDocumentData.recipients.map((recipient) => recipient.role_name || '').filter(Boolean)}
                                     documentId={expandedDocumentData.document.id}
                                     readOnly
@@ -494,7 +500,20 @@ export function SignaturesPage() {
                                       Send
                                     </Button>
                                   )}
-                                  {(doc.status === 'sent' || doc.status === 'in_progress') && (
+                                  {hasProcessingFailure && (
+                                    <Button
+                                      size="sm"
+                                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRetry(doc.id);
+                                      }}
+                                    >
+                                      <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                                      Retry failed step
+                                    </Button>
+                                  )}
+                                  {!hasProcessingFailure && (doc.status === 'sent' || doc.status === 'in_progress') && (
                                     <Button
                                       size="sm"
                                       className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
@@ -507,7 +526,7 @@ export function SignaturesPage() {
                                       Resend
                                     </Button>
                                   )}
-                                  {doc.status !== 'completed' && doc.status !== 'cancelled' && doc.status !== 'draft' && (
+                                  {(doc.status === 'sent' || doc.status === 'in_progress') && (
                                     <Button
                                       size="sm"
                                       variant="outline"

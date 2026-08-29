@@ -106,6 +106,7 @@ export interface EmailTemplate {
   organization_id: number;
   name: string;
   subject: string;
+  preheader?: string | null;
   body_html: string;
   body_text?: string | null;
   variables: string[];
@@ -115,6 +116,15 @@ export interface EmailTemplate {
   created_by_name?: string;
   created_at: string;
   updated_at: string;
+  draft_version?: number | null;
+  published_version?: number | null;
+  draft_subject?: string | null;
+  draft_preheader?: string | null;
+  draft_body_html?: string | null;
+  draft_body_text?: string | null;
+  draft_updated_at?: string | null;
+  draft_is_active?: boolean | null;
+  has_unpublished_changes?: boolean;
 }
 
 // ===================

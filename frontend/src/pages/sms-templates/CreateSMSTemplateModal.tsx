@@ -160,7 +160,7 @@ export function CreateSMSTemplateModal({
   const getSegmentColor = () => {
     if (messageInfo.segments === 0) return 'text-muted-foreground';
     if (messageInfo.segments === 1) return 'text-green-600';
-    if (messageInfo.segments <= 3) return 'text-yellow-600';
+    if (messageInfo.segments <= 3) return 'text-orange-600 dark:text-orange-400';
     return 'text-red-600';
   };
 
@@ -179,7 +179,7 @@ export function CreateSMSTemplateModal({
 
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="name" style={{ fontFamily: '"Raleway", sans-serif' }}>
                   Template Name <span className="text-red-500">*</span>

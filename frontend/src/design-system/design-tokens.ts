@@ -135,28 +135,36 @@ export const spacingMixins = {
 
 export const semanticColors = {
   status: {
-    // Success states (green)
-    active: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
+    // Itemize-owned live/working states (blue)
+    active: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300',
+    draft: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300',
+    info: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300',
+    // Successful outcomes (green)
     completed: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
     paid: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
+    accepted: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
+    succeeded: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
+    won: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
     published: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
     confirmed: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
     // Warning/pending states (orange)
     pending: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
     in_progress: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
+    processing: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
     sent: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
-    overdue: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
-    // Info states (blue)
-    draft: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300',
-    info: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300',
+    viewed: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
+    partial: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
+    inactive: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
+    paused: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
     // Error states (red)
     cancelled: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300',
     failed: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300',
+    declined: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300',
     expired: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300',
-    // Inactive states (gray)
-    inactive: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300',
-    archived: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300',
-    paused: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300',
+    overdue: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300',
+    archived: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300',
+    refunded: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300',
+    neutral: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300',
   },
   module: {
     invoice: 'text-blue-600 dark:text-blue-400',

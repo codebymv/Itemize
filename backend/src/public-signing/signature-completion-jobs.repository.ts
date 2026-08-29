@@ -39,10 +39,17 @@ export type SignatureCompletionSnapshot = {
     name: string | null;
     email: string;
     signed_at: Date | null;
+    electronic_consent_version: string | null;
+    electronic_consent_sha256: string | null;
+    electronic_consented_at: Date | null;
   }>;
   audit: Array<{
+    recipient_id: number | null;
     event_type: string;
     description: string | null;
+    ip_address: string | null;
+    user_agent: string | null;
+    metadata: Record<string, unknown> | null;
     created_at: Date;
   }>;
   sender: { name: string | null; email: string | null };
@@ -162,14 +169,15 @@ export class SignatureCompletionJobsRepository {
         [claim.document_id],
       ),
       this.pool.query<SignatureCompletionSnapshot['recipients'][number]>(
-        `SELECT id,contact_id,name,email,signed_at
+        `SELECT id,contact_id,name,email,signed_at,electronic_consent_version,
+           electronic_consent_sha256,electronic_consented_at
          FROM signature_recipients
          WHERE document_id=$1 AND organization_id=$2
          ORDER BY signing_order,id`,
         [claim.document_id, claim.organization_id],
       ),
       this.pool.query<SignatureCompletionSnapshot['audit'][number]>(
-        `SELECT event_type,description,created_at
+        `SELECT recipient_id,event_type,description,ip_address,user_agent,metadata,created_at
          FROM signature_audit_log
          WHERE document_id=$1 ORDER BY created_at,id`,
         [claim.document_id],

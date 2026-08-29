@@ -2,11 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCsrfToken } from '@/lib/api';
 import {
   createEmailTemplateViaGraphql,
+  createEmailTemplateDraftViaGraphql,
   deleteEmailTemplateViaGraphql,
   duplicateEmailTemplateViaGraphql,
   getEmailTemplateCategoriesViaGraphql,
   getEmailTemplateViaGraphql,
   getEmailTemplatesViaGraphql,
+  previewEmailTemplateViaGraphql,
+  publishEmailTemplateViaGraphql,
+  saveEmailTemplateDraftViaGraphql,
   updateEmailTemplateViaGraphql,
 } from './emailTemplatesGraphql';
 
@@ -21,6 +25,7 @@ const template = {
   organizationId: 4,
   name: 'Welcome',
   subject: 'Hello {{first_name}}',
+  preheader: 'Welcome to {{company}}',
   bodyHtml: '<p>{{company}}</p>',
   bodyText: null,
   variables: ['first_name', 'company'],
@@ -30,6 +35,15 @@ const template = {
   createdByName: 'Owner',
   createdAt: '2026-07-20T10:00:00.000Z',
   updatedAt: '2026-07-20T11:00:00.000Z',
+  draftVersion: null,
+  publishedVersion: 1,
+  draftSubject: null,
+  draftPreheader: null,
+  draftBodyHtml: null,
+  draftBodyText: null,
+  draftUpdatedAt: null,
+  draftIsActive: null,
+  hasUnpublishedChanges: false,
 };
 
 const response = (payload: unknown): Response => ({
@@ -40,6 +54,7 @@ const response = (payload: unknown): Response => ({
 
 describe('email-template GraphQL consumer', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
     vi.mocked(fetchCsrfToken).mockResolvedValue('template-csrf');
@@ -114,6 +129,50 @@ describe('email-template GraphQL consumer', () => {
       name: 'Welcome', subject: 'Hello', bodyHtml: '<p>Hello</p>', isActive: true,
     });
     expect(bodies[1].variables).toEqual({ id: 9, input: { bodyText: null, isActive: false } });
+    expect(fetchCsrfToken).toHaveBeenCalledTimes(4);
+  });
+
+  it('maps the safe draft, preview, and publish lifecycle', async () => {
+    const draft = {
+      ...template,
+      publishedVersion: null,
+      draftVersion: 1,
+      draftSubject: 'Draft {{first_name}}',
+      draftPreheader: 'Draft preview',
+      draftBodyHtml: '<p>Draft</p>',
+      draftIsActive: true,
+      hasUnpublishedChanges: true,
+    };
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response({ data: { createEmailTemplateDraft: draft } }))
+      .mockResolvedValueOnce(response({ data: { saveEmailTemplateDraft: draft } }))
+      .mockResolvedValueOnce(response({ data: { previewEmailTemplate: {
+        subject: 'Draft Test', html: '<html>safe preview</html>', text: null,
+        variables: ['first_name'],
+      } } }))
+      .mockResolvedValueOnce(response({ data: { publishEmailTemplate: template } }));
+
+    await expect(createEmailTemplateDraftViaGraphql({
+      name: 'Draft', subject: 'Draft {{first_name}}', preheader: 'Draft preview',
+      body_html: '<p>Draft</p>', category: 'marketing', is_active: true,
+    }, 4)).resolves.toMatchObject({ draft_version: 1, has_unpublished_changes: true });
+    await saveEmailTemplateDraftViaGraphql(9, {
+      name: 'Draft', subject: 'Draft {{first_name}}', preheader: 'Draft preview',
+      body_html: '<p>Draft</p>', category: 'marketing', is_active: true,
+    }, 4);
+    await expect(previewEmailTemplateViaGraphql({
+      subject: 'Draft {{first_name}}', preheader: 'Draft preview', body_html: '<p>Draft</p>',
+    }, 4)).resolves.toMatchObject({ subject: 'Draft Test', variables: ['first_name'] });
+    await publishEmailTemplateViaGraphql(9, true, 4);
+
+    const bodies = vi.mocked(fetch).mock.calls.map(call =>
+      JSON.parse(String((call[1] as RequestInit).body)),
+    );
+    expect(bodies[0].variables.input).toMatchObject({ preheader: 'Draft preview', isActive: true });
+    expect(bodies[2].variables.input).toEqual({
+      subject: 'Draft {{first_name}}', preheader: 'Draft preview', bodyHtml: '<p>Draft</p>',
+    });
+    expect(bodies[3].variables).toEqual({ id: 9, input: { isActive: true } });
     expect(fetchCsrfToken).toHaveBeenCalledTimes(4);
   });
 });

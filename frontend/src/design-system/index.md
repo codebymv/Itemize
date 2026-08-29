@@ -33,10 +33,18 @@ Used for primary actions, CTAs, and interactive elements.
 Use `semanticColors` for status and module-specific coloring.
 
 **Status Colors:**
+
+The application-wide semantic grammar is:
+
+- Blue: Itemize-owned active, draft, and live working states.
+- Orange: parked or transitional states such as sent, viewed, partial, pending, paused, and inactive.
+- Green: successful outcomes such as paid, accepted, completed, succeeded, and won.
+- Red: outcomes requiring attention such as overdue, failed, declined, expired, cancelled, and archived.
+- Gray: neutral or historical states such as refunded.
+
 ```typescript
 import { semanticColors } from '@/design-system/design-tokens'
 
-// Available statuses: active, paused, completed, pending, draft, published
 <div className={semanticColors.status.active}>Active</div>
 <div className={semanticColors.status.pending}>Pending</div>
 ```
@@ -87,16 +95,8 @@ Predefined spacing values for consistency:
 - Audit subtext at 300px of available component width. If authored copy occupies three full text lines, rewrite it to two lines or fewer: lead with the state and next action, remove inventories and implementation detail, and use direct phrasing such as “Workspace ready.” Do not use truncation to hide overlong authored copy; reserve line clamping for unpredictable user-generated values.
 - Legal, destructive, security, and payment-consequence copy may exceed two lines only when every remaining detail changes the user's decision. Make it concise first, and never move a required warning exclusively into a tooltip.
 
-```tsx
-import { PageToolbar } from '@/components/layout/PageToolbar'
-
-<PageToolbar
-  label="Contact controls"
-  search={<ContactSearch />}
-  filters={<ContactFilters />}
-  meta={<span>24 contacts</span>}
-/>
-```
+Use the named `PageLayout.desktopTools` slots with `HeaderSearch`, `HeaderFilters`,
+`HeaderCombinedQuery`, and `HeaderAction`. Do not construct a parallel page toolbar.
 
 ### Buttons
 
@@ -336,6 +336,10 @@ Page action cards wrap with 8 pixel gaps and give buttons and comboboxes a minim
 
 ### Empty State Pattern
 
+An empty state is valid only after a successful request. A failed request must render
+the persistent, retryable `ErrorState`; never replace failed source-of-truth data with
+an empty array and then show “No items yet.”
+
 ```tsx
 import { EmptyState } from '@/components/EmptyState'
 
@@ -367,16 +371,14 @@ Primary actions should use consistent styling:
 
 ### Status Icon Pattern
 
-For status indicators (pending, active, archived):
+Build domain status maps from the shared status visual primitive:
 
 ```tsx
-<div className={`h-8 w-8 rounded-full flex items-center justify-center ${
-  status === 'active' ? 'bg-green-100 dark:bg-green-900/30' : 
-  status === 'paused' ? 'bg-orange-100 dark:bg-orange-900/30' : 
-  status === 'draft' ? 'bg-gray-100 dark:bg-gray-800' : ''
-}`}>
-  <StatusIcon className="h-4 w-4" />
-</div>
+import { defineStatus } from '@/lib/statusVisuals'
+
+const status = defineStatus('Active', 'blue', Play)
+
+<Badge className={status.badgeClass}>{status.label}</Badge>
 ```
 
 ### Loading Pattern
@@ -394,12 +396,13 @@ import { PageLoading } from '@/components/ui/page-loading'
 ### Color Usage Rules
 
 1. **Primary actions** → Always use `bg-blue-600 hover:bg-blue-700`
-2. **Success states** → Use green (`bg-green-600`, `bg-green-100`)
-3. **Warning states** → Use orange (`bg-orange-600`, `bg-orange-100`)
-4. **Error states** → Use red (`bg-red-600`, `bg-red-100`)
-5. **Module indicators** → Use `semanticColors.module.*`
-6. **Usage/progress meters** → Use `Progress`; do not tint the full container behind a meter
-7. **Get Started** → Use `Progress` on card chrome; do not tint the card
+2. **Itemize-owned active/draft states** → Use blue
+3. **Successful outcomes** → Use green
+4. **Parked/transitional states** → Use orange
+5. **Attention/error outcomes** → Use red
+6. **Module indicators** → Use `semanticColors.module.*`
+7. **Usage/progress meters** → Use `Progress`; do not tint the full container behind a meter
+8. **Get Started** → Use `Progress` on card chrome; do not tint the card
 
 ### Spacing Guidelines
 

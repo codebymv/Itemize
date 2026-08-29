@@ -1,7 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { SignatureDocumentsService } from '../signature-documents/signature-documents.service';
 import { SignatureDocument } from '../signature-documents/signature-document.types';
+import {
+  SIGNATURE_FILE_STORAGE,
+  SignatureFileStorage,
+} from '../signature-files/signature-file-storage.provider';
+import { inspectSignaturePdf } from '../signature-files/signature-pdf.validator';
 import { renderSignaturePreviewEmail } from './signature-delivery.email';
 import { SignatureEmailPreviewInput } from './signature-delivery.inputs';
 import {
@@ -34,13 +40,34 @@ export class SignatureDeliveryService {
   constructor(
     private readonly repository: SignatureDeliveryRepository,
     private readonly documents: SignatureDocumentsService,
+    @Inject(SIGNATURE_FILE_STORAGE)
+    private readonly storage: SignatureFileStorage,
   ) {}
 
-  async send(organizationId: number, id: number): Promise<SignatureDocument> {
+  async send(organizationId: number, id: number, userId: number): Promise<SignatureDocument> {
     await this.access(organizationId);
     this.id(id);
     try {
-      if (!(await this.repository.enqueueInitial(organizationId, id))) {
+      const source = await this.repository.preflightSource(organizationId, id);
+      if (!source) {
+        throw itemizeGraphqlError('Signature document not found', 'NOT_FOUND');
+      }
+      let inspection: { fileUrl: string; originalSha256: string; pageCount: number } | undefined;
+      if (source.status === 'draft' && source.fileUrl && !source.pageCount) {
+        const pdf = await this.storage.read(source.fileUrl);
+        if (!pdf) {
+          throw new SignatureDeliveryStateError(
+            'The PDF is unavailable. Upload it again before sending',
+            'SIGNATURE_DOCUMENT_FILE_UNAVAILABLE',
+          );
+        }
+        inspection = {
+          fileUrl: source.fileUrl,
+          originalSha256: createHash('sha256').update(pdf).digest('hex'),
+          pageCount: (await inspectSignaturePdf(pdf)).pageCount,
+        };
+      }
+      if (!(await this.repository.enqueueInitial(organizationId, id, userId, inspection))) {
         throw itemizeGraphqlError('Signature document not found', 'NOT_FOUND');
       }
     } catch (error) {
@@ -49,11 +76,24 @@ export class SignatureDeliveryService {
     return (await this.documents.detail(organizationId, id)).document;
   }
 
-  async remind(organizationId: number, id: number): Promise<SignatureDocument> {
+  async remind(organizationId: number, id: number, userId: number): Promise<SignatureDocument> {
     await this.access(organizationId);
     this.id(id);
     try {
-      if (!(await this.repository.enqueueReminder(organizationId, id))) {
+      if (!(await this.repository.enqueueReminder(organizationId, id, userId))) {
+        throw itemizeGraphqlError('Signature document not found', 'NOT_FOUND');
+      }
+    } catch (error) {
+      this.deliveryError(error);
+    }
+    return (await this.documents.detail(organizationId, id)).document;
+  }
+
+  async retry(organizationId: number, id: number, userId: number): Promise<SignatureDocument> {
+    await this.access(organizationId);
+    this.id(id);
+    try {
+      if (!(await this.repository.retryFailures(organizationId, id, userId))) {
         throw itemizeGraphqlError('Signature document not found', 'NOT_FOUND');
       }
     } catch (error) {
@@ -66,6 +106,7 @@ export class SignatureDeliveryService {
     organizationId: number,
     id: number,
     days: number,
+    userId: number,
   ): Promise<SignatureReminderSchedule> {
     await this.access(organizationId);
     this.id(id);
@@ -77,7 +118,7 @@ export class SignatureDeliveryService {
       );
     }
     try {
-      const result = await this.repository.scheduleReminders(organizationId, id, days);
+      const result = await this.repository.scheduleReminders(organizationId, id, days, userId);
       if (!result) {
         throw itemizeGraphqlError('Active signature document not found', 'NOT_FOUND');
       }

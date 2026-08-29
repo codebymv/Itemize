@@ -8,6 +8,7 @@ import { SignatureDeliveryJobsService } from './signature-delivery-jobs.service'
 
 describe('SignatureDeliveryJobsService', () => {
   const repository = {
+    expireActiveDocuments: jest.fn(),
     enqueueDueReminders: jest.fn(),
     claim: jest.fn(),
     markSent: jest.fn(),
@@ -41,6 +42,7 @@ describe('SignatureDeliveryJobsService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.JWT_SECRET = 'signature-job-test-secret-at-least-32-characters';
+    repository.expireActiveDocuments.mockResolvedValue(0);
     repository.enqueueDueReminders.mockResolvedValue(0);
     repository.claim.mockResolvedValueOnce(claim).mockResolvedValue(null);
     repository.markSent.mockResolvedValue(true);
@@ -74,6 +76,7 @@ describe('SignatureDeliveryJobsService', () => {
     expect(repository.markSent).not.toHaveBeenCalled();
 
     jest.clearAllMocks();
+    repository.expireActiveDocuments.mockResolvedValue(0);
     repository.enqueueDueReminders.mockResolvedValue(0);
     repository.claim.mockResolvedValueOnce(claim).mockResolvedValue(null);
     email.send.mockRejectedValueOnce(Object.assign(new Error('invalid payload'), {

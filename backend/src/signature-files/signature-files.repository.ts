@@ -15,6 +15,7 @@ export type SignatureDocumentFileRow = {
   file_size: number | null;
   file_type: string | null;
   original_sha256: string | null;
+  page_count: number | null;
   signed_sha256: string | null;
   status: string;
   expiration_days: number;
@@ -44,18 +45,19 @@ export type SignatureTemplateFileRow = {
   file_size: number | null;
   file_type: string | null;
   original_sha256: string | null;
+  page_count: number | null;
   created_by: number | null;
   created_at: Date;
   updated_at: Date;
 };
 
 const documentColumns = `id,organization_id,title,document_number,description,message,
-  file_url,file_name,file_size,file_type,original_sha256,signed_sha256,status,
+  file_url,file_name,file_size,file_type,original_sha256,page_count,signed_sha256,status,
   expiration_days,expires_at,sender_name,
   sender_email,sent_at,completed_at,signed_file_url,timezone,locale,created_by,created_at,
   updated_at,routing_mode,template_id`;
 const templateColumns = `id,organization_id,title,description,message,file_url,file_name,
-  file_size,file_type,original_sha256,created_by,created_at,updated_at`;
+  file_size,file_type,original_sha256,page_count,created_by,created_at,updated_at`;
 
 @Injectable()
 export class SignatureFilesRepository {
@@ -135,7 +137,7 @@ export class SignatureFilesRepository {
   replaceDocument(
     organizationId: number,
     documentId: number,
-    file: { url: string; name: string; size: number; sha256: string },
+    file: { url: string; name: string; size: number; sha256: string; pageCount: number },
   ): Promise<SignatureDocumentFileRow | null> {
     return this.transaction(async (client) => {
       const current = await client.query<{
@@ -144,9 +146,10 @@ export class SignatureFilesRepository {
         file_size: number | null;
         file_type: string | null;
         original_sha256: string | null;
+        page_count: number | null;
         created_by: number | null;
       }>(
-        `SELECT file_url,file_name,file_size,file_type,original_sha256,created_by
+        `SELECT file_url,file_name,file_size,file_type,original_sha256,page_count,created_by
          FROM signature_documents
          WHERE id=$1 AND organization_id=$2 AND status='draft' FOR UPDATE`,
         [documentId, organizationId],
@@ -168,6 +171,7 @@ export class SignatureFilesRepository {
             size: prior.file_size ?? 0,
             type: prior.file_type ?? 'application/pdf',
             sha256: prior.original_sha256,
+            pageCount: prior.page_count,
             createdBy: prior.created_by,
           });
         }
@@ -175,14 +179,15 @@ export class SignatureFilesRepository {
       const updated = await client.query<SignatureDocumentFileRow>(
         `UPDATE signature_documents SET
            file_url=$1,file_name=$2,file_size=$3,file_type='application/pdf',
-           original_sha256=$4,updated_at=CURRENT_TIMESTAMP
-         WHERE id=$5 AND organization_id=$6 AND status='draft'
+           original_sha256=$4,page_count=$5,updated_at=CURRENT_TIMESTAMP
+         WHERE id=$6 AND organization_id=$7 AND status='draft'
          RETURNING ${documentColumns}`,
         [
           file.url,
           file.name,
           file.size,
           file.sha256,
+          file.pageCount,
           documentId,
           organizationId,
         ],
@@ -200,7 +205,7 @@ export class SignatureFilesRepository {
   replaceTemplate(
     organizationId: number,
     templateId: number,
-    file: { url: string; name: string; size: number; sha256: string },
+    file: { url: string; name: string; size: number; sha256: string; pageCount: number },
   ): Promise<SignatureTemplateFileRow | null> {
     return this.transaction(async (client) => {
       const current = await client.query<{ file_url: string | null }>(
@@ -218,14 +223,15 @@ export class SignatureFilesRepository {
       const updated = await client.query<SignatureTemplateFileRow>(
         `UPDATE signature_templates SET
            file_url=$1,file_name=$2,file_size=$3,file_type='application/pdf',
-           original_sha256=$4,updated_at=CURRENT_TIMESTAMP
-         WHERE id=$5 AND organization_id=$6
+           original_sha256=$4,page_count=$5,updated_at=CURRENT_TIMESTAMP
+         WHERE id=$6 AND organization_id=$7
          RETURNING ${templateColumns}`,
         [
           file.url,
           file.name,
           file.size,
           file.sha256,
+          file.pageCount,
           templateId,
           organizationId,
         ],
@@ -282,15 +288,16 @@ export class SignatureFilesRepository {
       size: number;
       type: string;
       sha256: string | null;
+      pageCount?: number | null;
       createdBy: number | null;
     },
   ): Promise<void> {
     await client.query(
       `INSERT INTO signature_document_versions (
          document_id,version_number,file_url,file_name,file_size,file_type,
-         original_sha256,created_by,created_at
+         original_sha256,page_count,created_by,created_at
        )
-       SELECT $1,COALESCE(MAX(version_number),0)+1,$2,$3,$4,$5,$6,$7,
+       SELECT $1,COALESCE(MAX(version_number),0)+1,$2,$3,$4,$5,$6,$7,$8,
          CURRENT_TIMESTAMP
        FROM signature_document_versions
        WHERE document_id=$1`,
@@ -301,6 +308,7 @@ export class SignatureFilesRepository {
         file.size,
         file.type,
         file.sha256,
+        file.pageCount ?? null,
         file.createdBy,
       ],
     );

@@ -1,5 +1,5 @@
 import api, { getApiUrl } from '@/lib/api';
-import { cancelSignatureDocumentViaGraphql, createSignatureDocumentViaGraphql, createSignatureTemplateViaGraphql, deleteSignatureDocumentViaGraphql, deleteSignatureTemplateViaGraphql, getSignatureAuditViaGraphql, getSignatureDocumentViaGraphql, getSignatureEmailPreviewViaGraphql, getSignatureTemplateViaGraphql, instantiateSignatureTemplateViaGraphql, listSignatureDocumentsViaGraphql, listSignatureTemplatesViaGraphql, remindSignatureDocumentViaGraphql, removeSignatureDocumentFileViaGraphql, sendSignatureDocumentViaGraphql, updateSignatureDocumentViaGraphql, updateSignatureTemplateViaGraphql } from './signaturesGraphql';
+import { cancelSignatureDocumentViaGraphql, createSignatureDocumentViaGraphql, createSignatureTemplateViaGraphql, deleteSignatureDocumentViaGraphql, deleteSignatureTemplateViaGraphql, getSignatureAuditViaGraphql, getSignatureDocumentViaGraphql, getSignatureEmailPreviewViaGraphql, getSignatureTemplateViaGraphql, instantiateSignatureTemplateViaGraphql, listSignatureDocumentsViaGraphql, listSignatureTemplatesViaGraphql, remindSignatureDocumentViaGraphql, removeSignatureDocumentFileViaGraphql, retrySignatureDocumentViaGraphql, sendSignatureDocumentViaGraphql, updateSignatureDocumentViaGraphql, updateSignatureTemplateViaGraphql } from './signaturesGraphql';
 
 type ApiPayload = Record<string, unknown>;
 
@@ -39,6 +39,9 @@ export interface SignatureDocument {
   completed_at?: string;
   file_url?: string;
   signed_file_url?: string;
+  page_count?: number;
+  delivery_state?: 'pending' | 'sending' | 'delivered' | 'retrying' | 'failed';
+  completion_state?: 'queued' | 'processing' | 'retry' | 'dead_letter' | 'completed' | 'cancelled';
   created_at: string;
   updated_at: string;
 }
@@ -61,6 +64,7 @@ export interface SignatureRecipient {
   decline_reason?: string;
   identity_method?: 'none' | 'email_otp' | 'sms_otp';
   identity_verified_at?: string;
+  delivery_state?: 'queued' | 'processing' | 'retry' | 'sent' | 'dead_letter' | 'cancelled';
 }
 
 export interface SignatureField {
@@ -106,6 +110,11 @@ export interface PublicSignatureField {
 export interface PublicSigningData {
   document: PublicSignatureDocument;
   fields: PublicSignatureField[];
+  consent: {
+    version: string;
+    text: string;
+    sha256: string;
+  };
 }
 
 export interface SignatureDocumentDetails {
@@ -174,6 +183,10 @@ export const remindSignatureDocument = async (id: number) => {
   return remindSignatureDocumentViaGraphql(id);
 };
 
+export const retrySignatureDocument = async (id: number) => {
+  return retrySignatureDocumentViaGraphql(id);
+};
+
 export const downloadSignedDocument = (id: number) => {
   return { url: `${getApiUrl()}/api/signatures/documents/${id}/download` };
 };
@@ -206,7 +219,13 @@ export const getPublicSigningData = async (token: string) => {
   return unwrapResponse<PublicSigningData>(response.data);
 };
 
-export const submitPublicSignature = async (token: string, payload: { fields: Array<{ id: number; value: string }> }) => {
+export const submitPublicSignature = async (
+  token: string,
+  payload: {
+    fields: Array<{ id: number; value: string }>;
+    consent: { agreed: true; version: string };
+  },
+) => {
   const response = await api.post(`/api/public/sign/${token}`, payload);
   return unwrapResponse<ApiPayload>(response.data);
 };
@@ -226,6 +245,8 @@ export interface SignatureTemplate {
   file_url?: string;
   file_name?: string;
   file_type?: string;
+  page_count?: number;
+  is_ready: boolean;
   created_at: string;
 }
 

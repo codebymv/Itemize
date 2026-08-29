@@ -11,6 +11,8 @@ export class SignatureTemplate {
   @Field(() => String, { nullable: true }) fileName: string | null;
   @Field(() => String, { nullable: true }) fileType: string | null;
   @Field(() => Float, { nullable: true }) fileSize: number | null;
+  @Field(() => Int, { nullable: true }) pageCount: number | null;
+  @Field() isReady: boolean;
   @Field(() => Int, { nullable: true }) createdById: number | null;
   @Field(() => GraphQLISODateTime) createdAt: Date;
   @Field(() => GraphQLISODateTime) updatedAt: Date;

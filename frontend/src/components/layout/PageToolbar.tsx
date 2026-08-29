@@ -8,6 +8,7 @@ interface PageToolbarProps {
   meta?: ReactNode;
   actions?: ReactNode;
   className?: string;
+  singleLine?: boolean;
 }
 
 /**
@@ -22,17 +23,19 @@ export function PageToolbar({
   meta,
   actions,
   className,
+  singleLine = false,
 }: PageToolbarProps) {
   return (
     <section
       aria-label={label}
       className={cn(
         'flex flex-wrap items-center gap-2 rounded-lg border bg-muted/10 p-3',
+        singleLine && 'flex-nowrap',
         className,
       )}
     >
-      {search ? <div className="min-w-[14rem] flex-1">{search}</div> : null}
-      {filters ? <div className="flex flex-wrap items-center gap-2">{filters}</div> : null}
+      {search ? <div className={cn('flex-1', singleLine ? 'min-w-0' : 'min-w-[14rem]')}>{search}</div> : null}
+      {filters ? <div className={cn('flex items-center gap-2', singleLine ? 'shrink-0 flex-nowrap' : 'flex-wrap')}>{filters}</div> : null}
       {meta || actions ? (
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {meta}

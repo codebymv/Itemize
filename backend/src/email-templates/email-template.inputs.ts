@@ -20,6 +20,9 @@ export class CreateEmailTemplateInput {
   @Field(() => String)
   subject: string;
 
+  @Field(() => String, { nullable: true })
+  preheader?: string | null;
+
   @Field(() => String)
   bodyHtml: string;
 
@@ -42,6 +45,9 @@ export class UpdateEmailTemplateInput {
   subject?: string | null;
 
   @Field(() => String, { nullable: true })
+  preheader?: string | null;
+
+  @Field(() => String, { nullable: true })
   bodyHtml?: string | null;
 
   @Field(() => String, { nullable: true })
@@ -52,4 +58,25 @@ export class UpdateEmailTemplateInput {
 
   @Field(() => Boolean, { nullable: true })
   isActive?: boolean | null;
+}
+
+@InputType()
+export class PublishEmailTemplateInput {
+  @Field(() => Boolean, { nullable: true })
+  isActive?: boolean;
+}
+
+@InputType()
+export class PreviewEmailTemplateInput {
+  @Field(() => String)
+  subject: string;
+
+  @Field(() => String, { nullable: true })
+  preheader?: string | null;
+
+  @Field(() => String)
+  bodyHtml: string;
+
+  @Field(() => String, { nullable: true })
+  bodyText?: string | null;
 }

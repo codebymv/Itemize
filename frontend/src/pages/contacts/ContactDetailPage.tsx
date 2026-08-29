@@ -21,10 +21,6 @@ import {
   Network,
   ListChecks,
   Users,
-  AlertTriangle,
-  AlertCircle,
-  Archive,
-  CheckCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,16 +35,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { PageLayout } from '@/components/layout/PageLayout';
@@ -70,7 +57,7 @@ import { ActivityTimeline } from './components/ActivityTimeline';
 import { EditContactModal } from './components/EditContactModal';
 import { ComposeEmailModal } from './components/ComposeEmailModal';
 import { useOrganization } from '@/hooks/useOrganization';
-import { getContactStatusBadgeClass } from '@/lib/badge-utils';
+import { getContactStatusVisual } from './constants/contactStatusConstants';
 
 type RelatedContactItem = {
   id: number;
@@ -315,23 +302,6 @@ export function ContactDetailPage() {
     return parts.length > 0 ? parts.join(', ') : null;
   };
 
-  const getStatusLabel = (status: string) =>
-    status
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (character) => character.toUpperCase());
-
-  const getStatusIcon = (status: string) => {
-    const StatusIcon = status === 'active'
-      ? CheckCircle
-      : status === 'inactive'
-        ? AlertCircle
-        : status === 'archived'
-          ? Archive
-          : null;
-
-    return StatusIcon ? <StatusIcon className="h-3 w-3" aria-hidden="true" /> : null;
-  };
-
   const backButton = (
     <ShellBackButton label="Back to contacts" onClick={() => navigate('/contacts')} />
   );
@@ -399,6 +369,9 @@ export function ContactDetailPage() {
     return null;
   }
 
+  const contactStatusVisual = getContactStatusVisual(contact.status);
+  const ContactStatusIcon = contactStatusVisual.icon;
+
   return (
     <PageLayout
       title="CONTACT"
@@ -450,11 +423,9 @@ export function ContactDetailPage() {
               </div>
             )}
           </div>
-          <Badge
-            className={`mt-2 shrink-0 gap-1 sm:mt-0 ${getContactStatusBadgeClass(contact.status)}`}
-          >
-            {getStatusIcon(contact.status)}
-            {getStatusLabel(contact.status)}
+          <Badge className={`mt-2 shrink-0 gap-1 sm:mt-0 ${contactStatusVisual.badgeClass}`}>
+            <ContactStatusIcon className="h-3 w-3" aria-hidden="true" />
+            {contactStatusVisual.label}
           </Badge>
         </div>
       </div>
@@ -758,29 +729,14 @@ export function ContactDetailPage() {
       )}
 
       {/* Delete confirmation dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2" style={{ fontFamily: '"Raleway", sans-serif' }}>
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              Delete Contact
-            </AlertDialogTitle>
-            <AlertDialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
-              Are you sure you want to delete this contact? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel style={{ fontFamily: '"Raleway", sans-serif' }}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 text-white"
-              onClick={handleDelete}
-              style={{ fontFamily: '"Raleway", sans-serif' }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={handleDelete}
+        itemType="contact"
+        itemTitle={getContactName()}
+        showToast={false}
+      />
     </PageLayout>
   );
 }

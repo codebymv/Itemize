@@ -10,6 +10,7 @@ describe('SignatureJobsSchedulerService', () => {
     stale: 0,
   };
   const deliveryResult = {
+    expired: 0,
     remindersQueued: 0,
     claimed: 0,
     sent: 0,

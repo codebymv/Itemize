@@ -48,13 +48,13 @@ describe('ResponsiveCardRail', () => {
     const thirdCard = rail.children.item(2) as HTMLElement;
     Object.defineProperty(thirdCard, 'offsetLeft', { value: 480 });
     Object.defineProperty(rail, 'scrollTo', { value: scrollTo });
-    fireEvent.click(screen.getByRole('button', { name: 'Show card 3 of 4' }));
+    const thirdIndicator = screen.getByRole('button', { name: 'Show card 3 of 4' });
+    fireEvent.click(thirdIndicator);
 
     expect(scrollTo).toHaveBeenCalledWith({ left: 480, behavior: 'smooth' });
-    expect(screen.getByRole('button', { name: 'Show card 3 of 4' })).toHaveAttribute(
-      'aria-current',
-      'true',
-    );
+    expect(thirdIndicator).toHaveAttribute('aria-current', 'true');
+    expect(thirdIndicator).toHaveClass('h-8', 'w-8');
+    expect(thirdIndicator.firstElementChild).toHaveClass('h-1.5');
   });
 
   it('supports wider mobile cards for dense content', () => {
@@ -83,5 +83,48 @@ describe('ResponsiveCardRail', () => {
     expect(screen.getByRole('region', { name: 'Activity overview' })).not.toHaveAttribute(
       'tabindex',
     );
+  });
+
+  it('centers an odd final card while the rail has two columns', () => {
+    isMobile = false;
+    render(
+      <ResponsiveCardRail
+        label="Campaign summary"
+        desktopColumns="md:grid-cols-2 lg:grid-cols-5"
+      >
+        <div>Not completed</div>
+        <div>Total</div>
+        <div>Draft</div>
+        <div>In progress</div>
+        <div>Delivered</div>
+      </ResponsiveCardRail>,
+    );
+
+    const lastCard = screen.getByRole('region', { name: 'Campaign summary' }).lastElementChild;
+    expect(lastCard).toHaveClass(
+      'md:col-span-2',
+      'md:w-[calc((100%_-_1rem)/2)]',
+      'md:justify-self-center',
+      'lg:col-span-1',
+      'lg:w-auto',
+      'lg:justify-self-stretch',
+    );
+  });
+
+  it('restores standard two-column placement when the card count becomes even', () => {
+    isMobile = false;
+    render(
+      <ResponsiveCardRail label="Even summary" desktopColumns="md:grid-cols-2 lg:grid-cols-6">
+        <div>One</div>
+        <div>Two</div>
+        <div>Three</div>
+        <div>Four</div>
+        <div>Five</div>
+        <div>Six</div>
+      </ResponsiveCardRail>,
+    );
+
+    const lastCard = screen.getByRole('region', { name: 'Even summary' }).lastElementChild;
+    expect(lastCard).not.toHaveClass('md:col-span-2', 'md:justify-self-center');
   });
 });
