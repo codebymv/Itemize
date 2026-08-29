@@ -61,6 +61,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { EntityDetailHeader } from '@/components/layout/EntityDetailHeader';
+import { cn } from '@/lib/utils';
 import {
     HeaderAction,
     HeaderActionLabel,
@@ -571,6 +573,7 @@ export function InvoiceEditorPage() {
         ? 'overdue'
         : persistedStatus;
     const invoiceStatusVisual = getInvoiceStatusVisual(invoiceStatus);
+    const InvoiceStatusIcon = invoiceStatusVisual.icon;
     const primaryActionLabel = saving
         ? 'Saving...'
         : isNew
@@ -634,6 +637,7 @@ export function InvoiceEditorPage() {
                 }} />
             }
             desktopTools={{
+                status: <Badge className={cn('pointer-events-none whitespace-nowrap', invoiceStatusVisual.badgeClass)}>{invoiceStatusVisual.label}</Badge>,
                 secondaryAction: invoiceActions,
                 primaryAction: (
                     <HeaderAction
@@ -681,31 +685,25 @@ export function InvoiceEditorPage() {
             }
         >
             <div className="space-y-6">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex min-w-0 items-center gap-4">
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                            <Receipt className="h-6 w-6" aria-hidden="true" />
-                        </div>
-                        <div className="min-w-0">
-                            <h2 className="truncate text-xl font-medium">
-                                {invoiceNumber || 'New invoice'}
-                            </h2>
-                            <p className="truncate text-sm text-muted-foreground">
-                                {customerName || 'No customer selected'}
-                                {issueDate ? ` · Issued ${new Date(`${issueDate}T00:00:00`).toLocaleDateString()}` : ''}
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex items-center justify-between gap-4 sm:flex-col sm:items-end sm:gap-1">
-                        <Badge className={invoiceStatusVisual.badgeClass}>
-                            {invoiceStatusVisual.label}
-                        </Badge>
-                        <div className="text-right">
-                            <p className="text-xs text-muted-foreground">Amount due</p>
-                            <p className="text-lg font-semibold">{formatCurrency(amountDue, currency)}</p>
-                        </div>
-                    </div>
-                </div>
+                <EntityDetailHeader
+                    className="mb-0"
+                    icon={<InvoiceStatusIcon className={cn('h-6 w-6', invoiceStatusVisual.iconClass)} aria-hidden="true" />}
+                    iconClassName={invoiceStatusVisual.iconBackgroundClass}
+                    title={invoiceNumber || 'New invoice'}
+                    mobileStatus={<Badge className={invoiceStatusVisual.badgeClass}>{invoiceStatusVisual.label}</Badge>}
+                    descriptor={(
+                        <span className="inline-flex items-baseline gap-2">
+                            Amount due
+                            <span className="text-lg font-semibold text-foreground">{formatCurrency(amountDue, currency)}</span>
+                        </span>
+                    )}
+                    metadata={(
+                        <>
+                            <span>{customerName || 'No customer selected'}</span>
+                            {issueDate && <span>Issued {new Date(`${issueDate}T00:00:00`).toLocaleDateString()}</span>}
+                        </>
+                    )}
+                />
                 {/* Business identity */}
                 <Collapsible open={businessSectionOpen} onOpenChange={setBusinessSectionOpen}>
                     <Card>

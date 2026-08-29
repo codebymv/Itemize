@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { HeaderAction, HeaderActionLabel } from '@/components/layout/DesktopHeaderTools';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { EntityDetailHeader } from '@/components/layout/EntityDetailHeader';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { ShellBackButton } from '@/components/layout/ShellBackButton';
 import { StatCard } from '@/components/StatCard';
@@ -264,13 +265,14 @@ export default function SignatureEditorPage() {
       mobileActions={<div className="flex w-full items-center gap-2">{document && <Badge className={cn('pointer-events-none shrink-0', statusVisual.badgeClass)}>{statusVisual.label}</Badge>}<div className="ml-auto flex min-w-0 gap-2">{editable && document && <Button variant="outline" className="h-11" onClick={() => void handleCreateOrSave()} disabled={working || !isDirty}><Save className="mr-2 h-4 w-4" />Save</Button>}{moreActions}{primaryAction && <Button className="h-11 bg-blue-600 text-white hover:bg-blue-700" onClick={mobilePrimary} disabled={working || (!document ? !isDirty || !title.trim() : editable ? isDirty || !readiness.ready : false)}>{!document ? <Save className="mr-2 h-4 w-4" /> : editable ? <Send className="mr-2 h-4 w-4" /> : processingFailure ? <RefreshCw className="mr-2 h-4 w-4" /> : document.status === 'completed' ? <Download className="mr-2 h-4 w-4" /> : <Mail className="mr-2 h-4 w-4" />}{mobilePrimaryLabel}</Button>}</div></div>}
     >
       {loadError ? <ErrorState title="Document unavailable" description={loadError} onAction={() => void loadDocument()} /> : loading && isExisting && !document ? <CardGridSkeleton count={2} columns={2} height="h-80" /> : <>
-        <div className="mb-6 flex items-start gap-4">
-          <div className={cn('flex h-14 w-14 shrink-0 items-center justify-center rounded-full', statusVisual.iconBackgroundClass)}><StatusIcon className={cn('h-6 w-6', statusVisual.iconClass)} /></div>
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center gap-2"><h2 className="min-w-0 text-xl font-medium">{title || 'New document'}</h2>{document && <Badge className={cn('shrink-0 xl:hidden', statusVisual.badgeClass)}>{statusVisual.label}</Badge>}</div>
-            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">{document?.document_number && <span>{document.document_number}</span>}<span>{recipients.length} recipient{recipients.length === 1 ? '' : 's'}</span>{document ? <span>Created {formatDateTime(document.created_at)}</span> : <span>Not saved yet</span>}{document?.sent_at && <span>Sent {formatDateTime(document.sent_at)}</span>}{document?.completed_at && <span className="text-green-600 dark:text-green-400">Completed {formatDateTime(document.completed_at)}</span>}</div>
-          </div>
-        </div>
+        <EntityDetailHeader
+          icon={<StatusIcon className={cn('h-6 w-6', statusVisual.iconClass)} />}
+          iconClassName={statusVisual.iconBackgroundClass}
+          title={title || 'New document'}
+          statusHandoff="xl"
+          mobileStatus={document ? <Badge className={statusVisual.badgeClass}>{statusVisual.label}</Badge> : undefined}
+          metadata={<>{document?.document_number && <span>{document.document_number}</span>}<span>{recipients.length} recipient{recipients.length === 1 ? '' : 's'}</span>{document ? <span>Created {formatDateTime(document.created_at)}</span> : <span>Not saved yet</span>}{document?.sent_at && <span>Sent {formatDateTime(document.sent_at)}</span>}{document?.completed_at && <span className="text-green-600 dark:text-green-400">Completed {formatDateTime(document.completed_at)}</span>}</>}
+        />
 
         {editable ? <DraftDocumentEditor
           document={document}

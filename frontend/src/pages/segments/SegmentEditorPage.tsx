@@ -5,6 +5,7 @@ import { debounce } from 'lodash';
 import { ErrorState } from '@/components/ErrorState';
 import { HeaderAction } from '@/components/layout/DesktopHeaderTools';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { EntityDetailHeader } from '@/components/layout/EntityDetailHeader';
 import { ShellBackButton } from '@/components/layout/ShellBackButton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -132,16 +133,14 @@ export function SegmentEditorPage() {
       desktopTools={{ status: <Badge className={cn('pointer-events-none whitespace-nowrap', visual.badgeClass)}>{visual.label}</Badge>, primaryAction: <HeaderAction label={saving ? 'Saving...' : isNew ? 'Create segment' : 'Save changes'} icon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} disabled={!dirty || saving} onClick={() => void handleSave()} /> }}
       mobileActions={<div className="flex w-full items-center gap-2"><Badge className={cn('shrink-0', visual.badgeClass)}>{visual.label}</Badge><Button className="ml-auto h-11 min-w-0 flex-1 bg-blue-600 text-white hover:bg-blue-700" disabled={!dirty || saving} onClick={() => void handleSave()}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}{isNew ? 'Create segment' : 'Save changes'}</Button></div>}
     >
-      <div className="mb-6 flex items-start gap-4">
-        <div className={cn('flex h-14 w-14 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}><TypeIcon className={cn('h-6 w-6', visual.iconClass)} /></div>
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <div className="flex min-w-0 items-center gap-2"><h2 className="min-w-0 text-xl font-medium">{form.name || 'New segment'}</h2><Badge className={cn('shrink-0 md:hidden', visual.badgeClass)}>{visual.label}</Badge></div>
-            <p className="min-w-0 text-sm text-muted-foreground sm:ml-auto sm:min-w-max sm:whitespace-nowrap sm:text-right">{form.description || (isStatic ? 'A saved group of selected contacts' : 'A rule-based audience that stays up to date')}</p>
-          </div>
-          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground"><span>{isStatic ? 'Static segment' : 'Dynamic segment'}</span>{segment ? <span>{segment.contact_count} contact{segment.contact_count === 1 ? '' : 's'}</span> : <span>Not saved yet</span>}{segment && segment.used_in_campaigns > 0 && <span>{segment.used_in_campaigns} campaign{segment.used_in_campaigns === 1 ? '' : 's'}</span>}</div>
-        </div>
-      </div>
+      <EntityDetailHeader
+        icon={<TypeIcon className={cn('h-6 w-6', visual.iconClass)} />}
+        iconClassName={visual.iconBackgroundClass}
+        title={form.name || 'New segment'}
+        mobileStatus={<Badge className={visual.badgeClass}>{visual.label}</Badge>}
+        descriptor={form.description || (isStatic ? 'A saved group of selected contacts' : 'A rule-based audience that stays up to date')}
+        metadata={<><span>{isStatic ? 'Static segment' : 'Dynamic segment'}</span>{segment ? <span>{segment.contact_count} contact{segment.contact_count === 1 ? '' : 's'}</span> : <span>Not saved yet</span>}{segment && segment.used_in_campaigns > 0 && <span>{segment.used_in_campaigns} campaign{segment.used_in_campaigns === 1 ? '' : 's'}</span>}</>}
+      />
 
       <div className="grid items-start gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">

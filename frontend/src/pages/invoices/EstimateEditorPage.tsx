@@ -46,6 +46,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { EntityDetailHeader } from '@/components/layout/EntityDetailHeader';
+import { cn } from '@/lib/utils';
 import {
     HeaderAction,
     HeaderActionLabel,
@@ -510,6 +512,7 @@ export function EstimateEditorPage() {
         ? 'expired'
         : status;
     const statusVisual = getEstimateStatusVisual(effectiveStatus);
+    const EstimateStatusIcon = statusVisual.icon;
     const hasSecondaryAction = !isNew
         && (status === 'draft' || ['sent', 'accepted'].includes(status));
     const estimateActions = hasSecondaryAction ? (
@@ -564,6 +567,7 @@ export function EstimateEditorPage() {
                 }} />
             }
             desktopTools={{
+                status: <Badge className={cn('pointer-events-none whitespace-nowrap', statusVisual.badgeClass)}>{statusVisual.label}</Badge>,
                 secondaryAction: estimateActions,
                 primaryAction: (
                     <HeaderAction
@@ -612,31 +616,25 @@ export function EstimateEditorPage() {
             }
         >
             <div className="space-y-6">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex min-w-0 items-center gap-4">
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                            <FileText className="h-6 w-6" aria-hidden="true" />
-                        </div>
-                        <div className="min-w-0">
-                            <h2 className="truncate text-xl font-medium">
-                                {estimateNumber || 'New estimate'}
-                            </h2>
-                            <p className="truncate text-sm text-muted-foreground">
-                                {customerName || 'No customer selected'}
-                                {issueDate ? ` · Issued ${new Date(`${issueDate}T00:00:00`).toLocaleDateString()}` : ''}
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex items-center justify-between gap-4 sm:flex-col sm:items-end sm:gap-1">
-                        <Badge className={statusVisual.badgeClass}>
-                            {statusVisual.label}
-                        </Badge>
-                        <div className="text-right">
-                            <p className="text-xs text-muted-foreground">Estimate total</p>
-                            <p className="text-lg font-semibold">{formatCurrency(total, currency)}</p>
-                        </div>
-                    </div>
-                </div>
+                <EntityDetailHeader
+                    className="mb-0"
+                    icon={<EstimateStatusIcon className={cn('h-6 w-6', statusVisual.iconClass)} aria-hidden="true" />}
+                    iconClassName={statusVisual.iconBackgroundClass}
+                    title={estimateNumber || 'New estimate'}
+                    mobileStatus={<Badge className={statusVisual.badgeClass}>{statusVisual.label}</Badge>}
+                    descriptor={(
+                        <span className="inline-flex items-baseline gap-2">
+                            Estimate total
+                            <span className="text-lg font-semibold text-foreground">{formatCurrency(total, currency)}</span>
+                        </span>
+                    )}
+                    metadata={(
+                        <>
+                            <span>{customerName || 'No customer selected'}</span>
+                            {issueDate && <span>Issued {new Date(`${issueDate}T00:00:00`).toLocaleDateString()}</span>}
+                        </>
+                    )}
+                />
 
                 {!isNew && (lifecycle.viewedAt || lifecycle.acceptedAt || lifecycle.declinedAt) && (
                     <Card className="border-border/80 bg-muted/20 shadow-none">

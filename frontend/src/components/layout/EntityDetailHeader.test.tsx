@@ -19,4 +19,27 @@ describe('EntityDetailHeader', () => {
     expect(screen.getByText('Reusable agreement')).toBeInTheDocument();
     expect(screen.getByText('2 roles')).toBeInTheDocument();
   });
+
+  it('hands entity status to the shell command lane at md by default', () => {
+    render(
+      <EntityDetailHeader icon={<span>icon</span>} title="Invoice 1001" mobileStatus={<span>Paid</span>} />,
+    );
+
+    expect(screen.getByText('Paid').parentElement).toHaveClass('md:hidden');
+  });
+
+  it('defers the hand-off to xl for pages with a crowded command lane', () => {
+    render(
+      <EntityDetailHeader
+        icon={<span>icon</span>}
+        title="Client agreement"
+        mobileStatus={<span>Sent</span>}
+        statusHandoff="xl"
+      />,
+    );
+
+    const wrapper = screen.getByText('Sent').parentElement;
+    expect(wrapper).toHaveClass('xl:hidden');
+    expect(wrapper).not.toHaveClass('md:hidden');
+  });
 });

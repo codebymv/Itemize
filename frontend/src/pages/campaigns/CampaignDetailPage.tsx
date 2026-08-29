@@ -79,6 +79,7 @@ import { EmailPreviewPane } from '@/components/email/EmailPreviewPane';
 import { EmailTemplateBrowserDialog } from '@/components/email/EmailTemplateBrowserDialog';
 import { HeaderAction, HeaderActionLabel } from '@/components/layout/DesktopHeaderTools';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { EntityDetailHeader } from '@/components/layout/EntityDetailHeader';
 import { PageToolbar } from '@/components/layout/PageToolbar';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { SectionCardTitle } from '@/components/ui/section-card-title';
@@ -626,26 +627,21 @@ export function CampaignDetailPage() {
       }}
       mobileActions={<div className="flex w-full gap-2">{campaignActions}{editable ? <Button className="h-11 min-w-0 flex-1 bg-blue-600 text-white hover:bg-blue-700" onClick={() => void handleSave()} disabled={!dirty || working}><Save className="mr-2 h-4 w-4" />{isNew ? 'Create campaign' : 'Save changes'}</Button> : campaign?.status === 'paused' ? <Button className="h-11 min-w-0 flex-1 bg-blue-600 text-white hover:bg-blue-700" onClick={() => void handleResume()} disabled={working}><Play className="mr-2 h-4 w-4" />Resume</Button> : null}</div>}
     >
-      <div className="mb-6 flex items-start gap-4">
-        <div className={cn('flex h-14 w-14 shrink-0 items-center justify-center rounded-full', statusVisual.iconBackgroundClass)}>
-          <StatusIcon className={cn('h-6 w-6', statusVisual.iconClass)} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <h2 className="min-w-0 text-xl font-medium">{campaign?.name || form.name || 'New campaign'}</h2>
-              <Badge className={cn('shrink-0 md:hidden', statusVisual.badgeClass)}>{statusVisual.label}</Badge>
-            </div>
-            <p className="min-w-0 text-sm text-muted-foreground sm:ml-auto sm:min-w-max sm:whitespace-nowrap sm:text-right">{campaign?.subject || form.subject || 'Build the message, audience, and delivery setup'}</p>
-          </div>
-          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+      <EntityDetailHeader
+        icon={<StatusIcon className={cn('h-6 w-6', statusVisual.iconClass)} />}
+        iconClassName={statusVisual.iconBackgroundClass}
+        title={campaign?.name || form.name || 'New campaign'}
+        mobileStatus={<Badge className={statusVisual.badgeClass}>{statusVisual.label}</Badge>}
+        descriptor={campaign?.subject || form.subject || 'Build the message, audience, and delivery setup'}
+        metadata={(
+          <>
             {campaign ? <span>Created {formatDateTime(campaign.created_at)}</span> : <span>Not saved yet</span>}
             {campaign?.created_by_name && <span>by {campaign.created_by_name}</span>}
             {campaign?.scheduled_at && <span>Scheduled {formatDateTime(campaign.scheduled_at)}</span>}
             {campaign?.completed_at && campaign.status === 'sent' && <span>Delivered {formatDateTime(campaign.completed_at)}</span>}
-          </div>
-        </div>
-      </div>
+          </>
+        )}
+      />
 
       {editable ? (
         <div className="space-y-6">

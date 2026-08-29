@@ -39,6 +39,8 @@ import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { EntityDetailHeader } from '@/components/layout/EntityDetailHeader';
+import { cn } from '@/lib/utils';
 import {
   HeaderAction,
   HeaderActionLabel,
@@ -378,6 +380,12 @@ export function ContactDetailPage() {
       icon={<Users className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
       leading={backButton}
       desktopTools={{
+        status: (
+          <Badge className={cn('pointer-events-none gap-1 whitespace-nowrap', contactStatusVisual.badgeClass)}>
+            <ContactStatusIcon className="h-3 w-3" aria-hidden="true" />
+            {contactStatusVisual.label}
+          </Badge>
+        ),
         secondaryAction: contactActions,
         primaryAction: (
           <HeaderAction
@@ -400,35 +408,27 @@ export function ContactDetailPage() {
         </>
       }
     >
-        {/* Contact profile card */}
-      <div className="mb-6 flex items-start gap-4">
-        <div className="h-16 w-16 shrink-0 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-xl font-medium text-blue-700 dark:text-blue-300">
-          {getInitials()}
-        </div>
-        <div className="min-w-0 flex-1 sm:flex sm:items-center sm:justify-between sm:gap-4">
-          <div className="min-w-0">
-            <h2 className="text-xl font-medium">{getContactName()}</h2>
-            {contact.job_title && contact.company && (
-              <p className="text-muted-foreground">
-                {contact.job_title} at {contact.company}
-              </p>
-            )}
-            {contact.tags.length > 0 && (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                {contact.tags.map((tag) => (
-                  <Badge key={tag} variant="outline">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-          <Badge className={`mt-2 shrink-0 gap-1 sm:mt-0 ${contactStatusVisual.badgeClass}`}>
+      <EntityDetailHeader
+        icon={<span className={cn('text-xl font-medium', contactStatusVisual.iconClass)}>{getInitials()}</span>}
+        iconClassName={contactStatusVisual.iconBackgroundClass}
+        title={getContactName()}
+        mobileStatus={(
+          <Badge className={cn('gap-1', contactStatusVisual.badgeClass)}>
             <ContactStatusIcon className="h-3 w-3" aria-hidden="true" />
             {contactStatusVisual.label}
           </Badge>
-        </div>
-      </div>
+        )}
+        descriptor={contact.job_title && contact.company ? `${contact.job_title} at ${contact.company}` : undefined}
+        metadata={contact.tags.length > 0 ? (
+          <>
+            {contact.tags.map((tag) => (
+              <Badge key={tag} variant="outline">
+                {tag}
+              </Badge>
+            ))}
+          </>
+        ) : undefined}
+      />
 
       {/* Main content */}
       <div className="grid gap-6 md:grid-cols-3">

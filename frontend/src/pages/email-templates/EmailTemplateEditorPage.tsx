@@ -8,6 +8,7 @@ import { EmailTemplateBrowserDialog } from '@/components/email/EmailTemplateBrow
 import { ErrorState } from '@/components/ErrorState';
 import { HeaderAction } from '@/components/layout/DesktopHeaderTools';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { EntityDetailHeader } from '@/components/layout/EntityDetailHeader';
 import { ShellBackButton } from '@/components/layout/ShellBackButton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -268,16 +269,14 @@ export function EmailTemplateEditorPage() {
       }}
       mobileActions={<div className="flex w-full items-center gap-2"><Badge variant="outline" className={status.className}>{status.label}</Badge><Button className="ml-auto bg-blue-600 text-white hover:bg-blue-700" onClick={() => setStudioOpen(true)}><Pencil className="h-4 w-4" />Edit email</Button></div>}
     >
-      <div className="mb-6 flex items-start gap-4">
-        <div className={cn('flex h-14 w-14 shrink-0 items-center justify-center rounded-full', catalogVisual.iconBackgroundClass)}><Mail className={cn('h-6 w-6', catalogVisual.iconClass)} /></div>
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <div className="flex min-w-0 items-center gap-2"><h2 className="truncate text-xl font-medium">{state.name || 'New email template'}</h2><Badge variant="outline" className={cn('shrink-0 md:hidden', status.className)}>{status.label}</Badge></div>
-            <p className="min-w-0 text-sm text-muted-foreground sm:ml-auto sm:max-w-[55%] sm:text-right">{state.subject || 'Add an email subject'}</p>
-          </div>
-          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground"><span>{categoryLabel(state.category)}</span>{template?.published_version ? <span>Version {template.published_version}</span> : <span>Not published yet</span>}{template?.has_unpublished_changes && <span>Unpublished changes</span>}</div>
-        </div>
-      </div>
+      <EntityDetailHeader
+        icon={<Mail className={cn('h-6 w-6', catalogVisual.iconClass)} />}
+        iconClassName={catalogVisual.iconBackgroundClass}
+        title={state.name || 'New email template'}
+        mobileStatus={<Badge variant="outline" className={status.className}>{status.label}</Badge>}
+        descriptor={state.subject || 'Add an email subject'}
+        metadata={<><span>{categoryLabel(state.category)}</span>{template?.published_version ? <span>Version {template.published_version}</span> : <span>Not published yet</span>}{template?.has_unpublished_changes && <span>Unpublished changes</span>}</>}
+      />
 
       <div className="grid items-stretch gap-6 md:grid-cols-2">
         <Card>
