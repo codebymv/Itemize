@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '@/lib/api';
 import {
   Server,
@@ -12,12 +11,14 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronRight,
-  ArrowLeft,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RefreshButton } from '@/components/ui/refresh-button';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { HeaderRefreshAction } from '@/components/layout/DesktopHeaderTools';
+import { ShellBackButton } from '@/components/layout/ShellBackButton';
+import { useSafeShellBack } from '@/components/layout/useSafeShellBack';
 import { PUBLIC_SHELL_WIDTH } from '@/components/layout/PageContainer';
 import { Skeleton } from '@/components/ui/skeleton';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
@@ -75,8 +76,8 @@ interface StatusData {
 }
 
 const StatusPage: React.FC = () => {
-  const navigate = useNavigate();
   const { currentUser } = useAuthState();
+  const navigateBack = useSafeShellBack(currentUser ? '/canvas' : '/home');
   const [statusData, setStatusData] = useState<StatusData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,12 +110,19 @@ const StatusPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const renderRefreshButton = () => (
+  const renderMobileRefreshButton = () => (
     <RefreshButton
       onClick={fetchStatus}
       refreshing={isRefreshing}
       variant="default"
       className="font-light"
+    />
+  );
+
+  const renderHeaderRefreshAction = () => (
+    <HeaderRefreshAction
+      onClick={fetchStatus}
+      refreshing={isRefreshing}
     />
   );
 
@@ -244,15 +252,10 @@ const StatusPage: React.FC = () => {
   };
 
   const backButton = (
-    <Button
-      onClick={() => navigate(-1)}
-      size="sm"
-      variant="ghost"
-      className="text-foreground"
-    >
-      <ArrowLeft className="h-4 w-4 mr-1" />
-      Back
-    </Button>
+    <ShellBackButton
+      label={currentUser ? 'Back to previous page' : 'Back to Itemize home'}
+      onClick={navigateBack}
+    />
   );
 
   if (loading && !statusData) {
@@ -261,8 +264,8 @@ const StatusPage: React.FC = () => {
         title="STATUS"
         icon={<Server className="h-5 w-5 text-blue-600 flex-shrink-0" />}
         leading={backButton}
-        pageActions={renderRefreshButton()}
-        mobileActions={renderRefreshButton()}
+        desktopTools={{ primaryAction: renderHeaderRefreshAction() }}
+        mobileActions={renderMobileRefreshButton()}
         className={cn('flex-1', !currentUser && PUBLIC_SHELL_WIDTH)}
       >
         <div className="space-y-4">
@@ -277,8 +280,8 @@ const StatusPage: React.FC = () => {
       title="STATUS"
       icon={<Server className="h-5 w-5 text-blue-600 flex-shrink-0" />}
       leading={backButton}
-      pageActions={renderRefreshButton()}
-      mobileActions={renderRefreshButton()}
+      desktopTools={{ primaryAction: renderHeaderRefreshAction() }}
+      mobileActions={renderMobileRefreshButton()}
       className={cn('flex-1', !currentUser && PUBLIC_SHELL_WIDTH)}
     >
       <BackgroundClouds />

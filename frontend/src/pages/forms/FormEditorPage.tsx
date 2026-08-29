@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     ArrowDown,
-    ArrowLeft,
     ArrowUp,
     Copy,
     ExternalLink,
@@ -39,6 +38,7 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { ShellBackButton } from '@/components/layout/ShellBackButton';
 import { ErrorState } from '@/components/ErrorState';
 import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/hooks/use-toast';
@@ -458,16 +458,12 @@ export default function FormEditorPage() {
     };
 
     const backButton = (
-        <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Back to forms"
+        <ShellBackButton
+            label="Back to forms"
             onClick={() => {
                 if (confirmLeave()) navigate('/forms');
             }}
-        >
-            <ArrowLeft className="h-4 w-4" />
-        </Button>
+        />
     );
 
     const formActions = !form ? null : (

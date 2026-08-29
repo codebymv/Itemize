@@ -3,10 +3,12 @@ import {
     Plus,
     Search,
     Package,
+    PackageCheck,
+    PackageX,
+    RefreshCw,
     MoreHorizontal,
     Trash2,
-    Edit,
-    DollarSign,
+    Pencil,
     Tag,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -42,7 +44,15 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
 import { PageLayout } from '@/components/layout/PageLayout';
+import {
+    HeaderAction,
+    HeaderCombinedQuery,
+    HeaderFilters,
+    HeaderSearch,
+} from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
+import { StatCard } from '@/components/StatCard';
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -54,6 +64,13 @@ import {
     Product,
 } from '@/services/invoicesApi';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
+import {
+    filterProductCatalog,
+    getProductCatalogStats,
+    getProductTaxInclusiveTotal,
+    type ProductStatusFilter,
+    type ProductTypeFilter,
+} from './productCatalog';
 
 interface ProductFormData {
     name: string;
@@ -107,7 +124,8 @@ export function ProductsPage() {
         }
     });
     const [searchQuery, setSearchQuery] = useState('');
-    const [showInactive, setShowInactive] = useState(false);
+    const [statusFilter, setStatusFilter] = useState<ProductStatusFilter>('active');
+    const [typeFilter, setTypeFilter] = useState<ProductTypeFilter>('all');
 
     // Dialog state
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -126,17 +144,14 @@ export function ProductsPage() {
         if (!organizationId) return;
         setLoading(true);
         try {
-            const data = await getProducts(
-                { is_active: showInactive ? undefined : true },
-                organizationId
-            );
+            const data = await getProducts({}, organizationId);
             setProducts(data || []);
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to load products', variant: 'destructive' });
         } finally {
             setLoading(false);
         }
-    }, [organizationId, showInactive, toast]);
+    }, [organizationId, toast]);
 
     useEffect(() => {
         fetchProducts();
@@ -205,146 +220,235 @@ export function ProductsPage() {
         }).format(amount);
     };
 
-    const filteredProducts = products.filter(p =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()))
+    const filteredProducts = filterProductCatalog(products, {
+        searchQuery,
+        status: statusFilter,
+        type: typeFilter,
+    });
+    const stats = getProductCatalogStats(products);
+    const statusFilterCount = Number(statusFilter !== 'active');
+    const typeFilterCount = Number(typeFilter !== 'all');
+    const headerFilterCount = statusFilterCount + typeFilterCount;
+    const headerQueryCount = headerFilterCount + Number(searchQuery.trim().length > 0);
+    const resetCatalogQuery = () => {
+        setSearchQuery('');
+        setStatusFilter('active');
+        setTypeFilter('all');
+    };
+    const statusSelect = (compact = false) => (
+        <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as ProductStatusFilter)}>
+            <SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[8.5rem] bg-muted/20'}>
+                <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="all">All products</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+        </Select>
+    );
+    const typeSelect = (compact = false) => (
+        <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as ProductTypeFilter)}>
+            <SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[8.5rem] bg-muted/20'}>
+                <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="all">All types</SelectItem>
+                <SelectItem value="one_time">One-time</SelectItem>
+                <SelectItem value="recurring">Recurring</SelectItem>
+            </SelectContent>
+        </Select>
     );
 
     return (
         <PageLayout
             title="PRODUCTS"
-            icon={<Package className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            pageActions={
-                <>
+            icon={<Package className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+            mobileClassName="flex-col items-stretch gap-2"
+            desktopTools={{
+                search: (
+                    <HeaderSearch
+                        label="Search products"
+                        placeholder="Search products..."
+                        value={searchQuery}
+                        onChange={setSearchQuery}
+                    />
+                ),
+                filters: (
                     <div className="flex items-center gap-2">
-                        <Switch
-                            id="show-inactive-header"
-                            checked={showInactive}
-                            onCheckedChange={setShowInactive}
-                        />
-                        <Label htmlFor="show-inactive-header" className="text-sm text-muted-foreground">
-                            Show inactive
-                        </Label>
+                        <HeaderFilters
+                            label="Select product status"
+                            activeCount={statusFilterCount}
+                            compactChildren={statusSelect(true)}
+                            preferExpanded
+                        >
+                            {statusSelect()}
+                        </HeaderFilters>
+                        <HeaderFilters
+                            label="Filter products by type"
+                            activeCount={typeFilterCount}
+                            compactChildren={typeSelect(true)}
+                            preferExpanded="when-roomy"
+                        >
+                            {typeSelect()}
+                        </HeaderFilters>
                     </div>
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                ),
+                combinedQuery: (
+                    <HeaderCombinedQuery
+                        label="Search and filter products"
+                        placeholder="Search products..."
+                        value={searchQuery}
+                        onChange={setSearchQuery}
+                        activeCount={headerQueryCount}
+                    >
+                        {statusSelect(true)}
+                        {typeSelect(true)}
+                    </HeaderCombinedQuery>
+                ),
+                primaryAction: (
+                    <HeaderAction
+                        label="Add product"
+                        icon={<Plus className="h-4 w-4" />}
+                        onClick={() => openCreateDialog()}
+                    />
+                ),
+            }}
+            mobileActions={
+                <>
+                <div className="flex w-full items-center gap-2">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             placeholder="Search products..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
+                            className="h-9 w-full border-border/50 bg-muted/20 pl-10"
                         />
                     </div>
                     <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
+                        size="icon"
+                        aria-label="Add product"
+                        className="h-9 w-9 bg-blue-600 text-white hover:bg-blue-700"
                         onClick={() => openCreateDialog()}
                     >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Product
+                        <Plus className="h-4 w-4" />
                     </Button>
-                </>
-            }
-            mobileActions={
-                <>
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                        placeholder="Search products..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
-                    />
                 </div>
-                <div className="flex items-center gap-2">
-                    <Switch
-                        id="show-inactive-mobile"
-                        checked={showInactive}
-                        onCheckedChange={setShowInactive}
-                    />
-                    <Label htmlFor="show-inactive-mobile" className="text-sm text-muted-foreground whitespace-nowrap">
-                        Inactive
-                    </Label>
-                </div>
-                <Button
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                    onClick={() => openCreateDialog()}
-                >
-                    <Plus className="h-4 w-4" />
-                </Button>
+                {statusSelect(true)}
+                {typeSelect(true)}
                 </>
             }
         >
-                {/* Product count */}
-                <div className="flex items-center justify-end mb-6">
-                    <p className="text-sm text-muted-foreground">
-                        {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''}
-                    </p>
-                </div>
+            <ResponsiveCardRail
+                label="Product catalog summary"
+                desktopColumns="md:grid-cols-4"
+                className="responsive-stat-summary"
+            >
+                <StatCard
+                    title="Active products"
+                    badgeText="Active"
+                    value={stats.active}
+                    icon={PackageCheck}
+                    description="Available on new invoices"
+                    colorTheme="blue"
+                    isLoading={loading}
+                />
+                <StatCard
+                    title="One-time products"
+                    badgeText="One-time"
+                    value={stats.oneTime}
+                    icon={Tag}
+                    description="Single-charge catalog items"
+                    colorTheme="blue"
+                    isLoading={loading}
+                />
+                <StatCard
+                    title="Recurring products"
+                    badgeText="Recurring"
+                    value={stats.recurring}
+                    icon={RefreshCw}
+                    description="Repeat-billing catalog items"
+                    colorTheme="blue"
+                    isLoading={loading}
+                />
+                <StatCard
+                    title="Inactive products"
+                    badgeText="Inactive"
+                    value={stats.inactive}
+                    icon={PackageX}
+                    description="Hidden from new invoices"
+                    colorTheme="orange"
+                    isLoading={loading}
+                />
+            </ResponsiveCardRail>
 
-                <Card>
+            <Card>
                 <CardContent className="p-0">
                     {loading ? (
                         <div className="p-6 space-y-4">
-                            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16" />)}
+                            {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20" />)}
                         </div>
                     ) : filteredProducts.length === 0 ? (
                         <EmptyState
                             icon={Package}
-                            title="No products yet"
-                            description="Create products or services to use in your invoices"
-                            actionLabel="Add Product"
-                            onAction={openCreateDialog}
+                            title={products.length === 0 ? 'No products yet' : 'No matching products'}
+                            description={products.length === 0
+                                ? 'Create reusable products and services for faster invoicing'
+                                : 'Try adjusting your search or catalog filters'}
+                            actionLabel={products.length === 0 ? 'Add product' : 'Clear filters'}
+                            onAction={products.length === 0 ? openCreateDialog : resetCatalogQuery}
                             className="p-12"
                         />
                     ) : (
                         <div className="divide-y">
-                            {filteredProducts.map((product) => (
-                                <div key={product.id} className="p-4 hover:bg-muted/50 transition-colors">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                                                <Package className="h-5 w-5 text-muted-foreground" />
+                            {filteredProducts.map((product) => {
+                                const ProductTypeIcon = product.product_type === 'recurring' ? RefreshCw : Tag;
+
+                                return (
+                                <div key={product.id} className="group p-4 transition-colors hover:bg-muted/50">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                                            <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full md:h-10 md:w-10 ${product.is_active ? 'bg-blue-100 dark:bg-blue-900' : 'bg-orange-100 dark:bg-orange-900'}`}>
+                                                <ProductTypeIcon className={`h-4 w-4 ${product.is_active ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'}`} aria-hidden="true" />
                                             </div>
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <p className="font-medium">{product.name}</p>
-                                                    {!product.is_active && (
-                                                        <Badge variant="secondary" className="text-xs">Inactive</Badge>
-                                                    )}
-                                                    {product.product_type === 'recurring' && (
-                                                        <Badge variant="outline" className="text-xs">
-                                                            {product.billing_period}
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {product.sku && <span className="mr-3">SKU: {product.sku}</span>}
-                                                    {product.description && product.description.slice(0, 50)}
-                                                    {product.description && product.description.length > 50 && '...'}
-                                                </p>
-                                            </div>
+                                            <button
+                                                type="button"
+                                                className="truncate text-left text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-base"
+                                                onClick={() => openEditDialog(product)}
+                                            >
+                                                {product.name}
+                                            </button>
+                                            <span className="sr-only">
+                                                {product.product_type === 'recurring' ? 'Recurring product' : 'One-time product'}
+                                            </span>
                                         </div>
-                                        <div className="flex items-center gap-4">
-                                            <div className="text-right">
-                                                <p className="font-medium">{formatCurrency(product.price, product.currency)}</p>
-                                                {product.tax_rate > 0 && (
-                                                    <p className="text-xs text-muted-foreground">
-                                                        +{product.tax_rate}% tax
-                                                    </p>
+                                        <div className="flex flex-shrink-0 items-center gap-2">
+                                            <div className="hidden lg:block">
+                                                <Badge className={`pointer-events-none cursor-default text-xs ${product.is_active ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300'}`}>
+                                                    {product.is_active ? 'Active' : 'Inactive'}
+                                                </Badge>
+                                            </div>
+                                            <div className="hidden text-right sm:block">
+                                                <p className="text-sm font-semibold md:text-base">{formatCurrency(product.price, product.currency)}</p>
+                                                {product.taxable && product.tax_rate > 0 && (
+                                                    <>
+                                                        <p className="text-xs text-muted-foreground">+{product.tax_rate}% tax</p>
+                                                        <p className="text-xs font-semibold text-green-600 dark:text-green-400">
+                                                            Total {formatCurrency(getProductTaxInclusiveTotal(product), product.currency)}
+                                                        </p>
+                                                    </>
                                                 )}
                                             </div>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon">
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Product actions">
                                                         <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuItem onClick={() => openEditDialog(product)} className="group/menu">
-                                                        <Edit className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Edit
+                                                        <Pencil className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Edit
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem
@@ -357,8 +461,36 @@ export function ProductsPage() {
                                             </DropdownMenu>
                                         </div>
                                     </div>
+
+                                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-6">
+                                        <span className="lg:hidden">
+                                            <Badge className={`pointer-events-none cursor-default text-xs ${product.is_active ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300'}`}>
+                                                {product.is_active ? 'Active' : 'Inactive'}
+                                            </Badge>
+                                        </span>
+                                        {product.product_type === 'recurring' && product.billing_period && (
+                                            <span className="text-xs capitalize text-muted-foreground">{product.billing_period}</span>
+                                        )}
+                                        {product.sku && <span className="text-xs text-muted-foreground">SKU {product.sku}</span>}
+                                    </div>
+
+                                    <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 px-6 text-xs text-muted-foreground">
+                                        <span className="flex flex-col sm:hidden">
+                                            <span className="font-semibold text-foreground">{formatCurrency(product.price, product.currency)}</span>
+                                            {product.taxable && product.tax_rate > 0 && (
+                                                <>
+                                                    <span>+{product.tax_rate}% tax</span>
+                                                    <span className="font-semibold text-green-600 dark:text-green-400">
+                                                        Total {formatCurrency(getProductTaxInclusiveTotal(product), product.currency)}
+                                                    </span>
+                                                </>
+                                            )}
+                                        </span>
+                                        {product.description && <span className="truncate">{product.description}</span>}
+                                    </div>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </CardContent>
@@ -371,7 +503,7 @@ export function ProductsPage() {
                             <Package className="h-5 w-5 text-blue-600" />
                             {editingProduct ? 'Edit Product' : 'Add Product'}
                         </DialogTitle>
-                        <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
+                        <DialogDescription>
                             {editingProduct 
                                 ? 'Update your product or service details'
                                 : 'Add a new product or service to your catalog'
@@ -380,7 +512,7 @@ export function ProductsPage() {
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="space-y-2">
-                            <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Name *</Label>
+                            <Label>Name *</Label>
                             <Input
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -388,7 +520,7 @@ export function ProductsPage() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Description</Label>
+                            <Label>Description</Label>
                             <Textarea
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -396,9 +528,9 @@ export function ProductsPage() {
                                 rows={2}
                             />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div className="space-y-2">
-                                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>SKU</Label>
+                                <Label>SKU</Label>
                                 <Input
                                     value={formData.sku}
                                     onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
@@ -406,7 +538,7 @@ export function ProductsPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Type</Label>
+                                <Label>Type</Label>
                                 <Select
                                     value={formData.product_type}
                                     onValueChange={(v) => setFormData({ ...formData, product_type: v as 'one_time' | 'recurring' })}
@@ -423,7 +555,7 @@ export function ProductsPage() {
                         </div>
                         {formData.product_type === 'recurring' && (
                             <div className="space-y-2">
-                                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Billing Period</Label>
+                                <Label>Billing period</Label>
                                 <Select
                                     value={formData.billing_period || 'monthly'}
                                     onValueChange={(v) => {
@@ -444,9 +576,9 @@ export function ProductsPage() {
                                 </Select>
                             </div>
                         )}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div className="space-y-2">
-                                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Price *</Label>
+                                <Label>Price *</Label>
                                 <Input
                                     type="number"
                                     min="0"
@@ -456,7 +588,7 @@ export function ProductsPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Tax Rate (%)</Label>
+                                <Label>Tax rate (%)</Label>
                                 <Input
                                     type="number"
                                     min="0"
@@ -474,7 +606,7 @@ export function ProductsPage() {
                                     checked={formData.taxable}
                                     onCheckedChange={(checked) => setFormData({ ...formData, taxable: checked })}
                                 />
-                                <Label htmlFor="taxable" style={{ fontFamily: '"Raleway", sans-serif' }}>Taxable</Label>
+                                <Label htmlFor="taxable">Taxable</Label>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Switch
@@ -482,19 +614,18 @@ export function ProductsPage() {
                                     checked={formData.is_active}
                                     onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
                                 />
-                                <Label htmlFor="is_active" style={{ fontFamily: '"Raleway", sans-serif' }}>Active</Label>
+                                <Label htmlFor="is_active">Active</Label>
                             </div>
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setDialogOpen(false)} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                        <Button variant="outline" onClick={() => setDialogOpen(false)}>
                             Cancel
                         </Button>
                         <Button
                             onClick={handleSave}
                             disabled={saving || !formData.name}
                             className="bg-blue-600 hover:bg-blue-700 text-white"
-                            style={{ fontFamily: '"Raleway", sans-serif' }}
                         >
                             {saving ? 'Saving...' : editingProduct ? 'Save Changes' : 'Create Product'}
                         </Button>

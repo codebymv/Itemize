@@ -1,6 +1,6 @@
-import { useState, useCallback, useRef } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { logger } from '@/lib/logger';
+import { useState, useCallback, useRef } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/lib/logger";
 import {
   createList as apiCreateList,
   updateList as apiUpdateList,
@@ -23,12 +23,17 @@ import {
   shareVault as apiShareVault,
   unshareVault as apiUnshareVault,
   CreateVaultPayload,
-} from '@/services/api';
-import { List, Note, Whiteboard, Wireframe, Vault } from '@/types';
-import { useQueuedListUpdates } from '@/hooks/useQueuedListUpdates';
+} from "@/services/api";
+import { List, Note, Whiteboard, Wireframe, Vault } from "@/types";
+import { useQueuedListUpdates } from "@/hooks/useQueuedListUpdates";
+import {
+  activatePreparedVaultSession,
+  type PreparedVaultSecurity,
+} from "@/lib/vaultZkSession";
+import type { CreateItemPresetPayload } from "@/config/contentPresets";
 
 type PositionUpdate = {
-  type: 'note' | 'wireframe' | 'vault' | 'whiteboard' | 'list';
+  type: "note" | "wireframe" | "vault" | "whiteboard" | "list";
   id: number | string;
   position_x: number;
   position_y: number;
@@ -37,9 +42,11 @@ type PositionUpdate = {
 };
 
 const getApiStatus = (error: unknown): number | undefined => {
-  if (error && typeof error === 'object') {
-    return (error as { response?: { status?: number }; status?: number }).response?.status ??
-      (error as { status?: number }).status;
+  if (error && typeof error === "object") {
+    return (
+      (error as { response?: { status?: number }; status?: number }).response
+        ?.status ?? (error as { status?: number }).status
+    );
   }
   return undefined;
 };
@@ -48,7 +55,10 @@ export function useCanvasCRUD(
   token: string | null,
   categoriesHook: {
     isCategoryInUse: (name: string) => boolean;
-    addCategory: (data: { name: string; color_value: string }) => Promise<unknown>;
+    addCategory: (data: {
+      name: string;
+      color_value: string;
+    }) => Promise<unknown>;
   },
   updateState: {
     setLists: React.Dispatch<React.SetStateAction<List[]>>;
@@ -57,38 +67,46 @@ export function useCanvasCRUD(
     setWireframes: React.Dispatch<React.SetStateAction<Wireframe[]>>;
     setVaults: React.Dispatch<React.SetStateAction<Vault[]>>;
   },
-  enqueuePositionUpdate: (update: PositionUpdate) => void
+  enqueuePositionUpdate: (update: PositionUpdate) => void,
 ) {
   const { toast } = useToast();
   const recentlyCreatedListIds = useRef<Set<string>>(new Set());
   const { isCategoryInUse, addCategory } = categoriesHook;
-  const { setLists, setNotes, setWhiteboards, setWireframes, setVaults } = updateState;
+  const { setLists, setNotes, setWhiteboards, setWireframes, setVaults } =
+    updateState;
 
   const mutateList = useCallback(
     (list: List) => apiUpdateList(list, token),
     [token],
   );
 
-  const handleListUpdateError = useCallback((error: unknown, updatedList: List) => {
-    logger.error('Failed to update list:', error);
+  const handleListUpdateError = useCallback(
+    (error: unknown, updatedList: List) => {
+      logger.error("Failed to update list:", error);
 
-    if (getApiStatus(error) === 404) {
-      logger.warn(`List ${updatedList.id} no longer exists in backend, removing from frontend state`);
-      setLists((previous) => previous.filter((list) => list.id !== updatedList.id));
+      if (getApiStatus(error) === 404) {
+        logger.warn(
+          `List ${updatedList.id} no longer exists in backend, removing from frontend state`,
+        );
+        setLists((previous) =>
+          previous.filter((list) => list.id !== updatedList.id),
+        );
+        toast({
+          title: "List no longer exists",
+          description: "This list has been removed as it no longer exists.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       toast({
-        title: "List no longer exists",
-        description: "This list has been removed as it no longer exists.",
-        variant: "destructive"
+        title: "Error",
+        description: "Could not update your list. Please try again.",
+        variant: "destructive",
       });
-      return;
-    }
-
-    toast({
-      title: "Error",
-      description: "Could not update your list. Please try again.",
-      variant: "destructive"
-    });
-  }, [setLists, toast]);
+    },
+    [setLists, toast],
+  );
 
   const enqueueListUpdate = useQueuedListUpdates({
     setLists,
@@ -96,76 +114,100 @@ export function useCanvasCRUD(
     onError: handleListUpdateError,
   });
 
-  const handleCreateNote = async (title: string, category: string, color: string, position?: { x: number; y: number }) => {
+  const handleCreateNote = async (
+    title: string,
+    category: string,
+    color: string,
+    position?: { x: number; y: number },
+    presetPayload?: CreateItemPresetPayload,
+  ) => {
     try {
-      if (!isCategoryInUse(category) && category !== 'General') {
+      if (!isCategoryInUse(category) && category !== "General") {
         await addCategory({ name: category, color_value: color });
       }
 
       const payloadWithDefaults: CreateNotePayload = {
-        title: title || 'Untitled Note',
-        content: '',
+        title: title || "Untitled Note",
+        content: presetPayload?.noteContent ?? "",
         color_value: color,
         position_x: position?.x ?? 2000,
         position_y: position?.y ?? 2000,
-        width: 570,
-        height: 350,
+        width: presetPayload?.initialCanvasSize.width ?? 570,
+        height: presetPayload?.initialCanvasSize.height ?? 350,
         z_index: 0,
       };
 
       const newNote = await apiCreateNote(payloadWithDefaults, token);
-      setNotes(prev => [newNote, ...prev]);
+      setNotes((prev) => [newNote, ...prev]);
 
       return newNote;
     } catch (error) {
-      logger.error('Failed to create note:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Could not create your note. Please try again.';
+      logger.error("Failed to create note:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Could not create your note. Please try again.";
       toast({
         title: "Error",
         description: errorMessage,
-        variant: "destructive"
+        variant: "destructive",
       });
       return undefined;
     }
   };
 
-  const handleUpdateNote = async (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at'>>) => {
+  const handleUpdateNote = async (
+    noteId: number,
+    updatedData: Partial<Omit<Note, "id" | "user_id" | "created_at">>,
+  ) => {
     let originalNotes: Note[] = [];
-    setNotes(prev => {
+    setNotes((prev) => {
       originalNotes = prev;
-      return prev.map(n => n.id === noteId ? { ...n, ...updatedData } : n);
+      return prev.map((n) => (n.id === noteId ? { ...n, ...updatedData } : n));
     });
 
     try {
       const updatedNote = await apiUpdateNote(noteId, updatedData, token);
-      setNotes(prev => prev.map(n => n.id === noteId ? updatedNote : n));
+      setNotes((prev) => prev.map((n) => (n.id === noteId ? updatedNote : n)));
       return updatedNote;
     } catch (error) {
-      logger.error('Failed to update note:', error);
+      logger.error("Failed to update note:", error);
       setNotes(originalNotes);
       toast({
         title: "Error",
         description: "Failed to update note",
-        variant: "destructive"
+        variant: "destructive",
       });
       return null;
     }
   };
 
-  const handleNotePositionUpdate = (noteId: number, newPosition: { x: number; y: number }, newSize?: { width: number; height: number }) => {
-    setNotes(prev => prev.map(n => n.id === noteId ? {
-      ...n,
-      position_x: newPosition.x,
-      position_y: newPosition.y,
-      ...(newSize ? { width: newSize.width, height: newSize.height } : {})
-    } : n));
+  const handleNotePositionUpdate = (
+    noteId: number,
+    newPosition: { x: number; y: number },
+    newSize?: { width: number; height: number },
+  ) => {
+    setNotes((prev) =>
+      prev.map((n) =>
+        n.id === noteId
+          ? {
+              ...n,
+              position_x: newPosition.x,
+              position_y: newPosition.y,
+              ...(newSize
+                ? { width: newSize.width, height: newSize.height }
+                : {}),
+            }
+          : n,
+      ),
+    );
 
     enqueuePositionUpdate({
-      type: 'note',
+      type: "note",
       id: noteId,
       position_x: newPosition.x,
       position_y: newPosition.y,
-      ...(newSize ? { width: newSize.width, height: newSize.height } : {})
+      ...(newSize ? { width: newSize.width, height: newSize.height } : {}),
     });
   };
 
@@ -175,95 +217,127 @@ export function useCanvasCRUD(
       const result = await apiDeleteNote(noteId, token);
       logger.log(`✅ Frontend: Delete API response:`, result);
 
-      setNotes(prev => prev.filter(n => n.id !== noteId));
+      setNotes((prev) => prev.filter((n) => n.id !== noteId));
       toast({
         title: "Note deleted",
         description: "Your note has been successfully removed.",
       });
       return true;
     } catch (error) {
-      logger.error('Frontend: Failed to delete note:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Could not delete your note. Please try again.';
+      logger.error("Frontend: Failed to delete note:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Could not delete your note. Please try again.";
       toast({
         title: "Error",
         description: errorMessage,
-        variant: "destructive"
+        variant: "destructive",
       });
       return false;
     }
   };
 
-  const handleCreateWhiteboard = async (title: string, category: string, color: string, position?: { x: number; y: number }) => {
+  const handleCreateWhiteboard = async (
+    title: string,
+    category: string,
+    color: string,
+    position?: { x: number; y: number },
+  ) => {
     try {
-      if (!isCategoryInUse(category) && category !== 'General') {
+      if (!isCategoryInUse(category) && category !== "General") {
         await addCategory({ name: category, color_value: color });
       }
 
       const payloadWithDefaults: CreateWhiteboardPayload = {
-        title: title || 'Untitled Whiteboard',
+        title: title || "Untitled Whiteboard",
         category: category,
-        canvas_data: '[]',
+        canvas_data: "[]",
         canvas_width: 750,
         canvas_height: 620,
-        background_color: '#FFFFFF',
+        background_color: "#FFFFFF",
         position_x: position?.x ?? 2000,
         position_y: position?.y ?? 2000,
         z_index: 0,
         color_value: color,
       };
-      logger.log('handleCreateWhiteboard payload:', payloadWithDefaults);
+      logger.log("handleCreateWhiteboard payload:", payloadWithDefaults);
 
-      const newWhiteboard = await apiCreateWhiteboard(payloadWithDefaults, token);
-      setWhiteboards(prev => [newWhiteboard, ...prev]);
+      const newWhiteboard = await apiCreateWhiteboard(
+        payloadWithDefaults,
+        token,
+      );
+      setWhiteboards((prev) => [newWhiteboard, ...prev]);
 
       return newWhiteboard;
     } catch (error) {
-      logger.error('Failed to create whiteboard:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Could not create your whiteboard. Please try again.';
+      logger.error("Failed to create whiteboard:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Could not create your whiteboard. Please try again.";
       toast({
         title: "Error",
         description: errorMessage,
-        variant: "destructive"
+        variant: "destructive",
       });
       return undefined;
     }
   };
 
-  const handleUpdateWhiteboard = async (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
+  const handleUpdateWhiteboard = async (
+    whiteboardId: number,
+    updatedData: Partial<
+      Omit<Whiteboard, "id" | "user_id" | "created_at" | "updated_at">
+    >,
+  ) => {
     let originalWhiteboards: Whiteboard[] = [];
     try {
-      setWhiteboards(prev => {
+      setWhiteboards((prev) => {
         originalWhiteboards = prev;
-        return prev.map(w => w.id === whiteboardId ? { ...w, ...updatedData } : w);
+        return prev.map((w) =>
+          w.id === whiteboardId ? { ...w, ...updatedData } : w,
+        );
       });
 
-      logger.log('🎨 CanvasPage: Updating whiteboard:', {
+      logger.log("🎨 CanvasPage: Updating whiteboard:", {
         whiteboardId,
         updatedFields: Object.keys(updatedData),
         hasCanvasData: !!updatedData.canvas_data,
         canvasDataType: typeof updatedData.canvas_data,
-        canvasDataPreview: updatedData.canvas_data ? JSON.stringify(updatedData.canvas_data).substring(0, 200) : 'N/A'
+        canvasDataPreview: updatedData.canvas_data
+          ? JSON.stringify(updatedData.canvas_data).substring(0, 200)
+          : "N/A",
       });
 
-      const updatedWhiteboard = await apiUpdateWhiteboard(whiteboardId, updatedData, token);
+      const updatedWhiteboard = await apiUpdateWhiteboard(
+        whiteboardId,
+        updatedData,
+        token,
+      );
 
-      logger.log('🎨 CanvasPage: Whiteboard update response:', {
+      logger.log("🎨 CanvasPage: Whiteboard update response:", {
         whiteboardId: updatedWhiteboard.id,
         hasCanvasData: !!updatedWhiteboard.canvas_data,
         canvasDataType: typeof updatedWhiteboard.canvas_data,
-        updatedAt: updatedWhiteboard.updated_at
+        updatedAt: updatedWhiteboard.updated_at,
       });
 
-      setWhiteboards(prev => prev.map(w => w.id === whiteboardId ? updatedWhiteboard : w));
+      setWhiteboards((prev) =>
+        prev.map((w) => (w.id === whiteboardId ? updatedWhiteboard : w)),
+      );
       return updatedWhiteboard;
     } catch (error) {
-      logger.error('Failed to update whiteboard:', error);
+      logger.error("Failed to update whiteboard:", error);
       setWhiteboards(originalWhiteboards);
-      const errorMessage = error instanceof Error ? error.message : 'Could not update your whiteboard. Please try again.';
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Could not update your whiteboard. Please try again.";
       toast({
         title: "Error",
         description: errorMessage,
-        variant: "destructive"
+        variant: "destructive",
       });
       throw error;
     }
@@ -272,69 +346,99 @@ export function useCanvasCRUD(
   const handleDeleteWhiteboard = async (whiteboardId: number) => {
     try {
       await apiDeleteWhiteboard(whiteboardId, token);
-      setWhiteboards(prev => prev.filter(w => w.id !== whiteboardId));
+      setWhiteboards((prev) => prev.filter((w) => w.id !== whiteboardId));
       toast({
         title: "Whiteboard deleted",
         description: "Your whiteboard has been successfully removed.",
       });
       return true;
     } catch (error) {
-      logger.error('Failed to delete whiteboard:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Could not delete your whiteboard. Please try again.';
+      logger.error("Failed to delete whiteboard:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Could not delete your whiteboard. Please try again.";
       toast({
         title: "Error",
         description: errorMessage,
-        variant: "destructive"
+        variant: "destructive",
       });
       return false;
     }
   };
 
-  const handleCreateWireframe = async (title: string, category: string, color: string, position?: { x: number; y: number }) => {
+  const handleCreateWireframe = async (
+    title: string,
+    category: string,
+    color: string,
+    position?: { x: number; y: number },
+    presetPayload?: CreateItemPresetPayload,
+  ) => {
     try {
-      if (!isCategoryInUse(category) && category !== 'General') {
+      if (!isCategoryInUse(category) && category !== "General") {
         await addCategory({ name: category, color_value: color });
       }
 
       const payloadWithDefaults: CreateWireframePayload = {
-        title: title || 'Untitled Wireframe',
+        title: title || "Untitled Wireframe",
         category: category,
-        flow_data: '{"nodes": [], "edges": [], "viewport": {"x": 0, "y": 0, "zoom": 1}}',
+        flow_data:
+          presetPayload?.wireframeFlowData ??
+          '{"nodes": [], "edges": [], "viewport": {"x": 0, "y": 0, "zoom": 1}}',
         position_x: position?.x ?? 2000,
         position_y: position?.y ?? 2000,
+        width: presetPayload?.initialCanvasSize.width,
+        height: presetPayload?.initialCanvasSize.height,
         z_index: 0,
         color_value: color,
       };
-      logger.log('handleCreateWireframe payload:', payloadWithDefaults);
+      logger.log("handleCreateWireframe payload:", payloadWithDefaults);
 
       const newWireframe = await apiCreateWireframe(payloadWithDefaults, token);
-      setWireframes(prev => [newWireframe, ...prev]);
+      setWireframes((prev) => [newWireframe, ...prev]);
 
       return newWireframe;
     } catch (error) {
-      logger.error('Failed to create wireframe:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Could not create your wireframe. Please try again.';
+      logger.error("Failed to create wireframe:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Could not create your wireframe. Please try again.";
       toast({
         title: "Error",
         description: errorMessage,
-        variant: "destructive"
+        variant: "destructive",
       });
       return undefined;
     }
   };
 
-  const handleUpdateWireframe = async (wireframeId: number, updatedData: Partial<Omit<Wireframe, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
+  const handleUpdateWireframe = async (
+    wireframeId: number,
+    updatedData: Partial<
+      Omit<Wireframe, "id" | "user_id" | "created_at" | "updated_at">
+    >,
+  ) => {
     try {
-      const updatedWireframe = await apiUpdateWireframe(wireframeId, updatedData, token);
-      setWireframes(prev => prev.map(w => w.id === wireframeId ? updatedWireframe : w));
+      const updatedWireframe = await apiUpdateWireframe(
+        wireframeId,
+        updatedData,
+        token,
+      );
+      setWireframes((prev) =>
+        prev.map((w) => (w.id === wireframeId ? updatedWireframe : w)),
+      );
       return updatedWireframe;
     } catch (error) {
-      logger.error('Failed to update wireframe:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Could not update your wireframe. Please try again.';
+      logger.error("Failed to update wireframe:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Could not update your wireframe. Please try again.";
       toast({
         title: "Error",
         description: errorMessage,
-        variant: "destructive"
+        variant: "destructive",
       });
       throw error;
     }
@@ -343,79 +447,137 @@ export function useCanvasCRUD(
   const handleDeleteWireframe = async (wireframeId: number) => {
     try {
       await apiDeleteWireframe(wireframeId, token);
-      setWireframes(prev => prev.filter(w => w.id !== wireframeId));
+      setWireframes((prev) => prev.filter((w) => w.id !== wireframeId));
       toast({
         title: "Wireframe deleted",
         description: "Your wireframe has been successfully removed.",
       });
       return true;
     } catch (error) {
-      logger.error('Failed to delete wireframe:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete wireframe';
+      logger.error("Failed to delete wireframe:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to delete wireframe";
       toast({
         title: "Error",
         description: errorMessage,
-        variant: "destructive"
+        variant: "destructive",
       });
       return false;
     }
   };
 
-  const handleWireframePositionChange = (wireframeId: number, newPosition: { x: number; y: number }) => {
-    setWireframes(prev => prev.map(w => w.id === wireframeId ? { ...w, position_x: newPosition.x, position_y: newPosition.y } : w));
+  const handleWireframePositionChange = (
+    wireframeId: number,
+    newPosition: { x: number; y: number },
+  ) => {
+    setWireframes((prev) =>
+      prev.map((w) =>
+        w.id === wireframeId
+          ? { ...w, position_x: newPosition.x, position_y: newPosition.y }
+          : w,
+      ),
+    );
 
     enqueuePositionUpdate({
-      type: 'wireframe',
+      type: "wireframe",
       id: wireframeId,
       position_x: newPosition.x,
-      position_y: newPosition.y
+      position_y: newPosition.y,
     });
   };
 
-  const handleCreateVault = async (title: string, category: string, color: string, position?: { x: number; y: number }) => {
+  const handleCreateVault = async (
+    title: string,
+    category: string,
+    color: string,
+    position?: { x: number; y: number },
+    security?: PreparedVaultSecurity,
+  ) => {
     try {
-      if (!isCategoryInUse(category) && category !== 'General') {
+      if (!isCategoryInUse(category) && category !== "General") {
         await addCategory({ name: category, color_value: color });
       }
 
       const payloadWithDefaults: CreateVaultPayload = {
-        title: title || 'Untitled Vault',
+        title: title || "Untitled Vault",
         category: category,
         position_x: position?.x ?? 2000,
         position_y: position?.y ?? 2000,
         z_index: 0,
         color_value: color,
+        ...(security
+          ? {
+              crypto_version: security.cryptoVersion,
+              kdf_salt: security.kdfSalt,
+              kdf_memory_kib: security.kdfMemoryKiB,
+              kdf_iterations: security.kdfIterations,
+              kdf_parallelism: security.kdfParallelism,
+              wrapped_vek: security.wrappedVek,
+              wrapped_vek_recovery: security.wrappedVekRecovery,
+            }
+          : {}),
       };
-      logger.log('handleCreateVault payload:', payloadWithDefaults);
+      logger.log("handleCreateVault payload:", payloadWithDefaults);
 
-      const newVault = await apiCreateVault(payloadWithDefaults, token);
-      setVaults(prev => [newVault, ...prev]);
+      const createdVault = await apiCreateVault(payloadWithDefaults, token);
+      let sessionReady = false;
+      if (security) {
+        try {
+          await activatePreparedVaultSession(
+            security.draftSessionId,
+            createdVault.id,
+          );
+          sessionReady = true;
+        } catch (sessionError) {
+          logger.error(
+            "Vault created but its local session could not be activated:",
+            sessionError,
+          );
+        }
+      }
+      const newVault = sessionReady
+        ? { ...createdVault, client_session_unlocked: true }
+        : createdVault;
+      setVaults((prev) => [newVault, ...prev]);
 
       return newVault;
     } catch (error) {
-      logger.error('Failed to create vault:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Could not create your vault. Please try again.';
+      logger.error("Failed to create vault:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Could not create your vault. Please try again.";
       toast({
         title: "Error",
         description: errorMessage,
-        variant: "destructive"
+        variant: "destructive",
       });
       return undefined;
     }
   };
 
-  const handleUpdateVault = async (vaultId: number, updatedData: Partial<Omit<Vault, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
+  const handleUpdateVault = async (
+    vaultId: number,
+    updatedData: Partial<
+      Omit<Vault, "id" | "user_id" | "created_at" | "updated_at">
+    >,
+  ) => {
     try {
       const updatedVault = await apiUpdateVault(vaultId, updatedData, token);
-      setVaults(prev => prev.map(v => v.id === vaultId ? updatedVault : v));
+      setVaults((prev) =>
+        prev.map((v) => (v.id === vaultId ? updatedVault : v)),
+      );
       return updatedVault;
     } catch (error) {
-      logger.error('Failed to update vault:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Could not update your vault. Please try again.';
+      logger.error("Failed to update vault:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Could not update your vault. Please try again.";
       toast({
         title: "Error",
         description: "Failed to update vault",
-        variant: "destructive"
+        variant: "destructive",
       });
       return null;
     }
@@ -424,77 +586,113 @@ export function useCanvasCRUD(
   const handleDeleteVault = async (vaultId: number) => {
     try {
       await apiDeleteVault(vaultId, token);
-      setVaults(prev => prev.filter(v => v.id !== vaultId));
+      setVaults((prev) => prev.filter((v) => v.id !== vaultId));
       toast({
         title: "Vault deleted",
         description: "Your vault has been successfully removed.",
       });
       return true;
     } catch (error) {
-      logger.error('Failed to delete vault:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Could not delete your vault. Please try again.';
+      logger.error("Failed to delete vault:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Could not delete your vault. Please try again.";
       toast({
         title: "Error",
         description: errorMessage,
-        variant: "destructive"
+        variant: "destructive",
       });
       return false;
     }
   };
 
-  const handleVaultPositionChange = (vaultId: number, newPosition: { x: number; y: number }, newSize?: { width: number; height: number }) => {
+  const handleVaultPositionChange = (
+    vaultId: number,
+    newPosition: { x: number; y: number },
+    newSize?: { width: number; height: number },
+  ) => {
     if (newSize) {
-      setVaults(prev => prev.map(v => v.id === vaultId 
-        ? { ...v, position_x: newPosition.x, position_y: newPosition.y, width: newSize.width, height: newSize.height } 
-        : v
-      ));
+      setVaults((prev) =>
+        prev.map((v) =>
+          v.id === vaultId
+            ? {
+                ...v,
+                position_x: newPosition.x,
+                position_y: newPosition.y,
+                width: newSize.width,
+                height: newSize.height,
+              }
+            : v,
+        ),
+      );
     } else {
-      setVaults(prev => prev.map(v => v.id === vaultId 
-        ? { ...v, position_x: newPosition.x, position_y: newPosition.y } 
-        : v
-      ));
+      setVaults((prev) =>
+        prev.map((v) =>
+          v.id === vaultId
+            ? { ...v, position_x: newPosition.x, position_y: newPosition.y }
+            : v,
+        ),
+      );
     }
 
     enqueuePositionUpdate({
-      type: 'vault',
+      type: "vault",
       id: vaultId,
       position_x: newPosition.x,
       position_y: newPosition.y,
-      ...(newSize ? { width: newSize.width, height: newSize.height } : {})
+      ...(newSize ? { width: newSize.width, height: newSize.height } : {}),
     });
   };
 
-  const handleWhiteboardPositionUpdate = (whiteboardId: number, newPosition: { x: number; y: number }) => {
-    setWhiteboards(prev => prev.map(whiteboard => whiteboard.id === whiteboardId ? {
-      ...whiteboard,
-      position_x: newPosition.x,
-      position_y: newPosition.y
-    } : whiteboard));
+  const handleWhiteboardPositionUpdate = (
+    whiteboardId: number,
+    newPosition: { x: number; y: number },
+  ) => {
+    setWhiteboards((prev) =>
+      prev.map((whiteboard) =>
+        whiteboard.id === whiteboardId
+          ? {
+              ...whiteboard,
+              position_x: newPosition.x,
+              position_y: newPosition.y,
+            }
+          : whiteboard,
+      ),
+    );
 
     enqueuePositionUpdate({
-      type: 'whiteboard',
+      type: "whiteboard",
       id: whiteboardId,
       position_x: newPosition.x,
-      position_y: newPosition.y
+      position_y: newPosition.y,
     });
   };
 
-  const handleListPositionUpdate = (listId: string, newPosition: { x: number; y: number }, newSize?: { width: number }) => {
-    setLists(prev => {
-      return prev.map(list => list.id === listId ? {
-        ...list,
-        position_x: newPosition.x,
-        position_y: newPosition.y,
-        ...(newSize ? { width: newSize.width } : {})
-      } : list);
+  const handleListPositionUpdate = (
+    listId: string,
+    newPosition: { x: number; y: number },
+    newSize?: { width: number },
+  ) => {
+    setLists((prev) => {
+      return prev.map((list) =>
+        list.id === listId
+          ? {
+              ...list,
+              position_x: newPosition.x,
+              position_y: newPosition.y,
+              ...(newSize ? { width: newSize.width } : {}),
+            }
+          : list,
+      );
     });
 
     enqueuePositionUpdate({
-      type: 'list',
+      type: "list",
       id: listId,
       position_x: newPosition.x,
       position_y: newPosition.y,
-      ...(newSize ? { width: newSize.width } : {})
+      ...(newSize ? { width: newSize.width } : {}),
     });
   };
 
@@ -504,7 +702,7 @@ export function useCanvasCRUD(
     try {
       await apiDeleteList(listId, token);
 
-      setLists(prev => prev.filter(list => list.id !== listId));
+      setLists((prev) => prev.filter((list) => list.id !== listId));
 
       toast({
         title: "List deleted",
@@ -513,38 +711,51 @@ export function useCanvasCRUD(
 
       return true;
     } catch (error) {
-      logger.error('Failed to delete list:', error);
+      logger.error("Failed to delete list:", error);
       toast({
         title: "Error",
         description: "Failed to delete list",
-        variant: "destructive"
+        variant: "destructive",
       });
 
       return false;
     }
   };
 
-  const handleCreateList = async (title: string, type: string, color: string, position?: { x: number; y: number }) => {
+  const handleCreateList = async (
+    title: string,
+    type: string,
+    color: string,
+    position?: { x: number; y: number },
+    presetPayload?: CreateItemPresetPayload,
+  ) => {
     try {
-      if (!isCategoryInUse(type) && type !== 'General') {
+      if (!isCategoryInUse(type) && type !== "General") {
         await addCategory({ name: type, color_value: color });
       }
 
-      const response = await apiCreateList({
-        title: title || 'Untitled List',
-        type,
-        items: [],
-        position_x: position?.x ?? 2000,
-        position_y: position?.y ?? 2000,
-        color_value: color
-      }, token);
+      const response = await apiCreateList(
+        {
+          title: title || "Untitled List",
+          type,
+          items: presetPayload?.listItems ?? [],
+          position_x: position?.x ?? 2000,
+          position_y: position?.y ?? 2000,
+          color_value: color,
+          width: presetPayload?.initialCanvasSize.width,
+          height: presetPayload?.initialCanvasSize.height,
+        },
+        token,
+      );
 
       const newList: List = {
         id: response.id,
         title: response.title,
-        type: response.type || 'General',
+        type: response.type || "General",
         items: response.items || [],
-        createdAt: response.createdAt ? new Date(response.createdAt) : undefined,
+        createdAt: response.createdAt
+          ? new Date(response.createdAt)
+          : undefined,
         updated_at: response.updated_at,
         position_x: response.position_x ?? position?.x ?? 2000,
         position_y: response.position_y ?? position?.y ?? 2000,
@@ -553,7 +764,9 @@ export function useCanvasCRUD(
         color_value: response.color_value || color,
         share_token: response.share_token,
         is_public: response.is_public,
-        shared_at: response.shared_at ? new Date(response.shared_at).toISOString() : undefined,
+        shared_at: response.shared_at
+          ? new Date(response.shared_at).toISOString()
+          : undefined,
       };
 
       recentlyCreatedListIds.current.add(newList.id);
@@ -561,14 +774,14 @@ export function useCanvasCRUD(
         recentlyCreatedListIds.current.delete(newList.id);
       }, 2000);
 
-      setLists(prev => [newList, ...prev]);
+      setLists((prev) => [newList, ...prev]);
       return newList;
     } catch (error) {
-      logger.error('Failed to create list:', error);
+      logger.error("Failed to create list:", error);
       toast({
         title: "Error",
         description: "Could not create your list. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return undefined;
     }
@@ -577,18 +790,29 @@ export function useCanvasCRUD(
   const handleShareVault = async (vaultId: number) => {
     try {
       const result = await apiShareVault(vaultId, token);
-      setVaults(prev => prev.map(v => v.id === vaultId 
-        ? { ...v, share_token: result.shareToken, is_public: true, shared_at: new Date().toISOString() } 
-        : v
-      ));
+      setVaults((prev) =>
+        prev.map((v) =>
+          v.id === vaultId
+            ? {
+                ...v,
+                share_token: result.shareToken,
+                is_public: true,
+                shared_at: new Date().toISOString(),
+              }
+            : v,
+        ),
+      );
       return result;
     } catch (error) {
-      logger.error('Failed to share vault:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Could not share your vault. Please try again.';
+      logger.error("Failed to share vault:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Could not share your vault. Please try again.";
       toast({
         title: "Error",
         description: errorMessage,
-        variant: "destructive"
+        variant: "destructive",
       });
       throw error;
     }
@@ -597,16 +821,24 @@ export function useCanvasCRUD(
   const handleUnshareVault = async (vaultId: number) => {
     try {
       await apiUnshareVault(vaultId, token);
-      setVaults(prev => prev.map(v => v.id === vaultId 
-        ? { ...v, is_public: false, share_token: undefined, shared_at: undefined }
-        : v
-      ));
+      setVaults((prev) =>
+        prev.map((v) =>
+          v.id === vaultId
+            ? {
+                ...v,
+                is_public: false,
+                share_token: undefined,
+                shared_at: undefined,
+              }
+            : v,
+        ),
+      );
     } catch (error) {
-      logger.error('Failed to unshare vault:', error);
+      logger.error("Failed to unshare vault:", error);
       toast({
         title: "Error",
         description: "Failed to revoke share",
-        variant: "destructive"
+        variant: "destructive",
       });
       throw error;
     }

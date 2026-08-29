@@ -176,7 +176,7 @@ const Navbar: React.FC = () => {
                                   handleNavigate('/admin');
                                 }}
                               >
-                                <ShieldCheck className={cn("mr-2 h-4 w-4 transition-colors", isOnAdminRoute ? "text-blue-600" : "group-hover/admin:text-blue-600")} />
+                                <ShieldCheck className={cn("mr-2 h-4 w-4 transition-colors", isOnAdminRoute ? "text-blue-600 dark:text-blue-400" : "group-hover/admin:text-blue-600 dark:group-hover/admin:text-blue-400")} />
                                 <span className="flex-1">Admin Dashboard</span>
                                 <ChevronRight className="h-4 w-4 ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                               </DropdownMenuItem>

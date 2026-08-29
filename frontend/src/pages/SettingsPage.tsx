@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from 'next-themes';
 import { useAISuggest } from '@/context/AISuggestContext';
@@ -7,6 +7,7 @@ import { useAuthState } from '@/contexts/AuthContext';
 import { useSubscriptionFeatures, useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { Button } from '@/components/ui/button';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { HeaderAction } from '@/components/layout/DesktopHeaderTools';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -20,9 +21,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { getAssetUrl } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import {
+  AVAILABLE_PLANS_HASH,
+  AVAILABLE_PLANS_PATH,
+  isAvailablePlansLocation,
+} from '@/lib/settingsNavigation';
 import {
   getReduceMotionPreference,
   getStartPagePreference,
@@ -54,8 +65,13 @@ import {
   Plug,
   Gauge,
   Layers3,
+  ChevronDown,
+  Save,
 } from 'lucide-react';
-import { SettingsSectionTitle } from '@/components/settings/SettingsPrimitives';
+import {
+  SettingsInfoTooltip,
+  SettingsSectionTitle,
+} from '@/components/settings/SettingsPrimitives';
 // Refactored hooks and components
 import { usePaymentsTab } from './settings/hooks/usePaymentsTab';
 import {
@@ -70,8 +86,7 @@ import {
   readIntegrationOAuthResult,
 } from '@/lib/integrationOAuthReturn';
 import { disconnectStripeConnect, initiateStripeConnect } from '@/services/stripeConnectApi';
-import { AccountDataExportCard } from './settings/components/AccountDataExportCard';
-import { AccountDeletionCard } from './settings/components/AccountDeletionCard';
+import { ManageAccountCard } from './settings/components/ManageAccountCard';
 const OrganizationSettings = React.lazy(() =>
   import('./settings/OrganizationSettings').then((module) => ({
     default: module.OrganizationSettings,
@@ -95,37 +110,8 @@ const settingsNav = [
 export function SettingsNav() {
   const location = useLocation();
   const navigate = useNavigate();
-  const activePath = location.pathname === '/settings/' ? '/settings' : location.pathname;
-  const activeItem = settingsNav.find((item) => item.path === activePath) ?? settingsNav[0];
 
-  // Mobile: keep every destination labeled instead of reducing navigation to
-  // ambiguous icons. The 44px trigger also provides a reliable touch target.
-  const mobileNav = (
-    <nav aria-label="Settings sections" className="w-full space-y-1.5 pb-3 lg:hidden">
-      <Label htmlFor="settings-section" className="text-xs text-muted-foreground">
-        Settings section
-      </Label>
-      <Select value={activeItem.path} onValueChange={(value) => navigate(value)}>
-        <SelectTrigger
-          id="settings-section"
-          aria-label="Settings section"
-          className="h-11 w-full bg-background"
-        >
-          <SelectValue placeholder="Choose a settings section" />
-        </SelectTrigger>
-        <SelectContent>
-          {settingsNav.map((item) => (
-            <SelectItem key={item.path} value={item.path}>
-              {item.title}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </nav>
-  );
-
-  // Desktop: Use sidebar navigation
-  const desktopNav = (
+  return (
     <nav aria-label="Settings sections" className="hidden flex-col gap-1 lg:flex">
       {settingsNav.map((item) => {
         const isActive = location.pathname === item.path || (item.path === '/settings' && location.pathname === '/settings/');
@@ -138,8 +124,8 @@ export function SettingsNav() {
           >
             <item.icon
               className={cn(
-                "mr-2 h-4 w-4 transition-colors group-hover/item:text-blue-600",
-                isActive ? 'text-blue-600' : 'text-gray-600 dark:text-gray-400'
+                "mr-2 h-4 w-4 transition-colors group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400",
+                isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'
               )}
             />
             {item.title}
@@ -148,12 +134,54 @@ export function SettingsNav() {
       })}
     </nav>
   );
+}
+
+export function SettingsShellNavigation() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activePath = location.pathname === '/settings/' ? '/settings' : location.pathname;
+  const activeItem = settingsNav.find((item) => item.path === activePath) ?? settingsNav[0];
+  const ActiveIcon = activeItem.icon;
 
   return (
-    <>
-      {mobileNav}
-      {desktopNav}
-    </>
+    <div className="min-w-0">
+      <h1 className="sr-only">{activeItem.title.toUpperCase()}</h1>
+      <Select value={activeItem.path} onValueChange={(value) => navigate(value)}>
+        <SelectTrigger
+          aria-label="Settings section"
+          className="h-11 w-auto max-w-full gap-2 bg-background px-3 font-raleway [&>span]:!flex [&>span]:line-clamp-none"
+        >
+          <span className="flex min-w-0 items-center gap-2 whitespace-nowrap">
+            <ActiveIcon
+              aria-hidden="true"
+              className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400"
+              data-settings-section-icon={activeItem.title}
+            />
+            <span className="text-lg font-semibold italic text-foreground">
+              {activeItem.title.toUpperCase()}
+            </span>
+          </span>
+        </SelectTrigger>
+        <SelectContent align="start">
+          {settingsNav.map((item) => (
+            <SelectItem key={item.path} value={item.path} className="py-2.5 pr-3">
+              <span className="flex items-center gap-2">
+                <item.icon
+                  aria-hidden="true"
+                  className={cn(
+                    'h-4 w-4 shrink-0',
+                    item.path === activeItem.path
+                      ? 'text-blue-600'
+                      : 'text-gray-600 dark:text-gray-400',
+                  )}
+                />
+                <span>{item.title}</span>
+              </span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 
@@ -167,11 +195,39 @@ function AccountInfo({
   canSubscribeCurrentTrial: boolean;
 }) {
   const { currentUser } = useAuthState();
+  const location = useLocation();
   const { startCheckout, startSoloTrial } = useSubscriptionFeatures();
   const { toast } = useToast();
+  const plansRequested = isAvailablePlansLocation(location.search, location.hash);
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [isLoading, setIsLoading] = useState(false);
+  const [plansOpen, setPlansOpen] = useState(plansRequested);
+  const plansContentRef = useRef<HTMLDivElement>(null);
   const { data: usageStats } = useUsageStats();
+  const joinedAt = currentUser?.createdAt ? new Date(currentUser.createdAt) : null;
+  const hasValidJoinedAt = joinedAt && !Number.isNaN(joinedAt.getTime());
+  const joinedDate = hasValidJoinedAt
+    ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(joinedAt)
+    : null;
+  const joinedDateTime = hasValidJoinedAt
+    ? new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeStyle: 'short' }).format(joinedAt)
+    : undefined;
+
+  useEffect(() => {
+    if (!plansRequested) return;
+
+    setPlansOpen(true);
+    const scrollTimer = window.setTimeout(() => {
+      const reduceMotion = getReduceMotionPreference()
+        || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      plansContentRef.current?.scrollIntoView({
+        behavior: reduceMotion ? 'auto' : 'smooth',
+        block: 'start',
+      });
+    }, 300);
+
+    return () => window.clearTimeout(scrollTimer);
+  }, [currentPlan, plansRequested, usageStats]);
 
   const handleUpgrade = async (planId: Plan) => {
     if (planId === 'free') return;
@@ -215,7 +271,17 @@ function AccountInfo({
             </div>
             <div className="text-center sm:text-left min-w-0 flex-1">
               <p className="font-medium break-words">{currentUser?.name || 'User'}</p>
-              <p className="text-sm text-muted-foreground break-all sm:break-words">{currentUser?.email}</p>
+              <div className="mt-1 flex flex-col gap-x-6 gap-y-2 text-sm text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:gap-y-1">
+                <p className="min-w-0 break-all sm:break-words">{currentUser?.email}</p>
+                {joinedDate && currentUser?.createdAt && (
+                  <p className="whitespace-nowrap sm:ml-auto">
+                    Joined:{' '}
+                    <time dateTime={currentUser.createdAt} title={joinedDateTime}>
+                      {joinedDate}
+                    </time>
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -229,7 +295,27 @@ function AccountInfo({
       {usageStats && (
         <Card>
           <CardHeader>
-            <SettingsSectionTitle icon={Gauge}>Current Usage</SettingsSectionTitle>
+            <SettingsSectionTitle icon={Gauge}>
+              <span className="flex items-center gap-1.5">
+                Current Usage
+                {(usageStats.usage.emails.limit === 0 || usageStats.usage.sms.limit === 0 || usageStats.usage.apiCalls.limit === 0) && (
+                  <SettingsInfoTooltip label="Plan availability for usage features">
+                    <div className="space-y-1">
+                      {(usageStats.usage.emails.limit === 0 || usageStats.usage.sms.limit === 0) && (
+                        <p>
+                          {usageStats.usage.emails.limit === 0 && usageStats.usage.sms.limit === 0
+                            ? 'Email and SMS are available on Solo and Studio.'
+                            : `${usageStats.usage.emails.limit === 0 ? 'Email' : 'SMS'} is available on Solo and Studio.`}
+                        </p>
+                      )}
+                      {usageStats.usage.apiCalls.limit === 0 && (
+                        <p>API calls are available on Studio.</p>
+                      )}
+                    </div>
+                  </SettingsInfoTooltip>
+                )}
+              </span>
+            </SettingsSectionTitle>
           </CardHeader>
           <CardContent>
             <UsageIndicatorGrid>
@@ -239,6 +325,7 @@ function AccountInfo({
                 limit={typeof usageStats.usage.emails.limit === 'number' ? usageStats.usage.emails.limit : -1}
                 label="Emails"
                 icon={<Mail className="h-5 w-5" />}
+                showAvailabilityHint={false}
               />
               <UsageIndicator
                 resourceType="sms"
@@ -246,6 +333,7 @@ function AccountInfo({
                 limit={typeof usageStats.usage.sms.limit === 'number' ? usageStats.usage.sms.limit : -1}
                 label="SMS"
                 icon={<MessageSquare className="h-5 w-5" />}
+                showAvailabilityHint={false}
               />
               <UsageIndicator
                 resourceType="apiCalls"
@@ -253,34 +341,60 @@ function AccountInfo({
                 limit={typeof usageStats.usage.apiCalls.limit === 'number' ? usageStats.usage.apiCalls.limit : -1}
                 label="API Calls"
                 icon={<Code2 className="h-5 w-5" />}
+                showAvailabilityHint={false}
               />
             </UsageIndicatorGrid>
           </CardContent>
         </Card>
       )}
 
-      <AccountDataExportCard />
-
       <Card>
         <CardHeader>
           <SettingsSectionTitle icon={Layers3}>Available Plans</SettingsSectionTitle>
         </CardHeader>
         <CardContent>
-          <PricingCards
-            variant="dashboard"
-            currentPlan={currentPlan}
-            starterTrialEligible={starterTrialEligible}
-            canSubscribeCurrentTrial={canSubscribeCurrentTrial}
-            onUpgrade={handleUpgrade}
-            isLoading={isLoading}
-            showYearlyToggle={false}
-            billingPeriod={billingPeriod}
-            onBillingPeriodChange={setBillingPeriod}
-          />
+          <Collapsible open={plansOpen} onOpenChange={setPlansOpen}>
+            <div className="flex flex-col gap-4 min-[1300px]:flex-row min-[1300px]:items-center min-[1300px]:justify-between">
+              <p className="text-sm text-muted-foreground">
+                Compare Solo and Studio features, limits, and pricing.
+              </p>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-fit">
+                  Compare plans
+                  <ChevronDown
+                    className={cn(
+                      'ml-2 h-4 w-4 text-blue-600 transition-transform',
+                      plansOpen && 'rotate-180',
+                    )}
+                    aria-hidden="true"
+                  />
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+            <CollapsibleContent>
+              <div
+                id={AVAILABLE_PLANS_HASH.slice(1)}
+                ref={plansContentRef}
+                className="mt-5 scroll-mt-24"
+              >
+              <PricingCards
+                variant="dashboard"
+                currentPlan={currentPlan}
+                starterTrialEligible={starterTrialEligible}
+                canSubscribeCurrentTrial={canSubscribeCurrentTrial}
+                onUpgrade={handleUpgrade}
+                isLoading={isLoading}
+                showYearlyToggle={false}
+                billingPeriod={billingPeriod}
+                onBillingPeriodChange={setBillingPeriod}
+              />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </CardContent>
       </Card>
 
-      <AccountDeletionCard />
+      <ManageAccountCard />
     </div>
   );
 }
@@ -444,6 +558,7 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
+  const { isLoading: subscriptionLoading, isSubscribed } = useSubscriptionState();
   const { organizationId } = useOrganization();
   const [connectingStripe, setConnectingStripe] = useState(false);
   const {
@@ -478,31 +593,33 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
     setBusinessFormData,
     setPendingLogoFile,
     setDeleteDialogOpen,
-  } = usePaymentsTab();
+  } = usePaymentsTab({ enabled: !subscriptionLoading && isSubscribed });
 
   // Set save button in header
   useEffect(() => {
-    if (setSaveButton) {
-      setSaveButton(
-        <Button
-          onClick={handleSaveSettings}
-          disabled={saving || loading || !settings}
-        >
-          {saving ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            'Save Changes'
-          )}
-        </Button>
-      );
+    if (!setSaveButton) return;
+
+    if (initialLoad || loading || !settings || loadError) {
+      setSaveButton(null);
+      return () => setSaveButton(null);
     }
+
+    const label = saving ? 'Saving…' : 'Save changes';
+    setSaveButton(
+      <HeaderAction
+        label={label}
+        onClick={handleSaveSettings}
+        disabled={saving}
+        icon={saving
+          ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+          : <Save aria-hidden="true" className="h-4 w-4" />}
+      />
+    );
+
     return () => {
-      setSaveButton?.(null);
+      setSaveButton(null);
     };
-  }, [handleSaveSettings, saving, loading, settings, setSaveButton]);
+  }, [handleSaveSettings, initialLoad, loadError, loading, saving, settings, setSaveButton]);
 
   useEffect(() => {
     const result = readIntegrationOAuthResult(location.search);
@@ -539,6 +656,18 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
     setBusinessFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  // Resolve the plan gate before mounting protected payment data. This keeps
+  // Free accounts on the same stable entitlement-first path as Integrations.
+  if (!subscriptionLoading && !isSubscribed) {
+    return (
+      <PaymentsTabErrorState
+        error="subscription"
+        onRetry={refetchData}
+        onUpgrade={() => navigate(AVAILABLE_PLANS_PATH)}
+      />
+    );
+  }
+
   // Show skeleton on initial load or when explicitly loading
   if (initialLoad || loading) {
     return <PaymentsTabLoadingSkeleton />;
@@ -550,7 +679,7 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
       <PaymentsTabErrorState
         error={loadError ?? 'settings'}
         onRetry={refetchData}
-        onUpgrade={() => navigate('/settings')}
+        onUpgrade={() => navigate(AVAILABLE_PLANS_PATH)}
       />
     );
   }
@@ -640,14 +769,21 @@ export function SettingsPage() {
     <PageLayout
       title={activeNavItem.title.toUpperCase()}
       icon={<ActivePageIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-      pageActions={saveButton}
-      mobileActions={saveButton ? <div className="flex-1">{saveButton}</div> : undefined}
+      desktopTools={saveButton ? { primaryAction: saveButton } : undefined}
+      mobileActions={saveButton ? (
+        <div className="flex-1 [&_.desktop-header-action-label]:!inline [&_button]:w-full">
+          {saveButton}
+        </div>
+      ) : undefined}
+      compactNavigation={<SettingsShellNavigation />}
       nav={<SettingsNav />}
       navigationBreakpoint="wide"
     >
       <div key={location.pathname}>
         {location.pathname === '/preferences' && <PreferencesSettings />}
-        {location.pathname === '/organization-settings' && <OrganizationSettings />}
+        {location.pathname === '/organization-settings' && (
+          <OrganizationSettings setSaveButton={setSaveButton} />
+        )}
         {location.pathname === '/settings/integrations' && <IntegrationsSettings embedded />}
         {location.pathname === '/payment-settings' && (
           <PaymentsSettings

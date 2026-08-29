@@ -135,7 +135,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       logger.error('Failed to load canvas data; leaving the saved drawing untouched', error);
       toast({
         title: 'Could not load drawing',
-        description: 'The saved whiteboard could not be opened. Your data was not overwritten.',
+        description: 'Whiteboard unavailable. Your saved data is unchanged.',
         variant: 'destructive',
       });
       setIsCanvasLoaded(true);
@@ -229,7 +229,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       setSaveState('error');
       toast({
         title: 'Could not save drawing',
-        description: 'Your last strokes are still on the board. Retry when your connection is restored.',
+        description: 'Strokes preserved. Retry after reconnecting.',
         variant: 'destructive',
       });
     }

@@ -23,13 +23,13 @@ import {
 export const ONBOARDING_CONTENT: Record<string, OnboardingContent> = {
   canvas: {
     title: "Build your workspace",
-    description: "Choose the kinds of content that fit your work and arrange them together on one canvas.",
+    description: "Choose content and arrange it on one canvas.",
     version: "3.0",
     completeLabel: "Choose a format",
     steps: [
       {
         title: "Choose what belongs on your canvas",
-        description: "Start with the format that fits your work. Mix different content types together or use only what you need.",
+        description: "Mix the content formats your work needs.",
         icon: <Layout className="h-12 w-12 text-primary" />,
         tips: [
           "Lists — track tasks and repeatable work",
@@ -41,7 +41,7 @@ export const ONBOARDING_CONTENT: Record<string, OnboardingContent> = {
       },
       {
         title: "Arrange it around the way you work",
-        description: "Move and resize content as your project evolves, then use search and filters whenever you need to focus.",
+        description: "Move, resize, search, and filter as work changes.",
         icon: <Palette className="h-12 w-12 text-primary" />,
         tips: [
           "Drag items anywhere on the canvas",
@@ -60,7 +60,7 @@ lists: {
     steps: [
       {
         title: "Create Lists",
-        description: "Organize your content into lists. Add items, check them off, and stay productive.",
+        description: "Add, organize, and complete list items.",
         icon: <CheckSquare className="h-12 w-12 text-primary" />,
         tips: [
           "Click 'New List' to create a list",
@@ -85,12 +85,12 @@ lists: {
 
   notes: {
     title: "Welcome to Notes",
-    description: "Capture ideas, thoughts, and important information with rich text notes",
+    description: "Capture and format ideas in rich-text notes.",
     version: "1.0",
     steps: [
       {
         title: "Create Notes",
-        description: "Quick capture for all your thoughts. Format text, add links, and organize with categories.",
+        description: "Format text, add links, and use categories.",
         icon: <StickyNote className="h-12 w-12 text-primary" />,
         tips: [
           "Click 'New Note' to start writing",
@@ -101,7 +101,7 @@ lists: {
       },
       {
         title: "Sticky Note Style",
-        description: "Notes appear as colorful sticky notes on your canvas, just like a real desk.",
+        description: "Arrange colorful notes anywhere on your canvas.",
         icon: <Palette className="h-12 w-12 text-primary" />,
         tips: [
           "Choose from multiple colors",
@@ -120,7 +120,7 @@ lists: {
     steps: [
       {
         title: "Draw & Sketch",
-        description: "Free-form drawing canvas for diagrams, flowcharts, and visual thinking.",
+        description: "Draw diagrams, flowcharts, and visual ideas.",
         icon: <Palette className="h-12 w-12 text-primary" />,
         tips: [
           "Use drawing tools to sketch",
@@ -139,7 +139,7 @@ lists: {
     steps: [
       {
         title: "Contact Management",
-        description: "Store and organize all your customer information, interactions, and history.",
+        description: "Keep customer details and history together.",
         icon: <Users className="h-12 w-12 text-primary" />,
         tips: [
           "Add contacts with full details",
@@ -183,13 +183,13 @@ lists: {
 
   invoices: {
     title: "Explore Sales & Payments",
-    description: "Price work, bill clients, and follow the money from one connected toolkit.",
+    description: "Price work, bill clients, and track payments.",
     version: "2.0",
     completeLabel: "Explore sales tools",
     steps: [
       {
         title: "Price and bill your work",
-        description: "Use the document that matches the job, from an initial estimate through recurring billing.",
+        description: "Use estimates, invoices, or recurring billing.",
         icon: <FileText className="h-12 w-12 text-primary" />,
         tips: [
           "Estimates — propose a price and record approval",
@@ -200,7 +200,7 @@ lists: {
       },
       {
         title: "Track what gets paid",
-        description: "Monitor document status, payment activity, and overdue balances without losing the client context.",
+        description: "Track document status, payments, and overdue balances.",
         icon: <TrendingUp className="h-12 w-12 text-primary" />,
         tips: [
           "See draft, sent, paid, and overdue work",
@@ -244,13 +244,13 @@ lists: {
 
   calendars: {
     title: "Explore Scheduling",
-    description: "Configure availability, accept bookings, and connect the calendars you already use.",
+    description: "Set availability, accept bookings, and connect calendars.",
     version: "2.0",
     completeLabel: "Explore scheduling",
     steps: [
       {
         title: "Make your time bookable",
-        description: "Create calendars with the availability, duration, and booking rules each service needs.",
+        description: "Set availability, duration, and booking rules.",
         icon: <Calendar className="h-12 w-12 text-primary" />,
         tips: [
           "Calendars — define availability and booking rules",
@@ -261,7 +261,7 @@ lists: {
       },
       {
         title: "Keep your calendars connected",
-        description: "Connect external calendars so availability and scheduled work stay aligned.",
+        description: "Keep availability aligned with external calendars.",
         icon: <CalendarCheck className="h-12 w-12 text-primary" />,
         tips: [
           "Calendar integrations — connect supported providers",
@@ -280,7 +280,7 @@ lists: {
     steps: [
       {
         title: "Overview",
-        description: "See key metrics, recent activity, and important updates at a glance.",
+        description: "See metrics, activity, and updates at a glance.",
         icon: <Layout className="h-12 w-12 text-primary" />,
         tips: [
           "View recent items and activity",
@@ -294,13 +294,13 @@ lists: {
 
   inbox: {
     title: "Explore Communications",
-    description: "Bring customer conversations together across your inbox, website, and connected social channels.",
+    description: "Bring customer conversations into one inbox.",
     version: "2.0",
     completeLabel: "Explore communications",
     steps: [
       {
         title: "Bring conversations together",
-        description: "Use the inbox as the shared record of customer messages, replies, and follow-up work.",
+        description: "Keep messages, replies, and follow-ups together.",
         icon: <Inbox className="h-12 w-12 text-primary" />,
         tips: [
           "Inbox — review and reply to conversations",
@@ -311,7 +311,7 @@ lists: {
       },
       {
         title: "Meet customers where they reach you",
-        description: "Configure each channel independently while keeping the resulting conversations in one workflow.",
+        description: "Configure each channel within one workflow.",
         icon: <MessageCircle className="h-12 w-12 text-primary" />,
         tips: [
           "Customize the website chat experience",
@@ -325,13 +325,13 @@ lists: {
 
   campaigns: {
     title: "Explore Campaigns",
-    description: "Define the audience, prepare reusable messages, and send campaigns from one place.",
+    description: "Build audiences, messages, and campaigns together.",
     version: "2.0",
     completeLabel: "Explore campaigns",
     steps: [
       {
         title: "Reach the right audience",
-        description: "Build campaigns around the contacts and segments that should receive each message.",
+        description: "Target the right contacts and segments.",
         icon: <Send className="h-12 w-12 text-primary" />,
         tips: [
           "Segments — define reusable audiences",
@@ -342,7 +342,7 @@ lists: {
       },
       {
         title: "Learn from every send",
-        description: "Review delivery and engagement signals, then refine the next audience or message.",
+        description: "Use engagement to improve the next send.",
         icon: <TrendingUp className="h-12 w-12 text-primary" />,
         tips: [
           "Track delivery before judging engagement",
@@ -356,13 +356,13 @@ lists: {
 
   pages: {
     title: "Explore Pages & Forms",
-    description: "Publish focused pages and collect structured responses without adding another builder.",
+    description: "Publish pages and collect structured responses.",
     version: "2.0",
     completeLabel: "Explore pages and forms",
     steps: [
       {
         title: "Publish a focused destination",
-        description: "Use landing pages to explain an offer, present a clear next step, or support a campaign.",
+        description: "Present an offer with one clear next step.",
         icon: <Globe className="h-12 w-12 text-primary" />,
         tips: [
           "Start with a page structure that fits the goal",
@@ -373,7 +373,7 @@ lists: {
       },
       {
         title: "Collect the information you need",
-        description: "Build forms for inquiries, intake, feedback, or any structured response.",
+        description: "Collect inquiries, intake, and feedback.",
         icon: <ClipboardList className="h-12 w-12 text-primary" />,
         tips: [
           "Forms — choose fields and validation rules",
@@ -387,12 +387,12 @@ lists: {
 
   forms: {
     title: "Welcome to Forms",
-    description: "Create custom forms to collect information from leads and customers",
+    description: "Collect lead and customer information.",
     version: "1.0",
     steps: [
       {
         title: "Form Builder",
-        description: "Build custom forms with various field types and conditional logic.",
+        description: "Use flexible fields and conditional logic.",
         icon: <ClipboardList className="h-12 w-12 text-primary" />,
         tips: [
           "Drag and drop field types",
@@ -449,7 +449,7 @@ lists: {
     steps: [
       {
         title: "Social Channels",
-        description: "Connect Facebook and Instagram to manage messages from one place.",
+        description: "Manage Facebook and Instagram messages together.",
         icon: <Share2 className="h-12 w-12 text-primary" />,
         tips: [
           "Connect Facebook pages",
@@ -463,13 +463,13 @@ lists: {
 
   reputation: {
     title: "Explore Reputation",
-    description: "Monitor feedback, request new reviews, and publish trust signals where customers will see them.",
+    description: "Request, monitor, and publish customer reviews.",
     version: "2.0",
     completeLabel: "Explore reputation",
     steps: [
       {
         title: "Build a repeatable review loop",
-        description: "Bring existing reviews into view, ask satisfied customers for feedback, and reuse the strongest proof.",
+        description: "Collect feedback and reuse your strongest reviews.",
         icon: <Star className="h-12 w-12 text-primary" />,
         tips: [
           "Reviews — monitor feedback in one place",

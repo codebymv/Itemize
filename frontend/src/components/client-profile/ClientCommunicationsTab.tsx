@@ -70,7 +70,7 @@ export function ClientCommunicationsTab({
           {onAddNote && (
             <Button variant="outline" className="w-full justify-start" onClick={onAddNote}>
               <Plus className="h-4 w-4 mr-2" />
-              Add Note
+              Add note
             </Button>
           )}
         </CardContent>

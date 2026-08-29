@@ -1,5 +1,5 @@
 import { PaymentRow, PaymentsRepository } from './payments.repository';
-import { PaymentMethod, PaymentStatus } from './payment.types';
+import { PaymentMethod, PaymentPeriod, PaymentStatus } from './payment.types';
 import { PaymentsService } from './payments.service';
 
 const payment: PaymentRow = {
@@ -34,6 +34,14 @@ describe('PaymentsService', () => {
 
   beforeEach(() => {
     repository = {
+      periodRange: jest.fn().mockResolvedValue({
+        period: PaymentPeriod.LAST_30_DAYS,
+        startAt: new Date('2026-07-01T07:00:00.000Z'),
+        endAt: new Date('2026-07-31T12:00:00.000Z'),
+        timeZone: 'America/Phoenix',
+      }),
+      overview: jest.fn(),
+      revenueFlow: jest.fn(),
       findPage: jest.fn(),
       record: jest.fn(),
       prepareRefund: jest.fn(),
@@ -50,8 +58,10 @@ describe('PaymentsService', () => {
       service.list(
         3,
         { page: 2, pageSize: 10 },
+        PaymentPeriod.LAST_30_DAYS,
         PaymentStatus.SUCCEEDED,
         PaymentMethod.CARD,
+        ' Ada ',
       ),
     ).resolves.toMatchObject({
       nodes: [{
@@ -65,11 +75,103 @@ describe('PaymentsService', () => {
     });
     expect(repository.findPage).toHaveBeenCalledWith(
       3,
-      10,
-      10,
-      PaymentStatus.SUCCEEDED,
-      PaymentMethod.CARD,
+      expect.objectContaining({
+        pageSize: 10,
+        offset: 10,
+        status: PaymentStatus.SUCCEEDED,
+        paymentMethod: PaymentMethod.CARD,
+        search: 'Ada',
+      }),
     );
+  });
+
+  it('returns currency-safe authoritative overview totals', async () => {
+    repository.overview.mockResolvedValue([{
+      currency: 'USD',
+      failed_amount: '15.00',
+      failed_count: '1',
+      gross_amount: '200.00',
+      gross_count: '3',
+      in_progress_amount: '25.00',
+      in_progress_count: '1',
+      refunded_amount: '40.00',
+      refunded_count: '1',
+      net_amount: '160.00',
+    }]);
+
+    await expect(
+      service.overview(3, PaymentPeriod.LAST_30_DAYS),
+    ).resolves.toMatchObject({
+      period: PaymentPeriod.LAST_30_DAYS,
+      timeZone: 'America/Phoenix',
+      currencies: [{
+        currency: 'USD',
+        failedAmount: '15.00',
+        failedCount: 1,
+        netAmount: '160.00',
+      }],
+    });
+  });
+
+  it('zero-fills authoritative revenue buckets and reconciles refunds', async () => {
+    repository.revenueFlow.mockResolvedValue({
+      startAt: new Date('2026-07-01T07:00:00.000Z'),
+      bucketUnit: 'day',
+      boundaries: [
+        new Date('2026-07-01T07:00:00.000Z'),
+        new Date('2026-07-02T07:00:00.000Z'),
+      ],
+      summaries: [{
+        currency: 'USD',
+        booked_sales: '300.00',
+        booked_deals: '2',
+        failed_amount: '15.00',
+        failed_count: '1',
+        gross_received: '200.00',
+        settled_payments: '3',
+        in_progress_amount: '25.00',
+        in_progress_count: '1',
+        refunds: '40.00',
+        refunded_payments: '1',
+        net_received: '160.00',
+      }],
+      buckets: [{
+        currency: 'USD',
+        start_at: new Date('2026-07-01T07:00:00.000Z'),
+        booked_sales: '300.00',
+        booked_deals: '2',
+        gross_received: '200.00',
+        settled_payments: '3',
+        refunds: '40.00',
+        refunded_payments: '1',
+        net_received: '160.00',
+      }],
+      methods: [{
+        currency: 'USD',
+        payment_method: PaymentMethod.CARD,
+        gross_received: '200.00',
+        settled_payments: '3',
+        refunds: '40.00',
+        refunded_payments: '1',
+        net_received: '160.00',
+      }],
+    });
+
+    await expect(
+      service.revenueFlow(3, PaymentPeriod.LAST_30_DAYS),
+    ).resolves.toMatchObject({
+      period: PaymentPeriod.LAST_30_DAYS,
+      bucketUnit: 'day',
+      currencies: [{
+        currency: 'USD',
+        summary: { bookedSales: '300.00', netReceived: '160.00' },
+        buckets: [
+          { grossReceived: '200.00', refunds: '40.00' },
+          { grossReceived: '0.00', refunds: '0.00', netReceived: '0.00' },
+        ],
+        methods: [{ paymentMethod: PaymentMethod.CARD, netReceived: '160.00' }],
+      }],
+    });
   });
 
   it('rejects unbounded page input', async () => {

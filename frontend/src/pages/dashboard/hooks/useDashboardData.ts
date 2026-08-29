@@ -9,13 +9,12 @@ import {
   getConversionRates,
   getCommunicationStats,
   getPipelineDealAge,
-  getRevenueTrends,
   type DashboardAnalytics,
   type ConversionRates,
   type CommunicationStats,
   type PipelineDealAge,
-  type RevenueTrends,
 } from '@/services/analyticsApi';
+import { getRevenueFlow, type RevenueFlow } from '@/services/invoicePaymentsApi';
 
 interface UseDashboardDataParams {
   organizationId?: number;
@@ -28,7 +27,7 @@ interface UseDashboardDataReturn {
   conversions: ConversionRates | undefined;
   communications: CommunicationStats | undefined;
   pipelineDealAge: PipelineDealAge | undefined;
-  revenue: RevenueTrends | undefined;
+  revenue: RevenueFlow | undefined;
   
   // Loading states
   isLoadingAnalytics: boolean;
@@ -91,7 +90,6 @@ export function useDashboardData({
 }: UseDashboardDataParams): UseDashboardDataReturn {
   const conversionPeriod = period === '6months' ? '30days' : period;
   const communicationPeriod = period === '6months' || period === '12months' ? '30days' : period;
-  const revenuePeriod = period === '7days' || period === '90days' ? '30days' : period;
 
   // Main analytics query
   const {
@@ -160,21 +158,23 @@ export function useDashboardData({
     error: revenueError,
     refetch: refetchRevenue,
   } = useQuery({
-    queryKey: ['revenue-trends', period, organizationId],
+    queryKey: ['revenue-flow', period, organizationId],
     queryFn: () =>
-      getRevenueTrends(revenuePeriod, organizationId),
-    enabled: shouldLoadSecondary,
+      getRevenueFlow(organizationId!, period),
+    // Revenue is a first-class signal in its own right. Standalone payments can
+    // exist even when the CRM analytics snapshot has no contacts or deals.
+    enabled: !!organizationId,
     staleTime: 5 * 60 * 1000,
   });
 
   // Refetch all data
   const refetchAll = () => {
     void refetchAnalytics();
+    if (organizationId) void refetchRevenue();
     if (shouldLoadSecondary) {
       void refetchConversions();
       void refetchCommunications();
       void refetchPipelineDealAge();
-      void refetchRevenue();
     }
   };
 
@@ -184,21 +184,21 @@ export function useDashboardData({
     conversions: shouldLoadSecondary ? conversions || undefined : undefined,
     communications: shouldLoadSecondary ? communications || undefined : undefined,
     pipelineDealAge: shouldLoadSecondary ? pipelineDealAge || undefined : undefined,
-    revenue: shouldLoadSecondary ? revenue || undefined : undefined,
+    revenue: revenue || undefined,
     
     // Loading states
     isLoadingAnalytics,
     isLoadingConversions: shouldLoadSecondary && isLoadingConversions,
     isLoadingCommunications: shouldLoadSecondary && isLoadingCommunications,
     isLoadingPipelineDealAge: shouldLoadSecondary && isLoadingPipelineDealAge,
-    isLoadingRevenue: shouldLoadSecondary && isLoadingRevenue,
+    isLoadingRevenue,
     
     // Error states
     analyticsError: analyticsError as Error | null,
     conversionsError: shouldLoadSecondary ? conversionsError as Error | null : null,
     communicationsError: shouldLoadSecondary ? communicationsError as Error | null : null,
     pipelineDealAgeError: shouldLoadSecondary ? pipelineDealAgeError as Error | null : null,
-    revenueError: shouldLoadSecondary ? revenueError as Error | null : null,
+    revenueError: revenueError as Error | null,
     
     // Refetch
     refetchAll,

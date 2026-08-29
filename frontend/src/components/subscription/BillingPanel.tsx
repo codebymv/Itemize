@@ -211,7 +211,7 @@ export function BillingPanel() {
                     <CardContent className="space-y-4">
                         <div className="flex items-center gap-3">
                             <div className={`p-2 rounded-lg ${meta.bgColor}`}>
-                                <Icon className={`h-5 w-5 ${meta.color}`} />
+                                <Icon className="icon-accent h-5 w-5" />
                             </div>
                             <div>
                                 <h3 className="text-xl font-semibold">{meta.displayName}</h3>

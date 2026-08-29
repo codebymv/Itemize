@@ -78,10 +78,10 @@ function CurrencyTrendChart({ trend, period }: { trend: RevenueCurrencyTrend; pe
                                     <p className="text-xs text-muted-foreground">
                                         {formatPeriod(point.period, period)}
                                     </p>
-                                    <p className="font-medium text-blue-600">
+                                    <p className="font-medium text-blue-600 dark:text-blue-400">
                                         Booked: {formatCurrency(point.bookedRevenue, trend.currency)}
                                     </p>
-                                    <p className="font-medium text-green-600">
+                                    <p className="font-medium text-green-600 dark:text-green-400">
                                         Collected: {formatCurrency(point.collectedRevenue, trend.currency)}
                                     </p>
                                 </div>

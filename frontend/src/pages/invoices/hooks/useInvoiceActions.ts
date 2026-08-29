@@ -108,7 +108,7 @@ export function useInvoiceActions(organizationId: number | null | undefined, fet
       setStates();
        
       fetchInvoices();
-      navigate('/recurring-invoices');
+      navigate('/invoices/recurring');
     } catch (error: unknown) {
       const errorMessage = getApiErrorMessage(error, 'Failed to create recurring template');
       toast({ title: 'Error', description: errorMessage, variant: 'destructive' });

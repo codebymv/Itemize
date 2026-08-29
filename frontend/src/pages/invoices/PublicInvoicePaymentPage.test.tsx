@@ -46,7 +46,7 @@ describe('PublicInvoicePaymentPage', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Payment not completed' })).toBeInTheDocument();
-    expect(screen.getByText(/No payment was recorded/)).toBeInTheDocument();
+    expect(screen.getByText(/No payment recorded/)).toBeInTheDocument();
     expect(api.getPublicInvoicePaymentResult).not.toHaveBeenCalled();
   });
 });

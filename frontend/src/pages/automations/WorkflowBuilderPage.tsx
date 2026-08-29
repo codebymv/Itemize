@@ -17,7 +17,6 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import {
-  ArrowLeft,
   Save,
   Play,
   Pause,
@@ -54,6 +53,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { ShellBackButton } from '@/components/layout/ShellBackButton';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useDirtyState } from '@/hooks/useDirtyState';
@@ -516,14 +516,10 @@ export function WorkflowBuilderPage() {
         title="WORKFLOW EDITOR"
         icon={<Zap className="h-5 w-5 text-blue-600 flex-shrink-0" />}
         leading={
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9"
+          <ShellBackButton
+            label="Back to automations"
             onClick={() => { if (confirmLeave()) navigate('/automations'); }}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          />
         }
         frame="flush"
       >
@@ -537,14 +533,10 @@ export function WorkflowBuilderPage() {
       title="WORKFLOW EDITOR"
       icon={<Zap className="h-5 w-5 text-blue-600 flex-shrink-0" />}
       leading={
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9"
+        <ShellBackButton
+          label="Back to automations"
           onClick={() => { if (confirmLeave()) navigate('/automations'); }}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+        />
       }
       pageActions={
         <>
@@ -712,7 +704,7 @@ export function WorkflowBuilderPage() {
                 className="group/menu-button flex h-9 w-full items-center gap-2 overflow-hidden rounded-md px-2 text-left text-sm outline-none ring-sidebar-ring transition-[width,height,padding] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 font-raleway text-sidebar-foreground"
                 onClick={() => handleAddStep(step.value)}
               >
-                <step.icon className="h-4 w-4 shrink-0 text-gray-600 dark:text-gray-400 group-hover/menu-button:text-blue-600 transition-colors" />
+                <step.icon className="h-4 w-4 shrink-0 text-gray-600 dark:text-gray-400 group-hover/menu-button:text-blue-600 dark:group-hover/menu-button:text-blue-400 transition-colors" />
                 <span className="truncate">{step.label}</span>
               </button>
             </li>

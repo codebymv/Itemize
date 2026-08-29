@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthState } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { StatCard } from '@/components/StatCard';
 import {
@@ -14,6 +14,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { HeaderAction, HeaderFilters } from '@/components/layout/DesktopHeaderTools';
 import {
     Users,
     TrendingUp,
@@ -41,18 +42,16 @@ import { PipelineFunnel } from './dashboard/components/PipelineFunnel';
 import { ConversionRateCard } from './dashboard/components/ConversionRateCard';
 import { CommunicationStatsCard } from './dashboard/components/CommunicationStatsCard';
 import { PipelineDealAgeCard } from './dashboard/components/PipelineDealAgeCard';
-import { RecentActivityList } from './dashboard/components/RecentActivityList';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
-import { ActivityTimeline } from '@/components/activity-timeline';
+import { ActivityTimeline, getLatestActivityGroupLabel } from '@/components/activity-timeline';
 import { transformApiActivityToDesignSystem } from '@/design-system/utils/transform-api-activity';
-import { RevenueTrendsChart } from './dashboard/components/RevenueTrendsChart';
+import { RevenueFlowChart } from '@/components/payments/RevenueFlowChart';
 import { useOrganization } from '@/hooks/useOrganization';
 import { InvoicesWidget, SignaturesWidget, WorkspaceWidget, ContactsWidget } from '@/design-system/widgets';
 import { GetStartedCard } from '@/components/GetStartedCard';
 
 interface QuickAction {
     title: string;
-    description: string;
     icon: LucideIcon;
     action: () => void;
 }
@@ -145,63 +144,75 @@ export function DashboardPage() {
         isLoadingRevenue: revenueLoading,
     } = useDashboardData({ organizationId, period });
 
+    const recentActivities = analytics?.recentActivity?.map(transformApiActivityToDesignSystem) ?? [];
+    const latestActivityGroupLabel = getLatestActivityGroupLabel(recentActivities);
+
     const firstName = currentUser?.name?.split(' ')[0] || 'there';
 
     const quickActions: QuickAction[] = [
         {
             title: 'Manage Contacts',
-            description: 'View and manage your CRM contacts',
             icon: Users,
             action: () => navigate('/contacts'),
         },
         {
             title: 'View Pipelines',
-            description: 'Track deals and opportunities',
             icon: TrendingUp,
             action: () => navigate('/pipelines'),
         },
         {
             title: 'View Bookings',
-            description: 'Manage your appointments',
             icon: Calendar,
             action: () => navigate('/bookings'),
         },
         {
             title: 'Open Workspace',
-            description: 'Continue organizing on your canvas',
             icon: Map,
             action: () => navigate('/canvas'),
         },
     ];
 
+    const periodSelect = (compact = false) => (
+        <Select value={period} onValueChange={(value) => setPeriod(value as PeriodOption)}>
+            <SelectTrigger
+                className={compact
+                    ? 'h-11 w-full bg-muted/20'
+                    : 'h-11 w-[140px] bg-muted/20'}
+            >
+                <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+                {Object.entries(periodLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                        {label}
+                    </SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
+    );
+
     return (
         <PageLayout
             title="DASHBOARD"
             icon={<LayoutDashboard className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
-            pageActions={
-                <>
-                    <Select value={period} onValueChange={(value) => setPeriod(value as PeriodOption)}>
-                        <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50">
-                            <SelectValue placeholder="Select period" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {Object.entries(periodLabels).map(([value, label]) => (
-                                <SelectItem key={value} value={value}>
-                                    {label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
-                        onClick={() => navigate('/canvas')}
+            desktopTools={{
+                filters: (
+                    <HeaderFilters
+                        label="Filter dashboard period"
+                        compactChildren={periodSelect(true)}
+                        preferExpanded
                     >
-                        <Map className="h-4 w-4 mr-2" />
-                        Canvas
-                    </Button>
-                </>
-            }
+                        {periodSelect()}
+                    </HeaderFilters>
+                ),
+                primaryAction: (
+                    <HeaderAction
+                        label="Canvas"
+                        onClick={() => navigate('/canvas')}
+                        icon={<Map className="h-4 w-4" />}
+                    />
+                ),
+            }}
             mobileActions={
                 <>
                     <Select value={period} onValueChange={(value) => setPeriod(value as PeriodOption)}>
@@ -228,12 +239,12 @@ export function DashboardPage() {
             }
         >
                     {/* Welcome Section */}
-                    <div className="mb-8">
-                        <h2 className="text-2xl font-light tracking-tight mb-2">
+                    <div className="mb-8 min-[1000px]:flex min-[1000px]:items-center min-[1000px]:justify-between min-[1000px]:gap-6">
+                        <h2 className="mb-2 text-2xl font-light tracking-tight min-[1000px]:mb-0">
                             Welcome back, <span className="font-medium">{firstName}</span>
                         </h2>
-                        <p className="text-muted-foreground">
-                            Here's an overview of your CRM performance
+                        <p className="text-muted-foreground min-[1000px]:shrink-0 min-[1000px]:text-right">
+                            Here's an overview of your performance
                         </p>
                     </div>
 
@@ -243,7 +254,7 @@ export function DashboardPage() {
                     <ResponsiveCardRail
                         label="CRM overview"
                         desktopColumns="md:grid-cols-2 lg:grid-cols-4"
-                        className="mb-8"
+                        className="dashboard-stat-summary mb-8"
                     >
                         <StatCard
                             title="Total Contacts"
@@ -287,7 +298,7 @@ export function DashboardPage() {
                     <ResponsiveCardRail
                         label="Activity overview"
                         desktopColumns="md:grid-cols-3"
-                        className="mb-8"
+                        className="dashboard-stat-summary mb-8"
                     >
                         <StatCard
                             title="Tasks Overdue"
@@ -323,7 +334,7 @@ export function DashboardPage() {
                         label="Module summaries"
                         desktopColumns="md:grid-cols-2 lg:grid-cols-4"
                         mobileCardClassName="flex-[0_0_88%]"
-                        className="mb-8"
+                        className="dashboard-module-summaries mb-8"
                     >
                         <InvoicesWidget
                             primaryStat={analytics?.invoiceMetrics?.pending ?? 0}
@@ -338,7 +349,7 @@ export function DashboardPage() {
                                 subtitle: `$${inv.amount.toLocaleString()}`,
                                 status: { label: inv.status === 'paid' ? 'Paid' : inv.status === 'overdue' ? 'Overdue' : inv.status, color: inv.status === 'paid' ? 'text-green-600 dark:text-green-400' : inv.status === 'overdue' ? 'text-orange-600 dark:text-orange-400' : 'text-blue-600 dark:text-blue-400' }
                             })) ?? []}
-                            action={{ label: 'View Invoices', onClick: () => navigate('/invoices') }}
+                            action={{ label: 'View Invoices', compactLabel: 'View', onClick: () => navigate('/invoices') }}
                             loading={isLoading}
                             compact={isMobile}
                             isCollapsed={isWidgetCollapsed('invoices')}
@@ -356,7 +367,7 @@ export function DashboardPage() {
                                 title: sig.title,
                                 status: { label: sig.status === 'signed' ? 'Signed' : sig.status === 'sent' ? 'Awaiting' : sig.status, color: sig.status === 'signed' ? 'text-green-600 dark:text-green-400' : sig.status === 'sent' ? 'text-orange-600 dark:text-orange-400' : 'text-gray-600 dark:text-gray-400' }
                             })) ?? []}
-                            action={{ label: 'View Documents', onClick: () => navigate('/documents') }}
+                            action={{ label: 'View Documents', compactLabel: 'View', onClick: () => navigate('/documents') }}
                             loading={isLoading}
                             compact={isMobile}
                             isCollapsed={isWidgetCollapsed('signatures')}
@@ -375,7 +386,7 @@ export function DashboardPage() {
                                 title: item.title,
                                 status: undefined
                             })) ?? []}
-                            action={{ label: 'Open Workspace', onClick: () => navigate('/canvas') }}
+                            action={{ label: 'Open Workspace', compactLabel: 'View', onClick: () => navigate('/canvas') }}
                             loading={isLoading}
                             compact={isMobile}
                             isCollapsed={isWidgetCollapsed('workspace')}
@@ -394,7 +405,7 @@ export function DashboardPage() {
                                 title: contact.name,
                                 subtitle: contact.email
                             })) ?? []}
-                            action={{ label: 'View Contacts', onClick: () => navigate('/contacts') }}
+                            action={{ label: 'View Contacts', compactLabel: 'View', onClick: () => navigate('/contacts') }}
                             loading={isLoading}
                             compact={isMobile}
                             isCollapsed={isWidgetCollapsed('contacts')}
@@ -402,26 +413,32 @@ export function DashboardPage() {
                         />
                     </ResponsiveCardRail>
 
-                    {/* Revenue Trends Chart */}
+                    {/* Revenue flow */}
                     <Card className="bg-muted/10 mb-8">
-                        <CardHeader>
+                        <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
                             <CardTitle className="text-base flex items-center gap-2">
                                 <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                Booked and Collected Revenue
+                                Revenue flow
                             </CardTitle>
-                            <CardDescription>
-                                {periodLabels[period]} · shown separately by currency
-                            </CardDescription>
+                            <Button
+                                size="sm"
+                                onClick={() => navigate('/invoices/payments')}
+                                className="bg-blue-600 hover:bg-blue-700 text-white text-xs whitespace-nowrap font-light"
+                                aria-label="View payment revenue flow details"
+                            >
+                                View payments
+                                <ArrowRight className="ml-1 h-3 w-3" />
+                            </Button>
                         </CardHeader>
                         <CardContent>
-                            <RevenueTrendsChart data={revenueData} isLoading={revenueLoading} />
+                            <RevenueFlowChart data={revenueData} isLoading={revenueLoading} compact />
                         </CardContent>
                     </Card>
 
                     {/* Pipeline funnel and current deal age */}
-                    <div className="grid gap-6 md:grid-cols-2 mb-8">
+                    <div className="mb-8 grid gap-6 md:grid-cols-2">
                         {/* Pipeline Overview */}
-                        <Card className="bg-muted/10">
+                        <Card className="flex flex-col bg-muted/10">
                             <CardHeader>
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="text-base flex items-center gap-2">
@@ -432,13 +449,17 @@ export function DashboardPage() {
                                         size="sm"
                                         onClick={() => navigate('/pipelines')}
                                         className="bg-blue-600 hover:bg-blue-700 text-white text-xs whitespace-nowrap font-light"
+                                        aria-label="View pipeline overview details"
+                                        data-dashboard-detail-action
                                     >
-                                        View Details <ArrowRight className="h-3 w-3 ml-1" />
+                                        <span data-dashboard-detail-label>
+                                            View<span className="hidden min-[1048px]:inline"> Details</span>
+                                        </span>
+                                        <ArrowRight className="ml-1 h-3 w-3" />
                                     </Button>
                                 </div>
-                                <CardDescription>Active deals by stage</CardDescription>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="flex-1">
                                 <PipelineFunnel
                                     funnel={analytics?.deals?.funnel ?? []}
                                     isLoading={isLoading}
@@ -455,16 +476,18 @@ export function DashboardPage() {
                                             <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                                             Open Deal Age
                                         </CardTitle>
-                                        <CardDescription>
-                                            {pipelineDealAge?.pipeline?.name ?? 'Default Pipeline'} · age since deal creation
-                                        </CardDescription>
                                     </div>
                                     <Button
                                         size="sm"
                                         onClick={() => navigate('/pipelines')}
                                         className="bg-blue-600 hover:bg-blue-700 text-white text-xs whitespace-nowrap font-light"
+                                        aria-label="View open deal age details"
+                                        data-dashboard-detail-action
                                     >
-                                        View Details <ArrowRight className="h-3 w-3 ml-1" />
+                                        <span data-dashboard-detail-label>
+                                            View<span className="hidden min-[1048px]:inline"> Details</span>
+                                        </span>
+                                        <ArrowRight className="ml-1 h-3 w-3" />
                                     </Button>
                                 </div>
                             </CardHeader>
@@ -480,25 +503,35 @@ export function DashboardPage() {
                     {/* Recent Activity */}
                     <Card className="bg-muted/10 mb-8">
                         <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <CardTitle className="text-base flex items-center gap-2">
+                            <div className="flex items-center justify-between gap-3">
+                                <CardTitle className="flex shrink-0 items-center gap-2 text-base">
                                     <Activity className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                                     Recent Activity
                                 </CardTitle>
-                                <Button
-                                    size="sm"
-                                    onClick={() => navigate('/contacts')}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white text-xs whitespace-nowrap font-light"
-                                >
-                                    View Details <ArrowRight className="h-3 w-3 ml-1" />
-                                </Button>
+                                <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-3">
+                                    <span className="min-w-0 flex-1 text-right text-sm leading-5 text-muted-foreground">
+                                        latest updates:{latestActivityGroupLabel ? ` ${latestActivityGroupLabel}` : ''}
+                                    </span>
+                                    <Button
+                                        size="sm"
+                                        onClick={() => navigate('/contacts')}
+                                        className="shrink-0 bg-blue-600 text-xs font-light text-white hover:bg-blue-700"
+                                        aria-label="View recent activity details"
+                                        data-dashboard-detail-action
+                                    >
+                                        <span data-dashboard-detail-label>
+                                            View<span className="hidden min-[1048px]:inline"> Details</span>
+                                        </span>
+                                        <ArrowRight className="ml-1 h-3 w-3" />
+                                    </Button>
+                                </div>
                             </div>
-                            <CardDescription>Latest updates across all modules</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <ActivityTimeline
-                                activities={analytics?.recentActivity?.map(transformApiActivityToDesignSystem) ?? []}
+                                activities={recentActivities}
                                 isLoading={isLoading}
+                                hideFirstGroupHeading
                                 empty={{
                                     title: 'No activity yet',
                                     description: 'Activity will appear here as you use Itemize'
@@ -510,9 +543,9 @@ export function DashboardPage() {
                     {/* Performance analytics: swipeable rail on mobile, grid on desktop */}
                     <ResponsiveCardRail
                         label="Performance analytics"
-                        desktopColumns="md:grid-cols-2 md:gap-6"
+                        desktopColumns="md:grid-cols-1 md:gap-6 min-[951px]:grid-cols-2"
                         mobileCardClassName="flex-[0_0_92%]"
-                        className="mb-8"
+                        className="dashboard-performance-analytics mb-8"
                     >
                         {/* Conversion Rates */}
                         <Card className="bg-muted/10 h-full flex flex-col">
@@ -520,11 +553,11 @@ export function DashboardPage() {
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="text-base flex items-center gap-2">
                                         <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                        Conversion Rates
+                                        <span className="min-[1048px]:hidden">Rates</span>
+                                        <span className="hidden min-[1048px]:inline">Conversion Rates</span>
                                     </CardTitle>
                                     <span className="text-xs text-muted-foreground">{periodLabels[period]}</span>
                                 </div>
-                                <CardDescription>Closed-deal and form conversion</CardDescription>
                             </CardHeader>
                             <CardContent className="flex-1 flex flex-col">
                                 <div className="flex flex-col gap-3 h-full">
@@ -552,7 +585,10 @@ export function DashboardPage() {
                                         <CardContent className="pt-6 h-full flex flex-col justify-between">
                                             <div className="flex items-center justify-between mb-3">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="p-2 rounded-full bg-muted text-green-600">
+                                                    <div
+                                                        className="p-2 rounded-full bg-muted text-green-600"
+                                                        data-dashboard-analytics-icon
+                                                    >
                                                         <DollarSign className="h-5 w-5" />
                                                     </div>
                                                     <span className="font-medium">Closed Deal Value</span>
@@ -595,11 +631,11 @@ export function DashboardPage() {
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="text-base flex items-center gap-2">
                                         <Mail className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                        Communication
+                                        <span className="min-[1048px]:hidden">Comms</span>
+                                        <span className="hidden min-[1048px]:inline">Communication</span>
                                     </CardTitle>
                                     <span className="text-xs text-muted-foreground">{periodLabels[period]}</span>
                                 </div>
-                                <CardDescription>Email and SMS performance</CardDescription>
                             </CardHeader>
                             <CardContent className="flex-1 flex flex-col">
                                 <CommunicationStatsCard 
@@ -628,7 +664,6 @@ export function DashboardPage() {
                                                 </div>
                                                 <div>
                                                     <CardTitle className="text-sm">{action.title}</CardTitle>
-                                                    <CardDescription className="text-xs">{action.description}</CardDescription>
                                                 </div>
                                             </div>
                                             <ArrowRight className="h-4 w-4 text-muted-foreground" />
@@ -659,15 +694,13 @@ export function DashboardPage() {
                             </CardHeader>
                             <CardContent>
                                 <p className="text-sm text-muted-foreground">
-                                    Set up automated workflows to send emails, create tasks, and update contacts when
-                                    deals move through your pipeline. Visit the{' '}
+                                    Automate emails, tasks, and contact updates in{' '}
                                     <button
                                         onClick={() => navigate('/automations')}
-                                        className="text-blue-600 hover:underline"
+                                        className="text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                                     >
                                         Automations
-                                    </button>{' '}
-                                    page to get started.
+                                    </button>.
                                 </p>
                             </CardContent>
                         </Card>

@@ -1,38 +1,54 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useImperativeHandle, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { RefreshButton } from '@/components/ui/refresh-button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Mail, Loader2 } from 'lucide-react';
 import { getEmailLog, getEmailLogs, EmailLog } from '@/services/adminEmailApi';
 
-export function EmailLogsView() {
+export interface EmailLogsViewHandle {
+    refresh: () => void;
+}
+
+interface EmailLogsViewProps {
+    onLoadingChange?: (loading: boolean) => void;
+    onTotalChange?: (total: number) => void;
+}
+
+export const EmailLogsView = React.forwardRef<EmailLogsViewHandle, EmailLogsViewProps>(function EmailLogsView({
+    onLoadingChange,
+    onTotalChange,
+}, ref) {
     const [logs, setLogs] = useState<EmailLog[]>([]);
     const [loading, setLoading] = useState(true);
-    const [total, setTotal] = useState(0);
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(false);
     const [selectedLog, setSelectedLog] = useState<EmailLog | null>(null);
     const { toast } = useToast();
 
-    const fetchLogs = async (pageNum = 0) => {
+    const fetchLogs = useCallback(async (pageNum = 0) => {
         setLoading(true);
+        onLoadingChange?.(true);
         try {
             const response = await getEmailLogs({ page: pageNum, limit: 25 });
             setLogs(response.logs);
-            setTotal(response.total);
+            onTotalChange?.(response.total);
             setHasMore(response.hasMore);
         } catch {
             toast({ title: 'Error', description: 'Failed to load email logs', variant: 'destructive' });
         } finally {
             setLoading(false);
+            onLoadingChange?.(false);
         }
-    };
+    }, [onLoadingChange, onTotalChange, toast]);
 
     useEffect(() => {
-        fetchLogs();
-    }, []);
+        void fetchLogs();
+    }, [fetchLogs]);
+
+    useImperativeHandle(ref, () => ({
+        refresh: () => void fetchLogs(page),
+    }), [fetchLogs, page]);
 
     const selectLog = async (log: EmailLog) => {
         setSelectedLog(log);
@@ -61,19 +77,8 @@ export function EmailLogsView() {
     };
 
     return (
-        <Card>
-            <CardHeader>
-                <div className="flex items-center justify-between">
-                    <div>
-                        <CardTitle>Email Logs</CardTitle>
-                        <CardDescription>
-                            {total} emails sent
-                        </CardDescription>
-                    </div>
-                    <RefreshButton onClick={() => fetchLogs(page)} />
-                </div>
-            </CardHeader>
-            <CardContent>
+        <>
+            <div data-email-logs-content>
                 {loading ? (
                     <div className="flex items-center justify-center h-48">
                         <Loader2 className="h-6 w-6 animate-spin" />
@@ -121,7 +126,7 @@ export function EmailLogsView() {
                         )}
                     </div>
                 )}
-            </CardContent>
+            </div>
 
             {/* Log Detail Dialog */}
             {selectedLog && (
@@ -165,8 +170,8 @@ export function EmailLogsView() {
                     </Card>
                 </div>
             )}
-        </Card>
+        </>
     );
-}
+});
 
 export default EmailLogsView;

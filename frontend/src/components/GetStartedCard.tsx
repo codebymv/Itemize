@@ -29,11 +29,11 @@ const STEP_COPY: Record<string, { label: string; description: string }> = {
   },
   first_list: {
     label: 'Add something to your workspace',
-    description: 'Choose a list, note, whiteboard, wireframe, or vault',
+    description: 'Choose the content that fits',
   },
   first_workspace_item: {
     label: 'Add something to your workspace',
-    description: 'Choose a list, note, whiteboard, wireframe, or vault',
+    description: 'Choose the content that fits',
   },
   first_artifact: {
     label: 'Create an estimate',
@@ -95,16 +95,19 @@ export function GetStartedCard() {
     <Card className="mb-6">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+          <div className={cn(
+            'min-w-0 flex-1',
+            isBusinessJourney && 'min-[1100px]:flex min-[1100px]:items-center min-[1100px]:justify-between min-[1100px]:gap-4',
+          )}>
             <CardTitle className="text-base font-semibold">
               {isBusinessJourney ? 'Get your first client approval' : 'Start your workspace'}
             </CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {isBusinessJourney
-                ? 'Follow one simple path from client to sent estimate.'
-                : 'Begin with one useful piece of work.'}
-            </p>
-            <div className="mt-2 flex items-center gap-2">
+            {!isBusinessJourney && (
+              <p className="text-sm text-muted-foreground">
+                Begin with one useful piece of work.
+              </p>
+            )}
+            <div className="mt-2 flex items-center gap-2 min-[1100px]:mt-0 min-[1100px]:shrink-0">
               <Progress value={percent} className="h-2 w-40 sm:w-56" />
               <span className="text-xs text-muted-foreground">
                 {data.completedCount}/{data.totalCount} complete

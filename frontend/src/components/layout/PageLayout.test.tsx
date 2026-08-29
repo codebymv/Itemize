@@ -6,8 +6,13 @@ import { PageLayout } from './PageLayout';
 import { PAGE_TITLE_CLASS } from '@/hooks/usePageHeader';
 
 function HeaderSlot() {
-  const { headerContent } = useHeader();
-  return <div data-testid="app-header">{headerContent}</div>;
+  const { headerContent, desktopTools } = useHeader();
+  return (
+    <div data-testid="app-header">
+      {headerContent}
+      <div data-testid="desktop-tools">{desktopTools}</div>
+    </div>
+  );
 }
 
 function renderLayout(ui: React.ReactElement) {
@@ -53,6 +58,78 @@ describe('PageLayout', () => {
     const action = screen.getByRole('button', { name: 'New invoice' });
     expect(actionRegion).toContainElement(action);
     expect(header).not.toContainElement(action);
+  });
+
+  it('renders named desktop tools in query-to-primary order', () => {
+    renderLayout(
+      <PageLayout
+        title="CONTENTS"
+        desktopTools={{
+          search: <button type="button">Search</button>,
+          filters: <button type="button">Filters</button>,
+          combinedQuery: <button type="button">Search and filters</button>,
+          secondaryAction: <button type="button">Canvas</button>,
+          primaryAction: <button type="button">Add</button>,
+        }}
+      >
+        Body
+      </PageLayout>
+    );
+
+    const tools = screen.getByTestId('desktop-tools');
+    const search = screen.getByRole('button', { name: 'Search' });
+    const filters = screen.getByRole('button', { name: 'Filters' });
+    const secondary = screen.getByRole('button', { name: 'Canvas' });
+    const primary = screen.getByRole('button', { name: 'Add' });
+    expect(tools.querySelector('[data-desktop-header-tools]')).toBeInTheDocument();
+    expect(search.compareDocumentPosition(filters) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(filters.compareDocumentPosition(secondary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(secondary.compareDocumentPosition(primary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'CONTENTS actions' })).not.toBeInTheDocument();
+  });
+
+  it('keeps a secondary-only command secondary when no primary action exists', () => {
+    renderLayout(
+      <PageLayout
+        title="SHARED"
+        desktopTools={{
+          search: <button type="button">Search shared content</button>,
+          secondaryAction: <button type="button">Canvas</button>,
+        }}
+      >
+        Body
+      </PageLayout>
+    );
+
+    const tools = screen.getByTestId('desktop-tools');
+    expect(tools.querySelector('.desktop-header-tools__secondary')).toContainElement(
+      screen.getByRole('button', { name: 'Canvas' }),
+    );
+    expect(tools.querySelector('.desktop-header-tools__primary')).toBeNull();
+  });
+
+  it('renders compact section navigation in the shell until wide navigation takes over', () => {
+    renderLayout(
+      <PageLayout
+        title="ORGANIZATION"
+        compactNavigation={<button type="button">Choose settings section</button>}
+        navigationBreakpoint="wide"
+        nav={<nav aria-label="Settings sections">Organization</nav>}
+      >
+        Body
+      </PageLayout>
+    );
+
+    const header = screen.getByTestId('app-header');
+    const compactNavigation = header.querySelector('[data-page-header-compact-navigation]');
+    expect(compactNavigation).toHaveClass('lg:hidden');
+    expect(compactNavigation).toContainElement(
+      screen.getByRole('button', { name: 'Choose settings section' }),
+    );
+    expect(screen.getByRole('heading', { name: 'ORGANIZATION' }).parentElement).toHaveClass(
+      'hidden',
+      'lg:flex',
+    );
   });
 
   it('renders mobile actions in the mobile controls bar', () => {

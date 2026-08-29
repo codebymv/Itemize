@@ -11,6 +11,18 @@ export class AnalyticsContactGrowth {
 }
 
 @ObjectType()
+export class DashboardRecentContact {
+  @Field(() => Int)
+  id: number;
+
+  @Field(() => String)
+  name: string;
+
+  @Field(() => String, { nullable: true })
+  email: string | null;
+}
+
+@ObjectType()
 export class DashboardContactMetrics {
   @Field(() => Float)
   total: number;
@@ -26,6 +38,9 @@ export class DashboardContactMetrics {
 
   @Field(() => [AnalyticsContactGrowth])
   growth: AnalyticsContactGrowth[];
+
+  @Field(() => [DashboardRecentContact])
+  recentContacts: DashboardRecentContact[];
 }
 
 @ObjectType()

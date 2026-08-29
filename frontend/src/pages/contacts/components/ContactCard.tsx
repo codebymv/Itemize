@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { Mail, Phone, MoreHorizontal, Trash2, Edit, ChevronDown } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { getContactStatusBadgeClass } from '@/lib/badge-utils';
+import { ContactStatusIconBadge } from './ContactStatusIconBadge';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -56,20 +55,6 @@ export function ContactCard({
         if (!contact.address) return '';
         const { street, city, state, zip, country } = contact.address;
         return [street, city, state, zip, country].filter(Boolean).join(', ');
-    };
-
-    const getStatusBadge = (status: string) => {
-        const badgeClass = getContactStatusBadgeClass(status);
-        switch (status) {
-            case 'active':
-                return <Badge className={`text-xs ${badgeClass}`}>Active</Badge>;
-            case 'inactive':
-                return <Badge className={`text-xs ${badgeClass}`}>Inactive</Badge>;
-            case 'archived':
-                return <Badge className={`text-xs ${badgeClass}`}>Archived</Badge>;
-            default:
-                return null;
-        }
     };
 
     return (
@@ -131,13 +116,13 @@ export function ContactCard({
                                             }}
                                             className="group/menu"
                                         >
-                                            <Edit className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+                                            <Edit className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
                                             Edit
                                         </DropdownMenuItem>
                                         {contact.email && (
                                             <DropdownMenuItem className="group/menu" asChild>
                                                 <a href={`mailto:${contact.email}`} onClick={(e) => e.stopPropagation()}>
-                                                    <Mail className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+                                                    <Mail className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
                                                     Email
                                                 </a>
                                             </DropdownMenuItem>
@@ -165,7 +150,7 @@ export function ContactCard({
                                     {contact.job_title && ` • ${contact.job_title}`}
                                 </span>
                             )}
-                            {getStatusBadge(contact.status)}
+                            <ContactStatusIconBadge status={contact.status} />
                         </div>
 
                         {/* Footer Row: Email + Phone */}
@@ -175,7 +160,7 @@ export function ContactCard({
                                     href={`mailto:${contact.email}`}
                                     className="flex items-center gap-1.5 text-muted-foreground hover:underline max-w-full"
                                 >
-                                    <Mail className="h-4 w-4 flex-shrink-0 text-blue-600" />
+                                    <Mail className="h-4 w-4 flex-shrink-0 text-blue-600 dark:text-blue-400" />
                                     <span className="truncate max-w-[180px]">{contact.email}</span>
                                 </a>
                             )}
@@ -184,7 +169,7 @@ export function ContactCard({
                                     href={`tel:${contact.phone}`}
                                     className="flex items-center gap-1.5 text-muted-foreground hover:underline max-w-full"
                                 >
-                                    <Phone className="h-4 w-4 flex-shrink-0 text-blue-600" />
+                                    <Phone className="h-4 w-4 flex-shrink-0 text-blue-600 dark:text-blue-400" />
                                     <span className="truncate max-w-[150px]">{contact.phone}</span>
                                 </a>
                             )}

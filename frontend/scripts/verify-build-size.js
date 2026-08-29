@@ -11,8 +11,10 @@ const limits = {
   entry: 430 * 1024,
   'react-vendor': 190 * 1024,
   'router-vendor': 42 * 1024,
-  'query-vendor': 45 * 1024,
-  icons: 42 * 1024,
+  // Pipeline stacking adds the multi-query observer; the expanded sales surfaces
+  // also deliberately use a broader set of semantic Lucide status/action icons.
+  'query-vendor': 46 * 1024,
+  icons: 48 * 1024,
   'axios-vendor': 50 * 1024,
 };
 

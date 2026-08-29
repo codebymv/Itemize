@@ -93,6 +93,9 @@ export class ContactContent {
 
   @Field(() => ContactContentCollection)
   whiteboards: ContactContentCollection;
+
+  @Field(() => ContactContentCollection)
+  wireframes: ContactContentCollection;
 }
 
 @ObjectType()

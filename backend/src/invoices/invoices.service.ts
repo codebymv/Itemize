@@ -558,6 +558,13 @@ export class InvoicesService {
       recurringInterval: row.recurring_interval,
       parentInvoiceId:
         row.parent_invoice_id === null ? null : Number(row.parent_invoice_id),
+      isRecurringSource: row.is_recurring_source,
+      recurringTemplateId:
+        row.recurring_template_id === null ? null : Number(row.recurring_template_id),
+      recurringSourceTemplateId:
+        row.recurring_source_template_id === null
+          ? null
+          : Number(row.recurring_source_template_id),
       customFields: row.custom_fields ?? {},
       createdById: row.created_by === null ? null : Number(row.created_by),
       createdAt: new Date(row.created_at),

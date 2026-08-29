@@ -18,6 +18,7 @@ describe('OperationsSection', () => {
     });
 
     it('renders provider configuration and actionable queue state', async () => {
+        const onDesktopToolsChange = vi.fn();
         getOperationsSnapshot.mockResolvedValue({
             asOf: '2026-08-22T12:00:00.000Z',
             status: 'action_required',
@@ -52,7 +53,7 @@ describe('OperationsSection', () => {
             ],
         });
 
-        render(<OperationsSection />);
+        render(<OperationsSection onDesktopToolsChange={onDesktopToolsChange} />);
 
         await waitFor(() => expect(screen.getByText('PostgreSQL')).toBeInTheDocument());
         expect(screen.getAllByText('Action required').length).toBeGreaterThan(0);
@@ -63,7 +64,9 @@ describe('OperationsSection', () => {
         expect(providerRail.firstElementChild).toHaveClass('flex-[0_0_calc(50%-0.5rem)]');
         expect(providerRail.children.item(6)).toHaveClass('lg:[&:nth-last-child(2)]:col-[2/span_2]');
         expect(providerRail.children.item(7)).toHaveClass('lg:[&:last-child]:col-[4/span_2]');
-        expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+        expect(onDesktopToolsChange).toHaveBeenCalledWith(expect.objectContaining({
+            secondaryAction: expect.anything(),
+        }));
         const operational = screen.getByRole('img', { name: 'PostgreSQL: Operational' });
         const unavailable = screen.getByRole('img', { name: 'Resend: Incomplete' });
         const notImplemented = screen.getByRole('img', { name: 'Gleam: Disabled' });

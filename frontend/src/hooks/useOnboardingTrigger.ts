@@ -90,7 +90,7 @@ export const useOnboardingTrigger = (featureKey: string) => {
  * onboarding key based on the current route.
  * 
  * Handles:
- * - Collapsible sidebar groups (e.g., /recurring-invoices shows "invoices" onboarding)
+ * - Collapsible sidebar groups (e.g., /invoices/recurring shows "invoices" onboarding)
  * - Mobile redirects (e.g., /contents shows "canvas" onboarding)
  * - Direct route mappings
  * 

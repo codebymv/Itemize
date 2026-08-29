@@ -40,6 +40,9 @@ export type InvoiceRow = {
   is_recurring: boolean;
   recurring_interval: string | null;
   parent_invoice_id: number | null;
+  is_recurring_source: boolean;
+  recurring_template_id: number | null;
+  recurring_source_template_id: number | null;
   custom_fields: Record<string, unknown> | null;
   created_by: number | null;
   created_at: Date;
@@ -223,7 +226,14 @@ const selection = `
   i.notes, i.terms_and_conditions, i.stripe_invoice_id,
   i.stripe_payment_intent_id, i.stripe_hosted_invoice_url, i.stripe_pdf_url,
   i.sent_at, i.viewed_at, i.paid_at, i.is_recurring, i.recurring_interval,
-  i.parent_invoice_id, i.custom_fields, i.created_by, i.created_at, i.updated_at,
+  i.parent_invoice_id, i.is_recurring_source, i.recurring_template_id,
+  (SELECT recurring.id
+   FROM recurring_invoice_templates recurring
+   WHERE recurring.organization_id = i.organization_id
+     AND recurring.source_invoice_id = i.id
+   ORDER BY recurring.created_at DESC, recurring.id DESC
+   LIMIT 1) AS recurring_source_template_id,
+  i.custom_fields, i.created_by, i.created_at, i.updated_at,
   c.first_name AS contact_first_name, c.last_name AS contact_last_name,
   c.email AS contact_email, b.name AS business_name, b.email AS business_email,
   b.phone AS business_phone, b.address AS business_address,

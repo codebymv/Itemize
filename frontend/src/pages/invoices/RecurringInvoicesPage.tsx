@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Plus,
     Search,
@@ -11,8 +11,6 @@ import {
     Pause,
     Play,
     Calendar,
-    CheckCircle,
-    Clock,
     History,
     ChevronDown,
     ChevronRight,
@@ -20,6 +18,7 @@ import {
     CalendarDays,
     ExternalLink,
     FileText,
+    Receipt,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,9 +48,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { getStatusBadgeClass } from '@/lib/badge-utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import {
     AlertDialog,
@@ -81,6 +78,12 @@ import {
 import { useOrganization } from '@/hooks/useOrganization';
 import { InvoicePreviewCard } from './components/InvoicePreviewCard';
 import { PageLayout } from '@/components/layout/PageLayout';
+import {
+    HeaderAction,
+    HeaderCombinedQuery,
+    HeaderFilters,
+    HeaderSearch,
+} from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
@@ -88,6 +91,8 @@ import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { cn } from '@/lib/utils';
+import { InvoiceViewSelect, type InvoiceView } from './components/InvoiceViewSelect';
+import { getRecurringStatusVisual } from './constants/recurringConstants';
 
 const RECURRING_FREQUENCIES: RecurringFrequency[] = ['weekly', 'monthly', 'quarterly', 'yearly'];
 
@@ -130,6 +135,7 @@ const getApiErrorMessage = (error: unknown, fallback: string): string => {
 
 export function RecurringInvoicesPage() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { toast } = useToast();
     // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
     const {
@@ -151,6 +157,7 @@ export function RecurringInvoicesPage() {
     const [expandedData, setExpandedData] = useState<RecurringInvoice | null>(null);
     const [loadingPreview, setLoadingPreview] = useState(false);
     const [previewInvoiceNumber, setPreviewInvoiceNumber] = useState<string>('INV-00001');
+    const autoExpandedScheduleRef = useRef<number | null>(null);
     
     // Delete confirmation dialog state
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -301,7 +308,7 @@ export function RecurringInvoicesPage() {
             setDialogOpen(false);
             fetchRecurringInvoices();
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to create recurring invoice', variant: 'destructive' });
+            toast({ title: 'Error', description: 'Failed to create recurring schedule', variant: 'destructive' });
         } finally {
             setSaving(false);
         }
@@ -376,23 +383,12 @@ export function RecurringInvoicesPage() {
         }
     };
 
-    const handleToggleExpand = async (recurringId: number, e: React.MouseEvent) => {
-        e.stopPropagation();
-        
-        // If clicking on already expanded item, collapse it
-        if (expandedId === recurringId) {
-            setExpandedId(null);
-            setExpandedData(null);
-            return;
-        }
-        
-        // Expand new item
+    const loadExpandedRecurring = useCallback(async (recurringId: number) => {
+        if (!organizationId) return;
         setExpandedId(recurringId);
         setExpandedData(null);
         setLoadingPreview(true);
-        
-        if (!organizationId) return;
-        
+
         try {
             const [recurring, previewNumber] = await Promise.all([
                 getRecurringInvoice(recurringId, organizationId),
@@ -401,12 +397,34 @@ export function RecurringInvoicesPage() {
             setExpandedData(recurring);
             setPreviewInvoiceNumber(previewNumber);
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to load recurring invoice details', variant: 'destructive' });
+            toast({ title: 'Error', description: 'Failed to load recurring schedule details', variant: 'destructive' });
             setExpandedId(null);
         } finally {
             setLoadingPreview(false);
         }
+    }, [organizationId, toast]);
+
+    const handleToggleExpand = async (recurringId: number, e: React.MouseEvent) => {
+        e.stopPropagation();
+
+        if (expandedId === recurringId) {
+            setExpandedId(null);
+            setExpandedData(null);
+            return;
+        }
+
+        await loadExpandedRecurring(recurringId);
     };
+
+    useEffect(() => {
+        const requestedId = Number(searchParams.get('schedule'));
+        if (!Number.isSafeInteger(requestedId) || requestedId <= 0 || loading) return;
+        if (!recurringInvoices.some((recurring) => recurring.id === requestedId)) return;
+        if (autoExpandedScheduleRef.current === requestedId) return;
+
+        autoExpandedScheduleRef.current = requestedId;
+        void loadExpandedRecurring(requestedId);
+    }, [loadExpandedRecurring, loading, recurringInvoices, searchParams]);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
@@ -452,6 +470,9 @@ export function RecurringInvoicesPage() {
             case 'paused':
                 filtered = filtered.filter(r => r.status === 'paused');
                 break;
+            case 'completed':
+                filtered = filtered.filter(r => r.status === 'completed');
+                break;
         }
 
         if (searchQuery) {
@@ -465,77 +486,102 @@ export function RecurringInvoicesPage() {
         return filtered;
     }, [recurringInvoices, activeTab, searchQuery]);
 
-    const getStatusIcon = (status: string) => {
-        switch (status) {
-            case 'active': return <Play className="h-4 w-4 text-blue-600 dark:text-blue-400" />;
-            case 'paused': return <Pause className="h-4 w-4 text-orange-600 dark:text-orange-400" />;
-            case 'completed': return <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />;
-            default: return <Clock className="h-4 w-4 text-gray-400 dark:text-gray-500" />;
-        }
-    };
-
-    const getStatusIconBg = (status: string) => {
-        switch (status) {
-            case 'active': return 'bg-blue-100 dark:bg-blue-900';
-            case 'paused': return 'bg-orange-100 dark:bg-orange-900';
-            case 'completed': return 'bg-green-100 dark:bg-green-900';
-            default: return 'bg-gray-100 dark:bg-gray-800';
-        }
-    };
-
     const total = lineItems.reduce((sum, item) => {
         return sum + (item.quantity * item.unit_price * (1 + item.tax_rate / 100));
     }, 0);
 
+    const headerFilterCount = Number(activeTab !== 'all');
+    const headerQueryCount = headerFilterCount + Number(searchQuery.trim().length > 0);
+    const handleInvoiceViewChange = (view: InvoiceView) => {
+        navigate(view === 'recurring' ? '/invoices/recurring' : '/invoices');
+    };
+    const statusFilter = (compact = false) => (
+        <Select value={activeTab} onValueChange={setActiveTab}>
+            <SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[9.5rem] bg-muted/20'}>
+                <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="paused">Paused</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+            </SelectContent>
+        </Select>
+    );
+
     return (
         <PageLayout
-            title="RECURRING INVOICES"
-            icon={<RefreshCw className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            title="INVOICES"
+            icon={<Receipt className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
             mobileClassName="flex-col items-stretch"
-            pageActions={
-                <>
-                    <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="h-9">
-                            <TabsTrigger value="all" className="text-xs">
-                                All
-                                <Badge variant="secondary" className="ml-2">{recurringInvoices.length}</Badge>
-                            </TabsTrigger>
-                            <TabsTrigger value="active" className="text-xs">
-                                Active
-                                <Badge variant="secondary" className="ml-2">{stats.active}</Badge>
-                            </TabsTrigger>
-                            <TabsTrigger value="paused" className="text-xs">
-                                Paused
-                                <Badge variant="secondary" className="ml-2">{stats.paused}</Badge>
-                            </TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search recurring..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
+            desktopTools={{
+                search: (
+                    <HeaderSearch
+                        label="Search recurring schedules"
+                        placeholder="Search schedules..."
+                        value={searchQuery}
+                        onChange={setSearchQuery}
+                    />
+                ),
+                filters: (
+                    <div className="flex items-center gap-2">
+                        <HeaderFilters
+                            label="Select invoice view"
+                            compactChildren={(
+                                <InvoiceViewSelect
+                                    value="recurring"
+                                    onValueChange={handleInvoiceViewChange}
+                                    compact
+                                />
+                            )}
+                            preferExpanded
+                        >
+                            <InvoiceViewSelect
+                                value="recurring"
+                                onValueChange={handleInvoiceViewChange}
+                            />
+                        </HeaderFilters>
+                        <HeaderFilters
+                            label="Filter recurring schedules by status"
+                            activeCount={headerFilterCount}
+                            compactChildren={statusFilter(true)}
+                            preferExpanded="when-roomy"
+                        >
+                            {statusFilter()}
+                        </HeaderFilters>
                     </div>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={openCreateDialog}
+                ),
+                combinedQuery: (
+                    <HeaderCombinedQuery
+                        label="Search and filter recurring schedules"
+                        placeholder="Search schedules..."
+                        value={searchQuery}
+                        onChange={setSearchQuery}
+                        activeCount={headerQueryCount}
                     >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Recurring
-                    </Button>
-                </>
-            }
+                        <InvoiceViewSelect
+                            value="recurring"
+                            onValueChange={handleInvoiceViewChange}
+                            compact
+                        />
+                        {statusFilter(true)}
+                    </HeaderCombinedQuery>
+                ),
+                primaryAction: (
+                    <HeaderAction
+                        label="New schedule"
+                        icon={<Plus className="h-4 w-4" />}
+                        onClick={openCreateDialog}
+                    />
+                ),
+            }}
             mobileActions={
                 <>
                 <div className="flex items-center gap-2 w-full">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
-                            placeholder="Search recurring..."
+                            placeholder="Search schedules..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
@@ -543,22 +589,21 @@ export function RecurringInvoicesPage() {
                     </div>
                     <Button
                         size="sm"
+                        aria-label="New schedule"
                         className="bg-blue-600 hover:bg-blue-700 text-white font-light"
                         onClick={openCreateDialog}
                     >
                         <Plus className="h-4 w-4" />
                     </Button>
                 </div>
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="w-full h-9">
-                        <TabsTrigger value="all" className="flex-1 text-xs">
-                            All
-                            <Badge variant="secondary" className="ml-1">{recurringInvoices.length}</Badge>
-                        </TabsTrigger>
-                        <TabsTrigger value="active" className="flex-1 text-xs">Active</TabsTrigger>
-                        <TabsTrigger value="paused" className="flex-1 text-xs">Paused</TabsTrigger>
-                    </TabsList>
-                </Tabs>
+                <div className="grid w-full grid-cols-2 gap-2">
+                    <InvoiceViewSelect
+                        value="recurring"
+                        onValueChange={handleInvoiceViewChange}
+                        compact
+                    />
+                    {statusFilter(true)}
+                </div>
                 </>
             }
         >
@@ -566,32 +611,33 @@ export function RecurringInvoicesPage() {
                 <ResponsiveCardRail
                     label="Recurring invoice summary"
                     desktopColumns="md:grid-cols-3"
+                    className="responsive-stat-summary"
                 >
                 <StatCard
                     title="Active"
                     badgeText="Active"
                     value={stats.active}
-                    icon={Play}
-                    description={`${stats.active} recurring${stats.active !== 1 ? 's' : ''}`}
-                    colorTheme="green"
+                    icon={getRecurringStatusVisual('active').icon}
+                    description={`${stats.active} schedule${stats.active !== 1 ? 's' : ''}`}
+                    colorTheme={getRecurringStatusVisual('active').theme}
                     isLoading={loading}
                 />
                 <StatCard
                     title="Paused"
                     badgeText="Paused"
                     value={stats.paused}
-                    icon={Pause}
-                    description={`${stats.paused} recurring${stats.paused !== 1 ? 's' : ''}`}
-                    colorTheme="orange"
+                    icon={getRecurringStatusVisual('paused').icon}
+                    description={`${stats.paused} schedule${stats.paused !== 1 ? 's' : ''}`}
+                    colorTheme={getRecurringStatusVisual('paused').theme}
                     isLoading={loading}
                 />
                 <StatCard
                     title="Completed"
                     badgeText="Completed"
                     value={stats.completed}
-                    icon={CheckCircle}
-                    description={`${stats.completed} recurring${stats.completed !== 1 ? 's' : ''}`}
-                    colorTheme="green"
+                    icon={getRecurringStatusVisual('completed').icon}
+                    description={`${stats.completed} schedule${stats.completed !== 1 ? 's' : ''}`}
+                    colorTheme={getRecurringStatusVisual('completed').theme}
                     isLoading={loading}
                 />
                 </ResponsiveCardRail>
@@ -606,9 +652,9 @@ export function RecurringInvoicesPage() {
                     ) : filteredRecurring.length === 0 ? (
                         <EmptyState
                             icon={RefreshCw}
-                            title="No recurring invoices yet"
-                            description="Create recurring invoices to automate billing"
-                            actionLabel="Create Recurring Invoice"
+                            title="No recurring schedules yet"
+                            description="Create a schedule to automate repeat billing"
+                            actionLabel="Create schedule"
                             onAction={openCreateDialog}
                             className="p-12"
                         />
@@ -616,6 +662,8 @@ export function RecurringInvoicesPage() {
                         <div className="divide-y">
                             {filteredRecurring.map((recurring) => {
                                 const isExpanded = expandedId === recurring.id;
+                                const statusVisual = getRecurringStatusVisual(recurring.status);
+                                const StatusIcon = statusVisual.icon;
                                 return (
                                     <div key={recurring.id}>
                                         {/* Recurring Row - Aligned with VaultCard Pattern */}
@@ -628,8 +676,8 @@ export function RecurringInvoicesPage() {
                                                 {/* Left Side: Status Icon + Template Name */}
                                                 <div className="flex items-center gap-2 min-w-0 flex-1">
                                                     {/* Status Icon */}
-                                                    <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getStatusIconBg(recurring.status)}`}>
-                                                        {getStatusIcon(recurring.status)}
+                                                    <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${statusVisual.iconBackgroundClass}`}>
+                                                        <StatusIcon className={`h-4 w-4 ${statusVisual.iconClass}`} aria-hidden="true" />
                                                     </div>
                                                     {/* Template Name */}
                                                     <p className="font-medium text-sm md:text-base">{recurring.template_name}</p>
@@ -637,6 +685,11 @@ export function RecurringInvoicesPage() {
                                                 
                                                 {/* Right Side: Amount + Chevron + Menu */}
                                                 <div className="flex items-center gap-2 flex-shrink-0">
+                                                    <div className="hidden lg:block">
+                                                        <Badge className={`pointer-events-none cursor-default text-xs ${statusVisual.badgeClass}`}>
+                                                            {statusVisual.label}
+                                                        </Badge>
+                                                    </div>
                                                     <div className="text-right hidden sm:block">
                                                         <p className="font-semibold text-sm md:text-base">{formatCurrency(recurring.total)}</p>
                                                     </div>
@@ -664,10 +717,10 @@ export function RecurringInvoicesPage() {
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                                                             <DropdownMenuItem className="group/menu">
-                                                                <Edit className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Edit
+                                                                <Edit className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Edit
                                                             </DropdownMenuItem>
                                                             <DropdownMenuItem className="group/menu">
-                                                                <History className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />View History
+                                                                <History className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />View History
                                                             </DropdownMenuItem>
                                                             {recurring.status !== 'completed' && (
                                                                 <DropdownMenuItem 
@@ -675,19 +728,19 @@ export function RecurringInvoicesPage() {
                                                                     disabled={generatingInvoice === recurring.id}
                                                                     className="group/menu"
                                                                 >
-                                                                    <FileText className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+                                                                    <FileText className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
                                                                     {generatingInvoice === recurring.id ? 'Generating...' : 'Generate Next Invoice'}
                                                                 </DropdownMenuItem>
                                                             )}
                                                             <DropdownMenuSeparator />
                                                             {recurring.status === 'active' && (
                                                                 <DropdownMenuItem onClick={() => handlePause(recurring.id)} className="group/menu">
-                                                                    <Pause className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Pause
+                                                                    <Pause className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Pause
                                                                 </DropdownMenuItem>
                                                             )}
                                                             {recurring.status === 'paused' && (
                                                                 <DropdownMenuItem onClick={() => handleResume(recurring.id)} className="group/menu">
-                                                                    <Play className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Resume
+                                                                    <Play className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Resume
                                                                 </DropdownMenuItem>
                                                             )}
                                                             <DropdownMenuSeparator />
@@ -708,13 +761,15 @@ export function RecurringInvoicesPage() {
                                                 <span className="text-sm text-muted-foreground font-medium">{getContactName(recurring)}</span>
                                                 
                                                 {/* Status Badge */}
-                                                <Badge className={`text-xs pointer-events-none cursor-default ${getStatusBadgeClass(recurring.status)}`}>
-                                                    {recurring.status.charAt(0).toUpperCase() + recurring.status.slice(1)}
-                                                </Badge>
+                                                <span className="lg:hidden">
+                                                    <Badge className={`text-xs pointer-events-none cursor-default ${statusVisual.badgeClass}`}>
+                                                        {statusVisual.label}
+                                                    </Badge>
+                                                </span>
                                                 
                                                 {/* Frequency Badge */}
                                                 <Badge variant="outline" className="text-xs">
-                                                    Billed {FREQUENCY_LABELS[recurring.frequency]?.toLowerCase() || recurring.frequency}
+                                                    {FREQUENCY_LABELS[recurring.frequency] || recurring.frequency}
                                                 </Badge>
                                             </div>
                                             
@@ -722,13 +777,11 @@ export function RecurringInvoicesPage() {
                                             <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                                                 <span className="md:hidden font-semibold">{formatCurrency(recurring.total)}</span>
                                                 {recurring.status === 'active' && recurring.next_run_date && (
-                                                    <span>Next: {new Date(recurring.next_run_date).toLocaleDateString()}</span>
+                                                    <span>Next invoice: {formatDate(recurring.next_run_date)}</span>
                                                 )}
-                                                {recurring.invoices_generated > 0 && (
-                                                    <span>
-                                                        ({recurring.invoices_generated} generated)
-                                                    </span>
-                                                )}
+                                                <span>
+                                                    {recurring.invoices_generated} invoice{recurring.invoices_generated === 1 ? '' : 's'} generated
+                                                </span>
                                             </div>
                                         </div>
 
@@ -781,8 +834,8 @@ export function RecurringInvoicesPage() {
                                                                         
                                                                         <div className="flex justify-between items-center py-2 border-b">
                                                                             <span className="text-sm text-muted-foreground">Status</span>
-                                                                            <Badge className={getStatusBadgeClass(expandedData.status)}>
-                                                                                {expandedData.status.charAt(0).toUpperCase() + expandedData.status.slice(1)}
+                                                                            <Badge className={getRecurringStatusVisual(expandedData.status).badgeClass}>
+                                                                                {getRecurringStatusVisual(expandedData.status).label}
                                                                             </Badge>
                                                                         </div>
                                                                         
@@ -801,7 +854,7 @@ export function RecurringInvoicesPage() {
                                                                         {expandedData.status === 'active' && expandedData.next_run_date && (
                                                                             <div className="flex justify-between items-center py-2 border-b">
                                                                                 <span className="text-sm text-muted-foreground">Next Invoice</span>
-                                                                                <span className="text-sm font-medium text-blue-600">{formatDate(expandedData.next_run_date)}</span>
+                                                                                <span className="text-sm font-medium text-green-600 dark:text-green-400">{formatDate(expandedData.next_run_date)}</span>
                                                                             </div>
                                                                         )}
                                                                         
@@ -920,15 +973,15 @@ export function RecurringInvoicesPage() {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <RefreshCw className="h-5 w-5 text-blue-600" />
-                            Create Recurring Invoice
+                            Create recurring schedule
                         </DialogTitle>
-                        <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
+                        <DialogDescription>
                             Set up an invoice that automatically generates on a schedule
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="space-y-2">
-                            <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Template Name *</Label>
+                            <Label>Schedule name *</Label>
                             <Input
                                 value={templateName}
                                 onChange={(e) => setTemplateName(e.target.value)}
@@ -937,7 +990,7 @@ export function RecurringInvoicesPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Customer</Label>
+                                <Label>Customer</Label>
                                 <Select
                                     value={contactId?.toString() || 'none'}
                                     onValueChange={handleContactChange}
@@ -956,7 +1009,7 @@ export function RecurringInvoicesPage() {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Frequency *</Label>
+                                <Label>Frequency *</Label>
                                 <Select
                                     value={frequency}
                                     onValueChange={(v) => {
@@ -979,7 +1032,7 @@ export function RecurringInvoicesPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Start Date *</Label>
+                                <Label>Start Date *</Label>
                                 <Input
                                     type="date"
                                     value={startDate}
@@ -987,7 +1040,7 @@ export function RecurringInvoicesPage() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>End Date (optional)</Label>
+                                <Label>End Date (optional)</Label>
                                 <Input
                                     type="date"
                                     value={endDate}
@@ -998,7 +1051,7 @@ export function RecurringInvoicesPage() {
 
                         <div className="border-t pt-4">
                             <div className="flex items-center justify-between mb-3">
-                                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Line Items</Label>
+                                <Label>Line Items</Label>
                                 <Button variant="outline" size="sm" onClick={addLineItem}>
                                     <Plus className="h-4 w-4 mr-1" />Add
                                 </Button>
@@ -1051,16 +1104,15 @@ export function RecurringInvoicesPage() {
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setDialogOpen(false)} style={{ fontFamily: '"Raleway", sans-serif' }}>
+                        <Button variant="outline" onClick={() => setDialogOpen(false)}>
                             Cancel
                         </Button>
                         <Button
                             onClick={handleSaveRecurring}
                             disabled={saving || !templateName || lineItems.filter(i => i.name).length === 0}
                             className="bg-blue-600 hover:bg-blue-700 text-white"
-                            style={{ fontFamily: '"Raleway", sans-serif' }}
                         >
-                            {saving ? 'Creating...' : 'Create Recurring Invoice'}
+                            {saving ? 'Creating...' : 'Create schedule'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -1070,18 +1122,18 @@ export function RecurringInvoicesPage() {
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Recurring Invoice</AlertDialogTitle>
+                        <AlertDialogTitle>Delete recurring schedule?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to delete recurring invoice{' '}
+                            Are you sure you want to delete recurring schedule{' '}
                             <span className="font-semibold">{recurringToDelete?.template_name}</span>?
                             {recurringToDelete?.status === 'active' && (
                                 <span className="block mt-2 text-yellow-600 dark:text-yellow-500">
-                                    This recurring invoice is currently active. No more invoices will be generated after deletion.
+                                    Active schedule stops after deletion.
                                 </span>
                             )}
                             {(recurringToDelete?.invoices_generated || 0) > 0 && (
                                 <span className="block mt-2 text-muted-foreground">
-                                    {recurringToDelete?.invoices_generated} invoice{recurringToDelete?.invoices_generated !== 1 ? 's have' : ' has'} already been generated from this template. They will not be affected.
+                                    Generated invoices stay unchanged ({recurringToDelete?.invoices_generated}).
                                 </span>
                             )}
                             <span className="block mt-2">

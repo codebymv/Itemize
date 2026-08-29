@@ -4,6 +4,7 @@ import { MobileControlsBar } from '@/components/MobileControlsBar';
 import { PageContainer, PageSurface } from '@/components/layout/PageContainer';
 import { PageActionsBar } from '@/components/layout/PageActionsBar';
 import { cn } from '@/lib/utils';
+import type { DesktopHeaderToolsProps } from '@/components/layout/DesktopHeaderTools';
 
 export type PageFrame = 'surface' | 'flush' | 'split';
 export type NavigationBreakpoint = 'md' | 'wide';
@@ -12,6 +13,10 @@ export interface PageLayoutProps {
   title: string;
   icon?: React.ReactNode;
   leading?: React.ReactNode;
+  /** Section selector shown in the shell until the page's navigation column becomes available. */
+  compactNavigation?: React.ReactNode;
+  /** Rule-bound desktop controls rendered in the single shell command lane. */
+  desktopTools?: DesktopHeaderToolsProps;
   /** Commands and query controls rendered in a wrapping card inside the page. */
   pageActions?: React.ReactNode;
   mobileActions?: React.ReactNode | false;
@@ -30,6 +35,8 @@ export function PageLayout({
   title,
   icon,
   leading,
+  compactNavigation,
+  desktopTools,
   pageActions,
   mobileActions,
   mobileClassName,
@@ -46,6 +53,9 @@ export function PageLayout({
     title,
     icon,
     leading,
+    compactNavigation,
+    compactNavigationBreakpoint: navigationBreakpoint,
+    desktopTools,
   });
 
   const mobileBar =

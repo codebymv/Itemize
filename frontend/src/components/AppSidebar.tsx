@@ -8,7 +8,6 @@ import {
     SidebarFooter,
     SidebarGroup,
     SidebarGroupContent,
-    SidebarGroupLabel,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
@@ -55,6 +54,7 @@ import {
     getStartedProgressViaGraphql,
 } from '@/services/getStartedGraphql';
 import { getWorkspaceDestinations, getWorkspaceLanding } from '@/lib/workspaceNavigation';
+import { AVAILABLE_PLANS_PATH } from '@/lib/settingsNavigation';
 
 // Navigation items for the sidebar
 interface NavItem {
@@ -102,10 +102,6 @@ const mainNavItems: NavItem[] = [
             {
                 title: 'Estimates',
                 path: '/estimates',
-            },
-            {
-                title: 'Recurring',
-                path: '/recurring-invoices',
             },
             {
                 title: 'Payments',
@@ -338,13 +334,9 @@ export function AppSidebar() {
             ? focusedPaidItems
             : [
                 ...workspaceItems,
-                { title: 'Unlock business tools', icon: Zap, path: '/settings' },
+                { title: 'Unlock business tools', icon: Zap, path: AVAILABLE_PLANS_PATH },
             ];
-    const filteredSecondaryNavItems = isSubscribed
-        ? secondaryNavItems
-        : secondaryNavItems.map((item) => item.title === 'Settings' && item.items
-            ? { ...item, items: item.items.filter((subItem) => subItem.title !== 'Integrations') }
-            : item);
+    const filteredSecondaryNavItems = secondaryNavItems;
     const homePath = isSubscribed ? '/dashboard' : workspaceLanding.path;
 
     const isNavItemActive = React.useCallback((item: NavItem) => (
@@ -419,7 +411,7 @@ export function AppSidebar() {
                                     }
                                 }}
                             >
-                                <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
+                                <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400")} />
                                 <span>{item.title}</span>
                                 <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-gray-600 dark:text-gray-400" />
                             </SidebarMenuButton>
@@ -458,7 +450,7 @@ export function AppSidebar() {
                         isActive ? 'text-gray-900 dark:text-white font-medium' : '',
                     )}
                 >
-                    <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
+                    <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400")} />
                     <span>{item.title}</span>
                     {item.disabled && (
                         <span className="ml-auto text-xs text-muted-foreground">Soon</span>
@@ -478,7 +470,18 @@ export function AppSidebar() {
             )}
         >
             <span className="relative block h-full w-full overflow-hidden">
-                <img src="/icon.png" alt="" aria-hidden="true" className="h-full w-full" />
+                <img
+                    src="/icon.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="h-full w-full object-contain dark:hidden"
+                />
+                <img
+                    src="/icon-blue-400.png"
+                    alt=""
+                    aria-hidden="true"
+                    className="hidden h-full w-full object-contain dark:block"
+                />
                 <span
                     aria-hidden="true"
                     className="pointer-events-none absolute inset-0 -translate-x-full transition-transform duration-1000 ease-out group-hover:translate-x-full"
@@ -497,7 +500,7 @@ export function AppSidebar() {
                 <div className={cn("flex items-center", isCollapsed ? "flex-col gap-2 justify-center" : "justify-between gap-2")}>
                     {!isCollapsed ? (
                         <div className="group flex items-center gap-2 flex-1 cursor-pointer" onClick={() => navigate(homePath)}>
-                            {brandIcon('h-7 w-7')}
+                            {brandIcon('h-7 w-9')}
                             <img
                                 src="/textblack.png"
                                 alt="Itemize"
@@ -517,7 +520,7 @@ export function AppSidebar() {
                             role="link"
                             aria-label="Itemize"
                         >
-                            {brandIcon('h-8 w-8')}
+                            {brandIcon('h-8 w-10')}
                         </div>
                     )}
                     <AppHeaderIconButton
@@ -549,7 +552,6 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <SidebarGroup className={cn(isCollapsed && "w-full flex items-center justify-center")}>
-                    <SidebarGroupLabel className="font-raleway">Main</SidebarGroupLabel>
                     <SidebarGroupContent className={cn(isCollapsed && "w-full flex items-center justify-center")}>
                         <SidebarMenu className={cn("gap-3", isCollapsed && "w-full items-center")}>
                             {filteredMainNavItems.map(renderMainNavItem)}
@@ -575,7 +577,7 @@ export function AppSidebar() {
                                                     }
                                                 }}
                                             >
-                                                <Ellipsis className={cn("h-4 w-4 transition-colors", isMoreToolsRouteActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
+                                                <Ellipsis className={cn("h-4 w-4 transition-colors", isMoreToolsRouteActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400")} />
                                                 <span>More tools</span>
                                                 <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/more-tools:rotate-90 text-gray-600 dark:text-gray-400" />
                                             </SidebarMenuButton>
@@ -631,7 +633,7 @@ export function AppSidebar() {
                                                                 // When expanded, CollapsibleTrigger handles toggle via onOpenChange
                                                             }}
                                                         >
-                                                            <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
+                                                            <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400")} />
                                                             <span>{item.title}</span>
                                                             <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-gray-600 dark:text-gray-400" />
                                                         </SidebarMenuButton>
@@ -669,7 +671,7 @@ export function AppSidebar() {
                                                     isActive ? 'text-gray-900 dark:text-white font-medium' : ''
                                                 )}
                                             >
-                                                <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600")} />
+                                                <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400")} />
                                                 <span>{item.title}</span>
                                             </SidebarMenuButton>
                                         </SidebarMenuItem>

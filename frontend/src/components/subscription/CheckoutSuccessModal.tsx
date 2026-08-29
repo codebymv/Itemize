@@ -144,8 +144,7 @@ export function CheckoutSuccessModal({
         {confirmationState === "delayed" && (
           <div className="space-y-4 py-3 text-center">
             <p className="text-sm text-muted-foreground">
-              We haven&apos;t received confirmation from Stripe yet. If you
-              completed checkout, wait a moment and check again.
+              Stripe confirmation pending. Check again shortly.
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
               <Button variant="outline" onClick={onClose}>

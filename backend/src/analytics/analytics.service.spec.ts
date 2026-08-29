@@ -14,6 +14,9 @@ const snapshot = (extra: Partial<DashboardSnapshotRows> = {}): DashboardSnapshot
     total: '2', active: '1',
     new_this_month: '1', new_this_week: '1',
   },
+  recentContacts: [{
+    id: 3, first_name: 'Ada', last_name: 'Lovelace', email: 'ada@example.test',
+  }],
   contactGrowth: [{ month: new Date('2026-07-01T00:00:00.000Z'), count: '1' }],
   deals: {
     total: '3', open: '2', won: '1', lost: '0',
@@ -74,7 +77,11 @@ describe('AnalyticsService', () => {
     await expect(service.dashboard(4)).resolves.toMatchObject({
       asOf: new Date('2026-07-20T18:00:00.000Z'),
       reportingTimezone: 'UTC',
-      contacts: { total: 2, active: 1 },
+      contacts: {
+        total: 2,
+        active: 1,
+        recentContacts: [{ id: 3, name: 'Ada Lovelace', email: 'ada@example.test' }],
+      },
       deals: { total: 3, open: 2, won: 1, lost: 0 },
       invoiceMetrics: {
         recentInvoices: [{ id: 12, number: 'INV-12', amount: 20.5 }],

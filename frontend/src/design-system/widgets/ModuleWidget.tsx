@@ -41,6 +41,7 @@ export interface ModuleWidgetProps {
   loading?: boolean
   action?: {
     label: string
+    compactLabel?: string
     onClick: () => void
   }
   className?: string
@@ -102,10 +103,13 @@ const hasRecentItems = recentItems !== undefined;
         }}
       >
         <Card className={cn('bg-muted/10 h-full', className)}>
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row lg:flex-col 2xl:flex-row sm:items-start lg:items-start 2xl:items-start justify-between gap-2">
+          <CardHeader data-module-widget-card-header>
+            <div
+              className="flex flex-col sm:flex-row lg:flex-col 2xl:flex-row sm:items-start lg:items-start 2xl:items-start justify-between gap-2"
+              data-module-widget-header
+            >
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-muted">
+                <div className="p-2 rounded-lg bg-muted" data-module-widget-icon>
                   <Icon className={cn("h-5 w-5", iconColor || "text-blue-600 dark:text-blue-400")} />
                 </div>
                 <div>
@@ -113,7 +117,7 @@ const hasRecentItems = recentItems !== undefined;
                   {description && <CardDescription>{description}</CardDescription>}
                 </div>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1" data-module-widget-actions>
                 {!compact && (
                   <CollapsibleTrigger asChild>
                     <Button
@@ -121,6 +125,7 @@ const hasRecentItems = recentItems !== undefined;
                       size="sm"
                       className="h-8 w-8 p-0"
                       aria-label="Toggle collapse"
+                      data-module-widget-toggle
                     >
                       <ChevronDown
                         className={cn(
@@ -137,8 +142,19 @@ const hasRecentItems = recentItems !== undefined;
                     variant="ghost"
                     className="text-blue-600 hover:text-blue-700 hover:bg-blue-50/50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20"
                     onClick={action.onClick}
+                    aria-label={action.label}
+                    data-module-widget-action
                   >
-                    {action.label}
+                    {action.compactLabel ? (
+                      <>
+                        <span aria-hidden="true" className="min-[1750px]:hidden">
+                          {action.compactLabel}
+                        </span>
+                        <span aria-hidden="true" className="hidden min-[1750px]:inline">
+                          {action.label}
+                        </span>
+                      </>
+                    ) : action.label}
                   </Button>
                 )}
               </div>
@@ -157,7 +173,11 @@ const hasRecentItems = recentItems !== undefined;
             {secondaryStats && secondaryStats.length > 0 && (
               <div className="grid grid-cols-2 gap-3 mb-4">
                 {secondaryStats.map((stat, i) => (
-                  <div key={i} className="flex items-center justify-between">
+                  <div
+                    key={i}
+                    className="flex items-center justify-between"
+                    data-module-widget-secondary-stat
+                  >
                     <span className="text-sm text-muted-foreground">{stat.label}</span>
                     <span className={cn('text-sm font-medium', stat.color)}>{stat.value}</span>
                   </div>
@@ -203,10 +223,13 @@ const hasRecentItems = recentItems !== undefined;
 
   return (
     <Card className={cn('bg-muted/10 h-full', className)}>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row lg:flex-col 2xl:flex-row sm:items-start lg:items-start 2xl:items-start justify-between gap-2">
+      <CardHeader data-module-widget-card-header>
+        <div
+          className="flex flex-col sm:flex-row lg:flex-col 2xl:flex-row sm:items-start lg:items-start 2xl:items-start justify-between gap-2"
+          data-module-widget-header
+        >
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-muted">
+            <div className="p-2 rounded-lg bg-muted" data-module-widget-icon>
               <Icon className={cn("h-5 w-5", iconColor || "text-blue-600 dark:text-blue-400")} />
             </div>
             <div>
@@ -214,15 +237,26 @@ const hasRecentItems = recentItems !== undefined;
               {description && <CardDescription>{description}</CardDescription>}
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1" data-module-widget-actions>
             {action && (
               <Button
                 size="sm"
                 variant="ghost"
                 className="text-blue-600 hover:text-blue-700 hover:bg-blue-50/50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20"
                 onClick={action.onClick}
+                aria-label={action.label}
+                data-module-widget-action
               >
-                {action.label}
+                {action.compactLabel ? (
+                  <>
+                    <span aria-hidden="true" className="min-[1750px]:hidden">
+                      {action.compactLabel}
+                    </span>
+                    <span aria-hidden="true" className="hidden min-[1750px]:inline">
+                      {action.label}
+                    </span>
+                  </>
+                ) : action.label}
               </Button>
             )}
           </div>
@@ -241,7 +275,11 @@ const hasRecentItems = recentItems !== undefined;
         {secondaryStats && secondaryStats.length > 0 && (
           <div className="grid grid-cols-2 gap-3 mb-4">
             {secondaryStats.map((stat, i) => (
-              <div key={i} className="flex items-center justify-between">
+              <div
+                key={i}
+                className="flex items-center justify-between"
+                data-module-widget-secondary-stat
+              >
                 <span className="text-sm text-muted-foreground">{stat.label}</span>
                 <span className={cn('text-sm font-medium', stat.color)}>{stat.value}</span>
               </div>

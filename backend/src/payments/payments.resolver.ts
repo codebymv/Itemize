@@ -6,8 +6,11 @@ import { RequestContextService } from '../request-context/request-context.servic
 import {
   Payment,
   PaymentMethod,
+  PaymentOverview,
   PaymentPage,
+  PaymentPeriod,
   PaymentStatus,
+  RevenueFlow,
   RecordPaymentResult,
   RefundPaymentResult,
 } from './payment.types';
@@ -30,17 +33,50 @@ export class PaymentsResolver {
   @Query(() => PaymentPage)
   payments(
     @Args('page', { nullable: true }) page?: PageInput,
+    @Args('period', {
+      type: () => PaymentPeriod,
+      defaultValue: PaymentPeriod.LAST_30_DAYS,
+    })
+    period?: PaymentPeriod,
     @Args('status', { type: () => PaymentStatus, nullable: true })
     status?: PaymentStatus,
     @Args('paymentMethod', { type: () => PaymentMethod, nullable: true })
     paymentMethod?: PaymentMethod,
+    @Args('search', { type: () => String, nullable: true })
+    search?: string,
   ): Promise<PaymentPage> {
     return this.paymentService.list(
       this.organizationId(),
       page,
+      period,
       status,
       paymentMethod,
+      search,
     );
+  }
+
+  @OrganizationScoped()
+  @Query(() => PaymentOverview)
+  paymentOverview(
+    @Args('period', {
+      type: () => PaymentPeriod,
+      defaultValue: PaymentPeriod.LAST_30_DAYS,
+    })
+    period?: PaymentPeriod,
+  ): Promise<PaymentOverview> {
+    return this.paymentService.overview(this.organizationId(), period);
+  }
+
+  @OrganizationScoped()
+  @Query(() => RevenueFlow)
+  revenueFlow(
+    @Args('period', {
+      type: () => PaymentPeriod,
+      defaultValue: PaymentPeriod.LAST_30_DAYS,
+    })
+    period?: PaymentPeriod,
+  ): Promise<RevenueFlow> {
+    return this.paymentService.revenueFlow(this.organizationId(), period);
   }
 
   @CsrfProtected()

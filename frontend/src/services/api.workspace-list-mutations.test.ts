@@ -76,4 +76,22 @@ describe('workspace list API GraphQL mutations', () => {
     expect(api.put).not.toHaveBeenCalled();
     expect(api.delete).not.toHaveBeenCalled();
   });
+
+  it('preserves a preset-specific initial size', async () => {
+    const sizedList = { ...list, width: 420, height: 622 };
+    vi.mocked(createWorkspaceListViaGraphql).mockResolvedValue(sizedList);
+
+    const created = await createList(
+      { title: 'Launch', items: [], width: 420, height: 622 },
+      'ignored-token',
+    );
+
+    expect(createWorkspaceListViaGraphql).toHaveBeenCalledWith({
+      title: 'Launch',
+      items: [],
+      width: 420,
+      height: 622,
+    });
+    expect(created).toEqual(expect.objectContaining({ width: 420, height: 622 }));
+  });
 });

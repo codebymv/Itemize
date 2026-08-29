@@ -68,7 +68,7 @@ export default function PublicInvoicePaymentPage() {
       <PaymentResultShell
         icon={<RotateCcw className="h-7 w-7 text-muted-foreground" />}
         title="Payment not completed"
-        description="No payment was recorded. You can return to the invoice email whenever you are ready."
+        description="No payment recorded. Return to the invoice to retry."
       />
     );
   }
@@ -78,7 +78,7 @@ export default function PublicInvoicePaymentPage() {
       <PaymentResultShell
         icon={<Loader2 className="h-7 w-7 animate-spin text-primary" />}
         title="Confirming your payment"
-        description="This usually takes only a few seconds. Please keep this page open."
+        description="Processing payment. Keep this page open."
       />
     );
   }
@@ -88,7 +88,7 @@ export default function PublicInvoicePaymentPage() {
       <PaymentResultShell
         icon={<ReceiptText className="h-7 w-7 text-muted-foreground" />}
         title="Confirmation unavailable"
-        description={error || 'We could not confirm this payment. Check your receipt or contact the sender.'}
+        description={error || 'Payment unconfirmed. Check your receipt or contact the sender.'}
       />
     );
   }
@@ -118,7 +118,7 @@ export default function PublicInvoicePaymentPage() {
                   ? `${result.businessName} has been notified that your payment was received.`
                   : refunded
                     ? 'This payment has been refunded by the sender.'
-                    : 'Stripe accepted your payment. Itemize is recording the final confirmation.'}
+                    : 'Payment accepted. Recording final confirmation.'}
               </p>
             </div>
 

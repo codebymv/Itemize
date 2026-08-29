@@ -67,6 +67,7 @@ export interface CanvasContainerMethods {
   focusPosition: (
     position: { x: number; y: number },
     size?: { width: number; height: number },
+    options?: { fit?: boolean },
   ) => void;
 }
 
@@ -119,7 +120,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   const { currentUser } = useAuthState();
   const { state: sidebarState, isMobile } = useSidebar();
   
-  // Calculate sidebar width for zoom controls positioning
+  // Keep viewport controls anchored to the visible canvas edge as the sidebar changes.
   const sidebarWidth = isMobile ? 0 : (sidebarState === 'expanded' ? 256 : 64);
   
   const [loading, setLoading] = useState(false); // No longer need to load lists
@@ -190,9 +191,15 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   const focusPosition = useCallback((
     position: { x: number; y: number },
     size: { width: number; height: number } = { width: 600, height: 420 },
+    options: { fit?: boolean } = {},
   ) => {
     const { width, height } = getViewportSize();
-    const scale = canvasTransformRef.current.scale;
+    const scale = options.fit
+      ? Math.max(
+          0.1,
+          Math.min(1, (width - 96) / size.width, (height - 96) / size.height),
+        )
+      : canvasTransformRef.current.scale;
     setCanvasTransform({
       x: width / 2 - (position.x + size.width / 2) * scale,
       y: height / 2 - (position.y + size.height / 2) * scale,
@@ -764,27 +771,6 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
           </div>
         ) : (
           <>
-            {/* Empty state when no content exists */}
-            {lists.length === 0 && notes.length === 0 && whiteboards.length === 0 && wireframes.length === 0 && vaults.length === 0 && (
-              <div 
-                className="flex items-center justify-center h-full"
-                style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  textAlign: 'center',
-                  color: '#64748b',
-                  fontFamily: '"Raleway", sans-serif',
-                  fontSize: '18px',
-                  fontWeight: '300',
-                  zIndex: 10
-                }}
-              >
-                No content on your canvas (for now!)
-              </div>
-            )}
-
             {/* Draggable list cards */}
             {filteredLists.map(list => (
               <DraggableListCard
@@ -916,15 +902,33 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
           </>
         )}
         </div>
+
+        {!loading &&
+          !error &&
+          lists.length === 0 &&
+          notes.length === 0 &&
+          whiteboards.length === 0 &&
+          wireframes.length === 0 &&
+          vaults.length === 0 && (
+            <div
+              aria-live="polite"
+              className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-center font-raleway text-lg font-light text-muted-foreground"
+              data-canvas-empty-state
+            >
+              No content on your canvas (for now!)
+            </div>
+          )}
       </div>
 
       {/* Canvas Control Panel */}
       <div
+        aria-label="Canvas view controls"
+        data-canvas-controls
+        role="toolbar"
         style={{
           position: 'fixed',
-          bottom: '20px',
-          left: isMobile ? '50%' : `calc(${sidebarWidth}px + (100vw - ${sidebarWidth}px) / 2)`,
-          transform: 'translateX(-50%)',
+          bottom: '16px',
+          left: `${sidebarWidth + 16}px`,
           zIndex: 1002,
           display: 'flex',
           alignItems: 'center',
@@ -940,6 +944,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
       >
         {/* Zoom Out */}
         <button
+          aria-label="Zoom out"
           onClick={handleZoomOut}
           style={{
             width: '36px',
@@ -967,6 +972,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
 
         {/* Reset/Center */}
         <button
+          aria-label="Reset canvas view"
           onClick={handleResetView}
           style={{
             width: '36px',
@@ -1009,6 +1015,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
 
         {/* Zoom In */}
         <button
+          aria-label="Zoom in"
           onClick={handleZoomIn}
           style={{
             width: '36px',

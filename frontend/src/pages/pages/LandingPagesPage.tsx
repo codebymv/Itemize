@@ -311,22 +311,22 @@ const handleDuplicate = async (id: number) => {
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                                                     <DropdownMenuItem onClick={() => navigate(`/pages/${page.id}`)} className="group/menu">
-                                                        <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Edit
+                                                        <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Edit
                                                     </DropdownMenuItem>
                                                     {page.status === 'published' ? (
                                                         <DropdownMenuItem onClick={() => handleToggleStatus(page, 'draft')} className="group/menu">
-                                                            <EyeOff className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Unpublish
+                                                            <EyeOff className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Unpublish
                                                         </DropdownMenuItem>
                                                     ) : (
                                                         <DropdownMenuItem onClick={() => handleToggleStatus(page, 'published')} className="group/menu">
-                                                            <Eye className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Publish
+                                                            <Eye className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Publish
                                                         </DropdownMenuItem>
                                                     )}
                                                     <DropdownMenuItem onClick={() => copyPageLink(page.slug)} className="group/menu">
-                                                        <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Copy Link
+                                                        <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Copy Link
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem onClick={() => handleDuplicate(page.id)} className="group/menu">
-                                                        <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Duplicate
+                                                        <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Duplicate
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem onClick={() => setPageToDelete(page)} className="text-destructive focus:text-destructive">

@@ -307,7 +307,7 @@ export default function SignPage() {
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
               {terminalState === 'signed'
-                ? 'Your signature was submitted successfully. You can close this page.'
+                ? 'Signature submitted. You can close this page.'
                 : 'Your response was recorded. You can close this page.'}
             </p>
           </BrandedPublicCard>

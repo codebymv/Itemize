@@ -349,10 +349,8 @@ export class AuthRepository {
       payload: { organizationName: `${user.name}'s Organization` },
       category: 'system',
       priority: 'normal',
-      title: 'Welcome to Itemize',
-      body: isTrial
-        ? 'Your workspace is ready. Add content, create a contact, or send your first estimate.'
-        : 'Your workspace is ready. Add your first list, note, whiteboard, wireframe, or vault.',
+      title: 'Welcome to Itemize!',
+      body: 'Workspace ready. Add your content.',
       href: '/canvas',
     });
   }

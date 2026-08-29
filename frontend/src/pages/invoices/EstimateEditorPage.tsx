@@ -1,25 +1,27 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
-    ArrowLeft,
     Save,
     Send,
     Plus,
     Trash2,
     FileText,
-    User,
-    DollarSign,
-    StickyNote,
     ArrowRight,
     CheckCircle,
     Eye,
     XCircle,
+    MoreHorizontal,
+    CalendarDays,
+    WalletCards,
+    ChevronDown,
+    ChevronUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
     Select,
     SelectContent,
@@ -29,9 +31,26 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { PageLayout } from '@/components/layout/PageLayout';
+import {
+    HeaderAction,
+    HeaderActionLabel,
+} from '@/components/layout/DesktopHeaderTools';
+import { ShellBackButton } from '@/components/layout/ShellBackButton';
 import { ErrorState } from '@/components/ErrorState';
 import { getContact, getContacts } from '@/services/contactsApi';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -47,6 +66,10 @@ import {
     updateEstimate,
 } from '@/services/estimatesApi';
 import type { JsonRecord } from '@/types';
+import { CustomerInfoSection } from './components/CustomerInfoSection';
+import { LineItemsTable } from './components/LineItemsTable';
+import { formatCurrency, getTodayDateString } from './utils/invoiceFormatters';
+import { getEstimateStatusVisual } from './constants/estimateConstants';
 
 interface LineItem {
     id: string;
@@ -106,6 +129,9 @@ export function EstimateEditorPage() {
     const [products, setProducts] = useState<Product[]>([]);
 
     // Estimate state
+    const [estimateNumber, setEstimateNumber] = useState('');
+    const [issueDate, setIssueDate] = useState('');
+    const [currency, setCurrency] = useState('USD');
     const [contactId, setContactId] = useState<number | undefined>();
     const [customerName, setCustomerName] = useState('');
     const [customerEmail, setCustomerEmail] = useState('');
@@ -113,6 +139,8 @@ export function EstimateEditorPage() {
     const [customerAddress, setCustomerAddress] = useState('');
     const [validUntil, setValidUntil] = useState('');
     const [notes, setNotes] = useState('');
+    const [termsAndConditions, setTermsAndConditions] = useState('');
+    const [footerOpen, setFooterOpen] = useState(false);
     const [discountType, setDiscountType] = useState<'fixed' | 'percent'>('fixed');
     const [discountValue, setDiscountValue] = useState(0);
     const [lineItems, setLineItems] = useState<LineItem[]>([
@@ -133,6 +161,7 @@ export function EstimateEditorPage() {
         customerAddress,
         validUntil,
         notes,
+        termsAndConditions,
         discountType,
         discountValue,
         lineItems: lineItems.map(({ id: _id, ...item }) => item),
@@ -146,6 +175,7 @@ export function EstimateEditorPage() {
         discountValue,
         lineItems,
         notes,
+        termsAndConditions,
         validUntil,
     ]);
     const { isDirty, markClean } = useDirtyState({
@@ -168,12 +198,15 @@ export function EstimateEditorPage() {
 
     // Set default valid until (30 days from now)
     useEffect(() => {
+        if (isNew && !issueDate) {
+            setIssueDate(getTodayDateString());
+        }
         if (isNew && !validUntil) {
             const date = new Date();
             date.setDate(date.getDate() + 30);
             setValidUntil(date.toISOString().split('T')[0]);
         }
-    }, [isNew, validUntil]);
+    }, [isNew, issueDate, validUntil]);
 
     // Initialize
     useEffect(() => {
@@ -196,7 +229,10 @@ export function EstimateEditorPage() {
                 // Load existing estimate if editing
                 if (!isNew && id) {
                     const estimate = await getEstimate(Number(id), organizationId);
-                    
+
+                    setEstimateNumber(estimate.estimate_number || '');
+                    setIssueDate(estimate.issue_date?.split('T')[0] || '');
+                    setCurrency(estimate.currency || 'USD');
                     setContactId(estimate.contact_id);
                     setCustomerName(estimate.customer_name || '');
                     setCustomerEmail(estimate.customer_email || '');
@@ -204,6 +240,7 @@ export function EstimateEditorPage() {
                     setCustomerAddress(estimate.customer_address || '');
                     setValidUntil(estimate.valid_until?.split('T')[0] || '');
                     setNotes(estimate.notes || '');
+                    setTermsAndConditions(estimate.terms_and_conditions || '');
                     setDiscountType(estimate.discount_type || 'fixed');
                     setDiscountValue(estimate.discount_value || 0);
                     setStatus(estimate.status || 'draft');
@@ -369,6 +406,7 @@ export function EstimateEditorPage() {
                 discount_type: discountType,
                 discount_value: discountValue,
                 notes: notes || undefined,
+                terms_and_conditions: termsAndConditions || undefined,
             };
 
             if (isNew) {
@@ -419,24 +457,15 @@ export function EstimateEditorPage() {
         }
     };
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD'
-        }).format(amount);
-    };
-
     if (loading) {
         return (
             <PageLayout
                 title={(isNew ? 'New Estimate' : 'Estimate').toUpperCase()}
-                icon={<FileText className="h-5 w-5 text-primary flex-shrink-0" />}
+                icon={<FileText className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
                 leading={
-                    <Button variant="ghost" size="icon" onClick={() => {
+                    <ShellBackButton label="Back to estimates" onClick={() => {
                         if (confirmLeave()) navigate('/estimates');
-                    }}>
-                        <ArrowLeft className="h-5 w-5 text-muted-foreground" />
-                    </Button>
+                    }} />
                 }
             >
                 <div className="space-y-6">
@@ -452,11 +481,9 @@ export function EstimateEditorPage() {
         return (
             <PageLayout
                 title="ESTIMATE"
-                icon={<FileText className="h-5 w-5 text-primary flex-shrink-0" />}
+                icon={<FileText className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
                 leading={
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/estimates')}>
-                        <ArrowLeft className="h-5 w-5 text-muted-foreground" />
-                    </Button>
+                    <ShellBackButton label="Back to estimates" onClick={() => navigate('/estimates')} />
                 }
             >
                 <ErrorState
@@ -468,61 +495,96 @@ export function EstimateEditorPage() {
         );
     }
 
+    const canSave = !saving
+        && isDirty
+        && lineItems.some((item) => item.name.trim().length > 0);
+    const primaryActionLabel = saving
+        ? 'Saving...'
+        : isNew
+            ? 'Create estimate'
+            : 'Save changes';
+    const effectiveStatus = !isNew
+        && status === 'sent'
+        && validUntil
+        && new Date(`${validUntil}T23:59:59`).getTime() < Date.now()
+        ? 'expired'
+        : status;
+    const statusVisual = getEstimateStatusVisual(effectiveStatus);
+    const hasSecondaryAction = !isNew
+        && (status === 'draft' || ['sent', 'accepted'].includes(status));
+    const estimateActions = hasSecondaryAction ? (
+        <DropdownMenu>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="outline"
+                            className="h-11 min-w-11 gap-2 px-3 font-light"
+                            aria-label="Estimate actions"
+                        >
+                            <MoreHorizontal className="h-4 w-4" />
+                            <HeaderActionLabel>More</HeaderActionLabel>
+                        </Button>
+                    </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Estimate actions</TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="end">
+                {status === 'draft' && (
+                    <DropdownMenuItem
+                        onClick={handleSendEstimate}
+                        disabled={saving || isDirty}
+                        className="group/menu"
+                    >
+                        <Send className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                        Send Estimate
+                    </DropdownMenuItem>
+                )}
+                {['sent', 'accepted'].includes(status) && (
+                    <DropdownMenuItem
+                        onClick={handleConvertToInvoice}
+                        disabled={saving || isDirty}
+                        className="group/menu"
+                    >
+                        <ArrowRight className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                        Convert to Invoice
+                    </DropdownMenuItem>
+                )}
+            </DropdownMenuContent>
+        </DropdownMenu>
+    ) : undefined;
+
     return (
         <PageLayout
             title={(isNew ? 'New Estimate' : 'Estimate').toUpperCase()}
-            icon={<FileText className="h-5 w-5 text-primary flex-shrink-0" />}
+            icon={<FileText className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
             leading={
-                <Button variant="ghost" size="icon" onClick={() => {
+                <ShellBackButton label="Back to estimates" onClick={() => {
                     if (confirmLeave()) navigate('/estimates');
-                }}>
-                    <ArrowLeft className="h-5 w-5 text-muted-foreground" />
-                </Button>
+                }} />
             }
-            pageActions={
-                <>
-                    <Button
-                        variant="outline"
-                        size="sm"
+            desktopTools={{
+                secondaryAction: estimateActions,
+                primaryAction: (
+                    <HeaderAction
+                        label={primaryActionLabel}
                         onClick={handleSave}
-                        disabled={saving || !isDirty || lineItems.filter(i => i.name).length === 0}
-                    >
-                        <Save className="h-4 w-4 mr-2" />
-                        {saving ? 'Saving...' : 'Save Draft'}
-                    </Button>
-                    {!isNew && status === 'draft' && (
-                        <Button
-                            size="sm"
-                            onClick={handleSendEstimate}
-                            disabled={saving || isDirty}
-                        >
-                            <Send className="h-4 w-4 mr-2" />
-                            Send
-                        </Button>
-                    )}
-                    {!isNew && ['sent', 'accepted'].includes(status) && (
-                        <Button
-                            size="sm"
-                            onClick={handleConvertToInvoice}
-                            disabled={saving || isDirty}
-                        >
-                            <ArrowRight className="h-4 w-4 mr-2" />
-                            Convert to Invoice
-                        </Button>
-                    )}
-                </>
-            }
+                        icon={<Save className="h-4 w-4" />}
+                        disabled={!canSave}
+                    />
+                ),
+            }}
             mobileActions={
                 <>
                     <Button
                         variant="outline"
                         size="sm"
                         onClick={handleSave}
-                        disabled={saving || !isDirty || lineItems.filter(i => i.name).length === 0}
-                        className="flex-1"
+                        disabled={!canSave}
+                        className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
                     >
                         <Save className="h-4 w-4 mr-2" />
-                        {saving ? 'Saving...' : 'Save'}
+                        {primaryActionLabel}
                     </Button>
                     {!isNew && status === 'draft' && (
                         <Button
@@ -549,7 +611,33 @@ export function EstimateEditorPage() {
                 </>
             }
         >
-                <div className="space-y-6">
+            <div className="space-y-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex min-w-0 items-center gap-4">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                            <FileText className="h-6 w-6" aria-hidden="true" />
+                        </div>
+                        <div className="min-w-0">
+                            <h2 className="truncate text-xl font-medium">
+                                {estimateNumber || 'New estimate'}
+                            </h2>
+                            <p className="truncate text-sm text-muted-foreground">
+                                {customerName || 'No customer selected'}
+                                {issueDate ? ` · Issued ${new Date(`${issueDate}T00:00:00`).toLocaleDateString()}` : ''}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-4 sm:flex-col sm:items-end sm:gap-1">
+                        <Badge className={statusVisual.badgeClass}>
+                            {statusVisual.label}
+                        </Badge>
+                        <div className="text-right">
+                            <p className="text-xs text-muted-foreground">Estimate total</p>
+                            <p className="text-lg font-semibold">{formatCurrency(total, currency)}</p>
+                        </div>
+                    </div>
+                </div>
+
                 {!isNew && (lifecycle.viewedAt || lifecycle.acceptedAt || lifecycle.declinedAt) && (
                     <Card className="border-border/80 bg-muted/20 shadow-none">
                         <CardContent className="flex flex-wrap items-center gap-x-6 gap-y-3 p-4 text-sm sm:px-6">
@@ -566,7 +654,7 @@ export function EstimateEditorPage() {
                                 </span>
                             )}
                             {lifecycle.declinedAt && (
-                                <span className="inline-flex items-center gap-2 text-muted-foreground font-medium">
+                                <span className="inline-flex items-center gap-2 font-medium text-red-700 dark:text-red-300">
                                     <XCircle className="h-4 w-4" />
                                     Declined {new Date(lifecycle.declinedAt).toLocaleString()}
                                 </span>
@@ -574,298 +662,204 @@ export function EstimateEditorPage() {
                         </CardContent>
                     </Card>
                 )}
-                    {/* Customer Details */}
-                <Card className="overflow-hidden border-border/80 shadow-none">
-                    <CardHeader className="border-b bg-muted/20 px-4 py-4 sm:px-6">
-                        <CardTitle className="flex items-center gap-3 text-base sm:text-lg">
-                            <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
-                                <User className="h-4 w-4" />
-                            </span>
-                            <span>Customer details</span>
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-5 p-4 sm:p-6">
-                        <div className="space-y-2">
-                            <Label htmlFor="estimate-contact">Select contact</Label>
-                            <Select
-                                value={contactId?.toString() || 'none'}
-                                onValueChange={handleContactChange}
-                            >
-                                <SelectTrigger id="estimate-contact" className="bg-card">
-                                    <SelectValue placeholder="Select a contact or enter manually" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="none">Enter manually</SelectItem>
-                                    {contacts.map(contact => (
-                                        <SelectItem key={contact.id} value={contact.id.toString()}>
-                                            {contact.first_name} {contact.last_name} {contact.email && `(${contact.email})`}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="grid gap-5 md:grid-cols-2">
-                            <div className="space-y-2">
-                                <Label htmlFor="estimate-customer-name">Name</Label>
+
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <CustomerInfoSection
+                        idPrefix="estimate"
+                        contacts={contacts}
+                        contactId={contactId}
+                        customerName={customerName}
+                        customerEmail={customerEmail}
+                        customerPhone={customerPhone}
+                        customerAddress={customerAddress}
+                        onContactChange={handleContactChange}
+                        onCustomerNameChange={setCustomerName}
+                        onCustomerEmailChange={setCustomerEmail}
+                        onCustomerPhoneChange={setCustomerPhone}
+                        onCustomerAddressChange={setCustomerAddress}
+                    />
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <CalendarDays className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                                Estimate Details
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem] sm:items-center">
+                                <Label className="text-muted-foreground">Estimate number</Label>
                                 <Input
-                                    id="estimate-customer-name"
-                                    className="bg-card"
-                                    value={customerName}
-                                    onChange={(e) => setCustomerName(e.target.value)}
-                                    placeholder="Customer name"
+                                    value={estimateNumber || (isNew ? 'Auto-generated' : '')}
+                                    readOnly
+                                    className="h-9 bg-muted/50 sm:text-right"
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="estimate-customer-email">Email</Label>
+                            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem] sm:items-center">
+                                <Label className="text-muted-foreground">Estimate date</Label>
                                 <Input
-                                    id="estimate-customer-email"
-                                    className="bg-card"
-                                    type="email"
-                                    value={customerEmail}
-                                    onChange={(e) => setCustomerEmail(e.target.value)}
-                                    placeholder="customer@example.com"
+                                    type="date"
+                                    value={issueDate}
+                                    readOnly
+                                    className="h-9 bg-muted/50"
                                 />
                             </div>
-                        </div>
-                        <div className="grid gap-5 md:grid-cols-2">
-                            <div className="space-y-2">
-                                <Label htmlFor="estimate-customer-phone">Phone</Label>
-                                <Input
-                                    id="estimate-customer-phone"
-                                    className="bg-card"
-                                    value={customerPhone}
-                                    onChange={(e) => setCustomerPhone(e.target.value)}
-                                    placeholder="Phone number"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="estimate-valid-until">Valid until</Label>
+                            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem] sm:items-center">
+                                <Label htmlFor="estimate-valid-until" className="text-muted-foreground">
+                                    Valid until
+                                </Label>
                                 <Input
                                     id="estimate-valid-until"
-                                    className="bg-card"
                                     type="date"
                                     value={validUntil}
-                                    onChange={(e) => setValidUntil(e.target.value)}
+                                    onChange={(event) => setValidUntil(event.target.value)}
+                                    className="h-9"
                                 />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="estimate-customer-address">Address</Label>
-                            <Textarea
-                                id="estimate-customer-address"
-                                className="bg-card"
-                                value={customerAddress}
-                                onChange={(e) => setCustomerAddress(e.target.value)}
-                                placeholder="Customer address"
-                                rows={2}
-                            />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Line Items */}
-                <Card className="overflow-hidden border-border/80 shadow-none">
-                    <CardHeader className="flex-row items-center justify-between space-y-0 border-b bg-muted/20 px-4 py-4 sm:px-6">
-                        <CardTitle className="flex items-center gap-3 text-base sm:text-lg">
-                            <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
-                                <FileText className="h-4 w-4" />
-                            </span>
-                            <span>Line items</span>
-                        </CardTitle>
-                        <Button size="sm" onClick={addLineItem}>
-                            <Plus className="h-4 w-4" />
-                            <span className="hidden sm:inline">Add item</span>
-                            <span className="sm:hidden">Add</span>
-                        </Button>
-                    </CardHeader>
-                    <CardContent className="space-y-4 p-4 sm:p-6">
-                        {lineItems.map((item, index) => (
-                            <div key={item.id} className="space-y-5 rounded-lg border border-border/80 bg-background/50 p-4 sm:p-5">
-                                <div className="flex items-center justify-between">
-                                    <span className="inline-flex items-center gap-2 text-sm font-semibold">
-                                        <span className="grid h-7 w-7 place-items-center rounded-full bg-primary/10 text-xs text-primary">
-                                            {index + 1}
-                                        </span>
-                                        Line item
-                                    </span>
-                                    {lineItems.length > 1 && (
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => removeLineItem(item.id)}
-                                            aria-label={`Remove item ${index + 1}`}
-                                            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    )}
-                                </div>
-                                
-                                {products.length > 0 && (
-                                    <div className="space-y-2">
-                                        <Label>Product</Label>
-                                        <Select
-                                            value={item.product_id?.toString() || 'custom'}
-                                            onValueChange={(v) => handleProductSelect(item.id, v)}
-                                        >
-                                            <SelectTrigger className="bg-card">
-                                                <SelectValue placeholder="Select product or custom" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="custom">Custom item</SelectItem>
-                                                {products.map(product => (
-                                                    <SelectItem key={product.id} value={product.id.toString()}>
-                                                        {product.name} - {formatCurrency(product.price)}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                )}
-
-                                <div>
-                                    <div className="space-y-2">
-                                        <Label>Name *</Label>
-                                        <Input
-                                            className="bg-card"
-                                            value={item.name}
-                                            onChange={(e) => updateLineItem(item.id, { name: e.target.value })}
-                                            placeholder="Item name"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label>Description</Label>
-                                    <Input
-                                        className="bg-card"
-                                        value={item.description}
-                                        onChange={(e) => updateLineItem(item.id, { description: e.target.value })}
-                                        placeholder="Optional description"
-                                    />
-                                </div>
-
-                                <div className="grid gap-4 sm:grid-cols-3">
-                                    <div className="space-y-2">
-                                        <Label>Quantity</Label>
-                                        <Input
-                                            className="bg-card"
-                                            type="number"
-                                            min="1"
-                                            value={item.quantity || ''}
-                                            onChange={(e) => updateLineItem(item.id, { quantity: e.target.value === '' ? 1 : parseInt(e.target.value) })}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Unit Price</Label>
-                                        <Input
-                                            className="bg-card"
-                                            type="number"
-                                            min="0"
-                                            step="0.01"
-                                            value={item.unit_price || ''}
-                                            onChange={(e) => updateLineItem(item.id, { unit_price: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Tax %</Label>
-                                        <Input
-                                            className="bg-card"
-                                            type="number"
-                                            min="0"
-                                            max="100"
-                                            step="0.1"
-                                            value={item.tax_rate}
-                                            onChange={(e) => updateLineItem(item.id, { tax_rate: parseFloat(e.target.value) || 0 })}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="rounded-md bg-primary/5 px-3 py-2 text-right text-sm">
-                                    <span className="text-muted-foreground">Line Total: </span>
-                                    <span className="font-medium">
-                                        {formatCurrency(item.quantity * item.unit_price * (1 + item.tax_rate / 100))}
-                                    </span>
-                                </div>
-                            </div>
-                        ))}
-                    </CardContent>
-                </Card>
-
-                {/* Totals & Notes */}
-                <div className="grid gap-6 lg:grid-cols-2">
-                    <Card className="overflow-hidden border-border/80 shadow-none">
-                        <CardHeader className="border-b bg-muted/20 px-4 py-4 sm:px-6">
-                            <CardTitle className="flex items-center gap-3 text-base sm:text-lg">
-                                <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
-                                    <StickyNote className="h-4 w-4" />
-                                </span>
-                                <span>Customer notes</span>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4 sm:p-6">
-                            <Textarea
-                                className="min-h-32 bg-card"
-                                value={notes}
-                                onChange={(e) => setNotes(e.target.value)}
-                                placeholder="Notes for the customer..."
-                                rows={4}
-                            />
-                        </CardContent>
-                    </Card>
-
-                    <Card className="overflow-hidden border-border/80 shadow-none">
-                        <CardHeader className="border-b bg-muted/20 px-4 py-4 sm:px-6">
-                            <CardTitle className="flex items-center gap-3 text-base sm:text-lg">
-                                <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
-                                    <DollarSign className="h-4 w-4" />
-                                </span>
-                                <span>Summary</span>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4 p-4 sm:p-6">
-                            <div className="flex justify-between">
-                                <span>Subtotal</span>
-                                <span>{formatCurrency(subtotal)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>Tax</span>
-                                <span>{formatCurrency(taxAmount)}</span>
-                            </div>
-                            <div className="grid grid-cols-[auto_auto_1fr] items-center gap-2 sm:grid-cols-[1fr_auto_auto_auto]">
-                                <span className="col-span-3 sm:col-span-1">Discount</span>
-                                <Select
-                                    value={discountType}
-                                    onValueChange={(v) => setDiscountType(v as 'fixed' | 'percent')}
-                                >
-                                    <SelectTrigger className="h-9 w-24 bg-card">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="fixed">$</SelectItem>
-                                        <SelectItem value="percent">%</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    className="h-9 w-24 bg-card"
-                                    value={discountValue}
-                                    onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
-                                />
-                                <span className="col-span-3 text-right text-sm text-muted-foreground sm:col-span-1 sm:text-foreground">-{formatCurrency(discountAmount)}</span>
-                            </div>
-                            <Separator />
-                            <div className="flex justify-between text-lg font-bold">
-                                <span>Total</span>
-                                <span>{formatCurrency(total)}</span>
                             </div>
                         </CardContent>
                     </Card>
                 </div>
 
-                {/* Actions */}
-                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <LineItemsTable
+                    lineItems={lineItems}
+                    products={products}
+                    currency={currency}
+                    showTaxRate
+                    onAddLineItem={addLineItem}
+                    onRemoveLineItem={removeLineItem}
+                    onUpdateLineItem={updateLineItem}
+                    onProductSelect={handleProductSelect}
+                />
+
+                <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                                Notes &amp; Terms
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Textarea
+                                value={notes}
+                                onChange={(event) => setNotes(event.target.value)}
+                                placeholder="Enter notes or terms visible to your customer"
+                                rows={5}
+                                className="min-h-[9rem] resize-y"
+                            />
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-base">
+                                <WalletCards className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                                Totals
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            <div className="flex justify-between text-sm">
+                                <span>Subtotal</span>
+                                <span>{formatCurrency(subtotal, currency)}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span>Tax</span>
+                                <span>{formatCurrency(taxAmount, currency)}</span>
+                            </div>
+
+                            {discountValue > 0 ? (
+                                <div className="flex items-center justify-between gap-3 text-sm">
+                                    <div className="flex min-w-0 items-center gap-2">
+                                        <span>Discount</span>
+                                        <Select
+                                            value={discountType}
+                                            onValueChange={(value) => setDiscountType(value as 'fixed' | 'percent')}
+                                        >
+                                            <SelectTrigger className="h-7 w-16 text-xs">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="fixed">$</SelectItem>
+                                                <SelectItem value="percent">%</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            className="h-7 w-16 text-sm"
+                                            value={discountValue || ''}
+                                            onChange={(event) => setDiscountValue(parseFloat(event.target.value) || 0)}
+                                        />
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6"
+                                            onClick={() => setDiscountValue(0)}
+                                            aria-label="Remove discount"
+                                        >
+                                            <Trash2 className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                                        </Button>
+                                    </div>
+                                    <span>-{formatCurrency(discountAmount, currency)}</span>
+                                </div>
+                            ) : (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 border-blue-200/60 px-2 text-blue-600 hover:bg-blue-50 dark:border-blue-800/60 dark:text-blue-400 dark:hover:bg-blue-950/40"
+                                    onClick={() => setDiscountValue(0.01)}
+                                >
+                                    <Plus className="mr-1 h-3 w-3" />
+                                    Add a discount
+                                </Button>
+                            )}
+
+                            <Separator />
+
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-semibold">Total</span>
+                                    <Badge variant="secondary">{currency}</Badge>
+                                </div>
+                                <span className="text-lg font-bold">{formatCurrency(total, currency)}</span>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <Collapsible open={footerOpen} onOpenChange={setFooterOpen}>
+                    <Card>
+                        <CollapsibleTrigger asChild>
+                            <CardHeader className="cursor-pointer rounded-t-lg transition-colors hover:bg-muted/50">
+                                <CardTitle className="flex items-center justify-between gap-3 text-base">
+                                    <span className="flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                                        Footer
+                                    </span>
+                                    {footerOpen ? (
+                                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                                    ) : (
+                                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                    )}
+                                </CardTitle>
+                            </CardHeader>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                            <CardContent>
+                                <Textarea
+                                    value={termsAndConditions}
+                                    onChange={(event) => setTermsAndConditions(event.target.value)}
+                                    placeholder="Enter a footer for this estimate"
+                                    rows={2}
+                                    className="min-h-[60px] resize-y"
+                                />
+                            </CardContent>
+                        </CollapsibleContent>
+                    </Card>
+                </Collapsible>
+
+                <div className="flex justify-end gap-4">
                     <Button variant="outline" onClick={() => {
                         if (confirmLeave()) navigate('/estimates');
                     }}>
@@ -873,10 +867,11 @@ export function EstimateEditorPage() {
                     </Button>
                     <Button
                         onClick={handleSave}
-                        disabled={saving || !isDirty || lineItems.filter(i => i.name).length === 0}
+                        disabled={!canSave}
+                        className="bg-blue-600 text-white hover:bg-blue-700"
                     >
-                        <Save className="h-4 w-4 mr-2" />
-                        {saving ? 'Saving...' : isNew ? 'Create Estimate' : 'Save Changes'}
+                        <Save className="mr-2 h-4 w-4" />
+                        {primaryActionLabel}
                     </Button>
                 </div>
             </div>

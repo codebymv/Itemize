@@ -20,6 +20,9 @@ const { runActivationEventsMigration } = require('./db_activation_events_migrati
 const {
   runAccountDeletionGraceMigration,
 } = require('./db_account_deletion_migrations');
+const {
+  runWireframeContactMigration,
+} = require('./db_wireframe_contact_migrations');
 
 const { runCategoryContractMigration } = require('./db_category_contract_migrations');
 
@@ -524,6 +527,11 @@ const initializeDatabase = async (pool) => {
 
     // Module migrations (each module handles its own tables)
     await runMigrationOnce(pool, 'module_crm', runAllCRMMigrations);
+    await runMigrationOnce(
+      pool,
+      'wireframe_contact_link_v1',
+      runWireframeContactMigration,
+    );
     await runMigrationOnce(
       pool,
       'organization_owner_invariant_v1',

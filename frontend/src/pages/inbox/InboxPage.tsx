@@ -245,7 +245,7 @@ export function InboxPage() {
                                     <EmptyState
                                         icon={Inbox}
                                         title={searchQuery ? 'No matches' : 'No conversations'}
-                                        description={searchQuery ? 'No conversations match your search' : 'Conversations will appear here when customers message you'}
+                                        description={searchQuery ? 'No conversations match your search.' : 'Customer conversations appear here.'}
                                     />
                                 </div>
                             ) : (

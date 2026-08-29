@@ -29,7 +29,7 @@ export function PipelineFunnel({ funnel, isLoading }: { funnel: DashboardAnalyti
     const maxCount = Math.max(...funnel.map(s => s.dealCount), 1);
 
     return (
-        <div className="space-y-3">
+        <div className="flex h-full flex-col justify-between gap-3">
             {funnel.map((stage) => (
                 <div key={stage.stageId} className="flex items-center gap-3">
                     <div

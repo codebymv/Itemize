@@ -472,7 +472,7 @@ export function ChatWidgetPage() {
                 <CardContent>
                   {embedCode ? (
                     <div className="space-y-3">
-                      <p className="text-sm text-muted-foreground">Paste this code immediately before the closing body tag on your website.</p>
+                      <p className="text-sm text-muted-foreground">Paste before your site's closing body tag.</p>
                       <div className="relative">
                         <pre className="max-h-72 overflow-auto rounded-lg bg-muted p-4 pr-24 text-sm"><code>{embedCode}</code></pre>
                         <Button type="button" variant="outline" size="sm" className="absolute right-2 top-2" onClick={() => void copyEmbedCode()}>

@@ -71,7 +71,11 @@ interface UsePaymentsTabReturn {
   setDeleteDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export const usePaymentsTab = (): UsePaymentsTabReturn => {
+export const usePaymentsTab = ({
+  enabled = true,
+}: {
+  enabled?: boolean;
+} = {}): UsePaymentsTabReturn => {
   const { toast } = useToast();
   const {
     organizationId,
@@ -111,6 +115,7 @@ export const usePaymentsTab = (): UsePaymentsTabReturn => {
 
   // Unified data fetching
   const refetchData = useCallback(async () => {
+    if (!enabled) return;
     if (organizationLoading) return;
 
     let targetOrganizationId = organizationId;
@@ -166,7 +171,7 @@ export const usePaymentsTab = (): UsePaymentsTabReturn => {
       setLoading(false);
       setInitialLoad(false);
     }
-  }, [organizationId, organizationLoading, refreshOrganization]);
+  }, [enabled, organizationId, organizationLoading, refreshOrganization]);
 
   // Surface a failed organization bootstrap as its own recovery state. The
   // context already attempts to create or select a default organization.
@@ -276,7 +281,7 @@ export const usePaymentsTab = (): UsePaymentsTabReturn => {
             }
             toast({
               title: 'Created',
-              description: 'Business created but logo upload failed. You can add a logo later.',
+              description: 'Business saved. Add the failed logo upload later.',
               variant: 'default'
             });
           } finally {

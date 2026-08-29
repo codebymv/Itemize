@@ -28,6 +28,14 @@ describe('AnalyticsRepository', () => {
       'BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY',
     );
     const queryCalls = client.query.mock.calls as unknown[][];
+    const statements = queryCalls.map((call) => String(call[0]));
+    const recentContactsIndex = statements.findIndex((text) =>
+      text.includes('SELECT id, first_name, last_name, email'),
+    );
+    expect(recentContactsIndex).toBeGreaterThan(1);
+    expect(statements[recentContactsIndex]).toContain('WHERE organization_id = $1');
+    expect(statements[recentContactsIndex]).toContain('ORDER BY created_at DESC, id DESC');
+    expect(client.query.mock.calls[recentContactsIndex][1]).toEqual([7]);
     const temporalCalls = queryCalls.filter((call) => {
       const values = call[1];
       return Array.isArray(values) && values.length === 2;

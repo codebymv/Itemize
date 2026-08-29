@@ -4,10 +4,12 @@
  */
 
 import React from 'react';
-import { Plus, Trash2 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { ListChecks, Plus, Trash2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -38,6 +40,7 @@ interface LineItemsTableProps {
   lineItems: LineItem[];
   products: Product[];
   currency: string;
+  showTaxRate?: boolean;
   onAddLineItem: () => void;
   onRemoveLineItem: (itemId: string) => void;
   onUpdateLineItem: (itemId: string, updates: Partial<LineItem>) => void;
@@ -48,6 +51,7 @@ export function LineItemsTable({
   lineItems,
   products,
   currency,
+  showTaxRate = false,
   onAddLineItem,
   onRemoveLineItem,
   onUpdateLineItem,
@@ -62,12 +66,22 @@ export function LineItemsTable({
 
   return (
     <Card>
-      <CardContent className="pt-6">
+      <CardHeader>
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <ListChecks className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+            Line Items
+          </CardTitle>
+          <Badge variant="secondary">{lineItems.length}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent>
         {/* Table Header */}
-        <div className="grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider pb-2 border-b">
-          <div className="col-span-5">Items</div>
+        <div className="hidden grid-cols-12 gap-3 border-b pb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground lg:grid">
+          <div className={showTaxRate ? 'col-span-4' : 'col-span-5'}>Items</div>
           <div className="col-span-2 text-center">Quantity</div>
           <div className="col-span-2 text-right">Price</div>
+          {showTaxRate && <div className="col-span-1 text-right">Tax</div>}
           <div className="col-span-2 text-right">Amount</div>
           <div className="col-span-1"></div>
         </div>
@@ -75,9 +89,10 @@ export function LineItemsTable({
         {/* Line Items */}
         <div className="divide-y">
           {lineItems.map((item) => (
-            <div key={item.id} className="grid grid-cols-12 gap-2 py-3 items-start">
+            <div key={item.id} className="grid grid-cols-1 items-start gap-3 py-4 lg:grid-cols-12">
               {/* Item Name & Description */}
-              <div className="col-span-5 space-y-1">
+              <div className={showTaxRate ? 'space-y-2 lg:col-span-4' : 'space-y-2 lg:col-span-5'}>
+                <Label className="text-xs text-muted-foreground lg:hidden">Item</Label>
                 {products.length > 0 ? (
                   <Select
                     value={item.product_id?.toString() || 'custom'}
@@ -126,7 +141,8 @@ export function LineItemsTable({
               </div>
 
               {/* Quantity */}
-              <div className="col-span-2">
+              <div className="space-y-2 lg:col-span-2">
+                <Label className="text-xs text-muted-foreground lg:hidden">Quantity</Label>
                 <Input
                   type="number"
                   min="1"
@@ -142,7 +158,8 @@ export function LineItemsTable({
               </div>
 
               {/* Price */}
-              <div className="col-span-2">
+              <div className="space-y-2 lg:col-span-2">
+                <Label className="text-xs text-muted-foreground lg:hidden">Price</Label>
                 <Input
                   type="number"
                   min="0"
@@ -158,19 +175,47 @@ export function LineItemsTable({
                 />
               </div>
 
+              {showTaxRate && (
+                <div className="space-y-2 lg:col-span-1">
+                  <Label className="text-xs text-muted-foreground lg:hidden">Tax %</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={item.tax_rate || ''}
+                    onChange={(e) =>
+                      onUpdateLineItem(item.id, {
+                        tax_rate: e.target.value === '' ? 0 : parseFloat(e.target.value),
+                      })
+                    }
+                    className="h-9 text-right"
+                    aria-label={`Tax rate for ${item.name || 'line item'}`}
+                  />
+                </div>
+              )}
+
               {/* Amount */}
-              <div className="col-span-2 text-right pt-2 font-medium">
-                {formatCurrency(item.quantity * item.unit_price)}
+              <div className="flex items-center justify-between pt-1 font-medium lg:col-span-2 lg:block lg:pt-2 lg:text-right">
+                <span className="text-xs font-normal text-muted-foreground lg:hidden">Amount</span>
+                <span>
+                  {formatCurrency(
+                    item.quantity
+                      * item.unit_price
+                      * (showTaxRate ? 1 + item.tax_rate / 100 : 1),
+                  )}
+                </span>
               </div>
 
               {/* Delete */}
-              <div className="col-span-1 flex justify-center pt-1">
+              <div className="flex justify-end pt-1 lg:col-span-1 lg:justify-center">
                 {lineItems.length > 1 && (
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
                     onClick={() => onRemoveLineItem(item.id)}
+                    aria-label="Remove line item"
                   >
                     <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                   </Button>
@@ -182,8 +227,8 @@ export function LineItemsTable({
 
         {/* Add Item Button */}
         <Button
-          variant="ghost"
-          className="mt-4 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+          variant="outline"
+          className="mt-4 border-blue-200/60 text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:border-blue-800/60 dark:text-blue-400 dark:hover:bg-blue-950/40 dark:hover:text-blue-300"
           onClick={onAddLineItem}
         >
           <Plus className="h-4 w-4 mr-2" />

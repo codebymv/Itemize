@@ -61,6 +61,9 @@ type GraphqlInvoice = {
   isRecurring: boolean;
   recurringInterval: string | null;
   parentInvoiceId: number | null;
+  isRecurringSource: boolean;
+  recurringTemplateId: number | null;
+  recurringSourceTemplateId: number | null;
   customFields: JsonRecord;
   createdById: number | null;
   createdAt: string;
@@ -90,7 +93,7 @@ type GraphqlInvoice = {
   } | null;
 };
 
-const coreFields = `
+const legacyCoreFields = `
   id organizationId invoiceNumber contactId businessId customerName
   customerEmail customerPhone customerAddress issueDate dueDate subtotal
   taxRate taxAmount discountAmount discountType discountValue total
@@ -99,6 +102,11 @@ const coreFields = `
   stripeHostedInvoiceUrl stripePdfUrl sentAt viewedAt paidAt isRecurring
   recurringInterval parentInvoiceId customFields createdById createdAt
   updatedAt contactFirstName contactLastName contactEmail
+`;
+
+const coreFields = `
+  ${legacyCoreFields}
+  isRecurringSource recurringTemplateId recurringSourceTemplateId
 `;
 
 const detailFields = `
@@ -112,6 +120,57 @@ const detailFields = `
   }
   business { id name email phone address taxId logoUrl }
 `;
+
+const legacyDetailFields = `
+  ${legacyCoreFields}
+  items {
+    id invoiceId productId name description quantity unitPrice taxRate
+    taxAmount discountAmount total sortOrder productName
+  }
+  payments {
+    id amount currency paymentMethod status notes paidAt createdAt
+  }
+  business { id name email phone address taxId logoUrl }
+`;
+
+const invoicesQuery = `
+  query Invoices($filter: InvoiceFilterInput, $page: PageInput) {
+    invoices(filter: $filter, page: $page) {
+      nodes { ${coreFields} }
+      pageInfo { page pageSize total totalPages }
+    }
+  }
+`;
+
+const legacyInvoicesQuery = `
+  query Invoices($filter: InvoiceFilterInput, $page: PageInput) {
+    invoices(filter: $filter, page: $page) {
+      nodes { ${legacyCoreFields} }
+      pageInfo { page pageSize total totalPages }
+    }
+  }
+`;
+
+const invoiceQuery = `
+  query Invoice($id: Int!) {
+    invoice(id: $id) { ${detailFields} }
+  }
+`;
+
+const legacyInvoiceQuery = `
+  query Invoice($id: Int!) {
+    invoice(id: $id) { ${legacyDetailFields} }
+  }
+`;
+
+const isRecurringRelationshipSchemaMismatch = (error: unknown): boolean => {
+  if (!(error instanceof Error)) return false;
+  return error.message.includes('Cannot query field') && (
+    error.message.includes('isRecurringSource')
+    || error.message.includes('recurringTemplateId')
+    || error.message.includes('recurringSourceTemplateId')
+  );
+};
 
 const optional = <T extends object, K extends keyof T>(
   key: K,
@@ -195,6 +254,15 @@ const mapInvoice = (invoice: GraphqlInvoice): Invoice => ({
   ...optional<Invoice, 'parent_invoice_id'>(
     'parent_invoice_id',
     invoice.parentInvoiceId,
+  ),
+  is_recurring_source: Boolean(invoice.isRecurringSource),
+  ...optional<Invoice, 'recurring_template_id'>(
+    'recurring_template_id',
+    invoice.recurringTemplateId,
+  ),
+  ...optional<Invoice, 'recurring_source_template_id'>(
+    'recurring_source_template_id',
+    invoice.recurringSourceTemplateId,
   ),
   custom_fields: invoice.customFields,
   ...optional<Invoice, 'created_by'>('created_by', invoice.createdById),
@@ -326,7 +394,7 @@ export const getInvoicesViaGraphql = async (
   },
   organizationId?: number,
 ) => {
-  const data = await graphqlRequest<{
+  type InvoicePageData = {
     invoices: {
       nodes: GraphqlInvoice[];
       pageInfo: {
@@ -336,25 +404,32 @@ export const getInvoicesViaGraphql = async (
         totalPages: number;
       };
     };
-  }, Record<string, unknown>>(
-    `query Invoices($filter: InvoiceFilterInput, $page: PageInput) {
-      invoices(filter: $filter, page: $page) {
-        nodes { ${coreFields} }
-        pageInfo { page pageSize total totalPages }
-      }
-    }`,
-    {
-      filter: {
-        ...(params.status === undefined ? {} : { status: params.status }),
-        ...(params.contact_id === undefined
-          ? {}
-          : { contactId: params.contact_id }),
-        ...(params.search === undefined ? {} : { search: params.search }),
-      },
-      page: { page: params.page ?? 1, pageSize: params.limit ?? 50 },
+  };
+  const variables = {
+    filter: {
+      ...(params.status === undefined ? {} : { status: params.status }),
+      ...(params.contact_id === undefined
+        ? {}
+        : { contactId: params.contact_id }),
+      ...(params.search === undefined ? {} : { search: params.search }),
     },
+    page: { page: params.page ?? 1, pageSize: params.limit ?? 50 },
+  };
+  const requestPage = (document: string) => graphqlRequest<
+    InvoicePageData,
+    Record<string, unknown>
+  >(
+    document,
+    variables,
     organizationId,
   );
+  let data: InvoicePageData;
+  try {
+    data = await requestPage(invoicesQuery);
+  } catch (error) {
+    if (!isRecurringRelationshipSchemaMismatch(error)) throw error;
+    data = await requestPage(legacyInvoicesQuery);
+  }
   return {
     invoices: data.invoices.nodes.map(mapInvoice),
     pagination: {
@@ -370,11 +445,20 @@ export const getInvoiceViaGraphql = async (
   id: number,
   organizationId?: number,
 ): Promise<Invoice> => {
-  const data = await graphqlRequest<{ invoice: GraphqlInvoice }, { id: number }>(
-    `query Invoice($id: Int!) { invoice(id: $id) { ${detailFields} } }`,
-    { id },
-    organizationId,
+  const requestInvoice = (document: string) => graphqlRequest<
+    { invoice: GraphqlInvoice },
+    { id: number }
+  >(
+    document,
+    { id }, organizationId,
   );
+  let data: { invoice: GraphqlInvoice };
+  try {
+    data = await requestInvoice(invoiceQuery);
+  } catch (error) {
+    if (!isRecurringRelationshipSchemaMismatch(error)) throw error;
+    data = await requestInvoice(legacyInvoiceQuery);
+  }
   return mapInvoice(data.invoice);
 };
 
@@ -387,7 +471,7 @@ export const createInvoiceViaGraphql = async (
     { input: ReturnType<typeof mapMutationInput> }
   >(
     `mutation CreateInvoice($input: CreateInvoiceInput!) {
-      createInvoice(input: $input) { ${detailFields} }
+      createInvoice(input: $input) { ${legacyDetailFields} }
     }`,
     { input: mapMutationInput(invoice) },
     organizationId,
@@ -405,7 +489,7 @@ export const updateInvoiceViaGraphql = async (
     { id: number; input: ReturnType<typeof mapMutationInput> }
   >(
     `mutation UpdateInvoice($id: Int!, $input: UpdateInvoiceInput!) {
-      updateInvoice(id: $id, input: $input) { ${detailFields} }
+      updateInvoice(id: $id, input: $input) { ${legacyDetailFields} }
     }`,
     { id, input: mapMutationInput(invoice) },
     organizationId,

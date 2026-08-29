@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { ErrorState } from '@/components/ErrorState';
 import { IntegrationProviderMark } from '@/components/brand/IntegrationProviderMark';
-import { SettingsSectionTitle } from '@/components/settings/SettingsPrimitives';
+import { SettingsPlanGate, SettingsSectionTitle } from '@/components/settings/SettingsPrimitives';
 import {
     getCalendarConnections,
     disconnectCalendar,
@@ -25,11 +26,13 @@ import {
     readIntegrationOAuthResult,
 } from '@/lib/integrationOAuthReturn';
 import { IntegrationStatusRow } from '@/components/integrations/IntegrationStatusRow';
+import { AVAILABLE_PLANS_PATH } from '@/lib/settingsNavigation';
 
 export function CalendarIntegrationsPage({ embedded = false }: { embedded?: boolean }) {
     const { toast } = useToast();
     const navigate = useNavigate();
     const location = useLocation();
+    const { isLoading: subscriptionLoading, isSubscribed } = useSubscriptionState();
 
     const [connections, setConnections] = useState<CalendarConnection[]>([]);
     const [facebookChannel, setFacebookChannel] = useState<{ id: number; name: string } | null>(null);
@@ -76,7 +79,7 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
     }, [organizationId, toast]);
 
     const fetchStatus = useCallback(async () => {
-        if (!organizationId) return;
+        if (!organizationId || subscriptionLoading || !isSubscribed) return;
         setLoading(true);
         try {
             const [calendarRes, channelsRes, paymentRes] = await Promise.all([
@@ -94,7 +97,7 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
         } finally {
             setLoading(false);
         }
-    }, [organizationId, toast]);
+    }, [isSubscribed, organizationId, subscriptionLoading, toast]);
 
     useEffect(() => {
         fetchStatus();
@@ -115,6 +118,12 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
             setLoading(false);
         }
     }, [organizationId, initError]);
+
+    useEffect(() => {
+        if (!subscriptionLoading && !isSubscribed) {
+            setLoading(false);
+        }
+    }, [isSubscribed, subscriptionLoading]);
 
     const handleSync = async (id: number) => {
         if (!organizationId) return;
@@ -169,6 +178,26 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
         if (!value) return 'Not synced yet';
         return `Last synced ${new Date(value).toLocaleString()}`;
     };
+
+    if (!subscriptionLoading && !isSubscribed) {
+        const planGate = (
+            <SettingsPlanGate
+                title="Unlock integrations"
+                description="Solo unlocks calendar, social, and payment connections."
+                onViewPlans={() => navigate(AVAILABLE_PLANS_PATH)}
+            />
+        );
+
+        if (embedded) return planGate;
+        return (
+            <PageLayout
+                title="INTEGRATIONS"
+                icon={<Plug className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            >
+                {planGate}
+            </PageLayout>
+        );
+    }
 
     if (initError) {
         const errorState = (

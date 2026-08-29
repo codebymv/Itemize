@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Building2,
+  ChevronDown,
   Crown,
   Globe2,
   History,
@@ -11,9 +12,11 @@ import {
   RefreshCw,
   Save,
   Send,
+  Settings2,
   Trash2,
   Users,
 } from 'lucide-react';
+import { HeaderAction } from '@/components/layout/DesktopHeaderTools';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,6 +32,7 @@ import {
 } from '@/components/ui/select';
 import {
   SettingsFieldLabel,
+  SettingsInfoTooltip,
   SettingsSectionTitle,
 } from '@/components/settings/SettingsPrimitives';
 import {
@@ -77,6 +81,7 @@ import type {
 } from '@/services/organizationsGraphql';
 import { getBusinesses, type Business } from '@/services/invoicesApi';
 import type { JsonRecord, OrganizationInvitation, OrganizationMember } from '@/types';
+import { AVAILABLE_PLANS_PATH } from '@/lib/settingsNavigation';
 
 const TIMEZONES = [
   'UTC',
@@ -157,7 +162,11 @@ const activityDescription = (activity: OrganizationActivity): string => {
   }
 };
 
-export function OrganizationSettings() {
+export function OrganizationSettings({
+  setSaveButton,
+}: {
+  setSaveButton?: (button: ReactNode) => void;
+}) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { currentUser } = useAuthState();
@@ -177,6 +186,7 @@ export function OrganizationSettings() {
   const [members, setMembers] = useState<OrganizationMember[]>([]);
   const [invitations, setInvitations] = useState<OrganizationInvitation[]>([]);
   const [activity, setActivity] = useState<OrganizationActivity[]>([]);
+  const [activityExpanded, setActivityExpanded] = useState(false);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [businessProfilesAvailable, setBusinessProfilesAvailable] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -203,6 +213,7 @@ export function OrganizationSettings() {
   const activeInvitationCount = invitations.filter((invitation) => invitation.status === 'pending').length;
   const usedSeats = members.length + activeInvitationCount;
   const memberLimitReached = hasMemberLimit && usedSeats >= memberLimit;
+  const visibleActivity = activityExpanded ? activity : activity.slice(0, 3);
 
   useEffect(() => {
     if (!organization) return;
@@ -254,6 +265,10 @@ export function OrganizationSettings() {
     void loadDetails();
   }, [loadDetails]);
 
+  useEffect(() => {
+    setActivityExpanded(false);
+  }, [organizationId]);
+
   const loadAllowance = useCallback(async () => {
     setAllowanceLoading(true);
     try {
@@ -278,7 +293,7 @@ export function OrganizationSettings() {
     return TIMEZONES.includes(timezone) ? TIMEZONES : [timezone, ...TIMEZONES];
   }, [timezone]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!organizationId || !organization || !canManage) return;
     if (!name.trim()) {
       toast({ title: 'Organization name required', variant: 'destructive' });
@@ -304,7 +319,29 @@ export function OrganizationSettings() {
     } finally {
       setSaving(false);
     }
-  };
+  }, [canManage, defaultBusinessId, locale, name, organization, organizationId, refresh, timezone, toast]);
+
+  useEffect(() => {
+    if (!setSaveButton) return;
+
+    if (!canManage) {
+      setSaveButton(null);
+      return () => setSaveButton(null);
+    }
+
+    setSaveButton(
+      <HeaderAction
+        label={saving ? 'Saving…' : 'Save changes'}
+        onClick={() => void handleSave()}
+        disabled={saving}
+        icon={saving
+          ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+          : <Save aria-hidden="true" className="h-4 w-4" />}
+      />,
+    );
+
+    return () => setSaveButton(null);
+  }, [canManage, handleSave, saving, setSaveButton]);
 
   const handleCreateOrganization = async () => {
     const trimmedName = organizationName.trim();
@@ -340,7 +377,7 @@ export function OrganizationSettings() {
         title: invitation.delivery_sent ? 'Invitation sent' : 'Invitation created',
         description: invitation.delivery_sent
           ? `A secure link was sent to ${invitation.email}.`
-          : 'Email delivery is currently unavailable. Resend when delivery is restored.',
+          : 'Email unavailable. Resend when delivery returns.',
       });
     } catch (error) {
       toast({
@@ -366,7 +403,7 @@ export function OrganizationSettings() {
           title: resent.delivery_sent ? 'Invitation resent' : 'Invitation renewed',
           description: resent.delivery_sent
             ? `A new secure link was sent to ${invitation.email}.`
-            : 'The secure link was renewed, but email delivery is currently unavailable.',
+            : 'Link renewed, but email delivery is unavailable.',
         });
       } else {
         await revokeOrganizationInvitation(organizationId, invitation.id);
@@ -477,22 +514,22 @@ export function OrganizationSettings() {
           )}
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
+          <div className="flex flex-col gap-4 min-[1300px]:flex-row min-[1300px]:items-center min-[1300px]:justify-between">
+            <div className="flex min-w-0 items-center gap-1.5">
               <p className="text-sm text-muted-foreground">
                 You belong to {organizations.length} {organizations.length === 1 ? 'organization' : 'organizations'} and own{' '}
                 {allowanceLoading ? '…' : allowance?.ownedCount ?? '—'}.
               </p>
-              <p className="text-sm text-muted-foreground">
-                Your highest live plan across organizations you own sets the ownership allowance:
-                Free 1, Solo 3, and Studio unlimited. Each organization keeps its members,
-                billing, paid features, and Workspace content separate, including after an ownership transfer.
-              </p>
+              <SettingsInfoTooltip label="How organization ownership limits work">
+                Your highest active plan sets how many organizations you can own: Free 1,
+                Solo 3, and Studio unlimited. Each organization keeps separate members,
+                billing, features, and Workspace content.
+              </SettingsInfoTooltip>
             </div>
             {allowance?.canCreate ? (
               <Dialog open={createOrganizationOpen} onOpenChange={setCreateOrganizationOpen}>
                 <DialogTrigger asChild>
-                  <Button type="button" disabled={allowanceLoading}>
+                  <Button type="button" className="w-fit" disabled={allowanceLoading}>
                     <Plus className="mr-2 h-4 w-4" />
                     New organization
                   </Button>
@@ -501,7 +538,7 @@ export function OrganizationSettings() {
                   <DialogHeader>
                     <DialogTitle>Create an organization</DialogTitle>
                     <DialogDescription>
-                      It starts on Free. You can upgrade this organization independently at any time.
+                      Starts on Free. Upgrade this organization anytime.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-2 py-2">
@@ -531,57 +568,22 @@ export function OrganizationSettings() {
                 </DialogContent>
               </Dialog>
             ) : allowance ? (
-              <Button type="button" variant="outline" onClick={() => navigate('/settings')}>
+              <Button type="button" variant="outline" className="w-fit" onClick={() => navigate(AVAILABLE_PLANS_PATH)}>
                 Review plans
               </Button>
             ) : null}
           </div>
           {allowance && !allowance.canCreate && allowance.limit >= 0 && (
             <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-muted-foreground">
-              You&apos;re at your ownership limit. Existing organizations remain available, but
-              you must upgrade one owned organization or transfer ownership before creating
-              or accepting another.
+              Upgrade or transfer ownership.
             </p>
           )}
         </CardContent>
       </Card>
 
-      {canManage && (
-        <Card>
-          <CardHeader>
-            <SettingsSectionTitle icon={History}>Recent organization activity</SettingsSectionTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="h-20 animate-pulse rounded-lg bg-muted/50" />
-            ) : activity.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Ownership and other security-sensitive organization changes will appear here.
-              </p>
-            ) : (
-              <div className="divide-y rounded-lg border">
-                {activity.map((item) => (
-                  <div key={item.id} className="flex gap-3 p-3">
-                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600/10 text-blue-600">
-                      <History className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{activityDescription(item)}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {new Date(item.occurredAt).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
       <Card>
         <CardHeader>
-          <SettingsSectionTitle icon={Building2}>Organization identity</SettingsSectionTitle>
+          <SettingsSectionTitle icon={Building2}>Organization details</SettingsSectionTitle>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="grid gap-2">
@@ -624,7 +626,14 @@ export function OrganizationSettings() {
           </div>
 
           <div className="grid gap-2">
-            <Label id="default-business-label" htmlFor="default-business">Default business identity</Label>
+            <SettingsFieldLabel
+              id="default-business-label"
+              htmlFor="default-business"
+              help="Used for new estimates and offered first for new invoices."
+              helpLabel="About the default business identity"
+            >
+              Default business identity
+            </SettingsFieldLabel>
             {businessProfilesAvailable && businesses.length > 0 ? (
               <Select
                 value={defaultBusinessId?.toString() ?? 'organization'}
@@ -645,12 +654,9 @@ export function OrganizationSettings() {
                 {businessProfilesAvailable ? 'Add a business profile' : 'Unlock business profiles'}
               </Button>
             )}
-            <p className="text-sm text-muted-foreground">
-              Used automatically for new estimates and as the first choice for new invoices.
-            </p>
           </div>
 
-          {canManage && (
+          {canManage && !setSaveButton && (
             <div className="flex justify-end">
               <Button onClick={() => void handleSave()} disabled={saving}>
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
@@ -663,7 +669,17 @@ export function OrganizationSettings() {
 
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">
-          <SettingsSectionTitle icon={Users}>Members</SettingsSectionTitle>
+          <SettingsSectionTitle icon={Users}>
+            <span className="flex items-center gap-1.5">
+              Members
+              {canManage && (
+                <SettingsInfoTooltip label="About organization seats and invitations">
+                  Pending invitations reserve a seat and expire after seven days. Expiration
+                  dates appear in the invitation list.
+                </SettingsInfoTooltip>
+              )}
+            </span>
+          </SettingsSectionTitle>
           {hasMemberLimit && (
             <Badge variant={memberLimitReached ? 'outline' : 'secondary'}>
               {usedSeats} of {memberLimit} seats
@@ -703,9 +719,6 @@ export function OrganizationSettings() {
                 {memberSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
                 {memberLimitReached ? 'Plan limit reached' : 'Send invite'}
               </Button>
-              <p className="text-sm text-muted-foreground sm:col-span-3">
-                Invitations expire after 7 days. Pending invitations reserve a plan seat.
-              </p>
             </div>
           )}
 
@@ -770,15 +783,21 @@ export function OrganizationSettings() {
                 const canTransfer = isOwner && member.role !== 'owner' && !isSelf &&
                   Boolean(member.joined_at);
                 return (
-                  <div key={member.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
-                    <Avatar className="h-9 w-9">
+                  <div key={member.id} className="flex items-center gap-3 p-3">
+                    <Avatar className="h-9 w-9 shrink-0">
                       <AvatarFallback className="bg-blue-600 text-sm text-white">{initials(member)}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{member.user_name || member.email || 'Member'}</p>
-                      {member.user_name && <p className="truncate text-xs text-muted-foreground">{member.email}</p>}
+                      <p className="truncate text-sm font-medium" title={member.user_name || member.email || 'Member'}>
+                        {member.user_name || member.email || 'Member'}
+                      </p>
+                      {member.user_name && (
+                        <p className="truncate text-xs text-muted-foreground" title={member.email}>
+                          {member.email}
+                        </p>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-1 sm:gap-2">
                       {canEdit ? (
                         <Select
                           value={member.role}
@@ -873,68 +892,159 @@ export function OrganizationSettings() {
         </CardContent>
       </Card>
 
+      {canManage && (
+        <Card>
+          <CardHeader>
+            <SettingsSectionTitle icon={History}>Recent organization activity</SettingsSectionTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="h-20 animate-pulse rounded-lg bg-muted/50" />
+            ) : activity.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Security-sensitive organization changes appear here.
+              </p>
+            ) : (
+              <div className="divide-y rounded-lg border">
+                {visibleActivity.map((item) => {
+                  const occurredAt = new Date(item.occurredAt);
+                  return (
+                    <div key={item.id} className="flex gap-3 p-3">
+                      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600/10 text-blue-600">
+                        <History className="h-4 w-4" aria-hidden="true" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">{activityDescription(item)}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          <time
+                            dateTime={item.occurredAt}
+                            title={occurredAt.toLocaleString(undefined, {
+                              dateStyle: 'full',
+                              timeStyle: 'short',
+                            })}
+                          >
+                            {occurredAt.toLocaleString(undefined, {
+                              dateStyle: 'medium',
+                              timeStyle: 'short',
+                            })}
+                          </time>
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {!loading && activity.length > 3 && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="mt-3"
+                aria-expanded={activityExpanded}
+                onClick={() => setActivityExpanded((expanded) => !expanded)}
+              >
+                {activityExpanded ? 'Show recent only' : `View all activity (${activity.length})`}
+                <ChevronDown
+                  className={`ml-2 h-4 w-4 text-blue-600 transition-transform ${activityExpanded ? 'rotate-180' : ''}`}
+                  aria-hidden="true"
+                />
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
-          <SettingsSectionTitle icon={Globe2}>Organization access</SettingsSectionTitle>
+          <SettingsSectionTitle icon={Settings2}>Manage organization</SettingsSectionTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-3 sm:flex-row">
+        <CardContent>
           {!isOwner && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline"><LogOut className="mr-2 h-4 w-4" />Leave organization</Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Leave {organization.name}?</AlertDialogTitle>
-                  <AlertDialogDescription>You will lose access to this organization’s content.</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => void handleLifecycle('leave')} disabled={lifecycleAction !== null}>
+            <section className="space-y-3" aria-labelledby="leave-organization-title">
+              <div className="space-y-1.5">
+                <h3 id="leave-organization-title" className="text-sm font-medium">Leave organization</h3>
+                <p className="text-sm text-muted-foreground">
+                  Leave this organization and its Workspace content.
+                </p>
+              </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline">
+                    <LogOut className="mr-2 h-4 w-4" aria-hidden="true" />
                     Leave organization
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Leave {organization.name}?</AlertDialogTitle>
+                    <AlertDialogDescription>You will lose access to this organization&apos;s content.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => void handleLifecycle('leave')} disabled={lifecycleAction !== null}>
+                      Leave organization
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </section>
           )}
           {isOwner && (
-            <AlertDialog onOpenChange={(open) => { if (!open) setDeleteConfirmation(''); }}>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" className="text-destructive hover:text-destructive">
-                  <Trash2 className="mr-2 h-4 w-4" />Delete organization
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete {organization.name}?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This permanently deletes the organization and all of its workspace data. Organizations containing retained signature evidence cannot be deleted.
-                    {organizations.length === 1 ? ' A new blank personal organization will be created when needed.' : ''}
-                  </AlertDialogDescription>
-                  <div className="grid gap-2 pt-2">
-                    <Label htmlFor="delete-organization-confirmation">
-                      Type <span className="font-semibold text-foreground">{organization.name}</span> to confirm
-                    </Label>
-                    <Input
-                      id="delete-organization-confirmation"
-                      value={deleteConfirmation}
-                      autoComplete="off"
-                      onChange={(event) => setDeleteConfirmation(event.target.value)}
-                    />
-                  </div>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    onClick={() => void handleLifecycle('delete')}
-                    disabled={lifecycleAction !== null || deleteConfirmation !== organization.name}
-                  >
+            <section className="space-y-3" aria-labelledby="delete-organization-title">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <h3 id="delete-organization-title" className="text-sm font-medium">Delete organization</h3>
+                  <SettingsInfoTooltip label="Organization deletion requirements">
+                    Organizations with retained signing evidence cannot be deleted.
+                    {organizations.length === 1
+                      ? ' Itemize creates a new blank personal organization when one is next needed.'
+                      : ''}
+                  </SettingsInfoTooltip>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Delete this organization and its Workspace data.
+                </p>
+              </div>
+              <AlertDialog onOpenChange={(open) => { if (!open) setDeleteConfirmation(''); }}>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive">
+                    <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
                     Delete organization
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete {organization.name}?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This permanently deletes the organization and all of its Workspace data.
+                      Organizations containing retained signing evidence cannot be deleted.
+                      {organizations.length === 1 ? ' A new blank personal organization will be created when needed.' : ''}
+                    </AlertDialogDescription>
+                    <div className="grid gap-2 pt-2">
+                      <Label htmlFor="delete-organization-confirmation">
+                        Type <span className="font-semibold text-foreground">{organization.name}</span> to confirm
+                      </Label>
+                      <Input
+                        id="delete-organization-confirmation"
+                        value={deleteConfirmation}
+                        autoComplete="off"
+                        onChange={(event) => setDeleteConfirmation(event.target.value)}
+                      />
+                    </div>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={() => void handleLifecycle('delete')}
+                      disabled={lifecycleAction !== null || deleteConfirmation !== organization.name}
+                    >
+                      Delete organization
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </section>
           )}
         </CardContent>
       </Card>

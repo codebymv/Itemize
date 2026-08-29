@@ -47,4 +47,19 @@ describe('ModuleWidget', () => {
     expect(screen.getByText('INV-00001')).toBeInTheDocument();
     expect(onToggleCollapse).toHaveBeenCalledOnce();
   });
+
+  it('can shorten an action visually below the wide breakpoint without changing its name', () => {
+    render(
+      <ModuleWidget
+        title="Invoices"
+        icon={TestIcon}
+        primaryStat={2}
+        action={{ label: 'View Invoices', compactLabel: 'View', onClick: vi.fn() }}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'View Invoices' })).toBeInTheDocument();
+    expect(screen.getByText('View')).toHaveClass('min-[1750px]:hidden');
+    expect(screen.getByText('View Invoices')).toHaveClass('hidden', 'min-[1750px]:inline');
+  });
 });

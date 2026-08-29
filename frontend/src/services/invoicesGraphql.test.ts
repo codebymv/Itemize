@@ -52,6 +52,9 @@ const graphqlInvoice = (extra: Record<string, unknown> = {}) => ({
   isRecurring: false,
   recurringInterval: null,
   parentInvoiceId: null,
+  isRecurringSource: false,
+  recurringTemplateId: null,
+  recurringSourceTemplateId: null,
   customFields: {},
   createdById: 7,
   createdAt: '2026-07-18T12:00:00.000Z',
@@ -92,6 +95,45 @@ describe('core invoice GraphQL adapter', () => {
       },
       4,
     );
+  });
+
+  it('maps recurring schedule relationships used by invoice identifiers', async () => {
+    vi.mocked(graphqlRequest).mockResolvedValue({
+      invoice: graphqlInvoice({
+        isRecurringSource: true,
+        recurringTemplateId: 41,
+        recurringSourceTemplateId: 42,
+        items: [],
+        payments: [],
+      }),
+    });
+
+    await expect(getInvoiceViaGraphql(12, 4)).resolves.toMatchObject({
+      is_recurring_source: true,
+      recurring_template_id: 41,
+      recurring_source_template_id: 42,
+    });
+  });
+
+  it('falls back during a rolling deploy when relationship fields are not live yet', async () => {
+    vi.mocked(graphqlRequest)
+      .mockRejectedValueOnce(new Error('Cannot query field "isRecurringSource" on type "Invoice".'))
+      .mockResolvedValueOnce({
+        invoices: {
+          nodes: [graphqlInvoice({
+            isRecurringSource: undefined,
+            recurringTemplateId: undefined,
+            recurringSourceTemplateId: undefined,
+          })],
+          pageInfo: { page: 1, pageSize: 50, total: 1, totalPages: 1 },
+        },
+      });
+
+    await expect(getInvoicesViaGraphql({}, 4)).resolves.toMatchObject({
+      invoices: [{ is_recurring_source: false }],
+      pagination: { total: 1 },
+    });
+    expect(graphqlRequest).toHaveBeenCalledTimes(2);
   });
 
   it('maps nested detail fields and normalizes payment strings', async () => {

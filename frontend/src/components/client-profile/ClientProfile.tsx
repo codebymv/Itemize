@@ -162,7 +162,7 @@ export function ClientProfile({
             activities={client.timeline}
             empty={{
               title: 'No activity yet',
-              description: 'Activity will appear here as you interact with this client'
+              description: 'Client activity appears here.'
             }}
           />
         </TabsContent>

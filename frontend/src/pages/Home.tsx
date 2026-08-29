@@ -427,7 +427,7 @@ const Home: React.FC = () => {
                   reverse={false}
                   badge={{ icon: Users, label: 'Contact Management', color: 'from-blue-500 to-cyan-500' }}
                   title="Every customer, every interaction, one view"
-                  description="Stop searching through emails and spreadsheets. See your complete customer history, notes, deals, and communications in one unified profile."
+                  description="See every customer interaction in one profile."
                   features={['Unlimited contacts with custom fields', 'Activity timeline and interaction history', 'Smart tags and segmentation', 'CSV import and bulk operations']}
                   screenshot={{ label: 'Contacts', sublabel: 'Full contact management with search and filters', accentFrom: 'from-blue-500', accentTo: 'to-cyan-500', src: '/screenshots/contacts.png' }}
                 />
@@ -437,7 +437,7 @@ const Home: React.FC = () => {
                   reverse={true}
                   badge={{ icon: TrendingUp, label: 'Sales Pipelines', color: 'from-emerald-500 to-teal-500' }}
                   title="Visual deal tracking that makes sense"
-                  description="Drag deals through custom stages, see your revenue forecast at a glance, and never let an opportunity slip through the cracks."
+                  description="Move deals through stages and spot what needs attention."
                   features={['Drag-and-drop Kanban boards', 'Custom pipeline stages and deal values', 'Revenue forecasting and probability', 'Win/loss tracking and analytics']}
                   screenshot={{ label: 'Pipelines', sublabel: 'Kanban board with drag-and-drop deal management', accentFrom: 'from-emerald-500', accentTo: 'to-teal-500', src: '/screenshots/pipelines.png' }}
                 />
@@ -447,7 +447,7 @@ const Home: React.FC = () => {
                   reverse={false}
                   badge={{ icon: Calendar, label: 'Calendars & Booking', color: 'from-orange-500 to-amber-500' }}
                   title="Let clients book, you stay focused"
-                  description="Share your availability and let clients book directly. Automatic reminders reduce no-shows and save hours of back-and-forth scheduling."
+                  description="Share availability, accept bookings, and reduce no-shows."
                   features={['Online booking pages with custom slugs', 'Google Calendar two-way sync', 'Automatic email reminders', 'Buffer times and daily limits']}
                   screenshot={{ label: 'Calendars', sublabel: 'Booking calendar management and scheduling', accentFrom: 'from-orange-500', accentTo: 'to-amber-500', src: '/screenshots/calendars.png' }}
                 />
@@ -457,7 +457,7 @@ const Home: React.FC = () => {
                   reverse={true}
                   badge={{ icon: Zap, label: 'Automations', color: 'from-pink-500 to-rose-500' }}
                   title="Set it up once, let it work forever"
-                  description="Build visual workflows that automatically send emails, update contacts, create tasks, and trigger actions -- so you can focus on what matters."
+                  description="Automate emails, contact updates, tasks, and follow-ups."
                   features={['Visual drag-and-drop workflow builder', 'Email sequences with templates', '8 action types including webhooks', '6 trigger types with conditional logic']}
                   screenshot={{ label: 'Automations', sublabel: 'Visual workflow builder with drag-and-drop nodes', accentFrom: 'from-pink-500', accentTo: 'to-rose-500', src: '/screenshots/automations.png' }}
                 />

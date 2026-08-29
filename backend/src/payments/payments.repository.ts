@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
-import { PaymentMethod, PaymentStatus } from './payment.types';
+import { PaymentMethod, PaymentPeriod, PaymentStatus } from './payment.types';
 import { NotificationsService } from '../notifications/notifications.service';
 
 export type PaymentRow = {
@@ -85,6 +85,81 @@ export type RefundCompletion = {
   refundStatus: string;
 };
 
+export type PaymentRange = {
+  period: PaymentPeriod;
+  startAt: Date | null;
+  endAt: Date;
+  timeZone: string;
+};
+
+export type PaymentOverviewRow = {
+  currency: string;
+  failed_amount: string;
+  failed_count: string;
+  gross_amount: string;
+  gross_count: string;
+  in_progress_amount: string;
+  in_progress_count: string;
+  refunded_amount: string;
+  refunded_count: string;
+  net_amount: string;
+};
+
+export type RevenueFlowSummaryRow = {
+  currency: string;
+  booked_sales: string;
+  booked_deals: string;
+  failed_amount: string;
+  failed_count: string;
+  gross_received: string;
+  settled_payments: string;
+  in_progress_amount: string;
+  in_progress_count: string;
+  refunds: string;
+  refunded_payments: string;
+  net_received: string;
+};
+
+export type RevenueFlowBucketRow = {
+  currency: string;
+  start_at: Date;
+  booked_sales: string;
+  booked_deals: string;
+  gross_received: string;
+  settled_payments: string;
+  refunds: string;
+  refunded_payments: string;
+  net_received: string;
+};
+
+export type RevenueFlowMethodRow = {
+  currency: string;
+  payment_method: PaymentMethod;
+  gross_received: string;
+  settled_payments: string;
+  refunds: string;
+  refunded_payments: string;
+  net_received: string;
+};
+
+export type RevenueFlowSnapshot = {
+  startAt: Date | null;
+  bucketUnit: 'day' | 'week' | 'month' | 'quarter' | 'year';
+  boundaries: Date[];
+  summaries: RevenueFlowSummaryRow[];
+  buckets: RevenueFlowBucketRow[];
+  methods: RevenueFlowMethodRow[];
+};
+
+type FindPaymentPageOptions = {
+  pageSize: number;
+  offset: number;
+  range: PaymentRange;
+  status?: PaymentStatus;
+  paymentMethod?: PaymentMethod;
+  search?: string;
+};
+
 @Injectable()
 export class PaymentsRepository {
   constructor(
@@ -92,13 +167,406 @@ export class PaymentsRepository {
     private readonly notifications: NotificationsService,
   ) {}
 
+  async periodRange(
+    organizationId: number,
+    period: PaymentPeriod,
+  ): Promise<PaymentRange> {
+    const result = await this.pool.query<{
+      start_at: Date | null;
+      end_at: Date;
+      time_zone: string;
+    }>(
+      `WITH organization_zone AS (
+         SELECT COALESCE(zone.name, 'UTC') AS time_zone
+         FROM organizations organization
+         LEFT JOIN pg_timezone_names zone
+           ON zone.name = organization.settings->>'timezone'
+         WHERE organization.id = $1
+       )
+       SELECT
+         CASE $2::varchar
+           WHEN 'all' THEN NULL
+           WHEN '7days' THEN
+             (((CURRENT_TIMESTAMP AT TIME ZONE time_zone)::date - 6)::timestamp
+               AT TIME ZONE time_zone)
+           WHEN '30days' THEN
+             (((CURRENT_TIMESTAMP AT TIME ZONE time_zone)::date - 29)::timestamp
+               AT TIME ZONE time_zone)
+           WHEN '90days' THEN
+             (((CURRENT_TIMESTAMP AT TIME ZONE time_zone)::date - 89)::timestamp
+               AT TIME ZONE time_zone)
+           WHEN '6months' THEN
+             (((CURRENT_TIMESTAMP AT TIME ZONE time_zone)::date - INTERVAL '6 months')
+               AT TIME ZONE time_zone)
+           WHEN '12months' THEN
+             (((CURRENT_TIMESTAMP AT TIME ZONE time_zone)::date - INTERVAL '12 months')
+               AT TIME ZONE time_zone)
+           ELSE NULL
+         END AS start_at,
+         CURRENT_TIMESTAMP AS end_at,
+         time_zone
+       FROM organization_zone`,
+      [organizationId, period],
+    );
+    const row = result.rows[0];
+    if (!row) throw new Error('Payment period organization was not found');
+    return {
+      period,
+      startAt: row.start_at,
+      endAt: row.end_at,
+      timeZone: row.time_zone,
+    };
+  }
+
+  async overview(
+    organizationId: number,
+    range: PaymentRange,
+  ): Promise<PaymentOverviewRow[]> {
+    const result = await this.pool.query<PaymentOverviewRow>(
+      `WITH payment_metrics AS (
+         SELECT
+           p.currency,
+           COALESCE(SUM(p.amount) FILTER (
+             WHERE p.status = 'failed'
+               AND ($2::timestamptz IS NULL OR p.created_at >= $2)
+               AND p.created_at < $3
+           ), 0) AS failed_amount,
+           COUNT(*) FILTER (
+             WHERE p.status = 'failed'
+               AND ($2::timestamptz IS NULL OR p.created_at >= $2)
+               AND p.created_at < $3
+           ) AS failed_count,
+           COALESCE(SUM(p.amount) FILTER (
+             WHERE p.status IN ('succeeded', 'refunded')
+               AND p.paid_at IS NOT NULL
+               AND ($2::timestamptz IS NULL OR p.paid_at >= $2)
+               AND p.paid_at < $3
+           ), 0) AS gross_amount,
+           COUNT(*) FILTER (
+             WHERE p.status IN ('succeeded', 'refunded')
+               AND p.paid_at IS NOT NULL
+               AND ($2::timestamptz IS NULL OR p.paid_at >= $2)
+               AND p.paid_at < $3
+           ) AS gross_count,
+           COALESCE(SUM(p.amount) FILTER (
+             WHERE p.status IN ('pending', 'processing')
+               AND ($2::timestamptz IS NULL OR p.created_at >= $2)
+               AND p.created_at < $3
+           ), 0) AS in_progress_amount,
+           COUNT(*) FILTER (
+             WHERE p.status IN ('pending', 'processing')
+               AND ($2::timestamptz IS NULL OR p.created_at >= $2)
+               AND p.created_at < $3
+           ) AS in_progress_count
+         FROM payments p
+         WHERE p.organization_id = $1
+         GROUP BY p.currency
+       ),
+       refund_metrics AS (
+         SELECT
+           refund.currency,
+           COALESCE(SUM(refund.amount), 0) AS refunded_amount,
+           COUNT(DISTINCT refund.payment_id) AS refunded_count
+         FROM payment_refunds refund
+         WHERE refund.organization_id = $1
+           AND refund.status = 'succeeded'
+           AND refund.completed_at IS NOT NULL
+           AND ($2::timestamptz IS NULL OR refund.completed_at >= $2)
+           AND refund.completed_at < $3
+         GROUP BY refund.currency
+       ),
+       currencies AS (
+         SELECT currency FROM payment_metrics
+         UNION
+         SELECT currency FROM refund_metrics
+       )
+       SELECT
+         currencies.currency,
+         COALESCE(payment.failed_amount, 0)::numeric(14,2) AS failed_amount,
+         COALESCE(payment.failed_count, 0)::text AS failed_count,
+         COALESCE(payment.gross_amount, 0)::numeric(14,2) AS gross_amount,
+         COALESCE(payment.gross_count, 0)::text AS gross_count,
+         COALESCE(payment.in_progress_amount, 0)::numeric(14,2) AS in_progress_amount,
+         COALESCE(payment.in_progress_count, 0)::text AS in_progress_count,
+         COALESCE(refund.refunded_amount, 0)::numeric(14,2) AS refunded_amount,
+         COALESCE(refund.refunded_count, 0)::text AS refunded_count,
+         (COALESCE(payment.gross_amount, 0) - COALESCE(refund.refunded_amount, 0))::numeric(14,2)
+           AS net_amount
+       FROM currencies
+       LEFT JOIN payment_metrics payment USING (currency)
+       LEFT JOIN refund_metrics refund USING (currency)
+       ORDER BY currencies.currency`,
+      [organizationId, range.startAt, range.endAt],
+    );
+    return result.rows;
+  }
+
+  async revenueFlow(
+    organizationId: number,
+    range: PaymentRange,
+  ): Promise<RevenueFlowSnapshot> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY');
+      let startAt = range.startAt;
+      if (startAt === null) {
+        const earliest = await client.query<{ start_at: Date | null }>(
+          `SELECT MIN(event_at) AS start_at
+           FROM (
+             SELECT won_at AS event_at
+             FROM deals
+             WHERE organization_id = $1 AND won_at IS NOT NULL AND won_at < $2
+             UNION ALL
+             SELECT paid_at
+             FROM payments
+             WHERE organization_id = $1
+               AND status IN ('succeeded', 'refunded')
+               AND paid_at IS NOT NULL AND paid_at < $2
+             UNION ALL
+             SELECT created_at
+             FROM payments
+             WHERE organization_id = $1
+               AND status IN ('pending', 'processing', 'failed')
+               AND created_at < $2
+             UNION ALL
+             SELECT completed_at
+             FROM payment_refunds
+             WHERE organization_id = $1
+               AND status = 'succeeded'
+               AND completed_at IS NOT NULL AND completed_at < $2
+           ) activity`,
+          [organizationId, range.endAt],
+        );
+        startAt = earliest.rows[0]?.start_at ?? null;
+      }
+
+      const bucketUnit = this.revenueBucketUnit(range.period, startAt, range.endAt);
+      const effectiveStart = startAt ?? range.endAt;
+      const parameters = [
+        organizationId,
+        effectiveStart,
+        range.endAt,
+        range.timeZone,
+        bucketUnit,
+      ];
+      const summaries = await client.query<RevenueFlowSummaryRow>(
+        `WITH booked AS (
+           SELECT
+             COALESCE(NULLIF(UPPER(TRIM(currency)), ''), 'USD') AS currency,
+             COALESCE(SUM(value), 0) AS booked_sales,
+             COUNT(*) AS booked_deals
+           FROM deals
+           WHERE organization_id = $1
+             AND won_at >= $2 AND won_at < $3
+           GROUP BY COALESCE(NULLIF(UPPER(TRIM(currency)), ''), 'USD')
+         ),
+         payment AS (
+           SELECT
+             COALESCE(NULLIF(UPPER(TRIM(currency)), ''), 'USD') AS currency,
+             COALESCE(SUM(amount) FILTER (
+               WHERE status = 'failed' AND created_at >= $2 AND created_at < $3
+             ), 0) AS failed_amount,
+             COUNT(*) FILTER (
+               WHERE status = 'failed' AND created_at >= $2 AND created_at < $3
+             ) AS failed_count,
+             COALESCE(SUM(amount) FILTER (
+               WHERE status IN ('succeeded', 'refunded')
+                 AND paid_at >= $2 AND paid_at < $3
+             ), 0) AS gross_received,
+             COUNT(*) FILTER (
+               WHERE status IN ('succeeded', 'refunded')
+                 AND paid_at >= $2 AND paid_at < $3
+             ) AS settled_payments,
+             COALESCE(SUM(amount) FILTER (
+               WHERE status IN ('pending', 'processing')
+                 AND created_at >= $2 AND created_at < $3
+             ), 0) AS in_progress_amount,
+             COUNT(*) FILTER (
+               WHERE status IN ('pending', 'processing')
+                 AND created_at >= $2 AND created_at < $3
+             ) AS in_progress_count
+           FROM payments
+           WHERE organization_id = $1
+             AND (
+               (status IN ('succeeded', 'refunded') AND paid_at >= $2 AND paid_at < $3)
+               OR (status IN ('pending', 'processing', 'failed') AND created_at >= $2 AND created_at < $3)
+             )
+           GROUP BY COALESCE(NULLIF(UPPER(TRIM(currency)), ''), 'USD')
+         ),
+         refund AS (
+           SELECT
+             COALESCE(NULLIF(UPPER(TRIM(currency)), ''), 'USD') AS currency,
+             COALESCE(SUM(amount), 0) AS refunds,
+             COUNT(DISTINCT payment_id) AS refunded_payments
+           FROM payment_refunds
+           WHERE organization_id = $1
+             AND status = 'succeeded'
+             AND completed_at >= $2 AND completed_at < $3
+           GROUP BY COALESCE(NULLIF(UPPER(TRIM(currency)), ''), 'USD')
+         ),
+         currencies AS (
+           SELECT currency FROM booked
+           UNION SELECT currency FROM payment
+           UNION SELECT currency FROM refund
+         )
+         SELECT
+           currencies.currency,
+           COALESCE(booked.booked_sales, 0)::numeric(14,2) AS booked_sales,
+           COALESCE(booked.booked_deals, 0)::text AS booked_deals,
+           COALESCE(payment.failed_amount, 0)::numeric(14,2) AS failed_amount,
+           COALESCE(payment.failed_count, 0)::text AS failed_count,
+           COALESCE(payment.gross_received, 0)::numeric(14,2) AS gross_received,
+           COALESCE(payment.settled_payments, 0)::text AS settled_payments,
+           COALESCE(payment.in_progress_amount, 0)::numeric(14,2) AS in_progress_amount,
+           COALESCE(payment.in_progress_count, 0)::text AS in_progress_count,
+           COALESCE(refund.refunds, 0)::numeric(14,2) AS refunds,
+           COALESCE(refund.refunded_payments, 0)::text AS refunded_payments,
+           (COALESCE(payment.gross_received, 0) - COALESCE(refund.refunds, 0))::numeric(14,2)
+             AS net_received
+         FROM currencies
+         LEFT JOIN booked USING (currency)
+         LEFT JOIN payment USING (currency)
+         LEFT JOIN refund USING (currency)
+         ORDER BY currencies.currency`,
+        parameters.slice(0, 3),
+      );
+      const buckets = await client.query<RevenueFlowBucketRow>(
+        `WITH events AS (
+           SELECT
+             COALESCE(NULLIF(UPPER(TRIM(currency)), ''), 'USD') AS currency,
+             DATE_TRUNC($5::text, won_at AT TIME ZONE $4::text) AT TIME ZONE $4::text
+               AS start_at,
+             value::numeric AS booked_sales,
+             1::bigint AS booked_deals,
+             0::numeric AS gross_received,
+             0::bigint AS settled_payments,
+             0::numeric AS refunds,
+             0::bigint AS refunded_payments
+           FROM deals
+           WHERE organization_id = $1 AND won_at >= $2 AND won_at < $3
+           UNION ALL
+           SELECT
+             COALESCE(NULLIF(UPPER(TRIM(currency)), ''), 'USD'),
+             DATE_TRUNC($5::text, paid_at AT TIME ZONE $4::text) AT TIME ZONE $4::text,
+             0, 0, amount, 1, 0, 0
+           FROM payments
+           WHERE organization_id = $1
+             AND status IN ('succeeded', 'refunded')
+             AND paid_at >= $2 AND paid_at < $3
+           UNION ALL
+           SELECT
+             COALESCE(NULLIF(UPPER(TRIM(currency)), ''), 'USD'),
+             DATE_TRUNC($5::text, completed_at AT TIME ZONE $4::text) AT TIME ZONE $4::text,
+             0, 0, 0, 0, amount, 1
+           FROM payment_refunds
+           WHERE organization_id = $1
+             AND status = 'succeeded'
+             AND completed_at >= $2 AND completed_at < $3
+         )
+         SELECT
+           currency, start_at,
+           COALESCE(SUM(booked_sales), 0)::numeric(14,2) AS booked_sales,
+           COALESCE(SUM(booked_deals), 0)::text AS booked_deals,
+           COALESCE(SUM(gross_received), 0)::numeric(14,2) AS gross_received,
+           COALESCE(SUM(settled_payments), 0)::text AS settled_payments,
+           COALESCE(SUM(refunds), 0)::numeric(14,2) AS refunds,
+           COALESCE(SUM(refunded_payments), 0)::text AS refunded_payments,
+           (COALESCE(SUM(gross_received), 0) - COALESCE(SUM(refunds), 0))::numeric(14,2)
+             AS net_received
+         FROM events
+         GROUP BY currency, start_at
+         ORDER BY currency, start_at`,
+        parameters,
+      );
+      const methods = await client.query<RevenueFlowMethodRow>(
+        `WITH gross AS (
+           SELECT
+             COALESCE(NULLIF(UPPER(TRIM(currency)), ''), 'USD') AS currency,
+             payment_method,
+             COALESCE(SUM(amount), 0) AS gross_received,
+             COUNT(*) AS settled_payments
+           FROM payments
+           WHERE organization_id = $1
+             AND status IN ('succeeded', 'refunded')
+             AND paid_at >= $2 AND paid_at < $3
+           GROUP BY COALESCE(NULLIF(UPPER(TRIM(currency)), ''), 'USD'), payment_method
+         ),
+         refund AS (
+           SELECT
+             COALESCE(NULLIF(UPPER(TRIM(payment.currency)), ''), 'USD') AS currency,
+             payment.payment_method,
+             COALESCE(SUM(refund.amount), 0) AS refunds,
+             COUNT(DISTINCT refund.payment_id) AS refunded_payments
+           FROM payment_refunds refund
+           JOIN payments payment
+             ON payment.id = refund.payment_id
+            AND payment.organization_id = refund.organization_id
+           WHERE refund.organization_id = $1
+             AND refund.status = 'succeeded'
+             AND refund.completed_at >= $2 AND refund.completed_at < $3
+           GROUP BY
+             COALESCE(NULLIF(UPPER(TRIM(payment.currency)), ''), 'USD'),
+             payment.payment_method
+         ),
+         methods AS (
+           SELECT currency, payment_method FROM gross
+           UNION SELECT currency, payment_method FROM refund
+         )
+         SELECT
+           methods.currency,
+           methods.payment_method,
+           COALESCE(gross.gross_received, 0)::numeric(14,2) AS gross_received,
+           COALESCE(gross.settled_payments, 0)::text AS settled_payments,
+           COALESCE(refund.refunds, 0)::numeric(14,2) AS refunds,
+           COALESCE(refund.refunded_payments, 0)::text AS refunded_payments,
+           (COALESCE(gross.gross_received, 0) - COALESCE(refund.refunds, 0))::numeric(14,2)
+             AS net_received
+         FROM methods
+         LEFT JOIN gross USING (currency, payment_method)
+         LEFT JOIN refund USING (currency, payment_method)
+         ORDER BY methods.currency, net_received DESC, methods.payment_method`,
+        parameters.slice(0, 3),
+      );
+      const boundaries = startAt === null
+        ? { rows: [] as Array<{ start_at: Date }> }
+        : await client.query<{ start_at: Date }>(
+          `SELECT local_bucket AT TIME ZONE $3::text AS start_at
+           FROM GENERATE_SERIES(
+             DATE_TRUNC($4::text, $1::timestamptz AT TIME ZONE $3::text),
+             DATE_TRUNC($4::text, ($2::timestamptz - INTERVAL '1 microsecond') AT TIME ZONE $3::text),
+             $5::interval
+           ) AS local_bucket
+           ORDER BY local_bucket`,
+          [
+            startAt,
+            range.endAt,
+            range.timeZone,
+            bucketUnit,
+            this.revenueBucketInterval(bucketUnit),
+          ],
+        );
+      await client.query('COMMIT');
+      return {
+        startAt,
+        bucketUnit,
+        boundaries: boundaries.rows.map((row) => row.start_at),
+        summaries: summaries.rows,
+        buckets: buckets.rows,
+        methods: methods.rows,
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async findPage(
     organizationId: number,
-    pageSize: number,
-    offset: number,
-    status?: PaymentStatus,
-    paymentMethod?: PaymentMethod,
+    options: FindPaymentPageOptions,
   ): Promise<{ rows: PaymentRow[]; total: number }> {
+    const { pageSize, offset, range, status, paymentMethod, search } = options;
     const values: unknown[] = [organizationId];
     const predicates = ['p.organization_id = $1'];
     if (status !== undefined) {
@@ -109,9 +577,43 @@ export class PaymentsRepository {
       values.push(paymentMethod);
       predicates.push(`p.payment_method = $${values.length}`);
     }
+    if (range.startAt !== null) {
+      values.push(range.startAt, range.endAt);
+      const start = `$${values.length - 1}`;
+      const end = `$${values.length}`;
+      predicates.push(`(
+        (p.status IN ('succeeded', 'refunded') AND p.paid_at >= ${start} AND p.paid_at < ${end})
+        OR (p.status NOT IN ('succeeded', 'refunded') AND p.created_at >= ${start} AND p.created_at < ${end})
+        OR (p.refunded_at >= ${start} AND p.refunded_at < ${end})
+      )`);
+    } else {
+      values.push(range.endAt);
+      const end = `$${values.length}`;
+      predicates.push(`(
+        (p.status IN ('succeeded', 'refunded') AND p.paid_at < ${end})
+        OR (p.status NOT IN ('succeeded', 'refunded') AND p.created_at < ${end})
+        OR p.refunded_at < ${end}
+      )`);
+    }
+    if (search) {
+      values.push(`%${search}%`);
+      const query = `$${values.length}`;
+      predicates.push(`(
+        p.id::text ILIKE ${query}
+        OR COALESCE(i.invoice_number, '') ILIKE ${query}
+        OR COALESCE(NULLIF(TRIM(CONCAT_WS(' ', c.first_name, c.last_name)), ''), i.customer_name, '') ILIKE ${query}
+        OR COALESCE(p.description, '') ILIKE ${query}
+        OR COALESCE(p.stripe_payment_intent_id, '') ILIKE ${query}
+      )`);
+    }
     const where = predicates.join(' AND ');
+    const from = `FROM payments p
+       LEFT JOIN invoices i
+         ON i.id = p.invoice_id AND i.organization_id = p.organization_id
+       LEFT JOIN contacts c
+         ON c.id = p.contact_id AND c.organization_id = p.organization_id`;
     const count = await this.pool.query<{ total: string }>(
-      `SELECT COUNT(*) AS total FROM payments p WHERE ${where}`,
+      `SELECT COUNT(*) AS total ${from} WHERE ${where}`,
       values,
     );
     values.push(pageSize, offset);
@@ -126,13 +628,9 @@ export class PaymentsRepository {
          p.description, p.notes, p.receipt_url, p.refund_amount,
          p.refunded_at, p.refund_reason, p.paid_at,
          p.created_at, p.updated_at
-       FROM payments p
-       LEFT JOIN invoices i
-         ON i.id = p.invoice_id AND i.organization_id = p.organization_id
-       LEFT JOIN contacts c
-         ON c.id = p.contact_id AND c.organization_id = p.organization_id
+       ${from}
        WHERE ${where}
-       ORDER BY p.created_at DESC, p.id DESC
+       ORDER BY COALESCE(p.refunded_at, p.paid_at, p.created_at) DESC, p.id DESC
        LIMIT $${values.length - 1} OFFSET $${values.length}`,
       values,
     );
@@ -528,6 +1026,38 @@ export class PaymentsRepository {
       );
     }
     return invoice.rows[0] ?? null;
+  }
+
+  private revenueBucketUnit(
+    period: PaymentPeriod,
+    startAt: Date | null,
+    endAt: Date,
+  ): RevenueFlowSnapshot['bucketUnit'] {
+    switch (period) {
+      case PaymentPeriod.LAST_7_DAYS:
+      case PaymentPeriod.LAST_30_DAYS:
+        return 'day';
+      case PaymentPeriod.LAST_90_DAYS:
+        return 'week';
+      case PaymentPeriod.LAST_6_MONTHS:
+      case PaymentPeriod.LAST_12_MONTHS:
+        return 'month';
+      case PaymentPeriod.ALL_TIME: {
+        if (startAt === null) return 'month';
+        const days = Math.max(0, (endAt.getTime() - startAt.getTime()) / 86_400_000);
+        if (days <= 45) return 'day';
+        if (days <= 180) return 'week';
+        if (days <= 730) return 'month';
+        if (days <= 1_825) return 'quarter';
+        return 'year';
+      }
+    }
+  }
+
+  private revenueBucketInterval(
+    unit: RevenueFlowSnapshot['bucketUnit'],
+  ): string {
+    return unit === 'quarter' ? '3 months' : `1 ${unit}`;
   }
 
   private async transaction<T>(

@@ -83,7 +83,7 @@ function ChangeTierSection() {
                                     {isLoading ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />
                                     ) : (
-                                        <PlanIcon className="h-4 w-4" />
+                                        <PlanIcon className={isSelected ? 'h-4 w-4 text-white' : 'icon-accent h-4 w-4'} />
                                     )}
                                     {plan.label}
                                 </Button>

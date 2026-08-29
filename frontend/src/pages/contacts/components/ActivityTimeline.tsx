@@ -63,9 +63,9 @@ export function ActivityTimeline({ activities }: ActivityTimelineProps) {
       case 'deal_update':
         return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300';
       case 'system':
-        return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+        return 'bg-gray-100 text-gray-700 dark:bg-muted dark:text-muted-foreground';
       default:
-        return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+        return 'bg-gray-100 text-gray-700 dark:bg-muted dark:text-muted-foreground';
     }
   };
 
@@ -114,6 +114,8 @@ export function ActivityTimeline({ activities }: ActivityTimelineProps) {
     }
   };
 
+  const normalizeActivityText = (value: string) => value.trim().replace(/\s+/g, ' ').toLowerCase();
+
   if (activities.length === 0) {
     return (
       <Card>
@@ -131,8 +133,13 @@ export function ActivityTimeline({ activities }: ActivityTimelineProps) {
 
   return (
     <div className="space-y-4">
-      {activities.map((activity, index) => (
-        <div key={activity.id} className="flex gap-4">
+      {activities.map((activity, index) => {
+        const title = activity.title || activity.type.replace('_', ' ');
+        const content = getActivityContent(activity);
+        const hasDistinctContent = normalizeActivityText(content) !== normalizeActivityText(title);
+
+        return (
+          <div key={activity.id} className="flex gap-4">
           {/* Timeline line */}
           <div className="flex flex-col items-center">
             <div
@@ -152,11 +159,13 @@ export function ActivityTimeline({ activities }: ActivityTimelineProps) {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm font-medium">
-                  {activity.title || activity.type.replace('_', ' ')}
+                  {title}
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  {getActivityContent(activity)}
-                </p>
+                {hasDistinctContent && (
+                  <p className="text-sm text-muted-foreground">
+                    {content}
+                  </p>
+                )}
               </div>
               <span className="text-xs text-muted-foreground whitespace-nowrap ml-4">
                 {formatDate(activity.created_at)}
@@ -168,8 +177,9 @@ export function ActivityTimeline({ activities }: ActivityTimelineProps) {
               </p>
             )}
           </div>
-        </div>
-      ))}
+          </div>
+        );
+      })}
     </div>
   );
 }

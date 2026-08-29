@@ -1,5 +1,7 @@
+import { type ReactNode, useState } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { OrganizationSettings } from './OrganizationSettings';
 
 const mocks = vi.hoisted(() => ({
@@ -139,6 +141,7 @@ describe('OrganizationSettings', () => {
     render(<OrganizationSettings />);
 
     expect(screen.getByDisplayValue('Ada Studio')).toBeInTheDocument();
+    expect(screen.getByText('Organization details')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /save changes/i })).toBeInTheDocument();
     expect(screen.getByLabelText('Time zone')).toHaveTextContent('America/Phoenix');
     await waitFor(() => expect(screen.getByText('Ada Lovelace')).toBeInTheDocument());
@@ -147,8 +150,34 @@ describe('OrganizationSettings', () => {
     expect(screen.getByText('Owner')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /delete organization/i })).toBeInTheDocument();
     expect(await screen.findByText('1 of 3 owned')).toBeInTheDocument();
-    expect(screen.getByText(/highest live plan across organizations you own/i)).toBeInTheDocument();
-    expect(screen.getByText(/each organization keeps its members, billing, paid features, and workspace content separate/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'How organization ownership limits work' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'About the default business identity' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'About organization seats and invitations' })).toBeInTheDocument();
+    expect(screen.getByText('Manage organization')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Organization deletion requirements' })).toBeInTheDocument();
+    expect(screen.queryByText(/highest live plan across organizations you own/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/used automatically for new estimates/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/pending invitations use a plan seat/i)).not.toBeInTheDocument();
+  });
+
+  it('publishes organization saving into the settings shell', async () => {
+    function ShellHarness() {
+      const [action, setAction] = useState<ReactNode>(null);
+      return (
+        <TooltipProvider>
+          <div data-testid="shell-action">{action}</div>
+          <OrganizationSettings setSaveButton={setAction} />
+        </TooltipProvider>
+      );
+    }
+
+    render(<ShellHarness />);
+
+    expect(await screen.findByRole('button', { name: 'Save changes' })).toBeInTheDocument();
+    expect(screen.getByTestId('shell-action')).toContainElement(
+      screen.getByRole('button', { name: 'Save changes' }),
+    );
+    expect(screen.getAllByRole('button', { name: 'Save changes' })).toHaveLength(1);
   });
 
   it('creates a free organization and selects it', async () => {
@@ -178,9 +207,9 @@ describe('OrganizationSettings', () => {
 
     expect(await screen.findByText('1 of 1 owned')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'New organization' })).not.toBeInTheDocument();
-    expect(screen.getByText(/existing organizations remain available/i)).toBeInTheDocument();
+    expect(screen.getByText('Upgrade or transfer ownership.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review plans' }));
-    expect(mocks.navigate).toHaveBeenCalledWith('/settings');
+    expect(mocks.navigate).toHaveBeenCalledWith('/settings?section=plans');
   });
 
   it('prevents another invitation when the plan seat limit is reached', async () => {
@@ -288,6 +317,32 @@ describe('OrganizationSettings', () => {
       'Ada Lovelace transferred organization ownership to Grace Hopper.',
     )).toBeInTheDocument();
     expect(mocks.getActivity).toHaveBeenCalledWith(7, 20);
+  });
+
+  it('defers older organization activity until requested', async () => {
+    mocks.getActivity.mockResolvedValueOnce(
+      Array.from({ length: 4 }, (_, index) => ({
+        id: String(index + 1),
+        organizationId: 7,
+        eventType: 'organization.updated',
+        actorUserId: index + 1,
+        actorName: `Member ${index + 1}`,
+        actorEmail: `member${index + 1}@example.com`,
+        targetUserId: null,
+        targetName: null,
+        targetEmail: null,
+        payload: {},
+        occurredAt: `2026-08-2${index + 1}T12:00:00.000Z`,
+      })),
+    );
+    render(<OrganizationSettings />);
+
+    const disclosure = await screen.findByRole('button', { name: 'View all activity (4)' });
+    expect(screen.getByText('Member 3 updated the organization.')).toBeInTheDocument();
+    expect(screen.queryByText('Member 4 updated the organization.')).not.toBeInTheDocument();
+
+    fireEvent.click(disclosure);
+    expect(screen.getByText('Member 4 updated the organization.')).toBeInTheDocument();
   });
 
   it('shows pending seat reservations and supports resend and revoke', async () => {

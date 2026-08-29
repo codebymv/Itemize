@@ -14,7 +14,7 @@ export function SectionCardTitle({
 }) {
   return (
     <CardTitle className={cn('flex items-center gap-2 text-base', className)}>
-      <Icon className="h-4 w-4 shrink-0 text-blue-600" aria-hidden="true" />
+      <Icon className="icon-accent h-4 w-4 shrink-0" aria-hidden="true" />
       {children}
     </CardTitle>
   );

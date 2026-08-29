@@ -58,7 +58,12 @@ import {
 } from '@/services/api';
 import { List, Note, Whiteboard, Wireframe, Vault } from '@/types';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { PageToolbar } from '@/components/layout/PageToolbar';
+import {
+  HeaderActionLabel,
+  HeaderCombinedQuery,
+  HeaderFilters,
+  HeaderSearch,
+} from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
@@ -67,6 +72,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { useWorkspaceContent } from './hooks/useWorkspaceContent';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getWorkspaceLanding } from '@/lib/workspaceNavigation';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Content type definitions
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
@@ -365,22 +371,103 @@ export function SharedPage() {
     }
   };
 
+  const headerFilterCount = Number(typeFilter !== 'all')
+    + Number(sortBy !== 'recent');
+  const headerQueryCount = headerFilterCount
+    + Number(searchQuery.trim().length > 0);
+  const typeHeaderFilter = (
+      <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as ContentType)}>
+        <SelectTrigger className="h-11 w-[7.5rem] bg-muted/20">
+          <SelectValue placeholder="Type" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Types</SelectItem>
+          <SelectItem value="list">Lists</SelectItem>
+          <SelectItem value="note">Notes</SelectItem>
+          <SelectItem value="whiteboard">Whiteboards</SelectItem>
+          <SelectItem value="wireframe">Wireframes</SelectItem>
+          <SelectItem value="vault">Vaults</SelectItem>
+        </SelectContent>
+      </Select>
+  );
+  const sortHeaderFilter = (
+      <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'recent' | 'title')}>
+        <SelectTrigger className="h-11 w-[7.5rem] bg-muted/20">
+          <SelectValue placeholder="Sort" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="recent">Most Recent</SelectItem>
+          <SelectItem value="title">Title A-Z</SelectItem>
+        </SelectContent>
+      </Select>
+  );
+  const headerFilters = (
+    <>
+      {typeHeaderFilter}
+      {sortHeaderFilter}
+    </>
+  );
+
   return (
     <PageLayout
       title="SHARED"
       icon={<Share2 className="h-5 w-5 text-blue-600 flex-shrink-0" />}
       mobileClassName="flex-col items-stretch gap-3"
-      pageActions={
-        <Button
-          size="sm"
-          variant="outline"
-          className="whitespace-nowrap font-light"
-          onClick={() => navigate(workspaceLanding.path)}
-        >
-          <WorkspaceLandingIcon className="mr-2 h-4 w-4" />
-          {workspaceLanding.title}
-        </Button>
-      }
+      desktopTools={{
+        search: (
+          <HeaderSearch
+            label="Search shared content"
+            placeholder="Search shared content..."
+            value={searchQuery}
+            onChange={setSearchQuery}
+          />
+        ),
+        filters: (
+          <div className="flex items-center gap-2">
+            <HeaderFilters
+              label="Filter shared content by type"
+              activeCount={Number(typeFilter !== 'all')}
+              preferExpanded
+            >
+              {typeHeaderFilter}
+            </HeaderFilters>
+            <HeaderFilters
+              label="Sort shared content"
+              activeCount={Number(sortBy !== 'recent')}
+              preferExpanded="when-roomy"
+            >
+              {sortHeaderFilter}
+            </HeaderFilters>
+          </div>
+        ),
+        combinedQuery: (
+          <HeaderCombinedQuery
+            label="Search and filter shared content"
+            placeholder="Search shared content..."
+            value={searchQuery}
+            onChange={setSearchQuery}
+            activeCount={headerQueryCount}
+          >
+            {headerFilters}
+          </HeaderCombinedQuery>
+        ),
+        secondaryAction: (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                className="h-11 min-w-11 gap-2 px-3 font-light"
+                onClick={() => navigate('/canvas')}
+                aria-label="Open Canvas"
+              >
+                <Map className="h-4 w-4" />
+                <HeaderActionLabel>Canvas</HeaderActionLabel>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Open Canvas</TooltipContent>
+          </Tooltip>
+        ),
+      }}
       mobileActions={
         <>
         <div className="relative flex-1">
@@ -420,55 +507,6 @@ export function SharedPage() {
         </>
       }
     >
-          <PageToolbar
-            label="Shared content controls"
-            className="mb-6 hidden md:flex"
-            search={
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  aria-label="Search shared content"
-                  placeholder="Search shared content..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-9 bg-muted/20 pl-10 focus:bg-background"
-                />
-              </div>
-            }
-            filters={
-              <>
-                <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ContentType)}>
-                  <SelectTrigger className="h-9 w-[140px] bg-muted/20">
-                    <Filter className="mr-2 h-4 w-4" />
-                    <SelectValue placeholder="Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="list">Lists</SelectItem>
-                    <SelectItem value="note">Notes</SelectItem>
-                    <SelectItem value="whiteboard">Whiteboards</SelectItem>
-                    <SelectItem value="wireframe">Wireframes</SelectItem>
-                    <SelectItem value="vault">Vaults</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={sortBy} onValueChange={(v) => setSortBy(v as 'recent' | 'title')}>
-                  <SelectTrigger className="h-9 w-[140px] bg-muted/20">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="recent">Most Recent</SelectItem>
-                    <SelectItem value="title">Title A-Z</SelectItem>
-                  </SelectContent>
-                </Select>
-              </>
-            }
-            meta={
-              <span className="text-sm text-muted-foreground">
-                {filteredContent.length} {filteredContent.length === 1 ? 'item' : 'items'} shared
-              </span>
-            }
-          />
-
           {/* Content */}
           <Card>
             <CardContent className="p-0">

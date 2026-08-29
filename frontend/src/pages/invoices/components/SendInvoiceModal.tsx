@@ -239,7 +239,7 @@ export function SendInvoiceModal({
                                     {checkingPaymentLinks ? (
                                         'Checking Stripe connection...'
                                     ) : paymentLinkCheckFailed ? (
-                                        'Unable to verify Stripe right now. Close this dialog and try again.'
+                                        'Stripe unavailable. Close and retry.'
                                     ) : paymentLinksAvailable ? (
                                         'Add a "Pay Now" button to the email for easy online payment'
                                     ) : (

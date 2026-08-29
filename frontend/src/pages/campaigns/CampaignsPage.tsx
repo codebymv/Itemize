@@ -344,10 +344,10 @@ export function CampaignsPage() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuItem className="group/menu">
-                                                    <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Edit
+                                                    <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Edit
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => handleDuplicate(campaign.id)} className="group/menu">
-                                                    <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Duplicate
+                                                    <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Duplicate
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem onClick={() => setCampaignToDelete(campaign)} className="text-destructive focus:text-destructive">

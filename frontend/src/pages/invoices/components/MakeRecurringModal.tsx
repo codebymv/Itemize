@@ -102,10 +102,10 @@ export function MakeRecurringModal({
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Repeat className="h-5 w-5 text-blue-600" />
-                        Create Recurring Template
+                        Create recurring schedule
                     </DialogTitle>
                     <DialogDescription>
-                        Create a recurring template based on invoice <span className="font-semibold">{invoiceNumber}</span>.
+                        Repeat invoice <span className="font-semibold">{invoiceNumber}</span> on a schedule.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -114,8 +114,7 @@ export function MakeRecurringModal({
                     <Alert variant="default" className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
                         <Info className="h-4 w-4 text-blue-600" />
                         <AlertDescription className="text-blue-800 dark:text-blue-200">
-                            The original invoice will remain in your invoices and can still receive payments. 
-                            A new recurring template will be created based on this invoice's data.
+                            The original invoice stays unchanged. Future invoices copy its current details.
                         </AlertDescription>
                     </Alert>
 
@@ -134,7 +133,7 @@ export function MakeRecurringModal({
 
                     {/* Template Name */}
                     <div className="space-y-2">
-                        <Label htmlFor="templateName">Template Name *</Label>
+                        <Label htmlFor="templateName">Schedule name *</Label>
                         <Input
                             id="templateName"
                             value={templateName}
@@ -207,7 +206,7 @@ export function MakeRecurringModal({
                         disabled={!isValid || converting}
                         className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
-                        {converting ? 'Creating...' : 'Create Recurring Template'}
+                        {converting ? 'Creating...' : 'Create schedule'}
                     </Button>
                 </DialogFooter>
             </DialogContent>

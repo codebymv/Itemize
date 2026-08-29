@@ -29,56 +29,56 @@ const getActivityConfig = (type: string): getActivityConfigReturn => {
         case 'note':
             return {
                 icon: StickyNote,
-                color: 'text-blue-600',
-                bgColor: 'bg-gray-100 dark:bg-gray-900',
+                color: 'text-blue-600 dark:text-blue-400',
+                bgColor: 'bg-gray-100 dark:bg-muted',
             };
         case 'email':
             return {
                 icon: Mail,
-                color: 'text-blue-600',
-                bgColor: 'bg-gray-100 dark:bg-gray-900',
+                color: 'text-blue-600 dark:text-blue-400',
+                bgColor: 'bg-gray-100 dark:bg-muted',
             };
         case 'call':
             return {
                 icon: Phone,
-                color: 'text-blue-600',
-                bgColor: 'bg-gray-100 dark:bg-gray-900',
+                color: 'text-blue-600 dark:text-blue-400',
+                bgColor: 'bg-gray-100 dark:bg-muted',
             };
         case 'task':
             return {
                 icon: CheckCircle,
-                color: 'text-blue-600',
-                bgColor: 'bg-gray-100 dark:bg-gray-900',
+                color: 'text-blue-600 dark:text-blue-400',
+                bgColor: 'bg-gray-100 dark:bg-muted',
             };
         case 'meeting':
             return {
                 icon: Users,
-                color: 'text-blue-600',
-                bgColor: 'bg-gray-100 dark:bg-gray-900',
+                color: 'text-blue-600 dark:text-blue-400',
+                bgColor: 'bg-gray-100 dark:bg-muted',
             };
         case 'status_change':
             return {
                 icon: GitBranch,
-                color: 'text-blue-600',
-                bgColor: 'bg-gray-100 dark:bg-gray-900',
+                color: 'text-blue-600 dark:text-blue-400',
+                bgColor: 'bg-gray-100 dark:bg-muted',
             };
         case 'deal_update':
             return {
                 icon: DollarSign,
-                color: 'text-blue-600',
-                bgColor: 'bg-gray-100 dark:bg-gray-900',
+                color: 'text-blue-600 dark:text-blue-400',
+                bgColor: 'bg-gray-100 dark:bg-muted',
             };
         case 'system':
             return {
                 icon: Users,
-                color: 'text-blue-600',
-                bgColor: 'bg-gray-100 dark:bg-gray-900',
+                color: 'text-blue-600 dark:text-blue-400',
+                bgColor: 'bg-gray-100 dark:bg-muted',
             };
         default:
             return {
                 icon: Clock,
-                color: 'text-blue-600',
-                bgColor: 'bg-gray-100 dark:bg-gray-900',
+                color: 'text-blue-600 dark:text-blue-400',
+                bgColor: 'bg-gray-100 dark:bg-muted',
             };
     }
 };

@@ -10,6 +10,8 @@ import { ListCard } from "@/components/ListCard";
 import { ShareModal } from "@/components/ShareModal";
 import QuickAddForm from "@/components/QuickAddForm";
 import { useDatabaseCategories } from '@/hooks/useDatabaseCategories';
+import type { CreateItemPresetPayload } from '@/config/contentPresets';
+import type { PreparedVaultSecurity } from '@/lib/vaultZkSession';
 import api from '@/lib/api';
 import {
   disableListSharingViaGraphql,
@@ -44,12 +46,12 @@ const Index = () => {
   const { toast } = useToast();
   const { categories } = useDatabaseCategories();
 
-  const createList = (title: string, type: string) => {
+  const createList = (title: string, type: string, items: ListItem[] = []) => {
     const newList: List = {
       id: Date.now().toString(),
       title,
       type,
-      items: [],
+      items,
       createdAt: new Date(),
       color: getTypeColor(type)
     };
@@ -66,9 +68,12 @@ const Index = () => {
   const handleCreateList = async (
     title: string,
     category: string,
-    _color: string
+    _color: string,
+    _position?: { x: number; y: number },
+    _vaultSecurity?: PreparedVaultSecurity,
+    presetPayload?: CreateItemPresetPayload,
   ) => {
-    createList(title, category);
+    createList(title, category, presetPayload?.listItems);
     return true;
   };
 

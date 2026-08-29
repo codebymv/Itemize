@@ -37,6 +37,21 @@ describe("UsageIndicator", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("can defer repeated availability copy to a shared card message", () => {
+    render(
+      <UsageIndicator
+        resourceType="emails"
+        used={0}
+        limit={0}
+        label="Emails"
+        showAvailabilityHint={false}
+      />,
+    );
+
+    expect(screen.getByText("Not included")).toBeInTheDocument();
+    expect(screen.queryByText("Available on Solo and Studio")).not.toBeInTheDocument();
+  });
+
   it("reserves Unlimited for the explicit -1 sentinel", () => {
     render(
       <UsageIndicator

@@ -32,7 +32,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
   {
     id: 'form-follow-up',
     name: 'Form Follow-up',
-    description: 'Tag a form contact, send a configured email, and create a follow-up task.',
+    description: 'Tag the contact, send an email, and create a task.',
     category: 'onboarding',
     icon: 'Users',
     color: 'bg-green-100 text-green-600',
@@ -63,7 +63,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
   {
     id: 'contract-handoff',
     name: 'Contract Handoff',
-    description: 'Tag the contact and create an internal handoff task after signature.',
+    description: 'Tag the contact and create a post-signature task.',
     category: 'sales',
     icon: 'TrendingUp',
     color: 'bg-blue-100 text-blue-600',
@@ -89,7 +89,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
   {
     id: 'invoice-paid-follow-up',
     name: 'Payment Follow-up',
-    description: 'Wait seven days, then send a configured follow-up email after payment.',
+    description: 'Wait seven days, then email after payment.',
     category: 'billing',
     icon: 'Star',
     color: 'bg-yellow-100 text-yellow-600',
@@ -115,7 +115,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
   {
     id: 'booking-confirmation',
     name: 'Booking Confirmation',
-    description: 'Send a configured confirmation and create an internal preparation task.',
+    description: 'Send confirmation and create a preparation task.',
     category: 'engagement',
     icon: 'Clock',
     color: 'bg-purple-100 text-purple-600',

@@ -173,7 +173,7 @@ export function CreateSMSTemplateModal({
             Create SMS Template
           </DialogTitle>
           <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
-            Create a reusable SMS template for your campaigns and automations
+            Create a reusable campaign and automation template.
           </DialogDescription>
         </DialogHeader>
 
@@ -248,8 +248,7 @@ export function CreateSMSTemplateModal({
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                SMS messages over 160 characters (or 70 for Unicode) will be split into multiple segments.
-                Each segment costs extra.
+                Long messages split into billable segments (160/70 Unicode).
               </p>
             </div>
 

@@ -4,8 +4,11 @@ import { PageInput, pageInfo } from '../common/pagination';
 import {
   Payment,
   PaymentMethod,
+  PaymentOverview,
   PaymentPage,
+  PaymentPeriod,
   PaymentStatus,
+  RevenueFlow,
   RecordPaymentResult,
   RefundPaymentResult,
 } from './payment.types';
@@ -45,16 +48,23 @@ export class PaymentsService {
   async list(
     organizationId: number,
     page: PageInput = new PageInput(),
+    period: PaymentPeriod = PaymentPeriod.LAST_30_DAYS,
     status?: PaymentStatus,
     paymentMethod?: PaymentMethod,
+    search?: string,
   ): Promise<PaymentPage> {
     const normalized = this.page(page);
+    const range = await this.payments.periodRange(organizationId, period);
     const result = await this.payments.findPage(
       organizationId,
-      normalized.pageSize,
-      normalized.offset,
-      status,
-      paymentMethod,
+      {
+        pageSize: normalized.pageSize,
+        offset: normalized.offset,
+        range,
+        status,
+        paymentMethod,
+        search: this.search(search),
+      },
     );
     return {
       nodes: result.rows.map(this.map),
@@ -63,6 +73,92 @@ export class PaymentsService {
         normalized.pageSize,
         result.total,
       ),
+    };
+  }
+
+  async overview(
+    organizationId: number,
+    period: PaymentPeriod = PaymentPeriod.LAST_30_DAYS,
+  ): Promise<PaymentOverview> {
+    const range = await this.payments.periodRange(organizationId, period);
+    const currencies = await this.payments.overview(organizationId, range);
+    return {
+      period,
+      startAt: range.startAt,
+      endAt: range.endAt,
+      timeZone: range.timeZone,
+      currencies: currencies.map((currency) => ({
+        currency: currency.currency,
+        failedAmount: currency.failed_amount,
+        failedCount: Number(currency.failed_count),
+        grossAmount: currency.gross_amount,
+        grossCount: Number(currency.gross_count),
+        inProgressAmount: currency.in_progress_amount,
+        inProgressCount: Number(currency.in_progress_count),
+        refundedAmount: currency.refunded_amount,
+        refundedCount: Number(currency.refunded_count),
+        netAmount: currency.net_amount,
+      })),
+    };
+  }
+
+  async revenueFlow(
+    organizationId: number,
+    period: PaymentPeriod = PaymentPeriod.LAST_30_DAYS,
+  ): Promise<RevenueFlow> {
+    const range = await this.payments.periodRange(organizationId, period);
+    const snapshot = await this.payments.revenueFlow(organizationId, range);
+    const bucketRows = new Map(
+      snapshot.buckets.map((bucket) => [
+        `${bucket.currency}:${bucket.start_at.toISOString()}`,
+        bucket,
+      ]),
+    );
+    return {
+      period,
+      startAt: snapshot.startAt,
+      endAt: range.endAt,
+      timeZone: range.timeZone,
+      bucketUnit: snapshot.bucketUnit,
+      currencies: snapshot.summaries.map((summary) => ({
+        currency: summary.currency,
+        summary: {
+          bookedSales: summary.booked_sales,
+          bookedDeals: Number(summary.booked_deals),
+          failedAmount: summary.failed_amount,
+          failedCount: Number(summary.failed_count),
+          grossReceived: summary.gross_received,
+          settledPayments: Number(summary.settled_payments),
+          inProgressAmount: summary.in_progress_amount,
+          inProgressCount: Number(summary.in_progress_count),
+          refunds: summary.refunds,
+          refundedPayments: Number(summary.refunded_payments),
+          netReceived: summary.net_received,
+        },
+        buckets: snapshot.boundaries.map((startAt) => {
+          const row = bucketRows.get(`${summary.currency}:${startAt.toISOString()}`);
+          return {
+            startAt,
+            bookedSales: row?.booked_sales ?? '0.00',
+            bookedDeals: Number(row?.booked_deals ?? 0),
+            grossReceived: row?.gross_received ?? '0.00',
+            settledPayments: Number(row?.settled_payments ?? 0),
+            refunds: row?.refunds ?? '0.00',
+            refundedPayments: Number(row?.refunded_payments ?? 0),
+            netReceived: row?.net_received ?? '0.00',
+          };
+        }),
+        methods: snapshot.methods
+          .filter((method) => method.currency === summary.currency)
+          .map((method) => ({
+            paymentMethod: method.payment_method,
+            grossReceived: method.gross_received,
+            settledPayments: Number(method.settled_payments),
+            refunds: method.refunds,
+            refundedPayments: Number(method.refunded_payments),
+            netReceived: method.net_received,
+          })),
+      })),
     };
   }
 
@@ -244,6 +340,16 @@ export class PaymentsService {
       Number.isNaN(Date.parse(normalized))
     ) {
       this.invalid('paymentDate', 'INVALID_PAYMENT_DATE');
+    }
+    return normalized;
+  }
+
+  private search(value?: string): string | undefined {
+    if (value === undefined) return undefined;
+    const normalized = value.trim();
+    if (!normalized) return undefined;
+    if (normalized.length > 100) {
+      this.invalid('search', 'INVALID_PAYMENT_SEARCH');
     }
     return normalized;
   }

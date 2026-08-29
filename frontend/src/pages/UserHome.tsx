@@ -9,6 +9,8 @@ import { ListCard } from "@/components/ListCard";
 import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { useDatabaseCategories } from '@/hooks/useDatabaseCategories';
+import type { CreateItemPresetPayload } from '@/config/contentPresets';
+import type { PreparedVaultSecurity } from '@/lib/vaultZkSession';
 
 import { useAuthState } from "@/contexts/AuthContext";
 import {
@@ -89,12 +91,16 @@ const UserHome = () => {
     }
   };
 
-  const createList = async (title: string, type: string) => {
+  const createList = async (
+    title: string,
+    type: string,
+    items: ListItem[] = [],
+  ) => {
     try {
       const response = await createListRequest({
         title,
         type,
-        items: []
+        items
       });
       
       const newList: List = {
@@ -127,10 +133,13 @@ const UserHome = () => {
   const handleCreateList = async (
     title: string,
     category: string,
-    _color: string
+    _color: string,
+    _position?: { x: number; y: number },
+    _vaultSecurity?: PreparedVaultSecurity,
+    presetPayload?: CreateItemPresetPayload,
   ) => {
     try {
-      await createList(title, category);
+      await createList(title, category, presetPayload?.listItems);
       return true;
     } catch {
       return false;
@@ -291,7 +300,7 @@ const UserHome = () => {
             <EmptyState
               icon={CheckSquare}
               title="No lists yet"
-              description="Get organized with custom lists for any purpose — shopping, notes, tasks, and more."
+              description="Organize tasks, notes, and more with lists."
               actionLabel="Create List"
               onAction={() => setShowCreateModal(true)}
             />

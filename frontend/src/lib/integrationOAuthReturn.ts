@@ -49,7 +49,7 @@ export function integrationOAuthToast(result: IntegrationOAuthResult): {
       return {
         title: 'Stripe setup submitted',
         description:
-          'Stripe is reviewing your account. Invoice payments will unlock when card payments are active.',
+          'Stripe review pending. Payments unlock when approved.',
       };
     }
     return {

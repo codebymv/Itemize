@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { MoreHorizontal, Trash2, Edit, Eye, Mail, Phone } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getContactStatusBadgeClass } from '@/lib/badge-utils';
+import { ContactStatusIconBadge } from './ContactStatusIconBadge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,20 +57,6 @@ export function ContactsTable({
       .join('')
       .toUpperCase()
       .slice(0, 2);
-  };
-
-  const getStatusBadge = (status: string) => {
-    const badgeClass = getContactStatusBadgeClass(status);
-    switch (status) {
-      case 'active':
-        return <Badge className={badgeClass}>Active</Badge>;
-      case 'inactive':
-        return <Badge className={badgeClass}>Inactive</Badge>;
-      case 'archived':
-        return <Badge className={badgeClass}>Archived</Badge>;
-      default:
-        return null;
-    }
   };
 
   const formatDate = (dateString: string) => {
@@ -141,7 +126,7 @@ export function ContactsTable({
                 <a
                   href={`mailto:${contact.email}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="text-blue-600 hover:underline flex items-center gap-1"
+                  className="flex items-center gap-1 text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                 >
                   <Mail className="h-3 w-3" />
                   {contact.email}
@@ -155,7 +140,7 @@ export function ContactsTable({
                 <a
                   href={`tel:${contact.phone}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="text-blue-600 hover:underline flex items-center gap-1"
+                  className="flex items-center gap-1 text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                 >
                   <Phone className="h-3 w-3" />
                   {contact.phone}
@@ -164,7 +149,9 @@ export function ContactsTable({
                 <span className="text-muted-foreground">—</span>
               )}
             </TableCell>
-            <TableCell>{getStatusBadge(contact.status)}</TableCell>
+            <TableCell>
+              <ContactStatusIconBadge status={contact.status} />
+            </TableCell>
             <TableCell>
               <span className="text-muted-foreground text-sm">
                 {formatDate(contact.created_at)}

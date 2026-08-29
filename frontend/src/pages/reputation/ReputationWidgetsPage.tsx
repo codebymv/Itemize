@@ -247,7 +247,7 @@ export function ReputationWidgetsPage() {
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuItem onClick={() => handleCopyEmbedCode(widget.id)} className="group/menu">
-                                                        <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Copy Embed Code
+                                                        <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Copy Embed Code
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem onClick={() => setWidgetToDelete(widget)} className="text-destructive focus:text-destructive">

@@ -99,6 +99,15 @@ describe('usePaymentsTab', () => {
     expect(result.current.loadError).toBe('subscription');
   });
 
+  it('does not request protected payment data when the plan gate is closed', async () => {
+    renderHook(() => usePaymentsTab({ enabled: false }));
+
+    await Promise.resolve();
+
+    expect(mocks.getPaymentSettings).not.toHaveBeenCalled();
+    expect(mocks.getBusinesses).not.toHaveBeenCalled();
+  });
+
   it('finishes loading with an organization recovery state when no organization exists', async () => {
     mocks.useOrganization.mockReturnValue({
       organizationId: null,

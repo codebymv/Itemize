@@ -23,6 +23,7 @@ interface ActivityTimelineProps {
   activities: Activity[]
   loading?: boolean
   isLoading?: boolean
+  hideFirstGroupHeading?: boolean
   empty?: {
     title?: string
     description?: string
@@ -148,6 +149,7 @@ export function ActivityTimeline({
   activities,
   loading = false,
   isLoading,
+  hideFirstGroupHeading = false,
   empty,
   onSelectActivity,
   className,
@@ -162,7 +164,7 @@ export function ActivityTimeline({
         <ActivityIcon className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
         <h3 className="text-lg font-medium mb-2">{empty?.title || 'No activity yet'}</h3>
         <p className="text-sm text-muted-foreground">
-          {empty?.description || 'Activity will appear here as you use Itemize'}
+          {empty?.description || 'Activity appears here.'}
         </p>
       </Card>
     )
@@ -172,11 +174,13 @@ export function ActivityTimeline({
 
   return (
     <div className={cn('space-y-6', className)}>
-      {groupedActivities.map((group) => (
+      {groupedActivities.map((group, index) => (
         <div key={group.date}>
-          <h4 className="text-sm font-medium text-muted-foreground mb-3 sticky top-0 bg-background py-2 z-10">
-            {formatGroupDate(group.date)}
-          </h4>
+          {!(hideFirstGroupHeading && index === 0) && (
+            <h4 className="text-sm font-medium text-muted-foreground mb-3 sticky top-0 bg-background py-2 z-10">
+              {formatGroupDate(group.date)}
+            </h4>
+          )}
           <div className="space-y-3">
             {group.activities.map((activity) => (
               <ActivityItem

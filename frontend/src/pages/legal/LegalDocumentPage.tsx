@@ -76,7 +76,7 @@ function LegalDocumentPage({ kind }: { kind: LegalKind }) {
         <p className="mt-4 text-muted-foreground">
           {isTerms
             ? 'These terms govern use of Itemize.cloud.'
-            : 'This policy explains how Itemize.cloud handles personal information.'}
+            : 'How Itemize.cloud handles personal information.'}
         </p>
         <div className="mt-8 space-y-8">
           {sections.map((section) => (

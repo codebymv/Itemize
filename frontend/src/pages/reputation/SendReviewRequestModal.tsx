@@ -222,7 +222,7 @@ export function SendReviewRequestModal({
             title: result.status === 'failed' ? 'Delivery failed' : 'Delivery needs review',
             description: result.status === 'failed'
               ? 'The request was saved, but the provider rejected delivery.'
-              : 'The request was saved, but the provider outcome could not be confirmed.',
+              : 'Request saved. Provider status unconfirmed.',
             variant: 'destructive',
           });
         } else if (result.status === 'sent') {

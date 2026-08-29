@@ -8,8 +8,8 @@ interface PageActionsBarProps {
 }
 
 /**
- * Desktop page commands live here instead of competing with the shell title.
- * Children wrap as independent controls when the content column narrows.
+ * Complex or additional desktop commands live here when they do not fit the
+ * shell's named search/filter/secondary/primary grammar.
  */
 export function PageActionsBar({
   children,

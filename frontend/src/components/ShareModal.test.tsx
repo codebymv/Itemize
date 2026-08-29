@@ -50,7 +50,7 @@ describe('ShareModal', () => {
     );
 
     expect(
-      screen.getByText('Create a shareable link. The decryption key stays in the URL fragment.'),
+      screen.getByText('Create an encrypted share link.'),
     ).toHaveClass('sr-only');
 
     const help = screen.getByRole('button', { name: 'About vault share links' });

@@ -68,7 +68,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
     useSessionWarning();
     const { resolvedTheme, setTheme } = useTheme();
     const { toast } = useToast();
-    const { headerContent } = useHeader();
+    const { headerContent, desktopTools } = useHeader();
     const navigate = useNavigate();
     const location = useLocation();
     const { subscription, isSubscribed } = useSubscriptionState();
@@ -186,7 +186,8 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
 
                     {/* Dynamic page identity. It gets a dedicated row on mobile. */}
                     <div className="col-span-2 row-start-2 flex min-h-12 min-w-0 items-center border-t px-4 py-2 md:order-1 md:col-auto md:row-auto md:h-full md:min-h-0 md:flex-1 md:border-t-0 md:px-0 md:py-px">
-                        {headerContent}
+                        <div className="min-w-0 flex-1 md:flex-none">{headerContent}</div>
+                        {desktopTools}
                     </div>
 
                     <div className="col-start-2 row-start-1 flex h-14 shrink-0 items-center gap-2 pr-4 md:order-2 md:ml-4 md:h-auto md:pr-0">
@@ -287,16 +288,15 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                                                         className="group/collapsible"
                                                     >
                                                         <div>
-                                                            <DropdownMenuItem 
+                                                            <DropdownMenuItem
                                                                 className="w-full cursor-pointer group/item"
-                                                                onSelect={(e) => {
-                                                                    e.preventDefault();
-                                                                    // Let Collapsible handle the toggle
+                                                                onSelect={() => {
+                                                                    navigate(adminNavItems[0].path);
                                                                 }}
                                                             >
                                                                 <CollapsibleTrigger asChild>
                                                                     <div className="flex items-center flex-1">
-                                                                        <ShieldCheck className={cn("mr-2 h-4 w-4 transition-colors", isOnAdminRoute ? "text-blue-600" : "group-hover/item:text-blue-600")} />
+                                                                        <ShieldCheck className={cn("mr-2 h-4 w-4 transition-colors", isOnAdminRoute ? "text-blue-600 dark:text-blue-400" : "group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400")} />
                                                                         <span className="flex-1">Admin Dashboard</span>
                                                                         <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-gray-600 dark:text-gray-400" />
                                                                     </div>

@@ -654,7 +654,7 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     expect(ownershipNotifications.rows).toEqual([
       expect.objectContaining({
         recipient_user_id: memberId,
-        title: 'Workspace ownership transferred',
+        title: 'Organization ownership transferred',
       }),
       expect.objectContaining({
         recipient_user_id: invitedUserId,

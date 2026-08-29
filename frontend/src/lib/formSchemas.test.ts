@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createContactFormSchema } from './formSchemas';
+import { createContactFormSchema, createPipelineFormSchema } from './formSchemas';
 
 const validContact = {
   first_name: 'Ada',
@@ -58,6 +58,37 @@ describe('createContactFormSchema', () => {
     expect(createContactFormSchema.safeParse({
       ...validContact,
       phone: '123',
+    }).success).toBe(false);
+  });
+});
+
+describe('createPipelineFormSchema', () => {
+  const validPipeline = {
+    name: 'New Business',
+    description: '',
+    is_default: true,
+    stages: [
+      { id: 'lead', name: 'Lead', order: 0, color: '#3B82F6' },
+    ],
+  };
+
+  it('trims and accepts valid pipeline fields', () => {
+    const result = createPipelineFormSchema.parse({
+      ...validPipeline,
+      name: '  New Business  ',
+    });
+
+    expect(result.name).toBe('New Business');
+  });
+
+  it('rejects blank pipeline and stage names for inline validation', () => {
+    expect(createPipelineFormSchema.safeParse({
+      ...validPipeline,
+      name: '   ',
+    }).success).toBe(false);
+    expect(createPipelineFormSchema.safeParse({
+      ...validPipeline,
+      stages: [{ ...validPipeline.stages[0], name: '   ' }],
     }).success).toBe(false);
   });
 });

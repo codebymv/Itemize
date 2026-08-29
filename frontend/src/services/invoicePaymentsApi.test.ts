@@ -5,6 +5,7 @@ import {
 } from './graphqlClient';
 import {
   createInvoicePayment,
+  getInvoicePaymentLedger,
   getInvoicePayments,
   recordInvoicePaymentViaGraphql,
 } from './invoicePaymentsApi';
@@ -43,6 +44,33 @@ describe('invoice payment GraphQL transport', () => {
           createdAt: '2026-07-18T12:00:00.000Z',
           updatedAt: '2026-07-18T12:00:00.000Z',
         }],
+        pageInfo: {
+          page: 1,
+          pageSize: 50,
+          total: 1,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
+      },
+      revenueFlow: {
+        period: 'ALL_TIME',
+        startAt: null,
+        endAt: '2026-07-19T00:00:00.000Z',
+        timeZone: 'America/Phoenix',
+        bucketUnit: 'month',
+        currencies: [{
+          currency: 'USD',
+          summary: {
+            bookedSales: '0.00', bookedDeals: 0,
+            failedAmount: '0.00', failedCount: 0,
+            grossReceived: '10.50', settledPayments: 1,
+            inProgressAmount: '0.00', inProgressCount: 0,
+            refunds: '0.00', refundedPayments: 0, netReceived: '10.50',
+          },
+          buckets: [],
+          methods: [],
+        }],
       },
     });
     await expect(
@@ -56,11 +84,81 @@ describe('invoice payment GraphQL transport', () => {
       invoice_number: 'INV-00008',
     }]);
     expect(graphqlRequest).toHaveBeenCalledWith(
-      expect.stringContaining('query Payments'),
+      expect.stringContaining('query PaymentLedger'),
       expect.objectContaining({
+        period: 'ALL_TIME',
         status: 'SUCCEEDED',
         paymentMethod: 'BANK_TRANSFER',
       }),
+      4,
+    );
+  });
+
+  it('maps a scoped ledger page and authoritative overview', async () => {
+    vi.mocked(graphqlRequest).mockResolvedValue({
+      payments: {
+        nodes: [],
+        pageInfo: {
+          page: 2,
+          pageSize: 25,
+          total: 30,
+          totalPages: 2,
+          hasNextPage: false,
+          hasPreviousPage: true,
+        },
+      },
+      revenueFlow: {
+        period: 'LAST_7_DAYS',
+        startAt: '2026-07-12T07:00:00.000Z',
+        endAt: '2026-07-19T00:00:00.000Z',
+        timeZone: 'America/Phoenix',
+        bucketUnit: 'day',
+        currencies: [{
+          currency: 'USD',
+          summary: {
+            bookedSales: '150.00', bookedDeals: 1,
+            failedAmount: '5.00', failedCount: 1,
+            grossReceived: '100.00', settledPayments: 2,
+            inProgressAmount: '20.00', inProgressCount: 1,
+            refunds: '25.00', refundedPayments: 1, netReceived: '75.00',
+          },
+          buckets: [{
+            startAt: '2026-07-12T07:00:00.000Z',
+            bookedSales: '150.00', bookedDeals: 1,
+            grossReceived: '100.00', settledPayments: 2,
+            refunds: '25.00', refundedPayments: 1, netReceived: '75.00',
+          }],
+          methods: [{
+            paymentMethod: 'CARD', grossReceived: '100.00', settledPayments: 2,
+            refunds: '25.00', refundedPayments: 1, netReceived: '75.00',
+          }],
+        }],
+      },
+    });
+
+    await expect(getInvoicePaymentLedger(4, {
+      period: '7days',
+      page: 2,
+      search: 'Ada',
+    })).resolves.toMatchObject({
+      payments: { pageInfo: { page: 2, total: 30 } },
+      overview: {
+        period: '7days',
+        timeZone: 'America/Phoenix',
+        currencies: [{ grossAmount: 100, refundedAmount: 25, netAmount: 75 }],
+      },
+      revenueFlow: {
+        bucketUnit: 'day',
+        currencies: [{
+          summary: { bookedSales: 150, netReceived: 75 },
+          buckets: [{ refunds: 25 }],
+          methods: [{ paymentMethod: 'card' }],
+        }],
+      },
+    });
+    expect(graphqlRequest).toHaveBeenCalledWith(
+      expect.stringContaining('revenueFlow(period: $period)'),
+      expect.objectContaining({ period: 'LAST_7_DAYS', page: { page: 2, pageSize: 25 }, search: 'Ada' }),
       4,
     );
   });
@@ -114,7 +212,11 @@ describe('invoice payment GraphQL transport', () => {
       { amount: 20, payment_method: 'cash' },
       4,
     )).resolves.toMatchObject({
-      payment: { amount: 20, payment_method: 'cash' },
+      payment: {
+        amount: 20,
+        payment_method: 'cash',
+        paid_at: '2026-07-18T12:00:00.000Z',
+      },
       invoice: { amount_paid: 20, amount_due: 80, status: 'partial' },
     });
     expect(graphqlMutationRequest).toHaveBeenNthCalledWith(

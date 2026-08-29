@@ -150,7 +150,7 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
                         <div className="flex flex-col items-center justify-center h-40 text-center">
                             <HistoryIcon className="h-12 w-12 text-muted-foreground mb-3" />
                             <p className="text-lg font-medium mb-1">No versions yet</p>
-                            <p className="text-sm text-muted-foreground mb-4">Create your first version to save a snapshot</p>
+                            <p className="text-sm text-muted-foreground mb-4">Create a version to save a snapshot.</p>
                             <Button onClick={handleCreateVersion} disabled={!organizationId}>
                                 Create Version
                             </Button>

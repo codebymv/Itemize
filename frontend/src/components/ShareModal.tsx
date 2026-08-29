@@ -79,7 +79,7 @@ const shareConfig = {
   },
   vault: {
     label: 'Vault',
-    description: 'Create a shareable link. The decryption key stays in the URL fragment.',
+    description: 'Create an encrypted share link.',
     icon: KeyRound,
     iconClassName: 'text-blue-600',
     shareHelp: 'Anyone with the full URL, including the #fragment, can read a snapshot of this vault. Itemize cannot recover a link copied without the fragment.',
@@ -98,7 +98,7 @@ const ShareLinkLabel = ({ help, itemLabel }: { help?: string; itemLabel: string 
           <TooltipTrigger asChild>
             <button
               type="button"
-              className="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+              className="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-blue-600 dark:hover:text-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
               aria-label={`About ${itemLabel.toLowerCase()} share links`}
             >
               <Info className="h-3.5 w-3.5" />
@@ -251,7 +251,7 @@ export const ShareModal = <TId extends string | number>({
               <ShieldAlert className="h-4 w-4" />
               <AlertTitle>Locked Vault</AlertTitle>
               <AlertDescription>
-                This vault is locked. Unlock it on the canvas first so a snapshot can be encrypted on your device.
+                Unlock this vault on the canvas before sharing.
               </AlertDescription>
             </Alert>
           )}

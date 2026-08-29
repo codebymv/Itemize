@@ -79,11 +79,13 @@ Predefined spacing values for consistency:
 ### Page hierarchy
 
 - Page identity gets space before controls; complete section titles are the last thing allowed to truncate.
-- Keep one visually primary action in the shell header. Compact its label before compromising the title.
-- Search, filters, sorting, and result counts belong in `PageToolbar` inside the page surface.
+- Keep one visually primary action in the shell header when the page has a real create or commit command. Do not promote secondary navigation just to fill the primary slot.
+- Frequent search, filters, and sorting may use named `desktopTools`; result counts stay in the page surface.
 - Secondary navigation uses outline or ghost styling so it does not compete with creation.
 - Keep descriptive action labels in onboarding and empty states; icon-only header actions require an accessible label and tooltip.
 - Responsive decisions must follow the available content width, including the sidebar, rather than viewport width alone.
+- Audit subtext at 300px of available component width. If authored copy occupies three full text lines, rewrite it to two lines or fewer: lead with the state and next action, remove inventories and implementation detail, and use direct phrasing such as “Workspace ready.” Do not use truncation to hide overlong authored copy; reserve line clamping for unpredictable user-generated values.
+- Legal, destructive, security, and payment-consequence copy may exceed two lines only when every remaining detail changes the user's decision. Make it concise first, and never move a required warning exclusively into a tooltip.
 
 ```tsx
 import { PageToolbar } from '@/components/layout/PageToolbar'
@@ -130,7 +132,7 @@ Used for delete/destroy actions.
 
 ### Tabs
 
-Use `TabsList` and `TabsTrigger` for content/status switching. For labeled icon navigation, use `IconTabsList` and `IconTabsTrigger`; they mirror the sidebar with a transparent parent, `sidebar-accent` hover/selected rows, no inset shadow, and blue-600 icons on hover and selection. Do not recreate those states in individual pages.
+Use `TabsList` and `TabsTrigger` for content/status switching. For labeled icon navigation, use `IconTabsList` and `IconTabsTrigger`; they mirror the sidebar with a transparent parent, `sidebar-accent` hover/selected rows, no inset shadow, and accent-colored icons on hover and selection. For route navigation outside the sidebar, use `NavigationRow` so active routes, focus rings, hover surfaces, and icon colors follow that same contract. Do not recreate those states in individual pages.
 
 ### App chrome icon actions
 
@@ -140,6 +142,7 @@ Use `AppHeaderIconButton` for unlabeled icon actions in the authenticated top ba
 | --- | --- | --- |
 | Authenticated app chrome | 44px square | `accent` hover; use `AppHeaderIconButton` |
 | Labeled icon navigation | Content-sized | `sidebar-accent` row with blue-600 icon on hover and selection; use `IconTabsTrigger` |
+| Route navigation row | 44px tall | `sidebar-accent` hover/selection with `aria-current`; use `NavigationRow` |
 | Primary icon action | 36px or larger | Blue-600 surface, blue-700 hover |
 | Compact row action | 32px square | Neutral ghost hover; keep inside its row or card |
 | Canvas/editor tool | 32px square | Neutral hover with an explicit active state |
@@ -290,11 +293,28 @@ The shell header identifies the current section or task. It is not a toolbar.
 - Never use a contact name, organization name, form name, workflow name, or other user-provided value as the shell title. Put that identity in the page surface.
 - The complete title must remain visible. Do not add `truncate`, line clamping, clipping, or horizontal scrolling to the shell heading.
 - A decorative module icon is optional. When supplied, it remains visible directly before the title at every viewport width and is hidden from assistive technology.
-- `leading` is reserved for one Back control with an accessible label and a 44 by 44 pixel target.
-- Search, filters, sorting, tabs, counts, statuses, badges, destructive commands, and multi-button command clusters are forbidden in the shell.
+- `leading` is reserved for one `ShellBackButton`. It uses an arrow-only blue-600 treatment, an accessible destination label, a tooltip, and a fixed 44 by 44 pixel target; do not add a visible `Back` label beside the arrow.
+- The Back control, optional section icon, and complete responsive section heading must remain on one aligned row with the spacing owned by `ResponsivePageHeading`.
+- Editor Back controls must preserve their unsaved-change guard and navigate to their explicit parent route. History-oriented utility pages may use `useSafeShellBack`, but must supply a deterministic fallback route for direct visits and new tabs.
+- Tabs, result counts, statuses, destructive commands, and arbitrary multi-button clusters are forbidden in the shell.
+- When a page's labeled section navigation column is hidden, `compactNavigation` may replace the static shell identity with one icon-bearing destination selector until the same breakpoint. It must show the complete active label on one row, use the same icons and labels as the navigation column, and disappear when that column appears.
+- On eligible high-frequency desktop pages, search, filters, one secondary action, and, when applicable, one primary action may use the named `desktopTools` slots. Pages may not inject an untyped toolbar.
+- A shell-level refresh command uses `HeaderRefreshAction` in the appropriate named action slot. Its text label follows the shell container query and yields to the accessible 44 by 44 pixel icon control when space is constrained.
+- Route-level administration sections use the same `compactNavigation` contract as Settings: one icon-bearing selector with the complete active label until the labeled navigation column appears.
+- Administration content modes such as Users and Email Logs remain page-surface tabs, but their active mode must be URL-addressable so reload, deep links, and browser history preserve it.
+- Dataset-wide administration search, filters, and refresh may use typed shell slots. Result counts, selections, bulk commands, queue-specific filters, and other contextual controls stay with their page-level dataset card.
 - Global organization, notification, theme, and account controls belong to `AppShell`, not to pages.
 
 On mobile, global controls occupy the first shell row and page identity occupies a separate row. The identity row may grow when a stable title wraps. On desktop, the shell remains 56 pixels high.
+
+Desktop tools form one non-wrapping command lane in this fixed order: section identity, search, filters/sort, secondary action, primary action, global controls. The last applicable page action is therefore closest to notification and account chrome. A secondary-only action remains secondary and uses outline or ghost styling. The lane uses its own available width, not viewport width, to select a density:
+
+- Spacious: full search, individual filters, icon plus secondary label, and `+ Add`.
+- Medium: full search, one filter popover, icon plus secondary label, and `+ Add`.
+- Compact: search and filter icon buttons, icon-only secondary action, and `+ Add`.
+- Tight: one combined query popover, icon-only secondary action, and a 44 by 44 `+` primary action.
+
+The title and global controls always win space. Header tools never wrap, and lower-priority query controls combine before an action or title is clipped. Compact controls require a tooltip and a complete accessible label. Generic object words such as “content” or “invoice” do not appear in the visible primary label; use `+ Add`, then `+` when tight.
 
 #### Action density and deferment
 
@@ -302,13 +322,15 @@ Use the following destination rules instead of adding controls to the shell:
 
 | Content | Destination |
 | --- | --- |
-| Search, filters, sorting, result counts | `PageToolbar` inside the page surface |
-| Primary and secondary page commands | `pageActions`, rendered by `PageActionsBar` |
+| Frequent search, filters, sorting | Named `desktopTools` on desktop; mobile card on mobile |
+| Result counts | Result summary or empty-state area inside the page surface |
+| One primary and one secondary page command | Named `desktopTools` when they fit the header grammar |
+| Additional or complex page commands | `pageActions`, rendered by `PageActionsBar` |
 | Mobile commands | `mobileActions`, rendered as a non-sticky page card |
 | Editor Save, Preview, Send, Publish | A page command card; use one primary action and overflow secondary commands when possible |
 | Record name, status, URL, owner | Page intro or entity summary card |
 | Destructive commands | Overflow menu or a dedicated danger card |
-| Cross-section navigation | Sidebar or section navigation |
+| Cross-section navigation | Sidebar or section navigation; one matching `compactNavigation` selector while that navigation is hidden |
 
 Page action cards wrap with 8 pixel gaps and give buttons and comboboxes a minimum 44 pixel target. Mobile actions scroll with content; they must not become a second sticky application header. If a mobile action card needs more than two frequent commands, consolidate secondary commands into an overflow menu or filter sheet.
 

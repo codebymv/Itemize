@@ -227,7 +227,11 @@ describe('Analytics GraphQL PostgreSQL contract', () => {
       query: `query {
         dashboardAnalytics {
           asOf reportingTimezone
-          contacts { total active newThisMonth newThisWeek growth { month count } }
+          contacts {
+            total active newThisMonth newThisWeek
+            growth { month count }
+            recentContacts { id name email }
+          }
           deals {
             total open won lost
             funnel { stageId stageName stageColor dealCount }
@@ -263,6 +267,13 @@ describe('Analytics GraphQL PostgreSQL contract', () => {
     expect(result.reportingTimezone).toBe('UTC');
     expect(new Date(result.asOf).toISOString()).toBe(result.asOf);
     expect(result.contacts).toMatchObject({ total: 1, active: 1 });
+    expect(result.contacts.recentContacts).toEqual([
+      expect.objectContaining({ name: 'Own' }),
+    ]);
+    expect(result.contacts.recentContacts[0].email).toContain('analytics-own-');
+    expect(result.contacts.recentContacts).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: 'Foreign' })]),
+    );
     expect(result.deals).toMatchObject({
       total: 2,
       open: 1,

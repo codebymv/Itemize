@@ -1,6 +1,7 @@
 // List and item type definitions
 export type JsonPrimitive = string | number | boolean | null;
-export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
+export type JsonValue =
+  JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 export type JsonRecord = Record<string, JsonValue>;
 
 export interface ListItem {
@@ -48,8 +49,14 @@ export interface ListCardProps {
   existingCategories: Category[];
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
-  addCategory?: (categoryData: { name: string; color_value: string }) => Promise<unknown>;
-  updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
+  addCategory?: (categoryData: {
+    name: string;
+    color_value: string;
+  }) => Promise<unknown>;
+  updateCategory?: (
+    categoryName: string,
+    updatedData: Partial<{ name: string; color_value: string }>,
+  ) => Promise<void>;
 }
 
 export interface Note {
@@ -108,25 +115,41 @@ export interface Whiteboard {
 // Props for NoteCard component
 export interface NoteCardProps {
   note: Note;
-  onUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<void>;
+  onUpdate: (
+    noteId: number,
+    updatedData: Partial<
+      Omit<Note, "id" | "user_id" | "created_at" | "updated_at">
+    >,
+  ) => Promise<void>;
   onDelete: (noteId: number) => Promise<void>;
   onShare: (noteId: number) => void;
   existingCategories: Category[];
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
-  updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
+  updateCategory?: (
+    categoryName: string,
+    updatedData: Partial<{ name: string; color_value: string }>,
+  ) => Promise<void>;
 }
 
-// Props for WhiteboardCard component  
+// Props for WhiteboardCard component
 export interface WhiteboardCardProps {
   whiteboard: Whiteboard;
-  onUpdate: (whiteboardId: number, updatedData: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Whiteboard | null>;
+  onUpdate: (
+    whiteboardId: number,
+    updatedData: Partial<
+      Omit<Whiteboard, "id" | "user_id" | "created_at" | "updated_at">
+    >,
+  ) => Promise<Whiteboard | null>;
   onDelete: (whiteboardId: number) => Promise<boolean>;
   onShare: (whiteboardId: number) => void;
   existingCategories: Category[];
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
-  updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
+  updateCategory?: (
+    categoryName: string,
+    updatedData: Partial<{ name: string; color_value: string }>,
+  ) => Promise<void>;
 }
 
 // React Flow node and edge types for wireframes
@@ -185,17 +208,25 @@ export interface Wireframe {
 // Props for WireframeCard component
 export interface WireframeCardProps {
   wireframe: Wireframe;
-  onUpdate: (wireframeId: number, updatedData: Partial<Omit<Wireframe, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Wireframe | null>;
+  onUpdate: (
+    wireframeId: number,
+    updatedData: Partial<
+      Omit<Wireframe, "id" | "user_id" | "created_at" | "updated_at">
+    >,
+  ) => Promise<Wireframe | null>;
   onDelete: (wireframeId: number) => Promise<boolean>;
   onShare: (wireframeId: number) => void;
   existingCategories: Category[];
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
-  updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
+  updateCategory?: (
+    categoryName: string,
+    updatedData: Partial<{ name: string; color_value: string }>,
+  ) => Promise<void>;
 }
 
-export * from './campaigns';
-export * from './segments';
+export * from "./campaigns";
+export * from "./segments";
 
 // ======================
 // Vault Types (Encrypted Storage)
@@ -204,7 +235,7 @@ export * from './segments';
 export interface VaultItem {
   id: number;
   vault_id: number;
-  item_type: 'key_value' | 'secure_note';
+  item_type: "key_value" | "secure_note";
   label: string;
   value: string;
   ciphertext?: string | null;
@@ -249,22 +280,42 @@ export interface Vault {
   share_token?: string;
   is_public?: boolean;
   shared_at?: string;
+  /** Client-only hint that the zero-knowledge key is active in this tab. */
+  client_session_unlocked?: boolean;
 }
 
 // Props for VaultCard component
 export interface VaultCardProps {
   vault: Vault;
-  onUpdate: (vaultId: number, updatedData: Partial<Omit<Vault, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Vault | null>;
+  onUpdate: (
+    vaultId: number,
+    updatedData: Partial<
+      Omit<Vault, "id" | "user_id" | "created_at" | "updated_at">
+    >,
+  ) => Promise<Vault | null>;
   onDelete: (vaultId: number) => Promise<boolean>;
   onShare: (vaultId: number) => void;
   existingCategories: Category[];
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
-  updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
-  onAddItem?: (vaultId: number, item: { item_type: string; label: string; value: string }) => Promise<VaultItem | null>;
-  onUpdateItem?: (vaultId: number, itemId: number, data: { label?: string; value?: string }) => Promise<VaultItem | null>;
+  updateCategory?: (
+    categoryName: string,
+    updatedData: Partial<{ name: string; color_value: string }>,
+  ) => Promise<void>;
+  onAddItem?: (
+    vaultId: number,
+    item: { item_type: string; label: string; value: string },
+  ) => Promise<VaultItem | null>;
+  onUpdateItem?: (
+    vaultId: number,
+    itemId: number,
+    data: { label?: string; value?: string },
+  ) => Promise<VaultItem | null>;
   onDeleteItem?: (vaultId: number, itemId: number) => Promise<boolean>;
-  onBulkAddItems?: (vaultId: number, items: Array<{ item_type: string; label: string; value: string }>) => Promise<VaultItem[]>;
+  onBulkAddItems?: (
+    vaultId: number,
+    items: Array<{ item_type: string; label: string; value: string }>,
+  ) => Promise<VaultItem[]>;
 }
 
 // ======================
@@ -278,7 +329,7 @@ export interface Organization {
   slug: string;
   settings: JsonRecord;
   logo_url?: string;
-  role?: 'owner' | 'admin' | 'member' | 'viewer';
+  role?: "owner" | "admin" | "member" | "viewer";
   is_default?: boolean;
   created_at: string;
   updated_at: string;
@@ -289,7 +340,7 @@ export interface OrganizationMember {
   id: number;
   organization_id: number;
   user_id: number;
-  role: 'owner' | 'admin' | 'member' | 'viewer';
+  role: "owner" | "admin" | "member" | "viewer";
   invited_at: string;
   joined_at?: string;
   invited_by?: number;
@@ -302,8 +353,8 @@ export interface OrganizationInvitation {
   organization_id: number;
   organization_name: string;
   email: string;
-  role: 'admin' | 'member' | 'viewer';
-  status: 'pending' | 'expired';
+  role: "admin" | "member" | "viewer";
+  status: "pending" | "expired";
   invited_by?: number;
   invited_by_name?: string;
   invited_at: string;
@@ -315,8 +366,8 @@ export interface OrganizationInvitation {
 export interface OrganizationInvitationPreview {
   organization_name: string;
   email: string;
-  role: 'admin' | 'member' | 'viewer';
-  status: 'pending' | 'expired';
+  role: "admin" | "member" | "viewer";
+  status: "pending" | "expired";
   expires_at: string;
   invited_by_name?: string;
 }
@@ -341,8 +392,8 @@ export interface Contact {
   company?: string;
   job_title?: string;
   address: ContactAddress;
-  source: 'manual' | 'import' | 'form' | 'integration' | 'api';
-  status: 'active' | 'inactive' | 'archived';
+  source: "manual" | "import" | "form" | "integration" | "api";
+  status: "active" | "inactive" | "archived";
   custom_fields: JsonRecord;
   tags: string[];
   assigned_to?: number;
@@ -360,7 +411,16 @@ export interface ContactActivity {
   user_id?: number;
   user_name?: string;
   user_email?: string;
-  type: 'note' | 'email' | 'sms' | 'call' | 'task' | 'meeting' | 'status_change' | 'deal_update' | 'system';
+  type:
+    | "note"
+    | "email"
+    | "sms"
+    | "call"
+    | "task"
+    | "meeting"
+    | "status_change"
+    | "deal_update"
+    | "system";
   title?: string;
   content: JsonRecord;
   metadata?: JsonRecord;
@@ -444,8 +504,8 @@ export interface Task {
   description?: string;
   due_date?: string;
   completed_at?: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  priority: "low" | "medium" | "high" | "urgent";
+  status: "pending" | "in_progress" | "completed" | "cancelled";
   reminder_at?: string;
   created_at: string;
   updated_at: string;
@@ -516,7 +576,7 @@ export interface Calendar {
   max_future_days: number;
   assigned_to?: number;
   assigned_to_name?: string;
-  assignment_mode: 'specific' | 'round_robin';
+  assignment_mode: "specific" | "round_robin";
   confirmation_email: boolean;
   reminder_email: boolean;
   reminder_hours: number;
@@ -546,14 +606,14 @@ export interface Booking {
   attendee_phone?: string;
   assigned_to?: number;
   assigned_to_name?: string;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show';
+  status: "pending" | "confirmed" | "cancelled" | "completed" | "no_show";
   cancelled_at?: string;
   cancellation_reason?: string;
   notes?: string;
   internal_notes?: string;
   reminder_sent_at?: string;
   custom_fields: JsonRecord;
-  source: 'booking_page' | 'manual' | 'api' | 'import';
+  source: "booking_page" | "manual" | "api" | "import";
   created_at: string;
   updated_at: string;
   // Joined data
@@ -617,7 +677,18 @@ export interface AvailableSlotsResponse {
 // Forms & Surveys Types
 // ======================
 
-export type FormFieldType = 'text' | 'email' | 'phone' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'date' | 'number' | 'rating' | 'nps';
+export type FormFieldType =
+  | "text"
+  | "email"
+  | "phone"
+  | "textarea"
+  | "select"
+  | "radio"
+  | "checkbox"
+  | "date"
+  | "number"
+  | "rating"
+  | "nps";
 
 export interface FormFieldOption {
   label: string;
@@ -635,7 +706,7 @@ export interface FormField {
   validation?: JsonRecord;
   options?: FormFieldOption[];
   field_order: number;
-  width: 'full' | 'half';
+  width: "full" | "half";
   conditions?: JsonRecord[];
   map_to_contact_field?: string;
 }
@@ -647,8 +718,8 @@ export interface Form {
   description?: string;
   slug: string;
   public_id: string;
-  type: 'form' | 'survey' | 'quiz';
-  status: 'draft' | 'published' | 'archived';
+  type: "form" | "survey" | "quiz";
+  status: "draft" | "published" | "archived";
   submit_button_text: string;
   success_message: string;
   redirect_url?: string;
@@ -705,7 +776,7 @@ export interface Conversation {
   contact_id?: number;
   assigned_to?: number;
   assigned_to_name?: string;
-  status: 'open' | 'closed' | 'snoozed';
+  status: "open" | "closed" | "snoozed";
   snoozed_until?: string;
   channel: string;
   subject?: string;
@@ -726,7 +797,7 @@ export interface Message {
   id: number;
   conversation_id: number;
   organization_id: number;
-  sender_type: 'user' | 'contact' | 'system';
+  sender_type: "user" | "contact" | "system";
   sender_user_id?: number;
   sender_contact_id?: number;
   sender_user_name?: string;

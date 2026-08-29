@@ -83,3 +83,19 @@ export const createDealFormSchema = z.object({
 });
 
 export type CreateDealFormValues = z.infer<typeof createDealFormSchema>;
+
+const pipelineStageFormSchema = z.object({
+  id: z.string(),
+  name: z.string().trim().min(1, 'Stage name is required').max(100, 'Stage name is too long'),
+  order: z.number().int().nonnegative(),
+  color: hexColorSchema,
+});
+
+export const createPipelineFormSchema = z.object({
+  name: z.string().trim().min(1, 'Pipeline name is required').max(200, 'Pipeline name is too long'),
+  description: z.string().max(1000, 'Description is too long').default(''),
+  is_default: z.boolean().default(false),
+  stages: z.array(pipelineStageFormSchema).default([]),
+});
+
+export type CreatePipelineFormValues = z.infer<typeof createPipelineFormSchema>;

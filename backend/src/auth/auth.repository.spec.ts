@@ -50,7 +50,8 @@ describe('AuthRepository registration transaction', () => {
         recipientUserId: 13,
         eventType: 'account.welcome',
         dedupeKey: 'account:13:welcome:v1',
-        body: 'Your workspace is ready. Add content, create a contact, or send your first estimate.',
+        title: 'Welcome to Itemize!',
+        body: 'Workspace ready. Add your content.',
         href: '/canvas',
       }),
     );
@@ -94,7 +95,8 @@ describe('AuthRepository registration transaction', () => {
       expect.objectContaining({
         organizationId: 32,
         recipientUserId: 16,
-        body: 'Your workspace is ready. Add your first list, note, whiteboard, wireframe, or vault.',
+        title: 'Welcome to Itemize!',
+        body: 'Workspace ready. Add your content.',
       }),
     );
   });

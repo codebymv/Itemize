@@ -15,8 +15,10 @@ import { UpgradePromptCard } from "@/components/subscription/UpgradeCTA";
 import { type Plan } from "@/lib/subscription";
 import { hasPlanAccess } from "@/lib/entitlements";
 import { initializeUserPreferences, preferredHomePath } from "@/lib/userPreferences";
+import { isAvailablePlansLocation } from "@/lib/settingsNavigation";
 import { OnboardingProvider } from "@/contexts/OnboardingContext";
 import { HeaderProvider } from '@/contexts/HeaderContext';
+import { ThemeFavicon } from '@/components/ThemeFavicon';
 
 // Layout components
 import Navbar from "@/components/Navbar";
@@ -229,7 +231,7 @@ const EntitledRoute = ({ requiredPlan = 'starter' }: { requiredPlan?: Plan }) =>
             requiredPlan={requiredPlan}
             currentPlan={(planName as Plan | null) ?? 'free'}
             title="Unlock Itemize business tools"
-            description="Keep using Itemize Free, or upgrade to manage clients, documents, billing, communication, and delivery in one place."
+            description="Upgrade for clients, documents, billing, and delivery."
             className="w-full bg-background"
           />
         </div>
@@ -307,8 +309,14 @@ const AppContent = () => {
 
   // Scroll to top on route change
   useEffect(() => {
+    if (
+      location.pathname === '/settings'
+      && isAvailablePlansLocation(location.search, location.hash)
+    ) {
+      return;
+    }
     window.scrollTo(0, 0);
-  }, [location.pathname]);
+  }, [location.hash, location.pathname, location.search]);
 
   // Determine if this is a public route (no sidebar)
   const publicRoutes = ['/home', '/status', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password', '/recover-account', '/legal/terms', '/legal/privacy'];
@@ -374,6 +382,7 @@ const AppContent = () => {
         <Route path="/organization-settings" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
         <Route path="/preferences" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
         <Route path="/payment-settings" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
+        <Route path="/settings/integrations" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />
         <Route path="/calendar-integrations" element={<LegacyIntegrationsRedirect />} />
         <Route path="/admin/*" element={<AuthenticatedLayout><AdminPage /></AuthenticatedLayout>} />
 
@@ -392,7 +401,6 @@ const AppContent = () => {
           <Route path="/automations/new" element={<WorkflowBuilderPage />} />
           <Route path="/automations/:id" element={<WorkflowBuilderPage />} />
           <Route path="/segments" element={<SegmentsPage />} />
-          <Route path="/settings/integrations" element={<SettingsPage />} />
           <Route path="/campaigns" element={<CampaignsPage />} />
           <Route path="/email-templates" element={<EmailTemplatesPage />} />
           <Route path="/sms-templates" element={<SMSTemplatesPage />} />
@@ -403,12 +411,13 @@ const AppContent = () => {
           <Route path="/review-requests" element={<ReputationRequestsPage />} />
           <Route path="/review-widgets" element={<ReputationWidgetsPage />} />
           <Route path="/invoices" element={<InvoicesPage />} />
+          <Route path="/invoices/recurring" element={<RecurringInvoicesPage />} />
           <Route path="/invoices/new" element={<InvoiceEditorPage />} />
           <Route path="/invoices/:id" element={<InvoiceEditorPage />} />
           <Route path="/estimates" element={<EstimatesPage />} />
           <Route path="/estimates/new" element={<EstimateEditorPage />} />
           <Route path="/estimates/:id" element={<EstimateEditorPage />} />
-          <Route path="/recurring-invoices" element={<RecurringInvoicesPage />} />
+          <Route path="/recurring-invoices" element={<Navigate to="/invoices/recurring" replace />} />
           <Route path="/invoices/payments" element={<PaymentsPage />} />
           <Route path="/products" element={<ProductsPage />} />
           <Route path="/signatures/templates/:id" element={<SignatureTemplateRedirect />} />
@@ -461,6 +470,7 @@ const App = () => {
           storageKey="theme"
           themes={['light', 'dark', 'system']}
         >
+          <ThemeFavicon />
           <BrowserRouter
             future={{
               v7_startTransition: true,

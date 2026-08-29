@@ -180,7 +180,7 @@ export function PublicProductCTA() {
         <div className="max-w-2xl">
           <h2 className="text-lg font-semibold">Bring your work together</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Create and share notes, lists, whiteboards, wireframes, and secure vaults from one focused workspace.
+            Create and share focused workspace content with Itemize.
           </p>
         </div>
         <Button asChild className="sm:shrink-0">

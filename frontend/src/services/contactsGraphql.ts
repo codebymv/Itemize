@@ -185,6 +185,7 @@ const contactContentQuery = `
       lists { nodes { id title category createdAt } total hasMore }
       notes { nodes { id title category createdAt } total hasMore }
       whiteboards { nodes { id title category createdAt } total hasMore }
+      wireframes { nodes { id title category createdAt } total hasMore }
     }
   }
 `;
@@ -457,10 +458,16 @@ export const getContactContentViaGraphql = async (
       lists: GraphqlContactContentCollection;
       notes: GraphqlContactContentCollection;
       whiteboards: GraphqlContactContentCollection;
+      wireframes: GraphqlContactContentCollection;
     };
   }, typeof variables>(contactContentQuery, variables, organizationId);
   const collections = data.contactContent;
-  if (collections.lists.hasMore || collections.notes.hasMore || collections.whiteboards.hasMore) {
+  if (
+    collections.lists.hasMore
+    || collections.notes.hasMore
+    || collections.whiteboards.hasMore
+    || collections.wireframes.hasMore
+  ) {
     throw new GraphqlRequestError(
       'Contact content exceeds the bounded GraphQL preview',
       200,
@@ -478,5 +485,6 @@ export const getContactContentViaGraphql = async (
     lists: map(collections.lists),
     notes: map(collections.notes),
     whiteboards: map(collections.whiteboards),
+    wireframes: map(collections.wireframes),
   };
 };

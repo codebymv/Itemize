@@ -14,6 +14,7 @@ export type ContactContentRows = {
   lists: ContactContentRow[];
   notes: ContactContentRow[];
   whiteboards: ContactContentRow[];
+  wireframes: ContactContentRow[];
 };
 
 @Injectable()
@@ -37,6 +38,7 @@ export class ContactContentRepository {
         lists: await this.findRows(client, 'lists', contactId, limit),
         notes: await this.findRows(client, 'notes', contactId, limit),
         whiteboards: await this.findRows(client, 'whiteboards', contactId, limit),
+        wireframes: await this.findRows(client, 'wireframes', contactId, limit),
       };
     } finally {
       client.release();
@@ -45,7 +47,7 @@ export class ContactContentRepository {
 
   private async findRows(
     client: PoolClient,
-    table: 'lists' | 'notes' | 'whiteboards',
+    table: 'lists' | 'notes' | 'whiteboards' | 'wireframes',
     contactId: number,
     limit: number,
   ): Promise<ContactContentRow[]> {

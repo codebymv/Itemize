@@ -13,10 +13,17 @@ import { graphqlRequest } from './graphqlClient';
 
 type GraphqlDashboardAnalytics = Omit<
   DashboardAnalytics,
-  'invoiceMetrics' | 'signatureMetrics'
+  'contacts' | 'invoiceMetrics' | 'signatureMetrics'
 > & {
   asOf: string;
   reportingTimezone: string;
+  contacts: Omit<DashboardAnalytics['contacts'], 'recentContacts'> & {
+    recentContacts: Array<{
+      id: number;
+      name: string;
+      email: string | null;
+    }>;
+  };
   invoiceMetrics: Omit<NonNullable<DashboardAnalytics['invoiceMetrics']>, 'recentInvoices'> & {
     recentInvoices: Array<{
       id: number;
@@ -43,6 +50,7 @@ const dashboardAnalyticsQuery = `
       contacts {
         total active newThisMonth newThisWeek
         growth { month count }
+        recentContacts { id name email }
       }
       deals {
         total open won lost
@@ -80,6 +88,14 @@ export const getDashboardAnalyticsViaGraphql = async (
   const result = data.dashboardAnalytics;
   return {
     ...result,
+    contacts: {
+      ...result.contacts,
+      recentContacts: result.contacts.recentContacts.map((contact) => ({
+        ...contact,
+        id: String(contact.id),
+        email: contact.email ?? undefined,
+      })),
+    },
     invoiceMetrics: {
       ...result.invoiceMetrics,
       recentInvoices: result.invoiceMetrics.recentInvoices.map((invoice) => ({

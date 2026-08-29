@@ -91,9 +91,9 @@ describe('Payment history GraphQL PostgreSQL contract', () => {
       [organizationId, invoiceId, contactId],
     );
     await pool.query(
-      `INSERT INTO payments (
-         organization_id, amount, currency, payment_method, status
-       ) VALUES ($1, 999, 'USD', 'cash', 'succeeded')`,
+       `INSERT INTO payments (
+          organization_id, amount, currency, payment_method, status, paid_at
+        ) VALUES ($1, 999, 'USD', 'cash', 'succeeded', NOW())`,
       [outsiderOrganizationId],
     );
     memberToken = await jwt.signAsync(
@@ -138,10 +138,18 @@ describe('Payment history GraphQL PostgreSQL contract', () => {
       .send({
         query: `query Payments(
           $page: PageInput,
+          $period: PaymentPeriod,
           $status: PaymentStatus,
-          $paymentMethod: PaymentMethod
+          $paymentMethod: PaymentMethod,
+          $search: String
         ) {
-          payments(page: $page, status: $status, paymentMethod: $paymentMethod) {
+          payments(
+            page: $page,
+            period: $period,
+            status: $status,
+            paymentMethod: $paymentMethod,
+            search: $search
+          ) {
             nodes {
               id organizationId invoiceNumber contactName amount currency
               paymentMethod status paidAt createdAt
@@ -150,6 +158,54 @@ describe('Payment history GraphQL PostgreSQL contract', () => {
           }
         }`,
         variables,
+      });
+
+  const overview = (token: string, orgId: number, period = 'ALL_TIME') =>
+    request(app.getHttpServer())
+      .post('/graphql')
+      .set('Cookie', `itemize_auth=${token}`)
+      .set('x-organization-id', String(orgId))
+      .send({
+        query: `query PaymentOverview($period: PaymentPeriod!) {
+          paymentOverview(period: $period) {
+            period startAt endAt timeZone
+            currencies {
+              currency failedAmount failedCount grossAmount grossCount
+              inProgressAmount inProgressCount refundedAmount refundedCount netAmount
+            }
+          }
+        }`,
+        variables: { period },
+      });
+
+  const revenueFlow = (token: string, orgId: number, period = 'ALL_TIME') =>
+    request(app.getHttpServer())
+      .post('/graphql')
+      .set('Cookie', `itemize_auth=${token}`)
+      .set('x-organization-id', String(orgId))
+      .send({
+        query: `query RevenueFlow($period: PaymentPeriod!) {
+          revenueFlow(period: $period) {
+            period startAt endAt timeZone bucketUnit
+            currencies {
+              currency
+              summary {
+                bookedSales bookedDeals failedAmount failedCount
+                grossReceived settledPayments inProgressAmount inProgressCount
+                refunds refundedPayments netReceived
+              }
+              buckets {
+                startAt bookedSales bookedDeals grossReceived settledPayments
+                refunds refundedPayments netReceived
+              }
+              methods {
+                paymentMethod grossReceived settledPayments
+                refunds refundedPayments netReceived
+              }
+            }
+          }
+        }`,
+        variables: { period },
       });
 
   const mutate = (
@@ -204,8 +260,10 @@ describe('Payment history GraphQL PostgreSQL contract', () => {
 
   it('applies typed filters, bounded pages, and selected-tenant isolation', async () => {
     const filtered = await query(memberToken, organizationId, {
+      period: 'ALL_TIME',
       status: 'SUCCEEDED',
       paymentMethod: 'CARD',
+      search: 'Ada',
     }).expect(200);
     expect(filtered.body.data.payments.pageInfo.total).toBe(1);
     expect(filtered.body.data.payments.nodes[0].amount).toBe('10.50');
@@ -221,6 +279,70 @@ describe('Payment history GraphQL PostgreSQL contract', () => {
     ).expect(200);
     expect(outsider.body.data.payments.pageInfo.total).toBe(1);
     expect(outsider.body.data.payments.nodes[0].amount).toBe('999.00');
+  });
+
+  it('returns period metadata and currency-safe authoritative totals', async () => {
+    const response = await overview(memberToken, organizationId).expect(200);
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data.paymentOverview).toMatchObject({
+      period: 'ALL_TIME',
+      timeZone: expect.any(String),
+      startAt: null,
+      currencies: [{
+        currency: 'USD',
+        failedAmount: '0.00',
+        failedCount: 0,
+        grossAmount: '10.50',
+        grossCount: 1,
+        inProgressAmount: '20.25',
+        inProgressCount: 1,
+        refundedAmount: '0.00',
+        refundedCount: 0,
+        netAmount: '10.50',
+      }],
+    });
+  });
+
+  it('returns zero-filled revenue buckets and reconciled payment methods', async () => {
+    const response = await revenueFlow(memberToken, organizationId).expect(200);
+    expect(response.body.errors).toBeUndefined();
+    const flow = response.body.data.revenueFlow;
+    expect(flow).toMatchObject({
+      period: 'ALL_TIME',
+      timeZone: expect.any(String),
+      bucketUnit: expect.any(String),
+      currencies: [{
+        currency: 'USD',
+        summary: {
+          bookedSales: '0.00',
+          bookedDeals: 0,
+          failedAmount: '0.00',
+          failedCount: 0,
+          grossReceived: '10.50',
+          settledPayments: 1,
+          inProgressAmount: '20.25',
+          inProgressCount: 1,
+          refunds: '0.00',
+          refundedPayments: 0,
+          netReceived: '10.50',
+        },
+        methods: [{
+          paymentMethod: 'CARD',
+          grossReceived: '10.50',
+          settledPayments: 1,
+          refunds: '0.00',
+          refundedPayments: 0,
+          netReceived: '10.50',
+        }],
+      }],
+    });
+    expect(flow.startAt).toEqual(expect.any(String));
+    expect(flow.endAt).toEqual(expect.any(String));
+    expect(flow.currencies[0].buckets.length).toBeGreaterThan(0);
+    expect(flow.currencies[0].buckets.reduce(
+      (total: number, bucket: { grossReceived: string }) => total + Number(bucket.grossReceived),
+      0,
+    )).toBe(10.5);
   });
 
   it('records standalone and linked payments with validation and CSRF', async () => {

@@ -1,15 +1,77 @@
-import type { Vault, VaultItem } from '@/types';
-import { runVaultZk } from './vaultZkClient';
-import { DEFAULT_VAULT_KDF } from './vaultZkCrypto';
+import type { Vault, VaultItem } from "@/types";
+import { runVaultZk } from "./vaultZkClient";
+import { DEFAULT_VAULT_KDF } from "./vaultZkCrypto";
 import {
   migrateVaultToV2ViaGraphql,
   rewrapVaultViaGraphql,
-} from '@/services/workspaceVaultGraphql';
+} from "@/services/workspaceVaultGraphql";
 
-export const isVaultZke = (vault: Pick<Vault, 'crypto_version'>): boolean =>
+let nextDraftVaultSessionId = -1;
+
+export type PreparedVaultSecurity = {
+  draftSessionId: number;
+  recoverySecret: string;
+  cryptoVersion: 2;
+  kdfSalt: string;
+  kdfMemoryKiB: number;
+  kdfIterations: number;
+  kdfParallelism: number;
+  wrappedVek: string;
+  wrappedVekRecovery: string;
+};
+
+export const prepareNewVaultSecurity = async (
+  password: string,
+): Promise<PreparedVaultSecurity> => {
+  const draftSessionId = nextDraftVaultSessionId;
+  nextDraftVaultSessionId -= 1;
+  const enrolled = await runVaultZk<{
+    kdf: {
+      salt: string;
+      memoryKiB: number;
+      iterations: number;
+      parallelism: number;
+    };
+    wrappedVek: string;
+    wrappedVekRecovery: string;
+    recoverySecret: string;
+  }>({
+    op: "sessionEnroll",
+    vaultId: draftSessionId,
+    password,
+    kdf: DEFAULT_VAULT_KDF,
+  });
+
+  return {
+    draftSessionId,
+    recoverySecret: enrolled.recoverySecret,
+    cryptoVersion: 2,
+    kdfSalt: enrolled.kdf.salt,
+    kdfMemoryKiB: enrolled.kdf.memoryKiB,
+    kdfIterations: enrolled.kdf.iterations,
+    kdfParallelism: enrolled.kdf.parallelism,
+    wrappedVek: enrolled.wrappedVek,
+    wrappedVekRecovery: enrolled.wrappedVekRecovery,
+  };
+};
+
+export const activatePreparedVaultSession = async (
+  draftSessionId: number,
+  vaultId: number,
+) =>
+  runVaultZk({
+    op: "sessionMove",
+    fromVaultId: draftSessionId,
+    toVaultId: vaultId,
+  });
+
+export const discardPreparedVaultSession = async (draftSessionId: number) =>
+  runVaultZk({ op: "sessionLock", vaultId: draftSessionId });
+
+export const isVaultZke = (vault: Pick<Vault, "crypto_version">): boolean =>
   (vault.crypto_version ?? 1) >= 2;
 
-const toPayload = (item: Pick<VaultItem, 'item_type' | 'label' | 'value'>) => ({
+const toPayload = (item: Pick<VaultItem, "item_type" | "label" | "value">) => ({
   item_type: item.item_type,
   label: item.label,
   value: item.value,
@@ -20,14 +82,16 @@ export const decryptZkeVaultItems = async (
 ): Promise<VaultItem[]> => {
   const source = vault.items ?? [];
   const blobs = source.map((item) => ({
-    ciphertext: item.ciphertext || '',
-    iv: item.iv || '',
+    ciphertext: item.ciphertext || "",
+    iv: item.iv || "",
   }));
   if (blobs.some((blob) => !blob.ciphertext || !blob.iv)) {
-    throw new Error('Vault ciphertext is incomplete');
+    throw new Error("Vault ciphertext is incomplete");
   }
-  const decrypted = await runVaultZk<Array<{ item_type: VaultItem['item_type']; label: string; value: string }>>({
-    op: 'sessionDecryptItems',
+  const decrypted = await runVaultZk<
+    Array<{ item_type: VaultItem["item_type"]; label: string; value: string }>
+  >({
+    op: "sessionDecryptItems",
     vaultId: vault.id,
     blobs,
   });
@@ -41,14 +105,14 @@ export const decryptZkeVaultItems = async (
 
 export const unlockZkeVault = async (vault: Vault, password: string) => {
   if (!vault.kdf || !vault.wrapped_vek) {
-    throw new Error('Vault is missing zero-knowledge metadata');
+    throw new Error("Vault is missing zero-knowledge metadata");
   }
   await runVaultZk({
-    op: 'sessionUnlock',
+    op: "sessionUnlock",
     vaultId: vault.id,
     password,
     kdf: {
-      algorithm: 'argon2id',
+      algorithm: "argon2id",
       salt: vault.kdf.salt,
       memoryKiB: vault.kdf.memoryKiB,
       iterations: vault.kdf.iterations,
@@ -76,13 +140,13 @@ export const enrollVaultToV2 = async (
     wrappedVekRecovery: string;
     recoverySecret: string;
   }>({
-    op: 'sessionEnroll',
+    op: "sessionEnroll",
     vaultId: vault.id,
     password,
     kdf: DEFAULT_VAULT_KDF,
   });
   const blobs = await runVaultZk<Array<{ ciphertext: string; iv: string }>>({
-    op: 'sessionEncryptItems',
+    op: "sessionEncryptItems",
     vaultId: vault.id,
     items: items.map(toPayload),
   });
@@ -108,10 +172,10 @@ export const enrollVaultToV2 = async (
 
 export const encryptZkeItem = async (
   vaultId: number,
-  item: { item_type: VaultItem['item_type']; label: string; value: string },
+  item: { item_type: VaultItem["item_type"]; label: string; value: string },
 ) => {
   const [blob] = await runVaultZk<Array<{ ciphertext: string; iv: string }>>({
-    op: 'sessionEncryptItems',
+    op: "sessionEncryptItems",
     vaultId,
     items: [toPayload(item)],
   });
@@ -119,17 +183,17 @@ export const encryptZkeItem = async (
 };
 
 export const rewrapZkeVault = async (vault: Vault, newPassword: string) => {
-  if (!vault.kdf) throw new Error('Vault is missing KDF parameters');
+  if (!vault.kdf) throw new Error("Vault is missing KDF parameters");
   const rewrapped = await runVaultZk<{
     wrappedVek: string;
     wrappedVekRecovery: string;
     recoverySecret: string;
   }>({
-    op: 'sessionRewrap',
+    op: "sessionRewrap",
     vaultId: vault.id,
     password: newPassword,
     kdf: {
-      algorithm: 'argon2id',
+      algorithm: "argon2id",
       salt: vault.kdf.salt,
       memoryKiB: vault.kdf.memoryKiB,
       iterations: vault.kdf.iterations,
@@ -144,7 +208,7 @@ export const rewrapZkeVault = async (vault: Vault, newPassword: string) => {
 };
 
 export const lockZkeSession = async (vaultId: number) => {
-  await runVaultZk({ op: 'sessionLock', vaultId });
+  await runVaultZk({ op: "sessionLock", vaultId });
 };
 
 export const encryptVaultShareSnapshot = async (
@@ -152,7 +216,7 @@ export const encryptVaultShareSnapshot = async (
   items: VaultItem[],
 ) =>
   runVaultZk<{ shareSecret: string; ciphertext: string; iv: string }>({
-    op: 'sessionEncryptShare',
+    op: "sessionEncryptShare",
     vaultId,
     items: items.map(toPayload),
   });

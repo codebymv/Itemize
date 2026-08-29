@@ -14,7 +14,10 @@ import {
 import { Badge, type BadgeProps } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { RefreshButton } from '@/components/ui/refresh-button';
+import {
+    HeaderRefreshAction,
+    type DesktopHeaderToolsProps,
+} from '@/components/layout/DesktopHeaderTools';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { ServiceMark, type ServiceMarkName } from '@/components/brand/ServiceMark';
 import {
@@ -190,7 +193,7 @@ function QueueDetailsPanel({
                 <div className="min-w-0">
                     <p className="font-medium">{queue.name} details</p>
                     <p className="text-xs text-muted-foreground">
-                        Oldest outstanding jobs first. Payloads and recipient data are hidden.
+                        Oldest jobs first. Payloads and recipients stay hidden.
                     </p>
                 </div>
                 {details && (
@@ -338,7 +341,15 @@ function QueueDetailsPanel({
     );
 }
 
-export default function OperationsSection() {
+interface OperationsSectionProps {
+    onDesktopToolsChange?: (tools?: DesktopHeaderToolsProps) => void;
+    onMobileActionsChange?: (actions?: React.ReactNode) => void;
+}
+
+export default function OperationsSection({
+    onDesktopToolsChange,
+    onMobileActionsChange,
+}: OperationsSectionProps) {
     const [snapshot, setSnapshot] = useState<adminApi.OperationsSnapshot | null>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -406,6 +417,34 @@ export default function OperationsSection() {
         void load();
     }, [load]);
 
+    useEffect(() => {
+        if (!onDesktopToolsChange) return;
+        onDesktopToolsChange({
+            secondaryAction: (
+                <HeaderRefreshAction
+                    prominence="secondary"
+                    refreshing={refreshing}
+                    onClick={() => void load(true)}
+                />
+            ),
+        });
+        return () => onDesktopToolsChange(undefined);
+    }, [load, onDesktopToolsChange, refreshing]);
+
+    useEffect(() => {
+        if (!onMobileActionsChange) return;
+        onMobileActionsChange(
+            <div className="flex w-full justify-end">
+                <HeaderRefreshAction
+                    prominence="secondary"
+                    refreshing={refreshing}
+                    onClick={() => void load(true)}
+                />
+            </div>,
+        );
+        return () => onMobileActionsChange(undefined);
+    }, [load, onMobileActionsChange, refreshing]);
+
     if (loading) {
         return (
             <div className="flex h-48 items-center justify-center" aria-label="Loading operations">
@@ -449,12 +488,9 @@ export default function OperationsSection() {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-muted-foreground">
-                    Last checked {new Date(snapshot.asOf).toLocaleString()}
-                </p>
-                <RefreshButton refreshing={refreshing} onClick={() => void load(true)} />
-            </div>
+            <p className="text-sm text-muted-foreground">
+                Last checked {new Date(snapshot.asOf).toLocaleString()}
+            </p>
 
             <ResponsiveCardRail
                 label="Operations summary"

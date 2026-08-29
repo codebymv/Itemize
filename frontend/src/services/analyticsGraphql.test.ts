@@ -21,6 +21,7 @@ const dashboard = {
     total: 2, active: 1,
     newThisMonth: 1, newThisWeek: 1,
     growth: [{ month: '2026-07-01T00:00:00.000Z', count: 1 }],
+    recentContacts: [{ id: 3, name: 'Ada Lovelace', email: 'ada@example.test' }],
   },
   deals: {
     total: 2, open: 1, won: 1, lost: 0,
@@ -61,6 +62,7 @@ describe('dashboard analytics GraphQL adapter', () => {
     await expect(getDashboardAnalyticsViaGraphql(4)).resolves.toMatchObject({
       asOf: dashboard.asOf,
       deals: { total: 2, open: 1, won: 1 },
+      contacts: { recentContacts: [{ id: '3', name: 'Ada Lovelace' }] },
       invoiceMetrics: { recentInvoices: [{ id: '12' }] },
       signatureMetrics: { recentDocuments: [{ id: '13' }] },
     });
@@ -68,6 +70,9 @@ describe('dashboard analytics GraphQL adapter', () => {
       expect.stringContaining('query DashboardAnalytics'),
       {},
       4,
+    );
+    expect(vi.mocked(graphqlRequest).mock.calls[0][0]).toContain(
+      'recentContacts { id name email }',
     );
   });
 

@@ -1,10 +1,15 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { RefreshButton } from '@/components/ui/refresh-button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { IconTabsList, IconTabsTrigger, Tabs } from '@/components/ui/tabs';
+import {
+    HeaderCombinedQuery,
+    HeaderFilters,
+    HeaderRefreshAction,
+    HeaderSearch,
+    type DesktopHeaderToolsProps,
+} from '@/components/layout/DesktopHeaderTools';
 import { useToast } from '@/hooks/use-toast';
 import { type Plan, PLAN_METADATA } from '@/lib/subscription';
 import { TemplateSelectorDialog, EmailComposeDialog, EmailTemplate } from '@/components/admin';
@@ -12,7 +17,6 @@ import {
     ShieldCheck,
     Users,
     Mail,
-    Search,
     Loader2,
     User as UserIcon,
     Zap,
@@ -24,7 +28,7 @@ import {
     Globe2
 } from 'lucide-react';
 import * as adminApi from '@/services/adminApi';
-import { EmailLogsView } from './EmailLogsView';
+import { EmailLogsView, type EmailLogsViewHandle } from './EmailLogsView';
 
 const PLAN_ICONS = {
     free: UserIcon,
@@ -35,10 +39,62 @@ const PLAN_ICONS = {
 
 const ITEMS_PER_PAGE = 50;
 
-export default function CommunicationsSection() {
+function PlanFilterControls({
+    planFilter,
+    onChange,
+    compact = false,
+}: {
+    planFilter: string | null;
+    onChange: (plan: string | null) => void;
+    compact?: boolean;
+}) {
+    return (
+        <div className={compact ? 'grid grid-cols-2 gap-2' : 'flex flex-wrap gap-2'}>
+            <Button
+                variant={planFilter === null ? 'default' : 'outline'}
+                onClick={() => onChange(null)}
+                className={`${compact ? 'col-span-2 w-full justify-start' : ''} ${planFilter === null
+                    ? 'h-11 bg-blue-600 hover:bg-blue-700'
+                    : 'h-11'}`}
+            >
+                <Globe2 className={`mr-1 h-4 w-4 ${planFilter === null ? 'text-white' : 'icon-accent'}`} />
+                All
+            </Button>
+            {Object.entries(PLAN_METADATA).map(([planId, planMeta]) => {
+                const PlanIcon = PLAN_ICONS[planId as Plan];
+                return (
+                    <Button
+                        key={planId}
+                        variant={planFilter === planId ? 'default' : 'outline'}
+                        onClick={() => onChange(planFilter === planId ? null : planId)}
+                        className={`${compact ? 'w-full justify-start' : ''} ${planFilter === planId
+                            ? 'h-11 bg-blue-600 hover:bg-blue-700'
+                            : 'h-11'}`}
+                    >
+                        <PlanIcon className={`mr-1 h-4 w-4 ${planFilter === planId ? 'text-white' : 'icon-accent'}`} />
+                        {planMeta.displayName}
+                    </Button>
+                );
+            })}
+        </div>
+    );
+}
+
+interface CommunicationsSectionProps {
+    onDesktopToolsChange?: (tools?: DesktopHeaderToolsProps) => void;
+    onMobileActionsChange?: (actions?: React.ReactNode) => void;
+}
+
+export default function CommunicationsSection({
+    onDesktopToolsChange,
+    onMobileActionsChange,
+}: CommunicationsSectionProps) {
     const { toast } = useToast();
-    
-    const [activeTab, setActiveTab] = useState<'users' | 'logs'>('users');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab: 'users' | 'logs' = searchParams.get('view') === 'email-logs' ? 'logs' : 'users';
+    const emailLogsRef = useRef<EmailLogsViewHandle>(null);
+    const [emailLogTotal, setEmailLogTotal] = useState(0);
+    const [emailLogsRefreshing, setEmailLogsRefreshing] = useState(false);
     const [planFilter, setPlanFilter] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [usersLoading, setUsersLoading] = useState(false);
@@ -58,6 +114,13 @@ export default function CommunicationsSection() {
     const [loadingRecipients, setLoadingRecipients] = useState(false);
     const [composeRecipients, setComposeRecipients] = useState<adminApi.AdminUser[]>([]);
     const isLoadingRef = useRef(false);
+
+    const handleTabChange = (value: string) => {
+        const next = new URLSearchParams(searchParams);
+        if (value === 'logs') next.set('view', 'email-logs');
+        else next.delete('view');
+        setSearchParams(next);
+    };
     
     useEffect(() => {
         const fetchCount = async () => {
@@ -71,10 +134,6 @@ export default function CommunicationsSection() {
         fetchCount();
     }, []);
 
-    useEffect(() => {
-        fetchUsers(0, false);
-    }, []);
-    
     const fetchUsers = useCallback(async (currentPage: number, append: boolean = false, isRefresh: boolean = false) => {
         if (isRefresh) {
             setRefreshing(true);
@@ -115,6 +174,7 @@ export default function CommunicationsSection() {
     useEffect(() => {
         if (isInitialMount.current) {
             isInitialMount.current = false;
+            void fetchUsers(0, false);
             return;
         }
 
@@ -239,175 +299,245 @@ export default function CommunicationsSection() {
 
     const showNoResultsState = !usersLoading && users.length === 0;
     const showResults = users.length > 0;
+    const resultCountLabel = (planFilter || searchQuery) && filteredTotal > 0
+        ? `${users.length} of ${filteredTotal} users`
+        : `${totalUsers} users`;
+
+    useEffect(() => {
+        if (!onDesktopToolsChange) return;
+        if (activeTab === 'logs') {
+            onDesktopToolsChange({
+                secondaryAction: (
+                    <HeaderRefreshAction
+                        prominence="secondary"
+                        onClick={() => emailLogsRef.current?.refresh()}
+                        refreshing={emailLogsRefreshing}
+                    />
+                ),
+            });
+            return () => onDesktopToolsChange(undefined);
+        }
+
+        onDesktopToolsChange({
+            search: (
+                <HeaderSearch
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    label="Search users"
+                    placeholder="Search users..."
+                />
+            ),
+            filters: (
+                <HeaderFilters
+                    label="Filter users by plan"
+                    activeCount={planFilter ? 1 : 0}
+                    compactChildren={(
+                        <PlanFilterControls compact planFilter={planFilter} onChange={setPlanFilter} />
+                    )}
+                >
+                    <PlanFilterControls planFilter={planFilter} onChange={setPlanFilter} />
+                </HeaderFilters>
+            ),
+            combinedQuery: (
+                <HeaderCombinedQuery
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    label="Search and filter users"
+                    placeholder="Search users..."
+                    activeCount={(searchQuery ? 1 : 0) + (planFilter ? 1 : 0)}
+                >
+                    <PlanFilterControls compact planFilter={planFilter} onChange={setPlanFilter} />
+                </HeaderCombinedQuery>
+            ),
+            secondaryAction: (
+                <HeaderRefreshAction
+                    prominence="secondary"
+                    onClick={() => void fetchUsers(0, false, true)}
+                    refreshing={refreshing}
+                />
+            ),
+        });
+
+        return () => onDesktopToolsChange(undefined);
+    }, [
+        activeTab,
+        emailLogsRefreshing,
+        fetchUsers,
+        onDesktopToolsChange,
+        planFilter,
+        refreshing,
+        searchQuery,
+    ]);
+
+    useEffect(() => {
+        if (!onMobileActionsChange) return;
+        if (activeTab === 'logs') {
+            onMobileActionsChange(
+                <div className="flex w-full items-center justify-end">
+                    <HeaderRefreshAction
+                        prominence="secondary"
+                        onClick={() => emailLogsRef.current?.refresh()}
+                        refreshing={emailLogsRefreshing}
+                    />
+                </div>,
+            );
+            return () => onMobileActionsChange(undefined);
+        }
+
+        onMobileActionsChange(
+            <div className="flex w-full items-center justify-end gap-2">
+                <HeaderCombinedQuery
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    label="Search and filter users"
+                    placeholder="Search users..."
+                    activeCount={(searchQuery ? 1 : 0) + (planFilter ? 1 : 0)}
+                >
+                    <PlanFilterControls compact planFilter={planFilter} onChange={setPlanFilter} />
+                </HeaderCombinedQuery>
+                <HeaderRefreshAction
+                    prominence="secondary"
+                    onClick={() => void fetchUsers(0, false, true)}
+                    refreshing={refreshing}
+                />
+            </div>,
+        );
+
+        return () => onMobileActionsChange(undefined);
+    }, [
+        activeTab,
+        emailLogsRefreshing,
+        fetchUsers,
+        onMobileActionsChange,
+        planFilter,
+        refreshing,
+        searchQuery,
+    ]);
 
     return (
-        <div className="space-y-6">
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'users' | 'logs')}>
-                <IconTabsList>
-                    <IconTabsTrigger value="users">
-                        <Users className="mr-2 h-4 w-4" />
-                        Users
-                    </IconTabsTrigger>
-                    <IconTabsTrigger value="logs">
-                        <Mail className="mr-2 h-4 w-4" />
-                        Email Logs
-                    </IconTabsTrigger>
-                </IconTabsList>
-            </Tabs>
-
-            {activeTab === 'users' && (
-                <>
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                                <div className="flex-1 max-w-md">
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                        <Input
-                                            placeholder="Search by name or email..."
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="pl-10"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-wrap gap-2">
-                                    <Button
-                                        variant={planFilter === null ? 'default' : 'outline'}
-                                        size="sm"
-                                        onClick={() => setPlanFilter(null)}
-                                        className={planFilter === null ? 'bg-blue-600 hover:bg-blue-700' : ''}
+        <div className="space-y-4" data-communications-section>
+            <div
+                className="flex flex-col gap-3 min-[1000px]:flex-row min-[1000px]:items-center min-[1000px]:justify-between"
+                data-communications-header
+            >
+                <Tabs value={activeTab} onValueChange={handleTabChange}>
+                    <IconTabsList>
+                        <IconTabsTrigger value="users">
+                            <Users className="mr-2 h-4 w-4" />
+                            Users
+                        </IconTabsTrigger>
+                        <IconTabsTrigger value="logs">
+                            <Mail className="mr-2 h-4 w-4" />
+                            Email Logs
+                        </IconTabsTrigger>
+                    </IconTabsList>
+                </Tabs>
+                <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 min-[1000px]:justify-end">
+                    <span className="whitespace-nowrap text-sm text-muted-foreground" data-communications-count>
+                        {activeTab === 'users'
+                            ? resultCountLabel
+                            : `${emailLogTotal} ${emailLogTotal === 1 ? 'email' : 'emails'} sent`}
+                    </span>
+                    {activeTab === 'users' && (totalUsers > 0 || filteredTotal > 0) && (
+                        <>
+                            {users.length > 0 && (
+                                <div className="flex min-h-11 items-center gap-2">
+                                    <button
+                                        type="button"
+                                        aria-label={`Select visible (${users.length})`}
+                                        aria-pressed={selectedUsers.size >= users.length && users.length > 0 && !allFilteredSelected}
+                                        onClick={handleSelectAllVisible}
+                                        disabled={loadingAllIds}
+                                        className="inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-muted disabled:opacity-50"
                                     >
-                                        <Globe2 className="h-3 w-3 mr-1" />
-                                        All
-                                    </Button>
-                                    {Object.entries(PLAN_METADATA).map(([planId, planMeta]) => {
-                                        const PlanIcon = PLAN_ICONS[planId as Plan];
-                                        return (
-                                            <Button
-                                                key={planId}
-                                                variant={planFilter === planId ? 'default' : 'outline'}
-                                                size="sm"
-                                                onClick={() => setPlanFilter(planFilter === planId ? null : planId)}
-                                                className={planFilter === planId ? 'bg-blue-600 hover:bg-blue-700' : ''}
-                                            >
-                                                <PlanIcon className="h-3 w-3 mr-1" />
-                                                {planMeta.displayName}
-                                            </Button>
-                                        );
-                                    })}
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm text-muted-foreground whitespace-nowrap">
-                                        {(planFilter || searchQuery) && filteredTotal > 0
-                                            ? `${users.length} of ${filteredTotal} users`
-                                            : `${totalUsers} users`
-                                        }
+                                        <span className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
+                                            selectedUsers.size >= users.length && users.length > 0 && !allFilteredSelected
+                                                ? 'border-blue-600 bg-blue-600'
+                                                : 'border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-800'
+                                        }`}>
+                                            {selectedUsers.size >= users.length && users.length > 0 && !allFilteredSelected && (
+                                                <Check className="h-3 w-3 text-white" />
+                                            )}
+                                        </span>
+                                    </button>
+                                    <span className="whitespace-nowrap text-sm text-muted-foreground">
+                                        Select visible ({users.length})
                                     </span>
-                                    <RefreshButton
-                                        onClick={() => fetchUsers(0, false, true)}
-                                        refreshing={refreshing}
-                                    />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardContent className="pt-6">
-                            {(totalUsers > 0 || filteredTotal > 0) && (
-                                <div className="flex items-center justify-between pb-3 mb-3 border-b">
-                                    <div className="flex items-center gap-4">
-                                        {users.length > 0 && (
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={handleSelectAllVisible}
-                                                    disabled={loadingAllIds}
-                                                    className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                                                        selectedUsers.size >= users.length && users.length > 0 && !allFilteredSelected
-                                                            ? 'bg-blue-600 border-blue-600'
-                                                            : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-slate-400 dark:hover:border-slate-500'
-                                                    }`}
-                                                >
-                                                    {selectedUsers.size >= users.length && users.length > 0 && !allFilteredSelected && (
-                                                        <Check className="h-3 w-3 text-white" />
-                                                    )}
-                                                </button>
-                                                <label className="text-sm text-muted-foreground cursor-pointer" onClick={handleSelectAllVisible}>
-                                                    Select visible ({users.length})
-                                                </label>
-                                            </div>
-                                        )}
-
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={handleSelectAllFiltered}
-                                                disabled={loadingAllIds}
-                                                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                                                    allFilteredSelected
-                                                        ? 'bg-blue-600 border-blue-600'
-                                                        : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:border-slate-400 dark:hover:border-slate-500'
-                                                }`}
-                                            >
-                                                {allFilteredSelected && <Check className="h-3 w-3 text-white" />}
-                                            </button>
-                                            <label
-                                                className={`text-sm cursor-pointer ${allFilteredSelected ? 'text-slate-700 dark:text-slate-200 font-medium' : 'text-muted-foreground'}`}
-                                                onClick={handleSelectAllFiltered}
-                                            >
-                                                {loadingAllIds ? (
-                                                    <span className="flex items-center gap-1">
-                                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                                        Loading...
-                                                    </span>
-                                                ) : (
-                                                    `Select all (${planFilter || searchQuery ? filteredTotal : totalUsers})`
-                                                )}
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    {selectedUsers.size > 0 && (
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm text-muted-foreground whitespace-nowrap">
-                                                {selectedUsers.size} selected{allFilteredSelected && ' (all)'}
-                                            </span>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={handleClearSelection}
-                                                disabled={loadingRecipients}
-                                                className="h-7 px-2 text-xs text-muted-foreground hover:text-slate-700 dark:hover:text-slate-200"
-                                            >
-                                                <X className="h-3 w-3 mr-1" />
-                                                Clear
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                onClick={handleOpenCompose}
-                                                disabled={loadingRecipients}
-                                                className="bg-blue-600 hover:bg-blue-700"
-                                            >
-                                                {loadingRecipients ? (
-                                                    <>
-                                                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                                                        Loading...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Send className="h-4 w-4 mr-1" />
-                                                        Email Selected
-                                                    </>
-                                                )}
-                                            </Button>
-                                        </div>
-                                    )}
                                 </div>
                             )}
 
-                            {usersLoading && page === 0 ? (
+                            <div className="flex min-h-11 items-center gap-2">
+                                <button
+                                    type="button"
+                                    aria-label={`Select all (${planFilter || searchQuery ? filteredTotal : totalUsers})`}
+                                    aria-pressed={allFilteredSelected}
+                                    onClick={handleSelectAllFiltered}
+                                    disabled={loadingAllIds}
+                                    className="inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-muted disabled:opacity-50"
+                                >
+                                    <span className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
+                                        allFilteredSelected
+                                            ? 'border-blue-600 bg-blue-600'
+                                            : 'border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-800'
+                                    }`}>
+                                        {allFilteredSelected && <Check className="h-3 w-3 text-white" />}
+                                    </span>
+                                </button>
+                                <span className={`whitespace-nowrap text-sm ${allFilteredSelected ? 'font-medium text-slate-700 dark:text-slate-200' : 'text-muted-foreground'}`}>
+                                    {loadingAllIds ? (
+                                        <span className="flex items-center gap-1">
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                            Loading...
+                                        </span>
+                                    ) : (
+                                        `Select all (${planFilter || searchQuery ? filteredTotal : totalUsers})`
+                                    )}
+                                </span>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+
+            {activeTab === 'users' && (
+                <>
+                    <div data-communications-content>
+                        {selectedUsers.size > 0 && (
+                            <div className="mb-3 flex flex-wrap items-center justify-end gap-2 border-b pb-3">
+                                <span className="whitespace-nowrap text-sm text-muted-foreground">
+                                    {selectedUsers.size} selected{allFilteredSelected && ' (all)'}
+                                </span>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleClearSelection}
+                                    disabled={loadingRecipients}
+                                    className="h-11 px-3 text-sm text-muted-foreground hover:text-slate-700 dark:hover:text-slate-200"
+                                >
+                                    <X className="mr-1 h-3 w-3" />
+                                    Clear
+                                </Button>
+                                <Button
+                                    onClick={handleOpenCompose}
+                                    disabled={loadingRecipients}
+                                    className="h-11 bg-blue-600 hover:bg-blue-700"
+                                >
+                                    {loadingRecipients ? (
+                                        <>
+                                            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                                            Loading...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Send className="mr-1 h-4 w-4" />
+                                            Email Selected
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
+                        )}
+
+                        {usersLoading && page === 0 ? (
                                 <div className="flex items-center justify-center h-64">
                                     <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                                 </div>
@@ -485,9 +615,8 @@ export default function CommunicationsSection() {
                                         </div>
                                     )}
                                 </div>
-                            ) : null}
-                        </CardContent>
-                    </Card>
+                        ) : null}
+                    </div>
 
                     <TemplateSelectorDialog
                         open={templateSelectorOpen}
@@ -515,7 +644,11 @@ export default function CommunicationsSection() {
             )}
 
             {activeTab === 'logs' && (
-                <EmailLogsView />
+                <EmailLogsView
+                    ref={emailLogsRef}
+                    onLoadingChange={setEmailLogsRefreshing}
+                    onTotalChange={setEmailLogTotal}
+                />
             )}
         </div>
     );

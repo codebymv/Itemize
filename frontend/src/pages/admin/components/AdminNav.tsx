@@ -1,8 +1,14 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { NavigationRow } from '@/components/ui/navigation-row';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+} from '@/components/ui/select';
 import { Activity, Mail, BarChart3, Zap } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 // Admin navigation items - Communications is now the default
 const adminNav = [
@@ -15,57 +21,74 @@ const adminNav = [
 export const AdminNav = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const activePath = location.pathname === '/admin/' ? '/admin' : location.pathname;
-
-    const mobileTabs = (
-        <Tabs value={activePath} onValueChange={(value) => navigate(value)} className="w-full md:hidden">
-            <TabsList className="grid w-full grid-cols-4 mb-4">
-                {adminNav.map((item) => (
-                    <TabsTrigger
-                        key={item.path}
-                        value={item.path}
-                        className="flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3"
-                    >
-                        <item.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-                        <span className="hidden sm:inline">{item.title}</span>
-                    </TabsTrigger>
-                ))}
-            </TabsList>
-        </Tabs>
-    );
-
-    const desktopNav = (
-        <nav aria-label="Admin sections" className="hidden md:flex flex-col gap-1">
+    return (
+        <nav aria-label="Admin sections" className="hidden flex-col gap-1 lg:flex">
             {adminNav.map((item) => {
                 const isActive = location.pathname === item.path ||
                     (item.path === '/admin' && location.pathname === '/admin/');
                 return (
-                    <Button
+                    <NavigationRow
                         key={item.path}
-                        variant={isActive ? 'secondary' : 'ghost'}
-                        className="group/item justify-start text-muted-foreground hover:text-foreground font-raleway"
+                        active={isActive}
+                        icon={item.icon}
+                        className="font-raleway"
                         onClick={() => navigate(item.path)}
                     >
-                        <item.icon
-                            className={`mr-2 h-4 w-4 transition-colors ${
-                                isActive
-                                    ? 'text-blue-600'
-                                    : 'text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600'
-                            }`}
-                        />
                         {item.title}
-                    </Button>
+                    </NavigationRow>
                 );
             })}
         </nav>
     );
+};
+
+export function AdminShellNavigation() {
+    const location = useLocation();
+    const navigate = useNavigate();
+    const activePath = location.pathname === '/admin/' ? '/admin' : location.pathname;
+    const activeItem = adminNav.find((item) => item.path === activePath) ?? adminNav[0];
+    const ActiveIcon = activeItem.icon;
 
     return (
-        <>
-            {mobileTabs}
-            {desktopNav}
-        </>
+        <div className="min-w-0">
+            <h1 className="sr-only">{activeItem.title.toUpperCase()}</h1>
+            <Select value={activeItem.path} onValueChange={(value) => navigate(value)}>
+                <SelectTrigger
+                    aria-label="Admin section"
+                    className="h-11 w-auto max-w-full gap-2 bg-background px-3 font-raleway [&>span]:!flex [&>span]:line-clamp-none"
+                >
+                    <span className="flex min-w-0 items-center gap-2 whitespace-nowrap">
+                        <ActiveIcon
+                            aria-hidden="true"
+                            className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400"
+                            data-admin-section-icon={activeItem.title}
+                        />
+                        <span className="text-lg font-semibold italic text-foreground">
+                            {activeItem.title.toUpperCase()}
+                        </span>
+                    </span>
+                </SelectTrigger>
+                <SelectContent align="start">
+                    {adminNav.map((item) => (
+                        <SelectItem key={item.path} value={item.path} className="py-2.5 pr-3">
+                            <span className="flex items-center gap-2">
+                                <item.icon
+                                    aria-hidden="true"
+                                    className={cn(
+                                        'h-4 w-4 shrink-0',
+                                        item.path === activeItem.path
+                                            ? 'text-blue-600 dark:text-blue-400'
+                                            : 'text-gray-600 dark:text-gray-400',
+                                    )}
+                                />
+                                <span>{item.title}</span>
+                            </span>
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
     );
-};
+}
 
 export default AdminNav;

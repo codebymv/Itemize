@@ -53,7 +53,7 @@ function RegisterForm() {
     if (!passwordValid) {
       toast({
         title: 'Weak password',
-        description: 'Password must be at least 8 characters with uppercase, lowercase, and number.',
+        description: 'Use 8+ characters with uppercase, lowercase, and a number.',
         variant: 'destructive',
       });
       return;
@@ -84,7 +84,7 @@ function RegisterForm() {
       if (error instanceof AuthError && error.code === 'GOOGLE_ACCOUNT_EXISTS') {
         toast({
           title: 'Google account exists',
-          description: 'This email is registered with Google. Please sign in with Google.',
+          description: 'Use Google to sign in to this account.',
           variant: 'destructive',
         });
         return;
@@ -141,7 +141,7 @@ function RegisterForm() {
               ? 'Use the invited email address to join your team workspace.'
               : isTrial
                 ? 'Explore the complete Solo toolkit. No credit card required.'
-                : 'Lists, notes, whiteboards, and canvas—free for as long as you need.'}
+                : 'Workspace tools, free for as long as you need.'}
           </CardDescription>
           {!invitationToken && (
             <p className="text-xs text-muted-foreground">

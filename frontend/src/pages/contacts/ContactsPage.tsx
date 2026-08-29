@@ -24,6 +24,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { PageLayout } from '@/components/layout/PageLayout';
+import {
+  HeaderActionLabel,
+  HeaderCombinedQuery,
+  HeaderFilters,
+  HeaderSearch,
+} from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
@@ -41,6 +47,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useOrganization } from '@/hooks/useOrganization';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const getApiStatus = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
@@ -229,12 +236,61 @@ export function ContactsPage() {
     navigate(`/contacts/${contact.id}`);
   };
 
+  const headerFilterCount = Number(statusFilter !== 'all');
+  const headerQueryCount = headerFilterCount + Number(searchQuery.trim().length > 0);
+  const headerFilters = (
+    <Select value={statusFilter} onValueChange={setStatusFilter}>
+      <SelectTrigger className="h-11 w-[8.5rem] bg-muted/20">
+        <SelectValue placeholder="Status" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">All Status</SelectItem>
+        <SelectItem value="active">Active</SelectItem>
+        <SelectItem value="inactive">Inactive</SelectItem>
+        <SelectItem value="archived">Archived</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+
+  const contactActions = (
+    <DropdownMenu>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              className="h-11 min-w-11 gap-2 px-3 font-light"
+              aria-label="Contact actions"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+              <HeaderActionLabel>More</HeaderActionLabel>
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Contact actions</TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => setShowImportModal(true)} className="group/menu">
+          <Upload className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+          Import CSV
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => organizationId && exportContactsCSV(organizationId)}
+          className="group/menu"
+        >
+          <Download className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+          Export CSV
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   // Show error state if initialization failed
   if (initError) {
     return (
       <PageLayout
         title="CONTACTS"
-        icon={<Users className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+        icon={<Users className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
       >
         <ErrorState
           title="CRM Not Ready"
@@ -249,58 +305,50 @@ export function ContactsPage() {
   return (
     <PageLayout
       title="CONTACTS"
-      icon={<Users className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      icon={<Users className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
       mobileClassName="flex-col items-stretch"
-      pageActions={
-        <>
-          <div className="relative w-full max-w-xs">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search contacts..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors font-raleway"
-              aria-label="Search contacts"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[130px] h-9 bg-muted/20 border-border/50">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="archived">Archived</SelectItem>
-            </SelectContent>
-          </Select>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-9 w-9">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowImportModal(true)} className="group/menu">
-                <Upload className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
-                Import CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => organizationId && exportContactsCSV(organizationId)} className="group/menu">
-                <Download className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
-                Export CSV
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
-            onClick={() => setShowCreateModal(true)}
+      desktopTools={{
+        search: (
+          <HeaderSearch
+            label="Search contacts"
+            placeholder="Search contacts..."
+            value={searchQuery}
+            onChange={setSearchQuery}
+          />
+        ),
+        filters: (
+          <HeaderFilters label="Filter contacts" activeCount={headerFilterCount} preferExpanded>
+            {headerFilters}
+          </HeaderFilters>
+        ),
+        combinedQuery: (
+          <HeaderCombinedQuery
+            label="Search and filter contacts"
+            placeholder="Search contacts..."
+            value={searchQuery}
+            onChange={setSearchQuery}
+            activeCount={headerQueryCount}
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Contact
-          </Button>
-        </>
-      }
+            {headerFilters}
+          </HeaderCombinedQuery>
+        ),
+        secondaryAction: contactActions,
+        primaryAction: (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                className="h-11 min-w-11 gap-2 bg-blue-600 px-3 font-light text-white hover:bg-blue-700"
+                onClick={() => setShowCreateModal(true)}
+                aria-label="Add contact"
+              >
+                <Plus className="h-4 w-4" />
+                <HeaderActionLabel>Add</HeaderActionLabel>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Add contact</TooltipContent>
+          </Tooltip>
+        ),
+      }}
       mobileActions={
         <>
           <div className="flex items-center gap-2 w-full">
@@ -341,11 +389,11 @@ export function ContactsPage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setShowImportModal(true)} className="group/menu">
-                  <Upload className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+                  <Upload className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
                   Import CSV
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => organizationId && exportContactsCSV(organizationId)} className="group/menu">
-                  <Download className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+                  <Download className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
                   Export CSV
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -364,6 +412,7 @@ export function ContactsPage() {
           <ResponsiveCardRail
             label="Contact status summary"
             desktopColumns="md:grid-cols-4"
+            className="responsive-stat-summary"
           >
             <StatCard
               title="Archived Contacts"

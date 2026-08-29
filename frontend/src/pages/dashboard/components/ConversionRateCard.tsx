@@ -40,7 +40,10 @@ return (
         <Card className="h-full">
             <CardContent className="pt-6 h-full flex flex-col justify-between">
                 <div className="flex items-center justify-between">
-                    <div className={`p-2 rounded-full bg-muted ${color}`}>
+                    <div
+                        className={`p-2 rounded-full bg-muted ${color}`}
+                        data-dashboard-analytics-icon
+                    >
                         <Icon className="h-5 w-5" />
                     </div>
                     <div className="text-right">

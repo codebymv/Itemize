@@ -2,6 +2,268 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Desktop shell tools respond to the space left after section identity and global chrome. */
+.desktop-header-tools {
+  container-name: desktop-header-tools;
+  container-type: inline-size;
+  display: none;
+  min-width: 0;
+  flex: 1 1 0%;
+}
+
+@media (min-width: 768px) {
+  .desktop-header-tools {
+    display: block;
+  }
+}
+
+.desktop-header-tools__lane,
+.desktop-header-tools__search,
+.desktop-header-tools__filters,
+.desktop-header-tools__secondary,
+.desktop-header-tools__primary,
+.desktop-header-search__compact,
+.desktop-header-filters__compact {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.desktop-header-tools__lane {
+  height: 100%;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  overflow: hidden;
+}
+
+.desktop-header-tools__combined-query,
+.desktop-header-search__full,
+.desktop-header-filters__full,
+.desktop-header-action-label {
+  display: none;
+}
+
+.desktop-header-filters__full {
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.desktop-header-filters__full > * {
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+.pipeline-selector__selected-default {
+  display: none;
+}
+
+@container desktop-header-tools (min-width: 900px) {
+  .pipeline-selector__trigger {
+    width: 14rem;
+  }
+
+  .pipeline-selector__selected-default {
+    display: inline-flex;
+  }
+}
+
+.desktop-header-tools button,
+.desktop-header-tools input,
+.desktop-header-tools [role='combobox'] {
+  min-height: 2.75rem;
+}
+
+.desktop-header-tools button {
+  min-width: 2.75rem;
+}
+
+.header-query-popover [role='combobox'] {
+  width: 100%;
+  min-height: 2.75rem;
+}
+
+@container desktop-header-tools (min-width: 300px) {
+  .desktop-header-tools__primary .desktop-header-action-label {
+    display: inline;
+  }
+}
+
+@container desktop-header-tools (min-width: 520px) {
+  .desktop-header-search__full,
+  .desktop-header-tools__secondary .desktop-header-action-label {
+    display: flex;
+  }
+
+  .desktop-header-search__compact {
+    display: none;
+  }
+}
+
+/* Surface the primary dataset control as soon as the compact lane can hold it. */
+@container desktop-header-tools (min-width: 380px) {
+  .desktop-header-filters__full--priority {
+    display: flex;
+  }
+
+  .desktop-header-filters__compact--priority {
+    display: none;
+  }
+}
+
+/* A second high-value control joins only after its label and trigger can fit. */
+@container desktop-header-tools (min-width: 480px) {
+  .desktop-header-filters__full--roomy {
+    display: flex;
+  }
+
+  .desktop-header-filters__compact--roomy {
+    display: none;
+  }
+}
+
+/* Keep search compact while a room-aware control is consuming the middle band. */
+@container desktop-header-tools (min-width: 520px) and (max-width: 699px) {
+  .desktop-header-tools__lane:has(.desktop-header-filters__full--roomy) .desktop-header-search__full {
+    display: none;
+  }
+
+  .desktop-header-tools__lane:has(.desktop-header-filters__full--roomy) .desktop-header-search__compact {
+    display: flex;
+  }
+}
+
+@container desktop-header-tools (min-width: 860px) {
+  .desktop-header-filters__full {
+    display: flex;
+  }
+
+  .desktop-header-filters__compact {
+    display: none;
+  }
+}
+
+@container desktop-header-tools (max-width: 199px) {
+  .desktop-header-tools__search,
+  .desktop-header-tools__filters {
+    display: none;
+  }
+
+  .desktop-header-tools__combined-query {
+    display: flex;
+  }
+}
+
+@container desktop-header-tools (max-width: 147px) {
+  .desktop-header-tools__secondary {
+    display: none;
+  }
+}
+
+@container desktop-header-tools (max-width: 95px) {
+  .desktop-header-tools__combined-query {
+    display: none;
+  }
+}
+
+/* Keep entity status summaries legible through the narrow desktop/tablet band. */
+@media (min-width: 768px) and (max-width: 1050px) {
+  .responsive-stat-summary [data-stat-card-icon] {
+    display: none;
+  }
+
+  .responsive-stat-summary [data-stat-card-row] {
+    justify-content: center;
+    gap: 0;
+  }
+
+  .responsive-stat-summary [data-stat-card-content] {
+    text-align: center;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 850px) {
+  .responsive-stat-summary [data-stat-card-value] {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+}
+
+/* Let dashboard summary copy breathe in the narrow tablet/desktop band. */
+@media (min-width: 780px) and (max-width: 1000px) {
+  .dashboard-stat-summary [data-stat-card-icon] {
+    display: none;
+  }
+
+  .dashboard-stat-summary [data-stat-card-row] {
+    justify-content: center;
+    gap: 0;
+  }
+
+  .dashboard-stat-summary [data-stat-card-content] {
+    text-align: center;
+  }
+
+}
+
+@media (min-width: 951px) and (max-width: 1000px) {
+  .dashboard-performance-analytics [data-dashboard-analytics-icon] {
+    display: none;
+  }
+}
+
+/* Preserve widget copy in the two widths where four-up and two-up cards are tightest. */
+@media (min-width: 760px) and (max-width: 868px),
+       (min-width: 1034px) and (max-width: 1200px) {
+  .dashboard-module-summaries [data-module-widget-icon] {
+    display: none;
+  }
+
+  .dashboard-module-summaries [data-module-widget-card-header] {
+    padding-inline: 1rem;
+  }
+
+  .dashboard-module-summaries [data-module-widget-header] {
+    gap: 0.25rem;
+  }
+
+  .dashboard-module-summaries [data-module-widget-actions] {
+    gap: 0;
+  }
+
+  .dashboard-module-summaries [data-module-widget-toggle] {
+    width: 1.75rem;
+  }
+
+  .dashboard-module-summaries [data-module-widget-action] {
+    padding-inline: 0.375rem;
+  }
+}
+
+@media (min-width: 760px) and (max-width: 868px) {
+  [data-dashboard-detail-action] {
+    flex-shrink: 0;
+    padding-inline: 0;
+    width: 2.5rem;
+  }
+
+  [data-dashboard-detail-action] [data-dashboard-detail-label] {
+    display: none;
+  }
+
+  [data-dashboard-detail-action] > svg {
+    margin-left: 0;
+  }
+
+  .dashboard-module-summaries [data-module-widget-secondary-stat] {
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 0.125rem;
+  }
+}
+
 @layer base {
   :root {
     --background: 220 13% 95%;
@@ -34,6 +296,7 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
+    --icon-accent: 221.2 83.2% 53.3%;
 
     --radius: 0.5rem;
 
@@ -88,6 +351,7 @@
     /* Lighter borders for better definition */
     --input: 217 20% 37%;
     --ring: 221.2 83.2% 53.3%;
+    --icon-accent: 213.1 93.9% 67.8%;
     --sidebar-background: 217 28% 22.5%;
     --sidebar-foreground: 215 13% 85%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -106,6 +370,26 @@
 }
 
 @layer utilities {
+  /*
+   * Informational icon accents use blue-600 on light surfaces and blue-400
+   * on dark surfaces. The SVG-only compatibility selectors standardize older
+   * call sites without changing adjacent heading, card, tab, or plan text.
+   */
+  .icon-accent,
+  svg.text-blue-600,
+  svg.text-primary,
+  .text-blue-600 > svg:not([class*='text-']),
+  .text-primary > svg:not([class*='text-']) {
+    color: hsl(var(--icon-accent));
+  }
+
+  /* Filled brand badges use the lighter dark-mode accent, never primary buttons. */
+  .dark [data-badge].bg-blue-600,
+  .dark [data-badge].bg-primary {
+    background-color: hsl(var(--icon-accent));
+    color: #172554;
+  }
+
   .font-raleway {
     font-family: "Raleway", sans-serif;
   }

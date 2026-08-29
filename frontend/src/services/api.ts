@@ -1,13 +1,13 @@
-import api from '../lib/api';
-import { logger } from '../lib/logger';
-import { MIN_LIST_WIDTH } from '../constants/dimensions';
-import type { JsonValue } from '@/types';
+import api from "../lib/api";
+import { logger } from "../lib/logger";
+import { MIN_LIST_WIDTH } from "../constants/dimensions";
+import type { JsonValue } from "@/types";
 import {
   createCategoryViaGraphql,
   deleteCategoryViaGraphql,
   getCategoriesViaGraphql,
   updateCategoryViaGraphql,
-} from './categoriesGraphql';
+} from "./categoriesGraphql";
 import {
   getCanvasListsViaGraphql,
   getWorkspaceListsViaGraphql,
@@ -15,27 +15,27 @@ import {
   getWorkspaceWhiteboardsViaGraphql,
   getWorkspaceWireframesViaGraphql,
   updateCanvasPositionsViaGraphql,
-} from './workspaceContentGraphql';
+} from "./workspaceContentGraphql";
 import {
   createWorkspaceNoteViaGraphql,
   deleteWorkspaceNoteViaGraphql,
   updateWorkspaceNoteViaGraphql,
-} from './workspaceNoteMutationsGraphql';
+} from "./workspaceNoteMutationsGraphql";
 import {
   createWorkspaceListViaGraphql,
   deleteWorkspaceListViaGraphql,
   updateWorkspaceListViaGraphql,
-} from './workspaceListMutationsGraphql';
+} from "./workspaceListMutationsGraphql";
 import {
   createWorkspaceWhiteboardViaGraphql,
   deleteWorkspaceWhiteboardViaGraphql,
   updateWorkspaceWhiteboardViaGraphql,
-} from './workspaceWhiteboardMutationsGraphql';
+} from "./workspaceWhiteboardMutationsGraphql";
 import {
   createWorkspaceWireframeViaGraphql,
   deleteWorkspaceWireframeViaGraphql,
   updateWorkspaceWireframeViaGraphql,
-} from './workspaceWireframeMutationsGraphql';
+} from "./workspaceWireframeMutationsGraphql";
 import {
   disableListSharingViaGraphql,
   disableNoteSharingViaGraphql,
@@ -43,10 +43,8 @@ import {
   enableListSharingViaGraphql,
   enableNoteSharingViaGraphql,
   enableWhiteboardSharingViaGraphql,
-} from './workspaceSharingMutationsGraphql';
-import {
-  rememberWorkspaceWhiteboardRevision,
-} from './workspaceWhiteboardRevision';
+} from "./workspaceSharingMutationsGraphql";
+import { rememberWorkspaceWhiteboardRevision } from "./workspaceWhiteboardRevision";
 import {
   addVaultItemsViaGraphql,
   addVaultItemViaGraphql,
@@ -62,7 +60,7 @@ import {
   setVaultPasswordViaGraphql,
   updateVaultItemViaGraphql,
   updateVaultViaGraphql,
-} from './workspaceVaultGraphql';
+} from "./workspaceVaultGraphql";
 
 // Types for API requests
 export interface CreateNotePayload {
@@ -78,7 +76,7 @@ export interface CreateNotePayload {
 }
 
 export type CanvasPositionUpdate = {
-  type: 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
+  type: "list" | "note" | "whiteboard" | "wireframe" | "vault";
   id: number | string;
   position_x: number;
   position_y: number;
@@ -190,25 +188,31 @@ const getAuthHeaders = (_token?: string) => ({});
 export const fetchCanvasLists = async (token?: string) => {
   void token;
   const responseData = await getCanvasListsViaGraphql();
-  
+
   // Transform backend response to match frontend List interface
-  const transformedLists = responseData.map((listFromBackend: BackendListResponse) => ({
-    id: listFromBackend.id,
-    title: listFromBackend.title,
-    type: listFromBackend.category || listFromBackend.type || 'General',
-    items: listFromBackend.items || [],
-    createdAt: listFromBackend.created_at ? new Date(listFromBackend.created_at) : undefined,
-    updated_at: listFromBackend.updated_at,
-    color_value: listFromBackend.color_value,
-    position_x: listFromBackend.position_x,
-    position_y: listFromBackend.position_y,
-    width: listFromBackend.width,
-    height: listFromBackend.height,
-    share_token: listFromBackend.share_token,
-    is_public: listFromBackend.is_public,
-    shared_at: listFromBackend.shared_at ? new Date(listFromBackend.shared_at).toISOString() : undefined
-  }));
-  
+  const transformedLists = responseData.map(
+    (listFromBackend: BackendListResponse) => ({
+      id: listFromBackend.id,
+      title: listFromBackend.title,
+      type: listFromBackend.category || listFromBackend.type || "General",
+      items: listFromBackend.items || [],
+      createdAt: listFromBackend.created_at
+        ? new Date(listFromBackend.created_at)
+        : undefined,
+      updated_at: listFromBackend.updated_at,
+      color_value: listFromBackend.color_value,
+      position_x: listFromBackend.position_x,
+      position_y: listFromBackend.position_y,
+      width: listFromBackend.width,
+      height: listFromBackend.height,
+      share_token: listFromBackend.share_token,
+      is_public: listFromBackend.is_public,
+      shared_at: listFromBackend.shared_at
+        ? new Date(listFromBackend.shared_at).toISOString()
+        : undefined,
+    }),
+  );
+
   return transformedLists;
 };
 
@@ -222,7 +226,7 @@ export const createList = async (listData: ListPayload, token?: string) => {
     void token;
     const response = await createWorkspaceListViaGraphql({
       ...listData,
-      width: MIN_LIST_WIDTH,
+      width: listData.width ?? MIN_LIST_WIDTH,
     });
     return {
       id: response.id,
@@ -236,21 +240,22 @@ export const createList = async (listData: ListPayload, token?: string) => {
       color_value: response.color_value,
       position_x: response.position_x,
       position_y: response.position_y,
-      width: MIN_LIST_WIDTH,
+      width: response.width ?? listData.width ?? MIN_LIST_WIDTH,
       height: response.height,
       share_token: response.share_token,
       is_public: response.is_public,
-      shared_at: response.shared_at
-        ? new Date(response.shared_at)
-        : undefined,
+      shared_at: response.shared_at ? new Date(response.shared_at) : undefined,
     };
   } catch (error) {
-    console.error('Failed to create list:', error);
+    console.error("Failed to create list:", error);
     throw error;
   }
 };
 
-export const updateList = async (listData: ListPayload & { id: string | number }, token?: string) => {
+export const updateList = async (
+  listData: ListPayload & { id: string | number },
+  token?: string,
+) => {
   void token;
   const response = await updateWorkspaceListViaGraphql(listData);
   return {
@@ -258,9 +263,7 @@ export const updateList = async (listData: ListPayload & { id: string | number }
     title: response.title,
     type: response.category,
     items: response.items,
-    createdAt: response.created_at
-      ? new Date(response.created_at)
-      : undefined,
+    createdAt: response.created_at ? new Date(response.created_at) : undefined,
     updated_at: response.updated_at,
     color_value: response.color_value,
     position_x: response.position_x,
@@ -269,9 +272,7 @@ export const updateList = async (listData: ListPayload & { id: string | number }
     height: response.height,
     share_token: response.share_token,
     is_public: response.is_public,
-    shared_at: response.shared_at
-      ? new Date(response.shared_at)
-      : undefined,
+    shared_at: response.shared_at ? new Date(response.shared_at) : undefined,
   };
 };
 
@@ -280,7 +281,10 @@ export const deleteList = async (listId: string, token?: string) => {
   return deleteWorkspaceListViaGraphql(listId);
 };
 
-export const updateCanvasPositions = async (updates: CanvasPositionUpdate[], token?: string) => {
+export const updateCanvasPositions = async (
+  updates: CanvasPositionUpdate[],
+  token?: string,
+) => {
   return updateCanvasPositionsViaGraphql(updates);
 };
 
@@ -290,28 +294,47 @@ export const getNotes = async (token?: string) => {
   return getWorkspaceNotesViaGraphql();
 };
 
-export const createNote = async (noteData: CreateNotePayload, token?: string) => {
+export const createNote = async (
+  noteData: CreateNotePayload,
+  token?: string,
+) => {
   void token;
   return createWorkspaceNoteViaGraphql(noteData);
 };
 
-export const updateNote = async (noteId: number, noteData: NotePayload, token?: string) => {
+export const updateNote = async (
+  noteId: number,
+  noteData: NotePayload,
+  token?: string,
+) => {
   void token;
   return updateWorkspaceNoteViaGraphql(noteId, noteData);
 };
 
 // Granular note update functions for real-time updates
-export const updateNoteContent = async (noteId: number, content: string, token?: string) => {
+export const updateNoteContent = async (
+  noteId: number,
+  content: string,
+  token?: string,
+) => {
   void token;
   return updateWorkspaceNoteViaGraphql(noteId, { content });
 };
 
-export const updateNoteTitle = async (noteId: number, title: string, token?: string) => {
+export const updateNoteTitle = async (
+  noteId: number,
+  title: string,
+  token?: string,
+) => {
   void token;
   return updateWorkspaceNoteViaGraphql(noteId, { title });
 };
 
-export const updateNoteCategory = async (noteId: number, category: string, token?: string) => {
+export const updateNoteCategory = async (
+  noteId: number,
+  category: string,
+  token?: string,
+) => {
   void token;
   return updateWorkspaceNoteViaGraphql(noteId, { category });
 };
@@ -337,21 +360,31 @@ export const getWhiteboards = async (token?: string) => {
   return data;
 };
 
-export const createWhiteboard = async (whiteboardData: CreateWhiteboardPayload, token?: string) => {
+export const createWhiteboard = async (
+  whiteboardData: CreateWhiteboardPayload,
+  token?: string,
+) => {
   void token;
   return createWorkspaceWhiteboardViaGraphql(whiteboardData);
 };
 
-export const updateWhiteboard = async (whiteboardId: number, whiteboardData: WhiteboardPayload, token?: string) => {
-  logger.log('Sending whiteboard update to backend:', { whiteboardId, whiteboardData });
-  void token;
-  return updateWorkspaceWhiteboardViaGraphql(
+export const updateWhiteboard = async (
+  whiteboardId: number,
+  whiteboardData: WhiteboardPayload,
+  token?: string,
+) => {
+  logger.log("Sending whiteboard update to backend:", {
     whiteboardId,
     whiteboardData,
-  );
+  });
+  void token;
+  return updateWorkspaceWhiteboardViaGraphql(whiteboardId, whiteboardData);
 };
 
-export const deleteWhiteboard = async (whiteboardId: number, token?: string) => {
+export const deleteWhiteboard = async (
+  whiteboardId: number,
+  token?: string,
+) => {
   void token;
   return deleteWorkspaceWhiteboardViaGraphql(whiteboardId);
 };
@@ -406,14 +439,24 @@ export const getWireframes = async (token?: string) => {
   return getWorkspaceWireframesViaGraphql();
 };
 
-export const createWireframe = async (wireframeData: CreateWireframePayload, token?: string) => {
+export const createWireframe = async (
+  wireframeData: CreateWireframePayload,
+  token?: string,
+) => {
   void token;
   return createWorkspaceWireframeViaGraphql(wireframeData);
 };
 
-export const updateWireframe = async (wireframeId: number, wireframeData: WireframePayload, token?: string) => {
+export const updateWireframe = async (
+  wireframeId: number,
+  wireframeData: WireframePayload,
+  token?: string,
+) => {
   void token;
-  logger.log('Sending wireframe update to backend:', { wireframeId, wireframeData });
+  logger.log("Sending wireframe update to backend:", {
+    wireframeId,
+    wireframeData,
+  });
   return updateWorkspaceWireframeViaGraphql(wireframeId, wireframeData);
 };
 
@@ -422,14 +465,21 @@ export const deleteWireframe = async (wireframeId: number, token?: string) => {
   return deleteWorkspaceWireframeViaGraphql(wireframeId);
 };
 
-export const updateWireframePosition = async (wireframeId: number, x: number, y: number, token?: string) => {
+export const updateWireframePosition = async (
+  wireframeId: number,
+  x: number,
+  y: number,
+  token?: string,
+) => {
   void token;
-  return updateCanvasPositionsViaGraphql([{
-    type: 'wireframe',
-    id: wireframeId,
-    position_x: x,
-    position_y: y,
-  }]);
+  return updateCanvasPositionsViaGraphql([
+    {
+      type: "wireframe",
+      id: wireframeId,
+      position_x: x,
+      position_y: y,
+    },
+  ]);
 };
 
 // Category API functions
@@ -438,12 +488,19 @@ export const getCategories = async (token?: string): Promise<Category[]> => {
   return getCategoriesViaGraphql();
 };
 
-export const createCategory = async (categoryData: CreateCategoryPayload, token?: string): Promise<Category> => {
+export const createCategory = async (
+  categoryData: CreateCategoryPayload,
+  token?: string,
+): Promise<Category> => {
   void token;
   return createCategoryViaGraphql(categoryData);
 };
 
-export const updateCategory = async (categoryId: number, categoryData: CreateCategoryPayload, token?: string): Promise<Category> => {
+export const updateCategory = async (
+  categoryId: number,
+  categoryData: CreateCategoryPayload,
+  token?: string,
+): Promise<Category> => {
   void token;
   return updateCategoryViaGraphql(categoryId, categoryData);
 };
@@ -467,6 +524,13 @@ export interface CreateVaultPayload {
   z_index?: number;
   color_value?: string;
   master_password?: string; // Optional - if provided, vault will be locked
+  crypto_version?: 2;
+  kdf_salt?: string;
+  kdf_memory_kib?: number;
+  kdf_iterations?: number;
+  kdf_parallelism?: number;
+  wrapped_vek?: string;
+  wrapped_vek_recovery?: string;
 }
 
 export interface VaultPayload {
@@ -481,7 +545,7 @@ export interface VaultPayload {
 }
 
 export interface VaultItemPayload {
-  item_type: 'key_value' | 'secure_note';
+  item_type: "key_value" | "secure_note";
   label: string;
   value: string;
   ciphertext?: string;
@@ -495,25 +559,41 @@ export const getVaults = async (token?: string) => {
 };
 
 // Get a single vault with decrypted items
-export const getVault = async (vaultId: number, masterPassword?: string, token?: string) => {
+export const getVault = async (
+  vaultId: number,
+  masterPassword?: string,
+  token?: string,
+) => {
   void token;
   return getVaultViaGraphql(vaultId, masterPassword);
 };
 
 // Create a new vault
-export const createVault = async (vaultData: CreateVaultPayload, token?: string) => {
+export const createVault = async (
+  vaultData: CreateVaultPayload,
+  token?: string,
+) => {
   void token;
   return createVaultViaGraphql(vaultData);
 };
 
 // Update a vault
-export const updateVault = async (vaultId: number, vaultData: VaultPayload, token?: string) => {
+export const updateVault = async (
+  vaultId: number,
+  vaultData: VaultPayload,
+  token?: string,
+) => {
   void token;
   return updateVaultViaGraphql(vaultId, vaultData);
 };
 
 // Update vault position
-export const updateVaultPosition = async (vaultId: number, x: number, y: number, token?: string) => {
+export const updateVaultPosition = async (
+  vaultId: number,
+  x: number,
+  y: number,
+  token?: string,
+) => {
   void token;
   return updateVaultViaGraphql(vaultId, { position_x: x, position_y: y });
 };
@@ -595,13 +675,22 @@ export const getSharedVault = async (shareToken: string) => {
 };
 
 // Lock vault with master password
-export const lockVault = async (vaultId: number, masterPassword: string, currentPassword?: string, token?: string) => {
+export const lockVault = async (
+  vaultId: number,
+  masterPassword: string,
+  currentPassword?: string,
+  token?: string,
+) => {
   void token;
   return setVaultPasswordViaGraphql(vaultId, masterPassword, currentPassword);
 };
 
 // Unlock vault (remove master password)
-export const unlockVault = async (vaultId: number, masterPassword: string, token?: string) => {
+export const unlockVault = async (
+  vaultId: number,
+  masterPassword: string,
+  token?: string,
+) => {
   void token;
   return removeVaultPasswordViaGraphql(vaultId, masterPassword);
 };
@@ -614,7 +703,7 @@ export const shareList = async (listId: string, _token?: string) => {
 // Unshare list
 export const unshareList = async (listId: string, _token?: string) => {
   await disableListSharingViaGraphql(Number(listId));
-  return { message: 'List sharing revoked successfully' };
+  return { message: "List sharing revoked successfully" };
 };
 
 // Share note
@@ -625,18 +714,24 @@ export const shareNote = async (noteId: number, _token?: string) => {
 // Unshare note
 export const unshareNote = async (noteId: number, _token?: string) => {
   await disableNoteSharingViaGraphql(noteId);
-  return { message: 'Note sharing revoked successfully' };
+  return { message: "Note sharing revoked successfully" };
 };
 
 // Share whiteboard
-export const shareWhiteboard = async (whiteboardId: number, _token?: string) => {
+export const shareWhiteboard = async (
+  whiteboardId: number,
+  _token?: string,
+) => {
   return enableWhiteboardSharingViaGraphql(whiteboardId);
 };
 
 // Unshare whiteboard
-export const unshareWhiteboard = async (whiteboardId: number, _token?: string) => {
+export const unshareWhiteboard = async (
+  whiteboardId: number,
+  _token?: string,
+) => {
   await disableWhiteboardSharingViaGraphql(whiteboardId);
-  return { message: 'Whiteboard sharing revoked successfully' };
+  return { message: "Whiteboard sharing revoked successfully" };
 };
 
 export default api;

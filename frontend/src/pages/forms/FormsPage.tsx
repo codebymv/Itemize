@@ -266,22 +266,22 @@ export function FormsPage() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                                                         <DropdownMenuItem onClick={() => navigate(`/forms/${form.id}`)} className="group/menu">
-                                                            <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Edit
+                                                            <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Edit
                                                         </DropdownMenuItem>
                                                         {form.status === 'published' ? (
                                                             <DropdownMenuItem onClick={() => handleToggleStatus(form, 'draft')} className="group/menu">
-                                                                <EyeOff className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Unpublish
+                                                                <EyeOff className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Unpublish
                                                             </DropdownMenuItem>
                                                         ) : (
                                                             <DropdownMenuItem onClick={() => handleToggleStatus(form, 'published')} className="group/menu">
-                                                                <Eye className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Publish
+                                                                <Eye className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Publish
                                                             </DropdownMenuItem>
                                                         )}
                                                         <DropdownMenuItem onClick={() => copyFormLink(form.public_id || form.slug)} className="group/menu">
-                                                            <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Copy Link
+                                                            <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Copy Link
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem onClick={() => handleDuplicate(form.id)} className="group/menu">
-                                                            <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Duplicate
+                                                            <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Duplicate
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
                                                         <DropdownMenuItem onClick={() => setFormToDelete(form)} className="text-destructive focus:text-destructive">

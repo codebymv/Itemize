@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
   Mail,
   Phone,
   Building2,
@@ -16,15 +15,20 @@ import {
   Receipt,
   FileSignature,
   Palette,
+  GitBranch,
+  ContactRound,
+  Footprints,
+  Network,
   ListChecks,
-  Plus,
   Users,
   AlertTriangle,
+  AlertCircle,
+  Archive,
+  CheckCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
@@ -48,6 +52,12 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { PageLayout } from '@/components/layout/PageLayout';
+import {
+  HeaderAction,
+  HeaderActionLabel,
+} from '@/components/layout/DesktopHeaderTools';
+import { ShellBackButton } from '@/components/layout/ShellBackButton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Contact, ContactActivity } from '@/types';
 import {
   getContact,
@@ -60,6 +70,60 @@ import { ActivityTimeline } from './components/ActivityTimeline';
 import { EditContactModal } from './components/EditContactModal';
 import { ComposeEmailModal } from './components/ComposeEmailModal';
 import { useOrganization } from '@/hooks/useOrganization';
+import { getContactStatusBadgeClass } from '@/lib/badge-utils';
+
+type RelatedContactItem = {
+  id: number;
+  title: string;
+  category: string;
+  created_at: string;
+};
+
+function RelatedContentGroup({
+  title,
+  icon,
+  items,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  items: RelatedContactItem[];
+}) {
+  return (
+    <section aria-labelledby={`related-${title.toLowerCase()}`}>
+      <div className="mb-1.5 flex items-center justify-between gap-3">
+        <h3
+          id={`related-${title.toLowerCase()}`}
+          className="flex items-center gap-2 text-sm font-medium"
+        >
+          {icon}
+          {title}
+        </h3>
+        <Badge variant="secondary" className="shrink-0">
+          {items.length}
+        </Badge>
+      </div>
+      {items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No linked {title.toLowerCase()}</p>
+      ) : (
+        <div className="space-y-2">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="flex min-w-0 items-center justify-between gap-3 rounded-md border p-3"
+            >
+              <span className="min-w-0 truncate text-sm">{item.title}</span>
+              {item.category && (
+                <Badge variant="outline" className="shrink-0 text-xs">
+                  {item.category}
+                </Badge>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
 
 export function ContactDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -69,10 +133,11 @@ export function ContactDetailPage() {
   const [contact, setContact] = useState<Contact | null>(null);
   const [activities, setActivities] = useState<ContactActivity[]>([]);
   const [relatedContent, setRelatedContent] = useState<{
-    lists: Array<{ id: number; title: string; category: string; created_at: string }>;
-    notes: Array<{ id: number; title: string; category: string; created_at: string }>;
-    whiteboards: Array<{ id: number; title: string; category: string; created_at: string }>;
-  }>({ lists: [], notes: [], whiteboards: [] });
+    lists: RelatedContactItem[];
+    notes: RelatedContactItem[];
+    whiteboards: RelatedContactItem[];
+    wireframes: RelatedContactItem[];
+  }>({ lists: [], notes: [], whiteboards: [], wireframes: [] });
   const [loading, setLoading] = useState(true);
   const { organizationId } = useOrganization();
   const [showEditModal, setShowEditModal] = useState(false);
@@ -81,7 +146,6 @@ export function ContactDetailPage() {
 
   const [addingNote, setAddingNote] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('activity');
 
   // Helper function for contact name (used in header)
   const getContactDisplayName = (c: Contact | null) => {
@@ -251,22 +315,66 @@ export function ContactDetailPage() {
     return parts.length > 0 ? parts.join(', ') : null;
   };
 
+  const getStatusLabel = (status: string) =>
+    status
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (character) => character.toUpperCase());
+
+  const getStatusIcon = (status: string) => {
+    const StatusIcon = status === 'active'
+      ? CheckCircle
+      : status === 'inactive'
+        ? AlertCircle
+        : status === 'archived'
+          ? Archive
+          : null;
+
+    return StatusIcon ? <StatusIcon className="h-3 w-3" aria-hidden="true" /> : null;
+  };
+
   const backButton = (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="h-9 w-9"
-      onClick={() => navigate('/contacts')}
-    >
-      <ArrowLeft className="h-4 w-4" />
-    </Button>
+    <ShellBackButton label="Back to contacts" onClick={() => navigate('/contacts')} />
+  );
+
+  const contactActions = (
+    <DropdownMenu>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              className="h-11 min-w-11 gap-2 px-3 font-light"
+              aria-label="Contact actions"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+              <HeaderActionLabel>More</HeaderActionLabel>
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Contact actions</TooltipContent>
+      </Tooltip>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => setShowEditModal(true)} className="group/menu">
+          <Edit className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+          Edit Contact
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="text-destructive focus:text-destructive"
+          onClick={() => setShowDeleteDialog(true)}
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          Delete Contact
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 
   if (loading) {
     return (
       <PageLayout
         title="CONTACT"
-        icon={<Users className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+        icon={<Users className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
         leading={backButton}
       >
         <div className="flex items-center gap-4 mb-6">
@@ -294,47 +402,18 @@ export function ContactDetailPage() {
   return (
     <PageLayout
       title="CONTACT"
-      icon={<Users className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      icon={<Users className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
       leading={backButton}
-      pageActions={
-        <>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="h-9">
-              <TabsTrigger value="activity" className="text-xs">Activity</TabsTrigger>
-              <TabsTrigger value="content" className="text-xs">Related Content</TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-9 w-9">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowEditModal(true)} className="group/menu">
-                <Edit className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
-                Edit Contact
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => setShowDeleteDialog(true)}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Contact
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
+      desktopTools={{
+        secondaryAction: contactActions,
+        primaryAction: (
+          <HeaderAction
+            label="Create estimate"
             onClick={handleCreateEstimate}
-          >
-            <FileText className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Create estimate</span>
-          </Button>
-        </>
-      }
+            icon={<FileText className="h-4 w-4" />}
+          />
+        ),
+      }}
       mobileActions={
         <>
           <Button
@@ -345,40 +424,38 @@ export function ContactDetailPage() {
             <FileText className="mr-2 h-4 w-4" />
             Create estimate
           </Button>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="w-full">
-              <TabsTrigger value="activity" className="flex-1">Activity</TabsTrigger>
-              <TabsTrigger value="content" className="flex-1">Related Content</TabsTrigger>
-            </TabsList>
-          </Tabs>
         </>
       }
     >
         {/* Contact profile card */}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="h-16 w-16 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-xl font-medium text-blue-700 dark:text-blue-300">
+      <div className="mb-6 flex items-start gap-4">
+        <div className="h-16 w-16 shrink-0 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-xl font-medium text-blue-700 dark:text-blue-300">
           {getInitials()}
         </div>
-        <div>
-          <h2 className="text-xl font-medium">{getContactName()}</h2>
-          {contact.job_title && contact.company && (
-            <p className="text-muted-foreground">
-              {contact.job_title} at {contact.company}
-            </p>
-          )}
-          <div className="flex items-center gap-2 mt-1">
-            <Badge
-              variant={contact.status === 'active' ? 'default' : 'secondary'}
-              className={contact.status === 'active' ? 'bg-green-500' : ''}
-            >
-              {contact.status}
-            </Badge>
-            {contact.tags.map((tag) => (
-              <Badge key={tag} variant="outline">
-                {tag}
-              </Badge>
-            ))}
+        <div className="min-w-0 flex-1 sm:flex sm:items-center sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <h2 className="text-xl font-medium">{getContactName()}</h2>
+            {contact.job_title && contact.company && (
+              <p className="text-muted-foreground">
+                {contact.job_title} at {contact.company}
+              </p>
+            )}
+            {contact.tags.length > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {contact.tags.map((tag) => (
+                  <Badge key={tag} variant="outline">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
+          <Badge
+            className={`mt-2 shrink-0 gap-1 sm:mt-0 ${getContactStatusBadgeClass(contact.status)}`}
+          >
+            {getStatusIcon(contact.status)}
+            {getStatusLabel(contact.status)}
+          </Badge>
         </div>
       </div>
 
@@ -389,15 +466,18 @@ export function ContactDetailPage() {
           {/* Contact info card */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Contact Information</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ContactRound className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                Contact Information
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {contact.email && (
                 <div className="flex items-center gap-3">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <Mail className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   <a
                     href={`mailto:${contact.email}`}
-                    className="text-blue-600 hover:underline"
+                    className="text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                   >
                     {contact.email}
                   </a>
@@ -405,10 +485,10 @@ export function ContactDetailPage() {
               )}
               {contact.phone && (
                 <div className="flex items-center gap-3">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <Phone className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   <a
                     href={`tel:${contact.phone}`}
-                    className="text-blue-600 hover:underline"
+                    className="text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                   >
                     {contact.phone}
                   </a>
@@ -435,136 +515,6 @@ export function ContactDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Activity tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsContent value="activity" className="mt-4">
-              {/* Add note form */}
-              <Card className="mb-4">
-                <CardContent className="pt-4">
-                  <Textarea
-                    placeholder="Add a note..."
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                    className="mb-2"
-                  />
-                  <Button
-                    size="sm"
-                    onClick={handleAddNote}
-                    disabled={!newNote.trim() || addingNote}
-                  >
-                    {addingNote ? 'Adding...' : 'Add Note'}
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Activity timeline */}
-              <ActivityTimeline activities={activities} />
-            </TabsContent>
-
-            <TabsContent value="content" className="mt-4 space-y-4">
-              {/* Lists */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <ListChecks className="h-4 w-4" />
-                      Lists
-                    </CardTitle>
-                    <Button variant="ghost" size="sm" disabled>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {relatedContent.lists.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No lists linked to this contact</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {relatedContent.lists.map((list) => (
-                        <div
-                          key={list.id}
-                          className="flex items-center justify-between p-2 rounded hover:bg-muted cursor-pointer"
-                        >
-                          <span className="text-sm">{list.title}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {list.category}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Notes */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Notes
-                    </CardTitle>
-                    <Button variant="ghost" size="sm" disabled>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {relatedContent.notes.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No notes linked to this contact</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {relatedContent.notes.map((note) => (
-                        <div
-                          key={note.id}
-                          className="flex items-center justify-between p-2 rounded hover:bg-muted cursor-pointer"
-                        >
-                          <span className="text-sm">{note.title}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {note.category}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Whiteboards */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Palette className="h-4 w-4" />
-                      Whiteboards
-                    </CardTitle>
-                    <Button variant="ghost" size="sm" disabled>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {relatedContent.whiteboards.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No whiteboards linked to this contact</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {relatedContent.whiteboards.map((wb) => (
-                        <div
-                          key={wb.id}
-                          className="flex items-center justify-between p-2 rounded hover:bg-muted cursor-pointer"
-                        >
-                          <span className="text-sm">{wb.title}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {wb.category}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
         </div>
 
         {/* Right column - Quick info */}
@@ -572,19 +522,26 @@ export function ContactDetailPage() {
           {/* Quick actions */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Quick Actions</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Footprints className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                Quick Actions
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="grid gap-2 lg:grid-cols-2">
               <Button
-                className="w-full justify-start"
+                size="sm"
+                className="min-w-0 justify-start overflow-hidden px-2 text-xs"
                 onClick={handleCreateEstimate}
+                aria-label="Create estimate"
               >
-                <FileText className="h-4 w-4 mr-2" />
-                Create Estimate
+                <FileText className="h-4 w-4" />
+                <span>Create estimate</span>
               </Button>
               <Button
                 variant="outline"
-                className="w-full justify-start"
+                size="sm"
+                className="min-w-0 justify-start overflow-hidden px-2 text-xs"
+                aria-label="Create invoice"
                 onClick={() => {
                   const params = new URLSearchParams({
                     contactId: String(contact.id),
@@ -594,12 +551,14 @@ export function ContactDetailPage() {
                   navigate(`/invoices/new?${params.toString()}`);
                 }}
               >
-                <Receipt className="h-4 w-4 mr-2" />
-                Create Invoice
+                <Receipt className="h-4 w-4" />
+                <span>New invoice</span>
               </Button>
               <Button
                 variant="outline"
-                className="w-full justify-start"
+                size="sm"
+                className="min-w-0 justify-start overflow-hidden px-2 text-xs"
+                aria-label="Send document"
                 onClick={() => {
                   const params = new URLSearchParams({
                     contactId: String(contact.id),
@@ -609,26 +568,43 @@ export function ContactDetailPage() {
                   navigate(`/documents/new?${params.toString()}`);
                 }}
               >
-                <FileSignature className="h-4 w-4 mr-2" />
-                Send Document
+                <FileSignature className="h-4 w-4" />
+                <span>Send doc</span>
               </Button>
               {contact.email && (
-                <Button variant="outline" className="w-full justify-start" onClick={() => setShowEmailModal(true)}>
-                  <Mail className="h-4 w-4 mr-2" />
-                  Send Email
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="min-w-0 justify-start overflow-hidden px-2 text-xs"
+                  onClick={() => setShowEmailModal(true)}
+                  aria-label="Send email"
+                >
+                  <Mail className="h-4 w-4" />
+                  <span>Email</span>
                 </Button>
               )}
               {contact.phone && (
-                <Button variant="outline" className="w-full justify-start" asChild>
-                  <a href={`tel:${contact.phone}`}>
-                    <Phone className="h-4 w-4 mr-2" />
-                    Call
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="min-w-0 justify-start overflow-hidden px-2 text-xs"
+                  asChild
+                >
+                  <a href={`tel:${contact.phone}`} aria-label="Call contact">
+                    <Phone className="h-4 w-4" />
+                    <span>Call</span>
                   </a>
                 </Button>
               )}
-              <Button variant="outline" className="w-full justify-start" disabled>
-                <CheckSquare className="h-4 w-4 mr-2" />
-                Create Task
+              <Button
+                variant="outline"
+                size="sm"
+                className="min-w-0 justify-start overflow-hidden px-2 text-xs"
+                disabled
+                aria-label="Create task"
+              >
+                <CheckSquare className="h-4 w-4" />
+                <span>New task</span>
               </Button>
             </CardContent>
           </Card>
@@ -667,6 +643,98 @@ export function ContactDetailPage() {
             </Card>
           )}
         </div>
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <Card className="flex min-h-0 flex-col lg:h-[22.5rem]">
+            <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                Activity
+              </CardTitle>
+              <Badge variant="secondary">{activities.length}</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="flex min-h-0 flex-1 flex-col">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <Textarea
+                placeholder="Add a note..."
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                className="min-w-0 flex-1"
+              />
+              <Button
+                size="sm"
+                className="w-full shrink-0 sm:w-auto"
+                onClick={handleAddNote}
+                disabled={!newNote.trim() || addingNote}
+              >
+                {addingNote ? 'Adding...' : 'Add note'}
+              </Button>
+            </div>
+            <Separator className="my-4" />
+            <div
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-2"
+              role="region"
+              aria-label="Contact activity"
+              tabIndex={0}
+            >
+              <ActivityTimeline activities={activities} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="flex min-h-0 flex-col lg:h-[22.5rem]">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Network className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                Related Content
+              </CardTitle>
+              <Badge variant="secondary">
+                {relatedContent.lists.length
+                  + relatedContent.notes.length
+                  + relatedContent.whiteboards.length
+                  + relatedContent.wireframes.length}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="min-h-0 flex-1">
+            <div
+              className="h-full overflow-y-auto overscroll-contain pr-2"
+              role="region"
+              aria-label="Related contact content"
+              tabIndex={0}
+            >
+              <div className="space-y-3">
+                <RelatedContentGroup
+                  title="Lists"
+                  icon={<ListChecks className="h-4 w-4 text-muted-foreground" />}
+                  items={relatedContent.lists}
+                />
+                <Separator />
+                <RelatedContentGroup
+                  title="Notes"
+                  icon={<FileText className="h-4 w-4 text-muted-foreground" />}
+                  items={relatedContent.notes}
+                />
+                <Separator />
+                <RelatedContentGroup
+                  title="Whiteboards"
+                  icon={<Palette className="h-4 w-4 text-muted-foreground" />}
+                  items={relatedContent.whiteboards}
+                />
+                <Separator />
+                <RelatedContentGroup
+                  title="Wireframes"
+                  icon={<GitBranch className="h-4 w-4 text-muted-foreground" />}
+                  items={relatedContent.wireframes}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Email modal */}

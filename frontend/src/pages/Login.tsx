@@ -78,7 +78,7 @@ function LoginForm() {
       if (error instanceof AuthError && error.code === 'GOOGLE_ACCOUNT') {
         toast({
           title: 'Google account',
-          description: 'This account uses Google sign-in. Please use the Google button below.',
+        description: 'Use Google to sign in to this account.',
           variant: 'destructive',
         });
         return;

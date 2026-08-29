@@ -52,7 +52,7 @@ export interface DashboardAnalytics {
         newThisMonth: number;
         newThisWeek: number;
         growth: ContactGrowth[];
-        recentContacts?: Array<{
+        recentContacts: Array<{
             id: string;
             name: string;
             email?: string;

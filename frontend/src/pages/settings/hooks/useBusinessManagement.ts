@@ -143,7 +143,7 @@ export const useBusinessManagement = (): UseBusinessManagementReturn => {
             }
             toast({
               title: 'Created',
-              description: 'Business created but logo upload failed. You can add a logo later.',
+              description: 'Business saved. Add the failed logo upload later.',
               variant: 'default'
             });
           } finally {

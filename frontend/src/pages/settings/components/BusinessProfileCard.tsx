@@ -68,7 +68,7 @@ export const BusinessProfileCard: React.FC<BusinessProfileCardProps> = ({
               <div>
                 <p className="text-sm font-medium text-foreground">Business profiles could not be loaded</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Your payment settings are still available. Retry before adding or editing a profile.
+                  Payment settings remain available. Retry before editing.
                 </p>
               </div>
             </div>

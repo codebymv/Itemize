@@ -129,7 +129,7 @@ export function CreateEmailTemplateModal({
             Create Email Template
           </DialogTitle>
           <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
-            Create a reusable email template for your campaigns and automations
+            Create a reusable campaign and automation template.
           </DialogDescription>
         </DialogHeader>
 

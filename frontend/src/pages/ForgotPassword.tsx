@@ -25,7 +25,7 @@ export default function ForgotPassword() {
       setSent(true);
       toast({
         title: 'Reset link sent',
-        description: 'If an account exists with this email, you will receive a password reset link.',
+        description: 'Check your inbox if this email is registered.',
       });
     } catch {
       // Always show success to prevent email enumeration
@@ -74,8 +74,7 @@ export default function ForgotPassword() {
                 {email}
               </p>
               <p className="text-sm text-muted-foreground">
-                You'll receive an email with a link to reset your password.
-                The link will expire in 1 hour.
+                Reset links expire after one hour.
               </p>
             </div>
           </CardContent>

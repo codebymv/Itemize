@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Calendar as CalendarIcon, Loader2, Plus, Save, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Loader2, Plus, Save, Trash2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { ShellBackButton } from '@/components/layout/ShellBackButton';
 import { ErrorState } from '@/components/ErrorState';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -278,16 +279,12 @@ export function CalendarSettingsPage() {
     };
 
     const backButton = (
-        <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Back to calendars"
+        <ShellBackButton
+            label="Back to calendars"
             onClick={() => {
                 if (confirmLeave()) navigate('/calendars');
             }}
-        >
-            <ArrowLeft className="h-4 w-4" />
-        </Button>
+        />
     );
 
     if (loading) {

@@ -73,7 +73,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   list: {
     icon: CheckSquare,
     typeLabel: 'List',
-    description: 'This will permanently delete the list and all its items. This action cannot be undone.',
+    description: 'Deletes this list and its items. Cannot be undone.',
     successTitle: 'List deleted',
     successDescription: 'The list has been permanently deleted.',
     errorDescription: 'Failed to delete the list. Please try again.',
@@ -81,7 +81,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   note: {
     icon: StickyNote,
     typeLabel: 'Note',
-    description: 'This will permanently delete the note and all its content. This action cannot be undone.',
+    description: 'Deletes this note and its content. Cannot be undone.',
     successTitle: 'Note deleted',
     successDescription: 'The note has been permanently deleted.',
     errorDescription: 'Failed to delete the note. Please try again.',
@@ -89,7 +89,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   whiteboard: {
     icon: Palette,
     typeLabel: 'Whiteboard',
-    description: 'This will permanently delete the whiteboard and all its content. This action cannot be undone.',
+    description: 'Deletes this whiteboard and its content. Cannot be undone.',
     successTitle: 'Whiteboard deleted',
     successDescription: 'The whiteboard has been permanently deleted.',
     errorDescription: 'Failed to delete the whiteboard. Please try again.',
@@ -97,7 +97,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   wireframe: {
     icon: GitBranch,
     typeLabel: 'Wireframe',
-    description: 'This will permanently delete the wireframe and all its diagram data. This action cannot be undone.',
+    description: 'Deletes this wireframe and diagram data. Cannot be undone.',
     successTitle: 'Wireframe deleted',
     successDescription: 'The wireframe has been permanently deleted.',
     errorDescription: 'Failed to delete the wireframe. Please try again.',
@@ -105,7 +105,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   vault: {
     icon: KeyRound,
     typeLabel: 'Vault',
-    description: 'This will permanently delete the vault and all its encrypted contents. This action cannot be undone.',
+    description: 'Deletes this vault and encrypted contents. Cannot be undone.',
     successTitle: 'Vault deleted',
     successDescription: 'The vault and all its contents have been permanently deleted.',
     errorDescription: 'Failed to delete the vault. Please try again.',
@@ -113,7 +113,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   contact: {
     icon: Users,
     typeLabel: 'Contact',
-    description: 'This will permanently delete the contact and all associated data. This action cannot be undone.',
+    description: 'Deletes this contact and related data. Cannot be undone.',
     successTitle: 'Contact deleted',
     successDescription: 'The contact has been permanently deleted.',
     errorDescription: 'Failed to delete the contact. Please try again.',
@@ -121,7 +121,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   deal: {
     icon: Receipt,
     typeLabel: 'Deal',
-    description: 'This will permanently delete the deal. This action cannot be undone.',
+    description: 'Deletes this deal. Cannot be undone.',
     successTitle: 'Deal deleted',
     successDescription: 'The deal has been permanently deleted.',
     errorDescription: 'Failed to delete the deal. Please try again.',
@@ -129,7 +129,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   template: {
     icon: FileText,
     typeLabel: 'Template',
-    description: 'This will permanently delete the template. This action cannot be undone.',
+    description: 'Deletes this template. Cannot be undone.',
     successTitle: 'Template deleted',
     successDescription: 'The template has been permanently deleted.',
     errorDescription: 'Failed to delete the template. Please try again.',
@@ -137,7 +137,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   'email-template': {
     icon: Mail,
     typeLabel: 'Email Template',
-    description: 'This will permanently delete the email template. This action cannot be undone.',
+    description: 'Deletes this email template. Cannot be undone.',
     successTitle: 'Email template deleted',
     successDescription: 'The email template has been permanently deleted.',
     errorDescription: 'Failed to delete the email template. Please try again.',
@@ -145,7 +145,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   'sms-template': {
     icon: MessageSquare,
     typeLabel: 'SMS Template',
-    description: 'This will permanently delete the SMS template. This action cannot be undone.',
+    description: 'Deletes this SMS template. Cannot be undone.',
     successTitle: 'SMS template deleted',
     successDescription: 'The SMS template has been permanently deleted.',
     errorDescription: 'Failed to delete the SMS template. Please try again.',
@@ -153,7 +153,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   calendar: {
     icon: Calendar,
     typeLabel: 'Calendar',
-    description: 'This will permanently delete the calendar and all its events. This action cannot be undone.',
+    description: 'Deletes this calendar and its events. Cannot be undone.',
     successTitle: 'Calendar deleted',
     successDescription: 'The calendar has been permanently deleted.',
     errorDescription: 'Failed to delete the calendar. Please try again.',
@@ -161,7 +161,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   page: {
     icon: Layout,
     typeLabel: 'Page',
-    description: 'This will permanently delete the page. This action cannot be undone.',
+    description: 'Deletes this page. Cannot be undone.',
     successTitle: 'Page deleted',
     successDescription: 'The page has been permanently deleted.',
     errorDescription: 'Failed to delete the page. Please try again.',
@@ -169,7 +169,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   version: {
     icon: Clock,
     typeLabel: 'Version',
-    description: 'This will permanently delete this version. This action cannot be undone.',
+    description: 'Deletes this version. Cannot be undone.',
     successTitle: 'Version deleted',
     successDescription: 'The version has been permanently deleted.',
     errorDescription: 'Failed to delete the version. Please try again.',
@@ -177,7 +177,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   widget: {
     icon: Layout,
     typeLabel: 'Widget',
-    description: 'This will permanently delete the widget. This action cannot be undone.',
+    description: 'Deletes this widget. Cannot be undone.',
     successTitle: 'Widget deleted',
     successDescription: 'The widget has been permanently deleted.',
     errorDescription: 'Failed to delete the widget. Please try again.',
@@ -185,7 +185,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   'review-request': {
     icon: Star,
     typeLabel: 'Review Request',
-    description: 'This will permanently delete the review request. This action cannot be undone.',
+    description: 'Deletes this review request. Cannot be undone.',
     successTitle: 'Review request deleted',
     successDescription: 'The review request has been permanently deleted.',
     errorDescription: 'Failed to delete the review request. Please try again.',
@@ -193,7 +193,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   product: {
     icon: Package,
     typeLabel: 'Product',
-    description: 'This will permanently delete the product. This action cannot be undone.',
+    description: 'Deletes this product. Cannot be undone.',
     successTitle: 'Product deleted',
     successDescription: 'The product has been permanently deleted.',
     errorDescription: 'Failed to delete the product. Please try again.',
@@ -201,7 +201,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   invoice: {
     icon: Receipt,
     typeLabel: 'Invoice',
-    description: 'This will permanently delete the invoice. This action cannot be undone.',
+    description: 'Deletes this invoice. Cannot be undone.',
     successTitle: 'Invoice deleted',
     successDescription: 'The invoice has been permanently deleted.',
     errorDescription: 'Failed to delete the invoice. Please try again.',
@@ -209,7 +209,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   estimate: {
     icon: FileText,
     typeLabel: 'Estimate',
-    description: 'This will permanently delete the estimate. This action cannot be undone.',
+    description: 'Deletes this estimate. Cannot be undone.',
     successTitle: 'Estimate deleted',
     successDescription: 'The estimate has been permanently deleted.',
     errorDescription: 'Failed to delete the estimate. Please try again.',
@@ -217,7 +217,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   document: {
     icon: FileText,
     typeLabel: 'Document',
-    description: 'This will permanently delete the document. This action cannot be undone.',
+    description: 'Deletes this document. Cannot be undone.',
     successTitle: 'Document deleted',
     successDescription: 'The document has been permanently deleted.',
     errorDescription: 'Failed to delete the document. Please try again.',
@@ -225,7 +225,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   campaign: {
     icon: Mail,
     typeLabel: 'Campaign',
-    description: 'This will permanently delete the campaign. This action cannot be undone.',
+    description: 'Deletes this campaign. Cannot be undone.',
     successTitle: 'Campaign deleted',
     successDescription: 'The campaign has been permanently deleted.',
     errorDescription: 'Failed to delete the campaign. Please try again.',
@@ -233,7 +233,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   segment: {
     icon: Users,
     typeLabel: 'Segment',
-    description: 'This will permanently delete the segment. This action cannot be undone.',
+    description: 'Deletes this segment. Cannot be undone.',
     successTitle: 'Segment deleted',
     successDescription: 'The segment has been permanently deleted.',
     errorDescription: 'Failed to delete the segment. Please try again.',
@@ -241,7 +241,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   form: {
     icon: FileText,
     typeLabel: 'Form',
-    description: 'This will permanently delete the form. This action cannot be undone.',
+    description: 'Deletes this form. Cannot be undone.',
     successTitle: 'Form deleted',
     successDescription: 'The form has been permanently deleted.',
     errorDescription: 'Failed to delete the form. Please try again.',
@@ -249,7 +249,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   workflow: {
     icon: Zap,
     typeLabel: 'Workflow',
-    description: 'This will permanently delete the workflow and stop any future runs. This action cannot be undone.',
+    description: 'Deletes this workflow and stops future runs. Cannot be undone.',
     successTitle: 'Workflow deleted',
     successDescription: 'The workflow has been permanently deleted.',
     errorDescription: 'Failed to delete the workflow. Please try again.',
@@ -257,7 +257,7 @@ const ITEM_CONFIGS: Record<PredefinedItemType, ItemConfig> = {
   generic: {
     icon: Trash2,
     typeLabel: 'Item',
-    description: 'This will permanently delete this item. This action cannot be undone.',
+    description: 'Deletes this item. Cannot be undone.',
     successTitle: 'Item deleted',
     successDescription: 'The item has been permanently deleted.',
     errorDescription: 'Failed to delete the item. Please try again.',

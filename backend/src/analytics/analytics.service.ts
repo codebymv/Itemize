@@ -49,6 +49,18 @@ export class AnalyticsService {
           month: this.date(row.month, 'contacts.growth.month').toISOString(),
           count: this.count(row.count, 'contacts.growth.count'),
         })),
+        recentContacts: snapshot.recentContacts.map((row) => {
+          const email = this.optionalString(row.email);
+          const name = [
+            this.optionalString(row.first_name),
+            this.optionalString(row.last_name),
+          ].filter(Boolean).join(' ');
+          return {
+            id: this.id(row.id, 'contacts.recentContacts.id'),
+            name: name || email || 'Unnamed Contact',
+            email,
+          };
+        }),
       },
       deals: {
         total: this.count(snapshot.deals.total, 'deals.total'),

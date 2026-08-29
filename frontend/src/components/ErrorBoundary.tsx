@@ -94,8 +94,7 @@ class ErrorBoundary extends Component<Props, State> {
                 Something went wrong
               </h1>
               <p className="text-muted-foreground">
-                We're sorry, but something unexpected happened. Please try refreshing
-                the page or return to the home page.
+                Something went wrong. Refresh or return home.
               </p>
             </div>
 

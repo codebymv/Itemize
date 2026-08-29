@@ -152,11 +152,11 @@ export const ListCardHeader: React.FC<ListCardHeaderProps> = ({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => setIsEditing(true)} className="group/menu font-raleway">
-                    <Edit3 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
+                    <Edit3 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
                     Edit Title
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleShareList} className="group/menu font-raleway">
-                    <Share2 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
+                    <Share2 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
                     Share
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleDeleteList} className="text-destructive focus:text-destructive">

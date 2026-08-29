@@ -7,6 +7,7 @@
 import { Check, Loader2, Zap, Crown, Building2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { 
     Plan, 
@@ -200,46 +201,25 @@ export function PricingCards({
             {/* Billing Period Toggle */}
             {showYearlyToggle && onBillingPeriodChange && (
                 <div className="flex justify-center">
-                    <div
-                        role="tablist"
-                        aria-label="Billing period"
-                        className="inline-flex items-center rounded-lg border border-border bg-muted p-1"
+                    <Tabs
+                        value={billingPeriod}
+                        onValueChange={(value) => onBillingPeriodChange(value as 'monthly' | 'yearly')}
                     >
-                        <button
-                            type="button"
-                            role="tab"
-                            aria-selected={billingPeriod === 'monthly'}
-                            onClick={() => onBillingPeriodChange('monthly')}
-                            className={cn(
-                                'px-4 py-1.5 rounded-md text-sm font-medium transition-colors',
-                                billingPeriod === 'monthly'
-                                    ? 'bg-background text-foreground shadow-sm border border-border'
-                                    : 'text-muted-foreground hover:text-foreground',
-                            )}
-                        >
-                            Monthly
-                        </button>
-                        <button
-                            type="button"
-                            role="tab"
-                            aria-selected={billingPeriod === 'yearly'}
-                            onClick={() => onBillingPeriodChange('yearly')}
-                            className={cn(
-                                'px-4 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-2',
-                                billingPeriod === 'yearly'
-                                    ? 'bg-background text-foreground shadow-sm border border-border'
-                                    : 'text-muted-foreground hover:text-foreground',
-                            )}
-                        >
-                            Yearly
-                            <Badge
-                                variant="secondary"
-                                className="bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400"
-                            >
-                                Save 17%
-                            </Badge>
-                        </button>
-                    </div>
+                        <TabsList aria-label="Billing period">
+                            <TabsTrigger value="monthly" className="px-4">
+                                Monthly
+                            </TabsTrigger>
+                            <TabsTrigger value="yearly" className="gap-2 px-4">
+                                Yearly
+                                <Badge
+                                    variant="secondary"
+                                    className="bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400"
+                                >
+                                    Save 17%
+                                </Badge>
+                            </TabsTrigger>
+                        </TabsList>
+                    </Tabs>
                 </div>
             )}
 

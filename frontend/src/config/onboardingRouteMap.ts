@@ -15,7 +15,7 @@ const SIDEBAR_GROUPS: Record<string, { onboardingKey: string; routes: string[] }
   },
   salesPayments: {
     onboardingKey: 'invoices',
-    routes: ['/invoices', '/estimates', '/recurring-invoices', '/invoices/payments', '/products'],
+    routes: ['/invoices', '/invoices/recurring', '/recurring-invoices', '/estimates', '/invoices/payments', '/products'],
   },
   campaigns: {
     onboardingKey: 'campaigns',
@@ -49,7 +49,7 @@ const DIRECT_ROUTE_MAP: Record<string, string> = {
 /**
  * Get the onboarding key for a given route path
  * 
- * @param pathname - The current route pathname (e.g., '/recurring-invoices')
+ * @param pathname - The current route pathname (e.g., '/invoices/recurring')
  * @returns The onboarding feature key to use, or null if no onboarding exists
  */
 export function getOnboardingKeyForRoute(pathname: string): string | null {

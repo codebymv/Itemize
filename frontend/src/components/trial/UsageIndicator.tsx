@@ -17,6 +17,7 @@ export interface UsageIndicatorProps {
   label: string;
   icon?: ReactNode;
   className?: string;
+  showAvailabilityHint?: boolean;
 }
 
 type UsageState =
@@ -45,6 +46,7 @@ export function UsageIndicator({
   label,
   icon,
   className,
+  showAvailabilityHint = true,
 }: UsageIndicatorProps) {
   const isUnlimited = limit === -1;
   const isUnavailable = limit === 0;
@@ -100,7 +102,7 @@ export function UsageIndicator({
         </div>
       </div>
 
-      {isUnavailable ? (
+      {isUnavailable && showAvailabilityHint ? (
         <p className="text-xs text-muted-foreground">
           {resourceType === "apiCalls"
             ? "Available on Studio"
@@ -110,7 +112,7 @@ export function UsageIndicator({
         <p className="text-xs text-muted-foreground">
           No monthly cap on this plan
         </p>
-      ) : (
+      ) : !isUnavailable ? (
         <>
           <Progress
             value={Math.min(Math.max(percentage, 0), 100)}
@@ -120,7 +122,7 @@ export function UsageIndicator({
           />
           <p className="text-xs text-muted-foreground">{percentage}% used</p>
         </>
-      )}
+      ) : null}
     </div>
   );
 }

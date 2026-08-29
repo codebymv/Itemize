@@ -4,19 +4,24 @@ import {
     Plus,
     Search,
     FileText,
-    MoreHorizontal,
+    MoreVertical,
     Trash2,
     Send,
     ArrowRight,
-    Clock,
-    CheckCircle,
-    XCircle,
-    AlertCircle,
     Pencil,
+    ChevronDown,
+    Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -24,9 +29,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { getStatusBadgeClass } from '@/lib/badge-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -34,11 +37,17 @@ import {
     convertEstimateToInvoice,
     deleteEstimate,
     Estimate,
+    getEstimate,
     getEstimates,
     sendEstimate,
 } from '@/services/estimatesApi';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { PageToolbar } from '@/components/layout/PageToolbar';
+import {
+    HeaderAction,
+    HeaderCombinedQuery,
+    HeaderFilters,
+    HeaderSearch,
+} from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
@@ -47,7 +56,33 @@ import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { formatDateOnly } from './utils/invoiceFormatters';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { InvoicePreviewCard } from './components/InvoicePreviewCard';
+import { cn } from '@/lib/utils';
+import { getEstimateStatusVisual } from './constants/estimateConstants';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const getWholeDaysSince = (value: string): number => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 0;
+
+    const now = new Date();
+    const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+    const then = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+
+    return Math.max(0, Math.round((today - then) / DAY_MS));
+};
+
+const getEffectiveEstimateStatus = (estimate: Estimate): Estimate['status'] => {
+    if (
+        estimate.status === 'sent'
+        && new Date(`${estimate.valid_until.split('T')[0]}T23:59:59`).getTime() < Date.now()
+    ) {
+        return 'expired';
+    }
+
+    return estimate.status;
+};
 
 export function EstimatesPage() {
     const navigate = useNavigate();
@@ -72,6 +107,9 @@ export function EstimatesPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<string>('all');
     const [estimateToDelete, setEstimateToDelete] = useState<Estimate | null>(null);
+    const [expandedEstimateId, setExpandedEstimateId] = useState<number | null>(null);
+    const [expandedEstimateData, setExpandedEstimateData] = useState<Estimate | null>(null);
+    const [loadingPreview, setLoadingPreview] = useState(false);
 
     useEffect(() => {
         if (!organizationId) {
@@ -131,6 +169,32 @@ export function EstimatesPage() {
         }
     };
 
+    const handleToggleExpand = async (estimateId: number, event?: React.MouseEvent) => {
+        event?.stopPropagation();
+
+        if (expandedEstimateId === estimateId) {
+            setExpandedEstimateId(null);
+            setExpandedEstimateData(null);
+            return;
+        }
+
+        setExpandedEstimateId(estimateId);
+        setExpandedEstimateData(null);
+        setLoadingPreview(true);
+        try {
+            const estimate = await getEstimate(estimateId, organizationId || undefined);
+            setExpandedEstimateData(estimate);
+        } catch {
+            toast({
+                title: 'Unable to load preview',
+                description: 'The estimate is still available from the Edit action.',
+                variant: 'destructive',
+            });
+        } finally {
+            setLoadingPreview(false);
+        }
+    };
+
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
             style: 'currency',
@@ -147,11 +211,19 @@ export function EstimatesPage() {
     };
 
     const stats = useMemo(() => {
+        const summarize = (status: Estimate['status']) => {
+            const matches = estimates.filter(estimate => getEffectiveEstimateStatus(estimate) === status);
+            return {
+                total: matches.reduce((sum, estimate) => sum + (estimate.total || 0), 0),
+                count: matches.length,
+            };
+        };
+
         return {
-            draft: estimates.filter(e => e.status === 'draft').length,
-            sent: estimates.filter(e => e.status === 'sent').length,
-            accepted: estimates.filter(e => e.status === 'accepted').length,
-            declined: estimates.filter(e => e.status === 'declined').length,
+            expired: summarize('expired'),
+            draft: summarize('draft'),
+            sent: summarize('sent'),
+            accepted: summarize('accepted'),
         };
     }, [estimates]);
 
@@ -160,13 +232,19 @@ export function EstimatesPage() {
 
         switch (activeTab) {
             case 'draft':
-                filtered = filtered.filter(e => e.status === 'draft');
+                filtered = filtered.filter(e => getEffectiveEstimateStatus(e) === 'draft');
                 break;
             case 'sent':
-                filtered = filtered.filter(e => e.status === 'sent');
+                filtered = filtered.filter(e => getEffectiveEstimateStatus(e) === 'sent');
                 break;
             case 'accepted':
-                filtered = filtered.filter(e => e.status === 'accepted');
+                filtered = filtered.filter(e => getEffectiveEstimateStatus(e) === 'accepted');
+                break;
+            case 'declined':
+                filtered = filtered.filter(e => getEffectiveEstimateStatus(e) === 'declined');
+                break;
+            case 'expired':
+                filtered = filtered.filter(e => getEffectiveEstimateStatus(e) === 'expired');
                 break;
         }
 
@@ -181,37 +259,62 @@ export function EstimatesPage() {
         return filtered;
     }, [estimates, activeTab, searchQuery]);
 
-    const getStatusIcon = (status: string) => {
-        switch (status) {
-            case 'accepted': return <CheckCircle className="h-4 w-4 text-green-600" />;
-            case 'declined': return <XCircle className="h-4 w-4 text-red-600" />;
-            case 'sent': return <Send className="h-4 w-4 text-orange-600" />;
-            case 'expired': return <AlertCircle className="h-4 w-4 text-orange-600" />;
-            case 'draft': return <Clock className="h-4 w-4 text-sky-600" />;
-            default: return <Clock className="h-4 w-4 text-gray-400" />;
-        }
-    };
+    const headerFilterCount = Number(activeTab !== 'all');
+    const headerQueryCount = headerFilterCount + Number(searchQuery.trim().length > 0);
+    const headerFilters = (
+        <Select value={activeTab} onValueChange={setActiveTab}>
+            <SelectTrigger className="h-11 w-[8.5rem] bg-muted/20">
+                <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="all">All Estimates</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="sent">Sent</SelectItem>
+                <SelectItem value="accepted">Accepted</SelectItem>
+                <SelectItem value="declined">Declined</SelectItem>
+                <SelectItem value="expired">Expired</SelectItem>
+            </SelectContent>
+        </Select>
+    );
 
     return (
         <PageLayout
             title="ESTIMATES"
-            icon={<FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            icon={<FileText className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
             mobileClassName="flex-col items-stretch"
-            pageActions={
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                    <Button
-                        size="icon"
-                        aria-label="New estimate"
-                        className="h-9 w-9 bg-blue-600 text-white hover:bg-blue-700"
-                        onClick={() => navigate('/estimates/new')}
+            desktopTools={{
+                search: (
+                    <HeaderSearch
+                        label="Search estimates"
+                        placeholder="Search estimates..."
+                        value={searchQuery}
+                        onChange={setSearchQuery}
+                    />
+                ),
+                filters: (
+                    <HeaderFilters label="Filter estimates" activeCount={headerFilterCount} preferExpanded>
+                        {headerFilters}
+                    </HeaderFilters>
+                ),
+                combinedQuery: (
+                    <HeaderCombinedQuery
+                        label="Search and filter estimates"
+                        placeholder="Search estimates..."
+                        value={searchQuery}
+                        onChange={setSearchQuery}
+                        activeCount={headerQueryCount}
                     >
-                        <Plus className="h-4 w-4" />
-                    </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>New estimate</TooltipContent>
-                </Tooltip>
-            }
+                        {headerFilters}
+                    </HeaderCombinedQuery>
+                ),
+                primaryAction: (
+                    <HeaderAction
+                        label="Create estimate"
+                        icon={<Plus className="h-4 w-4" />}
+                        onClick={() => navigate('/estimates/new')}
+                    />
+                ),
+            }}
             mobileActions={
                 <>
                 <div className="flex items-center gap-2 w-full">
@@ -226,103 +329,69 @@ export function EstimatesPage() {
                     </div>
                     <Button
                         size="sm"
+                        aria-label="Create estimate"
                         className="bg-blue-600 hover:bg-blue-700 text-white font-light"
                         onClick={() => navigate('/estimates/new')}
                     >
                         <Plus className="h-4 w-4" />
                     </Button>
                 </div>
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="w-full h-9">
-                        <TabsTrigger value="all" className="flex-1 text-xs">
-                            All
-                            <Badge variant="secondary" className="ml-1">{estimates.length}</Badge>
-                        </TabsTrigger>
-                        <TabsTrigger value="draft" className="flex-1 text-xs">Draft</TabsTrigger>
-                        <TabsTrigger value="sent" className="flex-1 text-xs">Sent</TabsTrigger>
-                        <TabsTrigger value="accepted" className="flex-1 text-xs">Accepted</TabsTrigger>
-                    </TabsList>
-                </Tabs>
+                <Select value={activeTab} onValueChange={setActiveTab}>
+                    <SelectTrigger className="h-9 w-full">
+                        <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Estimates</SelectItem>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="sent">Sent</SelectItem>
+                        <SelectItem value="accepted">Accepted</SelectItem>
+                        <SelectItem value="declined">Declined</SelectItem>
+                        <SelectItem value="expired">Expired</SelectItem>
+                    </SelectContent>
+                </Select>
                 </>
             }
         >
-            <PageToolbar
-                label="Estimate controls"
-                className="mb-6 hidden md:flex"
-                search={
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                            aria-label="Search estimates"
-                            placeholder="Search estimates..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="h-9 bg-muted/20 pl-10"
-                        />
-                    </div>
-                }
-                filters={
-                    <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="h-9">
-                            <TabsTrigger value="all" className="text-xs">
-                                All
-                                <Badge variant="secondary" className="ml-2">{estimates.length}</Badge>
-                            </TabsTrigger>
-                            <TabsTrigger value="draft" className="text-xs">
-                                Draft
-                                <Badge variant="secondary" className="ml-2">{stats.draft}</Badge>
-                            </TabsTrigger>
-                            <TabsTrigger value="sent" className="text-xs">
-                                Sent
-                                <Badge variant="secondary" className="ml-2">{stats.sent}</Badge>
-                            </TabsTrigger>
-                            <TabsTrigger value="accepted" className="text-xs">
-                                Accepted
-                                <Badge variant="secondary" className="ml-2">{stats.accepted}</Badge>
-                            </TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-                }
-            />
                 {/* Summary Cards */}
             <ResponsiveCardRail
                 label="Estimate status summary"
                 desktopColumns="md:grid-cols-4"
+                className="responsive-stat-summary"
             >
                 <StatCard
-                    title="Declined"
-                    badgeText="Declined"
-                    value={stats.declined}
-                    icon={XCircle}
-                    description={`${stats.declined} estimate${stats.declined !== 1 ? 's' : ''}`}
-                    colorTheme="red"
+                    title="Expired"
+                    badgeText="Expired"
+                    value={formatCurrency(stats.expired.total)}
+                    icon={getEstimateStatusVisual('expired').icon}
+                    description={`${stats.expired.count} estimate${stats.expired.count !== 1 ? 's' : ''}`}
+                    colorTheme={getEstimateStatusVisual('expired').theme}
                     isLoading={loading}
                 />
                 <StatCard
                     title="Draft"
                     badgeText="Draft"
-                    value={stats.draft}
-                    icon={Clock}
-                    description={`${stats.draft} estimate${stats.draft !== 1 ? 's' : ''}`}
-                    colorTheme="gray"
+                    value={formatCurrency(stats.draft.total)}
+                    icon={getEstimateStatusVisual('draft').icon}
+                    description={`${stats.draft.count} estimate${stats.draft.count !== 1 ? 's' : ''}`}
+                    colorTheme={getEstimateStatusVisual('draft').theme}
                     isLoading={loading}
                 />
                 <StatCard
                     title="Sent"
                     badgeText="Sent"
-                    value={stats.sent}
-                    icon={Send}
-                    description={`${stats.sent} estimate${stats.sent !== 1 ? 's' : ''}`}
-                    colorTheme="orange"
+                    value={formatCurrency(stats.sent.total)}
+                    icon={getEstimateStatusVisual('sent').icon}
+                    description={`${stats.sent.count} estimate${stats.sent.count !== 1 ? 's' : ''}`}
+                    colorTheme={getEstimateStatusVisual('sent').theme}
                     isLoading={loading}
                 />
                 <StatCard
                     title="Accepted"
                     badgeText="Accepted"
-                    value={stats.accepted}
-                    icon={CheckCircle}
-                    description={`${stats.accepted} estimate${stats.accepted !== 1 ? 's' : ''}`}
-                    colorTheme="green"
+                    value={formatCurrency(stats.accepted.total)}
+                    icon={getEstimateStatusVisual('accepted').icon}
+                    description={`${stats.accepted.count} estimate${stats.accepted.count !== 1 ? 's' : ''}`}
+                    colorTheme={getEstimateStatusVisual('accepted').theme}
                     isLoading={loading}
                 />
             </ResponsiveCardRail>
@@ -339,88 +408,186 @@ export function EstimatesPage() {
                             icon={FileText}
                             title="No estimates yet"
                             description="Create estimates to send quotes to your customers"
-                            actionLabel="Create Estimate"
+                            actionLabel="Create estimate"
                             onAction={() => navigate('/estimates/new')}
                             className="p-12"
                         />
                     ) : (
                         <div className="divide-y">
-                            {filteredEstimates.map((estimate) => (
-                                <div
-                                    key={estimate.id}
-                                    className="p-4 hover:bg-muted/50 transition-colors cursor-pointer"
-                                    onClick={() => navigate(`/estimates/${estimate.id}`)}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                                            <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                                                {getStatusIcon(estimate.status)}
-                                            </div>
-                                            <p className="font-medium text-sm md:text-base truncate">{estimate.estimate_number}</p>
-                                        </div>
-                                        <div className="flex items-center gap-2 flex-shrink-0">
-                                            <div className="text-right hidden sm:block">
-                                                <p className="font-semibold text-sm md:text-base">{formatCurrency(estimate.total)}</p>
-                                            </div>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                                                    <DropdownMenuItem onClick={() => navigate(`/estimates/${estimate.id}`)} className="group/menu">
-                                                        <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Edit
-                                                    </DropdownMenuItem>
-                                                    {estimate.status === 'draft' && (
-                                                        <DropdownMenuItem onClick={() => handleSendEstimate(estimate.id)} className="group/menu">
-                                                            <Send className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Send
-                                                        </DropdownMenuItem>
-                                                    )}
-                                                    {['sent', 'accepted'].includes(estimate.status) && !estimate.converted_invoice_id && (
-                                                        <DropdownMenuItem onClick={() => handleConvertToInvoice(estimate.id)} className="group/menu">
-                                                            <ArrowRight className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Convert to Invoice
-                                                        </DropdownMenuItem>
-                                                    )}
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        onClick={() => setEstimateToDelete(estimate)}
-                                                        className="text-destructive focus:text-destructive"
+                            {filteredEstimates.map((estimate) => {
+                                const isExpanded = expandedEstimateId === estimate.id;
+                                const effectiveStatus = getEffectiveEstimateStatus(estimate);
+                                const statusVisual = getEstimateStatusVisual(effectiveStatus);
+                                const StatusIcon = statusVisual.icon;
+
+                                return (
+                                    <div key={estimate.id}>
+                                        <div
+                                            className="group cursor-pointer p-4 transition-colors hover:bg-muted/50"
+                                            onClick={(event) => handleToggleExpand(estimate.id, event)}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex min-w-0 flex-1 items-center gap-2">
+                                                    <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full md:h-10 md:w-10 ${statusVisual.iconBackgroundClass}`}>
+                                                        <StatusIcon className={`h-4 w-4 ${statusVisual.iconClass}`} aria-hidden="true" />
+                                                    </div>
+                                                    <p className="truncate text-sm font-medium md:text-base">{estimate.estimate_number}</p>
+                                                </div>
+
+                                                <div className="flex flex-shrink-0 items-center gap-2">
+                                                    <div className="hidden lg:block">
+                                                        <Badge className={`pointer-events-none cursor-default text-xs ${statusVisual.badgeClass}`}>
+                                                            {statusVisual.label}
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="hidden text-right sm:block">
+                                                        <p className="text-sm font-semibold md:text-base">{formatCurrency(estimate.total)}</p>
+                                                    </div>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 w-8 p-0"
+                                                        aria-label={isExpanded ? 'Collapse estimate preview' : 'Expand estimate preview'}
+                                                        onClick={(event) => handleToggleExpand(estimate.id, event)}
                                                     >
-                                                        <Trash2 className="h-4 w-4 mr-2" />Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                                        <ChevronDown className={cn(
+                                                            'h-4 w-4 transition-transform',
+                                                            isExpanded ? '' : 'rotate-180',
+                                                        )} />
+                                                    </Button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild onClick={(event) => event.stopPropagation()}>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Estimate actions">
+                                                                <MoreVertical className="h-4 w-4" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
+                                                            <DropdownMenuItem onClick={() => navigate(`/estimates/${estimate.id}`)} className="group/menu">
+                                                                <Pencil className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Edit
+                                                            </DropdownMenuItem>
+                                                            {estimate.status === 'draft' && (
+                                                                <DropdownMenuItem onClick={() => handleSendEstimate(estimate.id)} className="group/menu">
+                                                                    <Send className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Send
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            {['sent', 'accepted'].includes(estimate.status) && !estimate.converted_invoice_id && (
+                                                                <DropdownMenuItem onClick={() => handleConvertToInvoice(estimate.id)} className="group/menu">
+                                                                    <ArrowRight className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Convert to Invoice
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                onClick={() => setEstimateToDelete(estimate)}
+                                                                className="text-destructive focus:text-destructive"
+                                                            >
+                                                                <Trash2 className="mr-2 h-4 w-4" />Delete
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-6">
+                                                <span className="text-sm font-medium text-muted-foreground">{getContactName(estimate)}</span>
+                                                <span className="lg:hidden">
+                                                    <Badge className={`pointer-events-none cursor-default text-xs ${statusVisual.badgeClass}`}>
+                                                        {statusVisual.label}
+                                                    </Badge>
+                                                </span>
+                                                {estimate.converted_invoice_id && (
+                                                    <Badge variant="outline" className="text-xs">Converted</Badge>
+                                                )}
+                                                <span className="text-xs text-muted-foreground">
+                                                    Valid until {formatDateOnly(estimate.valid_until)}
+                                                </span>
+                                            </div>
+
+                                            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 px-6 text-xs text-muted-foreground">
+                                                <span className="font-semibold md:hidden">{formatCurrency(estimate.total)}</span>
+                                                {effectiveStatus === 'expired' && (
+                                                    <span className="font-medium text-red-600 dark:text-red-400">
+                                                        {getWholeDaysSince(estimate.valid_until)}d expired
+                                                    </span>
+                                                )}
+                                                {effectiveStatus === 'accepted' && estimate.accepted_at && (
+                                                    <span className="font-medium text-green-600 dark:text-green-400">
+                                                        Accepted {getWholeDaysSince(estimate.accepted_at)}d ago
+                                                    </span>
+                                                )}
+                                                {effectiveStatus === 'declined' && estimate.declined_at && (
+                                                    <span className="font-medium text-red-600 dark:text-red-400">
+                                                        Declined {getWholeDaysSince(estimate.declined_at)}d ago
+                                                    </span>
+                                                )}
+                                                {effectiveStatus === 'sent' && estimate.viewed_at && (
+                                                    <span className="font-medium text-orange-600 dark:text-orange-400">
+                                                        Viewed {getWholeDaysSince(estimate.viewed_at)}d ago
+                                                    </span>
+                                                )}
+                                                {effectiveStatus === 'sent' && !estimate.viewed_at && estimate.sent_at && (
+                                                    <span className="font-medium text-orange-600 dark:text-orange-400">
+                                                        Sent {getWholeDaysSince(estimate.sent_at)}d ago
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
+
+                                        {isExpanded && (
+                                            <div className="border-t bg-muted/30 px-6 py-6">
+                                                {loadingPreview ? (
+                                                    <div className="flex items-center justify-center py-12">
+                                                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                                        <span className="ml-2 text-muted-foreground">Loading preview...</span>
+                                                    </div>
+                                                ) : expandedEstimateData ? (
+                                                    <div className="mx-auto max-w-3xl">
+                                                        <InvoicePreviewCard
+                                                            variant="estimate"
+                                                            documentNumber={expandedEstimateData.estimate_number}
+                                                            issueDate={expandedEstimateData.issue_date}
+                                                            dueDate={expandedEstimateData.valid_until}
+                                                            customerName={expandedEstimateData.customer_name || undefined}
+                                                            customerEmail={expandedEstimateData.customer_email || undefined}
+                                                            customerPhone={expandedEstimateData.customer_phone || undefined}
+                                                            customerAddress={expandedEstimateData.customer_address || undefined}
+                                                            items={(expandedEstimateData.items || []).map(item => ({
+                                                                name: item.name,
+                                                                description: item.description || undefined,
+                                                                quantity: item.quantity,
+                                                                unit_price: item.unit_price,
+                                                                tax_rate: item.tax_rate,
+                                                            }))}
+                                                            subtotal={expandedEstimateData.subtotal}
+                                                            taxAmount={expandedEstimateData.tax_amount}
+                                                            discountAmount={expandedEstimateData.discount_amount}
+                                                            total={expandedEstimateData.total}
+                                                            currency={expandedEstimateData.currency}
+                                                            notes={expandedEstimateData.notes || undefined}
+                                                            termsAndConditions={expandedEstimateData.terms_and_conditions || undefined}
+                                                        />
+
+                                                        <div className="mt-6 flex flex-wrap justify-center gap-2 border-t pt-4 sm:gap-3">
+                                                            <Button variant="outline" size="sm" onClick={() => navigate(`/estimates/${estimate.id}`)}>
+                                                                <Pencil className="mr-2 h-4 w-4" />Edit estimate
+                                                            </Button>
+                                                            {estimate.status === 'draft' && (
+                                                                <Button size="sm" onClick={() => handleSendEstimate(estimate.id)}>
+                                                                    <Send className="mr-2 h-4 w-4" />Send estimate
+                                                                </Button>
+                                                            )}
+                                                            {['sent', 'accepted'].includes(estimate.status) && !estimate.converted_invoice_id && (
+                                                                <Button size="sm" onClick={() => handleConvertToInvoice(estimate.id)}>
+                                                                    <ArrowRight className="mr-2 h-4 w-4" />Convert to invoice
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                                        <span className="text-sm text-muted-foreground font-medium">{getContactName(estimate)}</span>
-                                        <Badge className={`text-xs ${getStatusBadgeClass(estimate.status)}`}>
-                                            {estimate.status.charAt(0).toUpperCase() + estimate.status.slice(1)}
-                                        </Badge>
-                                        {estimate.converted_invoice_id && (
-                                            <Badge variant="outline" className="text-xs">
-                                                Converted
-                                            </Badge>
-                                        )}
-                                        <span className="text-xs text-muted-foreground">
-                                            Valid until {formatDateOnly(estimate.valid_until)}
-                                        </span>
-                                    </div>
-                                    <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                        <span className="md:hidden font-semibold">{formatCurrency(estimate.total)}</span>
-                                        {estimate.viewed_at && (
-                                            <span>Viewed {new Date(estimate.viewed_at).toLocaleString()}</span>
-                                        )}
-                                        {estimate.accepted_at && (
-                                            <span className="text-emerald-700">Accepted {new Date(estimate.accepted_at).toLocaleString()}</span>
-                                        )}
-                                        {estimate.declined_at && (
-                                            <span>Declined {new Date(estimate.declined_at).toLocaleString()}</span>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </CardContent>

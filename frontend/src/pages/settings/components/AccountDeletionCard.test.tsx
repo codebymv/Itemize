@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AccountDeletionCard } from './AccountDeletionCard';
+import { AccountDeletionAction } from './AccountDeletionCard';
 
 const mocks = vi.hoisted(() => ({
   deleteAccount: vi.fn(),
@@ -39,7 +39,7 @@ const eligiblePreflight = {
   retentionNotices: ['Audit records retain a one-way email hash.'],
 };
 
-describe('AccountDeletionCard', () => {
+describe('AccountDeletionAction', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.user.provider = 'email';
@@ -52,7 +52,7 @@ describe('AccountDeletionCard', () => {
   });
 
   it('preflights and requires the account email plus current password', async () => {
-    render(<AccountDeletionCard />);
+    render(<AccountDeletionAction />);
     fireEvent.click(screen.getByRole('button', { name: 'Delete my account' }));
 
     expect(await screen.findByText(/permanently delete 1 owned organization/)).toBeInTheDocument();
@@ -81,7 +81,7 @@ describe('AccountDeletionCard', () => {
 
   it('does not request a password for Google-only accounts', async () => {
     mocks.user.provider = 'google';
-    render(<AccountDeletionCard />);
+    render(<AccountDeletionAction />);
     fireEvent.click(screen.getByRole('button', { name: 'Delete my account' }));
     await screen.findByLabelText('Type member@example.com to confirm');
     expect(screen.queryByLabelText('Current password')).not.toBeInTheDocument();
@@ -114,7 +114,7 @@ describe('AccountDeletionCard', () => {
         },
       ],
     });
-    render(<AccountDeletionCard />);
+    render(<AccountDeletionAction />);
     fireEvent.click(screen.getByRole('button', { name: 'Delete my account' }));
 
     expect(await screen.findByText('Resolve these items first')).toBeInTheDocument();

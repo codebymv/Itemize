@@ -21,6 +21,20 @@ function asyncCssPlugin(): Plugin {
 const devProxyTarget = process.env.DEV_API_PROXY_TARGET?.trim();
 const devGraphqlProxyTarget =
   process.env.DEV_GRAPHQL_PROXY_TARGET?.trim() || devProxyTarget;
+const devProxyOrigin = process.env.DEV_API_PROXY_ORIGIN?.trim();
+
+const devProxy = (target: string) => ({
+  target,
+  changeOrigin: true,
+  cookieDomainRewrite: '',
+  configure(proxy: { on: (event: string, handler: (request: { setHeader: (name: string, value: string) => void }) => void) => void }) {
+    if (!devProxyOrigin) return;
+    proxy.on('proxyReq', (request) => {
+      request.setHeader('origin', devProxyOrigin);
+      request.setHeader('referer', `${devProxyOrigin.replace(/\/$/, '')}/`);
+    });
+  },
+});
 
 export default defineConfig(({ mode }) => ({
   plugins: [
@@ -77,14 +91,8 @@ export default defineConfig(({ mode }) => ({
       overlay: true
     },
     proxy: devProxyTarget ? {
-      '/api': {
-        target: devProxyTarget,
-        changeOrigin: true,
-      },
-      '/graphql': {
-        target: devGraphqlProxyTarget,
-        changeOrigin: true,
-      },
+      '/api': devProxy(devProxyTarget),
+      '/graphql': devProxy(devGraphqlProxyTarget),
       '/socket.io': {
         target: devProxyTarget,
         changeOrigin: true,

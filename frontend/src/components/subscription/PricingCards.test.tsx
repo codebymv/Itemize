@@ -3,6 +3,24 @@ import { describe, expect, it, vi } from 'vitest';
 import { PricingCards } from './PricingCards';
 
 describe('PricingCards', () => {
+  it('uses the shared tab primitive for billing periods', () => {
+    const onBillingPeriodChange = vi.fn();
+    render(
+      <PricingCards
+        billingPeriod="monthly"
+        onBillingPeriodChange={onBillingPeriodChange}
+      />,
+    );
+
+    const monthly = screen.getByRole('tab', { name: 'Monthly' });
+    const yearly = screen.getByRole('tab', { name: /Yearly/ });
+
+    expect(monthly).toHaveAttribute('data-state', 'active');
+    expect(yearly).toHaveClass('hover:bg-accent');
+    fireEvent.mouseDown(yearly, { button: 0, ctrlKey: false });
+    expect(onBillingPeriodChange).toHaveBeenCalledWith('yearly');
+  });
+
   it('offers an eligible Free organization a no-card Solo trial', () => {
     const onUpgrade = vi.fn();
     render(

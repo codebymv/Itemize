@@ -25,6 +25,7 @@ vi.mock('@/components/layout/PageLayout', () => ({
 
 vi.mock('./admin', () => ({
   AdminNav: () => <nav>Admin navigation</nav>,
+  AdminShellNavigation: () => <button type="button">Choose admin section</button>,
   CommunicationsSection: () => <div>Communications content</div>,
   StatisticsSection: () => <div>Statistics content</div>,
   OperationsSection: () => <div>Operations content</div>,

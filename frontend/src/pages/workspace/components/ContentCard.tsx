@@ -104,7 +104,7 @@ export function ContentCard({ content, onClick, onDelete, formatRelativeTime }: 
                 e.stopPropagation();
                 onClick();
               }} className="group/menu">
-                <ExternalLink className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+                <ExternalLink className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
                 Open
               </DropdownMenuItem>
               {content.is_public && (
@@ -115,7 +115,7 @@ export function ContentCard({ content, onClick, onDelete, formatRelativeTime }: 
                   const shareUrl = `${baseUrl}/shared/${content.type}/${content.share_token}`;
                   navigator.clipboard.writeText(shareUrl);
                 }} className="group/menu">
-                  <Share2 className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+                  <Share2 className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
                   Copy Link
                 </DropdownMenuItem>
               )}

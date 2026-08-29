@@ -1,15 +1,11 @@
-import type { Vault, VaultItem } from '@/types';
-import type {
-  CreateVaultPayload,
-  VaultItemPayload,
-  VaultPayload,
-} from './api';
-import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
+import type { Vault, VaultItem } from "@/types";
+import type { CreateVaultPayload, VaultItemPayload, VaultPayload } from "./api";
+import { graphqlMutationRequest, graphqlRequest } from "./graphqlClient";
 
 type GraphqlVaultItem = {
   id: number;
   vaultId: number;
-  itemType: 'key_value' | 'secure_note';
+  itemType: "key_value" | "secure_note";
   label: string;
   value: string;
   ciphertext?: string | null;
@@ -90,7 +86,7 @@ const VAULT_FIELDS = `
 `;
 
 const VAULT_ITEM_FIELDS =
-  'id vaultId itemType label value ciphertext iv cryptoVersion orderIndex createdAt updatedAt';
+  "id vaultId itemType label value ciphertext iv cryptoVersion orderIndex createdAt updatedAt";
 
 const legacyVaultItem = (item: GraphqlVaultItem): VaultItem => ({
   id: item.id,
@@ -193,7 +189,9 @@ export const getVaultViaGraphql = async (
 const createInput = (payload: CreateVaultPayload) => ({
   ...(payload.title !== undefined ? { title: payload.title } : {}),
   ...(payload.category !== undefined ? { category: payload.category } : {}),
-  ...(payload.color_value !== undefined ? { colorValue: payload.color_value } : {}),
+  ...(payload.color_value !== undefined
+    ? { colorValue: payload.color_value }
+    : {}),
   positionX: payload.position_x ?? 0,
   positionY: payload.position_y ?? 0,
   ...(payload.width !== undefined ? { width: payload.width } : {}),
@@ -202,14 +200,39 @@ const createInput = (payload: CreateVaultPayload) => ({
   ...(payload.master_password !== undefined
     ? { masterPassword: payload.master_password }
     : {}),
+  ...(payload.crypto_version !== undefined
+    ? { cryptoVersion: payload.crypto_version }
+    : {}),
+  ...(payload.kdf_salt !== undefined ? { kdfSalt: payload.kdf_salt } : {}),
+  ...(payload.kdf_memory_kib !== undefined
+    ? { kdfMemoryKiB: payload.kdf_memory_kib }
+    : {}),
+  ...(payload.kdf_iterations !== undefined
+    ? { kdfIterations: payload.kdf_iterations }
+    : {}),
+  ...(payload.kdf_parallelism !== undefined
+    ? { kdfParallelism: payload.kdf_parallelism }
+    : {}),
+  ...(payload.wrapped_vek !== undefined
+    ? { wrappedVek: payload.wrapped_vek }
+    : {}),
+  ...(payload.wrapped_vek_recovery !== undefined
+    ? { wrappedVekRecovery: payload.wrapped_vek_recovery }
+    : {}),
 });
 
 const updateInput = (payload: VaultPayload) => ({
   ...(payload.title !== undefined ? { title: payload.title } : {}),
   ...(payload.category !== undefined ? { category: payload.category } : {}),
-  ...(payload.color_value !== undefined ? { colorValue: payload.color_value } : {}),
-  ...(payload.position_x !== undefined ? { positionX: payload.position_x } : {}),
-  ...(payload.position_y !== undefined ? { positionY: payload.position_y } : {}),
+  ...(payload.color_value !== undefined
+    ? { colorValue: payload.color_value }
+    : {}),
+  ...(payload.position_x !== undefined
+    ? { positionX: payload.position_x }
+    : {}),
+  ...(payload.position_y !== undefined
+    ? { positionY: payload.position_y }
+    : {}),
   ...(payload.width !== undefined ? { width: payload.width } : {}),
   ...(payload.height !== undefined ? { height: payload.height } : {}),
   ...(payload.z_index !== undefined ? { zIndex: payload.z_index } : {}),
@@ -259,7 +282,7 @@ export const deleteVaultViaGraphql = async (
     { id },
   );
   return {
-    message: 'Vault deleted successfully',
+    message: "Vault deleted successfully",
     deletedId: data.deleteWorkspaceVault.deletedId,
   };
 };
@@ -283,7 +306,11 @@ export const addVaultItemViaGraphql = async (
 ): Promise<VaultItem> => {
   const data = await graphqlMutationRequest<
     { addWorkspaceVaultItem: GraphqlVaultItem },
-    { vaultId: number; input: ReturnType<typeof itemInput>; masterPassword?: string }
+    {
+      vaultId: number;
+      input: ReturnType<typeof itemInput>;
+      masterPassword?: string;
+    }
   >(
     `mutation AddWorkspaceVaultItem(
       $vaultId: Int!
@@ -357,7 +384,12 @@ export const updateVaultItemViaGraphql = async (
     {
       vaultId: number;
       itemId: number;
-      input: { label?: string; value?: string; ciphertext?: string; iv?: string };
+      input: {
+        label?: string;
+        value?: string;
+        ciphertext?: string;
+        iv?: string;
+      };
       masterPassword?: string;
     }
   >(
@@ -404,7 +436,7 @@ export const deleteVaultItemViaGraphql = async (
     withMasterPassword({ vaultId, itemId }, masterPassword),
   );
   return {
-    message: 'Item deleted successfully',
+    message: "Item deleted successfully",
     deletedId: data.deleteWorkspaceVaultItem.deletedId,
   };
 };
@@ -438,7 +470,7 @@ export const reorderVaultItemsViaGraphql = async (
     withMasterPassword({ vaultId, itemIds }, masterPassword),
   );
   return {
-    message: 'Items reordered successfully',
+    message: "Items reordered successfully",
     items: data.reorderWorkspaceVaultItems.items.map(legacyVaultItem),
   };
 };
@@ -477,7 +509,7 @@ export const setVaultPasswordViaGraphql = async (
     },
   );
   return {
-    message: 'Vault locked successfully',
+    message: "Vault locked successfully",
     ...data.setWorkspaceVaultPassword,
   };
 };
@@ -506,7 +538,7 @@ export const removeVaultPasswordViaGraphql = async (
     { vaultId, password },
   );
   return {
-    message: 'Vault unlocked successfully',
+    message: "Vault unlocked successfully",
     ...data.removeWorkspaceVaultPassword,
   };
 };
@@ -555,7 +587,7 @@ export const enableVaultSharingViaGraphql = async (
     !result.isPublic ||
     !result.sharedAt
   ) {
-    throw new Error('GraphQL vault sharing mutation returned an invalid link');
+    throw new Error("GraphQL vault sharing mutation returned an invalid link");
   }
   return { shareToken: result.shareToken, shareUrl: result.shareUrl };
 };
@@ -582,9 +614,9 @@ export const disableVaultSharingViaGraphql = async (
     result.shareUrl ||
     result.sharedAt
   ) {
-    throw new Error('GraphQL vault sharing revocation did not commit');
+    throw new Error("GraphQL vault sharing revocation did not commit");
   }
-  return { message: 'Vault sharing disabled' };
+  return { message: "Vault sharing disabled" };
 };
 
 export const migrateVaultToV2ViaGraphql = async (
@@ -631,7 +663,11 @@ export const migrateVaultToV2ViaGraphql = async (
 export const rewrapVaultViaGraphql = async (
   vaultId: number,
   input: { wrappedVek: string; wrappedVekRecovery?: string },
-): Promise<{ vaultId: number; isLocked: boolean; encryptionSalt: string | null }> => {
+): Promise<{
+  vaultId: number;
+  isLocked: boolean;
+  encryptionSalt: string | null;
+}> => {
   const data = await graphqlMutationRequest<
     { rewrapWorkspaceVault: GraphqlVaultPasswordResult },
     { vaultId: number; input: typeof input }
@@ -648,4 +684,3 @@ export const rewrapVaultViaGraphql = async (
   );
   return data.rewrapWorkspaceVault;
 };
-

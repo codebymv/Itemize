@@ -54,7 +54,7 @@ export default function ResetPassword() {
     if (!passwordValid) {
       toast({
         title: 'Weak password',
-        description: 'Password must be at least 8 characters with uppercase, lowercase, and number.',
+        description: 'Use 8+ characters with uppercase, lowercase, and a number.',
         variant: 'destructive',
       });
       return;

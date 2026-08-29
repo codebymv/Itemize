@@ -41,6 +41,7 @@ const dashboard = {
     newThisMonth: 0,
     newThisWeek: 0,
     growth: [],
+    recentContacts: [],
   },
   deals: {
     total: 0,

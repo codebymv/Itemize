@@ -53,7 +53,7 @@ export default function RecoverAccount() {
           <CardTitle>{recovered ? 'Account recovered' : 'Keep your Itemize account'}</CardTitle>
           <CardDescription>
             {recovered
-              ? 'Your deletion request was canceled and your data remains available.'
+              ? 'Deletion canceled. Your data remains available.'
               : 'Cancel the scheduled deletion before the recovery window closes.'}
           </CardDescription>
         </CardHeader>

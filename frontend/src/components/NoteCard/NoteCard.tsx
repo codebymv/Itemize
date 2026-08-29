@@ -251,11 +251,11 @@ const NoteCard: React.FC<NoteCardProps> = ({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setIsEditing(true)} className="group/menu" style={{ fontFamily: '"Raleway", sans-serif' }}>
-                        <Edit3 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
+                        <Edit3 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
                         Edit Title
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleShareNote} className="group/menu" style={{ fontFamily: '"Raleway", sans-serif' }}>
-                        <Share2 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
+                        <Share2 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
                         Share
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleDeleteConfirmation} className="text-destructive focus:text-destructive">

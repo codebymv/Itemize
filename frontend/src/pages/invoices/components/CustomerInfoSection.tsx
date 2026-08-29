@@ -4,9 +4,10 @@
  */
 
 import React from 'react';
-import { UserPlus } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { UserRound } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -34,6 +35,7 @@ interface Contact {
 }
 
 interface CustomerInfoSectionProps {
+  idPrefix?: string;
   contacts: Contact[];
   contactId?: number;
   customerName: string;
@@ -48,6 +50,7 @@ interface CustomerInfoSectionProps {
 }
 
 export function CustomerInfoSection({
+  idPrefix = 'invoice',
   contacts,
   contactId,
   customerName,
@@ -61,19 +64,25 @@ export function CustomerInfoSection({
   onCustomerAddressChange,
 }: CustomerInfoSectionProps) {
   return (
-    <Card className="border-2 border-dashed">
-      <CardContent className="pt-6">
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <UserRound className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+          Customer Information
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
         <div className="space-y-4">
           {/* Contact selector */}
           {contacts.length > 0 && (
             <>
-              <div className="flex flex-col items-center justify-center py-2 text-center">
-                <UserPlus className="h-6 w-6 text-muted-foreground mb-2" />
+              <div className="space-y-2">
+                <Label htmlFor={`${idPrefix}-contact`}>Existing contact</Label>
                 <Select
                   value={contactId?.toString() || 'none'}
                   onValueChange={onContactChange}
                 >
-                  <SelectTrigger className="w-full max-w-xs">
+                  <SelectTrigger id={`${idPrefix}-contact`} className="w-full">
                     <SelectValue placeholder="Select existing customer" />
                   </SelectTrigger>
                   <SelectContent>
@@ -91,30 +100,46 @@ export function CustomerInfoSection({
           )}
           {/* Manual entry fields - always visible */}
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor={`${idPrefix}-customer-name`}>Customer name</Label>
+                <Input
+                  id={`${idPrefix}-customer-name`}
+                  value={customerName}
+                  onChange={(e) => onCustomerNameChange(e.target.value)}
+                  placeholder="Customer name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`${idPrefix}-customer-email`}>Email</Label>
+                <Input
+                  id={`${idPrefix}-customer-email`}
+                  type="email"
+                  value={customerEmail}
+                  onChange={(e) => onCustomerEmailChange(e.target.value)}
+                  placeholder="Email"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`${idPrefix}-customer-phone`}>Phone</Label>
               <Input
-                value={customerName}
-                onChange={(e) => onCustomerNameChange(e.target.value)}
-                placeholder="Customer name"
-              />
-              <Input
-                type="email"
-                value={customerEmail}
-                onChange={(e) => onCustomerEmailChange(e.target.value)}
-                placeholder="Email"
+                id={`${idPrefix}-customer-phone`}
+                value={customerPhone}
+                onChange={(e) => onCustomerPhoneChange(e.target.value)}
+                placeholder="Phone"
               />
             </div>
-            <Input
-              value={customerPhone}
-              onChange={(e) => onCustomerPhoneChange(e.target.value)}
-              placeholder="Phone"
-            />
-            <Textarea
-              value={customerAddress}
-              onChange={(e) => onCustomerAddressChange(e.target.value)}
-              placeholder="Address"
-              rows={2}
-            />
+            <div className="space-y-2">
+              <Label htmlFor={`${idPrefix}-customer-address`}>Address</Label>
+              <Textarea
+                id={`${idPrefix}-customer-address`}
+                value={customerAddress}
+                onChange={(e) => onCustomerAddressChange(e.target.value)}
+                placeholder="Address"
+                rows={2}
+              />
+            </div>
           </div>
         </div>
       </CardContent>

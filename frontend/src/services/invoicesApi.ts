@@ -120,6 +120,9 @@ export interface Invoice {
     is_recurring: boolean;
     recurring_interval?: string;
     parent_invoice_id?: number;
+    is_recurring_source: boolean;
+    recurring_template_id?: number;
+    recurring_source_template_id?: number;
     custom_fields: JsonRecord;
     created_by?: number;
     created_at: string;

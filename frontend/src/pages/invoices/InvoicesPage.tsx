@@ -9,13 +9,8 @@ import {
     Trash2,
     Send,
     Download,
-    Clock,
-    CheckCircle,
-    XCircle,
-    AlertCircle,
     Calendar,
     DollarSign,
-    TrendingUp,
     Pencil,
     ChevronDown,
     ChevronRight,
@@ -35,9 +30,14 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { getStatusBadgeClass } from '@/lib/badge-utils';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
     AlertDialog,
@@ -74,6 +74,12 @@ import { PaymentLinkModal } from '@/components/PaymentLinkModal';
 import { RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PageLayout } from '@/components/layout/PageLayout';
+import {
+    HeaderAction,
+    HeaderCombinedQuery,
+    HeaderFilters,
+    HeaderSearch,
+} from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { StatCard } from '@/components/StatCard';
@@ -81,6 +87,9 @@ import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
+import { getInvoiceStatusVisual } from './constants/invoiceConstants';
+import { getPaidAgeLabel, getWholeDaysSince } from './invoiceRowMetadata';
+import { InvoiceViewSelect, type InvoiceView } from './components/InvoiceViewSelect';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
     if (error && typeof error === 'object') {
@@ -109,6 +118,7 @@ interface Invoice {
     created_at: string;
     is_recurring_source?: boolean;
     recurring_template_id?: number;
+    recurring_source_template_id?: number;
 }
 
 interface Stats {
@@ -323,7 +333,10 @@ export function InvoicesPage() {
                 organizationId
             );
             
-            toast({ title: 'Template Created', description: 'Recurring template created. Original invoice has been preserved.' });
+            toast({
+                title: 'Recurring schedule created',
+                description: 'The original invoice is unchanged. Manage future invoices under Recurring schedules.',
+            });
             setShowRecurringModal(false);
             setSelectedInvoiceForRecurring(null);
             setFullInvoiceDataForRecurring(null);
@@ -331,8 +344,6 @@ export function InvoicesPage() {
             // Refresh invoices to show updated is_recurring_source status
             fetchInvoices();
             
-            // Navigate to recurring invoices page to see the new template
-            navigate('/recurring-invoices');
         } catch (error: unknown) {
             const errorMessage = getApiErrorMessage(error, 'Failed to create recurring template');
             toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
@@ -387,7 +398,7 @@ export function InvoicesPage() {
         );
         setRecordingPayment(true);
         try {
-            await recordPayment(
+            const result = await recordPayment(
                 inv.id,
                 {
                     amount: paymentData.amount,
@@ -395,6 +406,21 @@ export function InvoicesPage() {
                     notes: paymentData.notes,
                 },
                 organizationId
+            );
+            setInvoices((prev) =>
+                prev.map((invoice) =>
+                    invoice.id === inv.id
+                        ? {
+                              ...invoice,
+                              amount_paid: result.invoice.amount_paid,
+                              amount_due: result.invoice.amount_due,
+                              status: result.invoice.status as Invoice['status'],
+                              ...(result.invoice.status === 'paid' && result.payment.paid_at
+                                  ? { paid_at: result.payment.paid_at }
+                                  : {}),
+                          }
+                        : invoice
+                )
             );
             toast({ title: 'Payment Recorded', description: `Payment of $${paymentData.amount.toFixed(2)} has been recorded.` });
             setShowPaymentModal(false);
@@ -590,40 +616,35 @@ export function InvoicesPage() {
         return filtered;
     }, [invoices, activeTab, searchQuery]);
 
-    const getStatusIcon = (status: string) => {
-        switch (status) {
-            case 'paid': return <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />;
-            case 'overdue': return <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />;
-            case 'sent':
-            case 'viewed': return <Send className="h-4 w-4 text-orange-600 dark:text-orange-400" />;
-            case 'partial': return <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />;
-            case 'draft': return <Clock className="h-4 w-4 text-sky-600 dark:text-sky-400" />;
-            default: return <Clock className="h-4 w-4 text-gray-400 dark:text-gray-500" />;
-        }
-    };
-
-    const getStatusIconBg = (status: string) => {
-        switch (status) {
-            case 'paid': return 'bg-green-100 dark:bg-green-900';
-            case 'overdue': return 'bg-red-100 dark:bg-red-900';
-            case 'sent':
-            case 'viewed':
-            case 'partial': return 'bg-orange-100 dark:bg-orange-900';
-            case 'draft': return 'bg-sky-100 dark:bg-sky-900';
-            default: return 'bg-gray-100 dark:bg-gray-800';
-        }
-    };
-
     const isOverdue = (invoice: Invoice) => {
         return ['sent', 'viewed', 'partial'].includes(invoice.status) && 
                new Date(invoice.due_date) < new Date();
     };
 
+    const headerFilterCount = Number(activeTab !== 'all');
+    const headerQueryCount = headerFilterCount + Number(searchQuery.trim().length > 0);
+    const handleInvoiceViewChange = (view: InvoiceView) => {
+        navigate(view === 'recurring' ? '/invoices/recurring' : '/invoices');
+    };
+    const statusFilter = (compact = false) => (
+        <Select value={activeTab} onValueChange={setActiveTab}>
+            <SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[8.5rem] bg-muted/20'}>
+                <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="unpaid">Unpaid</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+            </SelectContent>
+        </Select>
+    );
+
     if (initError) {
         return (
             <PageLayout
                 title="INVOICES"
-                icon={<Receipt className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+                icon={<Receipt className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
             >
                 <ErrorState
                     title="Failed to initialize"
@@ -637,51 +658,69 @@ export function InvoicesPage() {
     return (
         <PageLayout
             title="INVOICES"
-            icon={<Receipt className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            icon={<Receipt className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
             mobileClassName="flex-col items-stretch"
-            pageActions={
-                <>
-                    <Tabs value={activeTab} onValueChange={setActiveTab}>
-                        <TabsList className="h-9">
-                            <TabsTrigger value="all" className="text-xs">
-                                All invoices
-                                <Badge variant="secondary" className="ml-2">{invoices.length}</Badge>
-                            </TabsTrigger>
-                            <TabsTrigger value="unpaid" className="text-xs">
-                                Unpaid
-                                <Badge variant="secondary" className="ml-2">
-                                    {invoices.filter(i => ['sent', 'viewed', 'partial', 'overdue'].includes(i.status)).length}
-                                </Badge>
-                            </TabsTrigger>
-                            <TabsTrigger value="draft" className="text-xs">
-                                Draft
-                                <Badge variant="secondary" className="ml-2">{stats.draftCount}</Badge>
-                            </TabsTrigger>
-                            <TabsTrigger value="paid" className="text-xs">
-                                Paid
-                                <Badge variant="secondary" className="ml-2">{stats.paidCount}</Badge>
-                            </TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search invoices..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
+            desktopTools={{
+                search: (
+                    <HeaderSearch
+                        label="Search invoices"
+                        placeholder="Search invoices..."
+                        value={searchQuery}
+                        onChange={setSearchQuery}
+                    />
+                ),
+                filters: (
+                    <div className="flex items-center gap-2">
+                        <HeaderFilters
+                            label="Select invoice view"
+                            compactChildren={(
+                                <InvoiceViewSelect
+                                    value="invoices"
+                                    onValueChange={handleInvoiceViewChange}
+                                    compact
+                                />
+                            )}
+                            preferExpanded
+                        >
+                            <InvoiceViewSelect
+                                value="invoices"
+                                onValueChange={handleInvoiceViewChange}
+                            />
+                        </HeaderFilters>
+                        <HeaderFilters
+                            label="Filter invoices by status"
+                            activeCount={headerFilterCount}
+                            compactChildren={statusFilter(true)}
+                            preferExpanded="when-roomy"
+                        >
+                            {statusFilter()}
+                        </HeaderFilters>
                     </div>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={handleCreateInvoice}
+                ),
+                combinedQuery: (
+                    <HeaderCombinedQuery
+                        label="Search and filter invoices"
+                        placeholder="Search invoices..."
+                        value={searchQuery}
+                        onChange={setSearchQuery}
+                        activeCount={headerQueryCount}
                     >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Invoice
-                    </Button>
-                </>
-            }
+                        <InvoiceViewSelect
+                            value="invoices"
+                            onValueChange={handleInvoiceViewChange}
+                            compact
+                        />
+                        {statusFilter(true)}
+                    </HeaderCombinedQuery>
+                ),
+                primaryAction: (
+                    <HeaderAction
+                        label="New invoice"
+                        icon={<Plus className="h-4 w-4" />}
+                        onClick={handleCreateInvoice}
+                    />
+                ),
+            }}
             mobileActions={
                 <>
                 <div className="flex items-center gap-2 w-full">
@@ -696,34 +735,21 @@ export function InvoicesPage() {
                     </div>
                     <Button
                         size="sm"
+                        aria-label="New invoice"
                         className="bg-blue-600 hover:bg-blue-700 text-white font-light"
                         onClick={handleCreateInvoice}
                     >
                         <Plus className="h-4 w-4" />
                     </Button>
                 </div>
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <TabsList className="w-full h-9">
-                        <TabsTrigger value="all" className="flex-1 text-xs">
-                            All
-                            <Badge variant="secondary" className="ml-1">{invoices.length}</Badge>
-                        </TabsTrigger>
-                        <TabsTrigger value="unpaid" className="flex-1 text-xs">
-                            Unpaid
-                            <Badge variant="secondary" className="ml-1">
-                                {invoices.filter(i => ['sent', 'viewed', 'partial', 'overdue'].includes(i.status)).length}
-                            </Badge>
-                        </TabsTrigger>
-                        <TabsTrigger value="draft" className="flex-1 text-xs">
-                            Draft
-                            <Badge variant="secondary" className="ml-1">{stats.draftCount}</Badge>
-                        </TabsTrigger>
-                        <TabsTrigger value="paid" className="flex-1 text-xs">
-                            Paid
-                            <Badge variant="secondary" className="ml-1">{stats.paidCount}</Badge>
-                        </TabsTrigger>
-                    </TabsList>
-                </Tabs>
+                <div className="grid w-full grid-cols-2 gap-2">
+                    <InvoiceViewSelect
+                        value="invoices"
+                        onValueChange={handleInvoiceViewChange}
+                        compact
+                    />
+                    {statusFilter(true)}
+                </div>
                 </>
             }
         >
@@ -735,27 +761,28 @@ export function InvoicesPage() {
                 content={ONBOARDING_CONTENT.invoices}
             />
 
-                {/* Summary Cards */}
+            {/* Summary Cards */}
             <ResponsiveCardRail
                 label="Invoice status summary"
                 desktopColumns="md:grid-cols-4"
+                className="responsive-stat-summary"
             >
                 <StatCard
                     title="Overdue"
                     badgeText="Overdue"
                     value={formatCurrency(stats.overdue)}
-                    icon={XCircle}
+                    icon={getInvoiceStatusVisual('overdue').icon}
                     description={`${stats.overdueCount} invoice${stats.overdueCount !== 1 ? 's' : ''}`}
-                    colorTheme="red"
+                    colorTheme={getInvoiceStatusVisual('overdue').theme}
                     isLoading={loading}
                 />
                 <StatCard
                     title="Draft"
                     badgeText="Draft"
                     value={formatCurrency(stats.draft)}
-                    icon={Clock}
+                    icon={getInvoiceStatusVisual('draft').icon}
                     description={`${stats.draftCount} invoice${stats.draftCount !== 1 ? 's' : ''}`}
-                    colorTheme="gray"
+                    colorTheme={getInvoiceStatusVisual('draft').theme}
                     isLoading={loading}
                 />
                 <StatCard
@@ -771,9 +798,9 @@ export function InvoicesPage() {
                     title="Paid"
                     badgeText="Paid (Total)"
                     value={formatCurrency(stats.paid)}
-                    icon={TrendingUp}
+                    icon={getInvoiceStatusVisual('paid').icon}
                     description={`${stats.paidCount} invoice${stats.paidCount !== 1 ? 's' : ''}`}
-                    colorTheme="green"
+                    colorTheme={getInvoiceStatusVisual('paid').theme}
                     isLoading={loading}
                 />
             </ResponsiveCardRail>
@@ -794,7 +821,7 @@ export function InvoicesPage() {
                                     ? 'Create invoices to bill your customers'
                                     : `You don't have any ${activeTab} invoices`
                             }
-                            actionLabel={activeTab === 'all' ? 'New Invoice' : undefined}
+                            actionLabel={activeTab === 'all' ? 'New invoice' : undefined}
                             onAction={activeTab === 'all' ? handleCreateInvoice : undefined}
                             className="p-12"
                         />
@@ -803,6 +830,11 @@ export function InvoicesPage() {
                             {filteredInvoices.map((invoice) => {
                                 const isExpanded = expandedInvoiceId === invoice.id;
                                 const effectiveStatus = isOverdue(invoice) ? 'overdue' : invoice.status;
+                                const statusVisual = getInvoiceStatusVisual(effectiveStatus);
+                                const StatusIcon = statusVisual.icon;
+                                const paidAgeLabel = invoice.status === 'paid'
+                                    ? getPaidAgeLabel(invoice.paid_at)
+                                    : null;
                                 return (
                                     <div key={invoice.id}>
                                         {/* Invoice Row - Aligned with VaultCard Pattern */}
@@ -815,8 +847,8 @@ export function InvoicesPage() {
                                                 {/* Left Side: Status Icon + Invoice Number */}
                                                 <div className="flex items-center gap-2 min-w-0 flex-1">
                                                     {/* Status Icon */}
-                                                    <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${getStatusIconBg(effectiveStatus)}`}>
-                                                        {getStatusIcon(effectiveStatus)}
+                                                    <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${statusVisual.iconBackgroundClass}`}>
+                                                        <StatusIcon className={`h-4 w-4 ${statusVisual.iconClass}`} aria-hidden="true" />
                                                     </div>
                                                     {/* Invoice Number */}
                                                     <p className="font-medium text-sm md:text-base">{invoice.invoice_number}</p>
@@ -824,8 +856,18 @@ export function InvoicesPage() {
                                                 
                                                 {/* Right Side: Amount + Chevron + Menu */}
                                                 <div className="flex items-center gap-2 flex-shrink-0">
-                                                    <div className="text-right hidden sm:block">
+                                                    <div className="hidden lg:block">
+                                                        <Badge className={`pointer-events-none cursor-default text-xs ${statusVisual.badgeClass}`}>
+                                                            {statusVisual.label}
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="hidden flex-col items-end text-right sm:flex">
                                                         <p className="font-semibold text-sm md:text-base">{formatCurrency(invoice.total)}</p>
+                                                        {invoice.amount_paid > 0 && (
+                                                            <p className="text-xs font-medium text-green-600 dark:text-green-400">
+                                                                -{formatCurrency(invoice.amount_paid)}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                     {/* Chevron - Collapsible Trigger */}
                                                     <Button 
@@ -851,16 +893,16 @@ export function InvoicesPage() {
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                                                             <DropdownMenuItem onClick={() => navigate(`/invoices/${invoice.id}`)} className="group/menu">
-                                                                <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Edit
+                                                                <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Edit
                                                             </DropdownMenuItem>
                                                             {invoice.status === 'draft' && (
                                                                 <DropdownMenuItem onClick={() => handleOpenSendModal(invoice, false)} className="group/menu">
-                                                                    <Send className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Send
+                                                                    <Send className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Send
                                                                 </DropdownMenuItem>
                                                             )}
                                                             {['sent', 'viewed', 'partial', 'overdue'].includes(invoice.status) && (
                                                                 <DropdownMenuItem onClick={() => handleOpenSendModal(invoice, true)} className="group/menu">
-                                                                    <RefreshCw className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Resend
+                                                                    <RefreshCw className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Resend
                                                                 </DropdownMenuItem>
                                                             )}
                                                             <DropdownMenuItem
@@ -870,23 +912,25 @@ export function InvoicesPage() {
                                                             >
                                                                 {downloadingInvoiceId === invoice.id
                                                                     ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                                    : <Download className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />}
+                                                                    : <Download className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />}
                                                                 Download PDF
                                                             </DropdownMenuItem>
                                                             {invoice.amount_due > 0 && !['cancelled', 'refunded', 'paid'].includes(invoice.status) && (
                                                                 <>
                                                                     <DropdownMenuSeparator />
                                                                     <DropdownMenuItem onClick={(e) => handleOpenPaymentModal(invoice, e)} className="group/menu">
-                                                                        <Wallet className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Record Payment
+                                                                        <Wallet className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Record Payment
                                                                     </DropdownMenuItem>
                                                                     <DropdownMenuItem onClick={(e) => handleCreatePaymentLink(invoice, e)} className="group/menu">
-                                                                        <CreditCard className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Create Payment Link
+                                                                        <CreditCard className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Create Payment Link
                                                                     </DropdownMenuItem>
                                                                 </>
                                                             )}
-                                                            {!['cancelled', 'refunded'].includes(invoice.status) && !invoice.is_recurring_source && (
+                                                            {!['cancelled', 'refunded'].includes(invoice.status)
+                                                                && !invoice.is_recurring_source
+                                                                && !invoice.recurring_template_id && (
                                                                 <DropdownMenuItem onClick={(e) => handleOpenRecurringModal(invoice, e)} className="group/menu">
-                                                                    <Repeat className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />Make Recurring
+                                                                    <Repeat className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Make Recurring
                                                                 </DropdownMenuItem>
                                                             )}
                                                             <DropdownMenuSeparator />
@@ -907,21 +951,47 @@ export function InvoicesPage() {
                                                 <span className="text-sm text-muted-foreground font-medium">{getContactName(invoice)}</span>
                                                 
                                                 {/* Status Badge */}
-                                                <Badge className={`text-xs pointer-events-none cursor-default ${getStatusBadgeClass(effectiveStatus)}`}>
-                                                    {effectiveStatus.charAt(0).toUpperCase() + effectiveStatus.slice(1)}
-                                                </Badge>
+                                                <span className="lg:hidden">
+                                                    <Badge className={`pointer-events-none cursor-default text-xs ${statusVisual.badgeClass}`}>
+                                                        {statusVisual.label}
+                                                    </Badge>
+                                                </span>
                                                 
                                                 {/* Due Date */}
                                                 <span className="text-xs text-muted-foreground">
                                                     Due {new Date(invoice.due_date).toLocaleDateString()}
                                                 </span>
                                                 
-                                                {/* Recurring badges - inline */}
+                                                {/* Recurring relationship links */}
                                                 {invoice.is_recurring_source && (
-                                                    <Badge variant="outline" className="text-xs">Recurring</Badge>
+                                                    <Button
+                                                        type="button"
+                                                        variant="link"
+                                                        className="h-auto gap-1 p-0 text-xs font-normal"
+                                                        aria-label="Open recurring schedule created from this invoice"
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            navigate(`/invoices/recurring?schedule=${invoice.recurring_source_template_id || ''}`);
+                                                        }}
+                                                    >
+                                                        <Repeat className="h-3 w-3" aria-hidden="true" />
+                                                        Recurring schedule
+                                                    </Button>
                                                 )}
                                                 {invoice.recurring_template_id && (
-                                                    <Badge variant="outline" className="text-xs">Auto-generated</Badge>
+                                                    <Button
+                                                        type="button"
+                                                        variant="link"
+                                                        className="h-auto gap-1 p-0 text-xs font-normal"
+                                                        aria-label="Open schedule that generated this invoice"
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            navigate(`/invoices/recurring?schedule=${invoice.recurring_template_id}`);
+                                                        }}
+                                                    >
+                                                        <Repeat className="h-3 w-3" aria-hidden="true" />
+                                                        From recurring schedule
+                                                    </Button>
                                                 )}
                                             </div>
                                             
@@ -929,14 +999,19 @@ export function InvoicesPage() {
                                             <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                                                 <span className="md:hidden font-semibold">{formatCurrency(invoice.total)}</span>
                                                 {isOverdue(invoice) && (
-                                                    <span className="text-red-600 font-medium">
-                                                        {Math.floor((new Date().getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24))}d overdue
+                                                    <span className="font-medium text-red-600 dark:text-red-400">
+                                                        {getWholeDaysSince(invoice.due_date)}d overdue
+                                                    </span>
+                                                )}
+                                                {paidAgeLabel && (
+                                                    <span className="font-medium text-green-600 dark:text-green-400">
+                                                        {paidAgeLabel}
                                                     </span>
                                                 )}
                                                 {invoice.amount_due > 0 &&
                                                   !['draft', 'paid', 'cancelled', 'refunded'].includes(invoice.status) && (
                                                     <span className="text-muted-foreground">
-                                                        Due: {formatCurrency(invoice.amount_due)}
+                                                        Balance: {formatCurrency(invoice.amount_due)}
                                                     </span>
                                                 )}
                                             </div>
@@ -1055,7 +1130,9 @@ export function InvoicesPage() {
                                                                     </Button>
                                                                 </>
                                                             )}
-                                                            {!['cancelled', 'refunded'].includes(invoice.status) && !invoice.is_recurring_source && (
+                                                            {!['cancelled', 'refunded'].includes(invoice.status)
+                                                                && !invoice.is_recurring_source
+                                                                && !invoice.recurring_template_id && (
                                                                 <Button
                                                                     size="sm"
                                                                     onClick={(e) => handleOpenRecurringModal(invoice, e)}

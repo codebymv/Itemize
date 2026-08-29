@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { SettingsSectionTitle } from '@/components/settings/SettingsPrimitives';
+import { SettingsInfoTooltip } from '@/components/settings/SettingsPrimitives';
 import { useToast } from '@/hooks/use-toast';
 import { getViewerDataExportViaGraphql } from '@/services/authGraphql';
 
-export function AccountDataExportCard() {
+export function AccountDataExportAction() {
   const { toast } = useToast();
   const [downloading, setDownloading] = useState(false);
 
@@ -45,31 +44,28 @@ export function AccountDataExportCard() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <SettingsSectionTitle icon={Download}>Portable account export</SettingsSectionTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2 text-sm text-muted-foreground">
-          <p>
-            Download a JSON copy of your profile, memberships, personal canvas content,
-            and CRM and commercial records from organizations you own. Passwords, login
-            tokens, provider secrets, and sharing capabilities are excluded.
-          </p>
-          <p>
-            Vault values remain encrypted and still require the corresponding vault password
-            or recovery secret.
-          </p>
+    <section className="space-y-3" aria-labelledby="account-export-title">
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-1.5">
+          <h3 id="account-export-title" className="text-sm font-medium">JSON export</h3>
+          <SettingsInfoTooltip label="What is included in the JSON export?">
+            Includes your profile, memberships, personal Workspace content, and records from
+            organizations you own. Passwords, login tokens, provider secrets, and sharing access
+            are excluded. Vault values remain encrypted.
+          </SettingsInfoTooltip>
         </div>
-        <Button variant="outline" onClick={() => void downloadExport()} disabled={downloading}>
-          {downloading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Download className="mr-2 h-4 w-4" />
-          )}
-          {downloading ? 'Preparing export...' : 'Download JSON export'}
-        </Button>
-      </CardContent>
-    </Card>
+        <p className="text-sm text-muted-foreground">
+          Download your account and eligible organization data.
+        </p>
+      </div>
+      <Button variant="outline" onClick={() => void downloadExport()} disabled={downloading}>
+        {downloading ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <Download className="mr-2 h-4 w-4" />
+        )}
+        {downloading ? 'Preparing export...' : 'Download JSON export'}
+      </Button>
+    </section>
   );
 }

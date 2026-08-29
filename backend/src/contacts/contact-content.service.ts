@@ -33,6 +33,7 @@ export class ContactContentService {
         lists: this.collection(result.lists),
         notes: this.collection(result.notes),
         whiteboards: this.collection(result.whiteboards),
+        wireframes: this.collection(result.wireframes),
       };
     } catch (error) {
       if (error instanceof GraphQLError) throw error;

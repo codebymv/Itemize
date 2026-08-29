@@ -169,7 +169,7 @@ export function SendSignatureModal({
               <p className="text-xs text-muted-foreground">
                 {routingMode === 'parallel'
                   ? 'Parallel sends requests to everyone at the same time.'
-                  : 'Sequential sends to the first recipient, then the next after they sign.'}
+                  : 'Each recipient receives it after the previous one signs.'}
               </p>
             </div>
 

@@ -93,6 +93,30 @@ describe('AuthProvider GraphQL authentication', () => {
     expect(window.localStorage.getItem('itemize_user')).not.toBeNull();
   });
 
+  it('preserves the account creation timestamp during protected-route hydration', async () => {
+    vi.mocked(isLoggedOut).mockReturnValue(false);
+    vi.mocked(hasSessionHint).mockReturnValue(true);
+    vi.mocked(getCurrentUserViaGraphql).mockResolvedValue({
+      id: 42,
+      email: 'member@example.com',
+      name: 'Member',
+      provider: 'email',
+      emailVerified: true,
+      role: 'USER',
+      createdAt: '2026-08-27T18:25:00.000Z',
+    });
+
+    const protectedWrapper = ({ children }: { children: ReactNode }) => (
+      <MemoryRouter initialEntries={['/settings']}>
+        <AuthProvider>{children}</AuthProvider>
+      </MemoryRouter>
+    );
+    const { result } = renderHook(() => useAuthState(), { wrapper: protectedWrapper });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.currentUser?.createdAt).toBe('2026-08-27T18:25:00.000Z');
+  });
+
   it('routes registration directly through GraphQL', async () => {
     vi.mocked(registerViaGraphql).mockResolvedValue({
       success: true,

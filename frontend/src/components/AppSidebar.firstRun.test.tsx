@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppSidebar } from './AppSidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -14,6 +14,11 @@ const subscriptionState = vi.hoisted(() => ({
 }));
 
 const getStartedProgressViaGraphql = vi.hoisted(() => vi.fn());
+
+const LocationProbe = () => {
+  const location = useLocation();
+  return <output data-testid="location">{`${location.pathname}${location.search}`}</output>;
+};
 
 vi.mock('@/components/AppShell', () => ({
   useSearch: () => ({ setSearchOpen: vi.fn() }),
@@ -49,6 +54,7 @@ const renderSidebar = (initialPath = '/dashboard') => {
       <MemoryRouter initialEntries={[initialPath]}>
         <SidebarProvider>
           <AppSidebar />
+          <LocationProbe />
         </SidebarProvider>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -122,5 +128,28 @@ describe('AppSidebar first-run disclosure', () => {
       'Contents',
       'Shared',
     ]);
+  });
+
+  it('keeps every Settings section discoverable on the Free plan', async () => {
+    subscriptionState.isSubscribed = false;
+    subscriptionState.isTrialing = false;
+    getStartedProgressViaGraphql.mockResolvedValue(null);
+
+    renderSidebar('/settings/integrations');
+
+    expect(await screen.findByText('Integrations')).toBeInTheDocument();
+    expect(screen.getByText('Payments')).toBeInTheDocument();
+  });
+
+  it('deep-links Free users from Unlock business tools to the expanded plans section', async () => {
+    subscriptionState.isSubscribed = false;
+    subscriptionState.isTrialing = false;
+    getStartedProgressViaGraphql.mockResolvedValue(null);
+
+    renderSidebar('/contents');
+
+    fireEvent.click(await screen.findByText('Unlock business tools'));
+
+    expect(screen.getByTestId('location')).toHaveTextContent('/settings?section=plans');
   });
 });

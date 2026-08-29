@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { AlertTriangle, Loader2, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -15,7 +14,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { SettingsSectionTitle } from '@/components/settings/SettingsPrimitives';
 import { useAuthActions, useAuthState } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -36,7 +34,7 @@ const blockerMessage = (
   return `${blocker.organizationName} contains signing evidence that requires support-assisted retention.`;
 };
 
-export function AccountDeletionCard() {
+export function AccountDeletionAction() {
   const navigate = useNavigate();
   const { currentUser } = useAuthState();
   const { logout } = useAuthActions();
@@ -105,34 +103,29 @@ export function AccountDeletionCard() {
   };
 
   return (
-    <Card className="border-destructive/40">
-      <CardHeader>
-        <SettingsSectionTitle icon={Trash2}>Delete account</SettingsSectionTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2 text-sm text-muted-foreground">
-          <p>
-            Schedule permanent deletion of your account and eligible personal organizations.
-            Your account is locked immediately, with seven days to recover it by email.
-          </p>
-          <p>
-            Itemize checks every owned organization for members, active subscriptions, and
-            retained signing evidence before accepting the request.
-          </p>
-        </div>
-        <AlertDialog
-          open={open}
-          onOpenChange={(nextOpen) => {
-            if (deleting) return;
-            setOpen(nextOpen);
-            if (nextOpen) void loadPreflight();
-            else reset();
-          }}
-        >
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive">Delete my account</Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
+    <section className="space-y-3" aria-labelledby="account-deletion-title">
+      <div className="space-y-1.5">
+        <h3 id="account-deletion-title" className="text-sm font-medium">Delete account</h3>
+        <p className="text-sm text-muted-foreground">
+          Delete your account after a seven-day recovery window.
+        </p>
+      </div>
+      <AlertDialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (deleting) return;
+          setOpen(nextOpen);
+          if (nextOpen) void loadPreflight();
+          else reset();
+        }}
+      >
+        <AlertDialogTrigger asChild>
+          <Button variant="destructive">
+            <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+            Delete my account
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Schedule permanent account deletion?</AlertDialogTitle>
               <AlertDialogDescription>
@@ -232,9 +225,8 @@ export function AccountDeletionCard() {
                 </Button>
               )}
             </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </CardContent>
-    </Card>
+        </AlertDialogContent>
+      </AlertDialog>
+    </section>
   );
 }

@@ -460,7 +460,7 @@ export function CreateSegmentModal({
             Create Segment
           </DialogTitle>
           <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
-            Create a dynamic segment to group contacts based on specific criteria
+            Group contacts with shared criteria.
           </DialogDescription>
         </DialogHeader>
 

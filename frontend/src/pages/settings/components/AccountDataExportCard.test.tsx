@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AccountDataExportCard } from './AccountDataExportCard';
+import { AccountDataExportAction } from './AccountDataExportCard';
 
 const mocks = vi.hoisted(() => ({
   exportData: vi.fn(),
@@ -14,7 +14,7 @@ vi.mock('@/services/authGraphql', () => ({
 }));
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: mocks.toast }) }));
 
-describe('AccountDataExportCard', () => {
+describe('AccountDataExportAction', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal('URL', {
@@ -31,7 +31,7 @@ describe('AccountDataExportCard', () => {
 
   it('downloads the versioned export and reports completion', async () => {
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
-    render(<AccountDataExportCard />);
+    render(<AccountDataExportAction />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Download JSON export' }));
 
@@ -47,7 +47,7 @@ describe('AccountDataExportCard', () => {
 
   it('shows a destructive error without creating a download', async () => {
     mocks.exportData.mockRejectedValue(new Error('Export unavailable'));
-    render(<AccountDataExportCard />);
+    render(<AccountDataExportAction />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Download JSON export' }));
 

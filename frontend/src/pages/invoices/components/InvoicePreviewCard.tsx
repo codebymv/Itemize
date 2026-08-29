@@ -14,7 +14,7 @@ export interface PreviewLineItem {
 
 interface InvoicePreviewCardProps {
     // Display mode
-    variant?: 'invoice' | 'template';
+    variant?: 'invoice' | 'estimate' | 'template';
     
     // Business info
     business?: Business;
@@ -91,8 +91,9 @@ export function InvoicePreviewCard({
     };
 
     const isTemplate = variant === 'template';
-    // Always show "INVOICE" in blue - the preview shows what the generated invoice will look like
-    const headerTitle = 'INVOICE';
+    const isEstimate = variant === 'estimate';
+    // Templates preview their generated invoice; estimates retain their own document identity.
+    const headerTitle = isEstimate ? 'ESTIMATE' : 'INVOICE';
     const headerColor = 'text-blue-600';
 
     // Light mode color constants - invoice should always look professional/printable
@@ -186,7 +187,7 @@ export function InvoicePreviewCard({
                                 )}
                             </>
                         ) : (
-                            // Invoice: show dates
+                            // Invoice or estimate: show document dates
                             <>
                                 {issueDate && (
                                     <div className="flex justify-end gap-4">
@@ -196,7 +197,7 @@ export function InvoicePreviewCard({
                                 )}
                                 {dueDate && (
                                     <div className="flex justify-end gap-4">
-                                        <span className={colors.textMuted}>Due Date:</span>
+                                        <span className={colors.textMuted}>{isEstimate ? 'Valid Until:' : 'Due Date:'}</span>
                                         <span className="font-medium">{formatDate(dueDate)}</span>
                                     </div>
                                 )}

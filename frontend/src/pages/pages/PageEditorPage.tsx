@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    ArrowLeft,
     Save,
     Eye,
     EyeOff,
@@ -79,6 +78,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ErrorState } from '@/components/ErrorState';
 import { EmptyState } from '@/components/EmptyState';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { ShellBackButton } from '@/components/layout/ShellBackButton';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useDirtyState } from '@/hooks/useDirtyState';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
@@ -312,15 +312,12 @@ export function PageEditorPage() {
     };
 
     const backButton = (
-        <Button
-            variant="ghost"
-            size="icon"
+        <ShellBackButton
+            label="Back to pages"
             onClick={() => {
                 if (confirmLeave()) navigate('/pages');
             }}
-        >
-            <ArrowLeft className="h-5 w-5" />
-        </Button>
+        />
     );
 
     if (loading) {

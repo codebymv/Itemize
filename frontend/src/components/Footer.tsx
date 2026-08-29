@@ -64,7 +64,7 @@ const Footer: React.FC = () => {
               />
             </div>
             <p className="text-sm text-muted-foreground max-w-md">
-              Organize thoughts, ideas, projects and more with AI-enhanced tools.
+              Organize projects with AI-assisted tools.
             </p>
           </div>
 
@@ -89,7 +89,7 @@ const Footer: React.FC = () => {
                     className={`w-full justify-start pl-2 group ${location.pathname.startsWith('/canvas') ? 'text-foreground font-medium bg-accent/50' : 'text-muted-foreground hover:text-foreground'}`}
                     onClick={() => handleNavigate('/canvas')}
                   >
-                    <Palette className={`mr-2 h-4 w-4 transition-colors ${location.pathname.startsWith('/canvas') ? 'text-blue-600' : 'group-hover:text-blue-600'}`} />
+                    <Palette className={`mr-2 h-4 w-4 transition-colors ${location.pathname.startsWith('/canvas') ? 'text-blue-600 dark:text-blue-400' : 'group-hover:text-blue-600 dark:group-hover:text-blue-400'}`} />
                     Canvas
                   </Button>
                 </li>
@@ -100,7 +100,7 @@ const Footer: React.FC = () => {
                   className={`w-full justify-start pl-2 group ${location.pathname.startsWith('/help') ? 'text-foreground font-medium bg-accent/50' : 'text-muted-foreground hover:text-foreground'}`}
                   onClick={() => handleNavigate('/help')}
                 >
-                  <Book className={`mr-2 h-4 w-4 transition-colors ${location.pathname.startsWith('/help') ? 'text-blue-600' : 'group-hover:text-blue-600'}`} />
+                  <Book className={`mr-2 h-4 w-4 transition-colors ${location.pathname.startsWith('/help') ? 'text-blue-600 dark:text-blue-400' : 'group-hover:text-blue-600 dark:group-hover:text-blue-400'}`} />
                   Help
                 </Button>
               </li>
@@ -110,7 +110,7 @@ const Footer: React.FC = () => {
                   className={`w-full justify-start pl-2 group ${location.pathname.startsWith('/status') ? 'text-foreground font-medium bg-accent/50' : 'text-muted-foreground hover:text-foreground'}`}
                   onClick={() => handleNavigate('/status')}
                 >
-                  <Activity className={`mr-2 h-4 w-4 transition-colors ${location.pathname.startsWith('/status') ? 'text-blue-600' : 'group-hover:text-blue-600'}`} />
+                  <Activity className={`mr-2 h-4 w-4 transition-colors ${location.pathname.startsWith('/status') ? 'text-blue-600 dark:text-blue-400' : 'group-hover:text-blue-600 dark:group-hover:text-blue-400'}`} />
                   Status
                 </Button>
               </li>

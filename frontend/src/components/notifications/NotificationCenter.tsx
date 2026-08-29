@@ -1,18 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { formatDistanceToNow, isThisWeek, isToday } from 'date-fns';
+import { isThisWeek, isToday } from 'date-fns';
 import {
   AlertTriangle,
+  ArrowRightLeft,
   Bell,
-  BadgeCheck,
+  Building2,
   Check,
+  CircleCheckBig,
   CircleDollarSign,
+  CircleX,
+  CreditCard,
   FileCheck2,
   FileSignature,
   Inbox,
   Loader2,
   Eye,
-  Sparkles,
+  ReceiptText,
+  Undo2,
+  UsersRound,
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -30,6 +36,7 @@ import {
 } from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ToastAction } from '@/components/ui/toast';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -43,6 +50,12 @@ import {
   markNotificationRead,
   markNotificationsSeen,
 } from '@/services/notificationsGraphql';
+import {
+  formatNotificationAge,
+  getNotificationDisplayBody,
+  getNotificationDisplayTitle,
+  getNotificationIconKind,
+} from './notificationDisplay';
 
 const PAGE_SIZE = 25;
 
@@ -61,28 +74,45 @@ function notificationGroup(value: string): string {
 }
 
 function NotificationIcon({ notification }: { notification: AppNotification }) {
-  if (notification.eventType === 'account.welcome') {
-    return <Sparkles className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+  switch (getNotificationIconKind(notification)) {
+    case 'itemize':
+      return (
+        <img
+          src="/icon.png"
+          alt=""
+          aria-hidden="true"
+          className="h-[18px] w-6 max-w-none object-contain"
+        />
+      );
+    case 'viewed':
+      return <Eye className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+    case 'subscription':
+      return <CreditCard className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+    case 'paid':
+      return <CircleDollarSign className="h-4 w-4 text-emerald-600" aria-hidden="true" />;
+    case 'refunded':
+      return <Undo2 className="h-4 w-4 text-amber-600 dark:text-amber-400" aria-hidden="true" />;
+    case 'accepted':
+      return <CircleCheckBig className="h-4 w-4 text-emerald-600" aria-hidden="true" />;
+    case 'declined':
+      return <CircleX className="h-4 w-4 text-destructive" aria-hidden="true" />;
+    case 'signed':
+      return <FileSignature className="h-4 w-4 text-emerald-600" aria-hidden="true" />;
+    case 'signature':
+      return <FileSignature className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+    case 'ownership-transfer':
+      return <ArrowRightLeft className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+    case 'organization-people':
+      return <UsersRound className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+    case 'organization':
+      return <Building2 className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+    case 'estimate':
+      return <FileCheck2 className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+    case 'billing':
+      return <ReceiptText className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+    default:
+      return <Bell className="h-4 w-4 text-blue-600" aria-hidden="true" />;
   }
-  if (notification.eventType === 'subscription.plan_changed') {
-    return <BadgeCheck className="h-4 w-4 text-blue-600" aria-hidden="true" />;
-  }
-  if (notification.eventType.endsWith('.viewed')) {
-    return <Eye className="h-4 w-4 text-blue-600" aria-hidden="true" />;
-  }
-  if (notification.eventType === 'invoice.paid') {
-    return <CircleDollarSign className="h-4 w-4 text-emerald-600" aria-hidden="true" />;
-  }
-  if (notification.entityType === 'signature') {
-    return <FileSignature className="h-4 w-4 text-blue-600" aria-hidden="true" />;
-  }
-  if (notification.eventType.endsWith('.declined')) {
-    return <AlertTriangle className="h-4 w-4 text-destructive" aria-hidden="true" />;
-  }
-  if (notification.entityType === 'estimate') {
-    return <FileCheck2 className="h-4 w-4 text-blue-600" aria-hidden="true" />;
-  }
-  return <Bell className="h-4 w-4 text-blue-600" aria-hidden="true" />;
 }
 
 function NotificationPanel({
@@ -99,6 +129,7 @@ function NotificationPanel({
   onRetry,
   onRead,
   onMarkAllRead,
+  isMarkingAllRead,
 }: {
   reserveCloseSpace?: boolean;
   filter: NotificationFilter;
@@ -113,6 +144,7 @@ function NotificationPanel({
   onRetry: () => void;
   onRead: (notification: AppNotification) => void;
   onMarkAllRead: () => void;
+  isMarkingAllRead: boolean;
 }) {
   const sentinel = useRef<HTMLDivElement | null>(null);
 
@@ -127,39 +159,59 @@ function NotificationPanel({
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   let previousGroup = '';
+  const markAllUnavailable = unreadCount === 0 || isMarkingAllRead;
+  const markAllLabel = isMarkingAllRead
+    ? 'Marking all notifications as read'
+    : unreadCount === 0
+      ? 'Everything is read'
+      : 'Mark all as read';
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
       <div className={cn(
-        'flex items-center justify-between border-b px-4 py-3',
+        'flex flex-wrap items-center gap-2 border-b px-3 py-3',
         reserveCloseSpace && 'pr-12',
       )}>
-        <ResponsivePageHeading
-          title="Notifications"
-          icon={<Bell className="h-4 w-4 text-blue-600" aria-hidden="true" />}
-        />
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onMarkAllRead}
-          disabled={unreadCount === 0}
-          className="gap-1.5 text-xs"
-        >
-          <Check className="h-3.5 w-3.5" />
-          Mark all read
-        </Button>
+        <div className="min-w-0 shrink-0">
+          <ResponsivePageHeading
+            title="NOTIFICATIONS"
+            icon={<Bell className="h-4 w-4 text-blue-600" aria-hidden="true" />}
+            className="w-auto md:ml-0"
+          />
+        </div>
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          <Tabs
+            value={filter}
+            onValueChange={(value) => setFilter(value as NotificationFilter)}
+          >
+            <TabsList className="h-8">
+              <TabsTrigger value="all" className="h-7 px-3 text-xs">All</TabsTrigger>
+              <TabsTrigger value="unread" className="h-7 px-3 text-xs">Unread</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-disabled={markAllUnavailable}
+                aria-label={markAllLabel}
+                onClick={() => {
+                  if (!markAllUnavailable) onMarkAllRead();
+                }}
+                className="h-8 w-8 shrink-0 text-muted-foreground aria-disabled:cursor-default aria-disabled:opacity-50"
+              >
+                {isMarkingAllRead ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Check className="h-4 w-4" aria-hidden="true" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{markAllLabel}</TooltipContent>
+          </Tooltip>
+        </div>
       </div>
-
-      <Tabs
-        value={filter}
-        onValueChange={(value) => setFilter(value as NotificationFilter)}
-        className="border-b px-4 py-2"
-      >
-        <TabsList className="h-8">
-          <TabsTrigger value="all" className="h-7 px-3 text-xs">All</TabsTrigger>
-          <TabsTrigger value="unread" className="h-7 px-3 text-xs">Unread</TabsTrigger>
-        </TabsList>
-      </Tabs>
 
       <ScrollArea className="min-h-0 flex-1">
         {isLoading ? (
@@ -188,7 +240,9 @@ function NotificationPanel({
               {filter === 'unread' ? 'No unread notifications' : 'Nothing new yet'}
             </p>
             <p className="max-w-64 text-xs text-muted-foreground">
-              Important activity from estimates, invoices, signatures, and your account will appear here.
+              {filter === 'unread'
+                ? 'New activity appears here.'
+                : 'Account activity appears here.'}
             </p>
           </div>
         ) : (
@@ -221,10 +275,10 @@ function NotificationPanel({
                           'block text-sm leading-5',
                           !notification.readAt ? 'font-semibold' : 'font-medium',
                         )}>
-                          {notification.title}
+                          {getNotificationDisplayTitle(notification)}
                         </span>
                         <span className="mt-0.5 line-clamp-2 block text-xs leading-5 text-muted-foreground">
-                          {notification.body}
+                          {getNotificationDisplayBody(notification)}
                         </span>
                       </span>
                       <span className="flex min-h-full flex-col items-end justify-between gap-2">
@@ -232,7 +286,7 @@ function NotificationPanel({
                           <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-600" aria-label="Unread" />
                         )}
                         <span className="whitespace-nowrap text-right text-[11px] leading-4 text-muted-foreground">
-                          {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                          {formatNotificationAge(notification.createdAt)}
                         </span>
                       </span>
                     </span>
@@ -303,7 +357,17 @@ export function NotificationCenter() {
   });
   const markAllMutation = useMutation({
     mutationFn: () => markAllNotificationsRead(organizationId as number),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      void invalidate();
+      toast({ title: 'All notifications marked as read' });
+    },
+    onError: () => {
+      toast({
+        title: 'Could not mark notifications as read',
+        description: 'Please try again.',
+        variant: 'destructive',
+      });
+    },
   });
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -378,7 +442,7 @@ export function NotificationCenter() {
     >
       <Bell className="h-4 w-4" />
       {unseenCount > 0 && (
-        <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-blue-600 px-1 text-center text-[10px] font-semibold leading-4 text-white">
+        <span data-badge className="absolute -right-1 -top-1 min-w-4 rounded-full bg-blue-600 px-1 text-center text-[10px] font-semibold leading-4 text-white">
           {unseenCount > 99 ? '99+' : unseenCount}
         </span>
       )}
@@ -400,6 +464,7 @@ export function NotificationCenter() {
       onRetry={() => { void query.refetch(); }}
       onRead={handleRead}
       onMarkAllRead={() => markAllMutation.mutate()}
+      isMarkingAllRead={markAllMutation.isPending}
     />
   );
 
@@ -423,7 +488,12 @@ export function NotificationCenter() {
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
-      <PopoverContent align="end" sideOffset={8} className="h-[min(620px,calc(100vh-5rem))] w-[400px] overflow-hidden p-0">
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        className="h-[min(620px,calc(100vh-5rem))] w-[400px] overflow-hidden p-0"
+      >
         {renderPanel()}
       </PopoverContent>
     </Popover>

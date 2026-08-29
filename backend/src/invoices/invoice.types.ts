@@ -211,6 +211,15 @@ export class Invoice {
   @Field(() => Int, { nullable: true })
   parentInvoiceId: number | null;
 
+  @Field()
+  isRecurringSource: boolean;
+
+  @Field(() => Int, { nullable: true })
+  recurringTemplateId: number | null;
+
+  @Field(() => Int, { nullable: true })
+  recurringSourceTemplateId: number | null;
+
   @Field(() => GraphQLJSON)
   customFields: Record<string, unknown>;
 

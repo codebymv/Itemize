@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Plus, UploadCloud, Save, Send, FileSignature, X } from 'lucide-react';
+import { Plus, UploadCloud, Save, Send, FileSignature, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { ShellBackButton } from '@/components/layout/ShellBackButton';
 import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthState } from '@/contexts/AuthContext';
@@ -317,11 +318,9 @@ export default function SignatureEditorPage() {
       title={isEditing ? 'EDIT SIGNATURE DOCUMENT' : 'NEW SIGNATURE DOCUMENT'}
       icon={<FileSignature className="h-5 w-5 text-blue-600 flex-shrink-0" />}
       leading={
-        <Button variant="ghost" size="icon" onClick={() => {
+        <ShellBackButton label="Back to documents" onClick={() => {
           if (confirmLeave()) navigate('/documents');
-        }}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
+        }} />
       }
       pageActions={
         <>

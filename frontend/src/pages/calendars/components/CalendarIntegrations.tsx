@@ -313,7 +313,7 @@ export function CalendarIntegrations({ organizationId }: CalendarIntegrationsPro
 
                         {connections && connections.length === 0 && (
                             <p className="text-sm text-muted-foreground mt-2">
-                                Connect an external calendar to automatically sync your Itemize bookings.
+                                Sync Itemize bookings with an external calendar.
                             </p>
                         )}
                     </div>

@@ -285,7 +285,7 @@ describe('contacts API GraphQL transport', () => {
   });
 
   it('routes contact content through GraphQL', async () => {
-    const content = { lists: [], notes: [], whiteboards: [] };
+    const content = { lists: [], notes: [], whiteboards: [], wireframes: [] };
     vi.mocked(getContactContentViaGraphql).mockResolvedValue(content);
     await expect(getContactContent(11, 42)).resolves.toEqual(content);
     expect(getContactContentViaGraphql).toHaveBeenCalledWith(11, 42);

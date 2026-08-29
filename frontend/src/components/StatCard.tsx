@@ -30,9 +30,9 @@ export const StatCard = memo(({
     return (
       <Card>
         <CardContent className="py-6">
-          <div className="flex items-center gap-3">
-            <Skeleton className="w-10 h-10 rounded-full" />
-            <div className="flex-1">
+          <div className="flex items-center gap-3" data-stat-card-row>
+            <Skeleton className="w-10 h-10 rounded-full" data-stat-card-icon />
+            <div className="flex-1" data-stat-card-content>
               <Skeleton className="h-4 w-24 mb-2" />
               <Skeleton className="h-8 w-16" />
             </div>
@@ -45,13 +45,16 @@ export const StatCard = memo(({
   return (
     <Card>
       <CardContent className="py-6">
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${iconBgClass}`}>
+        <div className="flex items-center gap-3" data-stat-card-row>
+          <div
+            className={`w-10 h-10 rounded-full flex items-center justify-center ${iconBgClass}`}
+            data-stat-card-icon
+          >
             <Icon className={`h-5 w-5 ${iconClass}`} />
           </div>
-          <div className="flex-1">
+          <div className="flex-1" data-stat-card-content>
             <p className="text-xs font-medium text-muted-foreground mb-1">{badgeText}</p>
-            <p className={`text-2xl font-bold ${valueClass}`}>{value}</p>
+            <p className={`text-2xl font-bold ${valueClass}`} data-stat-card-value>{value}</p>
             {description && (
               <p className="text-xs text-muted-foreground mt-1">{description}</p>
             )}

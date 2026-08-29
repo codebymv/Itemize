@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ContactDetailPage } from '@/pages/contacts/ContactDetailPage';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { EstimateEditorPage } from './EstimateEditorPage';
 
 const contactsApi = vi.hoisted(() => ({
@@ -40,17 +41,19 @@ vi.mock('@/components/layout/PageLayout', () => ({
   PageLayout: ({
     children,
     pageActions,
+    desktopTools,
     mobileActions,
   }: {
     children: React.ReactNode;
     pageActions?: React.ReactNode;
+    desktopTools?: { primaryAction?: React.ReactNode };
     mobileActions?: React.ReactNode;
   }) => (
-    <>
-      <div data-testid="page-actions">{pageActions}</div>
+    <TooltipProvider>
+      <div data-testid="page-actions">{pageActions ?? desktopTools?.primaryAction}</div>
       <div data-testid="mobile-actions">{mobileActions}</div>
       {children}
-    </>
+    </TooltipProvider>
   ),
 }));
 
@@ -93,6 +96,7 @@ describe('contact to estimate handoff', () => {
       lists: [],
       notes: [],
       whiteboards: [],
+      wireframes: [],
     });
     invoicesApi.getProducts.mockResolvedValue([]);
   });

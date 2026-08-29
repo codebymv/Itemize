@@ -7,7 +7,6 @@ import {
   X,
   FileText,
   Folder,
-  ArrowLeft,
   Search,
   ChevronRight,
   ChevronDown,
@@ -15,6 +14,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { ShellBackButton } from '@/components/layout/ShellBackButton';
+import { useSafeShellBack } from '@/components/layout/useSafeShellBack';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -35,6 +36,7 @@ const DocsPage: React.FC = () => {
   const { '*': docPath } = useParams<{ '*': string }>();
   const { currentUser } = useAuthState();
   const navigate = useNavigate();
+  const navigateBack = useSafeShellBack(currentUser ? '/canvas' : '/home');
   const [markdownContent, setMarkdownContent] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [docStructure, setDocStructure] = useState<DocStructure[]>([]);
@@ -217,15 +219,10 @@ const DocsPage: React.FC = () => {
   }, []);
 
   const backButton = (
-    <Button
-      onClick={() => navigate(-1)}
-      size="sm"
-      variant="ghost"
-      className="text-foreground"
-    >
-      <ArrowLeft className="h-4 w-4 mr-1" />
-      Back
-    </Button>
+    <ShellBackButton
+      label={currentUser ? 'Back to previous page' : 'Back to Itemize home'}
+      onClick={navigateBack}
+    />
   );
 
   const filteredDocs = filterDocStructure(docStructure, searchQuery);

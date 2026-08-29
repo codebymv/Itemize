@@ -89,7 +89,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
         className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-transparent border-none text-left font-raleway"
         onClick={(e) => handleClickItem(e, onAddList)}
       >
-        <CheckSquare className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+        <CheckSquare className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
         <span>Add List</span>
       </button>
       {onAddNote && (
@@ -97,17 +97,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-transparent border-none text-left font-raleway"
           onClick={(e) => handleClickItem(e, onAddNote)}
         >
-          <StickyNote className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+          <StickyNote className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
           <span>Add Note</span>
-        </button>
-      )}
-      {onAddWhiteboard && (
-        <button 
-          className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-transparent border-none text-left font-raleway"
-          onClick={(e) => handleClickItem(e, onAddWhiteboard)}
-        >
-          <Palette className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
-          <span>Add Whiteboard</span>
         </button>
       )}
       {onAddWireframe && (
@@ -115,8 +106,17 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-transparent border-none text-left font-raleway"
           onClick={(e) => handleClickItem(e, onAddWireframe)}
         >
-          <GitBranch className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+          <GitBranch className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
           <span>Add Wireframe</span>
+        </button>
+      )}
+      {onAddWhiteboard && (
+        <button 
+          className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-transparent border-none text-left font-raleway"
+          onClick={(e) => handleClickItem(e, onAddWhiteboard)}
+        >
+          <Palette className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+          <span>Add Whiteboard</span>
         </button>
       )}
       {onAddVault && (
@@ -124,7 +124,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-transparent border-none text-left font-raleway"
           onClick={(e) => handleClickItem(e, onAddVault)}
         >
-          <KeyRound className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600" />
+          <KeyRound className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
           <span>Add Vault</span>
         </button>
       )}

@@ -7,6 +7,7 @@ type Row = Record<string, unknown>;
 export interface DashboardSnapshotRows {
   asOf: Date;
   contacts: Row;
+  recentContacts: Row[];
   contactGrowth: Row[];
   deals: Row;
   dealsByStage: Row[];
@@ -75,6 +76,12 @@ export class AnalyticsRepository {
           COUNT(*) FILTER (WHERE created_at >= $2::timestamptz - INTERVAL '30 days') AS new_this_month,
           COUNT(*) FILTER (WHERE created_at >= $2::timestamptz - INTERVAL '7 days') AS new_this_week
         FROM contacts WHERE organization_id = $1`, parameters);
+      const recentContacts = await this.many(client, `
+        SELECT id, first_name, last_name, email
+        FROM contacts
+        WHERE organization_id = $1
+        ORDER BY created_at DESC, id DESC
+        LIMIT 5`, [organizationId]);
       const contactGrowth = await this.many(client, `
         SELECT DATE_TRUNC('month', created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' AS month,
           COUNT(*) AS count
@@ -165,7 +172,7 @@ export class AnalyticsRepository {
 
       await client.query('COMMIT');
       return {
-        asOf, contacts, contactGrowth, deals, dealsByStage, bookings, tasks,
+        asOf, contacts, recentContacts, contactGrowth, deals, dealsByStage, bookings, tasks,
         pipelines, recentActivity, invoiceMetrics, recentInvoices,
         signatureMetrics, recentSignatures, workspaceMetrics, recentWorkspace,
       };

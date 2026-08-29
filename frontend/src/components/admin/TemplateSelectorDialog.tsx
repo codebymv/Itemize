@@ -244,7 +244,7 @@ export function TemplateSelectorDialog({
                                                             e.stopPropagation();
                                                             setPreviewTemplate(template);
                                                         }}
-                                                        className="p-1.5 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 text-slate-400 hover:text-blue-600 transition-all"
+                                                        className="p-1.5 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all"
                                                         title="Preview template"
                                                     >
                                                         <Eye className="h-4 w-4" />

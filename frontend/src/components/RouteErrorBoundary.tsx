@@ -84,7 +84,7 @@ class ErrorBoundaryComponent extends React.Component<
                 Something went wrong
               </h1>
               <p className="text-muted-foreground">
-                We're having trouble loading this page. Please try refreshing or go back to the home page.
+                This page couldn't load. Refresh or return home.
               </p>
             </div>
 

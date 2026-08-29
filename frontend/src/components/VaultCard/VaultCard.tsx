@@ -1,19 +1,39 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChevronDown, MoreVertical, Edit3, Trash2, X, Check, Lock, KeyRound, Share2, Plus } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  ChevronDown,
+  MoreVertical,
+  Edit3,
+  Trash2,
+  X,
+  Check,
+  Lock,
+  KeyRound,
+  Share2,
+  Plus,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ColorPicker } from '@/components/ui/color-picker';
-import { Spinner } from '@/components/ui/Spinner';
-import { useVaultCardLogic } from '@/hooks/useVaultCardLogic';
-import { VaultCardProps, Category } from '@/types';
-import { CategorySelector } from '../CategorySelector';
-import { VaultItemRow } from './VaultItemRow';
-import { DeleteDialog } from '../ui/delete-dialog';
-import { WorkspaceContentCard } from '../workspace/WorkspaceContentCard';
+import { ColorPicker } from "@/components/ui/color-picker";
+import { Spinner } from "@/components/ui/Spinner";
+import { useVaultCardLogic } from "@/hooks/useVaultCardLogic";
+import { VaultCardProps, Category } from "@/types";
+import { CategorySelector } from "../CategorySelector";
+import { VaultItemRow } from "./VaultItemRow";
+import { DeleteDialog } from "../ui/delete-dialog";
+import { WorkspaceContentCard } from "../workspace/WorkspaceContentCard";
 import {
   Dialog,
   DialogContent,
@@ -21,8 +41,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '../ui/dialog';
-import { useTheme } from 'next-themes';
+} from "../ui/dialog";
+import { useTheme } from "next-themes";
 import {
   DndContext,
   closestCenter,
@@ -31,18 +51,21 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-} from '@dnd-kit/core';
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
   useSortable,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // Sortable item wrapper component
-const SortableItem: React.FC<{ id: number; children: React.ReactNode }> = ({ id, children }) => {
+const SortableItem: React.FC<{ id: number; children: React.ReactNode }> = ({
+  id,
+  children,
+}) => {
   const {
     attributes,
     listeners,
@@ -75,58 +98,72 @@ export const VaultCard: React.FC<VaultCardProps> = ({
   existingCategories,
   isCollapsed,
   onToggleCollapsed,
-  updateCategory
+  updateCategory,
 }) => {
-  const categoryColor = existingCategories.find(c => c.name === vault.category)?.color_value;
-  const vaultDisplayColor = vault.color_value || categoryColor || '#3B82F6'; // Default to blue
+  const categoryColor = existingCategories.find(
+    (c) => c.name === vault.category,
+  )?.color_value;
+  const vaultDisplayColor = vault.color_value || categoryColor || "#3B82F6"; // Default to blue
 
   // State for delete confirmation modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Color preview state
-  const [currentColorPreview, setCurrentColorPreview] = useState(vault.color_value || '#3B82F6');
+  const [currentColorPreview, setCurrentColorPreview] = useState(
+    vault.color_value || "#3B82F6",
+  );
 
   // Get theme for styling
   const { theme } = useTheme();
 
   // Sync color preview when vault color changes
   useEffect(() => {
-    setCurrentColorPreview(vault.color_value || '#3B82F6');
+    setCurrentColorPreview(vault.color_value || "#3B82F6");
   }, [vault.color_value]);
 
   const {
     // Title for display
     vaultTitle,
-    
+
     // Collapsible
-    isCollapsibleOpen, setIsCollapsibleOpen,
-    
+    isCollapsibleOpen,
+    setIsCollapsibleOpen,
+
     // Title editing
-    isEditing, setIsEditing, editTitle, setEditTitle, handleEditTitle,
-    
+    isEditing,
+    setIsEditing,
+    editTitle,
+    setEditTitle,
+    handleEditTitle,
+
     // Vault operations
     handleDeleteVault,
-    
+
     // Color
     handleSaveVaultColor,
     isSavingColor,
-    
+
     // Category editing
-    isEditingCategory, setIsEditingCategory,
-    showNewCategoryInput, setShowNewCategoryInput,
-    newCategory, setNewCategory,
-    handleEditCategory, handleAddCustomCategory, handleUpdateCategoryColor,
-    
+    isEditingCategory,
+    setIsEditingCategory,
+    showNewCategoryInput,
+    setShowNewCategoryInput,
+    newCategory,
+    setNewCategory,
+    handleEditCategory,
+    handleAddCustomCategory,
+    handleUpdateCategoryColor,
+
     // Items
     items,
     isLoadingItems,
     loadItems,
-    
+
     // Item visibility
     toggleItemVisibility,
     isItemVisible,
     copyToClipboard,
-    
+
     // Item editing
     editingItemId,
     editingItemLabel,
@@ -137,7 +174,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
     cancelEditingItem,
     handleUpdateItem,
     handleDeleteItem,
-    
+
     // New item
     showAddItem,
     setShowAddItem,
@@ -148,7 +185,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
     newItemValue,
     setNewItemValue,
     handleAddItem,
-    
+
     // Bulk operations
     handleBulkAddItems,
     handleReorderItems,
@@ -171,11 +208,18 @@ export const VaultCard: React.FC<VaultCardProps> = ({
     openSecurityDialog,
     closeSecurityDialog,
     handleSecuritySubmit,
-    
+
     // Refs
     titleEditRef,
     newItemLabelRef,
-  } = useVaultCardLogic({ vault, onUpdate, onDelete, isCollapsed, onToggleCollapsed, updateCategory });
+  } = useVaultCardLogic({
+    vault,
+    onUpdate,
+    onDelete,
+    isCollapsed,
+    onToggleCollapsed,
+    updateCategory,
+  });
 
   // Handle sharing
   const handleShareVault = () => {
@@ -198,17 +242,19 @@ export const VaultCard: React.FC<VaultCardProps> = ({
   };
 
   // Handle paste in key-value input - detect .env format and bulk import
-  const handleLabelPaste = async (e: React.ClipboardEvent<HTMLInputElement>) => {
-    const pastedText = e.clipboardData.getData('text');
+  const handleLabelPaste = async (
+    e: React.ClipboardEvent<HTMLInputElement>,
+  ) => {
+    const pastedText = e.clipboardData.getData("text");
     const parsedItems = parseEnvFormat(pastedText);
-    
+
     // If pasted text contains multiple env variables, bulk import them
     if (parsedItems.length > 1) {
       e.preventDefault();
       await handleBulkAddItems(parsedItems);
       setShowAddItem(false);
-      setNewItemLabel('');
-      setNewItemValue('');
+      setNewItemLabel("");
+      setNewItemValue("");
     }
     // If it's a single KEY=VALUE, parse and fill both fields
     else if (parsedItems.length === 1) {
@@ -224,7 +270,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   // Handle drag end event for reordering
@@ -235,37 +281,32 @@ export const VaultCard: React.FC<VaultCardProps> = ({
       const oldIndex = items.findIndex((item) => item.id === active.id);
       const newIndex = items.findIndex((item) => item.id === over.id);
 
-      const newOrder = arrayMove(items, oldIndex, newIndex).map(item => item.id);
+      const newOrder = arrayMove(items, oldIndex, newIndex).map(
+        (item) => item.id,
+      );
       handleReorderItems(newOrder);
     }
   };
 
-  const displayedItemCount = isVaultLocked && !isUnlockedForSession
-    ? (vault.item_count ?? items.length)
-    : items.length;
+  const displayedItemCount =
+    isVaultLocked && !isUnlockedForSession
+      ? (vault.item_count ?? items.length)
+      : items.length;
 
   // Load items when collapsible opens
   useEffect(() => {
-    if (
-      isCollapsibleOpen &&
-      (!isVaultLocked || isUnlockedForSession)
-    ) {
+    if (isCollapsibleOpen && (!isVaultLocked || isUnlockedForSession)) {
       loadItems();
     }
-  }, [
-    isCollapsibleOpen,
-    isVaultLocked,
-    isUnlockedForSession,
-    loadItems,
-  ]);
+  }, [isCollapsibleOpen, isVaultLocked, isUnlockedForSession, loadItems]);
 
   // Implement click outside handler for title editing
   useEffect(() => {
     if (!isEditing) return;
-    
+
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        titleEditRef.current && 
+        titleEditRef.current &&
         !titleEditRef.current.contains(event.target as Node)
       ) {
         handleEditTitle();
@@ -292,7 +333,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
         }
       }}
       className="w-full h-full flex flex-col"
-      style={{ '--vault-color': vaultDisplayColor } as React.CSSProperties}
+      style={{ "--vault-color": vaultDisplayColor } as React.CSSProperties}
     >
       <WorkspaceContentCard className="h-full flex flex-col overflow-hidden">
         <CardHeader className="pb-2">
@@ -306,7 +347,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                   className="h-8"
                   autoFocus
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       handleEditTitle();
                     }
                   }}
@@ -324,7 +365,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                   size="sm"
                   variant="ghost"
                   onClick={() => {
-                    setEditTitle(vault.title || 'Untitled Vault');
+                    setEditTitle(vault.title || "Untitled Vault");
                     setIsEditing(false);
                   }}
                   className="h-8 w-8 p-0"
@@ -362,12 +403,18 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                   </ColorPicker>
                   {/* Type icon */}
                   {isVaultLocked ? (
-                    <Lock className="h-4 w-4" style={{ color: vaultDisplayColor }} />
+                    <Lock
+                      className="h-4 w-4"
+                      style={{ color: vaultDisplayColor }}
+                    />
                   ) : (
-                    <KeyRound className="h-4 w-4" style={{ color: vaultDisplayColor }} />
+                    <KeyRound
+                      className="h-4 w-4"
+                      style={{ color: vaultDisplayColor }}
+                    />
                   )}
                   {/* Title - clickable to edit */}
-                  <CardTitle 
+                  <CardTitle
                     className="text-lg font-medium cursor-pointer font-raleway"
                     onClick={() => setIsEditing(true)}
                   >
@@ -377,63 +424,89 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                 <div className="flex">
                   {/* Collapsible trigger - separate button */}
                   <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="Toggle vault details">
-                      <ChevronDown className={cn(
-                        "h-4 w-4 transition-transform",
-                        isCollapsibleOpen ? "" : "transform rotate-180"
-                      )}/>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      aria-label="Toggle vault details"
+                    >
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 transition-transform",
+                          isCollapsibleOpen ? "" : "transform rotate-180",
+                        )}
+                      />
                     </Button>
                   </CollapsibleTrigger>
                   {/* Dropdown menu */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0" aria-label="Vault actions">
+                      <Button
+                        variant="ghost"
+                        className="h-8 w-8 p-0"
+                        aria-label="Vault actions"
+                      >
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setIsEditing(true)} className="group/menu font-raleway">
-                        <Edit3 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
+                      <DropdownMenuItem
+                        onClick={() => setIsEditing(true)}
+                        className="group/menu font-raleway"
+                      >
+                        <Edit3 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
                         Edit Title
                       </DropdownMenuItem>
                       {isVaultLocked && !isUnlockedForSession && (
                         <DropdownMenuItem
-                          onClick={() => openSecurityDialog('unlock')}
+                          onClick={() => openSecurityDialog("unlock")}
                           className="group/menu font-raleway"
                         >
-                          <KeyRound className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
+                          <KeyRound className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
                           Open Vault
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem
                         onClick={() =>
                           openSecurityDialog(
-                            isVaultLocked ? 'change-password' : 'set-password',
+                            needsEnrollment
+                              ? "set-password"
+                              : isVaultLocked
+                                ? "change-password"
+                                : "set-password",
                           )
                         }
                         className="group/menu font-raleway"
                       >
-                        <Lock className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
-                        {isVaultLocked ? 'Change Password' : 'Add Password'}
+                        <Lock className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                        {needsEnrollment
+                          ? "Set vault password"
+                          : isVaultLocked
+                            ? "Change Password"
+                            : "Set vault password"}
                       </DropdownMenuItem>
-                      {isVaultLocked && !needsEnrollment && (
-                        <DropdownMenuItem
-                          onClick={() => openSecurityDialog('remove-password')}
-                          className="group/menu font-raleway"
-                        >
-                          <KeyRound className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
-                          Remove Password
-                        </DropdownMenuItem>
-                      )}
+                      {isVaultLocked &&
+                        !needsEnrollment &&
+                        (vault.crypto_version ?? 1) < 2 && (
+                          <DropdownMenuItem
+                            onClick={() =>
+                              openSecurityDialog("remove-password")
+                            }
+                            className="group/menu font-raleway"
+                          >
+                            <KeyRound className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                            Remove Password
+                          </DropdownMenuItem>
+                        )}
                       <DropdownMenuItem
                         onClick={handleShareVault}
                         disabled={isVaultLocked}
                         className="group/menu font-raleway"
                       >
-                        <Share2 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600" />
+                        <Share2 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
                         Share
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={handleDeleteConfirmation}
                         className="text-destructive focus:text-destructive"
                       >
@@ -449,7 +522,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
         </CardHeader>
 
         <CategorySelector
-          currentCategory={vault.category || 'General'}
+          currentCategory={vault.category || "General"}
           categoryColor={categoryColor}
           itemColor={vault.color_value}
           existingCategories={existingCategories}
@@ -467,31 +540,45 @@ export const VaultCard: React.FC<VaultCardProps> = ({
         <CollapsibleContent className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <CardContent className="pt-0 flex-1 flex flex-col min-h-0 overflow-hidden">
             {/* Items count and add button - fixed header */}
-            <div className="flex items-center justify-between mb-3 flex-shrink-0">
-              <span className="text-sm text-muted-foreground">
-                {displayedItemCount} {displayedItemCount === 1 ? 'item' : 'items'}
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setShowAddItem(true)}
-                className="h-7"
-                disabled={isVaultLocked && !isUnlockedForSession}
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                Add Item
-              </Button>
-            </div>
+            {!needsEnrollment && (
+              <div className="flex items-center justify-between mb-3 flex-shrink-0">
+                <span className="text-sm text-muted-foreground">
+                  {displayedItemCount}{" "}
+                  {displayedItemCount === 1 ? "item" : "items"}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowAddItem(true)}
+                  className="h-7"
+                  disabled={isVaultLocked && !isUnlockedForSession}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  Add Item
+                </Button>
+              </div>
+            )}
 
             {/* Scrollable content area */}
-            <div className="flex-1 overflow-y-auto min-h-0">
+            <div
+              className={cn(
+                "flex-1 min-h-0",
+                needsEnrollment
+                  ? "flex items-center overflow-hidden"
+                  : "overflow-y-auto",
+              )}
+            >
               {/* New item form */}
               {showAddItem && (
                 <div className="mb-4 p-3 rounded-lg border bg-muted/30">
                   <div className="flex items-center gap-2 mb-2">
                     <select
                       value={newItemType}
-                      onChange={(e) => setNewItemType(e.target.value as 'key_value' | 'secure_note')}
+                      onChange={(e) =>
+                        setNewItemType(
+                          e.target.value as "key_value" | "secure_note",
+                        )
+                      }
                       className="h-8 px-2 rounded-md border bg-background text-sm"
                     >
                       <option value="key_value">Key-Value</option>
@@ -501,8 +588,16 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                       ref={newItemLabelRef}
                       value={newItemLabel}
                       onChange={(e) => setNewItemLabel(e.target.value)}
-                      onPaste={newItemType === 'key_value' ? handleLabelPaste : undefined}
-                      placeholder={newItemType === 'key_value' ? "KEY_NAME (paste .env to bulk import)" : "Note title"}
+                      onPaste={
+                        newItemType === "key_value"
+                          ? handleLabelPaste
+                          : undefined
+                      }
+                      placeholder={
+                        newItemType === "key_value"
+                          ? "KEY_NAME (paste .env to bulk import)"
+                          : "Note title"
+                      }
                       className="h-8 font-mono text-sm flex-1"
                       autoComplete="off"
                       autoCorrect="off"
@@ -510,7 +605,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                       autoFocus
                     />
                   </div>
-                  {newItemType === 'key_value' ? (
+                  {newItemType === "key_value" ? (
                     <Input
                       value={newItemValue}
                       onChange={(e) => setNewItemValue(e.target.value)}
@@ -532,14 +627,22 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                     />
                   )}
                   <div className="flex justify-end gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => {
-                      setShowAddItem(false);
-                      setNewItemLabel('');
-                      setNewItemValue('');
-                    }}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setShowAddItem(false);
+                        setNewItemLabel("");
+                        setNewItemValue("");
+                      }}
+                    >
                       Cancel
                     </Button>
-                    <Button size="sm" onClick={handleAddItem} className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button
+                      size="sm"
+                      onClick={handleAddItem}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
                       Add
                     </Button>
                   </div>
@@ -548,22 +651,29 @@ export const VaultCard: React.FC<VaultCardProps> = ({
 
               {/* Items list */}
               {isVaultLocked && !isUnlockedForSession ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div
+                  className={cn(
+                    "w-full text-center text-muted-foreground",
+                    needsEnrollment ? "px-2 py-3" : "py-8",
+                  )}
+                >
                   <Lock className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">
                     {needsEnrollment
-                      ? 'Set a vault password. Itemize will not be able to recover it.'
-                      : 'This vault is password protected'}
+                      ? "Set a vault password before storing secrets."
+                      : "This vault is password protected"}
                   </p>
                   <Button
                     size="sm"
                     variant="outline"
                     className="mt-3"
                     onClick={() =>
-                      openSecurityDialog(needsEnrollment ? 'set-password' : 'unlock')
+                      openSecurityDialog(
+                        needsEnrollment ? "set-password" : "unlock",
+                      )
                     }
                   >
-                    {needsEnrollment ? 'Protect Vault' : 'Open Vault'}
+                    {needsEnrollment ? "Set vault password" : "Open Vault"}
                   </Button>
                 </div>
               ) : isLoadingItems ? (
@@ -574,7 +684,9 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                 <div className="text-center py-8 text-muted-foreground">
                   <KeyRound className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">No items in this vault</p>
-                  <p className="text-xs mt-1">Click "Add Item" to store secrets</p>
+                  <p className="text-xs mt-1">
+                    Click "Add Item" to store secrets
+                  </p>
                 </div>
               ) : (
                 <DndContext
@@ -583,7 +695,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                   onDragEnd={handleDragEnd}
                 >
                   <SortableContext
-                    items={items.map(item => item.id)}
+                    items={items.map((item) => item.id)}
                     strategy={verticalListSortingStrategy}
                   >
                     <div className="space-y-1">
@@ -595,8 +707,12 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                             isEditing={editingItemId === item.id}
                             editingLabel={editingItemLabel}
                             editingValue={editingItemValue}
-                            onToggleVisibility={() => toggleItemVisibility(item.id)}
-                            onCopy={() => copyToClipboard(item.value, item.label)}
+                            onToggleVisibility={() =>
+                              toggleItemVisibility(item.id)
+                            }
+                            onCopy={() =>
+                              copyToClipboard(item.value, item.label)
+                            }
                             onStartEdit={() => startEditingItem(item)}
                             onCancelEdit={cancelEditingItem}
                             onSaveEdit={() => handleUpdateItem(item.id)}
@@ -635,42 +751,42 @@ export const VaultCard: React.FC<VaultCardProps> = ({
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>
-              {securityDialogMode === 'unlock' && 'Open Vault'}
-              {securityDialogMode === 'set-password' && 'Add Password'}
-              {securityDialogMode === 'change-password' && 'Change Password'}
-              {securityDialogMode === 'remove-password' && 'Remove Password'}
+              {securityDialogMode === "unlock" && "Open Vault"}
+              {securityDialogMode === "set-password" && "Set vault password"}
+              {securityDialogMode === "change-password" && "Change Password"}
+              {securityDialogMode === "remove-password" && "Remove Password"}
             </DialogTitle>
             <DialogDescription>
-              {securityDialogMode === 'unlock'
-                ? 'Enter the vault password. It never leaves this device.'
-                : securityDialogMode === 'remove-password'
-                  ? 'Enter the current master password.'
-                  : 'This password cannot be reset by email. Save the emergency kit.'}
+              {securityDialogMode === "unlock"
+                ? "Enter the vault password. It never leaves this device."
+                : securityDialogMode === "remove-password"
+                  ? "Enter the current master password."
+                  : "This password cannot be reset by email. Save the emergency kit."}
             </DialogDescription>
           </DialogHeader>
 
-          {(securityDialogMode === 'unlock' ||
-            securityDialogMode === 'change-password' ||
-            securityDialogMode === 'remove-password') && (
+          {(securityDialogMode === "unlock" ||
+            securityDialogMode === "change-password" ||
+            securityDialogMode === "remove-password") && (
             <Input
               type="password"
               value={masterPasswordInput}
               onChange={(event) => setMasterPasswordInput(event.target.value)}
               placeholder={
-                securityDialogMode === 'unlock'
-                  ? 'Master password'
-                  : 'Current password'
+                securityDialogMode === "unlock"
+                  ? "Master password"
+                  : "Current password"
               }
               autoComplete="off"
               autoFocus
               onKeyDown={(event) => {
-                if (event.key === 'Enter') void handleSecuritySubmit();
+                if (event.key === "Enter") void handleSecuritySubmit();
               }}
             />
           )}
 
-          {(securityDialogMode === 'set-password' ||
-            securityDialogMode === 'change-password') && (
+          {(securityDialogMode === "set-password" ||
+            securityDialogMode === "change-password") && (
             <>
               <Input
                 type="password"
@@ -680,7 +796,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                 }
                 placeholder="New password"
                 autoComplete="off"
-                autoFocus={securityDialogMode === 'set-password'}
+                autoFocus={securityDialogMode === "set-password"}
               />
               <Input
                 type="password"
@@ -691,7 +807,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                 placeholder="Confirm new password"
                 autoComplete="off"
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter') void handleSecuritySubmit();
+                  if (event.key === "Enter") void handleSecuritySubmit();
                 }}
               />
             </>
@@ -705,26 +821,35 @@ export const VaultCard: React.FC<VaultCardProps> = ({
             >
               Cancel
             </Button>
-            <Button onClick={() => void handleSecuritySubmit()} disabled={isUnlocking}>
-              {isUnlocking ? <Spinner size="xs" /> : 'Continue'}
+            <Button
+              onClick={() => void handleSecuritySubmit()}
+              disabled={isUnlocking}
+            >
+              {isUnlocking ? <Spinner size="xs" /> : "Continue"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <Dialog open={Boolean(recoveryKit)} onOpenChange={(open) => { if (!open) dismissRecoveryKit(); }}>
+      <Dialog
+        open={Boolean(recoveryKit)}
+        onOpenChange={(open) => {
+          if (!open) dismissRecoveryKit();
+        }}
+      >
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle>Emergency kit</DialogTitle>
             <DialogDescription>
-              Itemize cannot reset this vault password. Save this recovery secret now.
+              Save this recovery secret. Itemize cannot reset the password.
             </DialogDescription>
           </DialogHeader>
-          <Input readOnly value={recoveryKit ?? ''} autoComplete="off" />
+          <Input readOnly value={recoveryKit ?? ""} autoComplete="off" />
           <DialogFooter>
             <Button
               variant="outline"
               onClick={() => {
-                if (recoveryKit) void navigator.clipboard.writeText(recoveryKit);
+                if (recoveryKit)
+                  void navigator.clipboard.writeText(recoveryKit);
               }}
             >
               Copy

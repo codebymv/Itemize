@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react';
-import { useSetHeaderContent } from '@/contexts/HeaderContext';
+import { useSetDesktopHeaderTools, useSetHeaderContent } from '@/contexts/HeaderContext';
 import { ResponsivePageHeading } from '@/components/layout/ResponsivePageHeading';
+import { DesktopHeaderTools, type DesktopHeaderToolsProps } from '@/components/layout/DesktopHeaderTools';
 
 export { PAGE_TITLE_CLASS } from '@/components/layout/pageHeaderLayout';
 
@@ -8,21 +9,37 @@ interface UsePageHeaderOptions {
     title?: string;
     icon?: ReactNode;
     leading?: ReactNode;
+    compactNavigation?: ReactNode;
+    compactNavigationBreakpoint?: 'md' | 'wide';
+    desktopTools?: DesktopHeaderToolsProps;
 }
 
 export const usePageHeader = ({
     title,
     icon,
     leading,
+    compactNavigation,
+    compactNavigationBreakpoint,
+    desktopTools,
 }: UsePageHeaderOptions) => {
     const setHeaderContent = useSetHeaderContent();
+    const setDesktopTools = useSetDesktopHeaderTools();
 
     useEffect(() => {
         setHeaderContent(
-            <div className="flex w-full min-w-0 items-center">
-                <ResponsivePageHeading title={title} icon={icon} leading={leading} />
-            </div>
+            <ResponsivePageHeading
+                title={title}
+                icon={icon}
+                leading={leading}
+                compactNavigation={compactNavigation}
+                compactNavigationBreakpoint={compactNavigationBreakpoint}
+            />,
         );
         return () => setHeaderContent(null);
-    }, [setHeaderContent, title, icon, leading]);
+    }, [compactNavigation, compactNavigationBreakpoint, icon, leading, setHeaderContent, title]);
+
+    useEffect(() => {
+        setDesktopTools(desktopTools ? <DesktopHeaderTools {...desktopTools} /> : null);
+        return () => setDesktopTools(null);
+    }, [desktopTools, setDesktopTools]);
 };

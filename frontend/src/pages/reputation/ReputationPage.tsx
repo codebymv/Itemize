@@ -330,7 +330,7 @@ export function ReputationPage() {
                         <EmptyState
                             icon={Star}
                             title="No reviews yet"
-                            description="Reviews from your customers will appear here"
+                            description="Customer reviews appear here."
                             actionLabel="Send Review Request"
                             onAction={() => navigate('/review-requests')}
                             className="p-12"
