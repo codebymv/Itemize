@@ -9,7 +9,7 @@ describe('ModuleWidget', () => {
   it('keeps compact summaries closed without rendering an expand control', () => {
     const onView = vi.fn();
 
-    render(
+    const { container } = render(
       <ModuleWidget
         title="Invoices"
         icon={TestIcon}
@@ -23,6 +23,12 @@ describe('ModuleWidget', () => {
 
     expect(screen.queryByRole('button', { name: 'Toggle collapse' })).not.toBeInTheDocument();
     expect(screen.queryByText('INV-00001')).not.toBeInTheDocument();
+    expect(container.querySelector('.rounded-lg.border')).toHaveAttribute('data-card-surface', 'inset');
+    expect(container.querySelector('[data-module-widget-header]')).toHaveClass('items-start');
+    expect(container.querySelector('[data-module-widget-header]')).not.toHaveClass('lg:flex-col');
+    expect(container.querySelector('[data-module-widget-icon]')).toHaveClass(
+      'min-[1280px]:max-[1399px]:hidden',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'View Invoices' }));
     expect(onView).toHaveBeenCalledOnce();

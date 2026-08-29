@@ -4,14 +4,12 @@
 
 import { useState, useCallback } from 'react';
 
-export type PeriodOption = '7days' | '30days' | '90days' | '6months' | '12months';
+export type PeriodOption = '7days' | '30days' | '90days';
 
 export const periodLabels: Record<PeriodOption, string> = {
   '7days': 'Last 7 days',
   '30days': 'Last 30 days',
   '90days': 'Last 90 days',
-  '6months': 'Last 6 months',
-  '12months': 'Last 12 months',
 };
 
 interface UsePeriodSelectorReturn {

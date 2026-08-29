@@ -19,7 +19,7 @@ export function ClientPaymentsTab({ payments }: ClientPaymentsTabProps) {
       <ResponsiveCardRail
         label="Client payment summary"
         desktopColumns="md:grid-cols-3"
-        className="mb-0"
+        className="responsive-stat-summary mb-0"
       >
         <StatCard
           title="Total Paid"

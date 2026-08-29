@@ -77,7 +77,7 @@ export function ModuleWidget({
 
   if (loading) {
     return (
-      <Card className={cn('bg-muted/10 h-full', className)}>
+      <Card surface="inset" className={cn('h-full', className)}>
         <CardHeader>
           <Skeleton className="h-6 w-32" />
           <Skeleton className="h-4 w-48 mt-2" />
@@ -102,14 +102,17 @@ const hasRecentItems = recentItems !== undefined;
           onToggleCollapse?.();
         }}
       >
-        <Card className={cn('bg-muted/10 h-full', className)}>
+        <Card surface="inset" className={cn('h-full', className)}>
           <CardHeader data-module-widget-card-header>
             <div
-              className="flex flex-col sm:flex-row lg:flex-col 2xl:flex-row sm:items-start lg:items-start 2xl:items-start justify-between gap-2"
+              className="flex items-start justify-between gap-2"
               data-module-widget-header
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-muted" data-module-widget-icon>
+                <div
+                  className="rounded-lg bg-muted p-2 min-[1280px]:max-[1399px]:hidden"
+                  data-module-widget-icon
+                >
                   <Icon className={cn("h-5 w-5", iconColor || "text-blue-600 dark:text-blue-400")} />
                 </div>
                 <div>
@@ -222,14 +225,17 @@ const hasRecentItems = recentItems !== undefined;
   }
 
   return (
-    <Card className={cn('bg-muted/10 h-full', className)}>
+    <Card surface="inset" className={cn('h-full', className)}>
       <CardHeader data-module-widget-card-header>
         <div
-          className="flex flex-col sm:flex-row lg:flex-col 2xl:flex-row sm:items-start lg:items-start 2xl:items-start justify-between gap-2"
+          className="flex items-start justify-between gap-2"
           data-module-widget-header
         >
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-muted" data-module-widget-icon>
+            <div
+              className="rounded-lg bg-muted p-2 min-[1280px]:max-[1399px]:hidden"
+              data-module-widget-icon
+            >
               <Icon className={cn("h-5 w-5", iconColor || "text-blue-600 dark:text-blue-400")} />
             </div>
             <div>

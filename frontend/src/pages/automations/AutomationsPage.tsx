@@ -378,6 +378,7 @@ export function AutomationsPage() {
       <ResponsiveCardRail
         label="Automation summary"
         desktopColumns="md:grid-cols-2 lg:grid-cols-5"
+        className="responsive-stat-summary"
       >
             <StatCard
               title="Failed runs"

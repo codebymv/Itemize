@@ -80,10 +80,10 @@ function ActivityItem({
 
   return (
     <Card
+      surface="inset"
       className={cn(
         'p-4 transition-all',
-        onSelect && 'cursor-pointer hover:shadow-md',
-        'bg-muted/10'
+        onSelect && 'cursor-pointer hover:shadow-md'
       )}
       onClick={() => onSelect?.(activity)}
     >
@@ -131,7 +131,7 @@ function ActivityTimelineSkeleton() {
   return (
     <div className="space-y-3">
       {[...Array(5)].map((_, i) => (
-        <Card key={i} className="p-4 bg-muted/10">
+        <Card key={i} surface="inset" className="p-4">
           <div className="flex gap-4">
             <Skeleton className="h-5 w-5" />
             <div className="flex-1 space-y-2">

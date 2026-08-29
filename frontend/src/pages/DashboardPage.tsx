@@ -6,13 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { StatCard } from '@/components/StatCard';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { HeaderAction, HeaderFilters } from '@/components/layout/DesktopHeaderTools';
 import {
@@ -35,6 +29,8 @@ import {
     LayoutDashboard,
     Activity,
     Mail,
+    BriefcaseBusiness,
+    Dumbbell,
 } from 'lucide-react';
 import { useDashboardData } from './dashboard/hooks/useDashboardData';
 import { usePeriodSelector, periodLabels, type PeriodOption } from './dashboard/hooks/usePeriodSelector';
@@ -58,10 +54,14 @@ interface QuickAction {
     action: () => void;
 }
 
+const DASHBOARD_PERIODS: PeriodOption[] = ['7days', '30days', '90days'];
+const DASHBOARD_COLLAPSED_KEY = 'itemize_dashboard_collapsed';
+const DEFAULT_COLLAPSED_WIDGETS = ['invoices', 'signatures', 'workspace', 'contacts'];
+
+const DASHBOARD_CARD_ACTION_CLASS = ['shrink-0 whitespace-nowrap text-xs font-light', 'text-blue-600 hover:bg-blue-50/50 hover:text-blue-700', 'dark:text-blue-400 dark:hover:bg-blue-900/20 dark:hover:text-blue-300'].join(' ');
+
 export function DashboardPage() {
     const { currentUser } = useAuthState();
-
-    const DASHBOARD_COLLAPSED_KEY = 'itemize_dashboard_collapsed';
 
     // Pro tip dismiss state
     const [proTipDismissed, setProTipDismissed] = useState(false);
@@ -73,12 +73,12 @@ export function DashboardPage() {
             const raw = window.localStorage.getItem(DASHBOARD_COLLAPSED_KEY);
             if (raw) {
                 const arr = JSON.parse(raw);
-                return Array.isArray(arr) ? new Set(arr) : new Set();
+                return Array.isArray(arr) ? new Set(arr) : new Set(DEFAULT_COLLAPSED_WIDGETS);
             }
         } catch {
             // ignore
         }
-        return new Set();
+        return new Set(DEFAULT_COLLAPSED_WIDGETS);
     });
 
     // Responsive detection
@@ -92,26 +92,11 @@ export function DashboardPage() {
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    // On mobile, if no persisted state yet, default to widgets collapsed and persist
-    useEffect(() => {
-        if (typeof window === 'undefined' || !isMobile) return;
-        const raw = window.localStorage.getItem(DASHBOARD_COLLAPSED_KEY);
-        if (raw === null || raw === '[]') {
-            const defaultCollapsed = new Set(['invoices', 'signatures', 'workspace', 'contacts']);
-            setCollapsedWidgets(defaultCollapsed);
-            try {
-                window.localStorage.setItem(DASHBOARD_COLLAPSED_KEY, JSON.stringify([...defaultCollapsed]));
-            } catch {
-                // ignore
-            }
-        }
-    }, [isMobile]);
-
     // Helper functions
     const isWidgetCollapsed = (widgetId: string) => collapsedWidgets.has(widgetId);
 
     const toggleWidgetCollapse = (widgetId: string) => {
-        setCollapsedWidgets(prev => {
+        setCollapsedWidgets((prev) => {
             const newSet = new Set(prev);
             if (newSet.has(widgetId)) {
                 newSet.delete(widgetId);
@@ -128,7 +113,7 @@ export function DashboardPage() {
     };
     const navigate = useNavigate();
     const { organizationId } = useOrganization();
-    
+
     // Period selector hook
     const { period, setPeriod } = usePeriodSelector('30days');
 
@@ -176,17 +161,13 @@ export function DashboardPage() {
 
     const periodSelect = (compact = false) => (
         <Select value={period} onValueChange={(value) => setPeriod(value as PeriodOption)}>
-            <SelectTrigger
-                className={compact
-                    ? 'h-11 w-full bg-muted/20'
-                    : 'h-11 w-[140px] bg-muted/20'}
-            >
-                <SelectValue placeholder="Select period" />
+            <SelectTrigger aria-label="Performance period" className={compact ? 'h-11 w-full bg-muted/20' : 'h-11 w-[180px] bg-muted/20'}>
+                {compact ? <SelectValue placeholder="Select period" /> : <span className="truncate">Performance · {periodLabels[period].replace('Last ', '')}</span>}
             </SelectTrigger>
             <SelectContent>
-                {Object.entries(periodLabels).map(([value, label]) => (
+                {DASHBOARD_PERIODS.map((value) => (
                     <SelectItem key={value} value={value}>
-                        {label}
+                        {periodLabels[value]}
                     </SelectItem>
                 ))}
             </SelectContent>
@@ -199,84 +180,76 @@ export function DashboardPage() {
             icon={<LayoutDashboard className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
             desktopTools={{
                 filters: (
-                    <HeaderFilters
-                        label="Filter dashboard period"
-                        compactChildren={periodSelect(true)}
-                        preferExpanded
-                    >
+                    <HeaderFilters label="Filter performance period" compactChildren={periodSelect(true)} preferExpanded>
                         {periodSelect()}
                     </HeaderFilters>
                 ),
-                primaryAction: (
-                    <HeaderAction
-                        label="Canvas"
-                        onClick={() => navigate('/canvas')}
-                        icon={<Map className="h-4 w-4" />}
-                    />
-                ),
+                primaryAction: <HeaderAction label="Canvas" onClick={() => navigate('/canvas')} icon={<Map className="h-4 w-4" />} />,
             }}
             mobileActions={
                 <>
                     <Select value={period} onValueChange={(value) => setPeriod(value as PeriodOption)}>
-                        <SelectTrigger className="w-[140px] h-9 bg-muted/20 border-border/50">
+                        <SelectTrigger aria-label="Performance period" className="w-[140px] h-9 bg-muted/20 border-border/50">
                             <SelectValue placeholder="Select period" />
                         </SelectTrigger>
                         <SelectContent>
-                            {Object.entries(periodLabels).map(([value, label]) => (
+                            {DASHBOARD_PERIODS.map((value) => (
                                 <SelectItem key={value} value={value}>
-                                    {label}
+                                    {periodLabels[value]}
                                 </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light flex-1"
-                        onClick={() => navigate('/canvas')}
-                    >
+                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light flex-1" onClick={() => navigate('/canvas')}>
                         <Map className="h-4 w-4 mr-2" />
                         Canvas
                     </Button>
                 </>
             }
         >
-                    {/* Welcome Section */}
-                    <div className="mb-8 min-[1000px]:flex min-[1000px]:items-center min-[1000px]:justify-between min-[1000px]:gap-6">
-                        <h2 className="mb-2 text-2xl font-light tracking-tight min-[1000px]:mb-0">
-                            Welcome back, <span className="font-medium">{firstName}</span>
-                        </h2>
-                        <p className="text-muted-foreground min-[1000px]:shrink-0 min-[1000px]:text-right">
-                            Here's an overview of your performance
-                        </p>
-                    </div>
+            {/* Welcome Section */}
+            <div className="mb-8 min-[1000px]:flex min-[1000px]:items-center min-[1000px]:justify-between min-[1000px]:gap-6">
+                <h2 className="mb-2 text-2xl font-light tracking-tight min-[1000px]:mb-0">
+                    Welcome back, <span className="font-medium">{firstName}</span>
+                </h2>
+                <p className="text-muted-foreground min-[1000px]:shrink-0 min-[1000px]:text-right">Here's an overview of your performance</p>
+            </div>
 
-                    <GetStartedCard />
+            <GetStartedCard />
 
+            {/* Overview */}
+            <Card className="mb-8" data-dashboard-section="overview">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                        <PieChart className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        Overview
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
                     {/* CRM Stats: swipeable rail on mobile, grid on desktop */}
-                    <ResponsiveCardRail
-                        label="CRM overview"
-                        desktopColumns="md:grid-cols-2 lg:grid-cols-4"
-                        className="dashboard-stat-summary mb-8"
-                    >
+                    <ResponsiveCardRail label="CRM overview" desktopColumns="md:grid-cols-2 xl:grid-cols-4" className="dashboard-stat-summary mb-4">
                         <StatCard
+                            surface="inset"
                             title="Total Contacts"
                             badgeText="Total Contacts"
                             value={analytics?.contacts?.total ?? 0}
                             icon={Users}
-                            description="Added"
+                            description={`${analytics?.contacts?.newThisMonth ?? 0} added this month`}
                             colorTheme="blue"
                             isLoading={isLoading}
                         />
                         <StatCard
+                            surface="inset"
                             title="Open Deals"
                             badgeText="Open Deals"
                             value={analytics?.deals?.open ?? 0}
                             icon={TrendingUp}
-                            description={`${analytics?.deals?.total ?? 0} deals total`}
+                            description={`${analytics?.deals?.total ?? 0} total · all pipelines`}
                             colorTheme="orange"
                             isLoading={isLoading}
                         />
                         <StatCard
+                            surface="inset"
                             title="Upcoming Bookings"
                             badgeText="Upcoming"
                             value={analytics?.bookings?.upcomingThisWeek ?? 0}
@@ -285,24 +258,13 @@ export function DashboardPage() {
                             colorTheme="orange"
                             isLoading={isLoading}
                         />
-                        <StatCard
-                            title="Pipelines"
-                            badgeText="Pipelines"
-                            value={analytics?.pipelines?.total ?? 0}
-                            icon={Workflow}
-                            description="Configured"
-                            colorTheme="blue"
-                            isLoading={isLoading}
-                        />
+                        <StatCard surface="inset" title="Pipelines" badgeText="Pipelines" value={analytics?.pipelines?.total ?? 0} icon={Workflow} description="Configured" colorTheme="blue" isLoading={isLoading} />
                     </ResponsiveCardRail>
 
                     {/* Secondary Stats: swipeable rail on mobile, grid on desktop */}
-                    <ResponsiveCardRail
-                        label="Activity overview"
-                        desktopColumns="md:grid-cols-3"
-                        className="dashboard-stat-summary mb-8"
-                    >
+                    <ResponsiveCardRail label="Activity overview" desktopColumns="md:grid-cols-2 xl:grid-cols-3" className="dashboard-stat-summary mb-0">
                         <StatCard
+                            surface="inset"
                             title="Tasks Overdue"
                             badgeText="Overdue"
                             value={analytics?.tasks?.overdue ?? 0}
@@ -312,6 +274,7 @@ export function DashboardPage() {
                             isLoading={isLoading}
                         />
                         <StatCard
+                            surface="inset"
                             title="Active Contacts"
                             badgeText="Active"
                             value={analytics?.contacts?.active ?? 0}
@@ -320,41 +283,56 @@ export function DashboardPage() {
                             colorTheme="blue"
                             isLoading={isLoading}
                         />
-                        <StatCard
-                            title="Deals Won"
-                            badgeText="Won"
-                            value={analytics?.deals?.won ?? 0}
-                            icon={CheckSquare}
-                            description={`${analytics?.deals?.lost ?? 0} lost`}
-                            colorTheme="green"
-                            isLoading={isLoading}
-                        />
+                        <StatCard surface="inset" title="Deals Won" badgeText="Won" value={analytics?.deals?.won ?? 0} icon={CheckSquare} description={`${analytics?.deals?.lost ?? 0} lost`} colorTheme="green" isLoading={isLoading} />
                     </ResponsiveCardRail>
+                </CardContent>
+            </Card>
 
+            {/* Operations */}
+            <Card className="mb-8" data-dashboard-section="operations">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                        <BriefcaseBusiness className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        Operations
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
                     {/* Module summaries: swipeable rail on mobile, grid on desktop */}
-                    <ResponsiveCardRail
-                        label="Module summaries"
-                        desktopColumns="md:grid-cols-2 lg:grid-cols-4"
-                        mobileCardClassName="flex-[0_0_88%]"
-                        className="dashboard-module-summaries mb-8"
-                    >
+                    <ResponsiveCardRail label="Module summaries" desktopColumns="md:grid-cols-2 xl:grid-cols-4" mobileCardClassName="flex-[0_0_88%]" className="dashboard-module-summaries mb-0">
                         <InvoicesWidget
                             primaryStat={analytics?.invoiceMetrics?.pending ?? 0}
                             primaryStatColor="text-blue-600 dark:text-blue-400"
                             secondaryStats={[
-                                { label: 'Overdue', value: analytics?.invoiceMetrics?.overdue ?? 0, color: getInvoiceStatusVisual('overdue').iconClass },
-                                { label: 'Paid This Month', value: `$${(analytics?.invoiceMetrics?.paidThisMonth ?? 0).toLocaleString()}`, color: 'text-green-600 dark:text-green-400' },
+                                {
+                                    label: 'Overdue',
+                                    value: analytics?.invoiceMetrics?.overdue ?? 0,
+                                    color: getInvoiceStatusVisual('overdue').iconClass,
+                                },
+                                {
+                                    label: 'Paid This Month',
+                                    value: `$${(analytics?.invoiceMetrics?.paidThisMonth ?? 0).toLocaleString()}`,
+                                    color: 'text-green-600 dark:text-green-400',
+                                },
                             ]}
-                            recentItems={analytics?.invoiceMetrics?.recentInvoices?.map(inv => {
-                                const visual = getInvoiceStatusVisual(inv.status);
-                                return {
-                                    id: inv.id,
-                                    title: inv.number,
-                                    subtitle: `$${inv.amount.toLocaleString()}`,
-                                    status: { label: visual.label, color: visual.iconClass },
-                                };
-                            }) ?? []}
-                            action={{ label: 'View Invoices', compactLabel: 'View', onClick: () => navigate('/invoices') }}
+                            recentItems={
+                                analytics?.invoiceMetrics?.recentInvoices?.map((inv) => {
+                                    const visual = getInvoiceStatusVisual(inv.status);
+                                    return {
+                                        id: inv.id,
+                                        title: inv.number,
+                                        subtitle: `$${inv.amount.toLocaleString()}`,
+                                        status: {
+                                            label: visual.label,
+                                            color: visual.iconClass,
+                                        },
+                                    };
+                                }) ?? []
+                            }
+                            action={{
+                                label: 'View Invoices',
+                                compactLabel: 'View',
+                                onClick: () => navigate('/invoices'),
+                            }}
                             loading={isLoading}
                             compact={isMobile}
                             isCollapsed={isWidgetCollapsed('invoices')}
@@ -364,19 +342,36 @@ export function DashboardPage() {
                             primaryStat={analytics?.signatureMetrics?.awaiting ?? 0}
                             primaryStatColor={getSignatureStatusVisual('in_progress').iconClass}
                             secondaryStats={[
-                                { label: 'Signed This Week', value: analytics?.signatureMetrics?.signedThisWeek ?? 0, color: 'text-green-600 dark:text-green-400' },
-                                { label: 'Total Documents', value: analytics?.signatureMetrics?.total ?? 0, color: 'text-blue-600 dark:text-blue-400' },
+                                {
+                                    label: 'Signed This Week',
+                                    value: analytics?.signatureMetrics?.signedThisWeek ?? 0,
+                                    color: 'text-green-600 dark:text-green-400',
+                                },
+                                {
+                                    label: 'Total Documents',
+                                    value: analytics?.signatureMetrics?.total ?? 0,
+                                    color: 'text-blue-600 dark:text-blue-400',
+                                },
                             ]}
-                            recentItems={analytics?.signatureMetrics?.recentDocuments?.map(sig => {
-                                const normalizedStatus = sig.status === 'signed' ? 'completed' : sig.status;
-                                const visual = getSignatureStatusVisual(normalizedStatus);
-                                return {
-                                    id: sig.id,
-                                    title: sig.title,
-                                    status: { label: sig.status === 'signed' ? 'Signed' : visual.label, color: visual.iconClass },
-                                };
-                            }) ?? []}
-                            action={{ label: 'View Documents', compactLabel: 'View', onClick: () => navigate('/documents') }}
+                            recentItems={
+                                analytics?.signatureMetrics?.recentDocuments?.map((sig) => {
+                                    const normalizedStatus = sig.status === 'signed' ? 'completed' : sig.status;
+                                    const visual = getSignatureStatusVisual(normalizedStatus);
+                                    return {
+                                        id: sig.id,
+                                        title: sig.title,
+                                        status: {
+                                            label: sig.status === 'signed' ? 'Signed' : visual.label,
+                                            color: visual.iconClass,
+                                        },
+                                    };
+                                }) ?? []
+                            }
+                            action={{
+                                label: 'View Documents',
+                                compactLabel: 'View',
+                                onClick: () => navigate('/documents'),
+                            }}
                             loading={isLoading}
                             compact={isMobile}
                             isCollapsed={isWidgetCollapsed('signatures')}
@@ -387,15 +382,29 @@ export function DashboardPage() {
                             primaryStatLabel="Active Items"
                             primaryStatColor="text-blue-600 dark:text-blue-400"
                             secondaryStats={[
-                                { label: 'Lists', value: analytics?.workspaceMetrics?.lists ?? 0, color: 'text-blue-600 dark:text-blue-400' },
-                                { label: 'Notes', value: analytics?.workspaceMetrics?.notes ?? 0, color: 'text-blue-600 dark:text-blue-400' },
+                                {
+                                    label: 'Lists',
+                                    value: analytics?.workspaceMetrics?.lists ?? 0,
+                                    color: 'text-blue-600 dark:text-blue-400',
+                                },
+                                {
+                                    label: 'Notes',
+                                    value: analytics?.workspaceMetrics?.notes ?? 0,
+                                    color: 'text-blue-600 dark:text-blue-400',
+                                },
                             ]}
-                            recentItems={analytics?.workspaceMetrics?.recentItems?.map(item => ({
-                                id: `${item.type}:${item.date}:${item.title}`,
-                                title: item.title,
-                                status: undefined
-                            })) ?? []}
-                            action={{ label: 'Open Workspace', compactLabel: 'View', onClick: () => navigate('/canvas') }}
+                            recentItems={
+                                analytics?.workspaceMetrics?.recentItems?.map((item) => ({
+                                    id: `${item.type}:${item.date}:${item.title}`,
+                                    title: item.title,
+                                    status: undefined,
+                                })) ?? []
+                            }
+                            action={{
+                                label: 'Open Workspace',
+                                compactLabel: 'View',
+                                onClick: () => navigate('/canvas'),
+                            }}
                             loading={isLoading}
                             compact={isMobile}
                             isCollapsed={isWidgetCollapsed('workspace')}
@@ -406,314 +415,292 @@ export function DashboardPage() {
                             primaryStatLabel="This Week"
                             primaryStatColor="text-blue-600 dark:text-blue-400"
                             secondaryStats={[
-                                { label: 'Total', value: analytics?.contacts?.total ?? 0, color: 'text-gray-600 dark:text-gray-400' },
-                                { label: 'This Month', value: analytics?.contacts?.newThisMonth ?? 0, color: 'text-green-600 dark:text-green-400' },
+                                {
+                                    label: 'Total',
+                                    value: analytics?.contacts?.total ?? 0,
+                                    color: 'text-gray-600 dark:text-gray-400',
+                                },
+                                {
+                                    label: 'This Month',
+                                    value: analytics?.contacts?.newThisMonth ?? 0,
+                                    color: 'text-green-600 dark:text-green-400',
+                                },
                             ]}
-                            recentItems={analytics?.contacts?.recentContacts?.map(contact => ({
-                                id: contact.id,
-                                title: contact.name,
-                                subtitle: contact.email
-                            })) ?? []}
-                            action={{ label: 'View Contacts', compactLabel: 'View', onClick: () => navigate('/contacts') }}
+                            recentItems={
+                                analytics?.contacts?.recentContacts?.map((contact) => ({
+                                    id: contact.id,
+                                    title: contact.name,
+                                    subtitle: contact.email,
+                                })) ?? []
+                            }
+                            action={{
+                                label: 'View Contacts',
+                                compactLabel: 'View',
+                                onClick: () => navigate('/contacts'),
+                            }}
                             loading={isLoading}
                             compact={isMobile}
                             isCollapsed={isWidgetCollapsed('contacts')}
                             onToggleCollapse={() => toggleWidgetCollapse('contacts')}
                         />
                     </ResponsiveCardRail>
+                </CardContent>
+            </Card>
 
-                    {/* Revenue flow */}
-                    <Card className="bg-muted/10 mb-8">
-                        <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-                            <CardTitle className="text-base flex items-center gap-2">
-                                <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                Revenue flow
-                            </CardTitle>
-                            <Button
-                                size="sm"
-                                onClick={() => navigate('/invoices/payments')}
-                                className="bg-blue-600 hover:bg-blue-700 text-white text-xs whitespace-nowrap font-light"
-                                aria-label="View payment revenue flow details"
-                            >
-                                View payments
-                                <ArrowRight className="ml-1 h-3 w-3" />
-                            </Button>
+            {/* Revenue flow */}
+            <Card className="mb-8">
+                <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+                    <CardTitle className="text-base flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        Revenue flow
+                    </CardTitle>
+                    <Button size="sm" variant="ghost" onClick={() => navigate('/invoices/payments')} className={DASHBOARD_CARD_ACTION_CLASS} aria-label="View payment revenue flow details">
+                        View payments
+                        <ArrowRight className="ml-1 h-3 w-3" />
+                    </Button>
+                </CardHeader>
+                <CardContent>
+                    <RevenueFlowChart data={revenueData} isLoading={revenueLoading} compact />
+                </CardContent>
+            </Card>
+
+            {/* Performance */}
+            <Card className="mb-8" data-dashboard-section="performance">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                        <Dumbbell className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        Performance
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-6 lg:grid-cols-2">
+                    {/* Pipeline info */}
+                    <Card surface="inset" className="flex flex-col">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div className="min-w-0">
+                                    <CardTitle className="flex items-center gap-2 text-base">
+                                        <Workflow className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                        Pipeline info
+                                    </CardTitle>
+                                    <p className="ml-6 mt-1 text-xs text-muted-foreground">Default pipeline</p>
+                                </div>
+                                <Button size="sm" variant="ghost" onClick={() => navigate('/pipelines')} className={DASHBOARD_CARD_ACTION_CLASS} aria-label="View pipeline info details" data-dashboard-detail-action>
+                                    <span data-dashboard-detail-label>
+                                        View
+                                        <span className="hidden min-[1048px]:inline"> Details</span>
+                                    </span>
+                                    <ArrowRight className="ml-1 h-3 w-3" />
+                                </Button>
+                            </div>
                         </CardHeader>
-                        <CardContent>
-                            <RevenueFlowChart data={revenueData} isLoading={revenueLoading} compact />
+                        <CardContent className="flex-1">
+                            <PipelineFunnel funnel={analytics?.deals?.funnel ?? []} isLoading={isLoading} />
                         </CardContent>
                     </Card>
 
-                    {/* Pipeline funnel and current deal age */}
-                    <div className="mb-8 grid gap-6 md:grid-cols-2">
-                        {/* Pipeline Overview */}
-                        <Card className="flex flex-col bg-muted/10">
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="text-base flex items-center gap-2">
-                                        <Workflow className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                        Pipeline Overview
-                                    </CardTitle>
-                                    <Button
-                                        size="sm"
-                                        onClick={() => navigate('/pipelines')}
-                                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs whitespace-nowrap font-light"
-                                        aria-label="View pipeline overview details"
-                                        data-dashboard-detail-action
-                                    >
-                                        <span data-dashboard-detail-label>
-                                            View<span className="hidden min-[1048px]:inline"> Details</span>
-                                        </span>
-                                        <ArrowRight className="ml-1 h-3 w-3" />
-                                    </Button>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="flex-1">
-                                <PipelineFunnel
-                                    funnel={analytics?.deals?.funnel ?? []}
-                                    isLoading={isLoading}
-                                />
-                            </CardContent>
-                        </Card>
-
-                        {/* Current open-deal age */}
-                        <Card className="bg-muted/10">
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <CardTitle className="text-base flex items-center gap-2">
-                                            <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                            Open Deal Age
-                                        </CardTitle>
-                                    </div>
-                                    <Button
-                                        size="sm"
-                                        onClick={() => navigate('/pipelines')}
-                                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs whitespace-nowrap font-light"
-                                        aria-label="View open deal age details"
-                                        data-dashboard-detail-action
-                                    >
-                                        <span data-dashboard-detail-label>
-                                            View<span className="hidden min-[1048px]:inline"> Details</span>
-                                        </span>
-                                        <ArrowRight className="ml-1 h-3 w-3" />
-                                    </Button>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <PipelineDealAgeCard
-                                    dealAge={pipelineDealAge}
-                                    isLoading={isLoadingPipelineDealAge}
-                                />
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    {/* Recent Activity */}
-                    <Card className="bg-muted/10 mb-8">
+                    {/* Current open-deal age */}
+                    <Card surface="inset">
                         <CardHeader>
-                            <div className="flex items-center justify-between gap-3">
-                                <CardTitle className="flex shrink-0 items-center gap-2 text-base">
-                                    <Activity className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                    Recent Activity
-                                </CardTitle>
-                                <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-3">
-                                    <span className="min-w-0 flex-1 text-right text-sm leading-5 text-muted-foreground">
-                                        latest updates:{latestActivityGroupLabel ? ` ${latestActivityGroupLabel}` : ''}
-                                    </span>
-                                    <Button
-                                        size="sm"
-                                        onClick={() => navigate('/contacts')}
-                                        className="shrink-0 bg-blue-600 text-xs font-light text-white hover:bg-blue-700"
-                                        aria-label="View recent activity details"
-                                        data-dashboard-detail-action
-                                    >
-                                        <span data-dashboard-detail-label>
-                                            View<span className="hidden min-[1048px]:inline"> Details</span>
-                                        </span>
-                                        <ArrowRight className="ml-1 h-3 w-3" />
-                                    </Button>
+                            <div className="flex items-center justify-between">
+                                <div className="min-w-0">
+                                    <CardTitle className="flex items-center gap-2 text-base">
+                                        <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                        Open Deal Age
+                                    </CardTitle>
+                                    <p className="ml-6 mt-1 text-xs text-muted-foreground">Default pipeline</p>
                                 </div>
+                                <Button size="sm" variant="ghost" onClick={() => navigate('/pipelines')} className={DASHBOARD_CARD_ACTION_CLASS} aria-label="View open deal age details" data-dashboard-detail-action>
+                                    <span data-dashboard-detail-label>
+                                        View
+                                        <span className="hidden min-[1048px]:inline"> Details</span>
+                                    </span>
+                                    <ArrowRight className="ml-1 h-3 w-3" />
+                                </Button>
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <ActivityTimeline
-                                activities={recentActivities}
-                                isLoading={isLoading}
-                                hideFirstGroupHeading
-                                empty={{
-                                    title: 'No activity yet',
-                                    description: 'Activity will appear here as you use Itemize'
-                                }}
-                            />
+                            <PipelineDealAgeCard dealAge={pipelineDealAge} isLoading={isLoadingPipelineDealAge} />
                         </CardContent>
                     </Card>
+                </CardContent>
+            </Card>
 
-                    {/* Performance analytics: swipeable rail on mobile, grid on desktop */}
-                    <ResponsiveCardRail
-                        label="Performance analytics"
-                        desktopColumns="md:grid-cols-1 md:gap-6 min-[951px]:grid-cols-2"
-                        mobileCardClassName="flex-[0_0_92%]"
-                        className="dashboard-performance-analytics mb-8"
-                    >
-                        {/* Conversion Rates */}
-                        <Card className="bg-muted/10 h-full flex flex-col">
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="text-base flex items-center gap-2">
-                                        <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                        <span className="min-[1048px]:hidden">Rates</span>
-                                        <span className="hidden min-[1048px]:inline">Conversion Rates</span>
-                                    </CardTitle>
-                                    <span className="text-xs text-muted-foreground">{periodLabels[period]}</span>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="flex-1 flex flex-col">
-                                <div className="flex flex-col gap-3 h-full">
-                                    <div className="grid grid-cols-2 gap-3 flex-1">
-                                    <ConversionRateCard
-                                        title="Deal Win Rate"
-                                        rate={conversionData?.dealWinRate?.rate ?? 0}
-                                        numerator={conversionData?.dealWinRate?.won ?? 0}
-                                        denominator={conversionData?.dealWinRate?.totalClosed ?? 0}
-                                        icon={TrendingUp}
-                                        color="text-green-600 dark:text-green-400"
-                                        isLoading={conversionLoading}
-                                    />
-                                    <ConversionRateCard
-                                        title="Form to Contact"
-                                        rate={conversionData?.formToContact?.rate ?? 0}
-                                        numerator={conversionData?.formToContact?.converted ?? 0}
-                                        denominator={conversionData?.formToContact?.submissions ?? 0}
-                                        icon={CheckSquare}
-                                        color="text-blue-600 dark:text-blue-400"
-                                        isLoading={conversionLoading}
-                                    />
-                                    </div>
-                                    <Card className="flex-1">
-                                        <CardContent className="pt-6 h-full flex flex-col justify-between">
-                                            <div className="flex items-center justify-between mb-3">
-                                                <div className="flex items-center gap-2">
-                                                    <div
-                                                        className="p-2 rounded-full bg-muted text-blue-600 dark:text-blue-400"
-                                                        data-dashboard-analytics-icon
-                                                    >
-                                                        <DollarSign className="h-5 w-5" />
-                                                    </div>
-                                                    <span className="font-medium">Closed Deal Value</span>
-                                                </div>
-                                                <span className="text-sm text-muted-foreground">
-                                                    {conversionData?.dealWinRate?.valuesByCurrency?.[0]
-                                                        ? `${conversionData.dealWinRate.valuesByCurrency[0].currency} ${conversionData.dealWinRate.valuesByCurrency[0].wonValue.toLocaleString()}`
-                                                        : '0'}
-                                                </span>
-                                            </div>
-                                            <div className="grid grid-cols-3 gap-4 text-center">
-                                                <div>
-                                                    <div className="text-lg font-bold text-green-600 dark:text-green-400">
-                                                        {conversionData?.dealWinRate?.valuesByCurrency?.[0]?.wonValue.toLocaleString() ?? 0}
-                                                    </div>
-                                                    <div className="text-xs text-muted-foreground">Won</div>
-                                                </div>
-                                                <div>
-                                                    <div className="text-lg font-bold text-red-600 dark:text-red-400">
-                                                        {conversionData?.dealWinRate?.valuesByCurrency?.[0]?.lostValue.toLocaleString() ?? 0}
-                                                    </div>
-                                                    <div className="text-xs text-muted-foreground">Lost</div>
-                                                </div>
-                                                <div>
-                                                    <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                                                        {conversionData?.dealWinRate?.totalClosed ?? 0}
-                                                    </div>
-                                                    <div className="text-xs text-muted-foreground">Closed</div>
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Communication Stats */}
-                        <Card className="bg-muted/10 h-full flex flex-col">
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <CardTitle className="text-base flex items-center gap-2">
-                                        <Mail className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                        <span className="min-[1048px]:hidden">Comms</span>
-                                        <span className="hidden min-[1048px]:inline">Communication</span>
-                                    </CardTitle>
-                                    <span className="text-xs text-muted-foreground">{periodLabels[period]}</span>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="flex-1 flex flex-col">
-                                <CommunicationStatsCard 
-                                    stats={commStats} 
-                                    isLoading={commLoading} 
-                                />
-                            </CardContent>
-                        </Card>
-                    </ResponsiveCardRail>
-
-                    {/* Quick Actions */}
-                    <div className="mb-8">
-                        <h2 className="text-lg font-medium mb-4">Quick Actions</h2>
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                            {quickActions.map((action) => (
-                                <Card
-                                    key={action.title}
-                                    className="cursor-pointer transition-all hover:shadow-md bg-muted/20 hover:border-blue-200 dark:hover:border-blue-800"
-                                    onClick={() => action.action()}
-                                >
-                                    <CardHeader className="pb-3">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
-                                                    <action.icon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                                </div>
-                                                <div>
-                                                    <CardTitle className="text-sm">{action.title}</CardTitle>
-                                                </div>
-                                            </div>
-                                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                                        </div>
-                                    </CardHeader>
-                                </Card>
-                            ))}
+            {/* Recent Activity */}
+            <Card className="mb-8">
+                <CardHeader>
+                    <div className="flex items-center justify-between gap-3">
+                        <CardTitle className="flex shrink-0 items-center gap-2 text-base">
+                            <Activity className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            Recent Activity
+                        </CardTitle>
+                        <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-3">
+                            <span className="min-w-0 flex-1 text-right text-sm leading-5 text-muted-foreground">
+                                Latest updates:
+                                {latestActivityGroupLabel ? ` ${latestActivityGroupLabel}` : ''}
+                            </span>
+                            <Button size="sm" variant="ghost" onClick={() => navigate('/contacts')} className={DASHBOARD_CARD_ACTION_CLASS} aria-label="View recent activity details" data-dashboard-detail-action>
+                                <span data-dashboard-detail-label>
+                                    View
+                                    <span className="hidden min-[1048px]:inline"> Details</span>
+                                </span>
+                                <ArrowRight className="ml-1 h-3 w-3" />
+                            </Button>
                         </div>
                     </div>
+                </CardHeader>
+                <CardContent>
+                    <ActivityTimeline
+                        activities={recentActivities}
+                        isLoading={isLoading}
+                        hideFirstGroupHeading
+                        empty={{
+                            title: 'No activity yet',
+                            description: 'Activity will appear here as you use Itemize',
+                        }}
+                    />
+                </CardContent>
+            </Card>
 
-                    {/* Getting Started Tip */}
-                    {!proTipDismissed && (
-                        <Card className="bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-100 dark:border-blue-900">
-                            <CardHeader>
-                                <div className="flex items-start gap-3">
-                                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
-                                        <div className="flex shrink-0 items-center gap-2">
-                                            <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                                            <CardTitle className="text-base">Pro Tip: Automation</CardTitle>
+            {/* Performance analytics: swipeable rail on mobile, grid on desktop */}
+            <ResponsiveCardRail label="Performance analytics" desktopColumns="md:grid-cols-1 md:gap-6 xl:grid-cols-2" mobileCardClassName="flex-[0_0_92%]" className="dashboard-performance-analytics mb-8">
+                {/* Conversion Rates */}
+                <Card className="h-full flex flex-col">
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                <span className="min-[1048px]:hidden">Rates</span>
+                                <span className="hidden min-[1048px]:inline">Conversion Rates</span>
+                            </CardTitle>
+                            <span className="text-xs text-muted-foreground">{periodLabels[period]}</span>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="flex-1 flex flex-col">
+                        <div className="flex flex-col gap-3 h-full">
+                            <div className="grid grid-cols-2 gap-3 flex-1">
+                                <ConversionRateCard
+                                    title="Deal Win Rate"
+                                    rate={conversionData?.dealWinRate?.rate ?? 0}
+                                    numerator={conversionData?.dealWinRate?.won ?? 0}
+                                    denominator={conversionData?.dealWinRate?.totalClosed ?? 0}
+                                    icon={TrendingUp}
+                                    color="text-green-600 dark:text-green-400"
+                                    isLoading={conversionLoading}
+                                />
+                                <ConversionRateCard
+                                    title="Form to Contact"
+                                    rate={conversionData?.formToContact?.rate ?? 0}
+                                    numerator={conversionData?.formToContact?.converted ?? 0}
+                                    denominator={conversionData?.formToContact?.submissions ?? 0}
+                                    icon={CheckSquare}
+                                    color="text-blue-600 dark:text-blue-400"
+                                    isLoading={conversionLoading}
+                                />
+                            </div>
+                            <Card surface="inset" className="flex-1">
+                                <CardContent className="pt-6 h-full flex flex-col justify-between">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-2 rounded-full bg-muted text-blue-600 dark:text-blue-400" data-dashboard-analytics-icon>
+                                                <DollarSign className="h-5 w-5" />
+                                            </div>
+                                            <span className="font-medium">Closed Deal Value</span>
                                         </div>
-                                        <p className="min-w-0 basis-[max-content] grow text-sm text-muted-foreground">
-                                            Automate emails, tasks, and contact updates in{' '}
-                                            <button
-                                                onClick={() => navigate('/automations')}
-                                                className="text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
-                                            >
-                                                Automations
-                                            </button>.
-                                        </p>
+                                        <span className="text-sm text-muted-foreground">
+                                            {conversionData?.dealWinRate?.valuesByCurrency?.[0]
+                                                ? `${conversionData.dealWinRate.valuesByCurrency[0].currency} ${conversionData.dealWinRate.valuesByCurrency[0].wonValue.toLocaleString()}`
+                                                : '0'}
+                                        </span>
                                     </div>
-                                    <button
-                                        onClick={() => setProTipDismissed(true)}
-                                        className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
-                                        aria-label="Dismiss"
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </button>
-                                </div>
-                            </CardHeader>
+                                    <div className="grid grid-cols-3 gap-4 text-center">
+                                        <div>
+                                            <div className="text-lg font-bold text-green-600 dark:text-green-400">{conversionData?.dealWinRate?.valuesByCurrency?.[0]?.wonValue.toLocaleString() ?? 0}</div>
+                                            <div className="text-xs text-muted-foreground">Won</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-lg font-bold text-red-600 dark:text-red-400">{conversionData?.dealWinRate?.valuesByCurrency?.[0]?.lostValue.toLocaleString() ?? 0}</div>
+                                            <div className="text-xs text-muted-foreground">Lost</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-lg font-bold text-blue-600 dark:text-blue-400">{conversionData?.dealWinRate?.totalClosed ?? 0}</div>
+                                            <div className="text-xs text-muted-foreground">Closed</div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Communication Stats */}
+                <Card className="h-full flex flex-col">
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <Mail className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                <span className="min-[1048px]:hidden">Comms</span>
+                                <span className="hidden min-[1048px]:inline">Communication</span>
+                            </CardTitle>
+                            <span className="text-xs text-muted-foreground">{periodLabels[period]}</span>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="flex-1 flex flex-col">
+                        <CommunicationStatsCard stats={commStats} isLoading={commLoading} />
+                    </CardContent>
+                </Card>
+            </ResponsiveCardRail>
+
+            {/* Quick Actions */}
+            <div className="mb-8">
+                <h2 className="text-lg font-medium mb-4">Quick Actions</h2>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    {quickActions.map((action) => (
+                        <Card surface="inset" key={action.title} className="group transition-all hover:border-blue-200 hover:shadow-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 dark:hover:border-blue-800">
+                            <button type="button" className="w-full rounded-lg text-left focus-visible:outline-none" onClick={action.action} aria-label={action.title}>
+                                <CardHeader className="pb-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
+                                                <action.icon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-sm">{action.title}</CardTitle>
+                                            </div>
+                                        </div>
+                                        <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                                    </div>
+                                </CardHeader>
+                            </button>
                         </Card>
-                    )}
+                    ))}
+                </div>
+            </div>
+
+            {/* Getting Started Tip */}
+            {!proTipDismissed && (
+                <Card className="bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-100 dark:border-blue-900">
+                    <CardHeader>
+                        <div className="flex items-start gap-3">
+                            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
+                                <div className="flex shrink-0 items-center gap-2">
+                                    <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                    <CardTitle className="text-base">Pro Tip: Automation</CardTitle>
+                                </div>
+                                <p className="min-w-0 basis-[max-content] grow text-sm text-muted-foreground">
+                                    Automate emails, tasks, and contact updates in{' '}
+                                    <button type="button" onClick={() => navigate('/automations')} className="text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300">
+                                        Automations
+                                    </button>
+                                    .
+                                </p>
+                            </div>
+                            <button type="button" onClick={() => setProTipDismissed(true)} className="shrink-0 text-muted-foreground transition-colors hover:text-foreground" aria-label="Dismiss">
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+                    </CardHeader>
+                </Card>
+            )}
         </PageLayout>
     );
 }

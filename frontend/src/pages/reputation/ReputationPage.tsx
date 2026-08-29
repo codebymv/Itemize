@@ -29,7 +29,7 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
-import { getStatBadgeClass, getStatIconBgClass, getStatValueClass, getStatIconClass, StatTheme } from '@/hooks/useStatStyles';
+import { StatCard } from '@/components/StatCard';
 import { getSentimentBadgeClass } from '@/lib/badge-utils';
 
 interface Review {
@@ -109,7 +109,7 @@ export function ReputationPage() {
         } finally {
             setLoading(false);
         }
-    }, [organizationId, ratingFilter]);
+    }, [organizationId, ratingFilter, toast]);
 
     useEffect(() => {
         fetchData();
@@ -221,100 +221,55 @@ export function ReputationPage() {
             <ResponsiveCardRail
                 label="Reputation summary"
                 desktopColumns="md:grid-cols-5"
+                className="responsive-stat-summary"
             >
-                {loading ? (
+                {(loading || analytics) ? (
                     <>
-                        {[...Array(5)].map((_, i) => (
-                            <Card key={i}>
-                                <CardContent className="p-4">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <Skeleton className="h-5 w-20 mb-2" />
-                                            <Skeleton className="h-8 w-24 mb-1" />
-                                            <Skeleton className="h-3 w-16" />
-                                        </div>
-                                        <Skeleton className="h-10 w-10 rounded-full" />
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </>
-                ) : analytics ? (
-                    <>
-                        {/* Critical - Red (Needs Attention) */}
-                        <Card>
-                            <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <Badge className={`text-xs mb-2 ${getStatBadgeClass('red')}`}>Negative</Badge>
-                                        <p className={`text-2xl font-bold ${getStatValueClass('red')}`}>{analytics.negative_count}</p>
-                                        <p className="text-xs text-muted-foreground">Negative Reviews</p>
-                                    </div>
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('red')}`}>
-                                        <ThumbsDown className={`h-5 w-5 ${getStatIconClass('red')}`} />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                        {/* General Overview - Blue (Primary Metrics) */}
-                        <Card>
-                            <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <Badge className={`text-xs mb-2 ${getStatBadgeClass('blue')}`}>Total</Badge>
-                                        <p className={`text-2xl font-bold ${getStatValueClass('blue')}`}>{analytics.total_reviews}</p>
-                                        <p className="text-xs text-muted-foreground">Total Reviews</p>
-                                    </div>
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('blue')}`}>
-                                        <FileText className={`h-5 w-5 ${getStatIconClass('blue')}`} />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <Badge className={`text-xs mb-2 ${getStatBadgeClass('blue')}`}>Average</Badge>
-                                        <p className={`text-2xl font-bold ${getStatValueClass('blue')}`}>{Number(analytics.average_rating || 0).toFixed(1)}</p>
-                                        <p className="text-xs text-muted-foreground">Average Rating</p>
-                                    </div>
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('blue')}`}>
-                                        <Star className={`h-5 w-5 ${getStatIconClass('blue')}`} />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                        {/* Warning - Orange (Attention Needed) */}
-                        <Card>
-                            <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <Badge className={`text-xs mb-2 ${getStatBadgeClass('orange')}`}>Neutral</Badge>
-                                        <p className={`text-2xl font-bold ${getStatValueClass('orange')}`}>{analytics.neutral_count}</p>
-                                        <p className="text-xs text-muted-foreground">Neutral Reviews</p>
-                                    </div>
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('orange')}`}>
-                                        <MessageSquare className={`h-5 w-5 ${getStatIconClass('orange')}`} />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                        {/* Success - Green (Positive Outcome) */}
-                        <Card>
-                            <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <Badge className={`text-xs mb-2 ${getStatBadgeClass('green')}`}>Positive</Badge>
-                                        <p className={`text-2xl font-bold ${getStatValueClass('green')}`}>{analytics.positive_count}</p>
-                                        <p className="text-xs text-muted-foreground">Positive Reviews</p>
-                                    </div>
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStatIconBgClass('green')}`}>
-                                        <ThumbsUp className={`h-5 w-5 ${getStatIconClass('green')}`} />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <StatCard
+                            title="Negative reviews"
+                            badgeText="Negative"
+                            value={analytics?.negative_count ?? 0}
+                            icon={ThumbsDown}
+                            description="Negative reviews"
+                            colorTheme="red"
+                            isLoading={loading}
+                        />
+                        <StatCard
+                            title="Total reviews"
+                            badgeText="Total"
+                            value={analytics?.total_reviews ?? 0}
+                            icon={FileText}
+                            description="Total reviews"
+                            colorTheme="blue"
+                            isLoading={loading}
+                        />
+                        <StatCard
+                            title="Average rating"
+                            badgeText="Average"
+                            value={Number(analytics?.average_rating || 0).toFixed(1)}
+                            icon={Star}
+                            description="Average rating"
+                            colorTheme="blue"
+                            isLoading={loading}
+                        />
+                        <StatCard
+                            title="Neutral reviews"
+                            badgeText="Neutral"
+                            value={analytics?.neutral_count ?? 0}
+                            icon={MessageSquare}
+                            description="Neutral reviews"
+                            colorTheme="orange"
+                            isLoading={loading}
+                        />
+                        <StatCard
+                            title="Positive reviews"
+                            badgeText="Positive"
+                            value={analytics?.positive_count ?? 0}
+                            icon={ThumbsUp}
+                            description="Positive reviews"
+                            colorTheme="green"
+                            isLoading={loading}
+                        />
                     </>
                 ) : null}
             </ResponsiveCardRail>

@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, type CardSurface } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,7 @@ interface StatCardProps {
   description?: string;
   colorTheme?: StatTheme;
   isLoading?: boolean;
+  surface?: CardSurface;
 }
 
 export const StatCard = memo(({
@@ -23,12 +24,13 @@ export const StatCard = memo(({
   description,
   colorTheme = 'gray',
   isLoading,
+  surface = 'inset',
 }: StatCardProps) => {
-  const { badgeClass, iconBgClass, valueClass, iconClass } = useStatStyles(colorTheme);
+  const { iconBgClass, valueClass, iconClass } = useStatStyles(colorTheme);
 
   if (isLoading) {
     return (
-      <Card>
+      <Card surface={surface} role="group" aria-label={title} data-stat-card>
         <CardContent className="py-6">
           <div className="flex items-center gap-3" data-stat-card-row>
             <Skeleton className="w-10 h-10 rounded-full" data-stat-card-icon />
@@ -43,7 +45,7 @@ export const StatCard = memo(({
   }
 
   return (
-    <Card>
+    <Card surface={surface} role="group" aria-label={title} data-stat-card>
       <CardContent className="py-6">
         <div className="flex items-center gap-3" data-stat-card-row>
           <div

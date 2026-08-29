@@ -173,16 +173,24 @@ function GetStartedRow({
       ) : (
         <Circle className="h-5 w-5 shrink-0 text-muted-foreground" />
       )}
-      <div className="min-w-0 flex-1">
+      <div
+        className="min-w-0 flex-1 min-[1100px]:flex min-[1100px]:items-baseline min-[1100px]:justify-between min-[1100px]:gap-6"
+        data-get-started-copy
+      >
         <p
           className={cn(
-            'text-sm font-medium',
+            'shrink-0 text-sm font-medium',
             step.completed && 'line-through text-muted-foreground',
           )}
         >
           {copy.label}
         </p>
-        <p className="truncate text-xs text-muted-foreground">{copy.description}</p>
+        <p
+          className="mt-0.5 text-xs text-muted-foreground min-[1100px]:ml-auto min-[1100px]:mt-0 min-[1100px]:whitespace-nowrap min-[1100px]:text-right"
+          data-get-started-description
+        >
+          {copy.description}
+        </p>
       </div>
       {isCurrent ? (
         <Button type="button" size="sm" onClick={onOpen} className="shrink-0">

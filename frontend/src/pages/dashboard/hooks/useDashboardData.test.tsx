@@ -121,4 +121,20 @@ describe('useDashboardData', () => {
 
     await waitFor(() => expect(paymentsApi.getRevenueFlow).toHaveBeenCalledWith(7, '7days'));
   });
+
+  it('uses the selected 90-day performance period consistently', async () => {
+    vi.mocked(analyticsApi.getDashboardAnalytics).mockResolvedValue({
+      ...emptyAnalytics,
+      contacts: { ...emptyAnalytics.contacts, total: 1 },
+    });
+    vi.mocked(analyticsApi.getConversionRates).mockResolvedValue({} as analyticsApi.ConversionRates);
+    vi.mocked(analyticsApi.getCommunicationStats).mockResolvedValue({} as analyticsApi.CommunicationStats);
+    vi.mocked(analyticsApi.getPipelineDealAge).mockResolvedValue({} as analyticsApi.PipelineDealAge);
+
+    renderHook(() => useDashboardData({ organizationId: 7, period: '90days' }), { wrapper });
+
+    await waitFor(() => expect(analyticsApi.getConversionRates).toHaveBeenCalledWith('90days', 7));
+    expect(analyticsApi.getCommunicationStats).toHaveBeenCalledWith('90days', 7);
+    expect(paymentsApi.getRevenueFlow).toHaveBeenCalledWith(7, '90days');
+  });
 });

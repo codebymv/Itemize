@@ -65,6 +65,26 @@ const ChartContainer = React.forwardRef<
 })
 ChartContainer.displayName = "Chart"
 
+const ChartSurface = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<"div">
+>(({ className, style, ...props }, ref) => (
+  <div
+    ref={ref}
+    data-chart-surface="true"
+    className={cn(
+      "rounded-lg border border-border/70 p-3 sm:p-4",
+      className
+    )}
+    style={{
+      backgroundColor: "hsl(var(--background-alt))",
+      ...style,
+    }}
+    {...props}
+  />
+))
+ChartSurface.displayName = "ChartSurface"
+
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   const colorConfig = Object.entries(config).filter(
     ([_, config]) => config.theme || config.color
@@ -355,6 +375,7 @@ function getPayloadConfigFromPayload(
 
 export {
   ChartContainer,
+  ChartSurface,
   ChartTooltip,
   ChartTooltipContent,
   ChartLegend,

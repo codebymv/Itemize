@@ -8,8 +8,8 @@ export function CommunicationStatsCard({ stats, isLoading }: { stats?: Communica
     if (isLoading) {
         return (
             <div className="flex flex-col gap-3 h-full">
-                <Card className="flex-1"><CardContent className="pt-6"><Skeleton className="h-20" /></CardContent></Card>
-                <Card className="flex-1"><CardContent className="pt-6"><Skeleton className="h-20" /></CardContent></Card>
+                <Card surface="inset" className="flex-1"><CardContent className="pt-6"><Skeleton className="h-20" /></CardContent></Card>
+                <Card surface="inset" className="flex-1"><CardContent className="pt-6"><Skeleton className="h-20" /></CardContent></Card>
             </div>
         );
     }
@@ -23,7 +23,7 @@ export function CommunicationStatsCard({ stats, isLoading }: { stats?: Communica
     }
 
     const EmailCommunicationCard = () => (
-        <Card className="flex-1">
+        <Card surface="inset" className="flex-1">
             <CardContent className="pt-6 h-full flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -56,7 +56,7 @@ export function CommunicationStatsCard({ stats, isLoading }: { stats?: Communica
     );
 
     const SMSCommunicationCard = () => (
-        <Card className="flex-1">
+        <Card surface="inset" className="flex-1">
             <CardContent className="pt-6 h-full flex flex-col justify-between">
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">

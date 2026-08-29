@@ -2,14 +2,19 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
+export type CardSurface = "frame" | "inset"
+
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  surface?: CardSurface
+}
+
+const Card = React.forwardRef<HTMLDivElement, CardProps>(({ className, surface = "frame", ...props }, ref) => (
   <div
     ref={ref}
+    data-card-surface={surface}
     className={cn(
       "rounded-lg border bg-card text-card-foreground shadow-sm",
+      surface === "inset" && "bg-[hsl(var(--background-alt))]",
       className
     )}
     {...props}

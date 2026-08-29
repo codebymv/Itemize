@@ -18,7 +18,7 @@ import { getRevenueFlow, type RevenueFlow } from '@/services/invoicePaymentsApi'
 
 interface UseDashboardDataParams {
   organizationId?: number;
-  period?: '7days' | '30days' | '90days' | '6months' | '12months';
+  period?: '7days' | '30days' | '90days';
 }
 
 interface UseDashboardDataReturn {
@@ -88,9 +88,6 @@ export function useDashboardData({
   organizationId,
   period = '30days',
 }: UseDashboardDataParams): UseDashboardDataReturn {
-  const conversionPeriod = period === '6months' ? '30days' : period;
-  const communicationPeriod = period === '6months' || period === '12months' ? '30days' : period;
-
   // Main analytics query
   const {
     data: analytics,
@@ -118,7 +115,7 @@ export function useDashboardData({
   } = useQuery({
     queryKey: ['conversion-rates', period, organizationId],
     queryFn: () =>
-      getConversionRates(conversionPeriod, organizationId),
+      getConversionRates(period, organizationId),
     enabled: shouldLoadSecondary,
     staleTime: 5 * 60 * 1000,
   });
@@ -132,7 +129,7 @@ export function useDashboardData({
   } = useQuery({
     queryKey: ['communication-stats', period, organizationId],
     queryFn: () =>
-      getCommunicationStats(communicationPeriod, organizationId),
+      getCommunicationStats(period, organizationId),
     enabled: shouldLoadSecondary,
     staleTime: 5 * 60 * 1000,
   });

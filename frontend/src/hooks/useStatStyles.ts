@@ -35,24 +35,19 @@ export const STAT_ICON_CLASSES: Record<StatTheme, string> = {
   gray: 'text-gray-400 dark:text-gray-500',
 };
 
-// Helper functions for direct access
-export const getStatBadgeClass = (theme: StatTheme): string => 
-  STAT_BADGE_CLASSES[theme] ?? STAT_BADGE_CLASSES.gray;
-
-export const getStatIconBgClass = (theme: StatTheme): string => 
+export const getStatIconBgClass = (theme: StatTheme): string =>
   STAT_ICON_BG_CLASSES[theme] ?? STAT_ICON_BG_CLASSES.gray;
 
-export const getStatValueClass = (theme: StatTheme): string => 
+export const getStatValueClass = (theme: StatTheme): string =>
   STAT_VALUE_CLASSES[theme] ?? STAT_VALUE_CLASSES.gray;
 
-export const getStatIconClass = (theme: StatTheme): string => 
+export const getStatIconClass = (theme: StatTheme): string =>
   STAT_ICON_CLASSES[theme] ?? STAT_ICON_CLASSES.gray;
 
 export const useStatStyles = (theme: StatTheme) => {
   return useMemo(() => {
     const resolvedTheme = theme ?? 'gray';
     return {
-      badgeClass: STAT_BADGE_CLASSES[resolvedTheme],
       iconBgClass: STAT_ICON_BG_CLASSES[resolvedTheme],
       valueClass: STAT_VALUE_CLASSES[resolvedTheme],
       iconClass: STAT_ICON_CLASSES[resolvedTheme],

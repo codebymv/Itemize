@@ -7,12 +7,16 @@ vi.mock('recharts', async () => {
   const React = await import('react');
   const component = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
   const chart = ({ children }: { children?: React.ReactNode }) => <svg>{children}</svg>;
+  const series = (kind: string) => ({ dataKey }: { dataKey?: string }) => (
+    <g data-chart-kind={kind} data-chart-series={dataKey} />
+  );
   return {
-    Area: component,
-    Bar: component,
+    Bar: series('bar'),
     CartesianGrid: component,
     ComposedChart: chart,
     Legend: component,
+    Line: series('line'),
+    ReferenceLine: component,
     ResponsiveContainer: component,
     Tooltip: component,
     XAxis: component,
@@ -64,12 +68,18 @@ const flow: RevenueFlow = {
 
 describe('RevenueFlowChart', () => {
   it('renders an accessible detailed flow and payment-method breakdown', () => {
-    render(<RevenueFlowChart data={flow} />);
+    const { container } = render(<RevenueFlowChart data={flow} />);
 
     expect(screen.getByRole('img', { name: /revenue flow in usd/i })).toBeInTheDocument();
     expect(screen.getByText('Payment methods')).toBeInTheDocument();
     expect(screen.getByText('Card')).toBeInTheDocument();
     expect(screen.getByText('$700.00 refunded')).toBeInTheDocument();
+    expect(container.querySelector('[data-chart-surface="true"]')).toHaveStyle({
+      backgroundColor: 'hsl(var(--background-alt))',
+    });
+    expect(container.querySelector('[data-chart-kind="bar"][data-chart-series="bookedSales"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-chart-kind="bar"][data-chart-series="refundImpact"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-chart-kind="line"][data-chart-series="netReceived"]')).toBeInTheDocument();
   });
 
   it('omits the method breakdown in compact mode', () => {

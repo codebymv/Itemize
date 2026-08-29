@@ -1,15 +1,16 @@
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
+import { ChartContainer, ChartSurface, ChartTooltip } from '@/components/ui/chart';
 import { cn } from '@/lib/utils';
 import type {
   RevenueFlow,
   RevenueFlowCurrency,
 } from '@/services/invoicePaymentsApi';
 import {
-  Area,
   Bar,
   CartesianGrid,
   ComposedChart,
+  Line,
+  ReferenceLine,
   XAxis,
   YAxis,
 } from 'recharts';
@@ -103,8 +104,7 @@ function CurrencyRevenueFlow({
     refundImpact: bucket.refunds === 0 ? 0 : -bucket.refunds,
   }));
   const safeCurrency = trend.currency.replace(/[^A-Za-z0-9_-]/g, '');
-  const bookedGradient = `revenue-booked-${safeCurrency}-${compact ? 'compact' : 'detail'}`;
-  const netGradient = `revenue-net-${safeCurrency}-${compact ? 'compact' : 'detail'}`;
+  const chartId = `revenue-flow-${safeCurrency}-${compact ? 'compact' : 'detail'}`;
   const hasActivity = trend.summary.bookedSales !== 0
     || trend.summary.grossReceived !== 0
     || trend.summary.refunds !== 0;
@@ -117,19 +117,24 @@ function CurrencyRevenueFlow({
           No booked or received revenue in this period
         </div>
       ) : (
-        <div className={cn('grid gap-6', !compact && 'xl:grid-cols-[minmax(0,2fr)_minmax(15rem,1fr)]')}>
+        <ChartSurface
+          className={cn(
+            'grid gap-6',
+            !compact && 'xl:grid-cols-[minmax(0,2fr)_minmax(15rem,1fr)]',
+          )}
+        >
           <div className="min-w-0 space-y-3">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-blue-600 dark:bg-blue-400" />
+                <span className="h-2 w-3 rounded-[2px] bg-blue-600 dark:bg-blue-400" />
                 Booked sales
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-green-600 dark:bg-green-400" />
+                <span className="h-0.5 w-3 rounded-full bg-green-600 dark:bg-green-400" />
                 Net received
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 bg-red-600 dark:bg-red-400" />
+                <span className="h-2 w-2 rounded-[1px] bg-red-600 dark:bg-red-400" />
                 Refunds
               </span>
             </div>
@@ -138,25 +143,52 @@ function CurrencyRevenueFlow({
               aria-label={`Revenue flow in ${trend.currency}: booked sales ${formatCurrency(trend.summary.bookedSales, trend.currency)}, net received ${formatCurrency(trend.summary.netReceived, trend.currency)}, and refunds ${formatCurrency(trend.summary.refunds, trend.currency)}`}
             >
               <ChartContainer
+                id={chartId}
                 config={{
-                  bookedSales: { label: 'Booked sales', color: 'hsl(217, 91%, 60%)' },
-                  netReceived: { label: 'Net received', color: 'hsl(142, 71%, 45%)' },
-                  refundImpact: { label: 'Refunds', color: 'hsl(0, 72%, 51%)' },
+                  bookedSales: {
+                    label: 'Booked sales',
+                    theme: {
+                      light: 'hsl(221.2, 83.2%, 53.3%)',
+                      dark: 'hsl(213.1, 93.9%, 67.8%)',
+                    },
+                  },
+                  netReceived: {
+                    label: 'Net received',
+                    theme: {
+                      light: 'hsl(142, 71%, 40%)',
+                      dark: 'hsl(142, 69%, 58%)',
+                    },
+                  },
+                  refundImpact: {
+                    label: 'Refunds',
+                    theme: {
+                      light: 'hsl(0, 72%, 51%)',
+                      dark: 'hsl(0, 91%, 71%)',
+                    },
+                  },
+                  gridLine: {
+                    label: 'Grid line',
+                    theme: {
+                      light: 'hsl(214, 25%, 78%)',
+                      dark: 'hsl(215, 20%, 40%)',
+                    },
+                  },
                 }}
                 className={cn('w-full', compact ? 'h-[200px]' : 'h-[280px]')}
               >
                 <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id={bookedGradient} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.22} />
-                      <stop offset="95%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id={netGradient} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-muted" />
+                  <CartesianGrid
+                    vertical={false}
+                    stroke="var(--color-gridLine)"
+                    strokeOpacity={0.9}
+                    strokeDasharray="3 3"
+                  />
+                  <ReferenceLine
+                    y={0}
+                    stroke="hsl(var(--muted-foreground))"
+                    strokeOpacity={0.55}
+                    strokeWidth={1}
+                  />
                   <XAxis
                     dataKey="label"
                     axisLine={false}
@@ -176,7 +208,7 @@ function CurrencyRevenueFlow({
                       if (!active || !payload?.length) return null;
                       const point = payload[0].payload as typeof chartData[number];
                       return (
-                        <div className="min-w-44 rounded-lg border bg-background p-3 shadow-sm">
+                        <div className="min-w-44 rounded-lg border bg-popover p-3 text-popover-foreground shadow-lg">
                           <p className="mb-2 text-xs text-muted-foreground">{point.label}</p>
                           <div className="space-y-1 text-xs">
                             <p className="flex justify-between gap-4 text-blue-600 dark:text-blue-400">
@@ -197,32 +229,37 @@ function CurrencyRevenueFlow({
                     }}
                   />
                   <Bar
+                    dataKey="bookedSales"
+                    stackId="flow"
+                    fill="var(--color-bookedSales)"
+                    fillOpacity={0.72}
+                    maxBarSize={18}
+                    radius={[3, 3, 0, 0]}
+                  />
+                  <Bar
                     dataKey="refundImpact"
-                    fill="hsl(0, 72%, 51%)"
-                    opacity={0.72}
-                    maxBarSize={14}
+                    stackId="flow"
+                    fill="var(--color-refundImpact)"
+                    fillOpacity={0.88}
+                    maxBarSize={18}
                     radius={[0, 0, 3, 3]}
                   />
-                  <Area
-                    type="monotone"
-                    dataKey="bookedSales"
-                    stroke="hsl(217, 91%, 60%)"
-                    strokeWidth={2}
-                    fill={`url(#${bookedGradient})`}
-                  />
-                  <Area
+                  <Line
                     type="monotone"
                     dataKey="netReceived"
-                    stroke="hsl(142, 71%, 45%)"
-                    strokeWidth={2}
-                    fill={`url(#${netGradient})`}
+                    stroke="var(--color-netReceived)"
+                    strokeWidth={2.25}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    dot={false}
+                    activeDot={{ r: 4, strokeWidth: 2 }}
                   />
                 </ComposedChart>
               </ChartContainer>
             </div>
           </div>
           {!compact && <MethodBreakdown trend={trend} />}
-        </div>
+        </ChartSurface>
       )}
     </section>
   );

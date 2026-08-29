@@ -576,7 +576,7 @@ export function PaymentsPage() {
             })}
 
             {!loadError && (
-                <Card className="bg-muted/10">
+                <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="flex items-center gap-2 text-base">
                             <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
