@@ -51,9 +51,16 @@ async function runEmailTemplateVersionsMigration(pool) {
       body_html, body_text, variables, is_active, created_by, created_at, updated_at, published_at
     )
     SELECT et.organization_id, et.id, 1, 'published', et.subject, et.preheader,
-      et.body_html, et.body_text, COALESCE(et.variables, '[]'::jsonb), et.is_active, et.created_by,
-      et.created_at, et.updated_at, et.updated_at
+      et.body_html, et.body_text, COALESCE(et.variables, '[]'::jsonb),
+      COALESCE(et.is_active, TRUE), existing_user.id,
+      COALESCE(et.created_at, CURRENT_TIMESTAMP),
+      COALESCE(et.updated_at, et.created_at, CURRENT_TIMESTAMP),
+      COALESCE(et.updated_at, et.created_at, CURRENT_TIMESTAMP)
     FROM email_templates et
+    -- Some pre-organization production rows are intentionally tenantless. They are
+    -- not reachable through organization-scoped APIs, so do not invent ownership.
+    JOIN organizations existing_organization ON existing_organization.id = et.organization_id
+    LEFT JOIN users existing_user ON existing_user.id = et.created_by
     WHERE NOT EXISTS (
       SELECT 1 FROM email_template_versions version WHERE version.template_id = et.id
     )
