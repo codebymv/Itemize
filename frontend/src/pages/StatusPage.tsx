@@ -24,6 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import { cn } from '@/lib/utils';
 import { useAuthState } from '@/contexts/AuthContext';
+import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
   const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
@@ -155,14 +156,14 @@ const StatusPage: React.FC = () => {
     switch (status.toLowerCase()) {
       case 'healthy':
       case 'operational':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+        return STATUS_THEME_CLASSES.green.badgeClass;
       case 'degraded':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400';
+        return STATUS_THEME_CLASSES.orange.badgeClass;
       case 'error':
       case 'unavailable':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+        return STATUS_THEME_CLASSES.red.badgeClass;
       default:
-        return 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-400';
+        return STATUS_THEME_CLASSES.gray.badgeClass;
     }
   };
 
@@ -194,7 +195,7 @@ const StatusPage: React.FC = () => {
       <span className="text-sm text-slate-600 dark:text-slate-400">{label}</span>
       <div className="flex items-center gap-2">
         {typeof status === 'boolean' ? (
-          <Badge className={status ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}>
+          <Badge className={status ? STATUS_THEME_CLASSES.green.badgeClass : STATUS_THEME_CLASSES.red.badgeClass}>
             {status ? 'Pass' : 'Fail'}
           </Badge>
         ) : (

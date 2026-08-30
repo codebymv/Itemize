@@ -10,6 +10,7 @@
 import { Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTrialStatus } from '@/hooks/useTrialStatus';
+import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
 
 // ============================================
 // Types
@@ -49,8 +50,7 @@ export function TrialBadge({
       <span
         className={cn(
           'inline-flex items-center px-2 py-0.5 rounded text-xs font-medium',
-          'bg-amber-100 text-amber-800',
-          'dark:bg-amber-900 dark:text-amber-300',
+          STATUS_THEME_CLASSES.orange.badgeClass,
           className
         )}
         aria-label={`${days} ${daysText} remaining in trial period`}

@@ -1,38 +1,29 @@
 import { useMemo } from 'react';
+import { STATUS_THEME_CLASSES, type StatTheme } from '@/lib/statusVisuals';
 
-export type StatTheme = 'green' | 'orange' | 'blue' | 'red' | 'gray';
+export type { StatTheme };
 
-// Export class maps for direct access without hook
-export const STAT_BADGE_CLASSES: Record<StatTheme, string> = {
-  green: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-  orange: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300',
-  blue: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-  red: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-  gray: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-};
+const byTheme = <T,>(pick: (theme: StatTheme) => T): Record<StatTheme, T> =>
+  Object.fromEntries(
+    (Object.keys(STATUS_THEME_CLASSES) as StatTheme[]).map(theme => [theme, pick(theme)]),
+  ) as Record<StatTheme, T>;
 
-export const STAT_ICON_BG_CLASSES: Record<StatTheme, string> = {
-  green: 'bg-green-100 dark:bg-green-900',
-  orange: 'bg-orange-100 dark:bg-orange-900',
-  blue: 'bg-blue-100 dark:bg-blue-900',
-  red: 'bg-red-100 dark:bg-red-900',
-  gray: 'bg-gray-100 dark:bg-gray-800',
-};
+// Badge and icon-disc classes are the shared palette verbatim, so a status pill
+// and the stat card counting that status always agree.
+export const STAT_BADGE_CLASSES = byTheme(theme => STATUS_THEME_CLASSES[theme].badgeClass);
 
+export const STAT_ICON_BG_CLASSES = byTheme(theme => STATUS_THEME_CLASSES[theme].iconBackgroundClass);
+
+export const STAT_ICON_CLASSES = byTheme(theme => STATUS_THEME_CLASSES[theme].iconClass);
+
+/**
+ * Stat values are the one place that departs from the palette: a large numeral
+ * needs more weight than a 16px icon, so gray reads at 600/400 rather than the
+ * icon's 500/400. Every other theme matches its icon class.
+ */
 export const STAT_VALUE_CLASSES: Record<StatTheme, string> = {
-  green: 'text-green-600 dark:text-green-400',
-  orange: 'text-orange-600 dark:text-orange-400',
-  blue: 'text-blue-600 dark:text-blue-400',
-  red: 'text-red-600 dark:text-red-400',
+  ...byTheme(theme => STATUS_THEME_CLASSES[theme].iconClass),
   gray: 'text-gray-600 dark:text-gray-400',
-};
-
-export const STAT_ICON_CLASSES: Record<StatTheme, string> = {
-  green: 'text-green-600 dark:text-green-400',
-  orange: 'text-orange-600 dark:text-orange-400',
-  blue: 'text-blue-600 dark:text-blue-400',
-  red: 'text-red-600 dark:text-red-400',
-  gray: 'text-gray-400 dark:text-gray-500',
 };
 
 export const getStatIconBgClass = (theme: StatTheme): string =>

@@ -9,7 +9,7 @@
  * you have is a string.
  */
 import { STATUS_THEME_CLASSES } from './statusVisuals';
-import type { StatTheme } from '@/hooks/useStatStyles';
+import type { StatTheme } from './statusVisuals';
 
 const badgeClass = (theme: StatTheme): string => STATUS_THEME_CLASSES[theme].badgeClass;
 

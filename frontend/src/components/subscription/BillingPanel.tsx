@@ -35,6 +35,7 @@ import {
     PLAN_METADATA, 
     PLAN_PRICING
 } from '@/lib/subscription';
+import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
 
 // Plan icons
 const PLAN_ICONS: Record<Plan, typeof Zap> = {
@@ -225,12 +226,12 @@ export function BillingPanel() {
                         {/* Status Badges */}
                         <div className="flex items-center gap-2">
                             {isTrial && (
-                                <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                                <Badge className={STATUS_THEME_CLASSES.orange.badgeClass}>
                                     Trial
                                 </Badge>
                             )}
                             {status.cancel_at_period_end && (
-                                <Badge variant="secondary" className="bg-red-100 text-red-800">
+                                <Badge className={STATUS_THEME_CLASSES.red.badgeClass}>
                                     Cancels at period end
                                 </Badge>
                             )}

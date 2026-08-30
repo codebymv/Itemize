@@ -5,10 +5,15 @@ This design system provides a unified set of design tokens, components, and patt
 ## Quick Start
 
 ```tsx
-// Import design tokens
-import { designTokens, semanticColors, colorMixins } from '@/design-system'
+// Declare a status once; every surface reads from it
+import { defineStatus } from '@/lib/statusVisuals'
 
-// Import components
+// Shared page chrome
+import { PageLayout } from '@/components/layout/PageLayout'
+import { EntityDetailHeader } from '@/components/layout/EntityDetailHeader'
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail'
+
+// Cross-module components
 import { ActivityTimeline } from '@/components/activity-timeline'
 import { CrossModuleSearch } from '@/components/cross-module-search'
 import { ModuleWidget, InvoicesWidget, SignaturesWidget } from '@/design-system'
@@ -16,17 +21,24 @@ import { ModuleWidget, InvoicesWidget, SignaturesWidget } from '@/design-system'
 
 ## What's Included
 
-### 1. Design Tokens (`design-tokens.ts`)
-Centralized design tokens for colors, spacing, and other design properties.
+### 1. The status palette (`@/lib/statusVisuals`)
+
+`src/lib/statusVisuals.ts` is the single definition of status color. Five themes
+carry the whole grammar (blue, orange, green, red, gray), and every other module
+derives from it -- including `design-tokens.ts` here, which is only a lookup by
+raw status string for the client-profile surfaces.
 
 **Usage:**
 ```tsx
-import { designTokens, colorMixins, semanticColors } from '@/design-system/design-tokens'
+import { defineStatus } from '@/lib/statusVisuals'
 
-// Use design tokens for consistent styling
-<Button className={colorMixins.primary()}>Primary Action</Button>
-<Badge className={semanticColors.status.active}>Active</Badge>
+const STATUS = { paid: defineStatus('Paid', 'green', CheckCircle) }
+
+<Badge className={STATUS.paid.badgeClass}>{STATUS.paid.label}</Badge>
 ```
+
+`design-system/visual-language.test.ts` fails the build if a second palette
+declaration appears anywhere in `src/`.
 
 ### 2. Activity Timeline (`components/activity-timeline/`)
 Shows unified activity history across all modules (invoices, contacts, signatures, campaigns, etc.).
@@ -112,11 +124,11 @@ All components support light and dark themes through CSS variables defined in `s
 
 ## Best Practices
 
-1. **Always use design tokens** instead of hardcoded colors
-2. **Use semantic colors** for status indicators (`semanticColors.status.*`)
-3. **Use module colors** for module-specific icons (`semanticColors.module.*`)
-4. **Follow the pattern library** for common UI patterns
-5. **Use PageLayout** for all authenticated pages (and public Status/Docs via `PublicPageHeader`)
+1. **Declare statuses with `defineStatus`** instead of hardcoded color classes
+2. **Distinguish modules by icon shape, not color** -- page icons all take the app accent
+3. **Follow the pattern library** for common UI patterns
+4. **Use PageLayout** for all authenticated pages (and public Status/Docs via `PublicPageHeader`)
+5. **Use EntityDetailHeader** for every routed entity detail or editor page
 
 Status semantics are fixed across modules: blue is active/draft Itemize work, orange is
 parked or transitional, green is a successful outcome, red requires attention, and gray

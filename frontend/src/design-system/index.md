@@ -16,59 +16,53 @@ The Itemize design system provides a unified set of design tokens, components, a
 
 ## Design Tokens
 
-Design tokens are the foundational elements of the design system. They are defined in `src/design-system/design-tokens.ts` and should be used instead of hardcoded Tailwind classes.
+### The status palette
 
-### Colors
+`src/lib/statusVisuals.ts` is the single definition of status color. Nothing else
+may declare these classes: `hooks/useStatStyles`, `lib/badge-utils` and
+`design-system/design-tokens` all derive from it, and
+`design-system/visual-language.test.ts` fails the build if a second declaration
+appears anywhere in `src/`.
 
-#### Primary Colors
-Used for primary actions, CTAs, and interactive elements.
+Five themes carry the entire status grammar:
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `designTokens.colors.primary` | `bg-blue-600` | Primary buttons, links |
-| `designTokens.colors.primaryHover` | `hover:bg-blue-700` | Hover states |
-| `designTokens.colors.primaryLight` | `bg-blue-100 dark:bg-blue-900` | Light backgrounds |
+| Theme | Meaning | Examples |
+|-------|---------|----------|
+| `blue` | Itemize-owned draft, active, live working state | draft, active, new, info |
+| `orange` | Parked or in flight | pending, sent, viewed, partial, paused, inactive, scheduled |
+| `green` | Successful outcome | paid, accepted, completed, published, confirmed |
+| `red` | Failed, destructive, or needing attention | overdue, failed, declined, expired, cancelled, archived |
+| `gray` | Neutral or historical | refunded, unknown |
 
-#### Semantic Colors
-Use `semanticColors` for status and module-specific coloring.
-
-**Status Colors:**
-
-The application-wide semantic grammar is:
-
-- Blue: Itemize-owned active, draft, and live working states.
-- Orange: parked or transitional states such as sent, viewed, partial, pending, paused, and inactive.
-- Green: successful outcomes such as paid, accepted, completed, succeeded, and won.
-- Red: outcomes requiring attention such as overdue, failed, declined, expired, cancelled, and archived.
-- Gray: neutral or historical states such as refunded.
+A status is declared once, with its label and icon, and every surface reads from
+that one object -- so a pill, a stat card and a detail header can never disagree:
 
 ```typescript
-import { semanticColors } from '@/design-system/design-tokens'
+import { defineStatus } from '@/lib/statusVisuals'
 
-<div className={semanticColors.status.active}>Active</div>
-<div className={semanticColors.status.pending}>Pending</div>
+const INVOICE_STATUS_CONFIG = {
+  draft: defineStatus('Draft', 'blue', Clock),
+  paid: defineStatus('Paid', 'green', CheckCircle),
+  overdue: defineStatus('Overdue', 'red', XCircle),
+}
 ```
 
-**Module Colors:**
-```typescript
-// For icons/badges indicating which module content is from
-<Package className={semanticColors.module.invoice} />
-<Users className={semanticColors.module.contact} />
-```
+`defineStatus` returns `{ label, theme, icon, badgeClass, iconClass, iconBackgroundClass }`.
+Use `badgeClass` on a `Badge`, `iconClass` on the icon, and `iconBackgroundClass`
+on the icon disc. Unmapped values go through `getUnknownStatusVisual`, which
+title-cases the raw string rather than rendering blank.
+
+Reach for `lib/badge-utils` only when all you have is a raw status string and no
+declared registry. Status color is deliberately **not** a `Badge` variant.
+
+Primary actions are `bg-blue-600 hover:bg-blue-700 text-white`. The app accent --
+page icons, active icon tabs, section card titles -- is `--icon-accent`
+(`blue-600` light, `blue-400` dark).
 
 ### Spacing
 
-Predefined spacing values for consistency:
-
-| Token | Value | CSS |
-|-------|-------|-----|
-| xs | 0.25rem | 4px |
-| sm | 0.5rem | 8px |
-| md | 0.75rem | 12px |
-| lg | 1rem | 16px |
-| xl | 1.5rem | 24px |
-| 2xl | 2rem | 32px |
-| 3xl | 3rem | 48px |
+Spacing uses Tailwind's default scale directly. There is no spacing token layer;
+an earlier one emitted invalid classes (`m-md`) and has been removed.
 
 ### Border Radius
 
@@ -105,9 +99,8 @@ Used for main actions and CTAs.
 
 ```tsx
 import { Button } from '@/components/ui/button'
-import { colorMixins } from '@/design-system/design-tokens'
 
-<Button className={colorMixins.primary()}>
+<Button className="bg-blue-600 text-white hover:bg-blue-700">
   Save Changes
 </Button>
 ```
@@ -193,33 +186,39 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 ### Badges
 
 #### Status Badge
+
+Always render a declared `StatusVisual`; never an inline color class.
+
 ```tsx
 import { Badge } from '@/components/ui/badge'
-import { semanticColors } from '@/design-system/design-tokens'
+import { getInvoiceStatusVisual } from '@/pages/invoices/constants/invoiceConstants'
 
-<Badge className={semanticColors.status.completed}>
-  Completed
-</Badge>
+const visual = getInvoiceStatusVisual(invoice.status)
+
+<Badge className={visual.badgeClass}>{visual.label}</Badge>
 ```
+
+Where the badge sits beside a shell command lane that also shows status, the
+inline badge is hidden from `md` up (see `EntityDetailHeader`'s `statusHandoff`)
+so the state is stated once, not twice.
 
 ### Icons
 
-All icons come from `lucide-react`. Use semantic colors for module context:
+All icons come from `lucide-react`.
+
+Modules are distinguished by icon shape, not by color. There is no per-module
+palette: every page icon uses the single app accent, so the sidebar, breadcrumbs
+and page header agree.
 
 ```tsx
-import { Users, Wallet, FileSignature, Zap, Calendar, Mail, MessageSquare, Star } from 'lucide-react'
-import { semanticColors } from '@/design-system/design-tokens'
+// Page icon, every family
+<Users className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
 
-// Module icons
-<Users className={semanticColors.module.contact} />
-<Wallet className={semanticColors.module.invoice} />
-<FileSignature className={semanticColors.module.signature} />
-<Zap className={semanticColors.module.workflow} />
-<Mail className={semanticColors.module.campaign} />
-<MessageSquare className={semanticColors.module.social} />
-<Calendar className={semanticColors.module.calendar} />
-<Star className={semanticColors.module.signature} />
+// Section card title -- icon takes the accent via the shared primitive
+<SectionCardTitle icon={Settings2}>Template settings</SectionCardTitle>
 ```
+
+An icon that represents a *status* takes that status's `iconClass` instead.
 
 ### Tables
 
@@ -334,6 +333,61 @@ Use the following destination rules instead of adding controls to the shell:
 
 Page action cards wrap with 8 pixel gaps and give buttons and comboboxes a minimum 44 pixel target. Mobile actions scroll with content; they must not become a second sticky application header. If a mobile action card needs more than two frequent commands, consolidate secondary commands into an overflow menu or filter sheet.
 
+### List and Detail Pattern
+
+`/invoices` is the reference implementation for list rows; `EntityDetailHeader`
+is the reference for what a row opens into. `design-system/visual-language.test.ts`
+holds both to their primitives.
+
+#### List rows
+
+- Rows sit in a `divide-y` list inside `space-y-4` -- not a card grid. Contacts
+  and Landing Pages are accepted exceptions: contacts read as people, and pages
+  need a thumbnail.
+- `hover:bg-muted/50`, `transition-colors`, `cursor-pointer` on the row.
+- `p-4` base, `px-6` for metadata rows, `gap-x-3 gap-y-1.5`.
+- `min-w-0` on every flex container that holds text; `truncate` on the text.
+- Status is a declared `StatusVisual`, never an inline class.
+- A row that expands in place uses `ExpandedRowActions`, and its actions must
+  mirror the row's overflow menu exactly. `ExpandedRowActionLabel` carries a full
+  and a compact label plus an `sr-only` copy, so labels shorten without losing
+  the accessible name.
+
+#### Stat summaries
+
+Wrap `StatCard`s in `ResponsiveCardRail`: one markup, a snap-scrolling rail with
+dot indicators on mobile and a grid on desktop. Cards use `surface="inset"` so a
+summary reads as recessed against the page surface. A lone odd trailing card is
+centered automatically -- do not hand-tune it.
+
+#### Detail and editor pages
+
+Every routed entity page renders `EntityDetailHeader`:
+
+```tsx
+<EntityDetailHeader
+  icon={<StatusIcon className={cn('h-6 w-6', visual.iconClass)} />}
+  iconClassName={visual.iconBackgroundClass}
+  title={entity.name}
+  mobileStatus={<Badge className={visual.badgeClass}>{visual.label}</Badge>}
+  descriptor={entity.subject}
+  metadata={<><span>Created {created}</span><span>{count} recipients</span></>}
+/>
+```
+
+- The icon disc is themed by the entity's own status, so an overdue invoice
+  reads red in its header exactly as it does in its list row.
+- Status appears **once**: in the shell command lane (`desktopTools.status`) on
+  desktop, and inline via `mobileStatus` below the hand-off breakpoint. Set
+  `statusHandoff="xl"` when the lane stays crowded past `md`.
+- The title uses `min-w-0` and wraps; it does not truncate. A detail page is
+  where the full name should be readable.
+- Left group is `flex-1 min-w-0`; right actions are `shrink-0`.
+
+`WorkflowBuilderPage` is a deliberate exception: it is a full-bleed builder on
+`frame="flush"` with viewport-height math and no identity block, closer to the
+canvas pages than to a detail page.
+
 ### Empty State Pattern
 
 An empty state is valid only after a successful request. A failed request must render
@@ -400,7 +454,7 @@ import { PageLoading } from '@/components/ui/page-loading'
 3. **Successful outcomes** → Use green
 4. **Parked/transitional states** → Use orange
 5. **Attention/error outcomes** → Use red
-6. **Module indicators** → Use `semanticColors.module.*`
+6. **Module indicators** → Distinguish by icon shape, not color; page icons all take the app accent
 7. **Usage/progress meters** → Use `Progress`; do not tint the full container behind a meter
 8. **Get Started** → Use `Progress` on card chrome; do not tint the card
 
@@ -510,26 +564,27 @@ All text uses Raleway (primary) display font:
 
 When updating existing components to use the design system:
 
-1. Replace hardcoded color classes with `designTokens` or `colorMixins`
-2. Replace hardcoded spacing with `designTokens.spacing`
-3. Use `semanticColors` for status indicators
-4. Ensure all pages use `PageLayout` (header, mobile bar, and frame)
+1. Declare each status once with `defineStatus`; delete inline color classes
+2. Render index pages through `PageLayout` (header, mobile bar, and frame)
+3. Render routed entity pages through `EntityDetailHeader`
+4. Put stat summaries in `ResponsiveCardRail` so they become a swipe rail on mobile
 5. Use `EmptyState` / `ErrorState` inside the layout body
+6. Use `DeleteDialog` for destructive confirmation rather than a bespoke dialog
 
 Example migration:
 
 **Before:**
 ```tsx
-<Button className="bg-blue-600 hover:bg-blue-700 text-white font-light">
-  Save
-</Button>
+<Badge className="border-blue-500/30 bg-blue-500/15 text-blue-700 dark:text-blue-300">
+  Active
+</Badge>
 ```
 
 **After:**
 ```tsx
-import { colorMixins } from '@/design-system/design-tokens'
+import { getCatalogStatusVisual } from '@/pages/campaigns/constants/campaignVisuals'
 
-<Button className={colorMixins.primary('font-light')}>
-  Save
-</Button>
+const visual = getCatalogStatusVisual(template.is_active)
+
+<Badge className={visual.badgeClass}>{visual.label}</Badge>
 ```

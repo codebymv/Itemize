@@ -13,7 +13,6 @@ import {
   ChevronDown,
   TrendingUp,
 } from 'lucide-react'
-import { semanticColors } from '@/design-system/design-tokens'
 import { EmptyState } from '@/components/EmptyState'
 
 export interface ModuleWidgetProps {
@@ -307,7 +306,6 @@ export function InvoicesWidget(props: PresetWidgetProps) {
   return (
     <ModuleWidget
       icon={Receipt}
-      iconColor={semanticColors.module.invoice}
       title="Invoices"
       primaryStat={props.primaryStat}
       primaryStatLabel="Pending"
@@ -320,7 +318,6 @@ export function SignaturesWidget(props: PresetWidgetProps) {
   return (
     <ModuleWidget
       icon={FileSignature}
-      iconColor={semanticColors.module.signature}
       title="Signatures"
       primaryStat={props.primaryStat}
       primaryStatLabel="Awaiting"
@@ -333,7 +330,6 @@ export function WorkspaceWidget(props: PresetWidgetProps) {
   return (
     <ModuleWidget
       icon={Map}
-      iconColor={semanticColors.module.workspace}
       title="Workspace"
       primaryStat={props.primaryStat}
       primaryStatLabel={props.primaryStatLabel || 'Active Items'}
@@ -346,7 +342,6 @@ export function ContactsWidget(props: PresetWidgetProps) {
   return (
     <ModuleWidget
       icon={Users}
-      iconColor={semanticColors.module.contact}
       title="Contacts"
       primaryStat={props.primaryStat}
       primaryStatLabel="This Week"
@@ -359,7 +354,6 @@ export function DealsWidget(props: PresetWidgetProps) {
   return (
     <ModuleWidget
       icon={TrendingUp}
-      iconColor={semanticColors.module.workflow}
       title="Deals"
       primaryStat={props.primaryStat}
       primaryStatLabel="Open"

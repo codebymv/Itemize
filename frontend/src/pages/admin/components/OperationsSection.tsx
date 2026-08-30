@@ -11,7 +11,8 @@ import {
     RefreshCw,
     X,
 } from 'lucide-react';
-import { Badge, type BadgeProps } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/badge';
+import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -67,26 +68,26 @@ const detailBuckets: { id: adminApi.JobQueueBucket; label: string }[] = [
     { id: 'action_required', label: 'Needs review' },
 ];
 
-function badgeVariant(
-    status: adminApi.AdminOperationalStatus,
-): BadgeProps['variant'] {
-    if (status === 'healthy' || status === 'operational' || status === 'configured') return 'success';
-    if (status === 'action_required') return 'destructive';
-    if (status === 'degraded' || status === 'incomplete') return 'warning';
-    return 'secondary';
+function badgeClass(status: adminApi.AdminOperationalStatus): string {
+    if (status === 'healthy' || status === 'operational' || status === 'configured') {
+        return STATUS_THEME_CLASSES.green.badgeClass;
+    }
+    if (status === 'action_required') return STATUS_THEME_CLASSES.red.badgeClass;
+    if (status === 'degraded' || status === 'incomplete') return STATUS_THEME_CLASSES.orange.badgeClass;
+    return STATUS_THEME_CLASSES.gray.badgeClass;
 }
 
 function isProviderOperational(status: adminApi.AdminOperationalStatus): boolean {
     return status === 'healthy' || status === 'operational' || status === 'configured';
 }
 
-function jobBadgeVariant(status: string): BadgeProps['variant'] {
+function jobBadgeClass(status: string): string {
     if (status === 'failed' || status === 'dead_letter' || status === 'reconciliation_required') {
-        return 'destructive';
+        return STATUS_THEME_CLASSES.red.badgeClass;
     }
-    if (status === 'retry') return 'warning';
-    if (status === 'processing') return 'default';
-    return 'secondary';
+    if (status === 'retry') return STATUS_THEME_CLASSES.orange.badgeClass;
+    if (status === 'processing') return STATUS_THEME_CLASSES.blue.badgeClass;
+    return STATUS_THEME_CLASSES.gray.badgeClass;
 }
 
 function pendingAge(value: string | null): string {
@@ -282,7 +283,7 @@ function QueueDetailsPanel({
                                             <p className="mt-1 text-xs text-muted-foreground">{timestamp(item.createdAt)}</p>
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant={jobBadgeVariant(item.status)}>{labels[item.status] || item.status}</Badge>
+                                            <Badge className={jobBadgeClass(item.status)}>{labels[item.status] || item.status}</Badge>
                                         </TableCell>
                                         <TableCell className="max-w-44">
                                             <p className="truncate text-sm">{item.kind || item.reference || '—'}</p>
@@ -308,7 +309,7 @@ function QueueDetailsPanel({
                                         <p className="truncate font-mono text-xs" title={item.id}>Job #{item.id}</p>
                                         <p className="mt-1 text-xs text-muted-foreground">Pending {pendingAge(item.createdAt)}</p>
                                     </div>
-                                    <Badge variant={jobBadgeVariant(item.status)}>{labels[item.status] || item.status}</Badge>
+                                    <Badge className={jobBadgeClass(item.status)}>{labels[item.status] || item.status}</Badge>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3 text-xs">
                                     <div><p className="text-muted-foreground">Type / reference</p><p className="mt-0.5">{item.kind || item.reference || '—'}</p></div>
@@ -580,7 +581,7 @@ export default function OperationsSection({
                                         <TableRow>
                                             <TableCell className="font-medium">{queue.name}</TableCell>
                                             <TableCell>
-                                                <Badge variant={badgeVariant(queue.status)}>{labels[queue.status]}</Badge>
+                                                <Badge className={badgeClass(queue.status)}>{labels[queue.status]}</Badge>
                                             </TableCell>
                                             <TableCell className="text-right tabular-nums">{queue.queued}</TableCell>
                                             <TableCell className="text-right tabular-nums">{queue.processing}</TableCell>
@@ -633,7 +634,7 @@ export default function OperationsSection({
                                 <CardContent className="min-w-0 space-y-3 p-4">
                                     <div className="flex items-center justify-between gap-3">
                                         <p className="font-medium">{queue.name}</p>
-                                        <Badge variant={badgeVariant(queue.status)}>{labels[queue.status]}</Badge>
+                                        <Badge className={badgeClass(queue.status)}>{labels[queue.status]}</Badge>
                                     </div>
                                     <div className="grid grid-cols-4 gap-2 text-center text-xs">
                                         <div><p className="font-semibold tabular-nums">{queue.queued}</p><p className="text-muted-foreground">Queued</p></div>

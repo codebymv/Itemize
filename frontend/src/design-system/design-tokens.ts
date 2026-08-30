@@ -1,190 +1,57 @@
-import { cn } from '@/lib/utils'
+/**
+ * Status classes keyed by raw status string, for the client-profile surfaces.
+ *
+ * Like `lib/badge-utils`, this is a lookup into the one palette contract in
+ * `lib/statusVisuals` rather than a second set of colors. Prefer `defineStatus`
+ * for new work; it carries the label and icon alongside the theme.
+ */
+import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals'
+import type { StatTheme } from '@/lib/statusVisuals'
 
-interface DesignTokens {
-  colors: {
-    primary: string
-    primaryHover: string
-    primaryForeground: string
-    primaryLight: string
-    primaryLightest: string
-    success: string
-    successLight: string
-    warning: string
-    warningLight: string
-    danger: string
-    dangerLight: string
-    info: string
-    infoLight: string
-    neutral: {
-      50: string
-      100: string
-      200: string
-      300: string
-      400: string
-      500: string
-      600: string
-      700: string
-      800: string
-      900: string
-      950: string
-    }
-  }
-  spacing: {
-    xs: string
-    sm: string
-    md: string
-    lg: string
-    xl: string
-    '2xl': string
-    '3xl': string
-  }
-  borderRadius: {
-    sm: string
-    md: string
-    lg: string
-    xl: string
-    full: string
-  }
-  shadows: {
-    sm: string
-    md: string
-    lg: string
-    xl: string
-  }
-  opacity: {
-    faint: string
-    light: string
-    medium: string
-    strong: string
-  }
-}
+const badgeClass = (theme: StatTheme): string => STATUS_THEME_CLASSES[theme].badgeClass
 
-export const designTokens: DesignTokens = {
-  colors: {
-    primary: 'bg-blue-600',
-    primaryHover: 'hover:bg-blue-700',
-    primaryForeground: 'text-white',
-    primaryLight: 'bg-blue-100 dark:bg-blue-900',
-    primaryLightest: 'bg-blue-50 dark:bg-blue-950',
-    success: 'bg-green-600',
-    successLight: 'bg-green-100 dark:bg-green-900',
-    warning: 'bg-orange-600',
-    warningLight: 'bg-orange-100 dark:bg-orange-900',
-    danger: 'bg-red-600',
-    dangerLight: 'bg-red-100 dark:bg-red-900',
-    info: 'bg-blue-600',
-    infoLight: 'bg-blue-100 dark:bg-blue-900',
-    neutral: {
-      50: 'bg-slate-50',
-      100: 'bg-slate-100',
-      200: 'bg-slate-200',
-      300: 'bg-slate-300',
-      400: 'bg-slate-400',
-      500: 'bg-slate-500',
-      600: 'bg-slate-600',
-      700: 'bg-slate-700',
-      800: 'bg-slate-800',
-      900: 'bg-slate-900',
-      950: 'bg-slate-950',
-    },
-  },
-  spacing: {
-    xs: '0.25rem',
-    sm: '0.5rem',
-    md: '0.75rem',
-    lg: '1rem',
-    xl: '1.5rem',
-    '2xl': '2rem',
-    '3xl': '3rem',
-  },
-  borderRadius: {
-    sm: 'rounded-sm',
-    md: 'rounded-md',
-    lg: 'rounded-lg',
-    xl: 'rounded-xl',
-    full: 'rounded-full',
-  },
-  shadows: {
-    sm: 'shadow-sm',
-    md: 'shadow-md',
-    lg: 'shadow-lg',
-    xl: 'shadow-xl',
-  },
-  opacity: {
-    faint: 'opacity-10',
-    light: 'opacity-20',
-    medium: 'opacity-50',
-    strong: 'opacity-80',
-  },
-}
-
-export const colorMixins = {
-  primary: (styles = '') => cn(designTokens.colors.primary, designTokens.colors.primaryForeground, designTokens.colors.primaryHover, styles),
-  success: (styles = '') => cn(designTokens.colors.success, styles),
-  warning: (styles = '') => cn(designTokens.colors.warning, styles),
-  danger: (styles = '') => cn(designTokens.colors.danger, styles),
-  info: (styles = '') => cn(designTokens.colors.info, styles),
-}
-
-export const spacingMixins = {
-  m: (size: keyof typeof designTokens.spacing) => `m-${size}`,
-  p: (size: keyof typeof designTokens.spacing) => `p-${size}`,
-  mx: (size: keyof typeof designTokens.spacing) => `mx-${size}`,
-  my: (size: keyof typeof designTokens.spacing) => `my-${size}`,
-}
+const STATUS_THEMES = {
+  // Itemize-owned live/working states
+  active: 'blue',
+  draft: 'blue',
+  info: 'blue',
+  // Successful outcomes
+  completed: 'green',
+  paid: 'green',
+  accepted: 'green',
+  succeeded: 'green',
+  won: 'green',
+  published: 'green',
+  confirmed: 'green',
+  // Parked or transitional states
+  pending: 'orange',
+  in_progress: 'orange',
+  processing: 'orange',
+  sent: 'orange',
+  viewed: 'orange',
+  partial: 'orange',
+  inactive: 'orange',
+  paused: 'orange',
+  // Error states
+  cancelled: 'red',
+  failed: 'red',
+  declined: 'red',
+  expired: 'red',
+  overdue: 'red',
+  archived: 'red',
+  // Neutral and historical states
+  refunded: 'gray',
+  neutral: 'gray',
+} as const satisfies Record<string, StatTheme>
 
 export const semanticColors = {
-  status: {
-    // Itemize-owned live/working states (blue)
-    active: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300',
-    draft: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300',
-    info: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300',
-    // Successful outcomes (green)
-    completed: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
-    paid: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
-    accepted: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
-    succeeded: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
-    won: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
-    published: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
-    confirmed: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300',
-    // Warning/pending states (orange)
-    pending: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
-    in_progress: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
-    processing: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
-    sent: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
-    viewed: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
-    partial: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
-    inactive: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
-    paused: 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-300',
-    // Error states (red)
-    cancelled: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300',
-    failed: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300',
-    declined: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300',
-    expired: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300',
-    overdue: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300',
-    archived: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-300',
-    refunded: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300',
-    neutral: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300',
-  },
-  module: {
-    invoice: 'text-blue-600 dark:text-blue-400',
-    contact: 'text-blue-600 dark:text-blue-400',
-    signature: 'text-blue-600 dark:text-blue-400',
-    workflow: 'text-orange-600 dark:text-orange-400',
-    workspace: 'text-blue-600 dark:text-blue-400',
-    campaign: 'text-indigo-600 dark:text-indigo-400',
-    social: 'text-pink-600 dark:text-pink-400',
-    calendar: 'text-teal-600 dark:text-teal-400',
-  },
+  status: Object.fromEntries(
+    Object.entries(STATUS_THEMES).map(([status, theme]) => [status, badgeClass(theme)]),
+  ) as Record<keyof typeof STATUS_THEMES, string>,
 } as const
 
-export type StatusType = keyof typeof semanticColors.status
-export type ModuleType = keyof typeof semanticColors.module
+export type StatusType = keyof typeof STATUS_THEMES
 
 export function getStatusColor(status: StatusType) {
   return semanticColors.status[status]
-}
-
-export function getModuleColor(module: ModuleType) {
-  return semanticColors.module[module]
 }
